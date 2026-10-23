@@ -13,6 +13,7 @@ import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
+import { GuestCartBar } from './guestcart.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
 import { idbGet, idbSet } from './idb.js';
 
@@ -381,6 +382,7 @@ function Shell() {
         {tab === 'musteriler' && admin && <Customers />}
         {tab === 'ayarlar' && admin && <Settings />}
       </main>
+      {pub && <GuestCartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
       <nav className="botnav" aria-label="Alt menü">

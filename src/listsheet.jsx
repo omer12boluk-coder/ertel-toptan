@@ -408,10 +408,11 @@ export function CodeList({ code }) {
         <span className={'pill tone-' + (L.priced ? 'ok' : 'info')}>{L.priced ? 'Fiyatlandırıldı' : 'Liste fiyatları'}</span>
       </div>
       <ListPaper r={r} rate={rate} />
-      <ExportBar r={r} rate={rate} shareText={link} extra={<>
+      <div className="export-bar">
+        {!L.priced && S.shop.whatsapp && <a className="btn wa" href={waLink(S.shop.whatsapp, link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Bu listeyi WhatsApp’tan gönder</a>}
+        {L.priced && S.shop.whatsapp && <a className="btn wa" href={waLink(S.shop.whatsapp, 'Bu fiyatlarla onaylıyorum:\n' + link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Onaylıyorum, WhatsApp’tan yaz</a>}
         <button className="btn ghost" onClick={() => copyText(link, 'Link kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
-        {S.shop.whatsapp && <a className="btn wa" href={waLink(S.shop.whatsapp, link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp</a>}
-      </>} />
+      </div>
       <p className="fine center admin-hint">Dükkan sahibi misiniz? <a href={listLink(code, true)}>Yönetim panelinde fiyatla</a></p>
     </div>
   );
@@ -460,10 +461,12 @@ export function VitrinListEditor({ code, onClose }) {
         </table>
         <label className="mini-check tl-toggle"><input type="checkbox" checked={tl} disabled={!rate} onChange={(e) => setTl(e.target.checked)} />TL karşılığını ekle {rate && <span className="muted">({rateLabel(rate)})</span>}</label>
         <ListPaper r={r} rate={rate} tl={tl} />
-        <ExportBar r={r} rate={rate} tl={tl} shareText={newLink} extra={<>
-          <button className="btn ghost" onClick={() => copyText(newLink, 'Fiyatlı liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
-        </>} />
-        <p className="fine">“Resim + linki kopyala” deyip müşterinin WhatsApp sohbetine yapıştırın. Link müşteride aynı fiyatlı tabloyu açar.</p>
+        <div className="export-bar">
+          <a className="btn wa" href={waLink('', 'Fiyatlı listeniz:\n' + newLink)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’ta müşteriye gönder</a>
+          <button className="btn outline" onClick={() => copyText(newLink, 'Fiyatlı liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
+          <a className="btn ghost" href={newLink} target="_blank" rel="noopener"><Icon n="ext" s={16} />Müşterinin göreceği hali aç</a>
+        </div>
+        <p className="fine">“WhatsApp’ta müşteriye gönder” WhatsApp’ı açar, sohbeti seçip gönderirsiniz. Ya da linki kopyalayıp müşterinin sohbetine yapıştırın. Link müşteride fiyatlı tabloyu açar.</p>
       </div>
     </Sheet>
   );

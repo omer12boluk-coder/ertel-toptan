@@ -588,9 +588,10 @@ export function Settings() {
           </div>
           <Field label="Teslim notu" hint="Sepet ekranının altında görünür"><textarea id="s-pn" rows="2" value={d.shop.pickupNote} onChange={(e) => set('shop.pickupNote', e.target.value)} /></Field>
           <h3>Online vitrin ({location.host}/magaza)</h3>
-          <p className="fine">Müşterileriniz giriş yapmadan ürünleri liste fiyatıyla görür, liste yapıp WhatsApp'tan size gönderir (mesajda sadece listenin linki gider). Siz Talepler'den listeyi açıp fiyatları ayarlar, aynı tabloyu resim ya da link olarak geri gönderirsiniz.</p>
+          <p className="fine">Müşteri giriş yapmadan ürünleri seçer, “WhatsApp’tan gönder”e basar; size sadece bir link gelir. Linki açınca resimli tabloyu görürsünüz. Fiyat vermek için linkin altındaki “Yönetim panelinde fiyatla”ya ya da Talepler’deki “Vitrin listesi”ne basın; fiyatlı yeni linki müşteriye gönderirsiniz. Hiçbir şey kaydedilmez, Talepler’e düşmez.</p>
           <Toggle id="s-pub" label="Online vitrin açık" checked={d.access.publicShop} onChange={(v) => set('access.publicShop', v)} />
           <div className="input-btn"><input id="s-publink" readOnly value={links.shop()} /><button type="button" className="btn sm outline" onClick={() => copyText(links.shop(), 'Vitrin linki kopyalandı')}>Kopyala</button></div>
+          <ShopInvite />
           <Field label="Ödeme / havale bilgisi" hint="Vitrin müşterisi teklifi onaylayınca görür. IBAN, alıcı adı, açıklama vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00\nAçıklamaya talep numarasını yazın.'} /></Field>
         </>}
 
@@ -953,5 +954,20 @@ export function DeleteCustomer({ c, onClose, onDone }) {
       {n > 0 && <label className="mini-check"><input type="checkbox" checked={withReq} onChange={(e) => setWithReq(e.target.checked)} />{n} talebini ve mesajlarını da sil</label>}
       <p className="fine">Not: “@{c.username}” kullanıcı adı tekrar kullanılamaz; aynı kişiyi yeniden eklerseniz farklı bir kullanıcı adı verin.</p>
     </Sheet>
+  );
+}
+
+// Müşteriye gönderilecek hazır mesaj (vitrin linkiyle)
+function ShopInvite() {
+  const t = `Merhaba, siparişinizi buradan kolayca verebilirsiniz 👇\n${links.shop()}\n\n1) İstediğiniz ürünlerde “Ekle”ye basın\n2) Alttaki “Sepete git”e basın\n3) Yeşil “WhatsApp’tan gönder”e basın, açılan WhatsApp’ta gönder’e dokunun\n\nListeniz bize gelir, fiyatı hemen yazarız.`;
+  return (
+    <div className="invite">
+      <b>Müşteriye göndereceğiniz hazır mesaj</b>
+      <pre className="share-box">{t}</pre>
+      <div className="row-btns">
+        <button className="btn sm primary" onClick={() => copyText(t, 'Mesaj kopyalandı')}><Icon n="copy" s={15} />Mesajı kopyala</button>
+        <a className="btn sm wa" href={waLink('', t)} target="_blank" rel="noopener"><Icon n="wa" s={15} />WhatsApp’ta gönder</a>
+      </div>
+    </div>
   );
 }

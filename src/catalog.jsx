@@ -6,6 +6,7 @@ import { links } from './route.js';
 import { ProductEdit, SyncButton } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
 import { TLHint } from './listsheet.jsx';
+import { GuestGuide } from './guestcart.jsx';
 
 export function useTree() {
   const { catalog, settings: S } = useStore();
@@ -61,7 +62,7 @@ export function PriceBlock({ p, big }) {
 }
 
 export function Catalog({ admin }) {
-  const { settings: S, cart } = useStore();
+  const { settings: S, cart, user } = useStore();
   const all = useVisibleProducts(admin);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState(null);
@@ -174,6 +175,7 @@ export function Catalog({ admin }) {
           {admin && changedN > 0 && adminFilter !== 'pricechanged' && (
             <div className="banner warn price-alert"><Icon n="tag" /><div><b>{changedN} ürünün liste fiyatı değişti.</b> Toptan fiyatlarını kontrol edin; kontrol edene kadar toptan fiyat liste fiyatını geçemez.</div><button className="btn sm outline" onClick={() => setAdminFilter('pricechanged')}>Göster</button></div>
           )}
+          {user?.role === 'public' && <GuestGuide />}
           <div className="result-line">
             <span>{list.length.toLocaleString('tr-TR')} ürün{cat != null && <> · <b>{tree.nodes.get(cat)?.name || catName(S, cat)}</b></>}{brand && <> · <b>{brand}</b></>}</span>
             {!admin && cartCount > 0 && <button className="link" onClick={() => go('sepet')}>Sepette {cartCount} kalem →</button>}
