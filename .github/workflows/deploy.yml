@@ -1,4 +1,4 @@
-# main dalına her gönderimde uygulamayı ve güvenlik kurallarını Firebase'e yayınlar
+# main dalına her gönderimde uygulamayı Firebase'e yayınlar
 name: Yayınla
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
           echo "::notice title=Anahtar kontrol::$info"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           set +e
-          npx -y firebase-tools@13 deploy --only hosting,firestore:rules --project erteltoptan --non-interactive > "$RUNNER_TEMP/out.txt" 2>&1
+          npx -y firebase-tools@13 deploy --only hosting --project erteltoptan --non-interactive > "$RUNNER_TEMP/out.txt" 2>&1
           code=$?
           cat "$RUNNER_TEMP/out.txt"
           if [ $code -ne 0 ]; then
