@@ -64,5 +64,5 @@ jobs:
           sleep 15
           out=$(curl -s -m 20 "https://ertel-b2b-watch.$SUB.workers.dev/rate" || true)
           echo "::notice title=Kur cevabı::$out"
-          dbg=$(curl -s -m 30 "https://ertel-b2b-watch.$SUB.workers.dev/rate?debug=1" | head -c 1500 || true)
+          curl -s -m 30 "https://ertel-b2b-watch.$SUB.workers.dev/rate?debug=1" > dbg.json || true; dbg=$(node -e 'try{const d=JSON.parse(require("fs").readFileSync("dbg.json","utf8"));for(const[k,v]of Object.entries(d))for(const x of [].concat(v))console.log(k+" :: "+(typeof x==="string"?x:JSON.stringify(x)))}catch(e){console.log("dbg read fail")}' | head -c 6000 | sed "s/%/%25/g" | awk '{printf "%s%%0A", $0}')
           echo "::notice title=Kur teşhis::$dbg"
