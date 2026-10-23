@@ -1,0 +1,44 @@
+# Cloudflare'deki site bekçisini yükler (worker/ değişince ya da elle)
+name: Bekçiyi yayınla
+on:
+  push:
+    branches: [main]
+    paths: ['worker/**', 'wrangler.toml', '.github/workflows/worker.yml']
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Ayarlar tamam mı
+        id: ok
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$GH_DISPATCH_TOKEN" ]; then
+            echo "::warning title=Bekçi kurulmadı::CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID ve GH_DISPATCH_TOKEN gizli ayarları eklenince çalışır."
+            echo "go=no" >> $GITHUB_OUTPUT
+          else echo "go=yes" >> $GITHUB_OUTPUT; fi
+      - name: Depo (KV) hazırla
+        if: steps.ok.outputs.go == 'yes'
+        run: |
+          set -e
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/storage/kv/namespaces"
+          auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          id=$(curl -s -H "$auth" "$api?per_page=100" | node -e 'const r=JSON.parse(require("fs").readFileSync(0));if(!r.success){console.error(JSON.stringify(r.errors));process.exit(1)}const n=r.result.find(x=>x.title==="ertel-b2b-sync");console.log(n?n.id:"")')
+          if [ -z "$id" ]; then
+            id=$(curl -s -X POST -H "$auth" -H "Content-Type: application/json" "$api" -d '{"title":"ertel-b2b-sync"}' | node -e 'const r=JSON.parse(require("fs").readFileSync(0));if(!r.success){console.error(JSON.stringify(r.errors));process.exit(1)}console.log(r.result.id)')
+          fi
+          sed -i "s/__KV_ID__/$id/" wrangler.toml
+      - name: Yükle
+        if: steps.ok.outputs.go == 'yes'
+        run: |
+          set -o pipefail
+          npx -y wrangler@3 deploy 2>&1 | tail -n 20 | tee out.txt || { echo "::error title=Yükleme hatası::$(tail -n 8 out.txt | tr '\n' ' ')"; exit 1; }
+          printf '%s' "$GH_DISPATCH_TOKEN" | npx -y wrangler@3 secret put GH_TOKEN 2>&1 | tail -n 5 | tee out2.txt || { echo "::error title=Gizli ayar hatası::$(tail -n 5 out2.txt | tr '\n' ' ')"; exit 1; }
+          echo "::notice title=Bekçi yayında::Dakikada bir siteyi kontrol ediyor."

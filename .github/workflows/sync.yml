@@ -2,13 +2,16 @@
 name: Siteyle eşitle
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '7 */6 * * *' # yedek: asıl tetikleyici Cloudflare bekçisi (dakikada bir)
   workflow_dispatch:
     inputs:
       dry:
         description: 'Deneme (kaydetme)'
         type: boolean
         default: false
+concurrency:
+  group: sync
+  cancel-in-progress: false
 jobs:
   sync:
     runs-on: ubuntu-latest

@@ -1,0 +1,16 @@
+# Cloudflare Worker ayarı (GitHub "Bekçiyi yayınla" işi tarafından yüklenir)
+name = "ertel-b2b-watch"
+main = "worker/index.js"
+compatibility_date = "2025-06-01"
+workers_dev = false
+
+[triggers]
+crons = ["* * * * *"]
+
+[[kv_namespaces]]
+binding = "KV"
+id = "__KV_ID__"
+
+[vars]
+FEED_URL = "https://www.ertelgsm.com/xml-cikti/gm"
+REPO = "omer12boluk-coder/ertel-toptan"
