@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, go } from './store.js';
 import { Icon, Empty, Thumb, Sheet, Stepper, copyText } from './ui.jsx';
 import { decodeList, encodeList, listItems, listRecord, listLink } from './listcode.js';
+import { Lightbox, imageList } from './catalog.jsx';
 import { links, waLink } from './route.js';
 import { fmt, totals, fmtTotals, when, ls, roundStep } from './utils.js';
 import { LOGO_MARK } from './config.js';
@@ -37,42 +38,43 @@ const priced = (r) => r.status !== 'new';
 const listRate = (r, live) => (r.rate && r.rate.usd > 0 ? r.rate : live);
 
 // ---- Sayfadaki tablo --------------------------------------------------------
-export function ListPaper({ r, items: itemsIn, rate: rateIn, tl: tlIn }) {
+export function ListPaper({ r, items: itemsIn, rate: rateIn }) {
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const live = useRate();
+  const [zoom, setZoom] = useState(null); // ürün resmini büyüt
   const items = itemsIn || r.items || [];
   const rate = rateIn !== undefined ? rateIn : listRate(r, live);
-  const tl = (tlIn ?? r.tl ?? true) && !!rate;
   const tot = totals(items, 'offer');
-  const tTL = tl ? toTL(tot, rate) : null;
+  const tTL = rate ? toTL(tot, rate) : null; // TL sadece toplamda
   return (
     <article className="paper">
       <header className="paper-h">
         <img src={S.brand.logo || LOGO_MARK} alt="" />
         <div className="paper-shop"><b>{S.shop.name}</b><span>{[S.shop.address, S.shop.phone].filter(Boolean).join(' · ')}</span></div>
-        <div className="paper-no"><span>Ürün listesi</span><b className="num">#{r.no}</b><small>{new Date(r.updatedAt || r.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</small></div>
+        <div className="paper-no"><span>Ürün listesi</span><b className="num">#{r.no}</b><small>{new Date(r.updatedAt || r.createdAt).toLocaleDateString('tr-TR')}</small></div>
       </header>
       {(r.gname || r.userName) && <div className="paper-who">Müşteri: <b>{r.gname || r.userName}</b></div>}
       <div className="paper-scroll">
         <table className="ptable">
-          <thead><tr><th className="c">#</th><th>Ürün</th><th className="r">Adet</th><th className="r">{priced(r) ? 'Fiyat' : 'Liste fiyatı'}</th><th className="r">Tutar</th>{tl && <th className="r">TL</th>}</tr></thead>
+          <thead><tr><th className="c">#</th><th>Ürün</th><th className="r">Adet</th><th className="r">{priced(r) ? 'Fiyat' : 'Liste fiyatı'}</th><th className="r">Tutar</th></tr></thead>
           <tbody>
             {items.map((it, k) => {
               const sum = it.offer == null ? null : Number(it.offer) * it.qty;
+              const p = { ...(byId.get(it.id) || {}), ...it };
+              const big = imageList(p, S, 'lg');
               return (
                 <tr key={it.id + '-' + k}>
                   <td className="c muted num">{k + 1}</td>
-                  <td className="pt-name">{(() => { const p = { ...(byId.get(it.id) || {}), ...it }; return (
-                    <a href={links.product(p, S)} target="_blank" rel="noopener" title="Ürün sayfasını yeni sekmede aç">
-                      <Thumb p={p} size="sm" />
-                      <span className="pt-t"><span>{it.n}</span><code>{it.k}</code></span>
-                      <Icon n="ext" s={14} className="pt-ext" />
-                    </a>); })()}</td>
-                  <td className="r num"><b>{it.qty}</b></td>
-                  <td className="r num">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}</td>
-                  <td className="r num"><b>{sum == null ? '—' : fmt(sum, it.cur)}</b></td>
-                  {tl && <td className="r num muted">{sum == null || it.cur !== 'USD' ? '—' : fmtTL(sum * rate.usd)}</td>}
+                  <td className="pt-name">
+                    <div className="pt-row">
+                      <button className="pt-img" onClick={() => big.length && setZoom({ urls: big, title: it.n })} aria-label="Resmi büyüt" disabled={!big.length}><Thumb p={p} size="sm" /></button>
+                      <a className="pt-t" href={links.product(p, S)} target="_blank" rel="noopener" title="Ürün sayfasını yeni sekmede aç"><span>{it.n}</span><code>{it.k}</code></a>
+                    </div>
+                  </td>
+                  <td className="r num pt-qty">{it.qty}</td>
+                  <td className="r num pt-unit">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}</td>
+                  <td className="r num pt-sum">{sum == null ? '—' : fmt(sum, it.cur)}</td>
                 </tr>
               );
             })}
@@ -81,9 +83,9 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, tl: tlIn }) {
       </div>
       <footer className="paper-f">
         <div className="paper-tot"><span>{items.length} kalem · {items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet</span><b className="num">{fmtTotals(tot)}</b></div>
-        {tTL != null && <div className="paper-tl"><span>{rateLabel(rate)}</span><b className="num">{fmtTL(tTL)}</b></div>}
-        <p className="paper-note">{priced(r) ? 'Fiyatlar size özeldir.' : 'Liste fiyatlarıdır; fiyatlandırıp size dönüş yapacağız.'}</p>
+        {tTL != null && <div className="paper-tl"><span>TL karşılığı <small>({rateLabel(rate)})</small></span><b className="num">{fmtTL(tTL)}</b></div>}
       </footer>
+      {zoom && <Lightbox urls={zoom.urls} title={zoom.title} onClose={() => setZoom(null)} />}
     </article>
   );
 }
@@ -116,10 +118,9 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
   try { await Promise.all(['700 40px "Barlow Condensed"', '600 24px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif', '500 18px "JetBrains Mono"', '400 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'].map((f) => document.fonts.load(f))); } catch {}
   const logo = await loadImg(S.brand.logo || LOGO_MARK);
   const pics = await Promise.all(items.map((it) => loadImg(thumbSrc(it, S), true)));
-  const W = tl ? 1240 : 1080, P = 48, MAXH = 1700;
+  const W = 1080, P = 48, MAXH = 1700;
   const accent = S.brand.accent || '#2f55b0', priceC = S.brand.priceAccent || '#c2410c';
   const cols = [['#', 44, 'c'], ['', 84, 'c'], ['Ürün', 0, 'l'], ['Adet', 96, 'r'], [priced(r) ? 'Fiyat' : 'Liste fiyatı', 150, 'r'], ['Tutar', 160, 'r']];
-  if (tl) cols.push(['TL', 170, 'r']);
   const fixed = cols.reduce((n, c) => n + c[1], 0);
   cols[2][1] = W - 2 * P - fixed;
   const meas = document.createElement('canvas').getContext('2d');
@@ -180,7 +181,6 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
       const sum = it.offer == null ? null : Number(it.offer) * it.qty;
       cx = P;
       const cells = [String(k + 1), null, null, String(it.qty), it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur), sum == null ? '—' : fmt(sum, it.cur)];
-      if (tl) cells.push(sum == null || it.cur !== 'USD' ? '—' : fmtTL(sum * rate.usd));
       cols.forEach(([, w, al], ci) => {
         if (ci === 1) {
           const sz = 68, ix = cx + (w - sz) / 2, iy = y + (row.h - sz) / 2;
@@ -215,7 +215,6 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
         y += 50;
       }
       x.textAlign = 'left'; x.fillStyle = '#6b7280'; x.font = '400 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
-      x.fillText(priced(r) ? 'Fiyatlar size özeldir.' : 'Liste fiyatlarıdır; fiyatlandırıp size dönüş yapacağız.', P, y + 30);
     }
     // alt bilgi
     x.fillStyle = '#9ca3af'; x.font = '400 16px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.textAlign = 'center';
@@ -425,19 +424,15 @@ export function VitrinListEditor({ code, onClose }) {
   const live = useRate();
   const L0 = useMemo(() => decodeList(code), [code]);
   const [items, setItems] = useState(() => (L0 ? listItems(L0, byId) : []));
-  const [name, setName] = useState(L0?.name || '');
-  const [tl, setTl] = useState(true);
   const step = Number(S.pricing.adjustStep) || 1;
   if (!L0) return <Sheet title="Vitrin listesi" onClose={onClose}><p className="err">Bu link okunamadı. Linkin tamamını yapıştırdığınızdan emin olun.</p></Sheet>;
   const upd = (i, patch) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x)));
-  const L = { no: L0.no, name, at: Date.now(), priced: true, rate: live?.usd || L0.rate, items };
+  const L = { no: L0.no, at: Date.now(), priced: true, rate: live?.usd || L0.rate, items };
   const newLink = listLink(encodeList(L));
-  const r = listRecord(L, items);
   const rate = live || (L0.rate ? { usd: L0.rate, src: 'harem' } : null);
   return (
-    <Sheet wide title={`Vitrin listesi #${L0.no}`} sub="Fiyatları ayarlayın; yeni link ve resmi müşteriye gönderin. Hiçbir yere kaydedilmez." onClose={onClose}>
+    <Sheet wide title={`Vitrin listesi #${L0.no}`} sub="Fiyatları ayarlayın, fiyatlı yeni linki müşteriye gönderin. Hiçbir yere kaydedilmez." onClose={onClose}>
       <div className="share-sheet">
-        <label className="field"><span className="field-l">Müşteri</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Müşteri adı (isteğe bağlı)" /></label>
         <table className="itable vle">
           <thead><tr><th>Ürün</th><th className="r">Adet</th><th className="r">Liste</th><th className="r">Fiyat</th><th className="r">Tutar</th><th /></tr></thead>
           <tbody>
@@ -459,14 +454,13 @@ export function VitrinListEditor({ code, onClose }) {
             ))}
           </tbody>
         </table>
-        <label className="mini-check tl-toggle"><input type="checkbox" checked={tl} disabled={!rate} onChange={(e) => setTl(e.target.checked)} />TL karşılığını ekle {rate && <span className="muted">({rateLabel(rate)})</span>}</label>
-        <ListPaper r={r} rate={rate} tl={tl} />
+        <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(totals(items, 'offer'))}</b>{rate && toTL(totals(items, 'offer'), rate) != null && <span className="muted num">≈ {fmtTL(toTL(totals(items, 'offer'), rate))}</span>}</div>
         <div className="export-bar">
           <a className="btn wa" href={waLink('', 'Fiyatlı listeniz:\n' + newLink)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’ta müşteriye gönder</a>
           <button className="btn outline" onClick={() => copyText(newLink, 'Fiyatlı liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
           <a className="btn ghost" href={newLink} target="_blank" rel="noopener"><Icon n="ext" s={16} />Müşterinin göreceği hali aç</a>
         </div>
-        <p className="fine">“WhatsApp’ta müşteriye gönder” WhatsApp’ı açar, sohbeti seçip gönderirsiniz. Ya da linki kopyalayıp müşterinin sohbetine yapıştırın. Link müşteride fiyatlı tabloyu açar.</p>
+
       </div>
     </Sheet>
   );

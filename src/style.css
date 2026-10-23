@@ -921,3 +921,30 @@ a.btn { text-decoration: none; }
 .gguide ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; flex: 1; }
 .gguide li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .gguide li > b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 13px; flex: none; }
+/* liste tablosu: dolar tutarları belirgin, ürün resmi büyütülebilir, ad ürün sayfasına gider */
+.pt-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pt-img { flex: none; padding: 0; border-radius: 8px; cursor: zoom-in; }
+.pt-img .thumb { width: 52px; height: 52px; background: #fff; }
+.pt-img:disabled { cursor: default; }
+.pt-t { display: flex; flex-direction: column; min-width: 0; color: inherit; text-decoration: none; }
+.pt-t:hover > span { color: var(--accent); text-decoration: underline; }
+.ptable .pt-qty { font: 700 20px/1 var(--f-display); color: #111827; }
+.ptable .pt-unit { font: 600 19px/1 var(--f-display); color: #111827; }
+.ptable .pt-sum { font: 700 22px/1 var(--f-display); color: var(--price); }
+.paper-tl small { font-size: 12px; }
+.vle-tot { display: flex; align-items: baseline; justify-content: flex-end; gap: 12px; } .vle-tot b { font: 700 28px/1 var(--f-display); color: var(--price); }
+.gtop { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--top-h) + 8px); z-index: 6; }
+.gtop-t { display: flex; flex-direction: column; gap: 2px; }
+.gtop-sum { font: 700 20px/1 var(--f-display); color: var(--price); }
+.gtop-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 560px) { .gtop-btns { width: 100%; } .gtop-btns .btn { flex: 1; justify-content: center; } }
+.gsend-done { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.gline { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px 14px; padding: 12px; border-bottom: 1px solid var(--line-2); }
+.gline:last-child { border-bottom: 0; }
+.gline-p { display: flex; align-items: center; gap: 12px; min-width: 0; color: inherit; text-decoration: none; }
+.gline-p:hover .prow-name { color: var(--accent); text-decoration: underline; }
+.gline-ctl { display: grid; grid-template-columns: auto 76px 36px; align-items: center; gap: 10px; }
+.gline-sum { font: 700 18px/1 var(--f-display); text-align: right; }
+@media (max-width: 560px) { .gline { grid-template-columns: 1fr; } .gline-ctl { grid-template-columns: auto 1fr 36px; } }
+.gclear { align-self: center; }
+.pt-name a.pt-t { align-items: flex-start; flex-direction: column; gap: 2px; }

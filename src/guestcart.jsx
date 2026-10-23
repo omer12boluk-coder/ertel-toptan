@@ -1,20 +1,24 @@
 // Vitrin (/magaza) sepeti — olabildiğince basit:
 //   ürünleri ekle → Sepet → büyük yeşil "WhatsApp'tan gönder" → WhatsApp dükkan sohbetinde sadece liste linkiyle açılır → müşteri gönder'e basar.
 // Liste hiçbir yere kaydedilmez; ürünler ve adetler linkin içindedir (bkz. listcode.js). Pano / paylaş penceresi kullanılmaz.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore, setQty, freshStart, toast, go } from './store.js';
-import { Icon, Thumb, Stepper, Empty } from './ui.jsx';
-import { waLink } from './route.js';
+import { Icon, Thumb, Stepper, Empty, copyText } from './ui.jsx';
+import { waLink, links } from './route.js';
 import { fmt, totals, fmtTotals } from './utils.js';
-import { encodeList, listLink } from './listcode.js';
+import { encodeList, listLink, listItems, listRecord } from './listcode.js';
+import { renderListImages, currentRate } from './listsheet.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
+
+const isPhone = () => matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 export function GuestCart() {
   const { cart, byId, settings: S } = useStore();
   const [no] = useState(newNo);
   const [opened, setOpened] = useState(false);
+  const [files, setFiles] = useState(null); // telefonda paylaşılacak liste resimleri
 
   const lines = Object.entries(cart).map(([id, qty]) => ({ p: byId.get(Number(id)), qty })).filter((l) => l.p);
   const items = useMemo(() => lines.map(({ p, qty }) => ({ id: p.id, qty })), [JSON.stringify(cart), byId]);
@@ -22,7 +26,29 @@ export function GuestCart() {
   const link = useMemo(() => listLink(encodeList({ no, at: Date.now(), items })), [no, items]);
   const wa = S.shop.whatsapp ? waLink(S.shop.whatsapp, link) : null;
 
-  function send() {
+  // Telefonda paylaş menüsüyle resim + link birlikte gider; resimleri önceden hazırla (dokunma anında paylaşım açılabilsin)
+  useEffect(() => {
+    setFiles(null);
+    if (!isPhone() || !navigator.share || !items.length) return;
+    let live = true;
+    const t = setTimeout(async () => {
+      try {
+        const L = { no, at: Date.now(), rows: items.map((i) => ({ ...i, price: null })), priced: false };
+        const rec = listRecord(L, listItems(L, byId));
+        const blobs = await renderListImages(rec, { rate: currentRate() });
+        if (live) setFiles(blobs.map((b, i) => new File([b], `liste-${no}${blobs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' })));
+      } catch {}
+    }, 400);
+    return () => { live = false; clearTimeout(t); };
+  }, [items]);
+
+  async function send() {
+    if (isPhone() && navigator.share) {
+      try {
+        const data = files?.length && navigator.canShare?.({ files, text: link }) ? { files, text: link } : { text: link };
+        await navigator.share(data); setOpened(true); return;
+      } catch (e) { if (e.name === 'AbortError') return; }
+    }
     if (!wa) return toast('Dükkan WhatsApp numarası girilmemiş', 'bad');
     window.open(wa, '_blank', 'noopener');
     setOpened(true);
@@ -43,50 +69,43 @@ export function GuestCart() {
 
   return (
     <div className="page gcart">
-      <div className="gcart-head">
-        <h1 className="page-t">Sepetiniz <span className="muted">· {lines.length} ürün</span></h1>
-        <button className="btn sm ghost danger" onClick={reset}><Icon n="trash" s={15} />Sepeti temizle</button>
+      <div className="gtop">
+        <div className="gtop-t">
+          <h1 className="page-t">Sepetiniz</h1>
+          <span className="muted">{lines.length} ürün · <b className="num gtop-sum">{fmtTotals(tot)}</b></span>
+        </div>
+        <div className="gtop-btns">
+          <button className="btn wa" onClick={send} disabled={!wa && !isPhone()}><Icon n="wa" s={18} />WhatsApp’tan gönder</button>
+          <button className="btn outline" onClick={() => copyText(link, 'Liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
+        </div>
       </div>
+      {opened && (
+        <div className="gsend-done">
+          <span><b>WhatsApp açıldı.</b> Göndermediyseniz WhatsApp’ta <b>gönder</b>’e basın.</span>
+          <button className="btn sm outline" onClick={reset}><Icon n="check" s={15} />Gönderdim, sepeti temizle</button>
+        </div>
+      )}
+      {!S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
 
-      <ul className="clist">
+      <ul className="clist gclist">
         {lines.map(({ p, qty }) => (
-          <li key={p.id} className="cline">
-            <Thumb p={p} size="sm" />
-            <div className="cline-info">
-              <span className="prow-name">{p.n}</span>
-              <span className="prow-meta"><code>{p.k}</code>{p.r > 0 && <span>{fmt(p.r, p.cur)}</span>}</span>
-            </div>
-            <div className="cline-ctl">
+          <li key={p.id} className="gline">
+            <a className="gline-p" href={links.product(p, S)} target="_blank" rel="noopener" title="Ürünü yeni sekmede incele">
+              <Thumb p={p} size="sm" />
+              <span className="cline-info">
+                <span className="prow-name">{p.n}</span>
+                <span className="prow-meta"><code>{p.k}</code>{p.r > 0 && <span>{fmt(p.r, p.cur)}</span>}</span>
+              </span>
+            </a>
+            <div className="gline-ctl">
               <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
-              <b className="num cline-tot">{p.r > 0 ? fmt(p.r * qty, p.cur) : '—'}</b>
+              <b className="num gline-sum">{p.r > 0 ? fmt(p.r * qty, p.cur) : '—'}</b>
               <button className="icon-btn sm" onClick={() => setQty(p.id, 0)} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
             </div>
           </li>
         ))}
       </ul>
-
-      <div className="gsend">
-        <div className="gsend-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
-        {!opened ? (
-          <>
-            <button className="wa-go" onClick={send} disabled={!wa}>
-              <Icon n="wa" s={30} />
-              <span><b>WhatsApp’tan gönder</b><small>Sepetiniz bize gelir</small></span>
-            </button>
-            <p className="gsend-hint">Basınca WhatsApp açılır. Açılınca <b>sadece gönder tuşuna basın</b>, başka bir şey yazmanıza gerek yok.</p>
-          </>
-        ) : (
-          <div className="gsend-done">
-            <p><b>WhatsApp açıldı.</b> Mesajı gönderdiniz mi? Göndermediyseniz WhatsApp’ta <b>gönder</b> tuşuna basın.</p>
-            <div className="gsend-btns">
-              <a className="btn wa" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’ı tekrar aç</a>
-              <button className="btn outline" onClick={reset}><Icon n="check" s={16} />Gönderdim, sepeti temizle</button>
-            </div>
-          </div>
-        )}
-        {!S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
-        <p className="fine">Fiyatlar liste fiyatıdır. Size özel fiyatı WhatsApp’tan yazarız.</p>
-      </div>
+      <button className="btn sm ghost danger gclear" onClick={reset}><Icon n="trash" s={15} />Sepeti temizle</button>
     </div>
   );
 }
