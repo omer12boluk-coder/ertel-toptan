@@ -122,6 +122,8 @@ async function loadAll(u, A, background) {
     if (s.brand.theme === 'auto') s.brand.theme = 'light';
   }
   store.set({ settings: migrate(withDefaults(s)) });
+  // yönetici açınca herkese açık ayar kopyasını güncel tut (vitrin ve liste linki KDV/TL ayarlarını buradan okur)
+  if (admin && s && A.savePublicSettings) A.savePublicSettings(store.s.settings).catch((e) => console.warn(e));
   if (admin) {
     const fb = A.mode === 'firebase';
     const seed = await loadSeed();

@@ -94,7 +94,13 @@ export class FirebaseBackend {
   async loadSettings() { const s = await timeout(this.F.getDoc(this.d('settings', 'app'))); return s.exists() ? s.data() : null; }
   async saveSettings(S) {
     await this.F.setDoc(this.d('settings', 'app'), S);
-    await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {} });
+    await this.savePublicSettings(S);
+  }
+  // Giriş yapmayanların (vitrin, liste linki) göreceği ayarlar. Fiyatlandırmadan sadece gösterimle ilgili alanlar (KDV, TL, kur) gider.
+  async savePublicSettings(S) {
+    const p = S.pricing || {};
+    await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' } });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan
