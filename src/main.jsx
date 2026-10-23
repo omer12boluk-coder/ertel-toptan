@@ -11,6 +11,8 @@ import { Catalog } from './catalog.jsx';
 import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
+import { Landing, HomePage } from './home.jsx';
+import { startRate, syncNow } from './watch.js';
 
 // /admin = yönetim paneli, ana adres = bayi girişi, /magaza = herkese açık vitrin (bkz. route.js)
 const ADMIN_ROUTE = ROUTE.admin;
@@ -38,7 +40,9 @@ async function boot() {
   const A = fb ? new FirebaseBackend(cfg, area === 'admin' ? 'admin' : undefined) : new DemoBackend(await loadSeed(), loadSeedDesc, area);
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
   store.set({ api: A });
+  startRate(A);
   try { const pub = await A.publicInfo(); if (pub) store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub })) }); } catch {}
+  if (ROUTE.landing) { store.set({ boot: 'landing' }); return; }
   if (ROUTE.shop) return bootShop(A);
   try { store.set({ needsSetup: await A.needsSetup() }); } catch {}
 
@@ -104,9 +108,11 @@ async function boot() {
       if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
       if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
       loadCart();
+      if (admin) syncNow(false).catch(() => {});
       // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
       store.set({ boot: 'ready', tab: admin ? 'talepler' : 'katalog', openReq: null });
-      if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/'); }
+      if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
+      else if (!admin) store.set({ tab: 'anasayfa' });
     } catch (e) {
       console.error(e);
       store.set({ boot: 'error', bootError: 'Veriler yüklenemedi: ' + e.message });
@@ -124,12 +130,13 @@ function migrate(S) {
 async function bootShop(A) {
   if (store.s.settings.access?.publicShop === false) { store.set({ boot: 'error', bootError: 'Online vitrin şu an kapalı.' }); return; }
   store.set({ user: { uid: 'guest', role: 'public', name: 'Ziyaretçi' }, boot: 'loading' });
+  // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
+  if (ROUTE.reqId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   try {
     setCatalog(await A.loadPublicCatalog());
     A.watchCatalog?.((items) => items && setCatalog(items), true);
-    loadCart();
-    store.set({ boot: 'ready', tab: ROUTE.reqId ? 'talepler' : 'katalog', openReq: ROUTE.reqId || null });
-  } catch (e) { store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
+    if (!ROUTE.reqId) { loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
+  } catch (e) { if (!ROUTE.reqId) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
 }
 
 // Tema: yöneticinin varsayılanı + her cihazın kendi seçimi (üst menüdeki güneş/ay düğmesi)
@@ -253,9 +260,9 @@ function Login() {
   );
 }
 
-const NAV_USER = [['katalog', 'Katalog', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Profil', 'user']];
+const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Katalog', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Profil', 'user']];
 const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['katalog', 'Ürünler', 'box'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
-const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Taleplerim', 'chat']];
+const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Listem', 'cart']];
 
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
 function pageMenu(e, role) {
@@ -317,7 +324,7 @@ function Shell() {
               <Avatar u={user} size={34} />
             </button>
           )}
-          {admin && <button className="icon-btn hide-s" onClick={() => A.logout()} aria-label="Çıkış" title="Çıkış"><Icon n="out" s={18} /></button>}
+          {!pub && <button className="icon-btn logout-btn" onClick={() => A.logout()} aria-label="Çıkış yap" title="Çıkış yap"><Icon n="out" s={18} /></button>}
         </div>
       </header>
       {A.mode === 'demo' && admin && demoNote && (
@@ -327,12 +334,13 @@ function Shell() {
         </div>
       )}
       <main className="main">
+        {tab === 'anasayfa' && !admin && !pub && <HomePage />}
         {tab === 'katalog' && <Catalog admin={admin} />}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
         {tab === 'profil' && !pub && <Profile />}
         {tab === 'musteriler' && admin && <Customers />}
-        {tab === 'ayarlar' && admin && <><Settings /><Profile /></>}
+        {tab === 'ayarlar' && admin && <Settings />}
       </main>
       <nav className="botnav" aria-label="Alt menü">
         {nav.map(([k, l, i]) => (
@@ -342,6 +350,28 @@ function Shell() {
           </button>
         ))}
       </nav>
+    </div>
+  );
+}
+
+// Açılış ekranı: uzun sürerse (zayıf bağlantı, WhatsApp içi tarayıcı) yeniden deneme ve tarayıcıda açma seçeneği çıkar
+function Splash() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 9000); return () => clearTimeout(t); }, []);
+  return (
+    <div className="splash">
+      <Brand />
+      <div className="spinner" aria-label="Yükleniyor" />
+      {slow && (
+        <div className="slow">
+          <p>Bağlantı yavaş görünüyor…</p>
+          <div className="slow-btns">
+            <button className="btn primary" onClick={() => location.reload()}><Icon n="refresh" s={16} />Tekrar dene</button>
+            <button className="btn outline" onClick={() => copyText(location.href, 'Link kopyalandı — tarayıcınıza yapıştırın')}><Icon n="copy" s={16} />Linki kopyala</button>
+          </div>
+          <p className="fine">WhatsApp içinden açtıysanız sağ üstteki ⋮ menüsünden “Tarayıcıda aç”ı seçin.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -357,7 +387,8 @@ function App() {
   const { boot: b, bootError } = useStore();
   return (
     <>
-      {b === 'loading' && <div className="splash"><Brand /><div className="spinner" aria-label="Yükleniyor" /></div>}
+      {b === 'loading' && <Splash />}
+      {b === 'landing' && <Landing />}
       {b === 'error' && <div className="splash"><Brand /><p className="err">{bootError}</p><button className="btn outline" onClick={() => location.reload()}>Tekrar dene</button></div>}
       {b === 'login' && <Login />}
       {b === 'ready' && <Shell />}

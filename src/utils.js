@@ -117,3 +117,5 @@ export function hue(s) {
 
 export const usernameOk = (u) => /^[a-z0-9._-]{3,30}$/.test(u);
 export const cleanUsername = (u) => norm(u).trim().replace(/\s+/g, '.').replace(/[^a-z0-9._-]/g, '');
+
+export { cleanText } from './clean.js';

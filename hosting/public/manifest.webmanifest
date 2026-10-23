@@ -1,16 +1,29 @@
 {
-  "name": "ERTEL Toptan",
-  "short_name": "ERTEL Toptan",
+  "name": "ERTEL B2B",
+  "short_name": "ERTEL B2B",
   "description": "Bayilere özel toptan katalog",
   "lang": "tr",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/b2b",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f1f4f9",
   "theme_color": "#2f55b0",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

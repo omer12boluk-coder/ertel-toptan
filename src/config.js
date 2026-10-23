@@ -25,6 +25,8 @@ export const DEFAULT_SETTINGS = {
     adjustStep: 1, // yönetici teklif ekranında -/+ butonlarının adımı
     showRetail: true, // liste (perakende) fiyatı göster
     showSaving: false, // sepette "avantajınız" satırını göster
+    showTL: false, // dolar fiyatların TL karşılığını bayilere / vitrine de göster (yönetici her zaman görür)
+    manualRate: '', // doluysa Harem Altın kuru yerine bu kur kullanılır (1 USD = ? TL)
   },
   tiers: [
     { id: 'standart', name: 'Standart', pct: 0 },
@@ -72,6 +74,7 @@ export const DEFAULT_SETTINGS = {
     profilePhoto: true,
     history: true,
   },
+  home: { title: '', subtitle: '', announcements: [], banners: [] }, // bayi ana sayfası (Ayarlar > Bayi ana sayfası)
   categories: {}, // { "42": { name: "...", hidden: false, order: 0 } }
 };
 

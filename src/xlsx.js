@@ -1,3 +1,4 @@
+import { cleanText } from './clean.js';
 // Küçük, bağımlılıksız .xlsx / .csv okuyucu (ilk sayfayı satır nesnelerine çevirir)
 
 async function inflateRaw(bytes) {
@@ -48,7 +49,7 @@ function colIndex(ref) {
   return n - 1;
 }
 
-export async function readSheet(file) {
+export async function readSheet(file, sheetName) {
   const name = file.name.toLowerCase();
   if (name.endsWith('.csv')) return parseCSV(await file.text());
   const z = await unzip(await file.arrayBuffer());
@@ -67,7 +68,9 @@ export async function readSheet(file) {
   const wb = await z.text('xl/workbook.xml');
   if (wb && wbRels) {
     const wd = P.parseFromString(wb, 'application/xml');
-    const first = wd.getElementsByTagName('sheet')[0];
+    const all = [...wd.getElementsByTagName('sheet')];
+    const first = sheetName ? all.find((x) => x.getAttribute('name') === sheetName) : all[0];
+    if (sheetName && !first) return [];
     const rId = first?.getAttribute('r:id') || first?.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
     const rd = P.parseFromString(wbRels, 'application/xml');
     for (const r of rd.getElementsByTagName('Relationship')) {
@@ -140,7 +143,7 @@ export function rowsToProducts(rows) {
     const p = { id };
     const v = (f) => pick(o, K[f]);
     if (v('k') != null) p.k = String(v('k'));
-    if (v('n') != null) p.n = String(v('n')).replace(/\s+/g, ' ').trim();
+    if (v('n') != null) p.n = cleanText(String(v('n')));
     if (v('c') != null) p.c = Number(v('c')) || 0;
     if (has(o, K.c2)) { const c2 = Number(v('c2')); if (c2 && c2 !== p.c) p.c2 = c2; }
     if (v('r') != null) p.r = Number(v('r')) || 0;
@@ -171,14 +174,22 @@ function same(a, b) {
 }
 const byIdOld = (arr, id) => arr.find((x) => x.id === id);
 // Mevcut kataloğa birleştir: dosyada olmayan alanlar, elle yüklenen resimler ve elle girilen toptan fiyatlar korunur.
-export function mergeCatalog(current, incoming) {
+// Aynı stok kodlu ürün asla ikinci kez eklenmez: ürün no farklı olsa bile stok kodu eşleşirse mevcut ürün güncellenir.
+const codeKey = (k) => String(k ?? '').trim().toLowerCase();
+export function mergeCatalog(current, incomingIn) {
   const byId = new Map(current.map((p) => [p.id, p]));
-  let added = 0, updated = 0;
-  const seen = new Set();
-  for (const n of incoming) {
+  const byCode = new Map(); for (const p of current) if (codeKey(p.k)) byCode.set(codeKey(p.k), p.id);
+  let added = 0, updated = 0, dupSkipped = 0, matchedByCode = 0;
+  const seen = new Set(), seenCodes = new Set(), idMap = {};
+  for (const n0 of incomingIn) {
+    const ck = codeKey(n0.k);
+    if (ck && seenCodes.has(ck)) { dupSkipped++; continue; } // dosyada aynı stok kodu iki kez varsa ilki geçerli
+    if (ck) seenCodes.add(ck);
+    let n = n0;
+    if (!byId.has(n.id) && ck && byCode.has(ck)) { idMap[n.id] = byCode.get(ck); n = { ...n0, id: byCode.get(ck) }; matchedByCode++; }
     seen.add(n.id);
     const o = byId.get(n.id);
-    if (!o) { byId.set(n.id, { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n }); added++; continue; }
+    if (!o) { const p = { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n, nw: 1 }; byId.set(n.id, p); if (ck) byCode.set(ck, n.id); added++; continue; }
     const m = { ...o, ...n };
     if (n.w == null) m.w = o.w ?? null;
     // Liste fiyatı değiştiyse işaretle: yönetici toptan fiyatı kontrol edene kadar uyarı görünür
@@ -192,5 +203,5 @@ export function mergeCatalog(current, incoming) {
   const missing = current.filter((p) => !seen.has(p.id)).length;
   const list = [...byId.values()].sort((a, b) => b.id - a.id);
   const priceChanged = list.filter((p) => p.pc && !byIdOld(current, p.id)?.pc).length;
-  return { list, added, updated, missing, priceChanged };
+  return { list, added, updated, missing, priceChanged, dupSkipped, matchedByCode, idMap };
 }

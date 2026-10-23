@@ -137,6 +137,7 @@ export class DemoBackend {
     this.db.messages[id] = msgs.map((m) => ({ id: rid(), ...m }));
     this.persist(); return id;
   }
+  watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
   async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => p); }
   async hasPublicCatalog() { return true; }
   async savePublicCatalog() {}

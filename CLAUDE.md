@@ -10,11 +10,14 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 ## Yayın
 - `main`'e push = GitHub Actions "Yayınla" → Firebase Hosting + kurallar (erteltoptan.web.app). Değişiklikten sonra build.py çalıştırıp çıktıyı da commit et.
 - Firebase projesi `erteltoptan`, Spark (ücretsiz) plan. Kullanıcı Blaze istemiyor; Storage / Cloud Functions yok.
-- Adresler: `/` bayi, `/admin` yönetim paneli (ayrı oturum), `/magaza` herkese açık vitrin, `/t/<id>` ve `/admin/t/<id>` talep linkleri.
+- Adresler: `/` giriş sayfası (Online mağaza / Bayi girişi), `/b2b` bayi uygulaması (ana sayfa + katalog…), `/admin` yönetim paneli (ayrı oturum), `/magaza` herkese açık vitrin (sadece ürünler + listem), `/magaza/t/<id>` vitrin listesi (tablo + PNG resim, `src/listsheet.jsx`), `/b2b/t/<id>` (eski `/t/<id>` de çalışır) ve `/admin/t/<id>` talep linkleri.
+- Excel içe aktarma (Ayarlar > Veri): ürün no ya da stok kodu eşleşirse günceller; aynı stok koduyla ikinci ürün asla eklenmez (`src/xlsx.js` mergeCatalog).
+- Bayi ana sayfası içeriği `settings.home` (Ayarlar > Bayi ana sayfası).
 
 ## Site eşitleme
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler.
-- `worker/index.js` Cloudflare Worker "ertel-b2b-watch": dakikada bir beslemeyi kontrol eder, değişince sync'i tetikler (Actions "Bekçiyi yayınla" yükler).
+- `worker/index.js` Cloudflare Worker "ertel-b2b-watch": dakikada bir beslemeyi kontrol eder, değişince sync'i tetikler (Actions "Bekçiyi yayınla" yükler). workers.dev adresi `hosting/public/config.js` → `window.WATCH_URL`: `GET /rate` Harem Altın dolar satış kuru, `POST /check` (panel açılınca), `POST /sync` ("Şimdi eşitle").
+- Ürün adları `src/clean.js` ile temizlenir (Windows-1252 kalıntısı, &#..; kodları).
 - Siteye toplu istek atma (IP engeli yemiştik). Beslemede stok adedi yok.
 
 ## Gizli ayarlar (GitHub Actions secrets) — değerlerini asla isteme/yazdırma

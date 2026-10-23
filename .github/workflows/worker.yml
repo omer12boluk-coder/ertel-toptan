@@ -35,6 +35,21 @@ jobs:
             id=$(curl -s -X POST -H "$auth" -H "Content-Type: application/json" "$api" -d '{"title":"ertel-b2b-sync"}' | node -e 'const r=JSON.parse(require("fs").readFileSync(0));if(!r.success){console.error(JSON.stringify(r.errors));process.exit(1)}console.log(r.result.id)')
           fi
           sed -i "s/__KV_ID__/$id/" wrangler.toml
+      - name: workers.dev adresi hazırla
+        if: steps.ok.outputs.go == 'yes'
+        run: |
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain"
+          auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          sub=$(curl -s -H "$auth" "$api" | node -e 'try{const r=JSON.parse(require("fs").readFileSync(0));console.log(r.result&&r.result.subdomain||"")}catch(e){console.log("")}')
+          if [ -z "$sub" ]; then
+            for name in ertelgsm ertel-b2b ertel-b2b-$RANDOM; do
+              ok=$(curl -s -X PUT -H "$auth" -H "Content-Type: application/json" "$api" -d "{\"subdomain\":\"$name\"}" | node -e 'const r=JSON.parse(require("fs").readFileSync(0));console.log(r.success?"1":"")')
+              if [ -n "$ok" ]; then sub=$name; break; fi
+            done
+          fi
+          echo "SUB=$sub" >> $GITHUB_ENV
+          echo "::notice title=Bekçi adresi::https://ertel-b2b-watch.$sub.workers.dev"
+
       - name: Yükle
         if: steps.ok.outputs.go == 'yes'
         run: |
@@ -42,3 +57,10 @@ jobs:
           npx -y wrangler@3 deploy 2>&1 | tail -n 20 | tee out.txt || { echo "::error title=Yükleme hatası::$(tail -n 8 out.txt | tr '\n' ' ')"; exit 1; }
           printf '%s' "$GH_DISPATCH_TOKEN" | npx -y wrangler@3 secret put GH_TOKEN 2>&1 | tail -n 5 | tee out2.txt || { echo "::error title=Gizli ayar hatası::$(tail -n 5 out2.txt | tr '\n' ' ')"; exit 1; }
           echo "::notice title=Bekçi yayında::Dakikada bir siteyi kontrol ediyor."
+      - name: Kur kontrol (Harem Altın)
+        if: steps.ok.outputs.go == 'yes'
+        continue-on-error: true
+        run: |
+          sleep 15
+          out=$(curl -s -m 20 "https://ertel-b2b-watch.$SUB.workers.dev/rate" || true)
+          echo "::notice title=Kur cevabı::$out"

@@ -2,7 +2,7 @@
 name = "ertel-b2b-watch"
 main = "worker/index.js"
 compatibility_date = "2025-06-01"
-workers_dev = false
+workers_dev = true # uygulamanın kullandığı küçük web adresi (/rate, /sync)
 
 [triggers]
 crons = ["* * * * *"]

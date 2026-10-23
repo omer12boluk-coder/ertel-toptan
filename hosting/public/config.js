@@ -10,3 +10,5 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: "1053773699238",
   appId: "1:1053773699238:web:72cdb3d5513cad8c29bc67"
 };
+// Site bekçisinin (Cloudflare) adresi: dolar kuru ve "Şimdi eşitle" butonu bunu kullanır
+window.WATCH_URL = "";

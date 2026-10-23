@@ -2,8 +2,10 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now } from './utils.js';
-import { ProductEdit } from './admin.jsx';
+import { links } from './route.js';
+import { ProductEdit, SyncButton } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
+import { TLHint } from './listsheet.jsx';
 
 export function useTree() {
   const { catalog, settings: S } = useStore();
@@ -43,6 +45,7 @@ export function PriceBlock({ p, big }) {
     return (
       <div className={'price' + (big ? ' big' : '')}>
         {pr.mine == null ? <span className="price-ask">Fiyat sorun</span> : <span className="price-mine"><small>Fiyat:</small>{fmt(pr.mine, p.cur)}</span>}
+        {S.pricing.showTL && <TLHint v={pr.mine} cur={p.cur} />}
       </div>
     );
   }
@@ -52,6 +55,7 @@ export function PriceBlock({ p, big }) {
       {pr.mine == null
         ? <span className="price-ask">Fiyat sorun</span>
         : <span className="price-mine"><small>{pr.src === 'ozel' ? 'Size özel:' : 'Toptan:'}</small>{fmt(pr.mine, p.cur)}</span>}
+      {(user?.role === 'admin' || S.pricing.showTL) && <TLHint v={pr.mine} cur={p.cur} />}
     </div>
   );
 }
@@ -163,6 +167,7 @@ export function Catalog({ admin }) {
                 </label>
               )}
               {admin && <button className="chip accent" onClick={() => setEdit({})}><Icon n="plus" s={15} />Yeni ürün</button>}
+              {admin && <SyncButton small />}
             </div>
           </div>
 
@@ -218,7 +223,7 @@ function ProductRow({ p, admin, onOpen }) {
   const { settings: S, cart, user } = useStore();
   const qty = cart[p.id] || 0;
   const st = stockInfo(p, S);
-  const site = p.u ? S.catalog.siteUrl + p.u : null;
+  const site = links.product(p, S);
   const menu = (e) => openMenu(e, admin ? [
     { label: 'Düzenle', icon: 'edit', onClick: onOpen },
     { label: p.a ? 'Pasif yap (bayilerden gizle)' : 'Aktif yap', icon: p.a ? 'eyeoff' : 'eye', onClick: () => quickSave(p, { a: p.a ? 0 : 1 }, p.a ? 'Ürün pasif yapıldı' : 'Ürün aktif yapıldı') },
@@ -262,7 +267,7 @@ function ProductRow({ p, admin, onOpen }) {
         ) : qty > 0 ? (
           <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
         ) : (
-          <button className="btn sm add" onClick={() => setQty(p.id, 1)} disabled={p.s <= 0 && S.catalog.stockMode !== 'hidden' && false}><Icon n="plus" s={15} />Sepete</button>
+          <button className="btn sm add" onClick={() => setQty(p.id, 1)} disabled={p.s <= 0 && S.catalog.stockMode !== 'hidden' && false}><Icon n="plus" s={15} />{user?.role === 'public' ? 'Ekle' : 'Sepete'}</button>
         )}
       </div>
     </li>
@@ -276,7 +281,7 @@ function ProductSheet({ p, onClose }) {
   const pr = priceFor(p, S, user, userPrices);
   const ask = async () => { onClose(); await askAbout(p, qty); };
   return (
-    <Sheet title="Ürün detayı" onClose={onClose} footer={<>
+    <Sheet wide title="Ürün detayı" onClose={onClose} footer={<>
       {S.requests.allowQuote && user?.role !== 'public' && <button className="btn ghost" onClick={ask}><Icon n="chat" s={16} />Bu ürünü sor</button>}
       <button className="btn primary" onClick={() => { setQty(p.id, qty); toast('Sepete eklendi'); onClose(); }}><Icon n="cart" s={16} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>
     </>}>
@@ -307,7 +312,8 @@ export function Gallery({ p }) {
   const [bad, setBad] = useState({});
   const [zoom, setZoom] = useState(null);
   const track = useRef(null);
-  const box = zoom != null && <Lightbox urls={urls} start={zoom} title={p.n} onClose={() => setZoom(null)} />;
+  const off = p.img ? 1 : 0;
+  const box = zoom != null && <Lightbox urls={urls} thumbs={thumbs} start={zoom} title={p.n} onClose={() => setZoom(null)} />;
   if (slides.length <= 1) return (
     <>
       <button className="gal-single" onClick={() => urls.length && setZoom(0)} aria-label="Resmi büyüt" disabled={!urls.length}>
@@ -316,74 +322,124 @@ export function Gallery({ p }) {
       {box}
     </>
   );
-  const goTo = (k) => { setI(k); track.current?.children[k]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }); };
+  const goTo = (k) => { setI(k); const el = track.current; if (el) el.scrollTo({ left: k * el.clientWidth, behavior: 'smooth' }); };
   const onScroll = (e) => { const el = e.currentTarget; setI(Math.round(el.scrollLeft / el.clientWidth)); };
   return (
     <div className="gallery">
-      <div className="gal-track" ref={track} onScroll={onScroll}>
-        {slides.map((u, k) => (
-          <div className="gal-slide" key={k}>
-            {u == null ? <Thumb p={{ ...p, pi: null }} size="lg" /> : bad[k] ? <Thumb p={{ ...p, pi: null, img: null }} size="lg" /> : (
-              <button className="gal-open" onClick={() => setZoom(k - (p.img ? 1 : 0))} aria-label="Resmi büyüt">
-                <img src={u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} onError={() => setBad((b) => ({ ...b, [k]: 1 }))} />
-              </button>
-            )}
-          </div>
-        ))}
+      <div className="gal-stage">
+        <div className="gal-track" ref={track} onScroll={onScroll}>
+          {slides.map((u, k) => (
+            <div className="gal-slide" key={k}>
+              {u == null ? <Thumb p={{ ...p, pi: null }} size="lg" /> : bad[k] ? <Thumb p={{ ...p, pi: null, img: null }} size="lg" /> : (
+                <button className="gal-open" onClick={() => setZoom(k - off)} aria-label="Resmi büyüt">
+                  <img src={u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} onError={() => setBad((b) => ({ ...b, [k]: 1 }))} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <span className="gal-count num"><Icon n="zoom" s={13} /> {i + 1} / {slides.length}</span>
+        {i > 0 && <button className="gal-nav prev" onClick={() => goTo(i - 1)} aria-label="Önceki resim"><Icon n="back" s={18} /></button>}
+        {i < slides.length - 1 && <button className="gal-nav next" onClick={() => goTo(i + 1)} aria-label="Sonraki resim"><Icon n="back" s={18} /></button>}
       </div>
-      <span className="gal-count num"><Icon n="zoom" s={13} /> {i + 1} / {slides.length}</span>
-      {i > 0 && <button className="gal-nav prev" onClick={() => goTo(i - 1)} aria-label="Önceki resim"><Icon n="back" s={18} /></button>}
-      {i < slides.length - 1 && <button className="gal-nav next" onClick={() => goTo(i + 1)} aria-label="Sonraki resim"><Icon n="back" s={18} /></button>}
-      <div className="gal-thumbs">
-        {slides.map((u, k) => (
-          <button key={k} className={'gal-th' + (k === i ? ' on' : '')} onClick={() => goTo(k)} aria-label={`Resim ${k + 1}`}>
-            {u == null ? <Thumb p={{ ...p, pi: null }} size="sm" /> : <img src={thumbs[k - (p.img ? 1 : 0)] || u} alt="" loading="lazy" />}
-          </button>
-        ))}
-      </div>
+      <ThumbStrip n={slides.length} active={i} onPick={goTo} render={(k) => (slides[k] == null ? <Thumb p={{ ...p, pi: null }} size="sm" /> : <img src={thumbs[k - off] || slides[k]} alt="" loading="lazy" />)} />
       {box}
     </div>
   );
 }
 
-// Tam ekran resim görüntüleyici: kaydır, oklar, dokununca / tıklayınca 2,5x yakınlaştır
-export function Lightbox({ urls, start = 0, title, onClose }) {
+// Küçük resim şeridi: taşarsa iki yanda ok çıkar, fare tekerleğiyle yana kayar, seçili resmi hep görünür tutar
+export function ThumbStrip({ n, active, onPick, render, dark }) {
+  const ref = useRef(null);
+  const [edge, setEdge] = useState({ l: false, r: false });
+  const measure = useCallback(() => {
+    const el = ref.current; if (!el) return;
+    setEdge({ l: el.scrollLeft > 2, r: el.scrollLeft + el.clientWidth < el.scrollWidth - 2 });
+  }, []);
+  useEffect(() => {
+    measure();
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(measure); ro.observe(el);
+    const wheel = (e) => {
+      if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      e.preventDefault(); el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener('wheel', wheel, { passive: false });
+    return () => { ro.disconnect(); el.removeEventListener('wheel', wheel); };
+  }, [n]);
+  useEffect(() => {
+    const el = ref.current; const b = el?.children[active]; if (!b) return;
+    const l = b.offsetLeft - el.offsetLeft, r = l + b.offsetWidth;
+    if (l < el.scrollLeft + 8) el.scrollTo({ left: l - 40, behavior: 'smooth' });
+    else if (r > el.scrollLeft + el.clientWidth - 8) el.scrollTo({ left: r - el.clientWidth + 40, behavior: 'smooth' });
+  }, [active]);
+  const page = (d) => { const el = ref.current; el?.scrollBy({ left: d * el.clientWidth * 0.8, behavior: 'smooth' }); };
+  return (
+    <div className={'strip' + (dark ? ' dark' : '')}>
+      {edge.l && <button className="strip-arrow l" onClick={() => page(-1)} aria-label="Önceki resimler"><Icon n="back" s={16} /></button>}
+      <div className="gal-thumbs" ref={ref} onScroll={measure}>
+        {Array.from({ length: n }, (_, k) => (
+          <button key={k} className={'gal-th' + (k === active ? ' on' : '')} onClick={() => onPick(k)} aria-label={`Resim ${k + 1}`} aria-current={k === active}>
+            {render(k)}
+          </button>
+        ))}
+      </div>
+      {edge.r && <button className="strip-arrow r" onClick={() => page(1)} aria-label="Sonraki resimler"><Icon n="back" s={16} /></button>}
+    </div>
+  );
+}
+
+// Resim görüntüleyici: resim ekrana sığar (büyütülmez). İstenirse büyüteçle 2 kat yakınlaştırılır.
+export function Lightbox({ urls, thumbs, start = 0, title, onClose }) {
   const [i, setI] = useState(start);
   const [zoomed, setZoomed] = useState(false);
   const track = useRef(null);
+  const imgs = useRef([]);
+  const iRef = useRef(start); iRef.current = i;
+  const go = useCallback((k) => {
+    const n = Math.max(0, Math.min(urls.length - 1, k));
+    setZoomed(false); setI(n);
+    const el = track.current; if (el) el.scrollTo({ left: n * el.clientWidth, behavior: 'smooth' });
+  }, [urls.length]);
   useEffect(() => {
-    track.current?.children[start]?.scrollIntoView({ block: 'nearest', inline: 'start' });
-    const k = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); onClose(); } if (e.key === 'ArrowRight') go(1); if (e.key === 'ArrowLeft') go(-1); };
+    const el = track.current; if (el) el.scrollLeft = start * el.clientWidth;
+    const k = (e) => {
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); onClose(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(iRef.current + 1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(iRef.current - 1); }
+    };
     addEventListener('keydown', k, true); document.body.classList.add('noscroll');
     return () => { removeEventListener('keydown', k, true); document.body.classList.remove('noscroll'); };
   }, []);
-  function go(d) {
-    setZoomed(false);
-    setI((cur) => { const n = Math.max(0, Math.min(urls.length - 1, cur + d)); track.current?.children[n]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }); return n; });
-  }
-  function toggleZoom(e, k) {
-    const sc = e.currentTarget;
+  function toggleZoom(e) {
+    const img = imgs.current[i]; if (!img) return;
     if (zoomed) { setZoomed(false); return; }
-    const r = sc.getBoundingClientRect(); const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    const r = img.getBoundingClientRect();
+    const fx = e?.clientX != null ? (e.clientX - r.left) / r.width : 0.5, fy = e?.clientY != null ? (e.clientY - r.top) / r.height : 0.5;
+    img.style.setProperty('--zw', r.width * 2 + 'px');
     setZoomed(true);
-    requestAnimationFrame(() => { sc.scrollLeft = fx * sc.scrollWidth - r.width / 2; sc.scrollTop = fy * sc.scrollHeight - r.height / 2; });
+    requestAnimationFrame(() => { const sc = img.parentElement; sc.scrollLeft = fx * img.offsetWidth - sc.clientWidth / 2; sc.scrollTop = fy * img.offsetHeight - sc.clientHeight / 2; });
   }
+  const many = urls.length > 1;
   return (
-    <div className="lb" role="dialog" aria-modal="true" aria-label={title}>
-      <div className={'lb-track' + (zoomed ? ' locked' : '')} ref={track} onScroll={(e) => { if (!zoomed) setI(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth)); }}>
+    <div className={'lb' + (many ? ' many' : '')} role="dialog" aria-modal="true" aria-label={title}>
+      <div className={'lb-track' + (zoomed ? ' locked' : '')} ref={track} onScroll={(e) => { if (!zoomed) { const el = e.currentTarget; const n = Math.round(el.scrollLeft / el.clientWidth); if (n !== iRef.current) setI(n); } }}>
         {urls.map((u, k) => (
-          <div key={k} className={'lb-slide' + (zoomed && k === i ? ' zoomed' : '')} onClick={(e) => k === i && toggleZoom(e, k)}>
-            <img src={u} alt={`${title} – resim ${k + 1}`} draggable="false" />
+          <div key={k} className={'lb-slide' + (zoomed && k === i ? ' zoomed' : '')} onClick={(e) => { if (e.target === e.currentTarget && !zoomed) onClose(); }}>
+            <img ref={(el) => (imgs.current[k] = el)} src={u} alt={`${title} – resim ${k + 1}`} draggable="false" loading={Math.abs(k - start) > 1 ? 'lazy' : 'eager'}
+              onDoubleClick={(e) => k === i && toggleZoom(e)} onClick={(e) => zoomed && k === i && toggleZoom(e)} />
           </div>
         ))}
       </div>
       <div className="lb-top">
         <span className="num">{i + 1} / {urls.length}</span>
-        <span className="lb-hint">{zoomed ? 'Küçültmek için dokunun' : 'Yakınlaştırmak için dokunun'}</span>
+        <span className="lb-title">{title}</span>
+        <button className={'lb-btn' + (zoomed ? ' on' : '')} onClick={() => toggleZoom()} aria-label={zoomed ? 'Küçült' : 'Yakınlaştır'} title={zoomed ? 'Küçült' : 'Yakınlaştır (çift tıklama)'}><Icon n="zoom" s={20} /></button>
         <button className="lb-btn" onClick={onClose} aria-label="Kapat"><Icon n="x" s={22} /></button>
       </div>
-      {i > 0 && <button className="lb-btn lb-nav prev" onClick={() => go(-1)} aria-label="Önceki"><Icon n="back" s={24} /></button>}
-      {i < urls.length - 1 && <button className="lb-btn lb-nav next" onClick={() => go(1)} aria-label="Sonraki"><Icon n="back" s={24} /></button>}
+      {i > 0 && <button className="lb-btn lb-nav prev" onClick={() => go(i - 1)} aria-label="Önceki"><Icon n="back" s={24} /></button>}
+      {i < urls.length - 1 && <button className="lb-btn lb-nav next" onClick={() => go(i + 1)} aria-label="Sonraki"><Icon n="back" s={24} /></button>}
+      {many && <div className="lb-strip"><ThumbStrip dark n={urls.length} active={i} onPick={go} render={(k) => <img src={thumbs?.[k] || urls[k]} alt="" loading="lazy" />} /></div>}
     </div>
   );
 }

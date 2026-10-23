@@ -6,33 +6,22 @@ import { ls } from './utils.js';
 import { fmt, totals, fmtTotals, when, now, roundStep } from './utils.js';
 import { STATUS, TYPE, OPEN_STATUSES } from './config.js';
 import { CustomerSheet } from './admin.jsx';
+import { GuestLists, AdminListShare, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
 
 const FILTERS_ADMIN = [
   ['open', 'Açık'], ['new', 'Yeni'], ['offered', 'Teklifte'], ['accepted', 'Hazırlanacak'], ['ready', 'Hazır'], ['closed', 'Kapanan'], ['all', 'Hepsi'],
 ];
 const FILTERS_USER = [['open', 'Açık'], ['closed', 'Geçmiş'], ['all', 'Hepsi']];
 
-// Vitrin müşterisi giriş yapmadığı için talepleri bu cihazda hatırlanan numaralardan yüklenir
-function useGuestRequests(on) {
-  const [list, setList] = useState([]);
-  const openReq = useStore((s) => s.openReq);
-  useEffect(() => {
-    if (!on) return;
-    const ids = [...new Set([openReq, ...ls.get('guest-reqs', [])].filter(Boolean))];
-    if (openReq && !ls.get('guest-reqs', []).includes(openReq)) ls.set('guest-reqs', [openReq, ...ls.get('guest-reqs', [])].slice(0, 30));
-    const map = new Map();
-    const unsubs = ids.map((id) => api().watchRequest(id, (r) => { if (r) map.set(id, r); else map.delete(id); setList([...map.values()].sort((a, b) => b.updatedAt - a.updatedAt)); }));
-    return () => unsubs.forEach((u) => u && u());
-  }, [on, openReq]);
-  return list;
+export function Requests() {
+  const pub = useStore((s) => s.user.role === 'public');
+  return pub ? <GuestLists /> : <RequestsInner />;
 }
 
-export function Requests() {
-  const { requests: all, user, openReq, settings: S } = useStore();
+function RequestsInner() {
+  const { requests, user, openReq, settings: S } = useStore();
   const admin = user.role === 'admin';
-  const pub = user.role === 'public';
-  const guestList = useGuestRequests(pub);
-  const requests = pub ? guestList : all;
+  const pub = false;
   const [f, setF] = useState('open');
   const [q, setQ] = useState('');
   const [newMsg, setNewMsg] = useState(false);
@@ -119,7 +108,7 @@ function ReqCard({ r, admin, on }) {
   );
 }
 
-function NewMessage({ onClose }) {
+export function NewMessage({ onClose }) {
   const { user } = useStore();
   const [t, setT] = useState('');
   const send = async () => {
@@ -151,6 +140,8 @@ export function RequestDetail({ id }) {
   const [text, setText] = useState('');
   const [cust, setCust] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [share, setShare] = useState(false);
+  const rate = useRate();
   const endRef = useRef(null);
 
   useEffect(() => api().watchMessages(id, setMsgs), [id]);
@@ -201,6 +192,14 @@ export function RequestDetail({ id }) {
     const changes = diffText(draft);
     await setStatus('accepted', { items: draft }, 'Onaylandı, hazırlanıyor' + (changes.length ? ' · ' + changes.join(' · ') : '') + ` · Toplam ${fmtTotals(totals(draft, 'offer'))}`);
     toast('Onaylandı');
+  }
+  // Vitrin listesi: fiyatları kaydet (gerekirse) ve tablo resmini / linkini hazırla
+  async function prepareList() {
+    if (dirty || r.status === 'new') {
+      const changes = diffText(draft);
+      await setStatus(r.status === 'new' ? 'offered' : r.status, { items: draft }, 'Fiyatlandırıldı' + (changes.length ? ' · ' + changes.join(' · ') : '') + ` · Toplam ${fmtTotals(totals(draft, 'offer'))}`);
+    }
+    setShare(true);
   }
   async function finish(status) {
     await setStatus(status);
@@ -306,12 +305,14 @@ export function RequestDetail({ id }) {
             {S.pricing.showRetail && <span className="muted">Liste <span className="num">{fmtTotals(tList)}</span></span>}
             <span className="muted">{admin ? 'İstenen' : 'Sepet'} <span className="num">{fmtTotals(tAsked)}</span></span>
             <span className="rd-total">Teklif <b className="num">{fmtTotals(tOffer)}</b></span>
+            {admin && rate && toTL(tOffer, rate) != null && <span className="muted rd-tl" title={rateLabel(rate)}>≈ <b className="num">{fmtTL(toTL(tOffer, rate))}</b></span>}
           </div>
         </div>
       )}
 
       <div className="rd-actions">
-        {admin && editable && (
+        {admin && r.guest && items.length > 0 && <button className="btn primary" onClick={prepareList}><Icon n="send" s={16} />{dirty || r.status === 'new' ? 'Fiyatları kaydet, resmi hazırla' : 'Tablo resmi / link'}</button>}
+        {admin && editable && !r.guest && (
           <>
             <button className="btn outline" onClick={sendOffer}><Icon n="send" s={16} />Teklif gönder<small className="hide-s">müşteri onaylasın</small></button>
             <button className="btn primary" onClick={approve}><Icon n="check" s={16} />{r.status === 'accepted' && !dirty ? 'Onaylı' : 'Onayla, hazırlıyorum'}</button>
@@ -354,6 +355,7 @@ export function RequestDetail({ id }) {
           <button className="btn primary icon" onClick={() => send()} disabled={!text.trim()} aria-label="Gönder"><Icon n="send" s={18} /></button>
         </div>
       </div>
+      {share && <Sheet wide title={`Liste #${r.no}`} sub="Müşteriye resim ya da link olarak gönderin" onClose={() => setShare(false)}><AdminListShare r={r} items={items} /></Sheet>}
       {cust && <CustomerSheet c={cust} onClose={() => setCust(null)} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>

@@ -7,6 +7,8 @@ import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
 import { imageList } from './catalog.jsx';
+import { rateLabel } from './listsheet.jsx';
+import { syncNow } from './watch.js';
 
 const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')));
 
@@ -320,7 +322,10 @@ export function CustomerSheet({ c, onClose }) {
     <Sheet wide title={live.name || live.username} sub={`@${live.username} · ${live.shop || ''}`} onClose={onClose}
       footer={tab === 'info' ? <button className="btn primary" onClick={saveInfo}><Icon n="check" s={16} />Kaydet</button> : tab === 'prices' ? <button className="btn primary" onClick={savePrices} disabled={!prices}><Icon n="check" s={16} />Fiyatları kaydet</button> : null}>
       <div className="cust-head">
-        <Avatar u={live} size={64} />
+        <div className="avatar-edit sm">
+          <Avatar u={live} size={64} />
+          {live.photo && <button className="avatar-del" onClick={() => api().updateUser(live.uid, { photo: '' }).then(() => toast('Müşterinin fotoğrafı kaldırıldı'))} aria-label="Fotoğrafı kaldır" title="Fotoğrafı kaldır"><Icon n="trash" s={14} /></button>}
+        </div>
         <div className="cust-kpis">
           <div><b className="num">{live.stats?.done || 0}</b><span>teslim aldı</span></div>
           <div className={(live.stats?.noshow || 0) >= S.requests.noShowWarn ? 'warn' : ''}><b className="num">{live.stats?.noshow || 0}</b><span>gelmedi</span></div>
@@ -398,7 +403,9 @@ export function CustomerSheet({ c, onClose }) {
 
 // =========================================================================
 // Ayarlar
-const SECTIONS = [['genel', 'Genel'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['kategori', 'Kategoriler'], ['veri', 'Veri']];
+const SECTIONS = [['genel', 'Genel'], ['anasayfa', 'Bayi ana sayfası'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['kategori', 'Kategoriler'], ['veri', 'Veri'], ['hesap', 'Hesabım']];
+// hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
+const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], kategori: ['categories'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -410,6 +417,9 @@ export function Settings() {
   const dirty = JSON.stringify(d) !== JSON.stringify(settings);
   const set = (path, v) => setD((x) => { const n = structuredClone(x); const ks = path.split('.'); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k] = o[k] ?? {})); o[ks.at(-1)] = v; return n; });
   const sample = catalog.find((p) => p.w == null && p.r >= 20) || catalog[0];
+  const secDirty = (k) => (SEC_KEYS[k] || []).some((key) => JSON.stringify(d[key]) !== JSON.stringify(settings[key]));
+  // kaydetmeden sayfadan çıkılırsa uyar
+  useEffect(() => { if (!dirty) return; const h = (e) => { e.preventDefault(); e.returnValue = ''; }; addEventListener('beforeunload', h); return () => removeEventListener('beforeunload', h); }, [dirty]);
 
   async function save() {
     setBusy(true);
@@ -424,13 +434,21 @@ export function Settings() {
       const { items: incoming, descs } = rowsToProducts(rows);
       if (!incoming.length) throw new Error('Dosyada ürün satırı bulunamadı (urun_id veya “Ürün ID” sütunu gerekli)');
       const res = mergeCatalog(catalog.map(({ _s, _t, ...p }) => p), incoming);
-      setImp({ ...res, descs, file: file.name, rows: incoming.length, fields: Object.keys(Object.assign({}, ...incoming.slice(0, 50))) });
+      for (const [from, to] of Object.entries(res.idMap)) if (descs[from] != null) { descs[to] = descs[from]; delete descs[from]; }
+      // "Kategoriler" sayfası varsa yeni kategori adlarını da al
+      let catNames = {};
+      try { for (const r of await readSheet(file, 'Kategoriler')) { const id = Number(r['Id']); const nm = String(r['Kategori Adı'] ?? '').replace(/^_+/, '').trim(); if (id && nm) catNames[id] = nm; } } catch {}
+      setImp({ ...res, descs, catNames, file: file.name, rows: incoming.length, fields: Object.keys(Object.assign({}, ...incoming.slice(0, 50))) });
     } catch (err) { toast(err.message, 'bad'); }
   }
   async function applyImport() {
     setBusy(true);
     try {
       await A.saveCatalog(imp.list); setCatalog(imp.list);
+      // bilinmeyen kategori numaralarına dosyadaki adı ver (elle verilmiş adlara dokunma)
+      const used = new Set(imp.list.flatMap((p) => [p.c, p.c2]).filter(Boolean));
+      const add = {}; for (const [id, nm] of Object.entries(imp.catNames || {})) if (used.has(Number(id)) && !settings.categories?.[id]?.name && !CATEGORY_NAMES[id]) add[id] = { ...(settings.categories?.[id] || {}), name: nm };
+      if (Object.keys(add).length) { const S2 = { ...settings, categories: { ...settings.categories, ...add } }; await A.saveSettings(S2); store.set({ settings: S2 }); }
       if (Object.keys(imp.descs).length) await A.saveDescs({ ...(await Promise.resolve(A.loadDescMap ? A.loadDescMap() : {})), ...imp.descs });
       toast(`Katalog güncellendi: ${imp.added} yeni, ${imp.updated} değişen`); setImp(null);
     }
@@ -455,11 +473,18 @@ export function Settings() {
         <h1 className="page-t">Ayarlar</h1>
         <span className="muted">{A.mode === 'demo' ? 'Demo modu · veriler bu tarayıcıda' : 'Firebase’e bağlı'}</span>
       </div>
-      <div className="chips scroll sec-nav">{SECTIONS.map(([k, l]) => <button key={k} className={'chip' + (sec === k ? ' on' : '')} onClick={() => setSec(k)}>{l}</button>)}</div>
+      <div className="chips scroll sec-nav">{SECTIONS.map(([k, l]) => <button key={k} className={'chip' + (sec === k ? ' on' : '') + (secDirty(k) ? ' dirty' : '')} onClick={() => setSec(k)}>{l}{secDirty(k) && <i className="dirty-dot" aria-label="kaydedilmedi" />}</button>)}</div>
 
-      <div className="set-card">
+      {sec === 'hesap' ? <Profile embedded /> : <div className="set-card">
+        <div className={'set-head' + (dirty ? ' dirty' : '')}>
+          <h2>{SECTIONS.find((x) => x[0] === sec)?.[1]}</h2>
+          {dirty && <span className="unsaved"><i className="dirty-dot" />Kaydedilmedi{!secDirty(sec) && ' (başka bölümde)'}</span>}
+          {sec !== 'veri' && <>
+            {dirty && <button className="btn sm ghost" onClick={() => setD(structuredClone(settings))}>Geri al</button>}
+            <button className="btn sm primary" onClick={save} disabled={busy || !dirty}><Icon n="check" s={15} />{busy ? 'Kaydediliyor…' : dirty ? 'Kaydet' : 'Kaydedildi'}</button>
+          </>}
+        </div>
         {sec === 'genel' && <>
-          <h2>Genel görünüm</h2>
           <div className="row2">
             <Field label="Uygulama adı"><input id="s-name" value={d.brand.appName} onChange={(e) => set('brand.appName', e.target.value)} /></Field>
             <Field label="Alt başlık"><input id="s-tag" value={d.brand.tagline} onChange={(e) => set('brand.tagline', e.target.value)} /></Field>
@@ -483,7 +508,6 @@ export function Settings() {
         </>}
 
         {sec === 'fiyat' && <>
-          <h2>Fiyatlandırma</h2>
           <p className="fine">Ürünün kendi toptan fiyatı varsa o kullanılır. Yoksa aşağıdaki kurala göre hesaplanır. Sonra müşterinin kademe ve ek indirimi uygulanır. Müşteriye özel fiyat her şeyin önündedir.</p>
           <div className="row3">
             <Field label="Toptan fiyatı olmayan ürünler"><select id="s-nw" value={d.pricing.noWholesale} onChange={(e) => set('pricing.noWholesale', e.target.value)}><option value="discount">Listeden % indirimle hesapla</option><option value="ask">“Fiyat sorun” göster</option></select></Field>
@@ -495,11 +519,14 @@ export function Settings() {
           </div>
           <Toggle id="s-retail" label="Liste fiyatını göster" hint="Üstü çizili perakende fiyat" checked={d.pricing.showRetail} onChange={(v) => set('pricing.showRetail', v)} />
           <Toggle id="s-save" label="Sepette avantaj tutarını göster" checked={d.pricing.showSaving} onChange={(v) => set('pricing.showSaving', v)} />
+          <h3>TL karşılığı</h3>
+          <RateInfo />
+          <Field label="Elle kur (isteğe bağlı)" hint="Boş bırakın: Harem Altın dolar satış kuru kullanılır. Doldurursanız onun yerine bu kur kullanılır."><input id="s-rate" inputMode="decimal" placeholder="ör. 41,95" value={d.pricing.manualRate ?? ''} onChange={(e) => set('pricing.manualRate', e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} /></Field>
+          <Toggle id="s-tl" label="TL karşılığını bayilere ve vitrine de göster" hint="Kapalıyken sadece siz görürsünüz. Liste resmine eklemek her listede ayrıca seçilir." checked={d.pricing.showTL} onChange={(v) => set('pricing.showTL', v)} />
           {sample && <div className="preview-box"><span className="eyebrow">Örnek</span><span>{sample.n}</span><span className="num">Liste {fmt(sample.r, sample.cur)} → Toptan <b>{fmt(priceFor(sample, withDefaults(d), null, null).mine, sample.cur)}</b></span></div>}
         </>}
 
         {sec === 'kademe' && <>
-          <h2>Kademeler</h2>
           <p className="fine">Her müşteriye bir kademe atanır. Kademe indirimi, toptan fiyatın üzerine uygulanır.</p>
           <div className="tier-list">
             {d.tiers.map((t, i) => (
@@ -514,7 +541,6 @@ export function Settings() {
         </>}
 
         {sec === 'katalog' && <>
-          <h2>Katalog</h2>
           <div className="row3">
             <Field label="Stok gösterimi"><select id="s-stock" value={d.catalog.stockMode} onChange={(e) => set('catalog.stockMode', e.target.value)}><option value="badge">Stokta / Az kaldı / Yok</option><option value="number">Adet olarak</option><option value="hidden">Gizle</option></select></Field>
             <Field label="“Az kaldı” sınırı"><input id="s-low" inputMode="numeric" value={d.catalog.lowStock} onChange={(e) => set('catalog.lowStock', Number(e.target.value) || 0)} /></Field>
@@ -534,7 +560,6 @@ export function Settings() {
         </>}
 
         {sec === 'talep' && <>
-          <h2>Talepler ve mesajlar</h2>
           <Toggle id="s-res" label="“Hazırlayın, geliyorum” butonu" checked={d.requests.allowReserve} onChange={(v) => set('requests.allowReserve', v)} />
           <Toggle id="s-quote" label="“Fiyat sor” butonu" checked={d.requests.allowQuote} onChange={(v) => set('requests.allowQuote', v)} />
           <Toggle id="s-msg" label="Sepetsiz genel mesaj" checked={d.requests.allowMessage} onChange={(v) => set('requests.allowMessage', v)} />
@@ -547,7 +572,6 @@ export function Settings() {
         </>}
 
         {sec === 'dukkan' && <>
-          <h2>Dükkan bilgileri</h2>
           <div className="row2">
             <Field label="Dükkan adı"><input id="s-shop" value={d.shop.name} onChange={(e) => set('shop.name', e.target.value)} /></Field>
             <Field label="Çalışma saatleri"><input id="s-hours" value={d.shop.hours} onChange={(e) => set('shop.hours', e.target.value)} /></Field>
@@ -559,14 +583,13 @@ export function Settings() {
           </div>
           <Field label="Teslim notu" hint="Sepet ekranının altında görünür"><textarea id="s-pn" rows="2" value={d.shop.pickupNote} onChange={(e) => set('shop.pickupNote', e.target.value)} /></Field>
           <h3>Online vitrin ({location.host}/magaza)</h3>
-          <p className="fine">Toptancı olmayan müşterileriniz giriş yapmadan ürünleri liste fiyatıyla görür, sepet yapıp WhatsApp'tan size gönderir. Siz fiyatı düzenleyip linki geri gönderirsiniz, müşteri onaylar.</p>
+          <p className="fine">Müşterileriniz giriş yapmadan ürünleri liste fiyatıyla görür, liste yapıp WhatsApp'tan size gönderir (mesajda sadece listenin linki gider). Siz Talepler'den listeyi açıp fiyatları ayarlar, aynı tabloyu resim ya da link olarak geri gönderirsiniz.</p>
           <Toggle id="s-pub" label="Online vitrin açık" checked={d.access.publicShop} onChange={(v) => set('access.publicShop', v)} />
           <div className="input-btn"><input id="s-publink" readOnly value={links.shop()} /><button type="button" className="btn sm outline" onClick={() => copyText(links.shop(), 'Vitrin linki kopyalandı')}>Kopyala</button></div>
           <Field label="Ödeme / havale bilgisi" hint="Vitrin müşterisi teklifi onaylayınca görür. IBAN, alıcı adı, açıklama vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00\nAçıklamaya talep numarasını yazın.'} /></Field>
         </>}
 
         {sec === 'kategori' && <>
-          <h2>Kategoriler</h2>
           <p className="fine">Ağaç sitenizdeki kategori yapısıyla aynı. İsmi değiştirebilir, gizleyebilir (alt kategorileriyle birlikte gizlenir), aynı seviyedekileri sıralayabilirsiniz (küçük sayı üstte).</p>
           <div className="cat-edit">
             {catRows.map(([code, base, depth, n]) => {
@@ -586,10 +609,9 @@ export function Settings() {
         </>}
 
         {sec === 'veri' && <>
-          <h2>Veri</h2>
           <div className="data-box">
             <div>
-              <b>Excel’den ürün güncelle</b>
+              <b>Excel’den ürün ekle / güncelle</b>
               <p className="fine">PlatinMarket’ten aldığınız dışa aktarımı seçin: “Ürünler” (stoklu) veya “Ürünler Varyasyonlu” (resimler, etiketler, marka, açıklama). İkisini sırayla yükleyebilirsiniz. Aynı ürün no’lu ürünler güncellenir, yeniler eklenir; elle yüklediğiniz resimler ve elle girdiğiniz toptan fiyatlar korunur.</p>
             </div>
             <label className="btn outline"><Icon n="upload" s={16} />Dosya seç<input type="file" accept=".xlsx,.csv" hidden onChange={pickFile} /></label>
@@ -610,13 +632,9 @@ export function Settings() {
             </div>
           )}
         </>}
-      </div>
 
-      <div className={'savebar' + (dirty ? ' show' : '')}>
-        <span>Kaydedilmemiş değişiklikler var</span>
-        <button className="btn ghost" onClick={() => setD(structuredClone(settings))}>Geri al</button>
-        <button className="btn primary" onClick={save} disabled={busy}><Icon n="check" s={16} />Kaydet</button>
-      </div>
+        {sec === 'anasayfa' && <HomeEditor d={d} set={set} />}
+      </div>}
 
       {imp && (
         <Sheet title="Excel içe aktarma" sub={imp.file} onClose={() => setImp(null)} footer={<><button className="btn ghost" onClick={() => setImp(null)}>Vazgeç</button><button className="btn primary" onClick={applyImport} disabled={busy}>Uygula</button></>}>
@@ -627,7 +645,8 @@ export function Settings() {
             <div><b className="num">{imp.missing}</b><span>dosyada yok</span></div>
           </div>
           {imp.priceChanged > 0 && <p className="banner warn" style={{ margin: 0 }}><b>{imp.priceChanged} ürünün liste fiyatı değişiyor.</b>&nbsp;Uygulayınca bunlar Ürünler'de “Liste fiyatı değişenler” olarak işaretlenir; toptan fiyatlarını kontrol edersiniz.</p>}
-          <p className="fine">Dosyada olmayan ürünler silinmez, olduğu gibi kalır. Okunan bilgiler: {[imp.fields.includes('pi') && 'resimler', imp.fields.includes('t') && 'etiketler', imp.fields.includes('b') && 'marka', imp.fields.includes('s') && 'stok', imp.fields.includes('r') && 'fiyat', Object.keys(imp.descs).length && `${Object.keys(imp.descs).length} açıklama`].filter(Boolean).join(', ')}.</p>
+          {(imp.matchedByCode > 0 || imp.dupSkipped > 0) && <p className="fine">{imp.matchedByCode > 0 && <><b>{imp.matchedByCode}</b> ürün, ürün numarası farklı olduğu halde stok kodu tuttuğu için mevcut ürünün üzerine güncellendi (kopya oluşmadı). </>}{imp.dupSkipped > 0 && <><b>{imp.dupSkipped}</b> satır dosyada aynı stok koduyla ikinci kez geçtiği için atlandı.</>}</p>}
+          <p className="fine">Aynı stok kodlu ürün asla ikinci kez eklenmez. Dosyada olmayan ürünler silinmez, olduğu gibi kalır. Okunan bilgiler: {[imp.fields.includes('pi') && 'resimler', imp.fields.includes('t') && 'etiketler', imp.fields.includes('b') && 'marka', imp.fields.includes('s') && 'stok', imp.fields.includes('r') && 'fiyat', Object.keys(imp.descs).length && `${Object.keys(imp.descs).length} açıklama`].filter(Boolean).join(', ')}.</p>
         </Sheet>
       )}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
@@ -637,7 +656,7 @@ export function Settings() {
 
 // =========================================================================
 // Profil (müşteri ve yönetici)
-export function Profile() {
+export function Profile({ embedded }) {
   const { user, settings: S, requests, api: A } = useStore();
   const admin = user.role === 'admin';
   const [f, setF] = useState({ name: user.name || '', shop: user.shop || '', phone: user.phone || '' });
@@ -656,11 +675,12 @@ export function Profile() {
   }
   const tier = S.tiers.find((t) => t.id === user.tier);
   return (
-    <div className="page narrow">
+    <div className={embedded ? 'profile-embed' : 'page narrow'}>
       <div className="profile-card">
         <div className="avatar-edit">
           <Avatar u={user} size={88} />
-          {S.features.profilePhoto && <label className="avatar-btn" aria-label="Fotoğraf değiştir"><Icon n="camera" s={16} /><input type="file" accept="image/*" hidden onChange={photo} /></label>}
+          {(admin || S.features.profilePhoto) && <label className="avatar-btn" aria-label="Fotoğraf değiştir" title="Fotoğraf değiştir"><Icon n="camera" s={16} /><input type="file" accept="image/*" hidden onChange={photo} /></label>}
+          {user.photo && <button className="avatar-del" onClick={() => A.updateMe({ photo: '' }).then(() => toast('Fotoğraf kaldırıldı'))} aria-label="Fotoğrafı kaldır" title="Fotoğrafı kaldır"><Icon n="trash" s={14} /></button>}
         </div>
         <div>
           <h1 className="page-t">{user.name || user.username}</h1>
@@ -833,11 +853,78 @@ function SyncInfo() {
     <div className="data-box">
       <div>
         <b>Siteyle otomatik eşitleme</b>
-        <p className="fine">Her saat ertelgsm.com'un ürün beslemesi okunur: liste fiyatı (dolara çevrilerek), stok durumu, ana resim ve ad güncellenir. Fiyatı değişenler “Liste fiyatı değişenler” olarak işaretlenir, toptan fiyata dokunulmaz.</p>
+        <p className="fine">Bekçi dakikada bir ertelgsm.com'u kontrol eder; değişiklik görünce liste fiyatı (dolara çevrilerek), stok durumu, ana resim ve ad güncellenir. Fiyatı değişenler “Liste fiyatı değişenler” olarak işaretlenir, toptan fiyata dokunulmaz. Beklemek istemezseniz “Şimdi eşitle”ye basın.</p>
         {info === undefined ? <p className="fine">Yükleniyor…</p> : info
           ? <p className="fine"><b>Son çalışma: {when(info.at)}</b> · {info.summary}</p>
           : <p className="fine">Henüz çalışmadı.</p>}
       </div>
+      <SyncButton />
     </div>
   );
+}
+
+// "Şimdi eşitle": siteyi hemen kontrol ettirir; değişiklikler ~1 dakikada uygulamaya düşer
+export function SyncButton({ small }) {
+  const [busy, setBusy] = useState(false);
+  async function go() {
+    setBusy(true);
+    try {
+      const r = await syncNow(true);
+      toast(r === 'dispatched' ? 'Eşitleme başladı — değişiklikler 1 dakika içinde gelir' : r === 'throttled' ? 'Az önce eşitleme başlatıldı, biraz sonra tekrar deneyin' : 'Site kontrol edildi: ' + r, r === 'dispatched' ? 'ok' : 'info');
+    } catch (e) { toast('Eşitleme başlatılamadı: ' + e.message, 'bad'); }
+    setTimeout(() => setBusy(false), 4000);
+  }
+  return <button className={'btn ' + (small ? 'chip' : 'outline')} onClick={go} disabled={busy} title="Sitedeki değişiklikleri hemen al"><Icon n="refresh" s={15} className={busy ? 'spin' : ''} />{busy ? 'Eşitleniyor…' : 'Şimdi eşitle'}</button>;
+}
+
+function RateInfo() {
+  const rate = useStore((s) => s.rate);
+  if (!rate) return <p className="fine">Harem Altın kuru henüz gelmedi. Bekçi dakikada bir günceller; gelmezse aşağıya elle kur yazabilirsiniz.</p>;
+  return <p className="fine">Şu an: <b>{rateLabel(rate)}</b>{rate.at ? ' · ' + when(rate.at) + ' güncellendi' : ''}</p>;
+}
+
+// Bayi ana sayfası içeriği: başlık, duyurular, bannerlar
+function HomeEditor({ d, set }) {
+  const H = d.home || {};
+  const anns = H.announcements || [];
+  const banners = H.banners || [];
+  const setAnn = (i, patch) => set('home.announcements', anns.map((a, j) => (j === i ? { ...a, ...patch } : a)));
+  const setBn = (i, patch) => set('home.banners', banners.map((b, j) => (j === i ? { ...b, ...patch } : b)));
+  async function bnImg(i, e) {
+    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
+    setBn(i, { img: await resizeImage(file, 1200, 0.78) });
+  }
+  return <>
+    <p className="fine">Bayiler giriş yapınca önce bu sayfayı görür. Buradan büyük menü kartlarıyla Katalog, Sepet, Talepler ve Mesaj’a geçerler.</p>
+    <div className="row2">
+      <Field label="Başlık" hint="Boşsa “Hoş geldiniz, Ad” yazar"><input id="h-title" value={H.title || ''} onChange={(e) => set('home.title', e.target.value)} /></Field>
+      <Field label="Alt yazı"><input id="h-sub" value={H.subtitle || ''} onChange={(e) => set('home.subtitle', e.target.value)} placeholder="ör. Yeni gelen ürünler kataloğa eklendi" /></Field>
+    </div>
+    <h3>Duyurular</h3>
+    {anns.map((a, i) => (
+      <div key={i} className="ann-row">
+        <select aria-label="Renk" value={a.tone || 'info'} onChange={(e) => setAnn(i, { tone: e.target.value })}><option value="info">Mavi</option><option value="ok">Yeşil</option><option value="warn">Turuncu</option><option value="bad">Kırmızı</option></select>
+        <input aria-label="Duyuru" value={a.text || ''} onChange={(e) => setAnn(i, { text: e.target.value })} placeholder="ör. Cumartesi 14:00'e kadar açığız" />
+        <button className="icon-btn sm" onClick={() => set('home.announcements', anns.filter((_, j) => j !== i))} aria-label="Duyuruyu sil"><Icon n="trash" s={15} /></button>
+      </div>
+    ))}
+    <button className="btn sm outline" onClick={() => set('home.announcements', [...anns, { text: '', tone: 'info' }])}><Icon n="plus" s={15} />Duyuru ekle</button>
+    <h3>Bannerlar</h3>
+    <p className="fine">Kampanya, yeni ürün vb. Resim yatay olursa iyi durur (ör. 1200×500). Link verirseniz tıklanınca o adres açılır.</p>
+    {banners.map((b, i) => (
+      <div key={i} className="bn-edit">
+        <label className="bn-img">{b.img ? <img src={b.img} alt="" /> : <span><Icon n="upload" s={18} />Resim seç</span>}<input type="file" accept="image/*" hidden onChange={(e) => bnImg(i, e)} /></label>
+        <div className="form-col">
+          <input aria-label="Banner başlığı" value={b.title || ''} onChange={(e) => setBn(i, { title: e.target.value })} placeholder="Başlık" />
+          <input aria-label="Banner yazısı" value={b.text || ''} onChange={(e) => setBn(i, { text: e.target.value })} placeholder="Kısa açıklama" />
+          <input aria-label="Banner linki" value={b.link || ''} onChange={(e) => setBn(i, { link: e.target.value })} placeholder="Link (isteğe bağlı) ör. https://www.ertelgsm.com/..." />
+          <div className="row-btns">
+            {b.img && <button className="btn sm ghost" onClick={() => setBn(i, { img: '' })}>Resmi kaldır</button>}
+            <button className="btn sm ghost danger" onClick={() => set('home.banners', banners.filter((_, j) => j !== i))}><Icon n="trash" s={15} />Banner’ı sil</button>
+          </div>
+        </div>
+      </div>
+    ))}
+    {banners.length < 4 && <button className="btn sm outline" onClick={() => set('home.banners', [...banners, { img: '', title: '', text: '', link: '' }])}><Icon n="plus" s={15} />Banner ekle</button>}
+  </>;
 }

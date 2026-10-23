@@ -26,7 +26,8 @@ export class FirebaseBackend {
     // Oturum: yönetici paneli ve "beni hatırlama" seçilen girişler sadece o sekmede yaşar (sekmeler birbirini etkilemez)
     this.tabOnly = this.opts?.tabOnly || sessionStorage.getItem('auth-tab') === '1';
     this.auth = U.initializeAuth(this.app, { persistence: this.tabOnly ? U.browserSessionPersistence : [U.indexedDBLocalPersistence, U.browserLocalPersistence] });
-    this.db = F.getFirestore(this.app);
+    // WhatsApp / Instagram içi tarayıcılarda canlı bağlantı takılabiliyor; gerekirse otomatik olarak uzun yoklamaya geçer
+    try { this.db = F.initializeFirestore(this.app, { experimentalAutoDetectLongPolling: true }); } catch { this.db = F.getFirestore(this.app); }
   }
   d(...p) { return this.F.doc(this.db, ...p); }
   c(...p) { return this.F.collection(this.db, ...p); }

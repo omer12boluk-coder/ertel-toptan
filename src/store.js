@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { withDefaults, ls, norm, now } from './utils.js';
+import { withDefaults, ls, norm, now, cleanText } from './utils.js';
 
 const subs = new Set();
 export const store = {
@@ -22,6 +22,7 @@ export const store = {
     ctx: null, // sağ tık menüsü
     intent: null, // başka ekrandan gelen istek: 'newProduct' | 'newCustomer'
     guestInfo: null,
+    rate: null, // Harem Altın dolar satış kuru { usd, src, at }
   },
   get() { return this.s; },
   set(patch) { this.s = { ...this.s, ...(typeof patch === 'function' ? patch(this.s) : patch) }; subs.forEach((f) => f()); },
@@ -33,7 +34,7 @@ export const api = () => store.s.api;
 export const isAdmin = () => store.s.user?.role === 'admin';
 
 export function setCatalog(items) {
-  const list = (items || []).map((p) => ({ ...p, _s: norm(p.n + ' ' + p.k + ' ' + (p.b || '')), _t: norm(p.t || '') }));
+  const list = (items || []).map((p0) => { const p = { ...p0, n: cleanText(p0.n) || '', b: p0.b ? cleanText(p0.b) : p0.b }; return { ...p, _s: norm(p.n + ' ' + p.k + ' ' + (p.b || '')), _t: norm(p.t || '') }; });
   store.set({ catalog: list, byId: new Map(list.map((p) => [p.id, p])) });
 }
 
@@ -55,5 +56,5 @@ export function setQty(id, qty) {
 export function clearCart() { store.set({ cart: {} }); ls.set(cartKey(), {}); }
 
 export function go(tab) { store.set({ tab, openReq: null }); window.scrollTo(0, 0); }
-export const home = () => go(store.s.user?.role === 'admin' ? 'talepler' : 'katalog');
+export const home = () => go(store.s.user?.role === 'admin' ? 'talepler' : store.s.user?.role === 'public' ? 'katalog' : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }

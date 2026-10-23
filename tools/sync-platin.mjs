@@ -7,6 +7,7 @@
 // Kullanım: node tools/sync-platin.mjs [--dry]
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { cleanText } from '../src/clean.js';
 
 const FEED = process.env.FEED_URL || 'https://www.ertelgsm.com/xml-cikti/gm';
 const DRY = process.argv.includes('--dry');
@@ -29,7 +30,7 @@ for (const e of xml.split('<entry>').slice(1)) {
   const price = parseFloat(tag(e, 'price')) || 0;
   const img = tag(e, 'image_link');
   feed.set(id, {
-    id, n: unesc(tag(e, 'title')).replace(/\s+/g, ' ').trim(), k: tag(e, 'mpn'), b: unesc(tag(e, 'brand')),
+    id, n: cleanText(unesc(tag(e, 'title'))), k: tag(e, 'mpn'), b: cleanText(unesc(tag(e, 'brand'))),
     tl: price, stock: tag(e, 'availability') === 'in_stock',
     pi: img.includes('/pictures/') ? img.split('/pictures/').pop().replace(/^thumb\/\d+X-/, '') : '',
   });

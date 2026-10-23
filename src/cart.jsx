@@ -17,7 +17,9 @@ export function Cart() {
   const lines = Object.entries(cart).map(([id, qty]) => ({ p: byId.get(Number(id)), qty })).filter((l) => l.p);
   const items = lines.map(({ p, qty }) => {
     const pr = priceFor(p, S, user, userPrices);
-    return { id: p.id, k: p.k, n: p.n, cur: p.cur, qty, list: p.r, asked: pr.mine, offer: pr.mine };
+    const it = { id: p.id, k: p.k, n: p.n, cur: p.cur, qty, list: p.r, asked: pr.mine, offer: pr.mine };
+    if (p.pi) it.pi = p.pi; if (p.u) it.u = p.u; // liste tablosunda resim ve ürün linki için
+    return it;
   });
   const tList = totals(items, 'list');
   const tMine = totals(items, 'asked');
@@ -26,31 +28,31 @@ export function Cart() {
   // viaWA: talep kaydedilir + WhatsApp, dükkana hazır mesajla açılır (mesajdaki link talebi yönetim panelinde açar)
   async function send(type, viaWA) {
     if (!items.length) return;
-    if (guest) {
-      if (!g.name.trim()) return toast('Adınızı yazın', 'bad');
-      if (phoneDigits(g.phone).length !== 11) return toast('Telefonunuzu 0(5xx) xxx xx xx şeklinde yazın', 'bad');
-      ls.set('guest-info', g);
-    }
+    if (guest) ls.set('guest-info', g);
     const win = viaWA ? window.open('about:blank', '_blank') : null; // tarayıcı engellemesin diye pencere tıklamada açılır
     setBusy(true);
     try {
       const t = now();
       const who = guest ? g.name.trim() : user.name || user.username;
-      const msgs = [{ from: 'system', text: `${guest ? 'Vitrin sepeti' : TYPE[type]} · ${items.length} kalem · ${fmtTotals(tMine)}`, at: t }];
+      const msgs = [{ from: 'system', text: `${guest ? 'Vitrin listesi' : TYPE[type]} · ${items.length} kalem · ${fmtTotals(tMine)}`, at: t }];
       if (note.trim()) msgs.push({ from: 'user', text: note.trim(), at: t + 1 });
-      const base = { type, status: 'new', items, note: note.trim(), pickup: pickup.trim(), createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: note.trim() || (guest ? 'Vitrin sepeti' : TYPE[type]), lastFrom: 'user' };
+      const base = { type, status: 'new', items, note: note.trim(), pickup: pickup.trim(), createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: note.trim() || (guest ? 'Vitrin listesi' : TYPE[type]), lastFrom: 'user' };
       const id = await api().createRequest(guest
-        ? { ...base, guest: true, uid: null, gname: g.name.trim(), gphone: g.phone, userName: g.name.trim(), shop: 'Vitrin müşterisi' }
+        ? { ...base, guest: true, uid: null, gname: g.name.trim().slice(0, 80), gphone: '', userName: g.name.trim() || 'Vitrin müşterisi', shop: 'Vitrin müşterisi' }
         : { ...base, uid: user.uid, userName: who, shop: user.shop || '' }, msgs);
       if (guest) ls.set('guest-reqs', [id, ...ls.get('guest-reqs', [])].slice(0, 30));
       clearCart(); setNote(''); setPickup('');
       if (viaWA) {
+        // vitrin: mesajda sadece liste linki gider (ürünler linkteki tabloda)
+        if (guest) { const url = waLink(S.shop.whatsapp, `Merhaba, ürün listem:\n${links.guestRequest(id)}${g.name.trim() ? '\n' + g.name.trim() : ''}`); if (win) win.location.href = url; else location.href = url; }
+        else {
         const lines = items.map((i, k) => `${k + 1}) ${i.n} (${i.k}) × ${i.qty}${i.asked != null ? ' — ' + fmt(i.asked * i.qty, i.cur) : ''}`).join('\n');
         const text = `Merhaba, ${guest ? 'sitenizden sepet hazırladım' : (TYPE[type] + ' talebim')}:\n${lines}\nToplam: ${fmtTotals(tMine)}${note.trim() ? '\nNot: ' + note.trim() : ''}\n${who}${guest ? ' · ' + g.phone : user.shop ? ' · ' + user.shop : ''}\n\nTalebi aç: ${links.adminRequest(id)}`;
         const url = waLink(S.shop.whatsapp, text);
         if (win) win.location.href = url; else location.href = url;
+        }
       }
-      toast(viaWA ? 'Talep kaydedildi, WhatsApp açılıyor' : type === 'reserve' ? 'Talebiniz iletildi, onay gelince haber vereceğiz' : 'Fiyat sorunuz iletildi');
+      toast(guest ? 'Listeniz kaydedildi, WhatsApp açılıyor' : viaWA ? 'Talep kaydedildi, WhatsApp açılıyor' : type === 'reserve' ? 'Talebiniz iletildi, onay gelince haber vereceğiz' : 'Fiyat sorunuz iletildi');
       openRequest(id);
     } catch (e) { win?.close(); toast('Gönderilemedi: ' + e.message, 'bad'); }
     setBusy(false);
@@ -66,10 +68,10 @@ export function Cart() {
   if (!lines.length) {
     return (
       <div className="page narrow">
-        <h1 className="page-t">Sepet</h1>
-        <Empty icon="cart" title="Sepetiniz boş">
-          <p>{guest ? 'Ürünleri sepete ekleyin, sonra tek tuşla WhatsApp’tan bize gönderin.' : 'Katalogdan ürün ekleyin; sonra ister “Hazırlayın, geliyorum” deyin, ister fiyat sorun.'}</p>
-          <button className="btn primary" onClick={() => go('katalog')}>Kataloğa git</button>
+        <h1 className="page-t">{guest ? 'Listem' : 'Sepet'}</h1>
+        <Empty icon="cart" title={guest ? 'Listeniz boş' : 'Sepetiniz boş'}>
+          <p>{guest ? 'Ürünleri listeye ekleyin, sonra tek tuşla WhatsApp’tan bize gönderin.' : 'Katalogdan ürün ekleyin; sonra ister “Hazırlayın, geliyorum” deyin, ister fiyat sorun.'}</p>
+          <button className="btn primary" onClick={() => go('katalog')}>{guest ? 'Ürünlere git' : 'Kataloğa git'}</button>
         </Empty>
       </div>
     );
@@ -78,8 +80,8 @@ export function Cart() {
   return (
     <div className="page cart-page">
       <div className="cart-head">
-        <h1 className="page-t">Sepet <span className="muted">· {lines.length} kalem</span></h1>
-        <button className="link danger" onClick={clearCart}>Sepeti boşalt</button>
+        <h1 className="page-t">{guest ? 'Listem' : 'Sepet'} <span className="muted">· {lines.length} kalem</span></h1>
+        <button className="link danger" onClick={clearCart}>{guest ? 'Listeyi boşalt' : 'Sepeti boşalt'}</button>
       </div>
       <div className="cart-grid">
         <ul className="clist">
@@ -111,27 +113,24 @@ export function Cart() {
             <div className="sum-total"><span>{guest ? 'Toplam' : 'Size toptan'}</span><b className="num">{fmtTotals(tMine)}</b></div>
             {S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
           </div>
-          {S.requests.askPickupTime && (
+          {!guest && S.requests.askPickupTime && (
             <label className="field">
               <span className="field-l">Ne zaman gelirsiniz?</span>
               <input id="cart-pickup" placeholder="ör. Bugün 17:00, yarın sabah" value={pickup} onChange={(e) => setPickup(e.target.value)} />
             </label>
           )}
-          <label className="field">
+          {!guest && <label className="field">
             <span className="field-l">Not / mesaj</span>
             <textarea id="cart-note" rows="3" placeholder="ör. Hepsini alırsam son ne olur?" value={note} onChange={(e) => setNote(e.target.value)} />
-          </label>
+          </label>}
           {guest && (
-            <div className="guest-fields">
-              <label className="field"><span className="field-l">Adınız</span><input id="g-name" value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} autoComplete="name" /></label>
-              <label className="field"><span className="field-l">Cep telefonunuz</span><PhoneInput id="g-phone" value={g.phone} onChange={(v) => setG({ ...g, phone: v })} /></label>
-            </div>
+            <label className="field"><span className="field-l">Adınız / dükkanınız <small className="opt">(isteğe bağlı)</small></span><input id="g-name" value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} autoComplete="name" placeholder="ör. Ahmet – Kadıköy GSM" /></label>
           )}
           <div className="cart-actions">
             {(guest || S.shop.whatsapp) && (
               <button className="btn wa big" disabled={busy || (guest && !S.shop.whatsapp)} onClick={() => send('quote', true)}>
                 <Icon n="wa" />
-                <span><b>WhatsApp’tan gönder</b><small>{guest ? 'Sepetinizi bize iletin, fiyatı onaylayalım' : 'Talep kaydedilir, WhatsApp’tan da haber verilir'}</small></span>
+                <span><b>{guest ? 'Listeyi WhatsApp’tan gönder' : 'WhatsApp’tan gönder'}</b><small>{guest ? 'Mesajda sadece listenizin linki gider' : 'Talep kaydedilir, WhatsApp’tan da haber verilir'}</small></span>
               </button>
             )}
             {!guest && S.requests.allowReserve && (
@@ -148,7 +147,7 @@ export function Cart() {
             )}
           </div>
           {guest && !S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
-          <p className="fine">{guest ? 'Fiyatlar liste fiyatıdır. Size özel teklif WhatsApp’tan link olarak gelir; onaylayınca havale bilgisi görünür.' : S.shop.pickupNote}</p>
+          <p className="fine">{guest ? 'Liste fiyatlarıdır. Listenizi fiyatlandırıp aynı tabloyla WhatsApp’tan size döneriz.' : S.shop.pickupNote}</p>
         </aside>
       </div>
     </div>

@@ -1,23 +1,30 @@
 // Adresler:
-//   /                 bayi uygulaması            /t/<talepNo>         bayinin talebi (WhatsApp linki)
-//   /admin            yönetim paneli             /admin/t/<talepNo>   talep (WhatsApp linki)
-//   /magaza           herkese açık vitrin (giriş yok, liste fiyatı)
-//   /magaza/t/<no>    vitrin müşterisinin sepeti / teklifi (linki bilen görür)
-// Claude demo sayfasında adres değişmediği için #admin / #magaza da kabul edilir.
+//   /                 giriş sayfası: "Online mağaza" (büyük) veya "Bayi girişi"
+//   /magaza           herkese açık vitrin (giriş yok): ürünler + listem
+//   /magaza/t/<no>    vitrin müşterisinin listesi (tablo; linki bilen görür)
+//   /b2b              bayi uygulaması             /b2b/t/<no>   bayinin talebi (WhatsApp linki; eski /t/<no> da çalışır)
+//   /admin            yönetim paneli              /admin/t/<no> talep / liste (WhatsApp linki)
+// Claude demo sayfasında adres değişmediği için #admin / #magaza / #b2b da kabul edilir.
 const path = location.pathname.replace(/\/+$/, '') || '/';
 const hash = location.hash.slice(1);
+const under = (p) => path === p || path.startsWith(p + '/') || hash === p.slice(1);
 
 export const ROUTE = {
-  admin: path === '/admin' || path.startsWith('/admin/') || hash === 'admin',
-  shop: path === '/magaza' || path.startsWith('/magaza/') || hash === 'magaza',
+  admin: under('/admin'),
+  shop: under('/magaza'),
+  b2b: under('/b2b') || path.startsWith('/t/'),
   reqId: (path.match(/\/t\/([\w-]+)$/) || [])[1] || null,
 };
+ROUTE.landing = !ROUTE.admin && !ROUTE.shop && !ROUTE.b2b;
 
 export const links = {
   adminRequest: (id) => `${location.origin}/admin/t/${id}`,
-  userRequest: (id) => `${location.origin}/t/${id}`,
+  userRequest: (id) => `${location.origin}/b2b/t/${id}`,
   guestRequest: (id) => `${location.origin}/magaza/t/${id}`,
   shop: () => `${location.origin}/magaza`,
+  b2b: () => `${location.origin}/b2b`,
+  // ürünün sitedeki sayfası (adres bilinmiyorsa site /x-pmu<no> ile ürüne yönlendirir)
+  product: (p, S) => (!p ? null : p.u ? S.catalog.siteUrl + p.u : S.catalog.siteUrl + '/x-pmu' + p.id),
 };
 
 // WhatsApp linki: numarayı 90XXXXXXXXXX biçimine çevirir; numara yoksa WhatsApp kişi seçtirir
