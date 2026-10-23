@@ -17,7 +17,7 @@ const now = Date.now();
 const note = (title, msg) => console.log(`::notice title=${title}::${String(msg).replace(/%/g, '%25').replace(/\n/g, '%0A')}`);
 
 // ---- besleme
-const res = await fetch(FEED, { headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0' } });
+const res = await fetch(FEED + (FEED.includes('?') ? '&' : '?') + 't=' + now, { headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0', 'Cache-Control': 'no-cache' } }); // önbellekteki eski kopya gelmesin
 if (!res.ok) throw new Error('Besleme alınamadı: HTTP ' + res.status);
 const xml = await res.text();
 const tag = (s, t) => { const m = s.match(new RegExp(`<g:${t}>([\\s\\S]*?)</g:${t}>`)); return m ? m[1].trim() : ''; };
@@ -83,6 +83,7 @@ for (const f of feed.values()) {
 cat.sort((a, b) => b.id - a.id);
 
 const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length;
+const has = (id) => (feed.has(id) ? 'var' : 'yok');
 const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length}`;
 note(DRY ? 'Deneme (kaydedilmedi)' : 'Eşitleme', summary);
 if (st.price.length) note('Fiyatı değişenler', st.price.slice(0, 40).join('\n'));
