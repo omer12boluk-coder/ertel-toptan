@@ -69,7 +69,8 @@ export async function readSheet(file, sheetName) {
   if (wb && wbRels) {
     const wd = P.parseFromString(wb, 'application/xml');
     const all = [...wd.getElementsByTagName('sheet')];
-    const first = sheetName ? all.find((x) => x.getAttribute('name') === sheetName) : all[0];
+    // sayfa adı verilmezse "Ürünler" sayfası (yoksa ilk sayfa) okunur; Varyasyonlar / Teknik Özellikler sekmeleri karışmaz
+    const first = sheetName ? all.find((x) => x.getAttribute('name') === sheetName) : all.find((x) => x.getAttribute('name') === 'Ürünler') || all[0];
     if (sheetName && !first) return [];
     const rId = first?.getAttribute('r:id') || first?.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
     const rd = P.parseFromString(wbRels, 'application/xml');
@@ -133,7 +134,7 @@ export function rowsToProducts(rows) {
   const K = {
     id: ['urun_id', 'Ürün ID', 'id', 'ID'], k: ['urun_stok_kod', 'Stok Kodu', 'stok_kod', 'kod'], n: ['urun_isim', 'Ürün Adı', 'isim', 'urun_adi'],
     c: ['urun_kategori_kod', 'Ürün Kategori Id 1', 'kategori_kod'], c2: ['Ürün Kategori Id 2'], r: ['urun_satis_fiyat', 'Fiyat', 'satis_fiyat'],
-    w: ['urunum_pro_s_price', 'İndirimli Fiyat', 'toptan', 'toptan_fiyat'], cur: ['urun_pb', 'Para Birimi', 'pb'], s: ['urun_stok', 'stok', 'Stok'],
+    w: ['urunum_pro_s_price', 'İndirimli Fiyat', 'toptan', 'toptan_fiyat'], cur: ['urun_pb', 'Para Birimi', 'pb'], s: ['urun_stok', 'stok', 'Stok', 'Miktar'],
     a: ['urun_durum', 'Ürün Durumu', 'durum'], b: ['Marka', 'marka'], t: ['Etiketler', 'etiketler'], u: ['Ürün URL'], desc: ['Ürün Açıklaması'],
   };
   const imgCols = Array.from({ length: 10 }, (_, i) => 'Ürün Resmi ' + (i + 1));
@@ -154,10 +155,10 @@ export function rowsToProducts(rows) {
     if (has(o, K.b)) { const b = String(v('b') ?? '').trim(); p.b = b === '-' ? '' : b; }
     if (has(o, K.t)) p.t = [...new Set(String(v('t') ?? '').split(',').map((x) => x.trim()).filter(Boolean))].join(',');
     if (v('u') != null) p.u = String(v('u'));
-    if (has(o, imgCols)) {
-      const files = imgCols.map((c) => o[c]).filter((x) => x != null && String(x).trim()).map(fileName);
-      p.pi = files[0] || ''; p.im = files.slice(1);
-    }
+    // Resimler: sadece dosyada olan resim sütunları güncellenir (ör. yalnız "Ürün Resmi 1" alındıysa ek resimlere dokunulmaz)
+    const val = (c) => (o[c] != null && String(o[c]).trim() ? fileName(o[c]) : null);
+    if (imgCols[0] in o) p.pi = val(imgCols[0]) || '';
+    if (has(o, imgCols.slice(1))) p.im = imgCols.slice(1).filter((c) => c in o).map(val).filter(Boolean);
     const d = v('desc'); if (d != null && String(d).trim()) descs[id] = String(d).trim();
     items.push(p);
   }
