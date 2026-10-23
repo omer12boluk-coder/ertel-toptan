@@ -52,7 +52,7 @@ export class FirebaseBackend {
       const s = await this.F.getDoc(this.d('users', u.uid));
       if (!s.exists()) return this.authCb?.(null, 'Hesap kaydı bulunamadı.');
       const data = { uid: u.uid, ...s.data() };
-      if (data.active === false) { await this.U.signOut(this.auth); return this.authCb?.(null, 'Hesabınız pasif. Lütfen dükkanla iletişime geçin.'); }
+      if (data.active === false) { await this.U.signOut(this.auth); return this.authCb?.(null, data.pending ? 'Üyelik başvurunuz onay bekliyor. Onaylanınca giriş yapabilirsiniz.' : 'Hesabınız pasif. Lütfen dükkanla iletişime geçin.'); }
       this.user = data; this.authCb?.(data);
     } catch (e) { this.authCb?.(null, e.message); }
   }
@@ -61,11 +61,23 @@ export class FirebaseBackend {
     catch (e) { throw new Error(/invalid|wrong|not-found|credential/i.test(e.code || e.message) ? 'Kullanıcı adı veya şifre hatalı' : e.message); }
   }
   async logout() { await this.U.signOut(this.auth); }
+  // Bayinin kendi başvurusu: hesap açılır ama yönetici onaylayana kadar giriş yapamaz
+  async signup({ username, password, name, shop, phone }) {
+    this.settingUp = true;
+    try {
+      let cred;
+      try { cred = await this.U.createUserWithEmailAndPassword(this.auth, toEmail(username), password); }
+      catch (e) { throw new Error(e.code === 'auth/email-already-in-use' ? 'Bu kullanıcı adı alınmış, başka bir tane deneyin.' : e.code === 'auth/weak-password' ? 'Şifre en az 6 karakter olmalı.' : e.message); }
+      const uid = cred.user.uid;
+      await this.F.setDoc(this.d('users', uid), { uid, username, name, shop, phone, role: 'customer', active: false, pending: true, tier: '', createdAt: now() });
+      await this.U.signOut(this.auth);
+    } finally { this.settingUp = false; }
+  }
 
   async loadSettings() { const s = await this.F.getDoc(this.d('settings', 'app')); return s.exists() ? s.data() : null; }
   async saveSettings(S) {
     await this.F.setDoc(this.d('settings', 'app'), S);
-    await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop });
+    await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan

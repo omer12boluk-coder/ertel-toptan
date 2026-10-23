@@ -11,6 +11,8 @@ import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 
+// /admin = yönetim paneli girişi, ana adres = bayi girişi (demo sayfasında #admin)
+const ADMIN_ROUTE = /^\/admin\/?$/.test(location.pathname) || location.hash === '#admin';
 let unsubs = [];
 let currentUid = null;
 const stopWatchers = () => { unsubs.forEach((f) => { try { f(); } catch {} }); unsubs = []; };
@@ -43,6 +45,13 @@ async function boot() {
       return;
     }
     if (currentUid === u.uid) { store.set({ user: u }); return; }
+    // Yönetici paneline sadece yönetici girer; yönetici ana adrese girerse panele yönlendirilir
+    if (fb && ADMIN_ROUTE && u.role !== 'admin') {
+      await A.logout();
+      store.set({ boot: 'login', loginError: 'Bu sayfa sadece yönetici içindir. Bayi girişi için ana sayfayı kullanın.' });
+      return;
+    }
+    if (fb && !ADMIN_ROUTE && u.role === 'admin') { location.replace('/admin'); return; }
     currentUid = u.uid;
     store.set({ user: u, boot: 'loading' });
     try {
@@ -129,20 +138,31 @@ function Brand({ small }) {
 
 function Login() {
   const { api: A, needsSetup, loginError, settings: S } = useStore();
-  const [u, setU] = useState('');
-  const [p, setP] = useState('');
-  const [name, setName] = useState('');
+  const fb = A?.mode === 'firebase';
+  const adminPage = fb && ADMIN_ROUTE;
+  const setup = adminPage && needsSetup;
+  const [view, setView] = useState('login'); // login | signup | sent
+  const [f, setF] = useState({ u: '', p: '', p2: '', name: '', shop: '', phone: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const setup = needsSetup && A?.mode === 'firebase';
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   async function submit(e) {
     e.preventDefault(); setErr(''); setBusy(true);
     try {
-      if (setup) await A.setupAdmin({ username: cleanUsername(u), password: p, name: name || S.shop.name });
-      else await A.login(cleanUsername(u), p);
+      const username = cleanUsername(f.u);
+      if (view === 'signup') {
+        if (!/^[a-z0-9._-]{3,30}$/.test(username)) throw new Error('Kullanıcı adı en az 3 karakter olmalı; harf, rakam, nokta ve tire kullanın.');
+        if (f.p.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
+        if (f.p !== f.p2) throw new Error('Şifreler aynı değil.');
+        if (!f.name.trim() || !f.shop.trim() || !f.phone.trim()) throw new Error('Ad, dükkan adı ve telefonu doldurun.');
+        await A.signup({ username, password: f.p, name: f.name.trim(), shop: f.shop.trim(), phone: f.phone.trim() });
+        setView('sent');
+      } else if (setup) await A.setupAdmin({ username, password: f.p, name: f.name || S.shop.name });
+      else await A.login(username, f.p);
     } catch (x) { setErr(x.message); }
     setBusy(false);
   }
+  const title = setup ? 'İlk kurulum: yönetici hesabı' : adminPage ? 'Yönetim paneli' : view === 'signup' ? 'Bayi üyeliği' : 'Bayi girişi';
   return (
     <div className="login">
       <div className="login-art" aria-hidden="true">
@@ -153,26 +173,46 @@ function Login() {
           <li><Icon n="chat" s={18} />Sepeti gönder, fiyat sor, onaylanınca gel al</li>
         </ul>
       </div>
-      <form className="login-card" onSubmit={submit}>
-        <img className="login-logo" src={S.brand.logoWide || LOGO_WIDE} alt={S.shop.name} />
-        <h1>{setup ? 'İlk kurulum: yönetici hesabı' : 'Bayi girişi'}</h1>
-        {setup && <p className="fine">Bu hesap tüm müşterileri, fiyatları ve talepleri yönetir. Bir kez yapılır.</p>}
-        {setup && <label className="field"><span className="field-l">Dükkan adı</span><input id="l-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ERTEL GSM" /></label>}
-        <label className="field"><span className="field-l">Kullanıcı adı</span><input id="l-user" autoComplete="username" autoCapitalize="none" value={u} onChange={(e) => setU(e.target.value)} required /></label>
-        <label className="field"><span className="field-l">Şifre</span><input id="l-pw" type="password" autoComplete={setup ? 'new-password' : 'current-password'} value={p} onChange={(e) => setP(e.target.value)} required minLength={setup ? 6 : undefined} /></label>
-        {(err || loginError) && <p className="err">{err || loginError}</p>}
-        <button className="btn primary big" disabled={busy}>{busy ? 'Bekleyin…' : setup ? 'Yönetici hesabını oluştur' : 'Giriş yap'}</button>
-        {A?.mode === 'demo' && (
-          <div className="demo-hint">
-            <span className="eyebrow">Demo · veriler bu tarayıcıda</span>
-            <div className="demo-btns">
-              <button type="button" className="btn sm outline" onClick={() => { setU('admin'); setP('admin'); }}>Yönetici: admin / admin</button>
-              <button type="button" className="btn sm outline" onClick={() => { setU('ahmet'); setP('1234'); }}>Bayi: ahmet / 1234</button>
+      {view === 'sent' ? (
+        <div className="login-card">
+          <img className="login-logo" src={S.brand.logoWide || LOGO_WIDE} alt={S.shop.name} />
+          <h1>Başvurunuz alındı</h1>
+          <p>{S.shop.name} hesabınızı onayladığında <b>{cleanUsername(f.u)}</b> kullanıcı adı ve belirlediğiniz şifreyle giriş yapabilirsiniz.</p>
+          <button className="btn outline" onClick={() => { setView('login'); setF((x) => ({ ...x, p: '', p2: '' })); }}>Girişe dön</button>
+        </div>
+      ) : (
+        <form className="login-card" onSubmit={submit}>
+          <img className="login-logo" src={S.brand.logoWide || LOGO_WIDE} alt={S.shop.name} />
+          <h1>{title}</h1>
+          {setup && <p className="fine">Bu hesap tüm müşterileri, fiyatları ve talepleri yönetir. Bir kez yapılır.</p>}
+          {view === 'signup' && <p className="fine">Bilgilerinizi gönderin; {S.shop.name} onayladıktan sonra toptan fiyatları görebilirsiniz.</p>}
+          {(setup || view === 'signup') && (
+            <label className="field"><span className="field-l">{setup ? 'Dükkan adı' : 'Ad soyad'}</span><input id="l-name" value={f.name} onChange={set('name')} placeholder={setup ? 'ERTEL GSM' : ''} /></label>
+          )}
+          {view === 'signup' && <>
+            <label className="field"><span className="field-l">Dükkan adı</span><input id="l-shop" value={f.shop} onChange={set('shop')} /></label>
+            <label className="field"><span className="field-l">Telefon</span><input id="l-phone" inputMode="tel" value={f.phone} onChange={set('phone')} /></label>
+          </>}
+          <label className="field"><span className="field-l">Kullanıcı adı</span><input id="l-user" autoComplete="username" autoCapitalize="none" value={f.u} onChange={set('u')} required /></label>
+          <label className="field"><span className="field-l">Şifre</span><input id="l-pw" type="password" autoComplete={setup || view === 'signup' ? 'new-password' : 'current-password'} value={f.p} onChange={set('p')} required /></label>
+          {view === 'signup' && <label className="field"><span className="field-l">Şifre (tekrar)</span><input id="l-pw2" type="password" autoComplete="new-password" value={f.p2} onChange={set('p2')} required /></label>}
+          {(err || (view === 'login' && loginError)) && <p className="err">{err || loginError}</p>}
+          <button className="btn primary big" disabled={busy}>{busy ? 'Bekleyin…' : setup ? 'Yönetici hesabını oluştur' : view === 'signup' ? 'Başvuruyu gönder' : 'Giriş yap'}</button>
+          {A?.mode === 'demo' && view === 'login' && (
+            <div className="demo-hint">
+              <span className="eyebrow">Demo · veriler bu tarayıcıda</span>
+              <div className="demo-btns">
+                <button type="button" className="btn sm outline" onClick={() => setF((x) => ({ ...x, u: 'admin', p: 'admin' }))}>Yönetici: admin / admin</button>
+                <button type="button" className="btn sm outline" onClick={() => setF((x) => ({ ...x, u: 'ahmet', p: '1234' }))}>Bayi: ahmet / 1234</button>
+              </div>
             </div>
-          </div>
-        )}
-        {!setup && <p className="fine center">Hesabınız yok mu? {S.shop.name} ile iletişime geçin{S.shop.phone ? ': ' + S.shop.phone : '.'}</p>}
-      </form>
+          )}
+          {!adminPage && view === 'login' && (S.access?.allowSignup
+            ? <p className="fine center">Hesabınız yok mu? <button type="button" className="link" onClick={() => { setErr(''); setView('signup'); }}>Bayi olarak üye olun</button></p>
+            : <p className="fine center">Hesabınız yok mu? {S.shop.name} ile iletişime geçin{S.shop.phone ? ': ' + S.shop.phone : '.'}</p>)}
+          {view === 'signup' && <p className="fine center"><button type="button" className="link" onClick={() => { setErr(''); setView('login'); }}>Zaten hesabım var, giriş yap</button></p>}
+        </form>
+      )}
     </div>
   );
 }
@@ -194,7 +234,8 @@ function Shell() {
     document.title = (unread ? `(${unread}) ` : '') + store.s.settings.brand.appName;
   }, [unread]);
   useEffect(() => { ls.set('tab-' + user.uid, tab); }, [tab]);
-  const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : 0);
+  const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length);
+  const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : 0);
 
   return (
     <div className={'shell tab-' + tab}>

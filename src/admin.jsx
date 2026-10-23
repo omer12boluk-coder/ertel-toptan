@@ -168,15 +168,17 @@ export function Customers() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [add, setAdd] = useState(false);
-  const list = customers.filter((c) => !q || norm(`${c.name} ${c.shop} ${c.username} ${c.phone}`).includes(norm(q)))
+  const pending = customers.filter((c) => c.pending);
+  const list = customers.filter((c) => !c.pending && (!q || norm(`${c.name} ${c.shop} ${c.username} ${c.phone}`).includes(norm(q))))
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
   const openCount = (uid) => requests.filter((r) => r.uid === uid && ['new', 'offered', 'accepted', 'ready'].includes(r.status)).length;
   return (
     <div className="page">
       <div className="page-h">
-        <h1 className="page-t">Müşteriler <span className="muted">· {customers.length}</span></h1>
+        <h1 className="page-t">Müşteriler <span className="muted">· {customers.length - pending.length}</span></h1>
         <button className="btn primary" onClick={() => setAdd(true)}><Icon n="plus" s={16} />Yeni müşteri</button>
       </div>
+      {pending.length > 0 && <PendingList list={pending} />}
       <div className="search"><Icon n="search" s={18} /><input id="cust-search" type="search" placeholder="İsim, dükkan, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {list.length === 0 ? <Empty icon="users" title="Henüz müşteri yok">“Yeni müşteri” ile toptancılarınıza kullanıcı adı ve şifre oluşturun.</Empty> : (
         <ul className="ulist">
@@ -447,6 +449,7 @@ export function Settings() {
             </div>
           </Field>
           <h3>Özellikler</h3>
+          <Toggle id="s-signup" label="Bayiler kendileri üye olabilsin" hint="Giriş ekranında “Bayi olarak üye olun” çıkar; siz onaylayana kadar giriş yapamazlar" checked={d.access.allowSignup} onChange={(v) => set('access.allowSignup', v)} />
           <Toggle id="s-photo" label="Profil fotoğrafı" hint="Müşteriler kendi fotoğrafını ekleyebilir" checked={d.features.profilePhoto} onChange={(v) => set('features.profilePhoto', v)} />
           <Toggle id="s-hist" label="Müşteri geçmiş istatistikleri" hint="Profilde alım / gelmedi sayıları görünür" checked={d.features.history} onChange={(v) => set('features.history', v)} />
         </>}
@@ -749,5 +752,39 @@ function RichText({ value, onChange }) {
       <div ref={ref} className="rte-body pdesc-body open" contentEditable suppressContentEditableWarning
         onInput={(e) => onChange(e.currentTarget.innerHTML)} data-ph="Ürün açıklaması yazın…" />
     </div>
+  );
+}
+
+// Bayilerin kendi üyelik başvuruları: onaylanana kadar giriş yapamazlar
+function PendingList({ list }) {
+  const { settings: S, api: A } = useStore();
+  const [tier, setTier] = useState({});
+  const [confirm, setConfirm] = useState(null);
+  const approve = async (c) => { await A.updateUser(c.uid, { active: true, pending: false, tier: tier[c.uid] || S.tiers[0]?.id || '', stats: c.stats || { done: 0, noshow: 0 } }); toast(`${c.name || c.username} onaylandı, artık giriş yapabilir`); };
+  const reject = async (c) => { await A.updateUser(c.uid, { active: false, pending: false, rejected: true }); toast('Başvuru reddedildi'); };
+  return (
+    <section className="pending">
+      <h2 className="pending-h"><span className="badge">{list.length}</span> Onay bekleyen üyelik başvurusu</h2>
+      <ul className="pending-list">
+        {list.map((c) => (
+          <li key={c.uid} className="pending-row">
+            <Avatar u={c} size={42} />
+            <span className="ucard-b">
+              <strong>{c.name}</strong>
+              <span className="muted">{c.shop}{c.phone ? ' · ' + c.phone : ''}</span>
+              <span className="muted">@{c.username} · {when(c.createdAt)}</span>
+            </span>
+            <select id={'pt-' + c.uid} aria-label="Kademe" value={tier[c.uid] || S.tiers[0]?.id || ''} onChange={(e) => setTier({ ...tier, [c.uid]: e.target.value })}>
+              {S.tiers.map((t) => <option key={t.id} value={t.id}>{t.name}{t.pct ? ` (−%${t.pct})` : ''}</option>)}
+            </select>
+            <span className="pending-btns">
+              <button className="btn sm ghost danger" onClick={() => setConfirm({ title: 'Başvuruyu reddet', text: `${c.name || c.username} giriş yapamayacak.`, okLabel: 'Reddet', tone: 'danger', onOk: () => reject(c) })}>Reddet</button>
+              <button className="btn sm primary" onClick={() => approve(c)}><Icon n="check" s={15} />Onayla</button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </section>
   );
 }

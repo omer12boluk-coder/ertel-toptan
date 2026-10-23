@@ -72,9 +72,15 @@ export class DemoBackend {
   async login(username, pw) {
     const u = Object.values(this.db.users).find((x) => x.username === username.trim().toLowerCase());
     if (!u || u.pw !== pw) throw new Error('Kullanıcı adı veya şifre hatalı');
-    if (u.active === false) throw new Error('Hesabınız pasif. Lütfen dükkanla iletişime geçin.');
+    if (u.active === false) throw new Error(u.pending ? 'Üyelik başvurunuz onay bekliyor. Onaylanınca giriş yapabilirsiniz.' : 'Hesabınız pasif. Lütfen dükkanla iletişime geçin.');
     this.db.session = u.uid; this.persist();
     this.authCb?.(this.pub(u));
+  }
+  async signup({ username, password, name, shop, phone }) {
+    if (Object.values(this.db.users).some((u) => u.username === username)) throw new Error('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
+    const uid = 'u_' + rid();
+    this.db.users[uid] = { uid, username, pw: password, name, shop, phone, role: 'customer', active: false, pending: true, tier: '', createdAt: now(), stats: { done: 0, noshow: 0 } };
+    this.persist();
   }
   async logout() { this.db.session = null; this.persist(); this.authCb?.(null); }
   async reset() { this.db = freshDb(this.seed); this.persist(); location.reload(); }

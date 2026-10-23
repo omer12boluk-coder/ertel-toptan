@@ -22,9 +22,16 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      // yönetici oluşturur; ya da ilk kurulumda sahip kendi kaydını yazar
-      allow create: if isAdmin() || (signedIn() && request.auth.uid == uid
-        && get(/databases/$(database)/documents/meta/owner).data.uid == uid);
+      // 1) bayi kendi başvurusunu yazar (pasif + onay bekliyor), 2) yönetici oluşturur, 3) ilk kurulumda sahip kendi kaydını yazar
+      allow create: if (signedIn() && request.auth.uid == uid
+          && request.resource.data.role == 'customer'
+          && request.resource.data.active == false
+          && request.resource.data.pending == true
+          && request.resource.data.keys().hasOnly(['uid', 'username', 'name', 'shop', 'phone', 'role', 'active', 'pending', 'tier', 'createdAt'])
+          && request.resource.data.tier == '')
+        || isAdmin()
+        || (signedIn() && request.auth.uid == uid
+          && get(/databases/$(database)/documents/meta/owner).data.uid == uid);
       // bayi sadece ad / dükkan / telefon / foto değiştirebilir
       allow update: if isAdmin() || (request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shop', 'phone', 'photo']));

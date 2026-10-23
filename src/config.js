@@ -63,6 +63,9 @@ export const DEFAULT_SETTINGS = {
     whatsapp: '',
     pickupNote: 'Siparişiniz hazırlandığında dükkandan teslim alabilirsiniz.',
   },
+  access: {
+    allowSignup: true, // bayiler giriş ekranından kendileri üye olabilir; yönetici onaylayınca girebilir
+  },
   features: {
     profilePhoto: true,
     history: true,
