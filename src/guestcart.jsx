@@ -1,26 +1,26 @@
-// Vitrin (/magaza) sepeti: müşteri ürünleri seçer, "WhatsApp'tan gönder"e basar.
-// Telefonda paylaş menüsü açılır: WhatsApp'a listenin tablo resim(ler)i + altında sadece link gider.
-// Bilgisayarda resim panoya kopyalanır, WhatsApp sohbeti linkle açılır; resmi yapıştırmak yeterli.
-// Sayfa yerinde kalır; liste arka planda kaydedilir (yönetim panelinde Talepler'de görünür).
-import { useEffect, useMemo, useRef, useState } from 'react';
+// Vitrin (/magaza) sepeti: 1) Sepet → "Sepeti onayla"  2) Gönder adımı: WhatsApp düğmesi + Panoya kopyala.
+// Panoya listenin tablo resmi ve linki birlikte kopyalanır; WhatsApp düğmesi ayrıca dükkan sohbetini link yazılı açar.
+// İndirme penceresi açılmaz. Liste onaylanınca arka planda kaydedilir (yönetim panelinde Talepler'de görünür).
+import { useEffect, useMemo, useState } from 'react';
 import { useStore, setQty, clearCart, api, toast, go } from './store.js';
 import { Icon, Thumb, Stepper, Empty } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { ls, fmt, totals, fmtTotals, now } from './utils.js';
-import { renderListImages, currentRate } from './listsheet.jsx';
+import { renderListImages, currentRate, copyImageAndLink } from './listsheet.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
-const canShareFiles = () => { try { return !!navigator.canShare?.({ files: [new File([new Blob(['x'])], 'x.png', { type: 'image/png' })] }); } catch { return false; } };
 
 export function GuestCart() {
   const { cart, byId, settings: S } = useStore();
   const [g, setG] = useState(() => ls.get('guest-info', { name: '' }));
   const [draft, setDraft] = useState(() => ls.get('guest-draft', null) || { id: api().newRequestId?.() || 'r_' + Date.now(), no: newNo() });
-  const [files, setFiles] = useState(null); // hazır resimler
-  const [sent, setSent] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const rendering = useRef(0);
+  const [step, setStep] = useState('cart'); // cart → send
+  const [files, setFiles] = useState(null);
+  const [saved, setSaved] = useState(null); // kaydedilen sepetin imzası
+  const [page, setPage] = useState(0); // kopyalanacak resim (birden fazla sayfa varsa)
+  const urls = useMemo(() => (files ? files.map((f) => URL.createObjectURL(f)) : []), [files]);
+  useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
 
   const lines = Object.entries(cart).map(([id, qty]) => ({ p: byId.get(Number(id)), qty })).filter((l) => l.p);
   const items = useMemo(() => lines.map(({ p, qty }) => {
@@ -29,74 +29,77 @@ export function GuestCart() {
     return it;
   }), [JSON.stringify(cart), byId]);
   const tot = totals(items, 'offer');
-  const req = useMemo(() => ({ no: draft.no, gname: g.name.trim(), items, status: 'new', createdAt: now(), tl: true }), [draft.no, g.name, items]);
+  const sig = JSON.stringify([items.map((i) => [i.id, i.qty]), g.name.trim()]);
+  const link = links.guestRequest(draft.id);
 
   useEffect(() => { ls.set('guest-draft', draft); }, [draft]);
-  // Resimleri önceden hazırla: butona basınca beklemeden paylaşılsın (telefonlar paylaşımı ancak dokunma anında açar)
-  useEffect(() => {
-    setFiles(null);
+  // sepet değişince, önceki kayıt farklı bir listeye aitse yeni numara al
+  useEffect(() => { if (saved && saved !== sig) { setSaved(null); setDraft({ id: api().newRequestId?.() || 'r_' + Date.now(), no: newNo() }); } }, [sig]);
+
+  async function confirm() {
     if (!items.length) return;
-    const my = ++rendering.current;
-    const t = setTimeout(async () => {
-      try {
-        const blobs = await renderListImages(req, { rate: currentRate(), tl: true });
-        if (my !== rendering.current) return;
-        setFiles(blobs.map((b, i) => new File([b], `liste-${draft.no}${blobs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' })));
-      } catch (e) { console.warn(e); }
-    }, 450);
-    return () => clearTimeout(t);
-  }, [req]);
-
-  function save() {
     ls.set('guest-info', g);
-    const t = now();
-    const doc = { type: 'quote', status: 'new', items, note: '', pickup: '', no: draft.no, createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: 'Vitrin listesi', lastFrom: 'user',
-      guest: true, uid: null, gname: g.name.trim().slice(0, 80), gphone: '', userName: g.name.trim() || 'Vitrin müşterisi', shop: 'Vitrin müşterisi', tl: true };
-    const r = currentRate(); if (r) doc.rate = { usd: r.usd, src: r.src, at: r.at || t };
-    return api().createRequest(doc, [{ from: 'system', text: `Vitrin listesi · ${items.length} kalem · ${fmtTotals(tot)}`, at: t }], draft.id);
+    setStep('send'); setFiles(null); setPage(0);
+    const req = { no: draft.no, gname: g.name.trim(), items, status: 'new', createdAt: now(), tl: true };
+    try {
+      const blobs = await renderListImages(req, { rate: currentRate(), tl: true });
+      setFiles(blobs.map((b, i) => new File([b], `liste-${draft.no}${blobs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' })));
+    } catch (e) { toast('Resim hazırlanamadı: ' + e.message, 'bad'); }
+    if (saved !== sig) {
+      const t = now();
+      const doc = { type: 'quote', status: 'new', items, note: '', pickup: '', no: draft.no, createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: 'Vitrin listesi', lastFrom: 'user',
+        guest: true, uid: null, gname: g.name.trim().slice(0, 80), gphone: '', userName: g.name.trim() || 'Vitrin müşterisi', shop: 'Vitrin müşterisi', tl: true };
+      const r = currentRate(); if (r) doc.rate = { usd: r.usd, src: r.src, at: r.at || t };
+      api().createRequest(doc, [{ from: 'system', text: `Vitrin listesi · ${items.length} kalem · ${fmtTotals(tot)}`, at: t }], draft.id)
+        .then(() => { setSaved(sig); const ids = ls.get('guest-reqs', []); ls.set('guest-reqs', [draft.id, ...ids.filter((x) => x !== draft.id)].slice(0, 30)); })
+        .catch((e) => toast('Liste kaydedilemedi: ' + e.message, 'bad'));
+    }
   }
 
-  async function send() {
-    if (!items.length || busy) return;
-    if (!S.shop.whatsapp) return toast('Dükkan WhatsApp numarası girilmemiş', 'bad');
-    setBusy(true);
-    const link = links.guestRequest(draft.id);
-    const saving = save().then(() => true, (e) => { toast('Liste kaydedilemedi: ' + e.message, 'bad'); return false; });
-    let fs = files;
-    if (!fs) { // resimler daha hazır değilse şimdi hazırla
-      try { const blobs = await renderListImages(req, { rate: currentRate(), tl: true }); fs = blobs.map((b, i) => new File([b], `liste-${draft.no}${blobs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' })); } catch { fs = []; }
-    }
-    let how = 'wa';
-    if (fs.length && canShareFiles()) {
-      try { await navigator.share({ files: fs, text: link }); how = 'share'; }
-      catch (e) { if (e.name === 'AbortError') { setBusy(false); return; } how = 'wa'; }
-    }
-    if (how === 'wa') {
-      // bilgisayar: resmi panoya kopyala, WhatsApp sohbetini sadece linkle aç
-      let copied = false;
-      if (fs.length === 1 && typeof ClipboardItem !== 'undefined') { try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': fs[0] })]); copied = true; } catch {} }
-      if (!copied) fs.forEach((f, i) => setTimeout(() => { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }, i * 300));
-      window.open(waLink(S.shop.whatsapp, link), '_blank', 'noopener');
-      how = copied ? 'copied' : 'downloaded';
-    }
-    await saving;
-    const ids = ls.get('guest-reqs', []); ls.set('guest-reqs', [draft.id, ...ids.filter((x) => x !== draft.id)].slice(0, 30));
-    setSent({ ...draft, how, link, files: fs, count: items.length, total: fmtTotals(tot) });
-    clearCart();
-    setDraft({ id: api().newRequestId?.() || 'r_' + Date.now(), no: newNo() });
-    setBusy(false);
+  async function copy(k = page) {
+    if (!files?.[k]) return false;
+    try {
+      const how = await copyImageAndLink(files[k], link);
+      toast(files.length > 1 ? `${k + 1}. resim${how === 'both' ? ' ve link' : ''} kopyalandı` : how === 'both' ? 'Resim ve link kopyalandı' : 'Resim kopyalandı');
+      if (k + 1 < files.length) setPage(k + 1);
+      return true;
+    } catch (e) { toast(e.message, 'bad'); return false; }
   }
-
-  if (sent) return <Sent s={sent} onNew={() => { setSent(null); go('katalog'); }} />;
+  async function whatsapp() {
+    // resmi panoya kopyala, WhatsApp'ta dükkan sohbetini link yazılı halde aç → sohbette Ctrl+V
+    const ok = await copy(0);
+    if (!ok && files?.length && navigator.canShare?.({ files })) { try { await navigator.share({ files, text: link }); return; } catch {} }
+    window.open(waLink(S.shop.whatsapp, link), '_blank', 'noopener');
+  }
 
   if (!lines.length) {
     return (
       <div className="page narrow">
-        <h1 className="page-t">Listem</h1>
-        <Empty icon="cart" title="Listeniz boş">
-          <p>Ürünleri listeye ekleyin, sonra tek tuşla WhatsApp’tan bize gönderin.</p>
+        <h1 className="page-t">Sepet</h1>
+        <Empty icon="cart" title="Sepetiniz boş">
+          <p>Ürünleri sepete ekleyin, sonra WhatsApp’tan bize gönderin.</p>
           <button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button>
         </Empty>
+      </div>
+    );
+  }
+
+  if (step === 'send') {
+    return (
+      <div className="page narrow send-step">
+        <button className="btn sm ghost back-btn" onClick={() => setStep('cart')}><Icon n="back" s={16} />Sepete dön</button>
+        <div className="send-card">
+          <h1 className="page-t">Listeniz hazır · #{draft.no}</h1>
+          <p className="muted">{items.length} kalem · {fmtTotals(tot)}</p>
+          <button className="wa-big" onClick={whatsapp} disabled={!files || !S.shop.whatsapp}>
+            <Icon n="wa" s={34} />
+            <span><b>{files ? 'WhatsApp’tan gönder' : 'Resim hazırlanıyor…'}</b><small>Resim kopyalanır, sohbet açılır → mesaj kutusunda yapıştırın</small></span>
+          </button>
+          <button className="btn outline big" onClick={() => copy()} disabled={!files}><Icon n="copy" s={18} />{files && files.length > 1 ? `Panoya kopyala (${page + 1}/${files.length}. resim)` : 'Panoya kopyala'}</button>
+          <p className="fine">Kopyalayınca resim ve liste linki birlikte gelir: WhatsApp’ta sohbete <kbd>Ctrl</kbd>+<kbd>V</kbd> (telefonda basılı tutup Yapıştır).{files && files.length > 1 && ' Listeniz birden fazla resim oldu; her basışta sıradaki resim kopyalanır.'}</p>
+          {!S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
+        </div>
+        {urls.length > 0 && <div className="img-prev">{urls.map((u, i) => <img key={i} src={u} alt={`Liste resmi ${i + 1}`} />)}</div>}
       </div>
     );
   }
@@ -104,8 +107,8 @@ export function GuestCart() {
   return (
     <div className="page cart-page">
       <div className="cart-head">
-        <h1 className="page-t">Listem <span className="muted">· {lines.length} kalem</span></h1>
-        <button className="link danger" onClick={clearCart}>Listeyi boşalt</button>
+        <h1 className="page-t">Sepet <span className="muted">· {lines.length} kalem</span></h1>
+        <button className="link danger" onClick={clearCart}>Sepeti boşalt</button>
       </div>
       <div className="cart-grid">
         <ul className="clist">
@@ -130,43 +133,10 @@ export function GuestCart() {
         <aside className="cart-sum">
           <div className="sum-rows"><div className="sum-total"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div></div>
           <label className="field"><span className="field-l">Adınız / dükkanınız <small className="opt">(isteğe bağlı)</small></span><input id="g-name" value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} autoComplete="name" placeholder="ör. Ahmet – Kadıköy GSM" /></label>
-          <button className="btn wa big" disabled={busy || !S.shop.whatsapp} onClick={send}>
-            <Icon n="wa" />
-            <span><b>{busy ? 'Hazırlanıyor…' : 'WhatsApp’tan gönder'}</b><small>Liste resim olarak + link gider</small></span>
-          </button>
-          {!S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
+          <button className="btn primary big" onClick={confirm}><Icon n="check" /><span><b>Sepeti onayla</b><small>Sonraki adımda WhatsApp’tan gönderin</small></span></button>
           <p className="fine">Liste fiyatlarıdır. Listenizi fiyatlandırıp aynı tabloyla WhatsApp’tan size döneriz.</p>
         </aside>
       </div>
-    </div>
-  );
-}
-
-function Sent({ s, onNew }) {
-  const S = useStore((x) => x.settings);
-  const urls = useMemo(() => (s.files || []).map((f) => ({ url: URL.createObjectURL(f), name: f.name })), [s]);
-  useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u.url)), [urls]);
-  return (
-    <div className="page narrow sent-page">
-      <div className="sent-card">
-        <span className="sent-ic"><Icon n="check" s={30} /></span>
-        <h1 className="page-t">Listeniz hazır · #{s.no}</h1>
-        <p className="muted">{s.count} kalem · {s.total}</p>
-        {s.how === 'share' && <p>WhatsApp’ta {S.shop.name} sohbetini seçip gönderin. Resim{urls.length > 1 ? 'ler' : ''} ve liste linki birlikte gider.</p>}
-        {s.how === 'copied' && <p><b>Resim kopyalandı.</b> Açılan WhatsApp sohbetinde mesaj kutusuna <kbd>Ctrl</kbd>+<kbd>V</kbd> ile yapıştırıp linkle birlikte gönderin.</p>}
-        {s.how === 'downloaded' && <p><b>{urls.length} resim indirildi.</b> Açılan WhatsApp sohbetine bu resimleri ekleyip linkle birlikte gönderin.</p>}
-        <div className="export-bar center">
-          <a className="btn wa" href={waLink(S.shop.whatsapp, s.link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’ı tekrar aç</a>
-          <a className="btn outline" href={s.link} target="_blank" rel="noopener"><Icon n="ext" s={16} />Listeyi aç</a>
-          <button className="btn ghost" onClick={onNew}><Icon n="plus" s={16} />Yeni liste</button>
-        </div>
-      </div>
-      {urls.length > 0 && (
-        <div className="img-prev">
-          <div className="img-prev-h"><b>Gönderilen resim{urls.length > 1 ? `ler (${urls.length})` : ''}</b><span className="fine">Dokunup kaydedebilirsiniz</span></div>
-          {urls.map((m) => <a key={m.url} href={m.url} download={m.name}><img src={m.url} alt={m.name} /></a>)}
-        </div>
-      )}
     </div>
   );
 }

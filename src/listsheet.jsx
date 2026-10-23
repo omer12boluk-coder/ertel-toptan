@@ -108,120 +108,128 @@ function wrap(ctx, text, w, maxLines) {
   return out;
 }
 
-const F = { d: '"Barlow Condensed", "Arial Narrow", Arial, sans-serif', b: 'Barlow, "Segoe UI", Roboto, Arial, sans-serif', m: '"JetBrains Mono", Consolas, monospace' };
-function rr(x, X, Y, W, H, R) { x.beginPath(); x.moveTo(X + R, Y); x.arcTo(X + W, Y, X + W, Y + H, R); x.arcTo(X + W, Y + H, X, Y + H, R); x.arcTo(X, Y + H, X, Y, R); x.arcTo(X, Y, X + W, Y, R); x.closePath(); }
-
-// Liste resmi: 1080 px genişlik, yazılar hiç küçülmez; sığmayan satırlar bir sonraki resme geçer.
 export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {}) {
   const S = store.s.settings;
   const items = itemsIn || r.items || [];
   const tl = (tlIn ?? r.tl ?? true) && !!rate;
-  try { await Promise.all(['700 40px "Barlow Condensed"', '600 24px Barlow', '700 24px Barlow', '500 18px "JetBrains Mono"', '400 20px Barlow'].map((f) => document.fonts.load(f))); } catch {}
-  const [logo, ...pics] = await Promise.all([loadImg(S.brand.logo || LOGO_MARK), ...items.map((it) => loadImg(thumbSrc(it, S), true))]);
-  const W = 1080, P = 56, MAXH = 1680;
+  try { await Promise.all(['700 40px "Barlow Condensed"', '600 24px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif', '500 18px "JetBrains Mono"', '400 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'].map((f) => document.fonts.load(f))); } catch {}
+  const logo = await loadImg(S.brand.logo || LOGO_MARK);
+  const pics = await Promise.all(items.map((it) => loadImg(thumbSrc(it, S), true)));
+  const W = tl ? 1240 : 1080, P = 48, MAXH = 1700;
   const accent = S.brand.accent || '#2f55b0', priceC = S.brand.priceAccent || '#c2410c';
-  const ink = '#0f172a', mute = '#64748b', soft = '#94a3b8', line = '#e2e8f0';
-  // sütunlar: #, resim, ürün, adet, birim fiyat, toplam
-  const C = { n: 48, img: 92, qty: 92, unit: 150, sum: 160 };
-  const TX = P + 24, TW = W - 2 * P - 48;
-  C.name = TW - C.n - C.img - C.qty - C.unit - C.sum;
+  const cols = [['#', 44, 'c'], ['', 84, 'c'], ['Ürün', 0, 'l'], ['Adet', 96, 'r'], [priced(r) ? 'Fiyat' : 'Liste fiyatı', 150, 'r'], ['Tutar', 160, 'r']];
+  if (tl) cols.push(['TL', 170, 'r']);
+  const fixed = cols.reduce((n, c) => n + c[1], 0);
+  cols[2][1] = W - 2 * P - fixed;
   const meas = document.createElement('canvas').getContext('2d');
-  meas.font = '600 26px ' + F.b;
-  const rows = items.map((it, k) => { const lines = wrap(meas, it.n, C.name - 16, 2); return { it, k, lines, h: Math.max(112, 30 + lines.length * 32 + 30) }; });
-  const HEAD = 372, THEAD = 64, FOOT = tl ? 300 : 230, PFOOT = 70;
-  const pages = []; let cur = [], h = HEAD + THEAD + PFOOT + 30;
+  meas.font = '600 23px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+  const rows = items.map((it, k) => { const lines = wrap(meas, it.n, cols[2][1] - 20, 3); return { it, k, lines, h: Math.max(96, 26 + lines.length * 29 + 26) }; });
+  const HEAD = 250, THEAD = 52, FOOT = tl ? 210 : 160, PFOOT = 56;
+  // sayfalara böl
+  const pages = []; let cur = [], h = HEAD + THEAD + PFOOT;
   rows.forEach((row, i) => {
-    const need = row.h + (i === rows.length - 1 ? FOOT : 0);
-    if (cur.length && h + need > MAXH) { pages.push(cur); cur = []; h = HEAD + THEAD + PFOOT + 30; }
+    const isLast = i === rows.length - 1;
+    const need = row.h + (isLast ? FOOT : 0);
+    if (cur.length && h + need > MAXH) { pages.push(cur); cur = []; h = HEAD + THEAD + PFOOT; }
     cur.push(row); h += row.h;
   });
   if (cur.length || !pages.length) pages.push(cur);
   const tot = totals(items, 'offer');
   const tTL = tl ? toTL(tot, rate) : null;
-  const date = new Date(r.updatedAt || r.createdAt || Date.now()).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
-  const who = r.gname || r.userName || '';
   const blobs = [];
   for (let pi = 0; pi < pages.length; pi++) {
-    const last = pi === pages.length - 1, many = pages.length > 1;
-    const bodyH = pages[pi].reduce((n, x) => n + x.h, 0);
-    const H = HEAD + THEAD + bodyH + 30 + (last ? FOOT : 50) + PFOOT;
+    const last = pi === pages.length - 1;
+    const H = HEAD + THEAD + pages[pi].reduce((n, x) => n + x.h, 0) + (last ? FOOT : 0) + PFOOT;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
-    const x = c.getContext('2d'); x.textBaseline = 'alphabetic';
-    x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
-    // --- başlık
-    rr(x, P, 56, 96, 96, 22); x.fillStyle = '#fff'; x.fill(); x.strokeStyle = line; x.lineWidth = 2; x.stroke();
-    if (logo) { const sc = Math.min(72 / logo.width, 72 / logo.height); x.drawImage(logo, P + 48 - logo.width * sc / 2, 104 - logo.height * sc / 2, logo.width * sc, logo.height * sc); }
-    x.textAlign = 'left'; x.fillStyle = ink; x.font = '700 46px ' + F.d; x.fillText((S.shop.name || '').toLocaleUpperCase('tr'), P + 124, 104);
-    x.fillStyle = accent; x.font = '700 19px ' + F.b; x.fillText(('ÜRÜN LİSTESİ  ·  #' + (r.no || '')) + (many ? `  ·  SAYFA ${pi + 1}/${pages.length}` : ''), P + 126, 136);
-    x.fillStyle = line; x.fillRect(P, 184, W - 2 * P, 2);
-    // --- müşteri / tarih kartları
-    const cw = (W - 2 * P - 24) / 2;
-    for (const [i, lab, val] of [[0, 'MÜŞTERİ', who || '—'], [1, 'TARİH', date]]) {
-      const cx0 = P + i * (cw + 24);
-      rr(x, cx0, 212, cw, 116, 22); x.fillStyle = '#f8fafc'; x.fill(); x.strokeStyle = line; x.lineWidth = 2; x.stroke();
-      x.fillStyle = soft; x.font = '700 17px ' + F.b; x.fillText(lab, cx0 + 28, 256);
-      x.fillStyle = ink; x.font = '700 30px ' + F.b; x.fillText(wrap(x, val, cw - 56, 1)[0], cx0 + 28, 298);
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+    x.fillStyle = accent; x.fillRect(0, 0, W, 10);
+    // başlık
+    if (logo) { x.save(); x.beginPath(); x.arc(P + 44, 96, 44, 0, Math.PI * 2); x.clip(); x.drawImage(logo, P, 52, 88, 88); x.restore(); }
+    x.fillStyle = '#111827'; x.font = '700 44px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+    x.fillText(S.shop.name || '', P + 108, 96);
+    x.fillStyle = '#6b7280'; x.font = '400 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+    x.fillText([S.shop.address, S.shop.phone].filter(Boolean).join(' · '), P + 108, 126);
+    x.textAlign = 'right';
+    x.fillStyle = '#6b7280'; x.font = '600 16px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText('ÜRÜN LİSTESİ', W - P, 70);
+    x.fillStyle = '#111827'; x.font = '700 40px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText('#' + r.no, W - P, 110);
+    x.fillStyle = '#6b7280'; x.font = '400 18px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(new Date(r.updatedAt || r.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }), W - P, 136);
+    x.textAlign = 'left';
+    const who = r.gname || r.userName;
+    x.fillStyle = '#374151'; x.font = '400 21px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+    if (who) { x.fillText('Müşteri: ', P, 196); const ww = x.measureText('Müşteri: ').width; x.font = '700 21px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(who, P + ww, 196); }
+    if (pages.length > 1) { x.textAlign = 'right'; x.font = '600 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillStyle = accent; x.fillText(`Sayfa ${pi + 1} / ${pages.length}`, W - P, 196); x.textAlign = 'left'; }
+    // tablo başlığı
+    let y = HEAD - 30;
+    x.fillStyle = '#eef2fb'; x.fillRect(P, y, W - 2 * P, THEAD);
+    x.fillStyle = '#374151'; x.font = '700 17px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+    let cx = P;
+    for (const [t, w, al] of cols) {
+      x.textAlign = al === 'r' ? 'right' : al === 'c' ? 'center' : 'left';
+      x.fillText(t.toLocaleUpperCase('tr'), al === 'r' ? cx + w - 10 : al === 'c' ? cx + w / 2 : cx + 10, y + 33);
+      cx += w;
     }
-    // --- tablo
-    let y = HEAD;
-    const tH = THEAD + bodyH;
-    rr(x, P, y, W - 2 * P, tH, 28); x.save(); x.clip();
-    x.fillStyle = '#f1f5f9'; x.fillRect(P, y, W - 2 * P, THEAD);
-    x.fillStyle = mute; x.font = '700 16px ' + F.b;
-    let cx = TX;
-    const head = (t, w, al) => { x.textAlign = al; x.fillText(t, al === 'right' ? cx + w : al === 'center' ? cx + w / 2 : cx, y + 40); cx += w; };
-    head('#', C.n, 'left'); head('', C.img, 'left'); head('ÜRÜN', C.name, 'left'); head('ADET', C.qty, 'center'); head(priced(r) ? 'BİRİM FİYAT' : 'LİSTE FİYATI', C.unit, 'right'); head('TOPLAM', C.sum, 'right');
     y += THEAD;
+    // satırlar
     for (const row of pages[pi]) {
       const { it, k, lines } = row;
-      const mid = y + row.h / 2;
-      if (row !== pages[pi][0]) { x.fillStyle = '#eef2f7'; x.fillRect(P + 20, y, W - 2 * P - 40, 2); }
-      cx = TX;
-      x.textAlign = 'left'; x.fillStyle = soft; x.font = '600 20px ' + F.b; x.fillText(String(k + 1), cx, mid + 7); cx += C.n;
-      const sz = 76, iy = mid - sz / 2;
-      rr(x, cx, iy, sz, sz, 14); x.fillStyle = '#fff'; x.fill(); x.strokeStyle = line; x.lineWidth = 2; x.stroke();
-      const im = pics[k];
-      if (im) { x.save(); rr(x, cx + 2, iy + 2, sz - 4, sz - 4, 12); x.clip(); const sc = Math.min((sz - 10) / im.width, (sz - 10) / im.height); try { x.drawImage(im, cx + sz / 2 - im.width * sc / 2, mid - im.height * sc / 2, im.width * sc, im.height * sc); } catch {} x.restore(); }
-      cx += C.img;
-      const top = mid - (lines.length * 32 + 22) / 2 + 24;
-      x.fillStyle = ink; x.font = '600 26px ' + F.b; lines.forEach((ln, li) => x.fillText(ln, cx, top + li * 32));
-      x.fillStyle = soft; x.font = '500 17px ' + F.m; x.fillText(it.k || '', cx, top + lines.length * 32 + 2);
-      cx += C.name;
-      x.textAlign = 'center'; x.fillStyle = ink; x.font = '700 30px ' + F.b; x.fillText(String(it.qty), cx + C.qty / 2, mid + 10); cx += C.qty;
+      if (k % 2) { x.fillStyle = '#f8f9fb'; x.fillRect(P, y, W - 2 * P, row.h); }
+      x.strokeStyle = '#e5e7eb'; x.lineWidth = 1; x.beginPath(); x.moveTo(P, y + row.h - .5); x.lineTo(W - P, y + row.h - .5); x.stroke();
+      const mid = y + row.h / 2 + 8;
       const sum = it.offer == null ? null : Number(it.offer) * it.qty;
-      x.textAlign = 'right'; x.fillStyle = '#334155'; x.font = '500 26px ' + F.b; x.fillText(it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur), cx + C.unit, mid + 9); cx += C.unit;
-      x.fillStyle = priceC; x.font = '700 30px ' + F.b; x.fillText(sum == null ? '—' : fmt(sum, it.cur), cx + C.sum, mid + 10);
+      cx = P;
+      const cells = [String(k + 1), null, null, String(it.qty), it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur), sum == null ? '—' : fmt(sum, it.cur)];
+      if (tl) cells.push(sum == null || it.cur !== 'USD' ? '—' : fmtTL(sum * rate.usd));
+      cols.forEach(([, w, al], ci) => {
+        if (ci === 1) {
+          const sz = 68, ix = cx + (w - sz) / 2, iy = y + (row.h - sz) / 2;
+          x.fillStyle = '#fff'; x.fillRect(ix, iy, sz, sz); x.strokeStyle = '#e5e7eb'; x.strokeRect(ix + .5, iy + .5, sz - 1, sz - 1);
+          const im = pics[k];
+          if (im) { const sc = Math.min((sz - 6) / im.width, (sz - 6) / im.height); const dw = im.width * sc, dh = im.height * sc; try { x.drawImage(im, ix + (sz - dw) / 2, iy + (sz - dh) / 2, dw, dh); } catch {} }
+        } else if (ci === 2) {
+          x.textAlign = 'left'; x.fillStyle = '#111827'; x.font = '600 23px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+          lines.forEach((ln, li) => x.fillText(ln, cx + 10, y + 26 + 22 + li * 29));
+          x.fillStyle = '#6b7280'; x.font = '500 17px "JetBrains Mono", Consolas, monospace'; x.fillText(it.k || '', cx + 10, y + 26 + 22 + lines.length * 29 - 2);
+        } else {
+          x.textAlign = al === 'r' ? 'right' : 'center';
+          x.fillStyle = ci === 0 ? '#9ca3af' : ci === 6 ? '#6b7280' : ci === 5 ? '#111827' : '#1f2937';
+          x.font = ci === 5 || ci === 3 ? '700 24px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif' : ci === 0 ? '500 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif' : '500 22px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+          x.fillText(cells[ci], al === 'r' ? cx + w - 10 : cx + w / 2, mid);
+        }
+        cx += w;
+      });
       y += row.h;
     }
-    x.restore();
-    rr(x, P, HEAD, W - 2 * P, tH, 28); x.strokeStyle = line; x.lineWidth = 2; x.stroke();
-    y = HEAD + tH + 30;
-    if (!last) {
-      x.textAlign = 'right'; x.fillStyle = accent; x.font = '700 22px ' + F.b; x.fillText(`Devamı ${pi + 2}. resimde  →`, W - P, y + 24);
-      y += 50;
-    } else {
-      // --- toplam kutusu
-      const bw = 470, bx = W - P - bw, bh = tTL != null ? 240 : 150;
-      rr(x, bx, y, bw, bh, 28); x.fillStyle = '#fff'; x.fill(); x.strokeStyle = line; x.lineWidth = 2; x.stroke();
-      x.textAlign = 'left'; x.fillStyle = priceC; x.font = '700 19px ' + F.b; x.fillText('GENEL TOPLAM', bx + 32, y + 62);
-      x.textAlign = 'right'; x.font = '700 60px ' + F.d; x.fillText(fmtTotals(tot), bx + bw - 32, y + 82);
+    // toplam
+    if (last) {
+      y += 30;
+      x.textAlign = 'left'; x.fillStyle = '#6b7280'; x.font = '500 21px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+      x.fillText(`${items.length} kalem · ${items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet`, P, y + 30);
+      x.textAlign = 'right'; x.fillStyle = '#374151'; x.font = '600 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText('TOPLAM', W - P - 230, y + 30);
+      x.fillStyle = priceC; x.font = '700 46px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText(fmtTotals(tot), W - P, y + 36);
+      y += 56;
       if (tTL != null) {
-        x.textAlign = 'left'; x.fillStyle = soft; x.font = '700 17px ' + F.b; x.fillText('TL KARŞILIĞI', bx + 32, y + 150);
-        x.textAlign = 'right'; x.fillStyle = '#d97706'; x.font = '700 40px ' + F.d; x.fillText(fmtTL(tTL), bx + bw - 32, y + 158);
-        x.fillStyle = soft; x.font = '600 16px ' + F.b; x.fillText('1 USD = ' + rate.usd.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺ · ' + (rate.src === 'manual' ? 'elle girilen kur' : 'Harem satış'), bx + bw - 32, y + 204);
+        x.fillStyle = '#6b7280'; x.font = '400 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(rateLabel(rate), W - P - 230, y + 30);
+        x.fillStyle = '#111827'; x.font = '700 34px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText(fmtTL(tTL), W - P, y + 34);
+        y += 50;
       }
-      x.textAlign = 'left'; x.fillStyle = mute; x.font = '600 22px ' + F.b;
-      x.fillText(`${items.length} kalem · ${items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet`, P + 4, y + 62);
-      x.fillStyle = soft; x.font = '400 19px ' + F.b;
-      wrap(x, priced(r) ? 'Fiyatlar size özeldir.' : 'Liste fiyatlarıdır; fiyatlandırıp size dönüş yapacağız.', W - 2 * P - bw - 30, 3).forEach((ln, i) => x.fillText(ln, P + 4, y + 100 + i * 26));
-      y += FOOT;
+      x.textAlign = 'left'; x.fillStyle = '#6b7280'; x.font = '400 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+      x.fillText(priced(r) ? 'Fiyatlar size özeldir.' : 'Liste fiyatlarıdır; fiyatlandırıp size dönüş yapacağız.', P, y + 30);
     }
-    // --- alt bilgi
-    x.textAlign = 'center'; x.fillStyle = soft; x.font = '400 17px ' + F.b;
-    x.fillText([S.shop.name, S.shop.address, S.shop.whatsapp ? 'WhatsApp ' + S.shop.whatsapp : S.shop.phone].filter(Boolean).join('  ·  '), W / 2, H - 32);
+    // alt bilgi
+    x.fillStyle = '#9ca3af'; x.font = '400 16px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.textAlign = 'center';
+    x.fillText(`${S.shop.name || ''}${S.shop.whatsapp ? ' · WhatsApp ' + S.shop.whatsapp : ''}${pages.length > 1 ? ` · Sayfa ${pi + 1}/${pages.length}` : ''}`, W / 2, H - 22);
     blobs.push(await new Promise((res) => c.toBlob(res, 'image/png')));
   }
   return blobs;
+}
+
+// Panoya hem resim hem link: WhatsApp'ta Ctrl+V yapınca resim eklenir, link de mesaj/başlık olarak gelir
+export async function copyImageAndLink(file, link) {
+  if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) throw new Error('Bu tarayıcı resmi kopyalayamıyor');
+  const txt = new Blob([link], { type: 'text/plain' });
+  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': file, 'text/plain': txt })]); return 'both'; }
+  catch { await navigator.clipboard.write([new ClipboardItem({ 'image/png': file })]); return 'image'; }
 }
 
 // Resmi paylaş (telefonda WhatsApp'a gönderilebilir) / indir / panoya kopyala
@@ -246,13 +254,15 @@ export function ExportBar({ r, items, rate, tl, extra, shareText }) {
     files.forEach((f, i) => setTimeout(() => { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, i * 400));
     toast(files.length > 1 ? `${files.length} sayfa indirildi` : 'Resim indirildi');
   }
+  const [pg, setPg] = useState(0);
   async function copy() {
     setBusy(true);
     try {
-      const files = await make();
-      if (files.length > 1) { download(files); toast(`Liste ${files.length} sayfa oldu, resimler indirildi`, 'info'); }
-      else { await navigator.clipboard.write([new ClipboardItem({ 'image/png': files[0] })]); toast('Resim kopyalandı — WhatsApp’a yapıştırın'); }
-    } catch { toast('Bu tarayıcı resmi kopyalayamıyor, indirmeyi deneyin', 'bad'); }
+      const files = await make(); const k = pg < files.length ? pg : 0;
+      const how = shareText ? await copyImageAndLink(files[k], shareText) : (await navigator.clipboard.write([new ClipboardItem({ 'image/png': files[k] })]), 'image');
+      toast((files.length > 1 ? `${k + 1}/${files.length}. resim` : 'Resim') + (how === 'both' ? ' ve link' : '') + ' kopyalandı — WhatsApp’a yapıştırın');
+      setPg(k + 1 < files.length ? k + 1 : 0);
+    } catch { toast('Bu tarayıcı resmi kopyalayamıyor', 'bad'); }
     setBusy(false);
   }
   async function preview() {
@@ -264,8 +274,9 @@ export function ExportBar({ r, items, rate, tl, extra, shareText }) {
   return (
     <>
       <div className="export-bar">
-        <button className="btn primary" disabled={busy} onClick={share}><Icon n={touch ? 'send' : 'upload'} s={16} />{touch ? 'Resim olarak paylaş' : 'Resmi indir'}</button>
-        {!touch && typeof ClipboardItem !== 'undefined' && <button className="btn outline" disabled={busy} onClick={copy}><Icon n="copy" s={16} />Resmi kopyala</button>}
+        {typeof ClipboardItem !== 'undefined' && <button className="btn primary" disabled={busy} onClick={copy}><Icon n="copy" s={16} />{shareText ? 'Resim + linki kopyala' : 'Resmi kopyala'}{pg > 0 ? ` (${pg + 1}. resim)` : ''}</button>}
+        {touch && <button className="btn outline" disabled={busy} onClick={share}><Icon n="send" s={16} />Paylaş</button>}
+        {!touch && <button className="btn ghost" disabled={busy} onClick={share}><Icon n="upload" s={16} />İndir</button>}
         <button className="btn ghost" disabled={busy} onClick={preview}><Icon n="eye" s={16} />Resmi gör</button>
         {extra}
       </div>
@@ -355,7 +366,7 @@ export function AdminListShare({ r, items, onClose }) {
         <button className="btn ghost" onClick={() => copyText(link, 'Liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
         <a className="btn wa" href={waLink(phone || '', waText)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’ta gönder</a>
       </>} />
-      <p className="fine">Telefonda “Resim olarak paylaş” deyip WhatsApp’ı seçin (resimle birlikte liste linki de gider); bilgisayarda “Resmi kopyala” deyip WhatsApp Web’e yapıştırın. Liste uzunsa birkaç sayfa resim olur.</p>
+      <p className="fine">“Resim + linki kopyala” deyip WhatsApp’ta müşterinin sohbetine yapıştırın (Ctrl+V). Liste birden fazla resim olduysa her basışta sıradaki resim kopyalanır.</p>
     </div>
   );
 }

@@ -863,3 +863,13 @@ a.btn { text-decoration: none; }
 .sent-ic { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in oklab, var(--ok) 14%, var(--surface)); color: var(--ok); }
 .export-bar.center { justify-content: center; margin-top: 8px; }
 .list-wait { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 60px; text-align: center; }
+.send-step { display: flex; flex-direction: column; gap: 14px; }
+.back-btn { align-self: flex-start; }
+.send-card { display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); text-align: center; }
+.send-card .page-t, .send-card .muted { margin: 0; }
+.wa-big { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border-radius: 16px; background: #1faa53; color: #fff; text-align: left; box-shadow: 0 6px 18px -8px rgb(31 170 83 / .7); }
+.wa-big:hover { background: #18934a; }
+.wa-big:disabled { opacity: .6; }
+.wa-big b { display: block; font: 700 24px/1.1 var(--f-display); }
+.wa-big small { display: block; opacity: .9; font-size: 13px; margin-top: 3px; }
+.send-card .btn.big { justify-content: center; }

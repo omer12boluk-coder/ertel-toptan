@@ -294,7 +294,7 @@ function Login() {
 
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Katalog', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Profil', 'user']];
 const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['katalog', 'Ürünler', 'box'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
-const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Listem', 'cart']];
+const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart']];
 
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
 function pageMenu(e, role) {
