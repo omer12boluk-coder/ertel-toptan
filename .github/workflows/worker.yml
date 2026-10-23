@@ -64,3 +64,5 @@ jobs:
           sleep 15
           out=$(curl -s -m 20 "https://ertel-b2b-watch.$SUB.workers.dev/rate" || true)
           echo "::notice title=Kur cevabı::$out"
+          dbg=$(curl -s -m 30 "https://ertel-b2b-watch.$SUB.workers.dev/rate?debug=1" | head -c 1500 || true)
+          echo "::notice title=Kur teşhis::$dbg"

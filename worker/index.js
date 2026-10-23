@@ -15,6 +15,7 @@ export default {
     const json = (o, st = 200, extra = {}) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     try {
+      if (url.pathname === '/rate' && url.searchParams.has('debug')) { const d = await haremDebug(); return json(d); }
       if (url.pathname === '/rate') {
         const r = await haremRate();
         return r ? json(r, 200, { 'Cache-Control': 'public, max-age=30' }) : json({ error: 'kur alınamadı' }, 502);
@@ -26,6 +27,19 @@ export default {
     return json({ error: 'bulunamadı' }, 404);
   },
 };
+
+async function haremDebug() {
+  const out = {};
+  for (const [name, u, opt] of [
+    ['ajax', 'https://www.haremaltin.com/dashboard/ajax/doviz', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest', Referer: 'https://www.haremaltin.com/canli-piyasalar/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' }, body: 'dil_kodu=tr' }],
+    ['page', 'https://www.haremaltin.com/canli-piyasalar/', { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' } }],
+    ['canli', 'https://canlipiyasalar.haremaltin.com/', { headers: { 'User-Agent': 'Mozilla/5.0' } }],
+  ]) {
+    try { const r = await fetch(u, opt); const t = await r.text(); out[name] = { status: r.status, server: r.headers.get('server'), ct: r.headers.get('content-type'), head: t.slice(0, 300) }; }
+    catch (e) { out[name] = { err: String(e) }; }
+  }
+  return out;
+}
 
 // Harem Altın: dakikada bir istekten fazlasını Harem'e yansıtmamak için bellek önbelleği
 let rateCache = null;
