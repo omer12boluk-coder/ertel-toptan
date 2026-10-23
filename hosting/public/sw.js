@@ -1,11 +1,13 @@
-// Basit çevrimdışı kabuk: uygulama dosyalarını önbelleğe alır, veriler her zaman Firebase'den gelir.
-const C = 'ertel-toptan-v1';
-const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png'];
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(C).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
-self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k))))); self.clients.claim(); });
+// Çevrimdışı kabuk: her zaman önce sunucudan en yeni sürümü ister, internet yoksa son sürümü gösterir.
+const C = 'ertel-toptan-v2';
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
-  // önce ağ, olmazsa önbellek (güncellemeler hemen gelsin)
-  e.respondWith(fetch(e.request).then((r) => { const cp = r.clone(); caches.open(C).then((c) => c.put(e.request, cp)); return r; }).catch(() => caches.match(e.request).then((r) => r || caches.match('index.html'))));
+  e.respondWith(
+    fetch(e.request, { cache: 'no-cache' })
+      .then((r) => { if (r.ok && (e.request.mode === 'navigate' || /\.(js|png|webmanifest)$/.test(u.pathname))) { const cp = r.clone(); caches.open(C).then((c) => c.put(e.request.mode === 'navigate' ? '/index.html' : e.request, cp)); } return r; })
+      .catch(() => caches.match(e.request.mode === 'navigate' ? '/index.html' : e.request))
+  );
 });
