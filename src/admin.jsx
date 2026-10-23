@@ -959,7 +959,7 @@ export function DeleteCustomer({ c, onClose, onDone }) {
 
 // Müşteriye gönderilecek hazır mesaj (vitrin linkiyle)
 function ShopInvite() {
-  const t = `Merhaba, siparişinizi buradan kolayca verebilirsiniz 👇\n${links.shop()}\n\n1) İstediğiniz ürünlerde “Ekle”ye basın\n2) Alttaki “Sepete git”e basın\n3) Yeşil “WhatsApp’tan gönder”e basın, açılan WhatsApp’ta gönder’e dokunun\n\nListeniz bize gelir, fiyatı hemen yazarız.`;
+  const t = `Merhaba, siparişinizi buradan kolayca verebilirsiniz 👇\n${links.shop()}\n\n1) İstediğiniz ürünlerde “Ekle”ye basın\n2) Alttaki “Sepete git”e basın\n3) “Sepeti onayla”ya, sonra yeşil “WhatsApp’tan gönder”e basın (ya da “Linki kopyala”ya dokunup WhatsApp’ta yapıştırın)\n\nListeniz bize gelir, fiyatı hemen yazarız.`;
   return (
     <div className="invite">
       <b>Müşteriye göndereceğiniz hazır mesaj</b>

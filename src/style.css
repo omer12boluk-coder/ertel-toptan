@@ -948,3 +948,18 @@ a.btn { text-decoration: none; }
 @media (max-width: 560px) { .gline { grid-template-columns: 1fr; } .gline-ctl { grid-template-columns: auto 1fr 36px; } }
 .gclear { align-self: center; }
 .pt-name a.pt-t { align-items: flex-start; flex-direction: column; gap: 2px; }
+/* liste kağıdı: kenarlar temiz, tablo kartın içinde boşluklu */
+.paper { border-top: 1px solid var(--line); border-radius: 16px; box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 8px 24px -12px rgb(0 0 0 / .12); }
+.paper-h { padding: 20px 22px 12px; }
+.paper-who { padding: 0 22px 12px; }
+.paper-scroll { padding: 0 16px 6px; }
+.ptable { border-collapse: separate; border-spacing: 0; }
+.ptable th { background: #f1f5f9; padding: 12px 10px; }
+.ptable th:first-child { border-radius: 10px 0 0 10px; padding-left: 14px; }
+.ptable th:last-child { border-radius: 0 10px 10px 0; padding-right: 14px; }
+.ptable td { padding: 12px 10px; border-bottom: 1px solid #eef2f7; }
+.ptable td:first-child { padding-left: 14px; }
+.ptable td:last-child { padding-right: 14px; }
+.ptable tbody tr:nth-child(even) td { background: none; }
+.ptable tbody tr:last-child td { border-bottom: 0; }
+.paper-f { margin: 6px 16px 16px; padding: 14px 16px; border-radius: 12px; background: #f8fafc; }
