@@ -20,6 +20,10 @@ products = json.load(open(SRC / 'products.json'))
 descs = json.load(open(SRC / 'descs.json'))
 seed = js(products).replace('</', '<\\/')
 seed_desc = js(descs).replace('</', '<\\/')
+import re
+FBV = re.search(r"const V = '([\d.]+)'", (SRC / 'backend-firebase.js').read_text()).group(1)
+# Firebase dosyalarını sayfa açılır açılmaz paralel indir (uygulama kodunu beklemeden)
+PRELOAD = ''.join(f'<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/{FBV}/{m}.js" crossorigin>' for m in ['firebase-app', 'firebase-auth', 'firebase-firestore']) + '<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin><link rel="preconnect" href="https://www.gstatic.com" crossorigin>'
 FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">'
 body = f'<div id="root"></div>\n<script type="application/json" id="seed">{seed}</script>\n<script type="application/json" id="seed-desc">{seed_desc}</script>\n<script type="module">{appjs}</script>'
 body_hosted = f'<div id="root"></div>\n<script type="module">{appjs}</script>'
@@ -46,6 +50,7 @@ hosted = f'''<!doctype html>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+{PRELOAD}
 {FONTS}
 <style>{css}</style>
 <script src="config.js"></script>

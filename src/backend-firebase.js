@@ -5,6 +5,9 @@
 import { EMAIL_DOMAIN } from './config.js';
 import { now, ls } from './utils.js';
 import { chunkBySize } from './cats.js';
+import { idbGet, idbSet } from './idb.js';
+// eski localStorage önbelleklerini temizle (artık IndexedDB'de)
+try { localStorage.removeItem('cat-cache'); localStorage.removeItem('pubcat-cache'); } catch {}
 
 const V = '10.12.2';
 const CDN = `https://www.gstatic.com/firebasejs/${V}/`;
@@ -53,13 +56,20 @@ export class FirebaseBackend {
   async _emitAuth(u) {
     if (this.settingUp) return;
     if (!u) return this.authCb?.(null);
+    // Hızlı açılış: bu cihazda kayıtlı kullanıcı bilgisiyle hemen devam et, sunucudakini arkadan kontrol et
+    const ck = 'me-' + u.uid;
+    const cached = ls.get(ck, null);
+    if (cached && cached.active !== false && !this._fastDone) {
+      this._fastDone = true; this.user = cached; this.authCb?.(cached);
+    }
     try {
       const s = await timeout(this.F.getDoc(this.d('users', u.uid)));
-      if (!s.exists()) return this.authCb?.(null, 'Hesap kaydı bulunamadı.');
+      if (!s.exists()) { ls.del(ck); return this.authCb?.(null, 'Hesap kaydı bulunamadı.'); }
       const data = { uid: u.uid, ...s.data() };
+      const { photo, ...small } = data; ls.set(ck, small); // fotoğraf büyük olabilir, saklama
       if (data.active === false) { await this.U.signOut(this.auth); return this.authCb?.(null, data.pending ? 'Üyelik başvurunuz onay bekliyor. Onaylanınca giriş yapabilirsiniz.' : 'Hesabınız pasif. Lütfen dükkanla iletişime geçin.'); }
       this.user = data; this.authCb?.(data);
-    } catch (e) { this.authCb?.(null, e.message); }
+    } catch (e) { if (!cached) this.authCb?.(null, e.message); }
   }
   async login(username, pw, remember = true) {
     // "Beni hatırla" kapalıysa oturum sadece bu sekmede kalır: aynı tarayıcıda farklı sekmelerde farklı bayilerle girilebilir
@@ -67,7 +77,7 @@ export class FirebaseBackend {
     try { await this.U.signInWithEmailAndPassword(this.auth, toEmail(username), pw); }
     catch (e) { throw new Error(/invalid|wrong|not-found|credential/i.test(e.code || e.message) ? 'Kullanıcı adı veya şifre hatalı' : e.message); }
   }
-  async logout() { await this.U.signOut(this.auth); sessionStorage.removeItem('auth-tab'); }
+  async logout() { if (this.user) ls.del('me-' + this.user.uid); this._fastDone = false; await this.U.signOut(this.auth); sessionStorage.removeItem('auth-tab'); }
   // Bayinin kendi başvurusu: hesap açılır ama yönetici onaylayana kadar giriş yapamaz
   async signup({ username, password, name, shop, phone }) {
     this.settingUp = true;
@@ -96,15 +106,17 @@ export class FirebaseBackend {
       try { cb(pub ? await this.loadPublicCatalog() : await this.loadCatalog()); } catch (e) { console.warn(e); }
     }, () => {});
   }
+  // Cihazdaki son katalog (ekranı beklemeden açmak için)
+  async cachedCatalog(pub) { const c = await idbGet(pub ? 'pubcat' : 'cat'); return c?.items?.length ? c : null; }
   async loadCatalog() {
     const meta = await timeout(this.F.getDoc(this.d('catalog', '_meta')));
     if (!meta.exists()) return null;
     const { version, chunks } = meta.data();
-    const cached = ls.get('cat-cache', null);
+    const cached = await idbGet('cat');
     if (cached && cached.version === version) return cached.items;
     const parts = await timeout(Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('catalog', 'c' + i)))), 45000);
     const items = parts.flatMap((p) => (p.exists() ? p.data().items : []));
-    ls.set('cat-cache', { version, items });
+    idbSet('cat', { version, items });
     return items;
   }
   async saveCatalog(items) {
@@ -115,7 +127,7 @@ export class FirebaseBackend {
     const version = now();
     b.set(this.d('catalog', '_meta'), { version, chunks, count: items.length });
     await b.commit();
-    ls.set('cat-cache', { version, items });
+    idbSet('cat', { version, items: items.map(clean) });
     await this.savePublicCatalog(items);
   }
   // Ziyaretçi mağazası için herkese açık katalog: toptan fiyat, etiket ve pasif ürünler yok
@@ -132,11 +144,11 @@ export class FirebaseBackend {
     const meta = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta')));
     if (!meta.exists()) return [];
     const { version, chunks } = meta.data();
-    const cached = ls.get('pubcat-cache', null);
+    const cached = await idbGet('pubcat');
     if (cached && cached.version === version) return cached.items;
     const parts = await timeout(Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('pubcatalog', 'c' + i)))), 45000);
     const items = parts.flatMap((p) => (p.exists() ? p.data().items : []));
-    ls.set('pubcat-cache', { version, items });
+    idbSet('pubcat', { version, items });
     return items;
   }
   // ---- Ürün açıklamaları: katalog gibi birkaç büyük dokümanda, ilk ürün detayında bir kez yüklenir

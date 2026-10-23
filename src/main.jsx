@@ -13,6 +13,7 @@ import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { startRate, syncNow } from './watch.js';
+import { idbGet, idbSet } from './idb.js';
 
 // /admin = yönetim paneli, ana adres = bayi girişi, /magaza = herkese açık vitrin (bkz. route.js)
 const ADMIN_ROUTE = ROUTE.admin;
@@ -41,10 +42,15 @@ async function boot() {
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
   store.set({ api: A });
   startRate(A);
-  try { const pub = await A.publicInfo(); if (pub) store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub })) }); } catch {}
+  // Logo / dükkan bilgisi: cihazda kayıtlıysa hemen kullan, sunucudakini arkadan al
+  const applyPub = (pub) => pub && store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub })) });
+  const cachedPub = ls.get('pub-info', null);
+  applyPub(cachedPub);
+  const pubP = A.publicInfo().then((pub) => { if (pub) { ls.set('pub-info', pub); if (!store.s.user || store.s.user.role === 'public') applyPub(pub); } }).catch(() => {});
+  if (!cachedPub) await Promise.race([pubP, new Promise((r) => setTimeout(r, 2500))]);
   if (ROUTE.landing) { store.set({ boot: 'landing' }); return; }
   if (ROUTE.shop) return bootShop(A);
-  try { store.set({ needsSetup: await A.needsSetup() }); } catch {}
+  if (ADMIN_ROUTE) A.needsSetup().then((v) => store.set({ needsSetup: v })).catch(() => {});
 
   A.onAuth(async (u, err) => {
     if (!u) {
@@ -65,60 +71,82 @@ async function boot() {
       return;
     }
     currentUid = u.uid;
-    store.set({ user: u, boot: 'loading' });
-    try {
-      const admin = u.role === 'admin';
-      const s = await A.loadSettings();
-      // eski varsayılanları yeni marka renklerine taşı (elle seçilmiş renklere dokunma)
-      if (s && (s.seedVersion || 0) < 3 && s.brand) {
-        if (s.brand.accent === '#0d6e5f') s.brand.accent = '#2f55b0';
-        if (s.brand.priceAccent === '#b45309') s.brand.priceAccent = '#c2410c';
-        if (s.brand.theme === 'auto') s.brand.theme = 'light';
-      }
-      store.set({ settings: migrate(withDefaults(s)) });
-      let cat = await A.loadCatalog();
-      if (admin) {
-        const seed = await loadSeed();
-        if ((!cat || !cat.length) && admin && seed.length) { await A.saveCatalog(seed); cat = seed; const S2 = { ...store.s.settings, seedVersion: SEED_VERSION }; await A.saveSettings(S2); store.set({ settings: S2 }); toast('Ürün listesi ilk kez yüklendi (' + seed.length + ' ürün)'); }
-        // Uygulamayla gelen yeni alanları (resimler, etiket, marka…) eski kayıtlara ekle; elle girilenlere dokunma
-        else if (cat && cat.length && (store.s.settings.seedVersion || 0) < SEED_VERSION) {
-          const byId = new Map(seed.map((p) => [p.id, p]));
-          let added = 0;
-          cat = cat.map((p) => {
-            const sp = byId.get(p.id); if (!sp) return p;
-            let n = p;
-            for (const f of SEED_FIELDS) if (n[f] == null && sp[f] != null && !(f === 'pi' && n.img)) { n = n === p ? { ...p } : n; n[f] = sp[f]; }
-            if (n !== p) added++;
-            return n;
-          });
-          try {
-            if (added) await A.saveCatalog(cat);
-            const S2 = { ...store.s.settings, seedVersion: SEED_VERSION };
-            await A.saveSettings(S2); store.set({ settings: S2 });
-            if (added) toast(added + ' ürüne resim, etiket ve marka bilgisi eklendi');
-          } catch (e) { console.warn(e); }
-        }
-        if (admin && fb && !(await A.hasDescs())) { try { await A.saveDescs(await loadSeedDesc()); } catch (e) { console.warn(e); } }
-        if (admin && fb && cat?.length && !(await A.hasPublicCatalog())) { try { await A.savePublicCatalog(cat); } catch (e) { console.warn(e); } }
-      }
-      setCatalog(cat || []);
-      store.set({ userPrices: admin ? {} : await A.getUserPrices(u.uid) });
-      stopWatchers();
-      unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
-      if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
-      if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
-      loadCart();
-      if (admin) syncNow(false).catch(() => {});
-      // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
-      store.set({ boot: 'ready', tab: admin ? 'talepler' : 'katalog', openReq: null });
-      if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
-      else if (!admin) store.set({ tab: 'anasayfa' });
-    } catch (e) {
-      console.error(e);
-      store.set({ boot: 'error', bootError: 'Veriler yüklenemedi: ' + e.message });
+    const admin = u.role === 'admin';
+    store.set({ user: u });
+    // Hızlı açılış: bu cihazda son açılıştan kalan ayar + katalog varsa ekranı hemen aç, yenisini arkada getir
+    const ck = 'boot-' + u.uid;
+    const cache = await idbGet(ck);
+    const cat = cache && A.cachedCatalog ? await A.cachedCatalog(false) : null;
+    if (cache && cat) {
+      store.set({ settings: migrate(withDefaults(cache.settings)), userPrices: cache.prices || {} });
+      setCatalog(cat.items);
+      startSession(u, A);
+      loadAll(u, A, true).catch((e) => console.warn('arka plan yenileme', e));
+      return;
     }
+    store.set({ boot: 'loading' });
+    try { await loadAll(u, A, false); startSession(u, A); }
+    catch (e) { console.error(e); currentUid = null; store.set({ boot: 'error', bootError: 'Veriler yüklenemedi: ' + e.message }); }
   });
 }
+
+// Oturum açıldıktan sonra: canlı dinleyiciler + açılış sekmesi
+function startSession(u, A) {
+  const admin = u.role === 'admin';
+  stopWatchers();
+  unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
+  if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
+  if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
+  loadCart();
+  if (admin) syncNow(false).catch(() => {});
+  // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
+  store.set({ boot: 'ready', tab: admin ? 'talepler' : 'anasayfa', openReq: null });
+  if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
+}
+
+// Ayarlar, katalog ve özel fiyatlar aynı anda indirilir (sırayla değil)
+async function loadAll(u, A, background) {
+  const admin = u.role === 'admin';
+  const [s, cat0, prices] = await Promise.all([A.loadSettings(), A.loadCatalog(), admin ? {} : A.getUserPrices(u.uid)]);
+  let cat = cat0;
+  // eski varsayılanları yeni marka renklerine taşı (elle seçilmiş renklere dokunma)
+  if (s && (s.seedVersion || 0) < 3 && s.brand) {
+    if (s.brand.accent === '#0d6e5f') s.brand.accent = '#2f55b0';
+    if (s.brand.priceAccent === '#b45309') s.brand.priceAccent = '#c2410c';
+    if (s.brand.theme === 'auto') s.brand.theme = 'light';
+  }
+  store.set({ settings: migrate(withDefaults(s)) });
+  if (admin) {
+    const fb = A.mode === 'firebase';
+    const seed = await loadSeed();
+    if ((!cat || !cat.length) && seed.length) { await A.saveCatalog(seed); cat = seed; const S2 = { ...store.s.settings, seedVersion: SEED_VERSION }; await A.saveSettings(S2); store.set({ settings: S2 }); toast('Ürün listesi ilk kez yüklendi (' + seed.length + ' ürün)'); }
+    // Uygulamayla gelen yeni alanları (resimler, etiket, marka…) eski kayıtlara ekle; elle girilenlere dokunma
+    else if (cat && cat.length && (store.s.settings.seedVersion || 0) < SEED_VERSION) {
+      const byId = new Map(seed.map((p) => [p.id, p]));
+      let added = 0;
+      cat = cat.map((p) => {
+        const sp = byId.get(p.id); if (!sp) return p;
+        let n = p;
+        for (const f of SEED_FIELDS) if (n[f] == null && sp[f] != null && !(f === 'pi' && n.img)) { n = n === p ? { ...p } : n; n[f] = sp[f]; }
+        if (n !== p) added++;
+        return n;
+      });
+      try {
+        if (added) await A.saveCatalog(cat);
+        const S2 = { ...store.s.settings, seedVersion: SEED_VERSION };
+        await A.saveSettings(S2); store.set({ settings: S2 });
+        if (added) toast(added + ' ürüne resim, etiket ve marka bilgisi eklendi');
+      } catch (e) { console.warn(e); }
+    }
+    if (fb) A.hasDescs().then((h) => !h && loadSeedDesc().then((d) => A.saveDescs(d))).catch((e) => console.warn(e));
+    if (fb && cat?.length) A.hasPublicCatalog().then((h) => !h && A.savePublicCatalog(cat)).catch((e) => console.warn(e));
+  }
+  // arka plan yenilemesinde katalog değişmediyse ekranı yeniden çizme
+  if (!background || store.s.catalog.length !== (cat || []).length || JSON.stringify(cat?.[0]) !== JSON.stringify(stripLocal(store.s.catalog[0]))) setCatalog(cat || []);
+  store.set({ userPrices: prices || {} });
+  idbSet('boot-' + u.uid, { settings: store.s.settings, prices: prices || {} });
+}
+const stripLocal = (p) => { if (!p) return p; const { _s, _t, ...o } = p; return o; };
 
 // Eski varsayılanları yenilerine taşı (elle değiştirilmiş değerlere dokunmaz)
 function migrate(S) {
@@ -132,11 +160,13 @@ async function bootShop(A) {
   store.set({ user: { uid: 'guest', role: 'public', name: 'Ziyaretçi' }, boot: 'loading' });
   // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
   if (ROUTE.reqId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
+  const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
+  if (cached && !ROUTE.reqId) { setCatalog(cached.items); loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
   try {
     setCatalog(await A.loadPublicCatalog());
     A.watchCatalog?.((items) => items && setCatalog(items), true);
-    if (!ROUTE.reqId) { loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
-  } catch (e) { if (!ROUTE.reqId) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
+    if (!ROUTE.reqId && !cached) { loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
+  } catch (e) { if (!ROUTE.reqId && !cached) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
 }
 
 // Tema: yöneticinin varsayılanı + her cihazın kendi seçimi (üst menüdeki güneş/ay düğmesi)
