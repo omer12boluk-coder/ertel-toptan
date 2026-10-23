@@ -21,3 +21,15 @@ export async function syncNow(force) {
   return j.result;
 }
 
+
+// Yeni sürüm yayınlanınca eski sayfa açık kalmasın: sekmeye geri dönüldüğünde (ya da 10 dakikada bir) kontrol edip yenile
+export function startVersionCheck() {
+  const cur = window.__BUILD; if (!cur) return;
+  let newer = false;
+  const check = async () => {
+    try { const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' }); const j = await r.json(); if (j.v && j.v !== cur) newer = true; } catch {}
+    if (newer && document.visibilityState === 'visible' && !document.querySelector('.set-head.dirty, .sheet')) location.reload();
+  };
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
+  setInterval(check, 10 * 60 * 1000);
+}

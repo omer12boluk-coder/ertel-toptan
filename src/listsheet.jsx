@@ -225,6 +225,18 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
   return blobs;
 }
 
+// Pano tek resim tutabildiği için birden fazla sayfa alt alta tek resimde birleştirilir
+export async function mergePages(files) {
+  if (!files || files.length <= 1) return files?.[0];
+  const imgs = await Promise.all(files.map((f) => createImageBitmap(f)));
+  const gap = 24, W = Math.max(...imgs.map((i) => i.width)), H = imgs.reduce((n, i) => n + i.height, 0) + gap * (imgs.length - 1);
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d'); x.fillStyle = '#e2e8f0'; x.fillRect(0, 0, W, H);
+  let y = 0; for (const i of imgs) { x.drawImage(i, 0, y); y += i.height + gap; }
+  const b = await new Promise((res) => c.toBlob(res, 'image/png'));
+  return new File([b], files[0].name.replace(/-1\.png$/, '.png'), { type: 'image/png' });
+}
+
 // Panoya hem resim hem link: WhatsApp'ta Ctrl+V yapınca resim eklenir, link de mesaj/başlık olarak gelir
 export async function copyImageAndLink(file, link) {
   if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) throw new Error('Bu tarayıcı resmi kopyalayamıyor');
@@ -255,14 +267,12 @@ export function ExportBar({ r, items, rate, tl, extra, shareText }) {
     files.forEach((f, i) => setTimeout(() => { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, i * 400));
     toast(files.length > 1 ? `${files.length} sayfa indirildi` : 'Resim indirildi');
   }
-  const [pg, setPg] = useState(0);
   async function copy() {
     setBusy(true);
     try {
-      const files = await make(); const k = pg < files.length ? pg : 0;
-      const how = shareText ? await copyImageAndLink(files[k], shareText) : (await navigator.clipboard.write([new ClipboardItem({ 'image/png': files[k] })]), 'image');
-      toast((files.length > 1 ? `${k + 1}/${files.length}. resim` : 'Resim') + (how === 'both' ? ' ve link' : '') + ' kopyalandı — WhatsApp’a yapıştırın');
-      setPg(k + 1 < files.length ? k + 1 : 0);
+      const one = await mergePages(await make());
+      const how = shareText ? await copyImageAndLink(one, shareText) : (await navigator.clipboard.write([new ClipboardItem({ 'image/png': one })]), 'image');
+      toast('Resim' + (how === 'both' ? ' ve link' : '') + ' kopyalandı — WhatsApp’a yapıştırın');
     } catch { toast('Bu tarayıcı resmi kopyalayamıyor', 'bad'); }
     setBusy(false);
   }
@@ -275,7 +285,7 @@ export function ExportBar({ r, items, rate, tl, extra, shareText }) {
   return (
     <>
       <div className="export-bar">
-        {typeof ClipboardItem !== 'undefined' && <button className="btn primary" disabled={busy} onClick={copy}><Icon n="copy" s={16} />{shareText ? 'Resim + linki kopyala' : 'Resmi kopyala'}{pg > 0 ? ` (${pg + 1}. resim)` : ''}</button>}
+        {typeof ClipboardItem !== 'undefined' && <button className="btn primary" disabled={busy} onClick={copy}><Icon n="copy" s={16} />{shareText ? 'Resim + linki kopyala' : 'Resmi kopyala'}</button>}
         {touch && <button className="btn outline" disabled={busy} onClick={share}><Icon n="send" s={16} />Paylaş</button>}
         {!touch && <button className="btn ghost" disabled={busy} onClick={share}><Icon n="upload" s={16} />İndir</button>}
         <button className="btn ghost" disabled={busy} onClick={preview}><Icon n="eye" s={16} />Resmi gör</button>
@@ -367,7 +377,7 @@ export function AdminListShare({ r, items, onClose }) {
         <button className="btn ghost" onClick={() => copyText(link, 'Liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
         <a className="btn wa" href={waLink(phone || '', waText)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’ta gönder</a>
       </>} />
-      <p className="fine">“Resim + linki kopyala” deyip WhatsApp’ta müşterinin sohbetine yapıştırın (Ctrl+V). Liste birden fazla resim olduysa her basışta sıradaki resim kopyalanır.</p>
+      <p className="fine">“Resim + linki kopyala” deyip WhatsApp’ta müşterinin sohbetine yapıştırın (Ctrl+V).</p>
     </div>
   );
 }

@@ -2,12 +2,12 @@
 // Panoya listenin tablo resmi ve linki birlikte kopyalanır; WhatsApp düğmesi ayrıca dükkan sohbetini link yazılı açar.
 // İndirme penceresi açılmaz. Liste onaylanınca arka planda kaydedilir (yönetim panelinde Talepler'de görünür).
 import { useEffect, useMemo, useState } from 'react';
-import { useStore, setQty, clearCart, api, toast, go } from './store.js';
+import { useStore, setQty, clearCart, freshStart, toast, go } from './store.js';
 import { Icon, Thumb, Stepper, Empty } from './ui.jsx';
 import { waLink } from './route.js';
 import { encodeList, listLink } from './listcode.js';
 import { ls, fmt, totals, fmtTotals, now } from './utils.js';
-import { renderListImages, currentRate, copyImageAndLink } from './listsheet.jsx';
+import { renderListImages, currentRate, copyImageAndLink, mergePages } from './listsheet.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -18,7 +18,6 @@ export function GuestCart() {
   const [no, setNo] = useState(newNo);
   const [step, setStep] = useState('cart'); // cart → send
   const [files, setFiles] = useState(null);
-  const [page, setPage] = useState(0); // kopyalanacak resim (birden fazla sayfa varsa)
   const urls = useMemo(() => (files ? files.map((f) => URL.createObjectURL(f)) : []), [files]);
   useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
 
@@ -36,7 +35,7 @@ export function GuestCart() {
   async function confirm() {
     if (!items.length) return;
     ls.set('guest-info', g);
-    setStep('send'); setFiles(null); setPage(0);
+    setStep('send'); setFiles(null);
     const req = { no, gname: g.name.trim(), items, status: 'new', createdAt: now(), tl: true };
     try {
       const blobs = await renderListImages(req, { rate: currentRate(), tl: true });
@@ -44,21 +43,29 @@ export function GuestCart() {
     } catch (e) { toast('Resim hazırlanamadı: ' + e.message, 'bad'); }
   }
 
-  async function copy(k = page) {
-    if (!files?.[k]) return false;
+  // Panoya: tüm sayfalar tek resimde + link
+  async function copy() {
+    if (!files?.length) return false;
     try {
-      const how = await copyImageAndLink(files[k], link);
-      toast(files.length > 1 ? `${k + 1}. resim${how === 'both' ? ' ve link' : ''} kopyalandı` : how === 'both' ? 'Resim ve link kopyalandı' : 'Resim kopyalandı');
-      if (k + 1 < files.length) setPage(k + 1);
+      const how = await copyImageAndLink(await mergePages(files), link);
+      toast(how === 'both' ? 'Resim ve link kopyalandı — WhatsApp’ta Ctrl+V' : 'Resim kopyalandı — WhatsApp’ta Ctrl+V');
       return true;
     } catch (e) { toast(e.message, 'bad'); return false; }
   }
+  const shareOk = () => { try { return !!files?.length && !!navigator.canShare?.({ files, text: link }); } catch { return false; } };
   async function whatsapp() {
-    // resmi panoya kopyala, WhatsApp'ta dükkan sohbetini link yazılı halde aç → sohbette Ctrl+V
-    const ok = await copy(0);
-    if (!ok && files?.length && navigator.canShare?.({ files })) { try { await navigator.share({ files, text: link }); return; } catch {} }
+    // 1) Paylaş menüsü varsa (telefon, Windows'ta Chrome/Edge): resim + link TEK SEFERDE gider (link resmin altına yazı olarak)
+    if (shareOk()) {
+      try { await navigator.share({ files, text: link }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    // 2) Yoksa: resmi panoya kopyala, WhatsApp sohbetini link yazılı aç → sohbette Ctrl+V ile resmi ekleyin
+    let ok = false;
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': await mergePages(files) })]); ok = true; } catch {}
     window.open(waLink(S.shop.whatsapp, link), '_blank', 'noopener');
+    toast(ok ? 'Resim kopyalandı. WhatsApp’ta mesaj kutusuna Ctrl+V yapın; link hazır yazılı.' : 'WhatsApp açıldı. Resmi “Panoya kopyala” ile ayrıca ekleyin.', ok ? 'ok' : 'info');
   }
+  function reset() { freshStart(); setG({ name: '' }); setStep('cart'); setFiles(null); go('katalog'); toast('Sepet sıfırlandı'); }
 
   if (!lines.length) {
     return (
@@ -74,20 +81,19 @@ export function GuestCart() {
 
   if (step === 'send') {
     return (
-      <div className="page narrow send-step">
-        <button className="btn sm ghost back-btn" onClick={() => setStep('cart')}><Icon n="back" s={16} />Sepete dön</button>
-        <div className="send-card">
-          <h1 className="page-t">Listeniz hazır · #{no}</h1>
-          <p className="muted">{items.length} kalem · {fmtTotals(tot)}</p>
-          <button className="wa-big" onClick={whatsapp} disabled={!files || !S.shop.whatsapp}>
-            <Icon n="wa" s={34} />
-            <span><b>{files ? 'WhatsApp’tan gönder' : 'Resim hazırlanıyor…'}</b><small>Resim kopyalanır, sohbet açılır → mesaj kutusunda yapıştırın</small></span>
-          </button>
-          <button className="btn outline big" onClick={() => copy()} disabled={!files}><Icon n="copy" s={18} />{files && files.length > 1 ? `Panoya kopyala (${page + 1}/${files.length}. resim)` : 'Panoya kopyala'}</button>
-          <p className="fine">Kopyalayınca resim ve liste linki birlikte gelir: WhatsApp’ta sohbete <kbd>Ctrl</kbd>+<kbd>V</kbd> (telefonda basılı tutup Yapıştır).{files && files.length > 1 && ' Listeniz birden fazla resim oldu; her basışta sıradaki resim kopyalanır.'}</p>
-          {!S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
+      <div className="page send-step">
+        <div className="send-bar">
+          <button className="btn sm ghost" onClick={() => setStep('cart')}><Icon n="back" s={16} />Sepet</button>
+          <div className="send-t"><b>Liste #{no}</b><span className="muted">{items.length} kalem · {fmtTotals(tot)}</span></div>
+          <div className="send-btns">
+            <button className="btn wa" onClick={whatsapp} disabled={!files || !S.shop.whatsapp}><Icon n="wa" s={17} />{files ? 'WhatsApp’tan gönder' : 'Hazırlanıyor…'}</button>
+            <button className="btn outline" onClick={() => copy()} disabled={!files}><Icon n="copy" s={16} />Panoya kopyala</button>
+          </div>
         </div>
-        {urls.length > 0 && <div className="img-prev">{urls.map((u, i) => <img key={i} src={u} alt={`Liste resmi ${i + 1}`} />)}</div>}
+        <p className="fine send-hint">{shareOk() ? 'WhatsApp’tan gönder: açılan paylaş penceresinde WhatsApp’ı ve dükkan sohbetini seçin — resim ve link birlikte gider.' : 'WhatsApp’tan gönder: resim kopyalanır, sohbet link yazılı açılır; mesaj kutusunda Ctrl+V yapıp gönderin.'}</p>
+        {!S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
+        {urls.length > 0 ? <div className="send-imgs">{urls.map((u, i) => <img key={i} src={u} alt={`Liste resmi ${i + 1}`} />)}</div> : <div className="list-wait"><div className="spinner" /></div>}
+        <button className="btn ghost danger fresh-btn" onClick={reset}><Icon n="refresh" s={16} />Bitti, sepeti sıfırla</button>
       </div>
     );
   }
@@ -96,7 +102,7 @@ export function GuestCart() {
     <div className="page cart-page">
       <div className="cart-head">
         <h1 className="page-t">Sepet <span className="muted">· {lines.length} kalem</span></h1>
-        <button className="link danger" onClick={clearCart}>Sepeti boşalt</button>
+        <button className="btn sm ghost danger" onClick={reset}><Icon n="refresh" s={15} />Sepeti sıfırla</button>
       </div>
       <div className="cart-grid">
         <ul className="clist">

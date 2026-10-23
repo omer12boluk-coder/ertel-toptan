@@ -14,6 +14,8 @@ subprocess.run([str(ROOT / 'node_modules/.bin/esbuild'), str(SRC / 'main.jsx'), 
                 '--loader:.png=dataurl', '--outfile=' + str(DIST / 'app.js'), '--log-level=warning'], check=True, cwd=ROOT)
 
 appjs = (DIST / 'app.js').read_text()
+import hashlib
+BUILD = hashlib.sha1((appjs + (SRC / 'style.css').read_text()).encode()).hexdigest()[:10]
 css = (SRC / 'style.css').read_text()
 def js(o): return json.dumps(o, ensure_ascii=False, separators=(',', ':'))
 products = json.load(open(SRC / 'products.json'))
@@ -54,6 +56,7 @@ hosted = f'''<!doctype html>
 {FONTS}
 <style>{css}</style>
 <script src="config.js"></script>
+<script>window.__BUILD = '{BUILD}';</script>
 </head>
 <body>
 {body_hosted}
@@ -64,5 +67,6 @@ hosted = f'''<!doctype html>
 (PUB / 'index.html').write_text(hosted)
 (ROOT / 'DEMO.html').write_text('<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body>' + art + '</body></html>')
 (PUB / 'seed-products.json').write_text(js(products))
+(PUB / 'version.json').write_text(json.dumps({'v': BUILD}))
 (PUB / 'seed-desc.json').write_text(js(descs))
 print('artifact', len(art) // 1024, 'KB · hosted', len(hosted) // 1024, 'KB')

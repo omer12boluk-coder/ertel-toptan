@@ -881,3 +881,13 @@ a.btn { text-decoration: none; }
 .rcard.picked { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 7%, var(--surface)); }
 .btn.danger:not(.ghost):not(.link) { background: var(--bad); color: #fff; border-color: var(--bad); }
 .itable.vle .adj input { width: 70px; }
+
+.send-step { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.send-bar { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--top-h)); z-index: 6; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.send-t { display: flex; flex-direction: column; line-height: 1.2; margin-right: auto; }
+.send-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.send-hint { margin: 0 4px; }
+.send-imgs { display: flex; flex-direction: column; gap: 12px; }
+.send-imgs img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.fresh-btn { align-self: center; }
+@media (max-width: 560px) { .send-btns { width: 100%; } .send-btns .btn { flex: 1; justify-content: center; } }

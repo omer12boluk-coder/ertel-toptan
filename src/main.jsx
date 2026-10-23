@@ -13,7 +13,7 @@ import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
-import { startRate, syncNow } from './watch.js';
+import { startRate, syncNow, startVersionCheck } from './watch.js';
 import { idbGet, idbSet } from './idb.js';
 
 // /admin = yönetim paneli, ana adres = bayi girişi, /magaza = herkese açık vitrin (bkz. route.js)
@@ -43,6 +43,7 @@ async function boot() {
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
   store.set({ api: A });
   startRate(A);
+  startVersionCheck();
   // Logo / dükkan bilgisi: cihazda kayıtlıysa hemen kullan, sunucudakini arkadan al
   const applyPub = (pub) => pub && store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub })) });
   const cachedPub = ls.get('pub-info', null);

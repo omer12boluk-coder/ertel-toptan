@@ -47,13 +47,25 @@ export function toast(text, tone = 'ok') {
 
 // ---- Sepet (cihazda, kullanıcıya özel)
 const cartKey = () => 'cart-' + (store.s.user?.uid || 'x');
-export function loadCart() { store.set({ cart: ls.get(cartKey(), {}) }); }
+// Vitrin (giriş yok) sepeti sadece bu sekmede yaşar: sekme kapanınca sıfırlanır. Bayi sepeti cihazda kalır.
+const guestCart = () => store.s.user?.role === 'public';
+const cs = {
+  get: (k) => { try { if (guestCart()) return JSON.parse(sessionStorage.getItem(k) || '{}'); } catch { return {}; } return ls.get(k, {}); },
+  set: (k, v) => { try { if (guestCart()) return sessionStorage.setItem(k, JSON.stringify(v)); } catch { return; } ls.set(k, v); },
+};
+export function loadCart() { if (guestCart()) ls.del(cartKey()); store.set({ cart: cs.get(cartKey()) }); }
 export function setQty(id, qty) {
   const cart = { ...store.s.cart };
   if (qty > 0) cart[id] = Math.min(9999, Math.floor(qty)); else delete cart[id];
-  store.set({ cart }); ls.set(cartKey(), cart);
+  store.set({ cart }); cs.set(cartKey(), cart);
 }
-export function clearCart() { store.set({ cart: {} }); ls.set(cartKey(), {}); }
+export function clearCart() { store.set({ cart: {} }); cs.set(cartKey(), {}); }
+// Vitrin: her şeyi temizle (sepet, ad, eski liste kayıtları) ve baştan başla
+export function freshStart() {
+  clearCart();
+  for (const k of ['guest-info', 'guest-draft', 'guest-reqs']) ls.del(k);
+  try { sessionStorage.clear(); } catch {}
+}
 
 export function go(tab) { store.set({ tab, openReq: null }); window.scrollTo(0, 0); }
 export const home = () => go(store.s.user?.role === 'admin' ? 'talepler' : store.s.user?.role === 'public' ? 'katalog' : 'anasayfa');
