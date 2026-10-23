@@ -29,16 +29,12 @@ export default {
 };
 
 async function haremDebug() {
-  const out = {};
-  for (const [name, u, opt] of [
-    ['ajax', 'https://www.haremaltin.com/dashboard/ajax/doviz', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest', Referer: 'https://www.haremaltin.com/canli-piyasalar/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' }, body: 'dil_kodu=tr' }],
-    ['page', 'https://www.haremaltin.com/canli-piyasalar/', { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' } }],
-    ['canli', 'https://canlipiyasalar.haremaltin.com/', { headers: { 'User-Agent': 'Mozilla/5.0' } }],
-  ]) {
-    try { const r = await fetch(u, opt); const t = await r.text(); out[name] = { status: r.status, server: r.headers.get('server'), ct: r.headers.get('content-type'), head: t.slice(0, 300) }; }
-    catch (e) { out[name] = { err: String(e) }; }
-  }
-  return out;
+  const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' };
+  const r = await fetch('https://canlipiyasalar.haremaltin.com/', { headers: UA });
+  const t = await r.text();
+  const urls = [...new Set([...t.matchAll(/(?:src|href|url)\s*[:=]\s*["'`]([^"'`]+)["'`]/g)].map((m) => m[1]).filter((u) => !/\.(css|png|jpg|svg|ico|woff2?)(\?|$)/.test(u)))].slice(0, 60);
+  const hints = [...new Set([...t.matchAll(/[\w./:-]*(?:ajax|socket|api|json|doviz)[\w./?=&-]*/gi)].map((m) => m[0]))].slice(0, 60);
+  return { status: r.status, len: t.length, urls, hints };
 }
 
 // Harem Altın: dakikada bir istekten fazlasını Harem'e yansıtmamak için bellek önbelleği
