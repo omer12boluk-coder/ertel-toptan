@@ -1,7 +1,8 @@
 // Adresler:
 //   /                 giriş sayfası: "Online mağaza" (büyük) veya "Bayi girişi"
 //   /magaza           herkese açık vitrin (giriş yok): ürünler + listem
-//   /magaza/t/<no>    vitrin müşterisinin listesi (tablo; linki bilen görür)
+//   /magaza/l/<kod>   vitrin listesi (ürünler linkin içinde, hiçbir yere kaydedilmez)  /admin/l/<kod> yönetici fiyatlar
+//   /magaza/t/<no>    eski vitrin talepleri (sadece görüntüleme)
 //   /b2b              bayi uygulaması             /b2b/t/<no>   bayinin talebi (WhatsApp linki; eski /t/<no> da çalışır)
 //   /admin            yönetim paneli              /admin/t/<no> talep / liste (WhatsApp linki)
 // Claude demo sayfasında adres değişmediği için #admin / #magaza / #b2b da kabul edilir.
@@ -14,6 +15,7 @@ export const ROUTE = {
   shop: under('/magaza'),
   b2b: under('/b2b') || path.startsWith('/t/'),
   reqId: (path.match(/\/t\/([\w-]+)$/) || [])[1] || null,
+  listCode: (path.match(/\/l\/([\w-]+)$/) || [])[1] || null, // vitrin listesi (bkz. listcode.js)
 };
 ROUTE.landing = !ROUTE.admin && !ROUTE.shop && !ROUTE.b2b;
 

@@ -3,9 +3,10 @@
 // Yönetici fiyatları düzenleyip aynı tabloyu resim olarak müşteriye geri gönderir.
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, go } from './store.js';
-import { Icon, Empty, Thumb, copyText } from './ui.jsx';
+import { Icon, Empty, Thumb, Sheet, Stepper, copyText } from './ui.jsx';
+import { decodeList, encodeList, listItems, listRecord, listLink } from './listcode.js';
 import { links, waLink } from './route.js';
-import { fmt, totals, fmtTotals, when, ls } from './utils.js';
+import { fmt, totals, fmtTotals, when, ls, roundStep } from './utils.js';
 import { LOGO_MARK } from './config.js';
 
 // ---- Kur (1 USD kaç TL) ------------------------------------------------------
@@ -368,5 +369,108 @@ export function AdminListShare({ r, items, onClose }) {
       </>} />
       <p className="fine">“Resim + linki kopyala” deyip WhatsApp’ta müşterinin sohbetine yapıştırın (Ctrl+V). Liste birden fazla resim olduysa her basışta sıradaki resim kopyalanır.</p>
     </div>
+  );
+}
+
+// ---- Linkli vitrin listesi (/magaza/l/<kod>): hiçbir yere kaydedilmez ----------------------
+export function CodeList({ code }) {
+  const S = useStore((s) => s.settings);
+  const byId = useStore((s) => s.byId);
+  const L = useMemo(() => decodeList(code), [code]);
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 12000); return () => clearTimeout(t); }, []);
+  if (!L) return (
+    <div className="page narrow"><Empty icon="search" title="Liste açılamadı"><p>Link eksik kopyalanmış olabilir.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty></div>
+  );
+  if (!byId.size) return (
+    <div className="page narrow list-wait"><div className="spinner" aria-label="Yükleniyor" />
+      {slow && <><p>Bağlantı yavaş görünüyor.</p><button className="btn primary" onClick={() => location.reload()}><Icon n="refresh" s={16} />Tekrar dene</button></>}
+    </div>
+  );
+  const items = listItems(L, byId);
+  const r = listRecord(L, items);
+  const link = location.href.split('?')[0];
+  const rate = r.rate || currentRate();
+  return (
+    <div className="page list-page">
+      <div className="list-top">
+        <button className="btn sm ghost" onClick={() => go('katalog')}><Icon n="back" s={16} />Ürünler</button>
+        <span className={'pill tone-' + (L.priced ? 'ok' : 'info')}>{L.priced ? 'Fiyatlandırıldı' : 'Liste fiyatları'}</span>
+      </div>
+      <ListPaper r={r} rate={rate} />
+      <ExportBar r={r} rate={rate} shareText={link} extra={<>
+        <button className="btn ghost" onClick={() => copyText(link, 'Link kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
+        {S.shop.whatsapp && <a className="btn wa" href={waLink(S.shop.whatsapp, link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp</a>}
+      </>} />
+      <p className="fine center admin-hint">Dükkan sahibi misiniz? <a href={listLink(code, true)}>Yönetim panelinde fiyatla</a></p>
+    </div>
+  );
+}
+
+// ---- Yönetici: linkli listeyi fiyatla, yeni link + resim üret -----------------------------------
+export function VitrinListEditor({ code, onClose }) {
+  const S = useStore((s) => s.settings);
+  const byId = useStore((s) => s.byId);
+  const live = useRate();
+  const L0 = useMemo(() => decodeList(code), [code]);
+  const [items, setItems] = useState(() => (L0 ? listItems(L0, byId) : []));
+  const [name, setName] = useState(L0?.name || '');
+  const [tl, setTl] = useState(true);
+  const step = Number(S.pricing.adjustStep) || 1;
+  if (!L0) return <Sheet title="Vitrin listesi" onClose={onClose}><p className="err">Bu link okunamadı. Linkin tamamını yapıştırdığınızdan emin olun.</p></Sheet>;
+  const upd = (i, patch) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const L = { no: L0.no, name, at: Date.now(), priced: true, rate: live?.usd || L0.rate, items };
+  const newLink = listLink(encodeList(L));
+  const r = listRecord(L, items);
+  const rate = live || (L0.rate ? { usd: L0.rate, src: 'harem' } : null);
+  return (
+    <Sheet wide title={`Vitrin listesi #${L0.no}`} sub="Fiyatları ayarlayın; yeni link ve resmi müşteriye gönderin. Hiçbir yere kaydedilmez." onClose={onClose}>
+      <div className="share-sheet">
+        <label className="field"><span className="field-l">Müşteri</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Müşteri adı (isteğe bağlı)" /></label>
+        <table className="itable vle">
+          <thead><tr><th>Ürün</th><th className="r">Adet</th><th className="r">Liste</th><th className="r">Fiyat</th><th className="r">Tutar</th><th /></tr></thead>
+          <tbody>
+            {items.map((it, i) => (
+              <tr key={it.id + '-' + i} className={it.offer !== it.list ? 'changed' : ''}>
+                <td className="it-name"><span>{it.n}</span><code>{it.k}</code></td>
+                <td className="r it-qty" data-l="Adet"><Stepper small min={1} value={it.qty} onChange={(v) => upd(i, { qty: v })} /></td>
+                <td className="r num muted it-list">{fmt(it.list, it.cur)}</td>
+                <td className="r it-offer" data-l="Fiyat">
+                  <div className="adj">
+                    <button onClick={() => upd(i, { offer: roundStep((Number(it.offer) || 0) - step, 0.01) })} aria-label="Düşür">−</button>
+                    <input inputMode="decimal" value={it.offer ?? ''} aria-label="Fiyat" onChange={(e) => { const v = e.target.value.replace(',', '.'); upd(i, { offer: v === '' ? null : isNaN(Number(v)) ? it.offer : v.endsWith('.') ? v : Number(v) }); }} onBlur={() => upd(i, { offer: it.offer == null ? null : Number(it.offer) })} />
+                    <button onClick={() => upd(i, { offer: roundStep((Number(it.offer) || 0) + step, 0.01) })} aria-label="Arttır">+</button>
+                  </div>
+                </td>
+                <td className="r num it-sum" data-l="Tutar"><b>{it.offer == null ? '—' : fmt(Number(it.offer) * it.qty, it.cur)}</b></td>
+                <td className="it-del"><button className="icon-btn sm" onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))} aria-label="Kalemi çıkar"><Icon n="trash" s={15} /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <label className="mini-check tl-toggle"><input type="checkbox" checked={tl} disabled={!rate} onChange={(e) => setTl(e.target.checked)} />TL karşılığını ekle {rate && <span className="muted">({rateLabel(rate)})</span>}</label>
+        <ListPaper r={r} rate={rate} tl={tl} />
+        <ExportBar r={r} rate={rate} tl={tl} shareText={newLink} extra={<>
+          <button className="btn ghost" onClick={() => copyText(newLink, 'Fiyatlı liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
+        </>} />
+        <p className="fine">“Resim + linki kopyala” deyip müşterinin WhatsApp sohbetine yapıştırın. Link müşteride aynı fiyatlı tabloyu açar.</p>
+      </div>
+    </Sheet>
+  );
+}
+
+// Yönetici: müşteriden gelen vitrin linkini yapıştırıp açma
+export function OpenVitrinList({ onClose }) {
+  const [t, setT] = useState('');
+  const [code, setCode] = useState(null);
+  const m = t.trim().match(/\/l\/([\w-]+)/);
+  const c = m ? m[1] : /^[\w-]{20,}$/.test(t.trim()) ? t.trim() : null;
+  if (code) return <VitrinListEditor code={code} onClose={onClose} />;
+  return (
+    <Sheet title="Vitrin listesi aç" sub="Müşterinin WhatsApp’tan gönderdiği linki yapıştırın" onClose={onClose}
+      footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn primary" disabled={!c} onClick={() => setCode(c)}>Aç</button></>}>
+      <input autoFocus value={t} onChange={(e) => setT(e.target.value)} placeholder="https://erteltoptan.web.app/magaza/l/…" />
+      {t && !c && <p className="err">Bu bir vitrin listesi linki gibi görünmüyor.</p>}
+    </Sheet>
   );
 }

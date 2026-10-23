@@ -8,6 +8,15 @@ import { STATUS, TYPE, OPEN_STATUSES } from './config.js';
 import { CustomerSheet } from './admin.jsx';
 import { GuestLists, AdminListShare, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
 
+// Talepleri (mesajlarıyla) kalıcı olarak sil
+export async function deleteRequests(ids, done) {
+  try {
+    await api().deleteRequests(ids);
+    if (ids.includes(store.s.openReq)) store.set({ openReq: null });
+    toast(ids.length > 1 ? `${ids.length} talep silindi` : 'Talep silindi'); done?.();
+  } catch (e) { toast('Silinemedi: ' + e.message, 'bad'); }
+}
+
 const FILTERS_ADMIN = [
   ['open', 'Açık'], ['new', 'Yeni'], ['offered', 'Teklifte'], ['accepted', 'Hazırlanacak'], ['ready', 'Hazır'], ['closed', 'Kapanan'], ['all', 'Hepsi'],
 ];
@@ -25,6 +34,10 @@ function RequestsInner() {
   const [f, setF] = useState('open');
   const [q, setQ] = useState('');
   const [newMsg, setNewMsg] = useState(false);
+  const [sel, setSel] = useState(null); // çoklu seçim: null = kapalı, Set = seçili talepler
+  const [confirm, setConfirm] = useState(null);
+  const askDelete = (ids) => setConfirm({ title: ids.length > 1 ? `${ids.length} talebi sil` : 'Talebi sil', text: 'Talep ve tüm mesajları kalıcı olarak silinir. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => deleteRequests(ids, () => setSel(null)) });
+  const toggle = (id) => setSel((s0) => { const s = new Set(s0 || []); s.has(id) ? s.delete(id) : s.add(id); return s; });
   const list = useMemo(() => requests.filter((r) => {
     if (f === 'open' && !OPEN_STATUSES.includes(r.status)) return false;
     if (f === 'closed' && OPEN_STATUSES.includes(r.status)) return false;
@@ -44,7 +57,18 @@ function RequestsInner() {
         <div className="req-list-h">
           <h1 className="page-t">{admin ? 'Gelen talepler' : 'Taleplerim'}</h1>
           {!admin && !pub && S.requests.allowMessage && <button className="btn sm outline" onClick={() => setNewMsg(true)}><Icon n="chat" s={16} />Mesaj yaz</button>}
+          {admin && <div className="req-h-btns">
+            <button className="btn sm ghost" onClick={() => store.set({ vitrinOpen: true })} title="Müşterinin WhatsApp’tan gönderdiği vitrin linkini açıp fiyatlayın"><Icon n="store" s={15} />Vitrin listesi</button>
+            <button className={'btn sm ' + (sel ? 'primary' : 'outline')} onClick={() => setSel(sel ? null : new Set())}><Icon n="check" s={15} />{sel ? 'Seçimi kapat' : 'Seç'}</button>
+          </div>}
         </div>
+        {admin && sel && (
+          <div className="sel-bar">
+            <label className="mini-check"><input type="checkbox" checked={list.length > 0 && list.every((r) => sel.has(r.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((r) => r.id)) : new Set())} />Tümü</label>
+            <span className="muted">{sel.size} seçili</span>
+            <button className="btn sm danger" disabled={!sel.size} onClick={() => askDelete([...sel])}><Icon n="trash" s={15} />Sil</button>
+          </div>
+        )}
         {admin && (
           <div className="search sm"><Icon n="search" s={16} /><input id="req-search" type="search" placeholder="Müşteri, dükkan, ürün…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         )}
@@ -59,7 +83,7 @@ function RequestsInner() {
           </Empty>
         ) : (
           <ul className="rlist">
-            {list.map((r) => <ReqCard key={r.id} r={r} admin={admin} on={openReq === r.id} />)}
+            {list.map((r) => <ReqCard key={r.id} r={r} admin={admin} on={openReq === r.id} sel={sel} onToggle={toggle} onDelete={(id) => askDelete([id])} onSelect={(id) => setSel(new Set([id]))} />)}
           </ul>
         )}
       </section>
@@ -67,11 +91,12 @@ function RequestsInner() {
         {openReq ? <RequestDetail key={openReq} id={openReq} /> : <div className="req-placeholder"><Empty icon="chat" title="Bir talep seçin">Soldaki listeden bir talebe dokunun.</Empty></div>}
       </section>
       {newMsg && <NewMessage onClose={() => setNewMsg(false)} />}
+      {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 }
 
-function ReqCard({ r, admin, on }) {
+function ReqCard({ r, admin, on, sel, onToggle, onDelete, onSelect }) {
   const unread = admin ? r.unreadAdmin : r.unreadUser;
   const n = (r.items || []).length;
   const phone = r.guest ? r.gphone : store.s.customers.find((c) => c.uid === r.uid)?.phone;
@@ -83,13 +108,17 @@ function ReqCard({ r, admin, on }) {
     '-',
     phone && { label: "WhatsApp'tan yaz", icon: 'wa', onClick: () => window.open(waLink(phone, `Merhaba ${r.userName || ''}, #${r.no} numaralı talebiniz: ${r.guest ? links.guestRequest(r.id) : links.userRequest(r.id)}`), '_blank', 'noopener') },
     { label: 'Talep linkini kopyala', icon: 'copy', onClick: () => copyText(links.adminRequest(r.id)) },
+    '-',
+    { label: 'Seç (çoklu silme)', icon: 'check', onClick: () => onSelect?.(r.id) },
+    { label: 'Talebi sil', icon: 'trash', danger: true, onClick: () => onDelete?.(r.id) },
   ] : [
     { label: 'Talebi aç', icon: 'chat', onClick: () => openRequest(r.id) },
     { label: 'Talep linkini kopyala', icon: 'copy', onClick: () => copyText(r.guest ? links.guestRequest(r.id) : links.userRequest(r.id)) },
   ], `#${r.no} · ${r.userName || ''}`);
   return (
     <li>
-      <button className={'rcard' + (on ? ' on' : '') + (unread ? ' unread' : '')} onClick={() => openRequest(r.id)} onContextMenu={menu}>
+      <button className={'rcard' + (on ? ' on' : '') + (unread ? ' unread' : '') + (sel?.has(r.id) ? ' picked' : '')} onClick={() => (sel ? onToggle(r.id) : openRequest(r.id))} onContextMenu={menu}>
+        {sel && <span className={'pick' + (sel.has(r.id) ? ' on' : '')} aria-hidden="true">{sel.has(r.id) && <Icon n="check" s={14} />}</span>}
         {admin && <Avatar u={{ name: r.userName, photo: store.s.customers.find((c) => c.uid === r.uid)?.photo }} size={38} />}
         <div className="rcard-b">
           <div className="rcard-top">
@@ -327,6 +356,7 @@ export function RequestDetail({ id }) {
           </>
         )}
         {admin && closed && <button className="btn ghost" onClick={() => setStatus('new', {}, 'Talep yeniden açıldı')}>Yeniden aç</button>}
+        {admin && <button className="btn ghost danger" onClick={() => setConfirm({ title: 'Talebi sil', text: 'Talep ve tüm mesajları kalıcı olarak silinir. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => deleteRequests([r.id]) })}><Icon n="trash" s={15} />Sil</button>}
         {!admin && r.status === 'offered' && (
           <>
             <button className="btn primary" onClick={() => setStatus('accepted', {}, 'Müşteri teklifi kabul etti')}><Icon n="check" s={16} />Teklifi kabul et</button>

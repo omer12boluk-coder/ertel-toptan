@@ -12,6 +12,7 @@ import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
+import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { startRate, syncNow } from './watch.js';
 import { idbGet, idbSet } from './idb.js';
 
@@ -104,6 +105,7 @@ function startSession(u, A) {
   // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
   store.set({ boot: 'ready', tab: admin ? 'talepler' : 'anasayfa', openReq: null });
   if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
+  if (admin && ROUTE.listCode) { store.set({ vitrinCode: ROUTE.listCode }); history.replaceState(null, '', '/admin'); }
 }
 
 // Ayarlar, katalog ve özel fiyatlar aynı anda indirilir (sırayla değil)
@@ -163,12 +165,15 @@ async function bootShop(A) {
   // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
   if (ROUTE.reqId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
-  if (cached && !ROUTE.reqId) { setCatalog(cached.items); loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
+  const firstTab = ROUTE.listCode ? 'liste' : 'katalog';
+  if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
+  if (cached) setCatalog(cached.items);
+  if (cached && !ROUTE.reqId && !ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: firstTab, openReq: null }); }
   try {
     setCatalog(await A.loadPublicCatalog());
     A.watchCatalog?.((items) => items && setCatalog(items), true);
-    if (!ROUTE.reqId && !cached) { loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
-  } catch (e) { if (!ROUTE.reqId && !cached) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
+    if (!ROUTE.reqId && !ROUTE.listCode && !cached) { loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
+  } catch (e) { if (!ROUTE.reqId && !ROUTE.listCode && !cached) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
 }
 
 // Tema: yöneticinin varsayılanı + her cihazın kendi seçimi (üst menüdeki güneş/ay düğmesi)
@@ -318,7 +323,7 @@ function pageMenu(e, role) {
 }
 
 function Shell() {
-  const { user, tab, cart, requests, api: A } = useStore();
+  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
   const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC : NAV_USER;
@@ -367,6 +372,7 @@ function Shell() {
       )}
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
+        {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'katalog' && <Catalog admin={admin} />}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
@@ -374,6 +380,8 @@ function Shell() {
         {tab === 'musteriler' && admin && <Customers />}
         {tab === 'ayarlar' && admin && <Settings />}
       </main>
+      {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
+      {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
       <nav className="botnav" aria-label="Alt menü">
         {nav.map(([k, l, i]) => (
           <button key={k} className={'botnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>

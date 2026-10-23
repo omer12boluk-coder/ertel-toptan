@@ -39,6 +39,7 @@ service cloud.firestore {
       // bayi sadece ad / dükkan / telefon / foto değiştirebilir
       allow update: if isAdmin() || (request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shop', 'phone', 'photo']));
+      allow delete: if isAdmin();
     }
     match /userNotes/{uid} { allow read, write: if isAdmin(); }
     match /userPrices/{uid} {
@@ -52,12 +53,9 @@ service cloud.firestore {
       // ziyaretçi talebi sadece kimliği (tahmin edilemez uzun numara) bilinerek açılabilir; listelenemez
       allow get: if isAdmin() || mine() || isGuestReq();
       allow list: if isAdmin() || mine();
-      allow create: if (isActive() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'new')
-        || (request.resource.data.guest == true && request.resource.data.uid == null
-          && request.resource.data.status == 'new'
-          && request.resource.data.items is list && request.resource.data.items.size() <= 200
-          && request.resource.data.gname is string && request.resource.data.gname.size() <= 80
-          && request.resource.data.gphone is string && request.resource.data.gphone.size() <= 25);
+      // vitrinden (/magaza) talep oluşturulamaz; sadece giriş yapmış aktif bayi
+      allow create: if isActive() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'new';
+      allow delete: if isAdmin();
       allow update: if isAdmin() || (
         (mine() || (isGuestReq() && request.resource.data.guest == true))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'lastMsg', 'lastFrom', 'updatedAt', 'unreadAdmin', 'unreadUser'])
@@ -72,6 +70,7 @@ service cloud.firestore {
         function parentAfter() { return getAfter(/databases/$(database)/documents/requests/$(id)).data; }
         allow read: if isAdmin() || (signedIn() && parent().uid == request.auth.uid) || parent().get('guest', false) == true;
         // getAfter: talep ve ilk mesajlar aynı anda (tek pakette) yazıldığı için talebin yazılmış halini kontrol eder
+        allow delete: if isAdmin();
         allow create: if isAdmin() || (request.resource.data.from in ['user', 'system']
           && ((signedIn() && parentAfter().uid == request.auth.uid) || parentAfter().get('guest', false) == true));
       }

@@ -873,3 +873,11 @@ a.btn { text-decoration: none; }
 .wa-big b { display: block; font: 700 24px/1.1 var(--f-display); }
 .wa-big small { display: block; opacity: .9; font-size: 13px; margin-top: 3px; }
 .send-card .btn.big { justify-content: center; }
+.req-h-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.sel-bar { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+.sel-bar .btn { margin-left: auto; }
+.pick { flex: none; width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; background: var(--surface); color: #fff; }
+.pick.on { background: var(--accent); border-color: var(--accent); }
+.rcard.picked { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 7%, var(--surface)); }
+.btn.danger:not(.ghost):not(.link) { background: var(--bad); color: #fff; border-color: var(--bad); }
+.itable.vle .adj input { width: 70px; }

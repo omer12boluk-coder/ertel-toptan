@@ -238,6 +238,24 @@ export class FirebaseBackend {
     return this.F.onSnapshot(this.d('requests', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null));
   }
   async getRequest(id) { const s = await timeout(this.F.getDoc(this.d('requests', id))); return s.exists() ? { id, ...s.data() } : null; }
+  // Talebi mesajlarıyla birlikte tamamen sil (sadece yönetici)
+  async deleteRequests(ids) {
+    for (const id of ids) {
+      const ms = await timeout(this.F.getDocs(this.c('requests', id, 'messages')));
+      const docs = [...ms.docs.map((d) => d.ref), this.d('requests', id)];
+      for (let i = 0; i < docs.length; i += 450) { const b = this.F.writeBatch(this.db); docs.slice(i, i + 450).forEach((r) => b.delete(r)); await b.commit(); }
+    }
+  }
+  // Müşteriyi tamamen sil: kayıt, özel fiyatlar, notlar (+ istenirse talepleri). Giriş hesabı silinmiş kayıt yüzünden artık açılmaz.
+  async deleteUser(uid, withRequests) {
+    if (withRequests) {
+      const rs = await timeout(this.F.getDocs(this.F.query(this.c('requests'), this.F.where('uid', '==', uid))));
+      await this.deleteRequests(rs.docs.map((d) => d.id));
+    }
+    const b = this.F.writeBatch(this.db);
+    b.delete(this.d('users', uid)); b.delete(this.d('userPrices', uid)); b.delete(this.d('userNotes', uid));
+    await b.commit();
+  }
   async updateRequest(id, patch) { await this.F.updateDoc(this.d('requests', id), patch); }
   watchMessages(id, cb) {
     return this.F.onSnapshot(this.F.query(this.c('requests', id, 'messages'), this.F.orderBy('at')), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))));

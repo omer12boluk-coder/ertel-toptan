@@ -4,7 +4,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, setQty, clearCart, api, toast, go } from './store.js';
 import { Icon, Thumb, Stepper, Empty } from './ui.jsx';
-import { waLink, links } from './route.js';
+import { waLink } from './route.js';
+import { encodeList, listLink } from './listcode.js';
 import { ls, fmt, totals, fmtTotals, now } from './utils.js';
 import { renderListImages, currentRate, copyImageAndLink } from './listsheet.jsx';
 
@@ -14,10 +15,9 @@ const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random(
 export function GuestCart() {
   const { cart, byId, settings: S } = useStore();
   const [g, setG] = useState(() => ls.get('guest-info', { name: '' }));
-  const [draft, setDraft] = useState(() => ls.get('guest-draft', null) || { id: api().newRequestId?.() || 'r_' + Date.now(), no: newNo() });
+  const [no, setNo] = useState(newNo);
   const [step, setStep] = useState('cart'); // cart → send
   const [files, setFiles] = useState(null);
-  const [saved, setSaved] = useState(null); // kaydedilen sepetin imzası
   const [page, setPage] = useState(0); // kopyalanacak resim (birden fazla sayfa varsa)
   const urls = useMemo(() => (files ? files.map((f) => URL.createObjectURL(f)) : []), [files]);
   useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
@@ -29,31 +29,19 @@ export function GuestCart() {
     return it;
   }), [JSON.stringify(cart), byId]);
   const tot = totals(items, 'offer');
-  const sig = JSON.stringify([items.map((i) => [i.id, i.qty]), g.name.trim()]);
-  const link = links.guestRequest(draft.id);
+  // liste hiçbir yere kaydedilmez: ürünler ve adetler linkin içinde (bkz. listcode.js)
+  const link = useMemo(() => listLink(encodeList({ no, name: g.name.trim(), at: Date.now(), items })), [no, g.name, items]);
 
-  useEffect(() => { ls.set('guest-draft', draft); }, [draft]);
-  // sepet değişince, önceki kayıt farklı bir listeye aitse yeni numara al
-  useEffect(() => { if (saved && saved !== sig) { setSaved(null); setDraft({ id: api().newRequestId?.() || 'r_' + Date.now(), no: newNo() }); } }, [sig]);
 
   async function confirm() {
     if (!items.length) return;
     ls.set('guest-info', g);
     setStep('send'); setFiles(null); setPage(0);
-    const req = { no: draft.no, gname: g.name.trim(), items, status: 'new', createdAt: now(), tl: true };
+    const req = { no, gname: g.name.trim(), items, status: 'new', createdAt: now(), tl: true };
     try {
       const blobs = await renderListImages(req, { rate: currentRate(), tl: true });
-      setFiles(blobs.map((b, i) => new File([b], `liste-${draft.no}${blobs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' })));
+      setFiles(blobs.map((b, i) => new File([b], `liste-${no}${blobs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' })));
     } catch (e) { toast('Resim hazırlanamadı: ' + e.message, 'bad'); }
-    if (saved !== sig) {
-      const t = now();
-      const doc = { type: 'quote', status: 'new', items, note: '', pickup: '', no: draft.no, createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: 'Vitrin listesi', lastFrom: 'user',
-        guest: true, uid: null, gname: g.name.trim().slice(0, 80), gphone: '', userName: g.name.trim() || 'Vitrin müşterisi', shop: 'Vitrin müşterisi', tl: true };
-      const r = currentRate(); if (r) doc.rate = { usd: r.usd, src: r.src, at: r.at || t };
-      api().createRequest(doc, [{ from: 'system', text: `Vitrin listesi · ${items.length} kalem · ${fmtTotals(tot)}`, at: t }], draft.id)
-        .then(() => { setSaved(sig); const ids = ls.get('guest-reqs', []); ls.set('guest-reqs', [draft.id, ...ids.filter((x) => x !== draft.id)].slice(0, 30)); })
-        .catch((e) => toast('Liste kaydedilemedi: ' + e.message, 'bad'));
-    }
   }
 
   async function copy(k = page) {
@@ -89,7 +77,7 @@ export function GuestCart() {
       <div className="page narrow send-step">
         <button className="btn sm ghost back-btn" onClick={() => setStep('cart')}><Icon n="back" s={16} />Sepete dön</button>
         <div className="send-card">
-          <h1 className="page-t">Listeniz hazır · #{draft.no}</h1>
+          <h1 className="page-t">Listeniz hazır · #{no}</h1>
           <p className="muted">{items.length} kalem · {fmtTotals(tot)}</p>
           <button className="wa-big" onClick={whatsapp} disabled={!files || !S.shop.whatsapp}>
             <Icon n="wa" s={34} />

@@ -144,6 +144,11 @@ export class DemoBackend {
   async savePublicCatalog() {}
   async getRequest(id) { return this.db.requests[id] ? { ...this.db.requests[id] } : null; }
   watchRequest(id, cb) { return this.sub(() => cb(this.db.requests[id] ? { ...this.db.requests[id] } : null)); }
+  async deleteRequests(ids) { for (const id of ids) { delete this.db.requests[id]; delete this.db.messages[id]; } this.persist(); }
+  async deleteUser(uid, withRequests) {
+    if (withRequests) for (const [id, r] of Object.entries(this.db.requests)) if (r.uid === uid) { delete this.db.requests[id]; delete this.db.messages[id]; }
+    delete this.db.users[uid]; delete this.db.userPrices[uid]; delete this.db.notes[uid]; this.persist();
+  }
   async updateRequest(id, patch) { Object.assign(this.db.requests[id], patch); this.persist(); }
   watchMessages(id, cb) { return this.sub(() => cb([...(this.db.messages[id] || [])])); }
   async sendMessage(id, msg, patch = {}, notify) {

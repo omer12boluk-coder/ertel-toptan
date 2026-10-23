@@ -183,6 +183,7 @@ export function Customers() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [add, setAdd] = useState(false);
+  const [del, setDel] = useState(null);
   const intent = useStore((s) => s.intent);
   useEffect(() => { if (intent === 'newCustomer') { store.set({ intent: null }); setAdd(true); } }, [intent]);
   const pending = customers.filter((c) => c.pending);
@@ -198,6 +199,7 @@ export function Customers() {
     c.active === false
       ? { label: 'Hesabı aktif yap', icon: 'check', onClick: () => store.s.api.updateUser(c.uid, { active: true }).then(() => toast('Hesap aktif')) }
       : { label: 'Hesabı pasif yap', icon: 'eyeoff', danger: true, onClick: () => store.s.api.updateUser(c.uid, { active: false }).then(() => toast('Hesap pasif; artık giriş yapamaz')) },
+    { label: 'Müşteriyi tamamen sil', icon: 'trash', danger: true, onClick: () => setDel(c) },
   ], c.name || c.username);
   const list = customers.filter((c) => !c.pending && (!q || norm(`${c.name} ${c.shop} ${c.username} ${c.phone}`).includes(norm(q))))
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
@@ -239,6 +241,7 @@ export function Customers() {
       )}
       {open && <CustomerSheet c={open} onClose={() => setOpen(null)} />}
       {add && <NewCustomer onClose={() => setAdd(false)} />}
+      {del && <DeleteCustomer c={del} onClose={() => setDel(null)} onDone={() => { setDel(null); setOpen(null); }} />}
     </div>
   );
 }
@@ -294,6 +297,7 @@ function NewCustomer({ onClose }) {
 }
 
 export function CustomerSheet({ c, onClose }) {
+  const [delC, setDelC] = useState(false);
   const { settings: S, requests, api: A, catalog, customers } = useStore();
   const live = customers.find((x) => x.uid === c.uid) || c;
   const [tab, setTab] = useState(c._tab || 'info');
@@ -320,7 +324,7 @@ export function CustomerSheet({ c, onClose }) {
 
   return (
     <Sheet wide title={live.name || live.username} sub={`@${live.username} · ${live.shop || ''}`} onClose={onClose}
-      footer={tab === 'info' ? <button className="btn primary" onClick={saveInfo}><Icon n="check" s={16} />Kaydet</button> : tab === 'prices' ? <button className="btn primary" onClick={savePrices} disabled={!prices}><Icon n="check" s={16} />Fiyatları kaydet</button> : null}>
+      footer={tab === 'info' ? <><button className="btn ghost danger" onClick={() => setDelC(true)}><Icon n="trash" s={16} />Müşteriyi sil</button><button className="btn primary" onClick={saveInfo}><Icon n="check" s={16} />Kaydet</button></> : tab === 'prices' ? <button className="btn primary" onClick={savePrices} disabled={!prices}><Icon n="check" s={16} />Fiyatları kaydet</button> : null}>
       <div className="cust-head">
         <div className="avatar-edit sm">
           <Avatar u={live} size={64} />
@@ -397,6 +401,7 @@ export function CustomerSheet({ c, onClose }) {
           </ul>
         )
       )}
+      {delC && <DeleteCustomer c={c} onClose={() => setDelC(false)} onDone={() => { setDelC(false); onClose(); }} />}
     </Sheet>
   );
 }
@@ -927,4 +932,26 @@ function HomeEditor({ d, set }) {
     ))}
     {banners.length < 4 && <button className="btn sm outline" onClick={() => set('home.banners', [...banners, { img: '', title: '', text: '', link: '' }])}><Icon n="plus" s={15} />Banner ekle</button>}
   </>;
+}
+
+// Müşteriyi tamamen sil (kayıt, özel fiyatlar, notlar; istenirse talepleri de)
+export function DeleteCustomer({ c, onClose, onDone }) {
+  const n = useStore((s) => s.requests.filter((r) => r.uid === c.uid).length);
+  const [withReq, setWithReq] = useState(true);
+  const [busy, setBusy] = useState(false);
+  async function go() {
+    setBusy(true);
+    try { await api().deleteUser(c.uid, withReq); toast((c.name || c.username) + ' silindi'); onDone?.(); }
+    catch (e) { toast('Silinemedi: ' + e.message, 'bad'); setBusy(false); }
+  }
+  return (
+    <Sheet title="Müşteriyi tamamen sil" sub={`${c.name || c.username} · @${c.username}`} onClose={onClose} footer={<>
+      <button className="btn ghost" onClick={onClose}>Vazgeç</button>
+      <button className="btn danger" onClick={go} disabled={busy}><Icon n="trash" s={16} />{busy ? 'Siliniyor…' : 'Kalıcı olarak sil'}</button>
+    </>}>
+      <p>Müşterinin kaydı, özel fiyatları ve notları kalıcı olarak silinir; bir daha giriş yapamaz. Bu işlem geri alınamaz.</p>
+      {n > 0 && <label className="mini-check"><input type="checkbox" checked={withReq} onChange={(e) => setWithReq(e.target.checked)} />{n} talebini ve mesajlarını da sil</label>}
+      <p className="fine">Not: “@{c.username}” kullanıcı adı tekrar kullanılamaz; aynı kişiyi yeniden eklerseniz farklı bir kullanıcı adı verin.</p>
+    </Sheet>
+  );
 }

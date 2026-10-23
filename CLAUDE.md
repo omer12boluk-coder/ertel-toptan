@@ -10,9 +10,10 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 ## Yayın
 - `main`'e push = GitHub Actions "Yayınla" → Firebase Hosting + kurallar (erteltoptan.web.app). Değişiklikten sonra build.py çalıştırıp çıktıyı da commit et.
 - Firebase projesi `erteltoptan`, Spark (ücretsiz) plan. Kullanıcı Blaze istemiyor; Storage / Cloud Functions yok.
-- Adresler: `/` giriş sayfası (Online mağaza / Bayi girişi), `/b2b` bayi uygulaması (ana sayfa + katalog…), `/admin` yönetim paneli (ayrı oturum), `/magaza` herkese açık vitrin (sadece ürünler + listem), `/magaza/t/<id>` vitrin listesi (tablo + PNG resim, `src/listsheet.jsx`), `/b2b/t/<id>` (eski `/t/<id>` de çalışır) ve `/admin/t/<id>` talep linkleri.
+- Adresler: `/` giriş sayfası (Online mağaza / Bayi girişi), `/b2b` bayi uygulaması (ana sayfa + katalog…), `/admin` yönetim paneli (ayrı oturum), `/magaza` herkese açık vitrin (sadece ürünler + listem), `/magaza/l/<kod>` vitrin listesi: veritabanına KAYDEDİLMEZ, ürün/adet/fiyat linkin içinde (`src/listcode.js`); `/admin/l/<kod>` yönetici fiyatlar ve yeni link + PNG üretir (`src/listsheet.jsx`). Vitrinden talep oluşturulamaz (kurallar). Eski `/magaza/t/<id>` sadece görüntülenir, `/b2b/t/<id>` (eski `/t/<id>` de çalışır) ve `/admin/t/<id>` talep linkleri.
 - Excel içe aktarma (Ayarlar > Veri): ürün no ya da stok kodu eşleşirse günceller; aynı stok koduyla ikinci ürün asla eklenmez (`src/xlsx.js` mergeCatalog).
 - Bayi ana sayfası içeriği `settings.home` (Ayarlar > Bayi ana sayfası).
+- Yönetici talepleri (sağ tık / çoklu seçim / talep içi) ve müşterileri tamamen silebilir (Firebase Auth hesabı silinmez, kayıt silindiği için giriş açılmaz).
 
 ## Site eşitleme
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler.
