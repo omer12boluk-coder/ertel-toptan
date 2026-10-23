@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore, setQty, clearCart, api, openRequest, toast, go } from './store.js';
-import { Icon, Thumb, Stepper, Empty, PhoneInput, phoneDigits, openMenu, copyText } from './ui.jsx';
+import { Icon, Thumb, Stepper, Empty, PhoneInput, phoneDigits, openMenu, copyText, VatLines } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { ls } from './utils.js';
 import { fmt, priceFor, totals, fmtTotals, now } from './utils.js';
@@ -117,6 +117,7 @@ function BayiCart() {
           <div className="sum-rows">
             {S.pricing.showRetail && !guest && <div><span>Liste toplamı</span><span className="num">{fmtTotals(tList)}</span></div>}
             <div className="sum-total"><span>{guest ? 'Toplam' : 'Size toptan'}</span><b className="num">{fmtTotals(tMine)}</b></div>
+            <VatLines by={tMine} />
             {S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
           </div>
           {!guest && S.requests.askPickupTime && (

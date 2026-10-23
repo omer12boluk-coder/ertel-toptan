@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useStore, api, store, toast } from './store.js';
-import { initials, hue } from './utils.js';
+import { initials, hue, vatOf, fmtTotals } from './utils.js';
 import { STATUS } from './config.js';
 
 const P = {
@@ -263,6 +263,19 @@ export function ContextMenu() {
           {it.hint && <span className="ctx-hint">{it.hint}</span>}
         </button>
       ))}
+    </div>
+  );
+}
+
+// Toplamın altında küçük KDV bilgisi (ürün fiyatlarına dokunmaz). Oran: Ayarlar > Fiyatlandırma
+export function VatLines({ by, className = '' }) {
+  const pct = useStore((s) => s.settings.pricing.vatPct);
+  const v = vatOf(by, pct ?? 20);
+  if (!v.pct || !Object.keys(by || {}).length) return null;
+  return (
+    <div className={'vat ' + className}>
+      <div><span>KDV %{v.pct.toLocaleString('tr-TR')}</span><span className="num">{fmtTotals(v.vat)}</span></div>
+      <div><span>KDV dahil toplam</span><span className="num">{fmtTotals(v.inc)}</span></div>
     </div>
   );
 }

@@ -84,6 +84,12 @@ export function totals(items, key) {
   }
   return by;
 }
+// KDV: tutar başına (para birimi bazında) KDV ve KDV dahil toplam
+export function vatOf(by, pct) {
+  const p = Number(pct) || 0; const vat = {}, inc = {};
+  for (const [c, v] of Object.entries(by || {})) { vat[c] = v * p / 100; inc[c] = v + vat[c]; }
+  return { pct: p, vat, inc };
+}
 export function fmtTotals(by) {
   const parts = Object.entries(by).map(([c, v]) => fmt(v, c));
   return parts.length ? parts.join(' + ') : '—';

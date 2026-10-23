@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, openRequest, toast, go } from './store.js';
-import { Icon, Avatar, StatusPill, Empty, Sheet, Stepper, Confirm, openMenu, copyText } from './ui.jsx';
+import { Icon, Avatar, StatusPill, Empty, Sheet, Stepper, Confirm, openMenu, copyText, VatLines } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { ls } from './utils.js';
 import { fmt, totals, fmtTotals, when, now, roundStep } from './utils.js';
@@ -336,6 +336,7 @@ export function RequestDetail({ id }) {
             <span className="rd-total">Teklif <b className="num">{fmtTotals(tOffer)}</b></span>
             {admin && rate && toTL(tOffer, rate) != null && <span className="muted rd-tl" title={rateLabel(rate)}>≈ <b className="num">{fmtTL(toTL(tOffer, rate))}</b></span>}
           </div>
+          <VatLines by={tOffer} className="right" />
         </div>
       )}
 

@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS = {
     adjustStep: 1, // yönetici teklif ekranında -/+ butonlarının adımı
     showRetail: true, // liste (perakende) fiyatı göster
     showSaving: false, // sepette "avantajınız" satırını göster
+    vatPct: 20, // KDV oranı: sadece toplamın altında bilgi olarak gösterilir (0 = gösterme)
     showTL: false, // dolar fiyatların TL karşılığını bayilere / vitrine de göster (yönetici her zaman görür)
     manualRate: '', // doluysa Harem Altın kuru yerine bu kur kullanılır (1 USD = ? TL)
   },

@@ -524,6 +524,7 @@ export function Settings() {
           </div>
           <Toggle id="s-retail" label="Liste fiyatını göster" hint="Üstü çizili perakende fiyat" checked={d.pricing.showRetail} onChange={(v) => set('pricing.showRetail', v)} />
           <Toggle id="s-save" label="Sepette avantaj tutarını göster" checked={d.pricing.showSaving} onChange={(v) => set('pricing.showSaving', v)} />
+          <Field label="KDV oranı (%)" hint="Ürün fiyatlarına eklenmez; sadece toplamın altında “KDV” ve “KDV dahil toplam” olarak bilgi verilir. 0 yazarsanız gösterilmez."><input id="s-vat" inputMode="decimal" value={d.pricing.vatPct ?? 20} onChange={(e) => set('pricing.vatPct', e.target.value === '' ? 0 : Number(e.target.value.replace(',', '.')) || 0)} /></Field>
           <h3>TL karşılığı</h3>
           <RateInfo />
           <Field label="Elle kur (isteğe bağlı)" hint="Boş bırakın: Harem Altın dolar satış kuru kullanılır. Doldurursanız onun yerine bu kur kullanılır."><input id="s-rate" inputMode="decimal" placeholder="ör. 41,95" value={d.pricing.manualRate ?? ''} onChange={(e) => set('pricing.manualRate', e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} /></Field>

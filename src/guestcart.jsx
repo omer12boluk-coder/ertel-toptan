@@ -3,7 +3,7 @@
 // Liste hiçbir yere kaydedilmez; ürünler ve adetler linkin içindedir (bkz. listcode.js). Pano / paylaş penceresi kullanılmaz.
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, setQty, freshStart, toast, go } from './store.js';
-import { Icon, Thumb, Stepper, Empty, copyText } from './ui.jsx';
+import { Icon, Thumb, Stepper, Empty, VatLines, copyText } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { fmt, totals, fmtTotals } from './utils.js';
 import { encodeList, listLink, listItems, listRecord } from './listcode.js';
@@ -98,16 +98,18 @@ export function GuestCart() {
       </div>
       <div className="cart-grid">
         <ul className="clist gclist">
+          <li className="gline gline-h" aria-hidden="true"><span>Ürün</span><span className="gline-ctl"><span className="r">Birim fiyat</span><span className="c">Adet</span><span className="r">Toplam</span><span /></span></li>
           {lines.map(({ p, qty }) => (
             <li key={p.id} className="gline">
               <a className="gline-p" href={links.product(p, S)} target="_blank" rel="noopener" title="Ürünü yeni sekmede incele">
                 <Thumb p={p} size="sm" />
                 <span className="cline-info">
                   <span className="prow-name">{p.n}</span>
-                  <span className="prow-meta"><code>{p.k}</code>{p.r > 0 && <span>{fmt(p.r, p.cur)}</span>}</span>
+                  <span className="prow-meta"><code>{p.k}</code></span>
                 </span>
               </a>
               <div className="gline-ctl">
+                <span className="num gline-unit" data-l="Birim">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</span>
                 <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
                 <b className="num gline-sum">{p.r > 0 ? fmt(p.r * qty, p.cur) : '—'}</b>
                 <button className="icon-btn sm" onClick={() => setQty(p.id, 0)} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
@@ -117,6 +119,7 @@ export function GuestCart() {
         </ul>
         <aside className="cart-sum">
           <div className="sum-rows"><div className="sum-total"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div></div>
+          <VatLines by={tot} />
           <button className="btn primary big" onClick={() => { setStep('send'); window.scrollTo(0, 0); }}><Icon n="check" />Sepeti onayla</button>
         </aside>
       </div>
