@@ -30,11 +30,14 @@ export default {
 
 async function haremDebug() {
   const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' };
-  const r = await fetch('https://canlipiyasalar.haremaltin.com/', { headers: UA });
-  const t = await r.text();
-  const urls = [...new Set([...t.matchAll(/(?:src|href|url)\s*[:=]\s*["'`]([^"'`]+)["'`]/g)].map((m) => m[1]).filter((u) => !/\.(css|png|jpg|svg|ico|woff2?)(\?|$)/.test(u)))].slice(0, 60);
-  const hints = [...new Set([...t.matchAll(/[\w./:-]*(?:ajax|socket|api|json|doviz)[\w./?=&-]*/gi)].map((m) => m[0]))].slice(0, 60);
-  return { status: r.status, len: t.length, urls, hints };
+  const out = {};
+  for (const f of ['js/scripts.js?v=15', 'js/vue.js?v=20&t=1']) {
+    const r = await fetch('https://canlipiyasalar.haremaltin.com/' + f, { headers: UA });
+    const t = await r.text();
+    const lines = t.split('\n').filter((l) => /socket|io\(|emit|\.on\(|wss?:|https?:\/\/|USDTRY|satis/i.test(l)).map((l) => l.trim().slice(0, 220)).slice(0, 40);
+    out[f] = { status: r.status, len: t.length, lines };
+  }
+  return out;
 }
 
 // Harem Altın: dakikada bir istekten fazlasını Harem'e yansıtmamak için bellek önbelleği
