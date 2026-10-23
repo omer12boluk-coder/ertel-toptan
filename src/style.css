@@ -857,3 +857,9 @@ body:has(.shell.admin)::before { background: #16213f; }
 .lb { background: rgb(8 10 16 / .97); }
 a.btn { text-decoration: none; }
 @media (max-width: 600px) { .home-hero { padding: 18px; } .home-hero h1 { font-size: 26px; } .home-mark { width: 52px; height: 52px; } .tile { min-height: 118px; padding: 14px; } .tile b { font-size: 19px; } }
+.sent-page { display: flex; flex-direction: column; gap: 16px; }
+.sent-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 24px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.sent-card p { margin: 0; max-width: 52ch; }
+.sent-ic { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in oklab, var(--ok) 14%, var(--surface)); color: var(--ok); }
+.export-bar.center { justify-content: center; margin-top: 8px; }
+.list-wait { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 60px; text-align: center; }

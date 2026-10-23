@@ -30,7 +30,7 @@ export class FirebaseBackend {
     this.app = this.appName ? A.initializeApp(this.config, this.appName) : A.initializeApp(this.config);
     // Oturum: yönetici paneli ve "beni hatırlama" seçilen girişler sadece o sekmede yaşar (sekmeler birbirini etkilemez)
     this.tabOnly = this.opts?.tabOnly || sessionStorage.getItem('auth-tab') === '1';
-    this.auth = U.initializeAuth(this.app, { persistence: this.tabOnly ? U.browserSessionPersistence : [U.indexedDBLocalPersistence, U.browserLocalPersistence] });
+    this.auth = U.initializeAuth(this.app, { persistence: this.tabOnly ? U.browserSessionPersistence : [U.browserLocalPersistence, U.indexedDBLocalPersistence] }); // önce localStorage: bazı telefon / WhatsApp içi tarayıcılarda IndexedDB cevap vermeyip girişi kilitliyor
     // WhatsApp / Instagram içi tarayıcılarda canlı bağlantı takılabiliyor; gerekirse otomatik olarak uzun yoklamaya geçer
     try { this.db = F.initializeFirestore(this.app, { experimentalAutoDetectLongPolling: true }); } catch { this.db = F.getFirestore(this.app); }
   }
@@ -225,10 +225,11 @@ export class FirebaseBackend {
       : this.F.query(this.c('requests'), this.F.where('uid', '==', user.uid));
     return this.F.onSnapshot(q, (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.updatedAt - a.updatedAt)), (e) => console.error(e));
   }
-  async createRequest(req, msgs) {
-    const ref = this.F.doc(this.c('requests'));
+  newRequestId() { return this.F.doc(this.c('requests')).id; }
+  async createRequest(req, msgs, id) {
+    const ref = id ? this.F.doc(this.c('requests'), id) : this.F.doc(this.c('requests'));
     const b = this.F.writeBatch(this.db);
-    b.set(ref, { ...req, no: ref.id.slice(0, 4).toUpperCase() });
+    b.set(ref, { ...req, no: req.no || ref.id.slice(0, 4).toUpperCase() });
     for (const m of msgs) b.set(this.F.doc(this.c('requests', ref.id, 'messages')), m);
     await b.commit();
     return ref.id;

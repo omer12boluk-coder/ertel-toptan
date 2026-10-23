@@ -5,8 +5,14 @@ import { waLink, links } from './route.js';
 import { ls } from './utils.js';
 import { fmt, priceFor, totals, fmtTotals, now } from './utils.js';
 import { TYPE } from './config.js';
+import { GuestCart } from './guestcart.jsx';
 
 export function Cart() {
+  const guest = useStore((s) => s.user?.role === 'public');
+  return guest ? <GuestCart /> : <BayiCart />;
+}
+
+function BayiCart() {
   const { cart, byId, settings: S, user, userPrices } = useStore();
   const [note, setNote] = useState('');
   const [pickup, setPickup] = useState('');

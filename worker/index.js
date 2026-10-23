@@ -20,6 +20,14 @@ export default {
         const r = await haremRate();
         return r ? json(r, 200, { 'Cache-Control': 'public, max-age=30' }) : json({ error: 'kur alınamadı' }, 502);
       }
+      // Ürün resimleri için aracı: site CDN'i başka siteden resim okumaya izin vermediği için liste resmini çizerken buradan alınır
+      if (url.pathname === '/img') {
+        const u = url.searchParams.get('u') || '';
+        if (!/^https:\/\/platincdn\.com\/3519\//.test(u)) return json({ error: 'izin yok' }, 400);
+        const r = await fetch(u, { cf: { cacheTtl: 86400, cacheEverything: true } });
+        if (!r.ok) return new Response(null, { status: r.status, headers: cors });
+        return new Response(r.body, { headers: { 'Content-Type': r.headers.get('content-type') || 'image/jpeg', 'Cache-Control': 'public, max-age=604800', ...cors } });
+      }
       if (url.pathname === '/check' && req.method === 'POST') return json({ result: await check(env) }); // sadece değişiklik varsa eşitler
       if (url.pathname === '/sync' && req.method === 'POST') return json({ result: await check(env, { force: true }) });
       if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch' });

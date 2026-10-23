@@ -52,6 +52,8 @@ async function boot() {
   if (ROUTE.shop) return bootShop(A);
   if (ADMIN_ROUTE) A.needsSetup().then((v) => store.set({ needsSetup: v })).catch(() => {});
 
+  // Oturum kontrolü 6 sn içinde cevap vermezse (bazı telefon tarayıcıları) giriş ekranını göster; cevap gelince kendiliğinden devam eder
+  setTimeout(() => { if (store.s.boot === 'loading' && !currentUid) store.set({ boot: 'login' }); }, 6000);
   A.onAuth(async (u, err) => {
     if (!u) {
       stopWatchers(); currentUid = null;

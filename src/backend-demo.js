@@ -131,9 +131,10 @@ export class DemoBackend {
       cb(list.sort((a, b) => b.updatedAt - a.updatedAt).map((r) => ({ ...r })));
     });
   }
-  async createRequest(req, msgs) {
-    const id = 'r_' + rid();
-    this.db.requests[id] = { ...req, id, no: id.slice(2, 6).toUpperCase() };
+  newRequestId() { return 'r_' + rid(); }
+  async createRequest(req, msgs, givenId) {
+    const id = givenId || 'r_' + rid();
+    this.db.requests[id] = { ...req, id, no: req.no || id.slice(2, 6).toUpperCase() };
     this.db.messages[id] = msgs.map((m) => ({ id: rid(), ...m }));
     this.persist(); return id;
   }
