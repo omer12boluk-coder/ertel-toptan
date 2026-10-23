@@ -81,7 +81,7 @@ export function Cart() {
 
         <aside className="cart-sum">
           <div className="sum-rows">
-            {S.pricing.showRetail && <div><span>Liste toplamı</span><s className="num">{fmtTotals(tList)}</s></div>}
+            {S.pricing.showRetail && <div><span>Liste toplamı</span><span className="num">{fmtTotals(tList)}</span></div>}
             <div className="sum-total"><span>Size toptan</span><b className="num">{fmtTotals(tMine)}</b></div>
             {S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
           </div>

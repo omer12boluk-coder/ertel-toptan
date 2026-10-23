@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest } from './store.js';
-import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm } from './ui.jsx';
+import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput } from './ui.jsx';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
@@ -253,7 +253,7 @@ function NewCustomer({ onClose }) {
           <Field label="Şifre"><div className="input-btn"><input id="nc-pw" value={f.password} onChange={(e) => set('password', e.target.value)} /><button type="button" className="btn sm ghost" onClick={genPw}>Üret</button></div></Field>
         </div>
         <div className="row3">
-          <Field label="Telefon"><input id="nc-phone" inputMode="tel" value={f.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
+          <Field label="Telefon"><PhoneInput id="nc-phone" value={f.phone} onChange={(v) => set('phone', v)} /></Field>
           <Field label="Kademe"><select id="nc-tier" value={f.tier} onChange={(e) => set('tier', e.target.value)}>{S.tiers.map((t) => <option key={t.id} value={t.id}>{t.name}{t.pct ? ` (−%${t.pct})` : ''}</option>)}</select></Field>
           <Field label="Ek indirim %"><input id="nc-extra" inputMode="decimal" value={f.extraPct} onChange={(e) => set('extraPct', e.target.value)} /></Field>
         </div>
@@ -309,7 +309,7 @@ export function CustomerSheet({ c, onClose }) {
             <Field label="Dükkan"><input id="cs-shop" value={f.shop} onChange={(e) => set('shop', e.target.value)} /></Field>
           </div>
           <div className="row3">
-            <Field label="Telefon"><input id="cs-phone" value={f.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
+            <Field label="Telefon"><PhoneInput id="cs-phone" value={f.phone} onChange={(v) => set('phone', v)} /></Field>
             <Field label="Kademe"><select id="cs-tier" value={f.tier} onChange={(e) => set('tier', e.target.value)}><option value="">—</option>{S.tiers.map((t) => <option key={t.id} value={t.id}>{t.name}{t.pct ? ` (−%${t.pct})` : ''}</option>)}</select></Field>
             <Field label="Ek indirim %"><input id="cs-extra" inputMode="decimal" value={f.extraPct} onChange={(e) => set('extraPct', e.target.value)} /></Field>
           </div>
@@ -526,7 +526,7 @@ export function Settings() {
           </div>
           <Field label="Adres"><input id="s-addr" value={d.shop.address} onChange={(e) => set('shop.address', e.target.value)} /></Field>
           <div className="row2">
-            <Field label="Telefon"><input id="s-tel" inputMode="tel" value={d.shop.phone} onChange={(e) => set('shop.phone', e.target.value)} /></Field>
+            <Field label="Telefon"><PhoneInput id="s-tel" value={d.shop.phone} onChange={(v) => set('shop.phone', v)} /></Field>
             <Field label="WhatsApp (905xx…)"><input id="s-wa" inputMode="tel" value={d.shop.whatsapp} onChange={(e) => set('shop.whatsapp', e.target.value)} /></Field>
           </div>
           <Field label="Teslim notu" hint="Sepet ekranının altında görünür"><textarea id="s-pn" rows="2" value={d.shop.pickupNote} onChange={(e) => set('shop.pickupNote', e.target.value)} /></Field>
@@ -647,7 +647,7 @@ export function Profile() {
         <div className="form-col">
           <Field label="Ad soyad"><input id="p-name" value={f.name} onChange={(e) => set('name', e.target.value)} /></Field>
           <Field label="Dükkan adı"><input id="p-shop" value={f.shop} onChange={(e) => set('shop', e.target.value)} /></Field>
-          <Field label="Telefon"><input id="p-phone" inputMode="tel" value={f.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
+          <Field label="Telefon"><PhoneInput id="p-phone" value={f.phone} onChange={(v) => set('phone', v)} /></Field>
           <button className="btn primary" disabled={!dirty} onClick={() => A.updateMe(f).then(() => toast('Kaydedildi'))}>Kaydet</button>
         </div>
       </div>

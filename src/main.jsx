@@ -5,7 +5,7 @@ import { withDefaults, ls, cleanUsername } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE } from './config.js';
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
-import { Icon, Avatar } from './ui.jsx';
+import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits } from './ui.jsx';
 import { Catalog } from './catalog.jsx';
 import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
@@ -154,7 +154,8 @@ function Login() {
         if (!/^[a-z0-9._-]{3,30}$/.test(username)) throw new Error('Kullanıcı adı en az 3 karakter olmalı; harf, rakam, nokta ve tire kullanın.');
         if (f.p.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
         if (f.p !== f.p2) throw new Error('Şifreler aynı değil.');
-        if (!f.name.trim() || !f.shop.trim() || !f.phone.trim()) throw new Error('Ad, dükkan adı ve telefonu doldurun.');
+        if (!f.name.trim()) throw new Error('Adınızı yazın.');
+        if (phoneDigits(f.phone).length !== 11) throw new Error('Telefonu 0(5xx) xxx xx xx şeklinde eksiksiz yazın.');
         await A.signup({ username, password: f.p, name: f.name.trim(), shop: f.shop.trim(), phone: f.phone.trim() });
         setView('sent');
       } else if (setup) await A.setupAdmin({ username, password: f.p, name: f.name || S.shop.name });
@@ -166,7 +167,7 @@ function Login() {
   return (
     <div className="login">
       <div className="login-art" aria-hidden="true">
-        <div className="tagline-big">Toptan fiyat,<br />tek ekranda.</div>
+        <div className="tagline-big">{adminPage ? <>Yönetim<br />paneli.</> : <>Toptan fiyat,<br />tek ekranda.</>}</div>
         <ul className="login-points">
           <li><Icon n="search" s={18} />Binlerce ürünü ara, kategoriden bul</li>
           <li><Icon n="tag" s={18} />Liste fiyatı ve size özel toptan fiyat</li>
@@ -181,7 +182,8 @@ function Login() {
           <button className="btn outline" onClick={() => { setView('login'); setF((x) => ({ ...x, p: '', p2: '' })); }}>Girişe dön</button>
         </div>
       ) : (
-        <form className="login-card" onSubmit={submit}>
+        <form className={'login-card' + (adminPage ? ' admin' : '')} onSubmit={submit}>
+          {adminPage && <span className="admin-flag"><Icon n="shield" s={15} />Yönetici girişi</span>}
           <img className="login-logo" src={S.brand.logoWide || LOGO_WIDE} alt={S.shop.name} />
           <h1>{title}</h1>
           {setup && <p className="fine">Bu hesap tüm müşterileri, fiyatları ve talepleri yönetir. Bir kez yapılır.</p>}
@@ -190,12 +192,12 @@ function Login() {
             <label className="field"><span className="field-l">{setup ? 'Dükkan adı' : 'Ad soyad'}</span><input id="l-name" value={f.name} onChange={set('name')} placeholder={setup ? 'ERTEL GSM' : ''} /></label>
           )}
           {view === 'signup' && <>
-            <label className="field"><span className="field-l">Dükkan adı</span><input id="l-shop" value={f.shop} onChange={set('shop')} /></label>
-            <label className="field"><span className="field-l">Telefon</span><input id="l-phone" inputMode="tel" value={f.phone} onChange={set('phone')} /></label>
+            <label className="field"><span className="field-l">Dükkan adı <small className="opt">(isteğe bağlı)</small></span><input id="l-shop" value={f.shop} onChange={set('shop')} /></label>
+            <label className="field"><span className="field-l">Cep telefonu</span><PhoneInput id="l-phone" value={f.phone} onChange={(v) => setF((x) => ({ ...x, phone: v }))} required /></label>
           </>}
           <label className="field"><span className="field-l">Kullanıcı adı</span><input id="l-user" autoComplete="username" autoCapitalize="none" value={f.u} onChange={set('u')} required /></label>
-          <label className="field"><span className="field-l">Şifre</span><input id="l-pw" type="password" autoComplete={setup || view === 'signup' ? 'new-password' : 'current-password'} value={f.p} onChange={set('p')} required /></label>
-          {view === 'signup' && <label className="field"><span className="field-l">Şifre (tekrar)</span><input id="l-pw2" type="password" autoComplete="new-password" value={f.p2} onChange={set('p2')} required /></label>}
+          <label className="field"><span className="field-l">Şifre{(setup || view === 'signup') && <small className="opt"> (en az 6 karakter)</small>}</span><PasswordInput id="l-pw" autoComplete={setup || view === 'signup' ? 'new-password' : 'current-password'} value={f.p} onChange={set('p')} required /></label>
+          {view === 'signup' && <label className="field"><span className="field-l">Şifre (tekrar)</span><PasswordInput id="l-pw2" autoComplete="new-password" value={f.p2} onChange={set('p2')} required /></label>}
           {(err || (view === 'login' && loginError)) && <p className="err">{err || loginError}</p>}
           <button className="btn primary big" disabled={busy}>{busy ? 'Bekleyin…' : setup ? 'Yönetici hesabını oluştur' : view === 'signup' ? 'Başvuruyu gönder' : 'Giriş yap'}</button>
           {A?.mode === 'demo' && view === 'login' && (
@@ -238,10 +240,11 @@ function Shell() {
   const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : 0);
 
   return (
-    <div className={'shell tab-' + tab}>
+    <div className={'shell tab-' + tab + (admin ? ' admin' : '')}>
       <header className="topbar">
         <div className="topbar-in">
           <Brand small />
+          {admin && <span className="admin-badge"><Icon n="shield" s={14} />Yönetim paneli</span>}
           <nav className="topnav" aria-label="Ana menü">
             {nav.map(([k, l, i]) => (
               <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>

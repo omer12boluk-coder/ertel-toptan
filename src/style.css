@@ -217,7 +217,7 @@ h1, h2, h3 { text-wrap: balance; }
 
 .price { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; gap: 3px; min-width: 92px; }
 .price-list { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
-.price-list s { font-variant-numeric: tabular-nums; }
+.price-list b { font-weight: 600; color: var(--fg); font-variant-numeric: tabular-nums; }
 .price-mine { display: flex; align-items: baseline; gap: 5px; font: 700 22px/1 var(--f-display); color: var(--price); font-variant-numeric: tabular-nums; }
 .price-mine small { font: 600 10px/1 var(--f-body); letter-spacing: .07em; text-transform: uppercase; color: var(--price); opacity: .85; }
 .price-ask { font-weight: 600; color: var(--price); font-size: 14px; }
@@ -633,3 +633,32 @@ kbd { font: 600 12px var(--f-mono); padding: 1px 5px; border: 1px solid var(--li
 .pending-row .ucard-b { flex: 1 1 200px; }
 .pending-row select { width: auto; min-height: 36px; padding: 4px 8px; }
 .pending-btns { display: flex; gap: 6px; margin-left: auto; }
+
+/* ---------- şifre & telefon */
+.pw-in { position: relative; display: flex; }
+.pw-in input { padding-right: 46px; }
+.pw-eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 38px; height: 34px; border-radius: 6px; display: grid; place-items: center; color: var(--muted); touch-action: none; user-select: none; -webkit-user-select: none; }
+.pw-eye:hover, .pw-eye.on { color: var(--accent); background: var(--accent-soft); }
+.field-l .opt { font-weight: 400; color: var(--muted); }
+input[type="tel"] { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+/* ---------- yönetim paneli görünümü */
+.admin-badge { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.shell.admin { --admin-bar: #16213f; --admin-ink: #e9eefb; --admin-dim: #a9b6d6; }
+.shell.admin .topbar { background: var(--admin-bar); border-bottom-color: #0d1530; color: var(--admin-ink); }
+.shell.admin .brand-t b { color: #fff; }
+.shell.admin .admin-badge { background: #f5b20b; color: #1b1300; }
+.shell.admin .topnav-b { color: var(--admin-dim); }
+.shell.admin .topnav-b:hover { color: #fff; background: rgb(255 255 255 / .08); }
+.shell.admin .topnav-b.on { color: #fff; background: rgb(255 255 255 / .14); }
+.shell.admin .me-t small { color: var(--admin-dim); }
+.shell.admin .topbar .icon-btn { color: var(--admin-dim); }
+.shell.admin .topbar .icon-btn:hover { color: #fff; background: rgb(255 255 255 / .08); }
+.shell.admin .botnav { background: var(--admin-bar); border-top-color: #0d1530; }
+.shell.admin .botnav-b { color: var(--admin-dim); }
+.shell.admin .botnav-b.on { color: #fff; }
+.shell.admin .botnav-b.on .botnav-i { background: rgb(255 255 255 / .14); }
+@media (max-width: 560px) { .admin-badge { padding: 0 8px; font-size: 10.5px; } .shell.admin .brand-t { display: none; } }
+body:has(.shell.admin)::before { background: #16213f; }
+.login-card.admin { border-top: 4px solid #f5b20b; }
+.admin-flag { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #16213f; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }

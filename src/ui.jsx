@@ -33,6 +33,8 @@ const P = {
   moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
   expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   zoom: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4M8 11h6M11 8v6',
+  eye: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  shield: 'M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z',
 };
 export function Icon({ n, s = 20, className = '' }) {
   return (
@@ -162,5 +164,52 @@ export function Confirm({ title, text, okLabel = 'Evet', tone = 'primary', onOk,
     </>}>
       <p className="muted">{text}</p>
     </Sheet>
+  );
+}
+
+// Türkiye telefon numarası: 0(5xx) xxx xx xx — sıfırı kendisi ekler, yazdıkça biçimler
+export function fmtPhone(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.startsWith('90') && d.length > 11) d = d.slice(2);
+  if (d[0] !== '0') d = '0' + d;
+  d = d.slice(0, 11);
+  const a = d.slice(1, 4), b = d.slice(4, 7), c = d.slice(7, 9), e = d.slice(9, 11);
+  let s = '0';
+  if (a) s += '(' + a;
+  if (a.length === 3) s += ')';
+  if (b) s += ' ' + b;
+  if (c) s += ' ' + c;
+  if (e) s += ' ' + e;
+  return s;
+}
+export const phoneDigits = (v) => String(v || '').replace(/\D/g, '');
+export function PhoneInput({ id, value, onChange, required }) {
+  return (
+    <input id={id} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="0(5__) ___ __ __" value={fmtPhone(value)} required={required}
+      onChange={(e) => onChange(fmtPhone(e.target.value))}
+      onKeyDown={(e) => {
+        const el = e.currentTarget;
+        if (e.key === 'Backspace' && el.selectionStart === el.value.length && el.selectionEnd === el.value.length) {
+          e.preventDefault(); onChange(fmtPhone(phoneDigits(el.value).slice(0, -1)));
+        }
+      }} />
+  );
+}
+
+// Şifre alanı: göz simgesine basılı tutulduğu sürece şifre görünür
+export function PasswordInput({ id, value, onChange, autoComplete, required }) {
+  const [show, setShow] = useState(false);
+  const on = (e) => { e.preventDefault(); setShow(true); };
+  const off = () => setShow(false);
+  return (
+    <div className="pw-in">
+      <input id={id} type={show ? 'text' : 'password'} autoComplete={autoComplete} value={value} onChange={onChange} required={required} />
+      <button type="button" className={'pw-eye' + (show ? ' on' : '')} aria-label="Basılı tutunca şifreyi göster" title="Basılı tutunca şifreyi göster"
+        onPointerDown={on} onPointerUp={off} onPointerLeave={off} onPointerCancel={off} onContextMenu={(e) => e.preventDefault()}
+        onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && setShow(true)} onKeyUp={off} onBlur={off}>
+        <Icon n="eye" s={18} />
+      </button>
+    </div>
   );
 }

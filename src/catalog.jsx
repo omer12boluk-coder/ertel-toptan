@@ -44,7 +44,7 @@ export function PriceBlock({ p, big }) {
     <div className={'price' + (big ? ' big' : '')}>
       {((S.pricing.showRetail && pr.list > 0 && pr.mine !== pr.list) || (S.pricing.showSaving && saving > 0)) && (
         <span className="price-list">
-          {S.pricing.showRetail && pr.list > 0 && pr.mine !== pr.list && <>Liste <s>{fmt(pr.list, p.cur)}</s></>}
+          {S.pricing.showRetail && pr.list > 0 && pr.mine !== pr.list && <>Liste <b className="num">{fmt(pr.list, p.cur)}</b></>}
           {S.pricing.showSaving && saving > 0 && <span className="price-save">−%{saving}</span>}
         </span>
       )}

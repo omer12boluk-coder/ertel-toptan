@@ -233,11 +233,11 @@ export function RequestDetail({ id }) {
                     <td className="r it-offer" data-l="Teklif">
                       {editable ? (
                         <div className="adj">
-                          <button onClick={() => upd(i, { offer: roundStep((it.offer || 0) - step, 0.01) })} aria-label="Fiyatı düşür">−{step}</button>
+                          <button onClick={() => upd(i, { offer: roundStep((it.offer || 0) - step, 0.01) })} aria-label={`Fiyatı ${step} düşür`} title={`−${step}`}>−</button>
                           <input inputMode="decimal" value={it.offer ?? ''} aria-label="Teklif fiyatı"
                             onChange={(e) => { const v = e.target.value.replace(',', '.'); upd(i, { offer: v === '' ? null : isNaN(Number(v)) ? it.offer : v.endsWith('.') ? v : Number(v) }); }}
                             onBlur={() => upd(i, { offer: it.offer == null ? null : Number(it.offer) })} />
-                          <button onClick={() => upd(i, { offer: roundStep((Number(it.offer) || 0) + step, 0.01) })} aria-label="Fiyatı arttır">+{step}</button>
+                          <button onClick={() => upd(i, { offer: roundStep((Number(it.offer) || 0) + step, 0.01) })} aria-label={`Fiyatı ${step} arttır`} title={`+${step}`}>+</button>
                         </div>
                       ) : <b className={'num' + (changed ? ' hl' : '')}>{fmt(it.offer, it.cur)}</b>}
                     </td>
@@ -249,7 +249,7 @@ export function RequestDetail({ id }) {
             </tbody>
           </table>
           <div className="rd-totals">
-            {S.pricing.showRetail && <span className="muted">Liste <s className="num">{fmtTotals(tList)}</s></span>}
+            {S.pricing.showRetail && <span className="muted">Liste <span className="num">{fmtTotals(tList)}</span></span>}
             <span className="muted">{admin ? 'İstenen' : 'Sepet'} <span className="num">{fmtTotals(tAsked)}</span></span>
             <span className="rd-total">Teklif <b className="num">{fmtTotals(tOffer)}</b></span>
           </div>

@@ -56,8 +56,9 @@ service cloud.firestore {
       );
       match /messages/{m} {
         allow read: if isAdmin() || get(/databases/$(database)/documents/requests/$(id)).data.uid == request.auth.uid;
+        // getAfter: talep ve ilk mesajlar aynı anda (tek pakette) yazıldığı için talebin yazılmış halini kontrol eder
         allow create: if isAdmin() || (signedIn()
-          && get(/databases/$(database)/documents/requests/$(id)).data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/requests/$(id)).data.uid == request.auth.uid
           && request.resource.data.from in ['user', 'system']);
       }
     }
