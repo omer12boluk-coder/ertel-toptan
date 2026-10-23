@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useStore, setQty, clearCart, api, openRequest, toast, go } from './store.js';
-import { Icon, Thumb, Stepper, Empty } from './ui.jsx';
+import { Icon, Thumb, Stepper, Empty, PhoneInput, phoneDigits, openMenu, copyText } from './ui.jsx';
+import { waLink, links } from './route.js';
+import { ls } from './utils.js';
 import { fmt, priceFor, totals, fmtTotals, now } from './utils.js';
 import { TYPE } from './config.js';
 
@@ -9,6 +11,8 @@ export function Cart() {
   const [note, setNote] = useState('');
   const [pickup, setPickup] = useState('');
   const [busy, setBusy] = useState(false);
+  const guest = user.role === 'public';
+  const [g, setG] = useState(() => ls.get('guest-info', { name: '', phone: '' }));
 
   const lines = Object.entries(cart).map(([id, qty]) => ({ p: byId.get(Number(id)), qty })).filter((l) => l.p);
   const items = lines.map(({ p, qty }) => {
@@ -19,30 +23,52 @@ export function Cart() {
   const tMine = totals(items, 'asked');
   const saving = Object.entries(tList).map(([c, v]) => [c, v - (tMine[c] || 0)]).filter(([, v]) => v > 0.001);
 
-  async function send(type) {
+  // viaWA: talep kaydedilir + WhatsApp, dükkana hazır mesajla açılır (mesajdaki link talebi yönetim panelinde açar)
+  async function send(type, viaWA) {
     if (!items.length) return;
+    if (guest) {
+      if (!g.name.trim()) return toast('Adınızı yazın', 'bad');
+      if (phoneDigits(g.phone).length !== 11) return toast('Telefonunuzu 0(5xx) xxx xx xx şeklinde yazın', 'bad');
+      ls.set('guest-info', g);
+    }
+    const win = viaWA ? window.open('about:blank', '_blank') : null; // tarayıcı engellemesin diye pencere tıklamada açılır
     setBusy(true);
     try {
       const t = now();
-      const msgs = [{ from: 'system', text: `${TYPE[type]} · ${items.length} kalem · ${fmtTotals(tMine)}`, at: t }];
+      const who = guest ? g.name.trim() : user.name || user.username;
+      const msgs = [{ from: 'system', text: `${guest ? 'Vitrin sepeti' : TYPE[type]} · ${items.length} kalem · ${fmtTotals(tMine)}`, at: t }];
       if (note.trim()) msgs.push({ from: 'user', text: note.trim(), at: t + 1 });
-      const id = await api().createRequest({
-        uid: user.uid, userName: user.name || user.username, shop: user.shop || '', type, status: 'new', items, note: note.trim(), pickup: pickup.trim(),
-        createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: note.trim() || TYPE[type], lastFrom: 'user',
-      }, msgs);
+      const base = { type, status: 'new', items, note: note.trim(), pickup: pickup.trim(), createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: note.trim() || (guest ? 'Vitrin sepeti' : TYPE[type]), lastFrom: 'user' };
+      const id = await api().createRequest(guest
+        ? { ...base, guest: true, uid: null, gname: g.name.trim(), gphone: g.phone, userName: g.name.trim(), shop: 'Vitrin müşterisi' }
+        : { ...base, uid: user.uid, userName: who, shop: user.shop || '' }, msgs);
+      if (guest) ls.set('guest-reqs', [id, ...ls.get('guest-reqs', [])].slice(0, 30));
       clearCart(); setNote(''); setPickup('');
-      toast(type === 'reserve' ? 'Talebiniz iletildi, onay gelince haber vereceğiz' : 'Fiyat sorunuz iletildi');
+      if (viaWA) {
+        const lines = items.map((i, k) => `${k + 1}) ${i.n} (${i.k}) × ${i.qty}${i.asked != null ? ' — ' + fmt(i.asked * i.qty, i.cur) : ''}`).join('\n');
+        const text = `Merhaba, ${guest ? 'sitenizden sepet hazırladım' : (TYPE[type] + ' talebim')}:\n${lines}\nToplam: ${fmtTotals(tMine)}${note.trim() ? '\nNot: ' + note.trim() : ''}\n${who}${guest ? ' · ' + g.phone : user.shop ? ' · ' + user.shop : ''}\n\nTalebi aç: ${links.adminRequest(id)}`;
+        const url = waLink(S.shop.whatsapp, text);
+        if (win) win.location.href = url; else location.href = url;
+      }
+      toast(viaWA ? 'Talep kaydedildi, WhatsApp açılıyor' : type === 'reserve' ? 'Talebiniz iletildi, onay gelince haber vereceğiz' : 'Fiyat sorunuz iletildi');
       openRequest(id);
-    } catch (e) { toast('Gönderilemedi: ' + e.message, 'bad'); }
+    } catch (e) { win?.close(); toast('Gönderilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
+  const lineMenu = (e, p, qty) => openMenu(e, [
+    { label: '1 tane daha', icon: 'plus', onClick: () => setQty(p.id, qty + 1) },
+    qty > 1 && { label: '1 tane azalt', icon: 'minus', onClick: () => setQty(p.id, qty - 1) },
+    { label: 'Sepetten çıkar', icon: 'trash', danger: true, onClick: () => setQty(p.id, 0) },
+    '-',
+    { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
+  ], p.n.slice(0, 40));
 
   if (!lines.length) {
     return (
       <div className="page narrow">
         <h1 className="page-t">Sepet</h1>
         <Empty icon="cart" title="Sepetiniz boş">
-          <p>Katalogdan ürün ekleyin; sonra ister “Hazırlayın, geliyorum” deyin, ister fiyat sorun.</p>
+          <p>{guest ? 'Ürünleri sepete ekleyin, sonra tek tuşla WhatsApp’tan bize gönderin.' : 'Katalogdan ürün ekleyin; sonra ister “Hazırlayın, geliyorum” deyin, ister fiyat sorun.'}</p>
           <button className="btn primary" onClick={() => go('katalog')}>Kataloğa git</button>
         </Empty>
       </div>
@@ -60,7 +86,7 @@ export function Cart() {
           {lines.map(({ p, qty }, i) => {
             const it = items[i];
             return (
-              <li key={p.id} className="cline">
+              <li key={p.id} className="cline" onContextMenu={(e) => lineMenu(e, p, qty)}>
                 <Thumb p={p} size="sm" />
                 <div className="cline-info">
                   <span className="prow-name">{p.n}</span>
@@ -81,8 +107,8 @@ export function Cart() {
 
         <aside className="cart-sum">
           <div className="sum-rows">
-            {S.pricing.showRetail && <div><span>Liste toplamı</span><span className="num">{fmtTotals(tList)}</span></div>}
-            <div className="sum-total"><span>Size toptan</span><b className="num">{fmtTotals(tMine)}</b></div>
+            {S.pricing.showRetail && !guest && <div><span>Liste toplamı</span><span className="num">{fmtTotals(tList)}</span></div>}
+            <div className="sum-total"><span>{guest ? 'Toplam' : 'Size toptan'}</span><b className="num">{fmtTotals(tMine)}</b></div>
             {S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
           </div>
           {S.requests.askPickupTime && (
@@ -95,21 +121,34 @@ export function Cart() {
             <span className="field-l">Not / mesaj</span>
             <textarea id="cart-note" rows="3" placeholder="ör. Hepsini alırsam son ne olur?" value={note} onChange={(e) => setNote(e.target.value)} />
           </label>
+          {guest && (
+            <div className="guest-fields">
+              <label className="field"><span className="field-l">Adınız</span><input id="g-name" value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} autoComplete="name" /></label>
+              <label className="field"><span className="field-l">Cep telefonunuz</span><PhoneInput id="g-phone" value={g.phone} onChange={(v) => setG({ ...g, phone: v })} /></label>
+            </div>
+          )}
           <div className="cart-actions">
-            {S.requests.allowReserve && (
+            {(guest || S.shop.whatsapp) && (
+              <button className="btn wa big" disabled={busy || (guest && !S.shop.whatsapp)} onClick={() => send('quote', true)}>
+                <Icon n="wa" />
+                <span><b>WhatsApp’tan gönder</b><small>{guest ? 'Sepetinizi bize iletin, fiyatı onaylayalım' : 'Talep kaydedilir, WhatsApp’tan da haber verilir'}</small></span>
+              </button>
+            )}
+            {!guest && S.requests.allowReserve && (
               <button className="btn primary big" disabled={busy} onClick={() => send('reserve')}>
                 <Icon n="check" />
                 <span><b>Hazırlayın, geliyorum</b><small>Bu fiyatlarla ayırın</small></span>
               </button>
             )}
-            {S.requests.allowQuote && (
+            {!guest && S.requests.allowQuote && (
               <button className="btn outline big" disabled={busy} onClick={() => send('quote')}>
                 <Icon n="chat" />
                 <span><b>Fiyat sor</b><small>Son ne olur? Teklif isteyin</small></span>
               </button>
             )}
           </div>
-          <p className="fine">{S.shop.pickupNote}</p>
+          {guest && !S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
+          <p className="fine">{guest ? 'Fiyatlar liste fiyatıdır. Size özel teklif WhatsApp’tan link olarak gelir; onaylayınca havale bilgisi görünür.' : S.shop.pickupNote}</p>
         </aside>
       </div>
     </div>

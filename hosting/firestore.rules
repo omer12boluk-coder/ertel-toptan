@@ -17,8 +17,10 @@ service cloud.firestore {
     match /settings/public { allow read: if true; allow write: if isAdmin(); }
     match /settings/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
     match /catalog/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
-    match /img/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
-    match /desc/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
+    // ziyaretçi mağazası: toptan fiyatsız katalog herkese açık
+    match /pubcatalog/{doc} { allow read: if true; allow write: if isAdmin(); }
+    match /img/{doc} { allow read: if true; allow write: if isAdmin(); }
+    match /desc/{doc} { allow read: if true; allow write: if isAdmin(); }
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
@@ -43,10 +45,19 @@ service cloud.firestore {
     }
 
     match /requests/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-      allow create: if isActive() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'new';
+      function isGuestReq() { return resource.data.get('guest', false) == true; }
+      function mine() { return signedIn() && resource.data.uid == request.auth.uid; }
+      // ziyaretçi talebi sadece kimliği (tahmin edilemez uzun numara) bilinerek açılabilir; listelenemez
+      allow get: if isAdmin() || mine() || isGuestReq();
+      allow list: if isAdmin() || mine();
+      allow create: if (isActive() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'new')
+        || (request.resource.data.guest == true && request.resource.data.uid == null
+          && request.resource.data.status == 'new'
+          && request.resource.data.items is list && request.resource.data.items.size() <= 200
+          && request.resource.data.gname is string && request.resource.data.gname.size() <= 80
+          && request.resource.data.gphone is string && request.resource.data.gphone.size() <= 25);
       allow update: if isAdmin() || (
-        signedIn() && resource.data.uid == request.auth.uid
+        (mine() || (isGuestReq() && request.resource.data.guest == true))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'lastMsg', 'lastFrom', 'updatedAt', 'unreadAdmin', 'unreadUser'])
         && (
           request.resource.data.status == resource.data.status
@@ -55,11 +66,12 @@ service cloud.firestore {
         )
       );
       match /messages/{m} {
-        allow read: if isAdmin() || get(/databases/$(database)/documents/requests/$(id)).data.uid == request.auth.uid;
+        function parent() { return get(/databases/$(database)/documents/requests/$(id)).data; }
+        function parentAfter() { return getAfter(/databases/$(database)/documents/requests/$(id)).data; }
+        allow read: if isAdmin() || (signedIn() && parent().uid == request.auth.uid) || parent().get('guest', false) == true;
         // getAfter: talep ve ilk mesajlar aynı anda (tek pakette) yazıldığı için talebin yazılmış halini kontrol eder
-        allow create: if isAdmin() || (signedIn()
-          && getAfter(/databases/$(database)/documents/requests/$(id)).data.uid == request.auth.uid
-          && request.resource.data.from in ['user', 'system']);
+        allow create: if isAdmin() || (request.resource.data.from in ['user', 'system']
+          && ((signedIn() && parentAfter().uid == request.auth.uid) || parentAfter().get('guest', false) == true));
       }
     }
   }

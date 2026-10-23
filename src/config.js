@@ -10,7 +10,7 @@ export { LOGO_MARK, LOGO_WIDE };
 
 export const DEFAULT_SETTINGS = {
   brand: {
-    appName: 'ERTEL Toptan',
+    appName: 'ERTEL B2B',
     tagline: 'Bayilere özel katalog',
     accent: '#2f55b0', // ana renk (logodaki lacivert)
     priceAccent: '#c2410c', // toptan fiyat rengi
@@ -24,7 +24,7 @@ export const DEFAULT_SETTINGS = {
     roundStep: 0.5, // toptan fiyat yuvarlama adımı (0.01 / 0.5 / 1)
     adjustStep: 1, // yönetici teklif ekranında -/+ butonlarının adımı
     showRetail: true, // liste (perakende) fiyatı göster
-    showSaving: true, // "%x avantaj" etiketini göster
+    showSaving: false, // sepette "avantajınız" satırını göster
   },
   tiers: [
     { id: 'standart', name: 'Standart', pct: 0 },
@@ -62,9 +62,11 @@ export const DEFAULT_SETTINGS = {
     phone: '',
     whatsapp: '',
     pickupNote: 'Siparişiniz hazırlandığında dükkandan teslim alabilirsiniz.',
+    payInfo: '', // vitrin müşterisine gösterilecek havale / ödeme bilgisi
   },
   access: {
-    allowSignup: true, // bayiler giriş ekranından kendileri üye olabilir; yönetici onaylayınca girebilir
+    allowSignup: true,
+    publicShop: true, // /magaza herkese açık vitrin // bayiler giriş ekranından kendileri üye olabilir; yönetici onaylayınca girebilir
   },
   features: {
     profilePhoto: true,

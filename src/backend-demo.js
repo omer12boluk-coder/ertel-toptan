@@ -45,7 +45,8 @@ function freshDb(seed) {
 
 export class DemoBackend {
   mode = 'demo';
-  constructor(seed, loadDescs) {
+  constructor(seed, loadDescs, area = 'user') {
+    this.sk = area === 'admin' ? 'adminSession' : 'session';
     this.seed = seed;
     this.loadDescs = loadDescs || (async () => ({}));
     this.db = ls.get(KEY, null) || freshDb(seed);
@@ -65,7 +66,7 @@ export class DemoBackend {
   async needsSetup() { return false; }
   onAuth(cb) {
     this.authCb = cb;
-    const u = this.db.users[this.db.session];
+    const u = this.db.users[this.db[this.sk]];
     cb(u && u.active !== false ? this.pub(u) : null);
     return () => {};
   }
@@ -73,7 +74,7 @@ export class DemoBackend {
     const u = Object.values(this.db.users).find((x) => x.username === username.trim().toLowerCase());
     if (!u || u.pw !== pw) throw new Error('Kullanıcı adı veya şifre hatalı');
     if (u.active === false) throw new Error(u.pending ? 'Üyelik başvurunuz onay bekliyor. Onaylanınca giriş yapabilirsiniz.' : 'Hesabınız pasif. Lütfen dükkanla iletişime geçin.');
-    this.db.session = u.uid; this.persist();
+    this.db[this.sk] = u.uid; this.persist();
     this.authCb?.(this.pub(u));
   }
   async signup({ username, password, name, shop, phone }) {
@@ -82,7 +83,7 @@ export class DemoBackend {
     this.db.users[uid] = { uid, username, pw: password, name, shop, phone, role: 'customer', active: false, pending: true, tier: '', createdAt: now(), stats: { done: 0, noshow: 0 } };
     this.persist();
   }
-  async logout() { this.db.session = null; this.persist(); this.authCb?.(null); }
+  async logout() { this.db[this.sk] = null; this.persist(); this.authCb?.(null); }
   async reset() { this.db = freshDb(this.seed); this.persist(); location.reload(); }
 
   async loadSettings() { return this.db.settings; }
@@ -102,8 +103,8 @@ export class DemoBackend {
   async getImage(id) { return this.db.images[id] || null; }
   async setImage(id, data) { if (data) this.db.images[id] = data; else delete this.db.images[id]; this.persist(); }
 
-  async me() { return this.pub(this.db.users[this.db.session]); }
-  async updateMe(patch) { const u = this.db.users[this.db.session]; Object.assign(u, patch); this.persist(); this.authCb?.(this.pub(u)); }
+  async me() { return this.pub(this.db.users[this.db[this.sk]]); }
+  async updateMe(patch) { const u = this.db.users[this.db[this.sk]]; Object.assign(u, patch); this.persist(); this.authCb?.(this.pub(u)); }
   watchUsers(cb) { return this.sub(() => cb(Object.values(this.db.users).filter((u) => u.role !== 'admin').map((u) => this.pub(u)))); }
   async createUser({ username, password, ...rest }) {
     if (Object.values(this.db.users).some((u) => u.username === username)) throw new Error('Bu kullanıcı adı zaten var');
@@ -136,6 +137,11 @@ export class DemoBackend {
     this.db.messages[id] = msgs.map((m) => ({ id: rid(), ...m }));
     this.persist(); return id;
   }
+  async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => p); }
+  async hasPublicCatalog() { return true; }
+  async savePublicCatalog() {}
+  async getRequest(id) { return this.db.requests[id] ? { ...this.db.requests[id] } : null; }
+  watchRequest(id, cb) { return this.sub(() => cb(this.db.requests[id] ? { ...this.db.requests[id] } : null)); }
   async updateRequest(id, patch) { Object.assign(this.db.requests[id], patch); this.persist(); }
   watchMessages(id, cb) { return this.sub(() => cb([...(this.db.messages[id] || [])])); }
   async sendMessage(id, msg, patch = {}, notify) {

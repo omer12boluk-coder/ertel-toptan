@@ -19,6 +19,9 @@ export const store = {
     openReq: null,
     cart: {},
     toast: null,
+    ctx: null, // sağ tık menüsü
+    intent: null, // başka ekrandan gelen istek: 'newProduct' | 'newCustomer'
+    guestInfo: null,
   },
   get() { return this.s; },
   set(patch) { this.s = { ...this.s, ...(typeof patch === 'function' ? patch(this.s) : patch) }; subs.forEach((f) => f()); },
@@ -52,4 +55,5 @@ export function setQty(id, qty) {
 export function clearCart() { store.set({ cart: {} }); ls.set(cartKey(), {}); }
 
 export function go(tab) { store.set({ tab, openReq: null }); window.scrollTo(0, 0); }
+export const home = () => go(store.s.user?.role === 'admin' ? 'talepler' : 'katalog');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }

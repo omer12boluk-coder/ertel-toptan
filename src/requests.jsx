@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, openRequest, toast, go } from './store.js';
-import { Icon, Avatar, StatusPill, Empty, Sheet, Stepper, Confirm } from './ui.jsx';
+import { Icon, Avatar, StatusPill, Empty, Sheet, Stepper, Confirm, openMenu, copyText } from './ui.jsx';
+import { waLink, links } from './route.js';
+import { ls } from './utils.js';
 import { fmt, totals, fmtTotals, when, now, roundStep } from './utils.js';
 import { STATUS, TYPE, OPEN_STATUSES } from './config.js';
 import { CustomerSheet } from './admin.jsx';
@@ -10,9 +12,27 @@ const FILTERS_ADMIN = [
 ];
 const FILTERS_USER = [['open', 'Açık'], ['closed', 'Geçmiş'], ['all', 'Hepsi']];
 
+// Vitrin müşterisi giriş yapmadığı için talepleri bu cihazda hatırlanan numaralardan yüklenir
+function useGuestRequests(on) {
+  const [list, setList] = useState([]);
+  const openReq = useStore((s) => s.openReq);
+  useEffect(() => {
+    if (!on) return;
+    const ids = [...new Set([openReq, ...ls.get('guest-reqs', [])].filter(Boolean))];
+    if (openReq && !ls.get('guest-reqs', []).includes(openReq)) ls.set('guest-reqs', [openReq, ...ls.get('guest-reqs', [])].slice(0, 30));
+    const map = new Map();
+    const unsubs = ids.map((id) => api().watchRequest(id, (r) => { if (r) map.set(id, r); else map.delete(id); setList([...map.values()].sort((a, b) => b.updatedAt - a.updatedAt)); }));
+    return () => unsubs.forEach((u) => u && u());
+  }, [on, openReq]);
+  return list;
+}
+
 export function Requests() {
-  const { requests, user, openReq, settings: S } = useStore();
+  const { requests: all, user, openReq, settings: S } = useStore();
   const admin = user.role === 'admin';
+  const pub = user.role === 'public';
+  const guestList = useGuestRequests(pub);
+  const requests = pub ? guestList : all;
   const [f, setF] = useState('open');
   const [q, setQ] = useState('');
   const [newMsg, setNewMsg] = useState(false);
@@ -34,7 +54,7 @@ export function Requests() {
       <section className="req-list">
         <div className="req-list-h">
           <h1 className="page-t">{admin ? 'Gelen talepler' : 'Taleplerim'}</h1>
-          {!admin && S.requests.allowMessage && <button className="btn sm outline" onClick={() => setNewMsg(true)}><Icon n="chat" s={16} />Mesaj yaz</button>}
+          {!admin && !pub && S.requests.allowMessage && <button className="btn sm outline" onClick={() => setNewMsg(true)}><Icon n="chat" s={16} />Mesaj yaz</button>}
         </div>
         {admin && (
           <div className="search sm"><Icon n="search" s={16} /><input id="req-search" type="search" placeholder="Müşteri, dükkan, ürün…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
@@ -65,13 +85,26 @@ export function Requests() {
 function ReqCard({ r, admin, on }) {
   const unread = admin ? r.unreadAdmin : r.unreadUser;
   const n = (r.items || []).length;
+  const phone = r.guest ? r.gphone : store.s.customers.find((c) => c.uid === r.uid)?.phone;
+  const menu = (e) => openMenu(e, admin ? [
+    { label: 'Talebi aç', icon: 'chat', onClick: () => openRequest(r.id) },
+    unread ? { label: 'Okundu işaretle', icon: 'check', onClick: () => api().updateRequest(r.id, { unreadAdmin: 0 }) } : { label: 'Okunmadı işaretle', icon: 'eye', onClick: () => api().updateRequest(r.id, { unreadAdmin: 1 }) },
+    r.status === 'accepted' && { label: 'Hazır olarak işaretle', icon: 'store', onClick: () => quickStatus(r, 'ready', 'Hazır, dükkandan teslim alabilirsiniz') },
+    r.status === 'ready' && { label: 'Teslim edildi', icon: 'check', onClick: () => quickStatus(r, 'done') },
+    '-',
+    phone && { label: "WhatsApp'tan yaz", icon: 'wa', onClick: () => window.open(waLink(phone, `Merhaba ${r.userName || ''}, #${r.no} numaralı talebiniz: ${r.guest ? links.guestRequest(r.id) : links.userRequest(r.id)}`), '_blank', 'noopener') },
+    { label: 'Talep linkini kopyala', icon: 'copy', onClick: () => copyText(links.adminRequest(r.id)) },
+  ] : [
+    { label: 'Talebi aç', icon: 'chat', onClick: () => openRequest(r.id) },
+    { label: 'Talep linkini kopyala', icon: 'copy', onClick: () => copyText(r.guest ? links.guestRequest(r.id) : links.userRequest(r.id)) },
+  ], `#${r.no} · ${r.userName || ''}`);
   return (
     <li>
-      <button className={'rcard' + (on ? ' on' : '') + (unread ? ' unread' : '')} onClick={() => openRequest(r.id)}>
+      <button className={'rcard' + (on ? ' on' : '') + (unread ? ' unread' : '')} onClick={() => openRequest(r.id)} onContextMenu={menu}>
         {admin && <Avatar u={{ name: r.userName, photo: store.s.customers.find((c) => c.uid === r.uid)?.photo }} size={38} />}
         <div className="rcard-b">
           <div className="rcard-top">
-            <strong>{admin ? r.userName : TYPE[r.type]}</strong>
+            <strong>{admin ? r.userName : TYPE[r.type]}{admin && r.guest && <span className="tag guest-tag">Vitrin</span>}</strong>
             <span className="muted num">{when(r.updatedAt)}</span>
           </div>
           <div className="rcard-mid">
@@ -109,7 +142,10 @@ function NewMessage({ onClose }) {
 export function RequestDetail({ id }) {
   const { requests, user, settings: S, customers, byId } = useStore();
   const admin = user.role === 'admin';
-  const r = requests.find((x) => x.id === id);
+  const listR = requests.find((x) => x.id === id);
+  const [single, setSingle] = useState(null);
+  useEffect(() => { if (!listR && api().watchRequest) return api().watchRequest(id, setSingle); }, [id, !!listR]);
+  const r = listR || single;
   const [msgs, setMsgs] = useState([]);
   const [draft, setDraft] = useState(null);
   const [text, setText] = useState('');
@@ -168,8 +204,8 @@ export function RequestDetail({ id }) {
   }
   async function finish(status) {
     await setStatus(status);
-    if (status === 'done') await api().bumpStat(r.uid, 'done', 1);
-    if (status === 'noshow') await api().bumpStat(r.uid, 'noshow', 1);
+    if (r.uid && status === 'done') await api().bumpStat(r.uid, 'done', 1);
+    if (r.uid && status === 'noshow') await api().bumpStat(r.uid, 'noshow', 1);
   }
   async function send(t = text) {
     const msg = t.trim(); if (!msg) return;
@@ -177,6 +213,12 @@ export function RequestDetail({ id }) {
     await api().sendMessage(id, { from: admin ? 'admin' : 'user', text: msg, at: now() });
   }
 
+  // WhatsApp: yönetici müşteriye teklif linki yollar; müşteri dükkana talep linki yollar
+  const custPhone = r.guest ? r.gphone : c?.phone;
+  const offerLine = items.length ? `Toplam: ${fmtTotals(totals(items, 'offer'))}` : '';
+  const waTo = admin
+    ? (custPhone ? waLink(custPhone, `Merhaba ${r.guest ? r.gname : r.userName}, #${r.no} numaralı talebiniz için ${STATUS[r.status]?.label === 'Teklif geldi' ? 'teklifimiz hazır' : 'güncelleme var'}. ${offerLine}\nGörmek ve onaylamak için: ${r.guest ? links.guestRequest(r.id) : links.userRequest(r.id)}`) : null)
+    : (S.shop.whatsapp ? waLink(S.shop.whatsapp, `Merhaba, #${r.no} numaralı talebim hakkında yazıyorum. ${offerLine}\nTalep: ${links.adminRequest(r.id)}`) : null);
   const tAsked = totals(items, 'asked');
   const tOffer = totals(items, 'offer');
   const tList = totals(items, 'list');
@@ -193,7 +235,16 @@ export function RequestDetail({ id }) {
         <StatusPill status={r.status} />
       </header>
 
-      {admin && (
+      {admin && r.guest && (
+        <div className="cust-strip">
+          <Avatar u={{ name: r.gname }} size={42} />
+          <span className="cust-strip-b">
+            <strong>{r.gname} <span className="tag guest-tag">Vitrin müşterisi</span></strong>
+            <span className="muted">{r.gphone} · giriş yapmadan sepet gönderdi</span>
+          </span>
+        </div>
+      )}
+      {admin && !r.guest && (
         <button className="cust-strip" onClick={() => c && setCust(c)}>
           <Avatar u={{ ...c, name: r.userName }} size={42} />
           <span className="cust-strip-b">
@@ -209,6 +260,9 @@ export function RequestDetail({ id }) {
 
       {!admin && r.status === 'ready' && (
         <div className="banner ok"><Icon n="store" /><div><b>Siparişiniz hazır.</b> {S.shop.name} · {S.shop.address} · {S.shop.hours}</div></div>
+      )}
+      {!admin && r.guest && ['accepted', 'ready', 'done'].includes(r.status) && S.shop.payInfo && (
+        <div className="banner ok pay-info"><Icon n="tag" /><div><b>Ödeme bilgileri</b><pre>{S.shop.payInfo}</pre><span className="fine">Açıklamaya talep numarasını yazın: #{r.no}</span></div></div>
       )}
       {!admin && r.status === 'offered' && (
         <div className="banner warn"><Icon n="tag" /><div><b>Size teklif geldi.</b> Fiyatları kontrol edip onaylayın; onaydan sonra hazırlanır.</div></div>
@@ -279,6 +333,7 @@ export function RequestDetail({ id }) {
           </>
         )}
         {!admin && ['new', 'offered'].includes(r.status) && <button className="btn ghost" onClick={() => setConfirm({ title: 'Talebi iptal et', text: 'Bu talep kapatılacak.', okLabel: 'İptal et', tone: 'danger', onOk: () => setStatus('cancelled', {}, 'Müşteri talebi iptal etti') })}>İptal et</button>}
+        {waTo && <a className="btn wa" href={waTo} target="_blank" rel="noopener"><Icon n="wa" s={16} />{admin ? 'WhatsApp’tan gönder' : 'WhatsApp’tan haber ver'}</a>}
         {dirty && <span className="dirty-note">Değişiklikler kaydedilmedi — teklif gönderin veya onaylayın.</span>}
       </div>
 
@@ -303,4 +358,11 @@ export function RequestDetail({ id }) {
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
+}
+
+// Sağ tık menüsünden hızlı durum değişikliği
+async function quickStatus(r, status, note) {
+  await api().sendMessage(r.id, { from: 'system', text: note || 'Durum: ' + STATUS[status].label, at: now() }, { status }, 'user');
+  if (r.uid && status === 'done') await api().bumpStat(r.uid, 'done', 1);
+  toast(STATUS[status].label);
 }

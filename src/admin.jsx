@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest } from './store.js';
-import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput } from './ui.jsx';
+import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
+import { waLink, links } from './route.js';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
@@ -29,6 +30,7 @@ export function ProductEdit({ p, onClose }) {
   const [desc0, setDesc0] = useState('');
   const [preview, setPreview] = useState(false);
   const [newImg, setNewImg] = useState('');
+  const [pcOk, setPcOk] = useState(false);
   useEffect(() => { if (!isNew) api().getDesc(f.id).then((h) => { setDesc(h || ''); setDesc0(h || ''); }); else setDesc(''); }, []);
   const siteFiles = [f.pi, ...(f.im || [])].filter(Boolean);
   const setFiles = (arr) => setF((x) => ({ ...x, pi: arr[0] || '', im: arr.slice(1) }));
@@ -42,6 +44,8 @@ export function ProductEdit({ p, onClose }) {
       if (imgUrl.trim() && rec.img !== 'fs') rec.img = imgUrl.trim();
       if (!imgUrl.trim() && rec.img && rec.img !== 'fs') delete rec.img;
       delete rec._s; delete rec._t;
+      // Toptan fiyat elle değiştirildiyse ya da "kontrol ettim" denildiyse fiyat uyarısı kalkar
+      if (rec.pc && (pcOk || String(rec.w ?? '') !== String(p?.w ?? ''))) delete rec.pc;
       rec.t = (rec.t || '').split(',').map((x) => x.trim()).filter(Boolean).join(',');
       rec.b = (rec.b || '').trim();
       if (rec.c2 === '' || rec.c2 === rec.c) delete rec.c2; else if (rec.c2 != null) rec.c2 = Number(rec.c2);
@@ -75,6 +79,13 @@ export function ProductEdit({ p, onClose }) {
       <button className="btn ghost" onClick={onClose}>Vazgeç</button>
       <button className="btn primary" onClick={save} disabled={busy}><Icon n="check" s={16} />Kaydet</button>
     </>}>
+      {f.pc && (
+        <div className="banner warn">
+          <Icon n="tag" />
+          <div><b>Liste fiyatı değişti: {fmt(f.pc.r0, f.cur)} → {fmt(f.r, f.cur)}</b> ({when(f.pc.at)}). Toptan fiyatı kontrol edin; değiştirirseniz ya da onaylarsanız uyarı kalkar.</div>
+          <label className="mini-check"><input type="checkbox" checked={pcOk} onChange={(e) => setPcOk(e.target.checked)} />Kontrol ettim, toptan fiyat doğru</label>
+        </div>
+      )}
       <div className="form-grid">
         <div className="img-edit">
           <Thumb p={{ ...f, img: f.img === 'fs' ? 'fs' : imgUrl || undefined }} size="lg" />
@@ -168,7 +179,22 @@ export function Customers() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [add, setAdd] = useState(false);
+  const intent = useStore((s) => s.intent);
+  useEffect(() => { if (intent === 'newCustomer') { store.set({ intent: null }); setAdd(true); } }, [intent]);
   const pending = customers.filter((c) => c.pending);
+  const custMenu = (e, c) => openMenu(e, [
+    { label: 'Müşteriyi aç', icon: 'user', onClick: () => setOpen({ ...c, _tab: 'info' }) },
+    { label: 'Özel fiyatlar', icon: 'tag', onClick: () => setOpen({ ...c, _tab: 'prices' }) },
+    { label: 'Geçmiş talepler', icon: 'chat', onClick: () => setOpen({ ...c, _tab: 'hist' }) },
+    '-',
+    c.phone && { label: "WhatsApp'tan yaz", icon: 'wa', onClick: () => window.open(waLink(c.phone, `Merhaba ${c.name || ''},`), '_blank', 'noopener') },
+    c.phone && { label: 'Telefonu kopyala', icon: 'copy', hint: c.phone, onClick: () => copyText(c.phone) },
+    { label: 'Kullanıcı adını kopyala', icon: 'copy', hint: '@' + c.username, onClick: () => copyText(c.username) },
+    '-',
+    c.active === false
+      ? { label: 'Hesabı aktif yap', icon: 'check', onClick: () => store.s.api.updateUser(c.uid, { active: true }).then(() => toast('Hesap aktif')) }
+      : { label: 'Hesabı pasif yap', icon: 'eyeoff', danger: true, onClick: () => store.s.api.updateUser(c.uid, { active: false }).then(() => toast('Hesap pasif; artık giriş yapamaz')) },
+  ], c.name || c.username);
   const list = customers.filter((c) => !c.pending && (!q || norm(`${c.name} ${c.shop} ${c.username} ${c.phone}`).includes(norm(q))))
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
   const openCount = (uid) => requests.filter((r) => r.uid === uid && ['new', 'offered', 'accepted', 'ready'].includes(r.status)).length;
@@ -187,7 +213,7 @@ export function Customers() {
             const oc = openCount(c.uid);
             return (
               <li key={c.uid}>
-                <button className={'ucard' + (c.active === false ? ' inactive' : '')} onClick={() => setOpen(c)}>
+                <button className={'ucard' + (c.active === false ? ' inactive' : '')} onClick={() => setOpen(c)} onContextMenu={(e) => custMenu(e, c)}>
                   <Avatar u={c} size={46} />
                   <span className="ucard-b">
                     <strong>{c.name || c.username}</strong>
@@ -266,7 +292,7 @@ function NewCustomer({ onClose }) {
 export function CustomerSheet({ c, onClose }) {
   const { settings: S, requests, api: A, catalog, customers } = useStore();
   const live = customers.find((x) => x.uid === c.uid) || c;
-  const [tab, setTab] = useState('info');
+  const [tab, setTab] = useState(c._tab || 'info');
   const [f, setF] = useState({ name: live.name || '', shop: live.shop || '', phone: live.phone || '', tier: live.tier || '', extraPct: live.extraPct || 0, active: live.active !== false, password: '' });
   const [note, setNote] = useState('');
   const [prices, setPrices] = useState(null);
@@ -466,7 +492,7 @@ export function Settings() {
             <Field label="Teklifte −/+ adımı (USD)"><select id="s-step" value={d.pricing.adjustStep} onChange={(e) => set('pricing.adjustStep', Number(e.target.value))}><option value="0.5">0,5</option><option value="1">1</option><option value="5">5</option><option value="10">10</option></select></Field>
           </div>
           <Toggle id="s-retail" label="Liste fiyatını göster" hint="Üstü çizili perakende fiyat" checked={d.pricing.showRetail} onChange={(v) => set('pricing.showRetail', v)} />
-          <Toggle id="s-save" label="Avantaj yüzdesini göster" checked={d.pricing.showSaving} onChange={(v) => set('pricing.showSaving', v)} />
+          <Toggle id="s-save" label="Sepette avantaj tutarını göster" checked={d.pricing.showSaving} onChange={(v) => set('pricing.showSaving', v)} />
           {sample && <div className="preview-box"><span className="eyebrow">Örnek</span><span>{sample.n}</span><span className="num">Liste {fmt(sample.r, sample.cur)} → Toptan <b>{fmt(priceFor(sample, withDefaults(d), null, null).mine, sample.cur)}</b></span></div>}
         </>}
 
@@ -530,6 +556,11 @@ export function Settings() {
             <Field label="WhatsApp (905xx…)"><input id="s-wa" inputMode="tel" value={d.shop.whatsapp} onChange={(e) => set('shop.whatsapp', e.target.value)} /></Field>
           </div>
           <Field label="Teslim notu" hint="Sepet ekranının altında görünür"><textarea id="s-pn" rows="2" value={d.shop.pickupNote} onChange={(e) => set('shop.pickupNote', e.target.value)} /></Field>
+          <h3>Online vitrin ({location.host}/magaza)</h3>
+          <p className="fine">Toptancı olmayan müşterileriniz giriş yapmadan ürünleri liste fiyatıyla görür, sepet yapıp WhatsApp'tan size gönderir. Siz fiyatı düzenleyip linki geri gönderirsiniz, müşteri onaylar.</p>
+          <Toggle id="s-pub" label="Online vitrin açık" checked={d.access.publicShop} onChange={(v) => set('access.publicShop', v)} />
+          <div className="input-btn"><input id="s-publink" readOnly value={links.shop()} /><button type="button" className="btn sm outline" onClick={() => copyText(links.shop(), 'Vitrin linki kopyalandı')}>Kopyala</button></div>
+          <Field label="Ödeme / havale bilgisi" hint="Vitrin müşterisi teklifi onaylayınca görür. IBAN, alıcı adı, açıklama vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00\nAçıklamaya talep numarasını yazın.'} /></Field>
         </>}
 
         {sec === 'kategori' && <>
@@ -592,6 +623,7 @@ export function Settings() {
             <div><b className="num">{imp.updated}</b><span>değişen</span></div>
             <div><b className="num">{imp.missing}</b><span>dosyada yok</span></div>
           </div>
+          {imp.priceChanged > 0 && <p className="banner warn" style={{ margin: 0 }}><b>{imp.priceChanged} ürünün liste fiyatı değişiyor.</b>&nbsp;Uygulayınca bunlar Ürünler'de “Liste fiyatı değişenler” olarak işaretlenir; toptan fiyatlarını kontrol edersiniz.</p>}
           <p className="fine">Dosyada olmayan ürünler silinmez, olduğu gibi kalır. Okunan bilgiler: {[imp.fields.includes('pi') && 'resimler', imp.fields.includes('t') && 'etiketler', imp.fields.includes('b') && 'marka', imp.fields.includes('s') && 'stok', imp.fields.includes('r') && 'fiyat', Object.keys(imp.descs).length && `${Object.keys(imp.descs).length} açıklama`].filter(Boolean).join(', ')}.</p>
         </Sheet>
       )}

@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { useStore, setQty, go, api, toast, store, openRequest } from './store.js';
-import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite } from './ui.jsx';
+import { useStore, setQty, go, api, toast, store, openRequest, setCatalog } from './store.js';
+import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now } from './utils.js';
 import { ProductEdit } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -39,18 +39,19 @@ export function stockInfo(p, S) {
 export function PriceBlock({ p, big }) {
   const { settings: S, user, userPrices } = useStore();
   const pr = priceFor(p, S, user, userPrices);
-  const saving = pr.mine != null && pr.list > 0 ? Math.round((1 - pr.mine / pr.list) * 100) : 0;
+  if (user?.role === 'public') {
+    return (
+      <div className={'price' + (big ? ' big' : '')}>
+        {pr.mine == null ? <span className="price-ask">Fiyat sorun</span> : <span className="price-mine"><small>Fiyat:</small>{fmt(pr.mine, p.cur)}</span>}
+      </div>
+    );
+  }
   return (
     <div className={'price' + (big ? ' big' : '')}>
-      {((S.pricing.showRetail && pr.list > 0 && pr.mine !== pr.list) || (S.pricing.showSaving && saving > 0)) && (
-        <span className="price-list">
-          {S.pricing.showRetail && pr.list > 0 && pr.mine !== pr.list && <>Liste <b className="num">{fmt(pr.list, p.cur)}</b></>}
-          {S.pricing.showSaving && saving > 0 && <span className="price-save">−%{saving}</span>}
-        </span>
-      )}
+      {S.pricing.showRetail && pr.list > 0 && <span className="price-list">Liste: <b className="num">{fmt(pr.list, p.cur)}</b></span>}
       {pr.mine == null
         ? <span className="price-ask">Fiyat sorun</span>
-        : <span className="price-mine"><small>{pr.src === 'ozel' ? 'Size özel' : 'Toptan'}</small>{fmt(pr.mine, p.cur)}</span>}
+        : <span className="price-mine"><small>{pr.src === 'ozel' ? 'Size özel:' : 'Toptan:'}</small>{fmt(pr.mine, p.cur)}</span>}
     </div>
   );
 }
@@ -69,6 +70,9 @@ export function Catalog({ admin }) {
   const [adminFilter, setAdminFilter] = useState('all');
   const [brand, setBrand] = useState('');
   const tree = useTree();
+  const intent = useStore((s) => s.intent);
+  useEffect(() => { if (admin && intent === 'newProduct') { store.set({ intent: null }); setEdit({}); } }, [intent]);
+  const changedN = useMemo(() => (admin ? all.filter((p) => p.pc).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);
   const counts = useMemo(() => {
@@ -92,6 +96,7 @@ export function Catalog({ admin }) {
     if (admin && adminFilter === 'nowholesale') r = r.filter((p) => p.w == null);
     if (admin && adminFilter === 'noimg') r = r.filter((p) => !p.img && !p.pi);
     if (admin && adminFilter === 'notags') r = r.filter((p) => !p.t);
+    if (admin && adminFilter === 'pricechanged') r = r.filter((p) => p.pc);
     if (sort === 'asc') r = [...r].sort((a, b) => a.r - b.r);
     if (sort === 'desc') r = [...r].sort((a, b) => b.r - a.r);
     if (sort === 'name') r = [...r].sort((a, b) => a.n.localeCompare(b.n, 'tr'));
@@ -149,6 +154,7 @@ export function Catalog({ admin }) {
                     <option value="nowholesale">Toptan fiyatı girilmemiş</option>
                     <option value="noimg">Resmi olmayanlar</option>
                     <option value="notags">Etiketi olmayanlar</option>
+                    <option value="pricechanged">Liste fiyatı değişenler</option>
                   </select>
                 </label>
               )}
@@ -156,6 +162,9 @@ export function Catalog({ admin }) {
             </div>
           </div>
 
+          {admin && changedN > 0 && adminFilter !== 'pricechanged' && (
+            <div className="banner warn price-alert"><Icon n="tag" /><div><b>{changedN} ürünün liste fiyatı değişti.</b> Toptan fiyatlarını kontrol edin; kontrol edene kadar toptan fiyat liste fiyatını geçemez.</div><button className="btn sm outline" onClick={() => setAdminFilter('pricechanged')}>Göster</button></div>
+          )}
           <div className="result-line">
             <span>{list.length.toLocaleString('tr-TR')} ürün{cat != null && <> · <b>{tree.nodes.get(cat)?.name || catName(S, cat)}</b></>}{brand && <> · <b>{brand}</b></>}</span>
             {!admin && cartCount > 0 && <button className="link" onClick={() => go('sepet')}>Sepette {cartCount} kalem →</button>}
@@ -202,11 +211,29 @@ function CatTree({ nodes, counts, cat, open, onPick, all: expandAll, admin, dept
 }
 
 function ProductRow({ p, admin, onOpen }) {
-  const { settings: S, cart } = useStore();
+  const { settings: S, cart, user } = useStore();
   const qty = cart[p.id] || 0;
   const st = stockInfo(p, S);
+  const site = p.u ? S.catalog.siteUrl + p.u : null;
+  const menu = (e) => openMenu(e, admin ? [
+    { label: 'Düzenle', icon: 'edit', onClick: onOpen },
+    { label: p.a ? 'Pasif yap (bayilerden gizle)' : 'Aktif yap', icon: p.a ? 'eyeoff' : 'eye', onClick: () => quickSave(p, { a: p.a ? 0 : 1 }, p.a ? 'Ürün pasif yapıldı' : 'Ürün aktif yapıldı') },
+    p.pc && { label: 'Fiyat uyarısını kaldır', icon: 'check', onClick: () => quickSave(p, { pc: null }, 'Uyarı kaldırıldı') },
+    '-',
+    { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
+    { label: 'Ürün adını kopyala', icon: 'copy', onClick: () => copyText(p.n) },
+    site && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
+  ] : [
+    { label: 'Ürünü aç', icon: 'zoom', onClick: onOpen },
+    { label: qty ? `Sepete 1 tane daha ekle (${qty})` : 'Sepete ekle', icon: 'plus', onClick: () => { setQty(p.id, qty + 1); toast('Sepete eklendi'); } },
+    qty > 0 && { label: 'Sepetten çıkar', icon: 'trash', danger: true, onClick: () => setQty(p.id, 0) },
+    user?.role !== 'public' && S.requests.allowQuote && { label: 'Bu ürünü sor', icon: 'chat', onClick: () => askAbout(p, Math.max(1, qty)) },
+    '-',
+    { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
+    site && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
+  ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
-    <li className={'prow' + (!p.a ? ' inactive' : '')}>
+    <li className={'prow' + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '')} onContextMenu={menu}>
       <button className="prow-main" onClick={onOpen}>
         <Thumb p={p} />
         <div className="prow-info">
@@ -218,6 +245,7 @@ function ProductRow({ p, admin, onOpen }) {
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
             {admin && !p.a && <span className="dot tone-muted">Pasif</span>}
             {admin && p.w == null && <span className="dot tone-warn">Toptan: oto</span>}
+            {admin && p.pc && <span className="dot tone-bad">Liste {fmt(p.pc.r0, p.cur)} → {fmt(p.r, p.cur)}</span>}
           </span>
         </div>
       </button>
@@ -240,18 +268,10 @@ function ProductSheet({ p, onClose }) {
   const [qty, setQ] = useState(cart[p.id] || 1);
   const st = stockInfo(p, S);
   const pr = priceFor(p, S, user, userPrices);
-  const ask = async () => {
-    const item = { id: p.id, k: p.k, n: p.n, cur: p.cur, qty, list: p.r, asked: pr.mine, offer: pr.mine };
-    const t = now();
-    const id = await api().createRequest({
-      uid: user.uid, userName: user.name || user.username, shop: user.shop || '', type: 'quote', status: 'new', items: [item], note: '', pickup: '',
-      createdAt: t, updatedAt: t, unreadAdmin: 1, unreadUser: 0, lastMsg: 'Ürün hakkında soru', lastFrom: 'user',
-    }, [{ from: 'system', text: 'Ürün sorusu açıldı · ' + p.n, at: t }]);
-    onClose(); openRequest(id); toast('Soru açıldı, mesajınızı yazın');
-  };
+  const ask = async () => { onClose(); await askAbout(p, qty); };
   return (
     <Sheet title="Ürün detayı" onClose={onClose} footer={<>
-      {S.requests.allowQuote && <button className="btn ghost" onClick={ask}><Icon n="chat" s={16} />Bu ürünü sor</button>}
+      {S.requests.allowQuote && user?.role !== 'public' && <button className="btn ghost" onClick={ask}><Icon n="chat" s={16} />Bu ürünü sor</button>}
       <button className="btn primary" onClick={() => { setQty(p.id, qty); toast('Sepete eklendi'); onClose(); }}><Icon n="cart" s={16} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>
     </>}>
       <div className="pdetail">
@@ -379,4 +399,28 @@ function Description({ id }) {
       {zoom && <Lightbox urls={zoom.urls} start={zoom.start} title="Açıklama resmi" onClose={() => setZoom(null)} />}
     </section>
   );
+}
+
+// Ürün hakkında soru talebi aç (ürün detayı ve sağ tık menüsünden)
+async function askAbout(p, qty) {
+  const { user, settings: S, userPrices } = store.s;
+  const pr = priceFor(p, S, user, userPrices);
+  const item = { id: p.id, k: p.k, n: p.n, cur: p.cur, qty, list: p.r, asked: pr.mine, offer: pr.mine };
+  const t = now();
+  const id = await api().createRequest({
+    uid: user.uid, userName: user.name || user.username, shop: user.shop || '', type: 'quote', status: 'new', items: [item], note: '', pickup: '',
+    createdAt: t, updatedAt: t, unreadAdmin: 1, unreadUser: 0, lastMsg: 'Ürün hakkında soru', lastFrom: 'user',
+  }, [{ from: 'system', text: 'Ürün sorusu açıldı · ' + p.n, at: t }]);
+  openRequest(id); toast('Soru açıldı, mesajınızı yazın');
+}
+
+// Sağ tık menüsünden hızlı değişiklik (aktif/pasif, uyarı kaldır)
+async function quickSave(p, patch, msg) {
+  const list = store.s.catalog.map(({ _s, _t, ...x }) => {
+    if (x.id !== p.id) return x;
+    const n = { ...x, ...patch };
+    for (const k of Object.keys(patch)) if (patch[k] == null) delete n[k];
+    return n;
+  });
+  try { await api().saveCatalog(list); setCatalog(list); toast(msg); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
 }

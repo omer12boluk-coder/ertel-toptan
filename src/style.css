@@ -662,3 +662,36 @@ input[type="tel"] { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 body:has(.shell.admin)::before { background: #16213f; }
 .login-card.admin { border-top: 4px solid #f5b20b; }
 .admin-flag { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; background: #16213f; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+
+/* ---------- sağ tık menüsü */
+.ctx { position: fixed; z-index: 95; min-width: 220px; max-width: 300px; padding: 6px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 10px 34px rgb(10 20 40 / .22), 0 2px 6px rgb(10 20 40 / .12); animation: fade .08s ease; }
+.ctx-title { padding: 6px 10px 8px; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid var(--line-2); margin-bottom: 4px; }
+.ctx-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; font-size: 14px; text-align: left; color: var(--fg); }
+.ctx-item:hover:not(:disabled), .ctx-item:focus-visible { background: var(--accent-soft); color: var(--accent); outline: none; }
+.ctx-item.danger { color: var(--bad); }
+.ctx-item.danger:hover { background: color-mix(in oklab, var(--bad) 10%, var(--surface)); color: var(--bad); }
+.ctx-ic { width: 18px; display: grid; place-items: center; color: inherit; opacity: .85; }
+.ctx-l { flex: 1; }
+.ctx-hint { font-size: 12px; color: var(--muted); font-family: var(--f-mono); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-sep { height: 1px; background: var(--line-2); margin: 4px 6px; }
+
+/* ---------- marka, vitrin, whatsapp */
+.brand-btn { padding: 2px 6px 2px 2px; border-radius: 22px; }
+.brand-btn:hover { background: var(--surface-2); }
+.shell.admin .brand-btn:hover { background: rgb(255 255 255 / .08); }
+.pub-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; white-space: nowrap; }
+@media (max-width: 560px) { .shell.public .brand-t { display: none; } }
+.btn.wa { background: #1fa855; color: #fff; }
+.btn.wa:hover:not(:disabled) { background: #178a45; }
+.btn.wa.big { justify-content: flex-start; }
+.guest-fields { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--line-2); }
+.guest-tag { margin-left: 6px; height: 20px; font-size: 11px; vertical-align: middle; color: var(--accent); }
+.pay-info pre { margin: 6px 0; font: 600 14px/1.5 var(--f-mono); white-space: pre-wrap; user-select: all; }
+.remember { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; cursor: pointer; }
+.remember input { width: auto; min-height: 0; margin-top: 3px; }
+.remember small { color: var(--muted); }
+.price-alert { margin: 0 0 10px; align-items: center; }
+.price-alert .btn { margin-left: auto; }
+.prow.changed { background: color-mix(in oklab, var(--bad) 5%, var(--surface)); }
+.price-list { gap: 4px; }
+.price-mine small { letter-spacing: .04em; }

@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { store, useStore, setCatalog, loadCart, go, toast } from './store.js';
+import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest } from './store.js';
+import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE } from './config.js';
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
-import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits } from './ui.jsx';
+import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
 import { Catalog } from './catalog.jsx';
 import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 
-// /admin = yönetim paneli girişi, ana adres = bayi girişi (demo sayfasında #admin)
-const ADMIN_ROUTE = /^\/admin\/?$/.test(location.pathname) || location.hash === '#admin';
+// /admin = yönetim paneli, ana adres = bayi girişi, /magaza = herkese açık vitrin (bkz. route.js)
+const ADMIN_ROUTE = ROUTE.admin;
 let unsubs = [];
 let currentUid = null;
 const stopWatchers = () => { unsubs.forEach((f) => { try { f(); } catch {} }); unsubs = []; };
@@ -27,15 +28,18 @@ let _seed, _seedDesc;
 const loadSeed = () => (_seed = _seed || loadJSON('seed', 'seed-products.json', []));
 const loadSeedDesc = () => (_seedDesc = _seedDesc || loadJSON('seed-desc', 'seed-desc.json', {}));
 const SEED_FIELDS = ['pi', 'im', 't', 'b', 'c2', 'u'];
-const SEED_VERSION = 3; // uygulamayla yeni veri gelince arttırılır
+const SEED_VERSION = 4; // uygulamayla yeni veri gelince arttırılır
 
 async function boot() {
   const cfg = window.FIREBASE_CONFIG;
   const fb = cfg && cfg.apiKey;
-  const A = fb ? new FirebaseBackend(cfg) : new DemoBackend(await loadSeed(), loadSeedDesc);
+  // Yönetici paneli ayrı bir oturum kullanır: aynı tarayıcıda bir sekmede yönetici, diğerinde bayi açık kalabilir
+  const area = ADMIN_ROUTE ? 'admin' : 'user';
+  const A = fb ? new FirebaseBackend(cfg, area === 'admin' ? 'admin' : undefined) : new DemoBackend(await loadSeed(), loadSeedDesc, area);
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
   store.set({ api: A });
-  try { const pub = await A.publicInfo(); if (pub) store.set({ settings: withDefaults({ ...store.s.settings, ...pub }) }); } catch {}
+  try { const pub = await A.publicInfo(); if (pub) store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub })) }); } catch {}
+  if (ROUTE.shop) return bootShop(A);
   try { store.set({ needsSetup: await A.needsSetup() }); } catch {}
 
   A.onAuth(async (u, err) => {
@@ -45,13 +49,17 @@ async function boot() {
       return;
     }
     if (currentUid === u.uid) { store.set({ user: u }); return; }
-    // Yönetici paneline sadece yönetici girer; yönetici ana adrese girerse panele yönlendirilir
+    // Yönetim paneline sadece yönetici, bayi tarafına sadece bayi girer (yönlendirme yok, her sekme kendi halinde)
     if (fb && ADMIN_ROUTE && u.role !== 'admin') {
       await A.logout();
       store.set({ boot: 'login', loginError: 'Bu sayfa sadece yönetici içindir. Bayi girişi için ana sayfayı kullanın.' });
       return;
     }
-    if (fb && !ADMIN_ROUTE && u.role === 'admin') { location.replace('/admin'); return; }
+    if (fb && !ADMIN_ROUTE && u.role === 'admin') {
+      await A.logout();
+      store.set({ boot: 'login', loginError: 'Yönetici hesabıyla bayi tarafına girilmez. Yönetim paneli: ' + location.origin + '/admin' });
+      return;
+    }
     currentUid = u.uid;
     store.set({ user: u, boot: 'loading' });
     try {
@@ -63,7 +71,7 @@ async function boot() {
         if (s.brand.priceAccent === '#b45309') s.brand.priceAccent = '#c2410c';
         if (s.brand.theme === 'auto') s.brand.theme = 'light';
       }
-      store.set({ settings: withDefaults(s) });
+      store.set({ settings: migrate(withDefaults(s)) });
       let cat = await A.loadCatalog();
       if (admin) {
         const seed = await loadSeed();
@@ -87,6 +95,7 @@ async function boot() {
           } catch (e) { console.warn(e); }
         }
         if (admin && fb && !(await A.hasDescs())) { try { await A.saveDescs(await loadSeedDesc()); } catch (e) { console.warn(e); } }
+        if (admin && fb && cat?.length && !(await A.hasPublicCatalog())) { try { await A.savePublicCatalog(cat); } catch (e) { console.warn(e); } }
       }
       setCatalog(cat || []);
       store.set({ userPrices: admin ? {} : await A.getUserPrices(u.uid) });
@@ -94,13 +103,31 @@ async function boot() {
       unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
       if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
       loadCart();
-      const tab = ls.get('tab-' + u.uid, null) || (admin ? 'talepler' : 'katalog');
-      store.set({ boot: 'ready', tab });
+      // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
+      store.set({ boot: 'ready', tab: admin ? 'talepler' : 'katalog', openReq: null });
+      if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/'); }
     } catch (e) {
       console.error(e);
       store.set({ boot: 'error', bootError: 'Veriler yüklenemedi: ' + e.message });
     }
   });
+}
+
+// Eski varsayılanları yenilerine taşı (elle değiştirilmiş değerlere dokunmaz)
+function migrate(S) {
+  if (S.brand.appName === 'ERTEL Toptan') S.brand.appName = 'ERTEL B2B';
+  return S;
+}
+
+// Herkese açık vitrin: giriş yok, sadece liste fiyatı; sepet WhatsApp'la gönderilir
+async function bootShop(A) {
+  if (store.s.settings.access?.publicShop === false) { store.set({ boot: 'error', bootError: 'Online vitrin şu an kapalı.' }); return; }
+  store.set({ user: { uid: 'guest', role: 'public', name: 'Ziyaretçi' }, boot: 'loading' });
+  try {
+    setCatalog(await A.loadPublicCatalog());
+    loadCart();
+    store.set({ boot: 'ready', tab: ROUTE.reqId ? 'talepler' : 'katalog', openReq: ROUTE.reqId || null });
+  } catch (e) { store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
 }
 
 // Tema: yöneticinin varsayılanı + her cihazın kendi seçimi (üst menüdeki güneş/ay düğmesi)
@@ -123,17 +150,18 @@ function ThemeButton() {
   const cur = dev || S.brand.theme;
   const dark = cur === 'dark' || (cur === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   const flip = () => { const n = dark ? 'light' : 'dark'; ls.set('device-theme', n); store.set({ deviceTheme: n }); };
-  return <button className="icon-btn" onClick={flip} aria-label={dark ? 'Açık temaya geç' : 'Koyu temaya geç'} title={dark ? 'Açık tema' : 'Koyu tema'}><Icon n={dark ? 'sun' : 'moon'} s={19} /></button>;
+  return <button className="icon-btn" data-theme-btn onClick={flip} aria-label={dark ? 'Açık temaya geç' : 'Koyu temaya geç'} title={dark ? 'Açık tema' : 'Koyu tema'}><Icon n={dark ? 'sun' : 'moon'} s={19} /></button>;
 }
 
-function Brand({ small }) {
+function Brand({ small, onClick }) {
   const S = useStore((s) => s.settings);
-  return (
-    <span className={'brand' + (small ? ' sm' : '')}>
-      <img className="brand-logo" src={S.brand.logo || LOGO_MARK} alt="" />
-      <span className="brand-t"><b>{S.brand.appName}</b>{!small && <small>{S.brand.tagline}</small>}</span>
-    </span>
-  );
+  const inner = <>
+    <img className="brand-logo" src={S.brand.logo || LOGO_MARK} alt="" />
+    <span className="brand-t"><b>{S.brand.appName}</b>{!small && <small>{S.brand.tagline}</small>}</span>
+  </>;
+  return onClick
+    ? <button className={'brand' + (small ? ' sm' : '') + ' brand-btn'} onClick={onClick} aria-label="Ana sayfa" title="Ana sayfa">{inner}</button>
+    : <span className={'brand' + (small ? ' sm' : '')}>{inner}</span>;
 }
 
 function Login() {
@@ -143,6 +171,7 @@ function Login() {
   const setup = adminPage && needsSetup;
   const [view, setView] = useState('login'); // login | signup | sent
   const [f, setF] = useState({ u: '', p: '', p2: '', name: '', shop: '', phone: '' });
+  const [remember, setRemember] = useState(true);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
@@ -159,7 +188,7 @@ function Login() {
         await A.signup({ username, password: f.p, name: f.name.trim(), shop: f.shop.trim(), phone: f.phone.trim() });
         setView('sent');
       } else if (setup) await A.setupAdmin({ username, password: f.p, name: f.name || S.shop.name });
-      else await A.login(username, f.p);
+      else await A.login(username, f.p, remember);
     } catch (x) { setErr(x.message); }
     setBusy(false);
   }
@@ -198,6 +227,9 @@ function Login() {
           <label className="field"><span className="field-l">Kullanıcı adı</span><input id="l-user" autoComplete="username" autoCapitalize="none" value={f.u} onChange={set('u')} required /></label>
           <label className="field"><span className="field-l">Şifre{(setup || view === 'signup') && <small className="opt"> (en az 6 karakter)</small>}</span><PasswordInput id="l-pw" autoComplete={setup || view === 'signup' ? 'new-password' : 'current-password'} value={f.p} onChange={set('p')} required /></label>
           {view === 'signup' && <label className="field"><span className="field-l">Şifre (tekrar)</span><PasswordInput id="l-pw2" autoComplete="new-password" value={f.p2} onChange={set('p2')} required /></label>}
+          {fb && !adminPage && view === 'login' && (
+            <label className="remember"><input id="l-remember" type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /><span>Beni hatırla <small>(kapatırsanız sadece bu sekmede açık kalır)</small></span></label>
+          )}
           {(err || (view === 'login' && loginError)) && <p className="err">{err || loginError}</p>}
           <button className="btn primary big" disabled={busy}>{busy ? 'Bekleyin…' : setup ? 'Yönetici hesabını oluştur' : view === 'signup' ? 'Başvuruyu gönder' : 'Giriş yap'}</button>
           {A?.mode === 'demo' && view === 'login' && (
@@ -221,11 +253,34 @@ function Login() {
 
 const NAV_USER = [['katalog', 'Katalog', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Profil', 'user']];
 const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['katalog', 'Ürünler', 'box'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Taleplerim', 'chat']];
+
+// Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
+function pageMenu(e, role) {
+  const t = e.target;
+  if (t.closest('input, textarea, select, a, [contenteditable="true"], .ctx, .sheet, .lb') || getSelection()?.toString()) return; // tarayıcının kendi menüsü kalsın
+  const admin = role === 'admin', pub = role === 'public';
+  const findProduct = () => { go('katalog'); setTimeout(() => document.getElementById('cat-search')?.focus(), 50); };
+  openMenu(e, [
+    { label: 'Ana sayfa', icon: 'home', onClick: home },
+    { label: admin ? 'Ürün ara' : 'Ürün ara', icon: 'search', onClick: findProduct },
+    !admin && { label: 'Sepete git', icon: 'cart', onClick: () => go('sepet') },
+    !pub && { label: admin ? 'Gelen talepler' : 'Taleplerim', icon: 'chat', onClick: () => go('talepler') },
+    admin && '-',
+    admin && { label: 'Yeni ürün ekle', icon: 'plus', onClick: () => { go('katalog'); store.set({ intent: 'newProduct' }); } },
+    admin && { label: 'Yeni müşteri ekle', icon: 'users', onClick: () => { go('musteriler'); store.set({ intent: 'newCustomer' }); } },
+    admin && { label: 'Vitrin linkini kopyala', icon: 'copy', hint: '/magaza', onClick: () => copyText(links.shop(), 'Vitrin linki kopyalandı') },
+    '-',
+    { label: 'Temayı değiştir', icon: 'moon', onClick: () => document.querySelector('[data-theme-btn]')?.click() },
+    { label: 'Yenile', icon: 'refresh', onClick: () => location.reload() },
+  ]);
+}
 
 function Shell() {
   const { user, tab, cart, requests, api: A } = useStore();
   const admin = user.role === 'admin';
-  const nav = admin ? NAV_ADMIN : NAV_USER;
+  const pub = user.role === 'public';
+  const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
   const prev = useRef(unread);
@@ -235,16 +290,17 @@ function Shell() {
     prev.current = unread;
     document.title = (unread ? `(${unread}) ` : '') + store.s.settings.brand.appName;
   }, [unread]);
-  useEffect(() => { ls.set('tab-' + user.uid, tab); }, [tab]);
   const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length);
-  const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : 0);
+  const priceN = useStore((s) => (admin ? s.catalog.filter((p) => p.pc).length : 0));
+  const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : 0);
 
   return (
-    <div className={'shell tab-' + tab + (admin ? ' admin' : '')}>
+    <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
       <header className="topbar">
         <div className="topbar-in">
-          <Brand small />
+          <Brand small onClick={home} />
           {admin && <span className="admin-badge"><Icon n="shield" s={14} />Yönetim paneli</span>}
+          {pub && <span className="pub-badge">Online vitrin</span>}
           <nav className="topnav" aria-label="Ana menü">
             {nav.map(([k, l, i]) => (
               <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
@@ -253,10 +309,12 @@ function Shell() {
             ))}
           </nav>
           <ThemeButton />
-          <button className="me" onClick={() => go(admin ? 'ayarlar' : 'profil')} aria-label="Profil">
-            <span className="me-t"><b>{user.name || user.username}</b><small>{admin ? 'Yönetici' : user.shop}</small></span>
-            <Avatar u={user} size={34} />
-          </button>
+          {!pub && (
+            <button className="me" onClick={() => go(admin ? 'ayarlar' : 'profil')} aria-label="Profil">
+              <span className="me-t"><b>{user.name || user.username}</b><small>{admin ? 'Yönetici' : user.shop}</small></span>
+              <Avatar u={user} size={34} />
+            </button>
+          )}
           {admin && <button className="icon-btn hide-s" onClick={() => A.logout()} aria-label="Çıkış" title="Çıkış"><Icon n="out" s={18} /></button>}
         </div>
       </header>
@@ -270,7 +328,7 @@ function Shell() {
         {tab === 'katalog' && <Catalog admin={admin} />}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
-        {tab === 'profil' && <Profile />}
+        {tab === 'profil' && !pub && <Profile />}
         {tab === 'musteriler' && admin && <Customers />}
         {tab === 'ayarlar' && admin && <><Settings /><Profile /></>}
       </main>
@@ -302,6 +360,7 @@ function App() {
       {b === 'login' && <Login />}
       {b === 'ready' && <Shell />}
       <Toast />
+      <ContextMenu />
     </>
   );
 }

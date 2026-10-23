@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useStore, api } from './store.js';
+import { useStore, api, store, toast } from './store.js';
 import { initials, hue } from './utils.js';
 import { STATUS } from './config.js';
 
@@ -35,6 +35,12 @@ const P = {
   zoom: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4M8 11h6M11 8v6',
   eye: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   shield: 'M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z',
+  copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
+  wa: 'M4 20l1.3-3.9A8.5 8.5 0 1 1 8 19zM9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2-1-1 .9a5 5 0 0 1-2.8-2.8l.9-1-1-2z',
+  ext: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
+  refresh: 'M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7',
+  eyeoff: 'M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.8M6.6 7.6C3.6 9.4 2 12 2 12s3.6 6 10 6a10 10 0 0 0 4.4-1',
+  home: 'M3 11l9-7 9 7v9h-6v-6H9v6H3z',
 };
 export function Icon({ n, s = 20, className = '' }) {
   return (
@@ -210,6 +216,53 @@ export function PasswordInput({ id, value, onChange, autoComplete, required }) {
         onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && setShow(true)} onKeyUp={off} onBlur={off}>
         <Icon n="eye" s={18} />
       </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sağ tık (ve telefonda basılı tutma) menüsü
+// openMenu(e, items, title)  items: [{ label, icon, onClick, danger, disabled, hint }] veya '-' (ayraç)
+export function openMenu(e, items, title) {
+  e.preventDefault(); e.stopPropagation();
+  const list = items.filter(Boolean);
+  if (!list.length) return;
+  store.set({ ctx: { x: e.clientX, y: e.clientY, items: list, title } });
+}
+export const closeMenu = () => store.s.ctx && store.set({ ctx: null });
+export async function copyText(t, label = 'Kopyalandı') {
+  try { await navigator.clipboard.writeText(String(t)); toast(label); } catch { toast('Kopyalanamadı', 'bad'); }
+}
+export function ContextMenu() {
+  const ctx = useStore((s) => s.ctx);
+  const ref = useRef(null);
+  const [pos, setPos] = useState(null);
+  useEffect(() => {
+    if (!ctx) return;
+    const el = ref.current; const w = el?.offsetWidth || 220, h = el?.offsetHeight || 200;
+    setPos({ left: Math.max(8, Math.min(ctx.x, innerWidth - w - 8)), top: Math.max(8, Math.min(ctx.y, innerHeight - h - 8)) });
+    const close = (ev) => { if (ev.type === 'keydown' && ev.key !== 'Escape') return; if (ev.type === 'mousedown' && ref.current?.contains(ev.target)) return; closeMenu(); };
+    addEventListener('mousedown', close, true); addEventListener('keydown', close, true); addEventListener('resize', close); addEventListener('scroll', close, true);
+    setTimeout(() => ref.current?.querySelector('button:not(:disabled)')?.focus(), 0);
+    return () => { removeEventListener('mousedown', close, true); removeEventListener('keydown', close, true); removeEventListener('resize', close); removeEventListener('scroll', close, true); };
+  }, [ctx]);
+  if (!ctx) return null;
+  const move = (e) => {
+    if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return; e.preventDefault();
+    const bs = [...ref.current.querySelectorAll('button:not(:disabled)')]; const i = bs.indexOf(document.activeElement);
+    bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus();
+  };
+  return (
+    <div ref={ref} className="ctx" role="menu" style={pos || { left: ctx.x, top: ctx.y, visibility: 'hidden' }} onKeyDown={move} onContextMenu={(e) => e.preventDefault()}>
+      {ctx.title && <div className="ctx-title">{ctx.title}</div>}
+      {ctx.items.map((it, i) => it === '-' ? <div key={i} className="ctx-sep" role="separator" /> : (
+        <button key={i} role="menuitem" className={'ctx-item' + (it.danger ? ' danger' : '')} disabled={it.disabled}
+          onClick={() => { closeMenu(); it.onClick?.(); }}>
+          <span className="ctx-ic">{it.icon && <Icon n={it.icon} s={16} />}</span>
+          <span className="ctx-l">{it.label}</span>
+          {it.hint && <span className="ctx-hint">{it.hint}</span>}
+        </button>
+      ))}
     </div>
   );
 }

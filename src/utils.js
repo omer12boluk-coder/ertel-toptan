@@ -58,6 +58,7 @@ export function catName(S, code) {
 // Öncelik: müşteriye özel fiyat > ürünün toptan fiyatı (veya % indirim) > kademe/ek indirim
 export function priceFor(p, S, me, userPrices) {
   const list = p.r;
+  if (me && me.role === 'public') return { list, mine: list > 0 ? list : null, src: 'liste' };
   if (userPrices && userPrices[p.id] != null && userPrices[p.id] !== '') {
     return { list, mine: Number(userPrices[p.id]), src: 'ozel' };
   }
@@ -69,7 +70,9 @@ export function priceFor(p, S, me, userPrices) {
     const pct = (Number(tier?.pct) || 0) + (Number(me.extraPct) || 0);
     if (pct) { base = base * (1 - pct / 100); src = 'kademe'; }
   }
-  return { list, mine: roundStep(base, S.pricing.roundStep), src };
+  let mine = roundStep(base, S.pricing.roundStep);
+  if (list > 0 && mine > list) mine = list; // liste fiyatı düşmüşse toptan hiçbir zaman listeden pahalı görünmez
+  return { list, mine, src };
 }
 
 export function totals(items, key) {

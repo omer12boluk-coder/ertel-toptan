@@ -169,6 +169,7 @@ function same(a, b) {
   }
   return true;
 }
+const byIdOld = (arr, id) => arr.find((x) => x.id === id);
 // Mevcut kataloğa birleştir: dosyada olmayan alanlar, elle yüklenen resimler ve elle girilen toptan fiyatlar korunur.
 export function mergeCatalog(current, incoming) {
   const byId = new Map(current.map((p) => [p.id, p]));
@@ -180,10 +181,16 @@ export function mergeCatalog(current, incoming) {
     if (!o) { byId.set(n.id, { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n }); added++; continue; }
     const m = { ...o, ...n };
     if (n.w == null) m.w = o.w ?? null;
+    // Liste fiyatı değiştiyse işaretle: yönetici toptan fiyatı kontrol edene kadar uyarı görünür
+    if (n.r != null && o.r != null && Number(n.r) !== Number(o.r)) {
+      const r0 = o.pc ? o.pc.r0 : o.r;
+      if (Number(n.r) === Number(r0)) delete m.pc; else m.pc = { r0, at: Date.now() };
+    }
     if (!same(m, o)) updated++;
     byId.set(n.id, m);
   }
   const missing = current.filter((p) => !seen.has(p.id)).length;
   const list = [...byId.values()].sort((a, b) => b.id - a.id);
-  return { list, added, updated, missing };
+  const priceChanged = list.filter((p) => p.pc && !byIdOld(current, p.id)?.pc).length;
+  return { list, added, updated, missing, priceChanged };
 }
