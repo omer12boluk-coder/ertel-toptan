@@ -31,7 +31,7 @@ export default {
 async function haremDebug() {
   const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' };
   const out = {};
-  for (const f of ['', 'js/scripts.js?v=15']) {
+  for (const f of ['js/vue.js?v=20&t=1']) {
     const t = await (await fetch('https://canlipiyasalar.haremaltin.com/' + f, { headers: UA })).text();
     const snips = []; const re = /io\(|socketManager|wss?:\/\/|haremaltin\.com[^"' ]*|\.on\(["'][a-z_]+/gi; let m;
     while ((m = re.exec(t)) && snips.length < 25) snips.push(t.slice(Math.max(0, m.index - 90), m.index + 140).replace(/\s+/g, ' '));
