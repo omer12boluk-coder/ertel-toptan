@@ -980,3 +980,18 @@ a.btn { text-decoration: none; }
   .gline-ctl { grid-template-columns: auto auto 1fr 36px; }
   .gline-unit::before { content: attr(data-l) ' '; font: 600 11px var(--f-body); color: var(--muted); text-transform: uppercase; }
 }
+/* toplam kutusu: büyük toplam + hemen altında TL (KDV hariç), en altta küçük KDV satırı */
+.paper-tot { align-items: flex-end; }
+.paper-cnt { color: #6b7280; font-size: 14px; }
+.paper-sum { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.paper-lbl { font: 700 11px/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: #6b7280; }
+.paper-sum > b { font: 700 34px/1 var(--f-display); color: var(--price); }
+.paper-sum .paper-tl { font: 700 18px/1.1 var(--f-display); color: #111827; }
+.paper-sum .paper-tl small { font: 400 11px var(--f-body); color: #9ca3af; }
+.vat { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; font-size: 12px; color: var(--muted); padding-top: 8px; border-top: 1px dashed var(--line); }
+.vat > div { display: contents; }
+.vat b { font-weight: 600; color: var(--fg); opacity: .75; }
+.vat-sep { opacity: .5; }
+.vat.right { align-self: flex-end; min-width: 0; }
+.paper .vat { color: #6b7280; border-top-color: #e5e7eb; } .paper .vat b { color: #374151; }
+.cart-sum .vat { justify-content: space-between; }

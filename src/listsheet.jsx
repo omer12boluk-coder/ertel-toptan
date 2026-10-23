@@ -82,9 +82,15 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn }) {
         </table>
       </div>
       <footer className="paper-f">
-        <div className="paper-tot"><span>{items.length} kalem · {items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet</span><b className="num">{fmtTotals(tot)}</b></div>
-        <VatLines by={tot} />
-        {tTL != null && <div className="paper-tl"><span>TL karşılığı <small>({rateLabel(rate)})</small></span><b className="num">{fmtTL(tTL)}</b></div>}
+        <div className="paper-tot">
+          <span className="paper-cnt">{items.length} kalem · {items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet</span>
+          <div className="paper-sum">
+            <span className="paper-lbl">Toplam</span>
+            <b className="num">{fmtTotals(tot)}</b>
+            {tTL != null && <span className="paper-tl num">≈ {fmtTL(tTL)} <small>({rateLabel(rate)})</small></span>}
+          </div>
+        </div>
+        <VatLines by={tot} rate={rate} />
       </footer>
       {zoom && <Lightbox urls={zoom.urls} title={zoom.title} onClose={() => setZoom(null)} />}
     </article>
@@ -127,7 +133,8 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
   const meas = document.createElement('canvas').getContext('2d');
   meas.font = '600 23px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
   const rows = items.map((it, k) => { const lines = wrap(meas, it.n, cols[2][1] - 20, 3); return { it, k, lines, h: Math.max(96, 26 + lines.length * 29 + 26) }; });
-  const vat = vatOf(totals(items, 'offer'), S.pricing.vatPct ?? 20);
+  const vat0 = vatOf(totals(items, 'offer'), S.pricing.vatPct ?? 20);
+  const vat = S.pricing.showVat === false ? { pct: 0 } : vat0;
   const HEAD = 250, THEAD = 52, FOOT = (tl ? 210 : 160) + (vat.pct ? 64 : 0), PFOOT = 56;
   // sayfalara böl
   const pages = []; let cur = [], h = HEAD + THEAD + PFOOT;
@@ -211,15 +218,16 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
       x.textAlign = 'right'; x.fillStyle = '#374151'; x.font = '600 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText('TOPLAM', W - P - 230, y + 30);
       x.fillStyle = priceC; x.font = '700 46px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText(fmtTotals(tot), W - P, y + 36);
       y += 56;
-      if (vat.pct) { // KDV bilgisi: küçük, toplamın altında
-        x.fillStyle = '#6b7280'; x.font = '400 18px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText('KDV %' + vat.pct, W - P - 230, y + 20); x.fillText(fmtTotals(vat.vat), W - P, y + 20);
-        x.fillText('KDV dahil toplam', W - P - 230, y + 48); x.font = '600 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillStyle = '#374151'; x.fillText(fmtTotals(vat.inc), W - P, y + 48);
-        y += 64;
+      if (tTL != null) { // TL: genel toplamın (KDV hariç) karşılığı, hemen altında
+        x.fillStyle = '#111827'; x.font = '700 30px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText('≈ ' + fmtTL(tTL), W - P, y + 24);
+        x.fillStyle = '#9ca3af'; x.font = '400 16px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(rateLabel(rate), W - P, y + 48);
+        y += 62;
       }
-      if (tTL != null) {
-        x.fillStyle = '#6b7280'; x.font = '400 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(rateLabel(rate), W - P - 230, y + 30);
-        x.fillStyle = '#111827'; x.font = '700 34px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText(fmtTL(tTL), W - P, y + 34);
-        y += 50;
+      if (vat.pct) { // KDV: küçük tek satır
+        x.fillStyle = '#e5e7eb'; x.fillRect(W - P - 520, y + 4, 520, 1);
+        const inc = fmtTotals(vat.inc) + (tTL != null ? ' (≈ ' + fmtTL(tTL * (1 + vat.pct / 100)) + ')' : '');
+        x.fillStyle = '#6b7280'; x.font = '400 17px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(`KDV %${vat.pct} ${fmtTotals(vat.vat)}  ·  KDV dahil ${inc}`, W - P, y + 32);
+        y += 44;
       }
       x.textAlign = 'left'; x.fillStyle = '#6b7280'; x.font = '400 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
     }
@@ -462,7 +470,7 @@ export function VitrinListEditor({ code, onClose }) {
           </tbody>
         </table>
         <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(totals(items, 'offer'))}</b>{rate && toTL(totals(items, 'offer'), rate) != null && <span className="muted num">≈ {fmtTL(toTL(totals(items, 'offer'), rate))}</span>}</div>
-        <VatLines by={totals(items, 'offer')} className="right" />
+        <VatLines by={totals(items, 'offer')} rate={rate} className="right" />
         <div className="export-bar">
           <a className="btn wa" href={waLink('', 'Fiyatlı listeniz:\n' + newLink)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’ta müşteriye gönder</a>
           <button className="btn outline" onClick={() => copyText(newLink, 'Fiyatlı liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>

@@ -336,7 +336,7 @@ export function RequestDetail({ id }) {
             <span className="rd-total">Teklif <b className="num">{fmtTotals(tOffer)}</b></span>
             {admin && rate && toTL(tOffer, rate) != null && <span className="muted rd-tl" title={rateLabel(rate)}>≈ <b className="num">{fmtTL(toTL(tOffer, rate))}</b></span>}
           </div>
-          <VatLines by={tOffer} className="right" />
+          <VatLines by={tOffer} rate={admin ? rate : null} className="right" />
         </div>
       )}
 

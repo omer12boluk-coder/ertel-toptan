@@ -267,15 +267,17 @@ export function ContextMenu() {
   );
 }
 
-// Toplamın altında küçük KDV bilgisi (ürün fiyatlarına dokunmaz). Oran: Ayarlar > Fiyatlandırma
-export function VatLines({ by, className = '' }) {
-  const pct = useStore((s) => s.settings.pricing.vatPct);
-  const v = vatOf(by, pct ?? 20);
-  if (!v.pct || !Object.keys(by || {}).length) return null;
+// Toplamın altında küçük KDV bilgisi (ürün fiyatlarına dokunmaz). Oran ve göster/gizle: Ayarlar > Fiyatlandırma
+export function VatLines({ by, rate, className = '' }) {
+  const P = useStore((s) => s.settings.pricing);
+  const v = vatOf(by, P.vatPct ?? 20);
+  if (P.showVat === false || !v.pct || !Object.keys(by || {}).length) return null;
+  const tl = rate?.usd && Object.keys(v.inc).every((c) => c === 'USD' || c === 'TRY') ? Object.entries(v.inc).reduce((n, [c, x]) => n + (c === 'USD' ? x * rate.usd : x), 0) : null;
   return (
     <div className={'vat ' + className}>
-      <div><span>KDV %{v.pct.toLocaleString('tr-TR')}</span><span className="num">{fmtTotals(v.vat)}</span></div>
-      <div><span>KDV dahil toplam</span><span className="num">{fmtTotals(v.inc)}</span></div>
+      <span>KDV %{v.pct.toLocaleString('tr-TR')} <b className="num">{fmtTotals(v.vat)}</b></span>
+      <span className="vat-sep">·</span>
+      <span>KDV dahil <b className="num">{fmtTotals(v.inc)}</b>{tl != null && <> <span className="num">(≈ {Math.round(tl).toLocaleString('tr-TR')} ₺)</span></>}</span>
     </div>
   );
 }
