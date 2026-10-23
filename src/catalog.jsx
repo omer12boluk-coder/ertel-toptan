@@ -97,6 +97,8 @@ export function Catalog({ admin }) {
     if (admin && adminFilter === 'noimg') r = r.filter((p) => !p.img && !p.pi);
     if (admin && adminFilter === 'notags') r = r.filter((p) => !p.t);
     if (admin && adminFilter === 'pricechanged') r = r.filter((p) => p.pc);
+    if (admin && adminFilter === 'new') r = r.filter((p) => p.nw);
+    if (admin && adminFilter === 'siteoff') r = r.filter((p) => p.so);
     if (sort === 'asc') r = [...r].sort((a, b) => a.r - b.r);
     if (sort === 'desc') r = [...r].sort((a, b) => b.r - a.r);
     if (sort === 'name') r = [...r].sort((a, b) => a.n.localeCompare(b.n, 'tr'));
@@ -155,6 +157,8 @@ export function Catalog({ admin }) {
                     <option value="noimg">Resmi olmayanlar</option>
                     <option value="notags">Etiketi olmayanlar</option>
                     <option value="pricechanged">Liste fiyatı değişenler</option>
+                    <option value="new">Siteden yeni gelenler</option>
+                    <option value="siteoff">Sitede satışta olmayanlar</option>
                   </select>
                 </label>
               )}
@@ -245,6 +249,8 @@ function ProductRow({ p, admin, onOpen }) {
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
             {admin && !p.a && <span className="dot tone-muted">Pasif</span>}
             {admin && p.w == null && <span className="dot tone-warn">Toptan: oto</span>}
+            {admin && p.nw && <span className="dot tone-info">Siteden yeni</span>}
+            {admin && p.so && <span className="dot tone-muted">Sitede satışta değil</span>}
             {admin && p.pc && <span className="dot tone-bad">Liste {fmt(p.pc.r0, p.cur)} → {fmt(p.r, p.cur)}</span>}
           </span>
         </div>

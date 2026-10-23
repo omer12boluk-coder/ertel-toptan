@@ -9,6 +9,8 @@ service cloud.firestore {
     function isActive() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().active != false; }
 
     // İlk kurulum: yönetici sahibi bir kez yazılır
+    // otomatik eşitlemenin son çalışma bilgisi (sunucu yazar, yönetici okur)
+    match /meta/sync { allow read: if isAdmin(); }
     match /meta/owner {
       allow read: if true;
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;

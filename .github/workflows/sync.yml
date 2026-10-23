@@ -1,0 +1,24 @@
+# Her saat sitenin ürün beslemesini okuyup fiyat / stok / resim değişikliklerini uygulamaya işler
+name: Siteyle eşitle
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Deneme (kaydetme)'
+        type: boolean
+        default: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - name: Eşitle
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node tools/sync-platin.mjs ${{ inputs.dry && '--dry' || '' }}

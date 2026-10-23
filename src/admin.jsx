@@ -46,6 +46,8 @@ export function ProductEdit({ p, onClose }) {
       delete rec._s; delete rec._t;
       // Toptan fiyat elle değiştirildiyse ya da "kontrol ettim" denildiyse fiyat uyarısı kalkar
       if (rec.pc && (pcOk || String(rec.w ?? '') !== String(p?.w ?? ''))) delete rec.pc;
+      delete rec.nw; // yönetici gördü
+      if (rec.so && rec.a) delete rec.so; // elle açıldıysa eşitleme artık karışmaz
       rec.t = (rec.t || '').split(',').map((x) => x.trim()).filter(Boolean).join(',');
       rec.b = (rec.b || '').trim();
       if (rec.c2 === '' || rec.c2 === rec.c) delete rec.c2; else if (rec.c2 != null) rec.c2 = Number(rec.c2);
@@ -592,6 +594,7 @@ export function Settings() {
             </div>
             <label className="btn outline"><Icon n="upload" s={16} />Dosya seç<input type="file" accept=".xlsx,.csv" hidden onChange={pickFile} /></label>
           </div>
+          <SyncInfo />
           <ImageSync />
           <div className="data-box">
             <div><b>Katalog</b><p className="fine">{catalog.length.toLocaleString('tr-TR')} ürün · {catalog.filter((p) => p.a).length.toLocaleString('tr-TR')} aktif · {catalog.filter((p) => p.w != null).length} üründe özel toptan fiyat · {catalog.filter((p) => p.img || p.pi).length} resimli</p></div>
@@ -818,5 +821,23 @@ function PendingList({ list }) {
       </ul>
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </section>
+  );
+}
+
+// Sitenin ürün beslemesiyle saatlik otomatik eşitlemenin son durumu
+function SyncInfo() {
+  const { api: A } = useStore();
+  const [info, setInfo] = useState(undefined);
+  useEffect(() => { A.getSyncInfo ? A.getSyncInfo().then(setInfo).catch(() => setInfo(null)) : setInfo(null); }, []);
+  return (
+    <div className="data-box">
+      <div>
+        <b>Siteyle otomatik eşitleme</b>
+        <p className="fine">Her saat ertelgsm.com'un ürün beslemesi okunur: liste fiyatı (dolara çevrilerek), stok durumu, ana resim ve ad güncellenir. Fiyatı değişenler “Liste fiyatı değişenler” olarak işaretlenir, toptan fiyata dokunulmaz.</p>
+        {info === undefined ? <p className="fine">Yükleniyor…</p> : info
+          ? <p className="fine"><b>Son çalışma: {when(info.at)}</b> · {info.summary}</p>
+          : <p className="fine">Henüz çalışmadı.</p>}
+      </div>
+    </div>
   );
 }

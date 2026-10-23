@@ -2,7 +2,16 @@
   "name": "ertel-toptan",
   "private": true,
   "description": "Bayilere özel toptan katalog (Firebase + PWA)",
-  "scripts": { "build": "python3 tools/build.py", "deploy": "python3 tools/build.py && cd hosting && firebase deploy" },
-  "dependencies": { "react": "19.2.0", "react-dom": "19.2.0" },
-  "devDependencies": { "esbuild": "0.25.0" }
+  "scripts": {
+    "build": "python3 tools/build.py",
+    "deploy": "python3 tools/build.py && cd hosting && firebase deploy"
+  },
+  "dependencies": {
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.0"
+  },
+  "type": "module"
 }

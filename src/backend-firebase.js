@@ -155,6 +155,7 @@ export class FirebaseBackend {
     await this.saveDescs(m);
   }
 
+  async getSyncInfo() { const s = await this.F.getDoc(this.d('meta', 'sync')); return s.exists() ? s.data() : null; }
   async getImage(id) {
     if (this.imgCache.has(id)) return this.imgCache.get(id);
     const p = this.F.getDoc(this.d('img', String(id))).then((s) => (s.exists() ? s.data().d : null)).catch(() => null);
