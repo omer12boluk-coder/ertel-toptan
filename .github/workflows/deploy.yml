@@ -18,6 +18,8 @@ jobs:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          info=$(node -e 'try{const j=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));console.log("tur="+j.type+" proje="+j.project_id+" hesap="+(j.client_email||"").replace(/^[^@]+/,"***")+" alanlar="+Object.keys(j).join(","))}catch(e){console.log("JSON okunamadi: "+e.message)}' "$RUNNER_TEMP/sa.json")
+          echo "::notice title=Anahtar kontrol::$info"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           set +e
           npx -y firebase-tools@13 deploy --only hosting,firestore:rules --project erteltoptan --non-interactive > "$RUNNER_TEMP/out.txt" 2>&1
