@@ -29,38 +29,53 @@ export default {
 };
 
 async function haremDebug() {
-  const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' };
-  const out = {};
-  for (const f of ['js/vue.js?v=20&t=1']) {
-    const t = await (await fetch('https://canlipiyasalar.haremaltin.com/' + f, { headers: UA })).text();
-    const snips = []; const re = /io\(|socketManager|wss?:\/\/|haremaltin\.com[^"' ]*|\.on\(["'][a-z_]+/gi; let m;
-    while ((m = re.exec(t)) && snips.length < 25) snips.push(t.slice(Math.max(0, m.index - 90), m.index + 140).replace(/\s+/g, ' '));
-    out[f || 'page'] = snips;
-  }
-  return out;
+  try { const d = await haremSocketOnce(9000); return { ok: true, keys: Object.keys(d || {}).slice(0, 10), usd: d?.data?.USDTRY || d?.USDTRY || null }; }
+  catch (e) { return { ok: false, err: String(e.message || e) }; }
 }
 
-// Harem Altın: dakikada bir istekten fazlasını Harem'e yansıtmamak için bellek önbelleği
+// Harem Altın: canlı fiyat sayfası (canlipiyasalar.haremaltin.com) fiyatları Socket.IO ile yayınlıyor;
+// aynı yayına bağlanıp ilk "price_changed" mesajındaki USDTRY satış fiyatını alıyoruz.
+// Harem'e yük olmasın diye sonuç ~45 sn bellekte tutulur.
 let rateCache = null;
 export async function haremRate() {
   if (rateCache && Date.now() - rateCache.fetched < 45000) return rateCache.r;
-  const res = await fetch('https://www.haremaltin.com/dashboard/ajax/doviz', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest',
-      'Referer': 'https://www.haremaltin.com/canli-piyasalar/', 'Origin': 'https://www.haremaltin.com',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', 'Accept': 'application/json, text/javascript, */*; q=0.01',
-    },
-    body: 'dil_kodu=tr',
+  try {
+    const data = await haremSocketOnce(9000);
+    const u = data?.data?.USDTRY || data?.USDTRY;
+    const usd = parseFloat(String(u?.satis ?? '').replace(',', '.'));
+    if (usd > 1) {
+      const r = { usd, alis: parseFloat(String(u.alis ?? '').replace(',', '.')) || null, src: 'harem', at: Date.now(), t: u.tarih || null };
+      rateCache = { r, fetched: Date.now() };
+      return r;
+    }
+  } catch (e) { console.log('harem', String(e)); }
+  return rateCache?.r || null;
+}
+
+function haremSocketOnce(ms) {
+  return new Promise(async (resolve, reject) => {
+    let ws; const timer = setTimeout(() => { try { ws?.close(); } catch {} reject(new Error('zaman aşımı')); }, ms);
+    try {
+      const res = await fetch('https://hrmsocketonly.haremaltin.com/socket.io/?EIO=4&transport=websocket', {
+        headers: { Upgrade: 'websocket', Origin: 'https://canlipiyasalar.haremaltin.com', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' },
+      });
+      ws = res.webSocket;
+      if (!ws) throw new Error('websocket açılamadı: HTTP ' + res.status);
+      ws.accept();
+      ws.addEventListener('message', (ev) => {
+        const m = typeof ev.data === 'string' ? ev.data : '';
+        if (m.startsWith('0')) ws.send('40'); // Engine.IO açıldı → Socket.IO ana kanala bağlan
+        else if (m === '2') ws.send('3'); // ping → pong
+        else if (m.startsWith('42')) {
+          try {
+            const [ev2, payload] = JSON.parse(m.slice(2));
+            if (ev2 === 'price_changed') { clearTimeout(timer); try { ws.close(1000); } catch {} resolve(payload); }
+          } catch {}
+        }
+      });
+      ws.addEventListener('close', () => { clearTimeout(timer); reject(new Error('bağlantı kapandı')); });
+    } catch (e) { clearTimeout(timer); reject(e); }
   });
-  if (!res.ok) return rateCache?.r || null;
-  let j; try { j = await res.json(); } catch { return rateCache?.r || null; }
-  const u = j?.data?.USDTRY;
-  const usd = parseFloat(String(u?.satis ?? '').replace(',', '.'));
-  if (!(usd > 1)) return rateCache?.r || null;
-  const r = { usd, alis: parseFloat(String(u.alis).replace(',', '.')) || null, src: 'harem', at: Date.now(), t: u.tarih || null };
-  rateCache = { r, fetched: Date.now() };
-  return r;
 }
 
 function field(s, tag, from) {

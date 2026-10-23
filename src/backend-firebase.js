@@ -8,6 +8,8 @@ import { chunkBySize } from './cats.js';
 
 const V = '10.12.2';
 const CDN = `https://www.gstatic.com/firebasejs/${V}/`;
+// Bağlantı takılırsa sonsuza kadar beklemesin: belirli sürede cevap gelmezse hata verir (ekranda "Tekrar dene" çıkar)
+const timeout = (p, ms = 20000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('Sunucu cevap vermedi, bağlantınızı kontrol edip tekrar deneyin')), ms))]);
 const toEmail = (u) => `${u.trim().toLowerCase()}@${EMAIL_DOMAIN}`;
 
 export class FirebaseBackend {
@@ -32,8 +34,8 @@ export class FirebaseBackend {
   d(...p) { return this.F.doc(this.db, ...p); }
   c(...p) { return this.F.collection(this.db, ...p); }
 
-  async publicInfo() { const s = await this.F.getDoc(this.d('settings', 'public')); return s.exists() ? s.data() : null; }
-  async needsSetup() { const s = await this.F.getDoc(this.d('meta', 'owner')); return !s.exists(); }
+  async publicInfo() { const s = await timeout(this.F.getDoc(this.d('settings', 'public'))); return s.exists() ? s.data() : null; }
+  async needsSetup() { const s = await timeout(this.F.getDoc(this.d('meta', 'owner'))); return !s.exists(); }
   async setupAdmin({ username, password, name }) {
     this.settingUp = true;
     const cred = await this.U.createUserWithEmailAndPassword(this.auth, toEmail(username), password);
@@ -52,7 +54,7 @@ export class FirebaseBackend {
     if (this.settingUp) return;
     if (!u) return this.authCb?.(null);
     try {
-      const s = await this.F.getDoc(this.d('users', u.uid));
+      const s = await timeout(this.F.getDoc(this.d('users', u.uid)));
       if (!s.exists()) return this.authCb?.(null, 'Hesap kaydı bulunamadı.');
       const data = { uid: u.uid, ...s.data() };
       if (data.active === false) { await this.U.signOut(this.auth); return this.authCb?.(null, data.pending ? 'Üyelik başvurunuz onay bekliyor. Onaylanınca giriş yapabilirsiniz.' : 'Hesabınız pasif. Lütfen dükkanla iletişime geçin.'); }
@@ -79,7 +81,7 @@ export class FirebaseBackend {
     } finally { this.settingUp = false; }
   }
 
-  async loadSettings() { const s = await this.F.getDoc(this.d('settings', 'app')); return s.exists() ? s.data() : null; }
+  async loadSettings() { const s = await timeout(this.F.getDoc(this.d('settings', 'app'))); return s.exists() ? s.data() : null; }
   async saveSettings(S) {
     await this.F.setDoc(this.d('settings', 'app'), S);
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {} });
@@ -95,12 +97,12 @@ export class FirebaseBackend {
     }, () => {});
   }
   async loadCatalog() {
-    const meta = await this.F.getDoc(this.d('catalog', '_meta'));
+    const meta = await timeout(this.F.getDoc(this.d('catalog', '_meta')));
     if (!meta.exists()) return null;
     const { version, chunks } = meta.data();
     const cached = ls.get('cat-cache', null);
     if (cached && cached.version === version) return cached.items;
-    const parts = await Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('catalog', 'c' + i))));
+    const parts = await timeout(Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('catalog', 'c' + i)))), 45000);
     const items = parts.flatMap((p) => (p.exists() ? p.data().items : []));
     ls.set('cat-cache', { version, items });
     return items;
@@ -125,14 +127,14 @@ export class FirebaseBackend {
     b.set(this.d('pubcatalog', '_meta'), { version: now(), chunks: parts.length, count: pub.length });
     await b.commit();
   }
-  async hasPublicCatalog() { return (await this.F.getDoc(this.d('pubcatalog', '_meta'))).exists(); }
+  async hasPublicCatalog() { return (await timeout(this.F.getDoc(this.d('pubcatalog', '_meta')))).exists(); }
   async loadPublicCatalog() {
-    const meta = await this.F.getDoc(this.d('pubcatalog', '_meta'));
+    const meta = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta')));
     if (!meta.exists()) return [];
     const { version, chunks } = meta.data();
     const cached = ls.get('pubcat-cache', null);
     if (cached && cached.version === version) return cached.items;
-    const parts = await Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('pubcatalog', 'c' + i))));
+    const parts = await timeout(Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('pubcatalog', 'c' + i)))), 45000);
     const items = parts.flatMap((p) => (p.exists() ? p.data().items : []));
     ls.set('pubcat-cache', { version, items });
     return items;
@@ -141,14 +143,15 @@ export class FirebaseBackend {
   async loadDescMap() {
     if (this._descs) return this._descs;
     this._descsP = this._descsP || (async () => {
-      const meta = await this.F.getDoc(this.d('desc', '_meta'));
+      const meta = await timeout(this.F.getDoc(this.d('desc', '_meta')));
       if (!meta.exists()) return {};
       const parts = await Promise.all(Array.from({ length: meta.data().chunks }, (_, i) => this.F.getDoc(this.d('desc', 'c' + i))));
       return Object.assign({}, ...parts.map((x) => (x.exists() ? x.data().d : {})));
     })();
-    this._descs = await this._descsP; return this._descs;
+    try { this._descs = await this._descsP; } catch (e) { this._descsP = null; throw e; } // hata olursa bir dahakine yeniden dener
+    return this._descs;
   }
-  async hasDescs() { return (await this.F.getDoc(this.d('desc', '_meta'))).exists(); }
+  async hasDescs() { return (await timeout(this.F.getDoc(this.d('desc', '_meta')))).exists(); }
   async getDesc(id) { return (await this.loadDescMap())[id] || ''; }
   async saveDescs(map) {
     const parts = chunkBySize(Object.entries(map));
@@ -164,7 +167,7 @@ export class FirebaseBackend {
     await this.saveDescs(m);
   }
 
-  async getSyncInfo() { const s = await this.F.getDoc(this.d('meta', 'sync')); return s.exists() ? s.data() : null; }
+  async getSyncInfo() { const s = await timeout(this.F.getDoc(this.d('meta', 'sync'))); return s.exists() ? s.data() : null; }
   async getImage(id) {
     if (this.imgCache.has(id)) return this.imgCache.get(id);
     const p = this.F.getDoc(this.d('img', String(id))).then((s) => (s.exists() ? s.data().d : null)).catch(() => null);
@@ -198,9 +201,9 @@ export class FirebaseBackend {
   }
   async updateUser(uid, patch) { const { password, ...rest } = patch; await this.F.updateDoc(this.d('users', uid), rest); }
   async bumpStat(uid, key, d) { await this.F.updateDoc(this.d('users', uid), { ['stats.' + key]: this.F.increment(d) }); }
-  async getNote(uid) { const s = await this.F.getDoc(this.d('userNotes', uid)); return s.exists() ? s.data().t : ''; }
+  async getNote(uid) { const s = await timeout(this.F.getDoc(this.d('userNotes', uid))); return s.exists() ? s.data().t : ''; }
   async setNote(uid, t) { await this.F.setDoc(this.d('userNotes', uid), { t }); }
-  async getUserPrices(uid) { const s = await this.F.getDoc(this.d('userPrices', uid)); return s.exists() ? s.data().p || {} : {}; }
+  async getUserPrices(uid) { const s = await timeout(this.F.getDoc(this.d('userPrices', uid))); return s.exists() ? s.data().p || {} : {}; }
   async setUserPrices(uid, map) { await this.F.setDoc(this.d('userPrices', uid), { p: map }); }
 
   // ---- Talepler & mesajlar
@@ -221,7 +224,7 @@ export class FirebaseBackend {
   watchRequest(id, cb) {
     return this.F.onSnapshot(this.d('requests', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null));
   }
-  async getRequest(id) { const s = await this.F.getDoc(this.d('requests', id)); return s.exists() ? { id, ...s.data() } : null; }
+  async getRequest(id) { const s = await timeout(this.F.getDoc(this.d('requests', id))); return s.exists() ? { id, ...s.data() } : null; }
   async updateRequest(id, patch) { await this.F.updateDoc(this.d('requests', id), patch); }
   watchMessages(id, cb) {
     return this.F.onSnapshot(this.F.query(this.c('requests', id, 'messages'), this.F.orderBy('at')), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))));
