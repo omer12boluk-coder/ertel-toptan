@@ -1,0 +1,58 @@
+rules_version = '2';
+// ERTEL Toptan — Firestore güvenlik kuralları
+// Bayi: sadece katalog + kendi talepleri + kendi özel fiyatları. Yönetici: her şey.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().role == 'admin'; }
+    function isActive() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().active != false; }
+
+    // İlk kurulum: yönetici sahibi bir kez yazılır
+    match /meta/owner {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+    // Giriş ekranındaki logo / dükkan bilgisi herkese açık
+    match /settings/public { allow read: if true; allow write: if isAdmin(); }
+    match /settings/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
+    match /catalog/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
+    match /img/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
+    match /desc/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      // yönetici oluşturur; ya da ilk kurulumda sahip kendi kaydını yazar
+      allow create: if isAdmin() || (signedIn() && request.auth.uid == uid
+        && get(/databases/$(database)/documents/meta/owner).data.uid == uid);
+      // bayi sadece ad / dükkan / telefon / foto değiştirebilir
+      allow update: if isAdmin() || (request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shop', 'phone', 'photo']));
+    }
+    match /userNotes/{uid} { allow read, write: if isAdmin(); }
+    match /userPrices/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /requests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isActive() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'new';
+      allow update: if isAdmin() || (
+        signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'lastMsg', 'lastFrom', 'updatedAt', 'unreadAdmin', 'unreadUser'])
+        && (
+          request.resource.data.status == resource.data.status
+          || (resource.data.status == 'offered' && request.resource.data.status in ['accepted', 'rejected'])
+          || (resource.data.status in ['new', 'offered'] && request.resource.data.status == 'cancelled')
+        )
+      );
+      match /messages/{m} {
+        allow read: if isAdmin() || get(/databases/$(database)/documents/requests/$(id)).data.uid == request.auth.uid;
+        allow create: if isAdmin() || (signedIn()
+          && get(/databases/$(database)/documents/requests/$(id)).data.uid == request.auth.uid
+          && request.resource.data.from in ['user', 'system']);
+      }
+    }
+  }
+}
