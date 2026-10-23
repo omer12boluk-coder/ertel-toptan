@@ -101,6 +101,7 @@ async function boot() {
       store.set({ userPrices: admin ? {} : await A.getUserPrices(u.uid) });
       stopWatchers();
       unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
+      if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
       if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
       loadCart();
       // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
@@ -125,6 +126,7 @@ async function bootShop(A) {
   store.set({ user: { uid: 'guest', role: 'public', name: 'Ziyaretçi' }, boot: 'loading' });
   try {
     setCatalog(await A.loadPublicCatalog());
+    A.watchCatalog?.((items) => items && setCatalog(items), true);
     loadCart();
     store.set({ boot: 'ready', tab: ROUTE.reqId ? 'talepler' : 'katalog', openReq: ROUTE.reqId || null });
   } catch (e) { store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }

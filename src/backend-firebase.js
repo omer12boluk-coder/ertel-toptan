@@ -85,6 +85,14 @@ export class FirebaseBackend {
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan
+  // Katalog değişince (eşitleme veya yönetici kaydı) açık ekranlara haber verir
+  watchCatalog(cb, pub) {
+    let first = true;
+    return this.F.onSnapshot(this.d(pub ? 'pubcatalog' : 'catalog', '_meta'), async () => {
+      if (first) { first = false; return; }
+      try { cb(pub ? await this.loadPublicCatalog() : await this.loadCatalog()); } catch (e) { console.warn(e); }
+    }, () => {});
+  }
   async loadCatalog() {
     const meta = await this.F.getDoc(this.d('catalog', '_meta'));
     if (!meta.exists()) return null;
