@@ -50,10 +50,9 @@ hosted = f'''<!doctype html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script>(function(){{var p=location.pathname,a=/^[/](admin|siparisformu)([/]|$)/.test(p)?'admin':/^[/]magaza([/]|$)/.test(p)?'magaza':'b2b';document.querySelector('link[rel=manifest]').href='manifest-'+a+'.webmanifest';if(a==='admin'){{document.querySelector('link[rel=icon]').href='icon-admin-192.png';document.querySelector('link[rel=apple-touch-icon]').href='icon-admin-180.png';document.querySelector('meta[name=theme-color]').content='#16213f';}}var m=document.createElement('meta');m.name='apple-mobile-web-app-title';m.content=a==='admin'?'ERTEL Yönetim':'ERTEL GSM';document.head.appendChild(m);}})();</script>
+<script>(function(){{var p=location.pathname,a=/^[/](admin|siparisformu)([/]|$)/.test(p)?'admin':/^[/]magaza([/]|$)/.test(p)?'magaza':'b2b';var l=document.createElement('link');l.rel='manifest';l.href='/manifest-'+a+'.webmanifest';document.head.appendChild(l);if(a==='admin'){{document.querySelector('link[rel=icon]').href='icon-admin-192.png';document.querySelector('link[rel=apple-touch-icon]').href='icon-admin-180.png';document.querySelector('meta[name=theme-color]').content='#16213f';}}var m=document.createElement('meta');m.name='apple-mobile-web-app-title';m.content=a==='admin'?'ERTEL Yönetim':'ERTEL GSM';document.head.appendChild(m);}})();</script>
 {PRELOAD}
 {FONTS}
 <style>{css}</style>

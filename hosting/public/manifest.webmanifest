@@ -3,7 +3,7 @@
   "short_name": "ERTEL GSM",
   "description": "Bayilere özel toptan katalog",
   "lang": "tr",
-  "start_url": "/b2b",
+  "start_url": "/magaza",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f1f4f9",
@@ -25,5 +25,6 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "id": "/magaza"
 }

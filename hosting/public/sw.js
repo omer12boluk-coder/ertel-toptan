@@ -1,6 +1,6 @@
 // Çevrimdışı kabuk: önce sunucudan en yeni sürümü ister; ağ 6 sn içinde cevap vermezse ya da internet yoksa
 // kayıtlı son sürümü gösterir (WhatsApp'tan açılan linklerin sonsuza kadar dönmemesi için).
-const C = 'ertel-toptan-v3';
+const C = 'ertel-toptan-v4';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
