@@ -16,4 +16,3 @@ FEED_URL = "https://www.ertelgsm.com/xml-cikti/gm"
 REPO = "omer12boluk-coder/ertel-toptan"
 # sipariş bildirimi (Ayarlar > Online mağaza > Bildirimler'de anlatılıyor)
 NOTIFY_EMAIL = "omer.12boluk@gmail.com"
-NOTIFY_WA = "905437227637"

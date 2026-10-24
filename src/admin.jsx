@@ -1002,23 +1002,54 @@ function ShopInvite() {
 function NotifyCard() {
   const [st, setSt] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [code] = useState(() => String(Math.floor(100000 + Math.random() * 900000)));
   const W = (window.WATCH_URL || '').replace(/\/$/, '');
-  useEffect(() => { if (W) fetch(W + '/').then((r) => r.json()).then((j) => setSt(j.notify || null)).catch(() => {}); }, []);
+  const load = () => W && fetch(W + '/').then((r) => r.json()).then((j) => setSt(j.notify || {})).catch(() => setSt({}));
+  useEffect(() => { load(); }, []);
+  async function post(path, body) { const r = await fetch(W + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }); return r.json(); }
   async function test() {
     setBusy(true);
-    try { const r = await fetch(W + '/notify-test', { method: 'POST' }); const j = await r.json(); toast(j.ok ? 'Deneme bildirimi gönderildi; e-postanıza ve WhatsApp’ınıza bakın' : j.error || 'Gönderilemedi', j.ok ? 'ok' : 'bad'); }
-    catch (e) { toast('Gönderilemedi: ' + e.message, 'bad'); }
+    try {
+      const j = await post('/notify-test');
+      if (!j.ok) toast(j.error || 'Gönderilemedi', 'bad');
+      else toast(`Telegram: ${j.telegram || '—'} · E-posta: ${String(j.email || 'kapalı').slice(0, 60)}`, /hata|false/.test(String(j.telegram) + j.email) ? 'bad' : 'ok');
+    } catch (e) { toast('Gönderilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
+  async function link() {
+    setBusy(true);
+    try { const j = await post('/tg-link', { code }); if (j.ok) { toast('Telegram bağlandı', 'ok'); load(); } else toast(j.error || 'Bağlanamadı', 'bad'); }
+    catch (e) { toast('Bağlanamadı: ' + e.message, 'bad'); }
+    setBusy(false);
+  }
+  const on = (x) => <b className="tone-ok-t">{x}</b>;
   return (
     <div className="invite notify-card">
       <b>Yeni sipariş bildirimi</b>
-      <p className="fine">Mağazadan sipariş gelince size e-posta ve WhatsApp mesajı gelir (sipariş özeti + panelde açma linki).</p>
-      <p className="fine">E-posta: {st ? (st.email ? <b className="tone-ok-t">açık</b> : 'kapalı') : '…'} · WhatsApp: {st ? (st.whatsapp ? <b className="tone-ok-t">açık</b> : <b>kurulum bekliyor</b>) : '…'}</p>
-      <ul className="fine notify-steps">
-        <li><b>E-posta</b> ilk bildirimde FormSubmit’ten “Activate Form” e-postası gelir; bir kez tıklayın, sonraki siparişler doğrudan gelir.</li>
-        <li><b>WhatsApp</b> için CallMeBot’tan ücretsiz anahtar alınır (callmebot.com → WhatsApp). Gelen anahtarı GitHub’da depo ayarlarına <code>CALLMEBOT_KEY</code> adıyla ekleyip “Bekçiyi yayınla”yı çalıştırın.</li>
-      </ul>
+      <p className="fine">Mağazadan sipariş gelince Telegram’ınıza ve e-postanıza sipariş özeti + panelde açma linki gelir.</p>
+      <p className="fine">Telegram: {!st ? '…' : st.telegramLinked ? on('bağlı (' + st.telegramLinked + ')') : st.telegram ? <b>bağlanmayı bekliyor</b> : 'kurulmadı'} · E-posta: {!st ? '…' : st.email ? on('açık') : 'kurulmadı'}</p>
+      {st && !st.telegram && (
+        <ol className="fine notify-steps">
+          <li>Telegram’da <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>’ı açıp <code>/newbot</code> yazın; bota bir ad ve sonu <code>bot</code> ile biten bir kullanıcı adı verin.</li>
+          <li>BotFather’ın verdiği anahtarı (token) GitHub’da depo &gt; Settings &gt; Secrets and variables &gt; Actions’a <code>TELEGRAM_TOKEN</code> adıyla ekleyin.</li>
+          <li>Actions’ta “Bekçiyi yayınla”yı çalıştırın, sonra bu sayfayı yenileyin.</li>
+        </ol>
+      )}
+      {st && st.telegram && !st.telegramLinked && (
+        <div className="tg-link">
+          <p className="fine">1) Aşağıdaki düğmeyle botu açıp <b>Başlat</b>’a basın (ya da bota <b className="num">{code}</b> yazın). 2) Sonra “Bağla”ya basın.</p>
+          <div className="row-btns">
+            {st.telegramBot && <a className="btn sm tg" href={`https://t.me/${st.telegramBot}?start=${code}`} target="_blank" rel="noopener"><Icon n="send" s={15} />Botu aç</a>}
+            <button className="btn sm primary" disabled={busy} onClick={link}>{busy ? 'Bakılıyor…' : 'Bağla'}</button>
+          </div>
+        </div>
+      )}
+      {st && !st.email && (
+        <ol className="fine notify-steps">
+          <li><a href="https://resend.com/signup" target="_blank" rel="noopener">resend.com</a>’a <b>bildirimlerin geleceği e-postayla</b> ücretsiz üye olun.</li>
+          <li>API Keys &gt; Create API Key (Sending access yeterli). Anahtarı GitHub’a <code>RESEND_KEY</code> adıyla ekleyin ve “Bekçiyi yayınla”yı çalıştırın.</li>
+        </ol>
+      )}
       {W && <button className="btn sm outline" disabled={busy} onClick={test}><Icon n="send" s={15} />{busy ? 'Gönderiliyor…' : 'Deneme bildirimi gönder'}</button>}
     </div>
   );

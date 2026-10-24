@@ -24,7 +24,7 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 - Marka logoları/renkleri: `settings.brandLogos` {Ad: {logo, color}} (Ayarlar > Markalar; ad büyük/küçük harf duyarsız eşleşir). Ana sayfa kutuları durağanken nötr, üstüne gelince marka renginde ışık. Kayan şerit stili `shopHome.marquee`: color (varsayılan, renkli logolar) / dark / mono / off. `settings/public` brandLogos'u da taşır.
 - Tüm ürünler: kutu (varsayılan, büyük resim) / satır görünümü (`cat-view`, cihazda).
 - Sipariş durumu yönetici tarafından serbest seçilir (Yeni…Tamamlandı, İptal); Kargoda seçilince kargo firması listeden (`settings.orders.cargoCompanies`, Ayarlar > Online mağaza) + takip no.
-- Yeni sipariş bildirimi: checkout → Worker `POST /notify {id}` (siparişi Firestore REST'ten okur, KV ile tekrar göndermez) → e-posta FormSubmit (NOTIFY_EMAIL, ilk mesajda aktivasyon tıklanmalı) + WhatsApp CallMeBot (NOTIFY_WA + secret CALLMEBOT_KEY). Ayarlar > Online mağaza'da "Deneme bildirimi gönder" (`/notify-test`).
+- Yeni sipariş bildirimi: checkout → Worker `POST /notify {id}` (siparişi Firestore REST'ten okur, KV ile tekrar göndermez) → Telegram (secret TELEGRAM_TOKEN; alıcı sohbet KV `tg-chat`, panelde 6 haneli kodla `POST /tg-link`, sadece ilk bağlantı) + e-posta Resend (secret RESEND_KEY, onboarding@resend.dev → NOTIFY_EMAIL; Resend hesabı o e-postayla açılmalı; anahtar yoksa FormSubmit, ama FormSubmit Cloudflare'den 'Rate limit' veriyor). CallMeBot WhatsApp botu dolu olduğu için bırakıldı. Ayarlar > Online mağaza > "Deneme bildirimi gönder" (`/notify-test`).
 - Yönetici mağaza üyesi açabilir/görebilir/silebilir (Siparişler > Mağaza üyeleri). Panelden açılan üye `byAdmin: true` → e-posta doğrulaması gerekmez.
 
 ## Site eşitleme
@@ -35,7 +35,7 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 - Siteye toplu istek atma (IP engeli yemiştik). Beslemede stok adedi yok.
 
 ## Gizli ayarlar (GitHub Actions secrets) — değerlerini asla isteme/yazdırma
-FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_DISPATCH_TOKEN, CALLMEBOT_KEY (WhatsApp bildirimi; kullanıcı ekler).
+FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_DISPATCH_TOKEN, TELEGRAM_TOKEN, RESEND_KEY (bildirim; kullanıcı ekler).
 
 ## Açık konular
 - iyzico "link ile ödeme" entegrasyonu (kullanıcı başvuracak).

@@ -7,7 +7,8 @@
 //   GET  /rate   Harem Altın dolar satış kuru  → { usd, src: 'harem', at }
 //   POST /check  yönetim paneli açılınca: sitede değişiklik varsa hemen eşitler
 //   POST /sync   yönetim panelindeki "Şimdi eşitle": siteyi hemen kontrol edip eşitlemeyi başlatır
-//   POST /notify mağazada sipariş verilince: dükkan sahibine e-posta (FormSubmit) + WhatsApp (CallMeBot) bildirimi
+//   POST /notify mağazada sipariş verilince: dükkan sahibine Telegram + e-posta (Resend) bildirimi
+//   POST /tg-link {code} Telegram botuna yazılan kodu bulup o sohbeti bildirim alıcısı yapar (sadece ilk bağlantı)
 export default {
   async scheduled(event, env, ctx) { ctx.waitUntil(check(env)); },
   async fetch(req, env, ctx) {
@@ -33,7 +34,8 @@ export default {
       if (url.pathname === '/sync' && req.method === 'POST') return json({ result: await check(env, { force: true }) });
       if (url.pathname === '/notify' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyOrder(env, String(b.id || ''))); }
       if (url.pathname === '/notify-test' && req.method === 'POST') { if (await env.KV.get('ntest')) return json({ ok: false, error: 'Biraz bekleyip tekrar deneyin' }); await env.KV.put('ntest', '1', { expirationTtl: 120 }); return json(await notifySend(env, { subject: 'ERTEL GSM · bildirim denemesi', text: 'Bu bir deneme bildirimidir. Mağazadan sipariş gelince buna benzer bir mesaj alacaksınız.' })); }
-      if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: { email: !!env.NOTIFY_EMAIL, whatsapp: !!(env.NOTIFY_WA && env.CALLMEBOT_KEY) } });
+      if (url.pathname === '/tg-link' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await tgLink(env, String(b.code || ''))); }
+      if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: await notifyStatus(env) });
     } catch (e) { return json({ error: String(e.message || e) }, 500); }
     return json({ error: 'bulunamadı' }, 404);
   },
@@ -184,9 +186,51 @@ async function notifyOrder(env, id) {
   const text = `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n${deliv} · ${pay}${o.note ? '\nNot: ' + o.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
   return notifySend(env, { subject: `Yeni sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, short: `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${tot}\n${deliv}\nPanelde aç: ${link}`, replyTo: o.contact?.email });
 }
+// ---- bildirim kanalları ----
+// Telegram: TELEGRAM_TOKEN (BotFather) + KV 'tg-chat' (panelden kodla bağlanır)
+// E-posta: RESEND_KEY varsa Resend (onboarding@resend.dev → hesap sahibinin e-postası), yoksa FormSubmit
+const TG = (env, m) => 'https://api.telegram.org/bot' + env.TELEGRAM_TOKEN + '/' + m;
+async function tgBot(env) {
+  if (!env.TELEGRAM_TOKEN) return null;
+  let u = await env.KV.get('tg-bot');
+  if (!u) { const r = await fetch(TG(env, 'getMe')).then((x) => x.json()).catch(() => null); u = r?.result?.username || ''; if (u) await env.KV.put('tg-bot', u, { expirationTtl: 86400 }); }
+  return u || null;
+}
+async function notifyStatus(env) {
+  const chat = env.TELEGRAM_TOKEN ? JSON.parse((await env.KV.get('tg-chat')) || 'null') : null;
+  return { email: !!(env.NOTIFY_EMAIL && env.RESEND_KEY), emailVia: env.RESEND_KEY ? 'resend' : 'formsubmit', telegram: !!env.TELEGRAM_TOKEN, telegramBot: await tgBot(env), telegramLinked: chat ? chat.name || true : false };
+}
+async function tgLink(env, code) {
+  if (!env.TELEGRAM_TOKEN) return { ok: false, error: 'Telegram bot anahtarı (TELEGRAM_TOKEN) henüz eklenmemiş' };
+  if (await env.KV.get('tg-chat')) return { ok: true, already: true };
+  if (!/^\d{6}$/.test(code)) return { ok: false, error: 'Kod hatalı' };
+  const r = await fetch(TG(env, 'getUpdates') + '?limit=100').then((x) => x.json()).catch(() => null);
+  const m = (r?.result || []).map((u) => u.message).filter(Boolean).reverse().find((x) => (x.text || '').replace(/\D/g, '') === code && x.chat?.type === 'private');
+  if (!m) return { ok: false, error: 'Kod bota ulaşmamış. Kodu bota gönderip birkaç saniye sonra tekrar deneyin.' };
+  const name = [m.chat.first_name, m.chat.last_name].filter(Boolean).join(' ') || m.chat.username || 'Telegram';
+  await env.KV.put('tg-chat', JSON.stringify({ id: m.chat.id, name }));
+  await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: m.chat.id, text: '✅ Bağlandı. Yeni mağaza siparişleri buraya bildirilecek.' }) }).catch(() => {});
+  return { ok: true, name };
+}
 async function notifySend(env, { subject, text, short, replyTo }) {
   const out = {};
-  if (env.NOTIFY_EMAIL) {
+  if (env.TELEGRAM_TOKEN) {
+    const chat = JSON.parse((await env.KV.get('tg-chat')) || 'null');
+    if (!chat) out.telegram = 'bağlanmamış';
+    else try {
+      const r = await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat.id, text: (subject + '\n\n' + text).slice(0, 4000), disable_web_page_preview: true }) });
+      const j = await r.json().catch(() => ({})); out.telegram = j.ok ? 'gönderildi' : 'hata: ' + (j.description || r.status);
+    } catch (e) { out.telegram = 'hata: ' + e; }
+  } else out.telegram = 'TELEGRAM_TOKEN eklenmemiş';
+  if (env.NOTIFY_EMAIL && env.RESEND_KEY) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: 'ERTEL GSM <onboarding@resend.dev>', to: [env.NOTIFY_EMAIL], subject, text, ...(replyTo ? { reply_to: replyTo } : {}) }),
+      });
+      const j = await r.json().catch(() => ({})); out.email = r.ok ? 'gönderildi' : 'hata: ' + (j.message || r.status);
+    } catch (e) { out.email = 'hata: ' + e; }
+  } else if (env.NOTIFY_EMAIL) {
     try {
       const r = await fetch('https://formsubmit.co/ajax/' + encodeURIComponent(env.NOTIFY_EMAIL), {
         method: 'POST',
@@ -196,11 +240,5 @@ async function notifySend(env, { subject, text, short, replyTo }) {
       out.email = (await r.text()).slice(0, 300);
     } catch (e) { out.email = 'hata: ' + e; }
   }
-  if (env.NOTIFY_WA && env.CALLMEBOT_KEY) {
-    try {
-      const u = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(env.NOTIFY_WA)}&apikey=${encodeURIComponent(env.CALLMEBOT_KEY)}&text=${encodeURIComponent((short || text).slice(0, 1200))}`;
-      const r = await fetch(u); out.whatsapp = r.status + ' ' + (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 200);
-    } catch (e) { out.whatsapp = 'hata: ' + e; }
-  } else out.whatsapp = 'CALLMEBOT_KEY eklenmemiş';
   return { ok: true, ...out };
 }
