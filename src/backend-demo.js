@@ -138,6 +138,9 @@ export class DemoBackend {
     this.db.messages[id] = msgs.map((m) => ({ id: rid(), ...m }));
     this.persist(); return id;
   }
+  async saveShopImage(d) { const id = 'si' + rid(); (this.db.shopimg = this.db.shopimg || {})[id] = d; this.persist(); return id; }
+  async getShopImage(id) { return this.db.shopimg?.[id] || null; }
+  async deleteShopImage(id) { delete this.db.shopimg?.[id]; this.persist(); }
   // ---- Online mağaza üyeleri + siparişleri (demo)
   mem() { return (this.db.members = this.db.members || {}); }
   ord() { return (this.db.orders = this.db.orders || {}); }

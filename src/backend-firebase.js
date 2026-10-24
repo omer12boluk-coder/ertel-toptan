@@ -101,7 +101,7 @@ export class FirebaseBackend {
   async savePublicSettings(S) {
     const p = S.pricing || {};
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
-      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' }, orders: S.orders || {} });
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan
@@ -330,6 +330,15 @@ export class FirebaseBackend {
     const s = await this.F.getDoc(this.d('members', uid)); const un = s.exists() && s.data().username;
     const b = this.F.writeBatch(this.db); b.delete(this.d('members', uid)); if (un) b.delete(this.d('usernames', un)); await b.commit();
   }
+
+  // ---- Mağaza ana sayfası resimleri (Storage yok: küçültülmüş resim Firestore'da, cihazda önbellekte)
+  async saveShopImage(data) { const ref = this.F.doc(this.c('shopimg')); await timeout(this.F.setDoc(ref, { d: data, at: now() })); idbSet('si-' + ref.id, data); return ref.id; }
+  async getShopImage(id) {
+    const c = await idbGet('si-' + id); if (c) return c;
+    const s = await timeout(this.F.getDoc(this.d('shopimg', id)));
+    const d = s.exists() ? s.data().d : null; if (d) idbSet('si-' + id, d); return d;
+  }
+  async deleteShopImage(id) { await this.F.deleteDoc(this.d('shopimg', id)).catch(() => {}); }
 
   // ---- Online mağaza siparişleri
   newOrderId() { return this.F.doc(this.c('orders')).id; }

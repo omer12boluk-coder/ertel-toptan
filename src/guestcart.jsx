@@ -8,7 +8,7 @@ import { useCartItems } from './cart.jsx';
 export function CartBar() {
   const tab = useStore((s) => s.tab);
   const items = useCartItems();
-  if (tab !== 'katalog' || !items.length) return null;
+  if (!['katalog', 'anasayfa'].includes(tab) || !items.length) return null;
   const tot = totals(items, 'offer');
   return (
     <button className="gbar" onClick={() => go('sepet')}>

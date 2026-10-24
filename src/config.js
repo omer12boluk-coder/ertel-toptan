@@ -91,7 +91,45 @@ export const DEFAULT_SETTINGS = {
     cargoNote: 'Kargo ücreti ve teslim süresi sipariş onayında bildirilir.',
     doneNote: 'Siparişiniz bize ulaştı. En kısa sürede kontrol edip size dönüş yapacağız.',
   },
-  home: { title: '', subtitle: '', announcements: [], banners: [] }, // bayi ana sayfası (Ayarlar > Bayi ana sayfası)
+  home: { title: '', subtitle: '', announcements: [], banners: [] },
+  // Online mağaza ana sayfası (Ayarlar > Mağaza ana sayfası). Resimler: 'si…' = shopimg kaydı, http… = dış link.
+  // Link: 'brand:Aixun' | 'cat:3' | 'q:jbc uç' | 'p:1234' (ürün) | 'https://…' | ''
+  shopHome: {
+    enabled: true,
+    slides: [
+      { layout: 'split', theme: 'night', tag: 'Yeni gelenler', title: 'Tamir masanızın yeni yıldızları', text: 'Aixun, 2UUL, Mechanic, Luban ve daha fazlası. Orijinal ürün, hızlı kargo.', cta: 'Yeni ürünleri gör', link: 'q:', img: '' },
+      { layout: 'split', theme: 'ember', tag: 'Aixun', title: 'Akıllı havya istasyonları', text: 'T3A, T420D ve uçları stokta. Profesyoneller için hız ve hassasiyet.', cta: 'Aixun ürünleri', link: 'brand:Aixun', img: '' },
+    ],
+    usps: [
+      { icon: 'shield', title: 'Orijinal ürün', text: 'Distribütör güvencesi' },
+      { icon: 'box', title: 'Hızlı kargo', text: 'Aynı gün gönderim' },
+      { icon: 'chat', title: 'Teknik destek', text: 'WhatsApp’tan sorun' },
+      { icon: 'tag', title: 'Uygun fiyat', text: 'Toptan ve perakende' },
+    ],
+    brandsTitle: 'Markalar',
+    brands: [
+      { name: '2UUL', color: '#111827', link: 'brand:2UUL' },
+      { name: 'Aixun', color: '#0b3b8c', link: 'brand:Aixun' },
+      { name: 'Mechanic', color: '#c2410c', link: 'brand:Mechanic' },
+      { name: 'LUBAN', color: '#6d28d9', link: 'brand:LUBAN' },
+      { name: 'JCID', color: '#0e7490', link: 'brand:JCID' },
+      { name: 'Qianli', color: '#b91c1c', link: 'brand:Qianli' },
+      { name: 'Sunshine', color: '#ca8a04', link: 'brand:Sunshine' },
+      { name: 'Relife', color: '#15803d', link: 'brand:Relife' },
+    ],
+    promosTitle: 'Öne çıkanlar',
+    promos: [
+      { size: 'big', color: '#0f172a', tag: 'Kampanya', title: 'Mikroskop ve kamera setleri', text: 'Net görüntü, rahat çalışma', link: 'q:mikroskop', img: '' },
+      { size: 'sq', color: '#c2410c', tag: '', title: 'Havya uçları', text: 'JBC, Quick, Aixun', link: 'q:uç', img: '' },
+      { size: 'sq', color: '#0b3b8c', tag: '', title: 'Programlayıcılar', text: 'JCID, Qianli', link: 'q:programlayıcı', img: '' },
+      { size: 'wide', color: '#14532d', tag: 'Stokta', title: 'Ekran ayırma ve UV ekipmanları', text: 'Atölyeniz için her şey', link: 'q:ayırma', img: '' },
+    ],
+    sections: [
+      { title: 'Yeni gelenler', mode: 'new', limit: 10 },
+      { title: 'Aixun', mode: 'brand', brand: 'Aixun', limit: 10 },
+    ],
+    cta: { title: 'Aradığınızı bulamadınız mı?', text: 'Ürün kodunu ya da fotoğrafını WhatsApp’tan gönderin, hemen bakalım.' },
+  }, // bayi ana sayfası (Ayarlar > Bayi ana sayfası)
   categories: {}, // { "42": { name: "...", hidden: false, order: 0 } }
 };
 

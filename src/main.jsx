@@ -15,6 +15,7 @@ import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { CartBar } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
+import { ShopHome } from './shophome.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
@@ -185,7 +186,7 @@ async function bootShop(A) {
   // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
   if (ROUTE.reqId && !ROUTE.orderId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
-  const firstTab = ROUTE.listCode ? 'liste' : 'katalog';
+  const firstTab = ROUTE.listCode ? 'liste' : shopFirst();
   if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
   if (cached) setCatalog(cached.items);
   const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId || ROUTE.authAction;
@@ -193,7 +194,7 @@ async function bootShop(A) {
   try {
     setCatalog(await A.loadPublicCatalog());
     A.watchCatalog?.((items) => items && setCatalog(items), true);
-    if (!direct && !cached) { loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
+    if (!direct && !cached) { loadCart(); store.set({ boot: 'ready', tab: shopFirst(), openReq: null }); }
   } catch (e) { if (!direct && !cached) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
 }
 
@@ -322,7 +323,8 @@ function Login() {
 // [sekme, ad, ikon, telefondaki kısa ad]
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Hesabım', 'user']];
 const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
-const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
+const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
+const shopFirst = () => (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa');
 
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
 function pageMenu(e, role) {
@@ -348,10 +350,10 @@ function pageMenu(e, role) {
 }
 
 function Shell() {
-  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId } = useStore();
+  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0 } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
-  const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC : NAV_USER;
+  const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => k !== 'anasayfa' || S0.shopHome?.enabled !== false) : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
   const prev = useRef(unread);
@@ -405,6 +407,7 @@ function Shell() {
       )}
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
+        {tab === 'anasayfa' && pub && <ShopHome />}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'katalog' && <Catalog admin={admin} />}
         {tab === 'sepet' && !admin && <Cart />}

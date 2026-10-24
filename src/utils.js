@@ -130,3 +130,21 @@ export { cleanText } from './clean.js';
 try { const q = new URLSearchParams(location.search).get('onizleme'); if (q === '1') localStorage.setItem('shop-preview', '1'); if (q === '0') localStorage.removeItem('shop-preview'); } catch {}
 export const shopPreview = () => { try { return localStorage.getItem('shop-preview') === '1'; } catch { return false; } };
 export const soon = (S, k) => S.orders?.[k] !== false && !shopPreview();
+
+// Mağaza ana sayfası resmi: webp (destekliyse), logolar için saydamlık korunur
+export async function resizeForWeb(file, max = 1600, q = 0.82, alpha = false) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const sc = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+    const x = c.getContext('2d');
+    if (!alpha) { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); }
+    x.drawImage(img, 0, 0, c.width, c.height);
+    let d = c.toDataURL('image/webp', q);
+    if (!d.startsWith('data:image/webp')) d = alpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', q);
+    // Firestore belge sınırı (~1 MB): büyükse kaliteyi düşür
+    for (let qq = q - 0.12; d.length > 900000 && qq > 0.3; qq -= 0.12) d = c.toDataURL('image/webp', qq);
+    return d;
+  } finally { URL.revokeObjectURL(url); }
+}

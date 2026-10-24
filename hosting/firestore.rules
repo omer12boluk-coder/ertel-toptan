@@ -22,6 +22,8 @@ service cloud.firestore {
     // ziyaretçi mağazası: toptan fiyatsız katalog herkese açık
     match /pubcatalog/{doc} { allow read: if true; allow write: if isAdmin(); }
     match /img/{doc} { allow read: if true; allow write: if isAdmin(); }
+    // mağaza ana sayfası resimleri (banner, marka logosu, kutular)
+    match /shopimg/{doc} { allow read: if true; allow write: if isAdmin(); }
     match /desc/{doc} { allow read: if true; allow write: if isAdmin(); }
 
     match /users/{uid} {

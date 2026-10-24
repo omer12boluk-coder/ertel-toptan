@@ -78,6 +78,9 @@ export function Catalog({ admin }) {
   const tree = useTree();
   const intent = useStore((s) => s.intent);
   useEffect(() => { if (admin && intent === 'newProduct') { store.set({ intent: null }); setEdit({}); } }, [intent]);
+  // başka ekrandan (mağaza ana sayfası) gelen filtre: marka / kategori / arama
+  const browse = useStore((s) => s.catalogGo);
+  useEffect(() => { if (!browse) return; setQ(browse.q || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); store.set({ catalogGo: null }); }, [browse]);
   const changedN = useMemo(() => (admin ? all.filter((p) => p.pc).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);
@@ -277,7 +280,7 @@ function ProductRow({ p, admin, onOpen }) {
   );
 }
 
-function ProductSheet({ p, onClose }) {
+export function ProductSheet({ p, onClose }) {
   const { settings: S, cart, user, userPrices } = useStore();
   const [qty, setQ] = useState(cart[p.id] || 1);
   const st = stockInfo(p, S);

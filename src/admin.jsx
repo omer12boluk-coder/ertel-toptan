@@ -1,3 +1,4 @@
+import { ShopHomeEditor } from './shophome.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
@@ -408,9 +409,9 @@ export function CustomerSheet({ c, onClose }) {
 
 // =========================================================================
 // Ayarlar
-const SECTIONS = [['genel', 'Genel'], ['anasayfa', 'Bayi ana sayfası'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['magaza', 'Online mağaza'], ['kategori', 'Kategoriler'], ['veri', 'Veri'], ['hesap', 'Hesabım']];
+const SECTIONS = [['genel', 'Genel'], ['anasayfa', 'Bayi ana sayfası'], ['magazaana', 'Mağaza ana sayfası'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['magaza', 'Online mağaza'], ['kategori', 'Kategoriler'], ['veri', 'Veri'], ['hesap', 'Hesabım']];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
+const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -661,6 +662,7 @@ export function Settings() {
         </>}
 
         {sec === 'anasayfa' && <HomeEditor d={d} set={set} />}
+        {sec === 'magazaana' && <ShopHomeEditor d={d} set={set} />}
       </div>}
 
       {imp && (
