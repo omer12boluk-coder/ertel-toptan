@@ -69,6 +69,14 @@ export function OrderForm() {
   }, [rec, rate?.usd]);
   useEffect(() => () => imgs?.forEach((m) => URL.revokeObjectURL(m.url)), [imgs]);
 
+  // Telefonda: bütün tablo resimlerini (link olmadan) paylaş menüsüyle WhatsApp'a gönder
+  const canShareImgs = typeof navigator !== 'undefined' && !!navigator.canShare && matchMedia('(hover: none) and (pointer: coarse)').matches;
+  async function shareImgs() {
+    if (!imgs?.length) return;
+    const files = imgs.map((m) => m.file);
+    if (!navigator.canShare({ files })) return toast('Bu telefon resim paylaşmayı desteklemiyor; resimleri tek tek kopyalayın', 'bad');
+    try { await navigator.share({ files }); } catch (e) { if (e.name !== 'AbortError') toast('Paylaşılamadı: ' + e.message, 'bad'); }
+  }
   async function copyImg(i) {
     setBusy(true);
     try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': imgs[i].file })]); toast(imgs.length > 1 ? `${i + 1}. resim kopyalandı — WhatsApp’ta Ctrl+V` : 'Resim kopyalandı — WhatsApp’ta Ctrl+V'); }
@@ -110,7 +118,7 @@ export function OrderForm() {
                 <tbody>
                   {rows.map(({ id, qty, price, p }) => (
                     <tr key={id}>
-                      <td className="it-name"><a href={links.product(p, S)} target="_blank" rel="noopener"><span>{p.n}</span></a><code>{p.k}</code></td>
+                      <td className="it-name"><div className="of-prod"><Thumb p={p} size="sm" /><span><a href={links.product(p, S)} target="_blank" rel="noopener"><span>{p.n}</span></a><code>{p.k}</code></span></div></td>
                       <td className="r it-qty" data-l="Adet"><Stepper small min={1} value={qty} onChange={(v) => upd(id, { qty: v })} /></td>
                       <td className="r num muted it-list">{fmt(p.r, p.cur)}</td>
                       <td className="r it-offer" data-l="Fiyat">
@@ -138,7 +146,8 @@ export function OrderForm() {
           <div className="oform-out-h">
             <h2>Müşteriye gönder</h2>
             <div className="row-btns">
-              <a className="btn wa" href={waLink('', 'Siparişiniz:\n' + link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’ta gönder</a>
+              {canShareImgs && <button className="btn wa" disabled={!imgs || busy} onClick={shareImgs}><Icon n="wa" s={16} />{imgs && imgs.length > 1 ? `Tabloyu gönder (${imgs.length} resim)` : 'Tabloyu WhatsApp’ta gönder'}</button>}
+              <a className={'btn ' + (canShareImgs ? 'outline' : 'wa')} href={waLink('', 'Siparişiniz:\n' + link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’ta gönder</a>
               <button className="btn outline" onClick={() => copyText(link, 'Link kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
             </div>
           </div>
