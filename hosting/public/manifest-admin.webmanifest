@@ -1,0 +1,30 @@
+{
+  "name": "ERTEL Yönetim",
+  "short_name": "ERTEL Yönetim",
+  "description": "ERTEL GSM yönetim paneli",
+  "lang": "tr",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#16213f",
+  "theme_color": "#16213f",
+  "icons": [
+    {
+      "src": "icon-admin-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-admin-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-admin-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/admin"
+}

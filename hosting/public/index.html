@@ -12,6 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<script>(function(){var p=location.pathname,a=/^[/](admin|siparisformu)([/]|$)/.test(p)?'admin':/^[/]magaza([/]|$)/.test(p)?'magaza':'b2b';document.querySelector('link[rel=manifest]').href='manifest-'+a+'.webmanifest';if(a==='admin'){document.querySelector('link[rel=icon]').href='icon-admin-192.png';document.querySelector('link[rel=apple-touch-icon]').href='icon-admin-180.png';document.querySelector('meta[name=theme-color]').content='#16213f';}var m=document.createElement('meta');m.name='apple-mobile-web-app-title';m.content=a==='admin'?'ERTEL Yönetim':'ERTEL GSM';document.head.appendChild(m);})();</script>
 <link rel="modulepreload" href="/fb/firebase-app.js"><link rel="modulepreload" href="/fb/firebase-auth.js"><link rel="modulepreload" href="/fb/firebase-firestore.js"><link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" media="print" onload="this.media='all'">
 <style>/* Layout: mobile-first app shell. Top bar + bottom tab bar on phones; top bar with inline tabs on desktop.
