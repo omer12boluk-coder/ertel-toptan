@@ -29,7 +29,7 @@ export class FirebaseBackend {
     // Yönetici paneli ayrı bir Firebase örneği kullanır: aynı tarayıcıda yönetici ve bayi oturumları birbirini etkilemez
     this.app = this.appName ? A.initializeApp(this.config, this.appName) : A.initializeApp(this.config);
     // Oturum: yönetici paneli ve "beni hatırlama" seçilen girişler sadece o sekmede yaşar (sekmeler birbirini etkilemez)
-    this.tabOnly = this.opts?.tabOnly || sessionStorage.getItem('auth-tab') === '1';
+    this.tabOnly = this.appName !== 'shop' && sessionStorage.getItem('auth-tab') === '1'; // mağaza üyesi oturumu her zaman cihazda kalır
     this.auth = U.initializeAuth(this.app, { persistence: this.tabOnly ? U.browserSessionPersistence : [U.browserLocalPersistence, U.indexedDBLocalPersistence] }); // önce localStorage: bazı telefon / WhatsApp içi tarayıcılarda IndexedDB cevap vermeyip girişi kilitliyor
     // WhatsApp / Instagram içi tarayıcılarda canlı bağlantı takılabiliyor; gerekirse otomatik olarak uzun yoklamaya geçer
     try { this.db = F.initializeFirestore(this.app, { experimentalAutoDetectLongPolling: true }); } catch { this.db = F.getFirestore(this.app); }
@@ -100,7 +100,7 @@ export class FirebaseBackend {
   async savePublicSettings(S) {
     const p = S.pricing || {};
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
-      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' } });
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' }, orders: S.orders || {} });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan
@@ -262,6 +262,48 @@ export class FirebaseBackend {
     b.delete(this.d('users', uid)); b.delete(this.d('userPrices', uid)); b.delete(this.d('userNotes', uid));
     await b.commit();
   }
+  // ---- Online mağaza üyeleri (e-posta + şifre). Bayi / yönetici oturumundan tamamen ayrı (ayrı Firebase örneği: 'shop')
+  onMember(cb) {
+    this.memberCb = cb;
+    return this.U.onAuthStateChanged(this.auth, async (u) => {
+      if (!u) return cb(null);
+      if (this.signingUp) return;
+      try { const s = await timeout(this.F.getDoc(this.d('members', u.uid))); cb({ uid: u.uid, email: u.email, ...(s.exists() ? s.data() : {}) }); }
+      catch { cb({ uid: u.uid, email: u.email }); }
+    });
+  }
+  async memberSignup({ email, password, name, phone }) {
+    this.signingUp = true;
+    try {
+      let cred;
+      try { cred = await this.U.createUserWithEmailAndPassword(this.auth, email, password); }
+      catch (e) { throw new Error(authMsg(e)); }
+      const m = { uid: cred.user.uid, email, name, phone, createdAt: now(), addresses: [], invoice: { type: 'person' } };
+      await timeout(this.F.setDoc(this.d('members', m.uid), m));
+      this.memberCb?.(m);
+      return m;
+    } finally { this.signingUp = false; }
+  }
+  async memberLogin(email, pw) { try { await this.U.signInWithEmailAndPassword(this.auth, email, pw); } catch (e) { throw new Error(authMsg(e)); } }
+  async memberLogout() { await this.U.signOut(this.auth); }
+  async memberReset(email) { try { await this.U.sendPasswordResetEmail(this.auth, email); } catch (e) { throw new Error(authMsg(e)); } }
+  async saveMember(m) {
+    const { uid, ...rest } = m;
+    await timeout(this.F.setDoc(this.d('members', uid), { uid, ...rest }, { merge: true }));
+    this.memberCb?.(m);
+  }
+  watchMembers(cb) { return this.F.onSnapshot(this.c('members'), (s) => cb(s.docs.map((x) => ({ uid: x.id, ...x.data() }))), (e) => console.warn(e)); }
+  async deleteMember(uid) { await this.F.deleteDoc(this.d('members', uid)); }
+
+  // ---- Online mağaza siparişleri
+  newOrderId() { return this.F.doc(this.c('orders')).id; }
+  async placeOrder(o, id) { const ref = this.F.doc(this.c('orders'), id || this.newOrderId()); await timeout(this.F.setDoc(ref, o)); return ref.id; }
+  watchOrder(id, cb) { return this.F.onSnapshot(this.d('orders', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null)); }
+  watchMyOrders(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
+  watchOrders(cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.orderBy('createdAt', 'desc'), this.F.limit(300)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
+  async updateOrder(id, patch) { await timeout(this.F.updateDoc(this.d('orders', id), patch)); }
+  async deleteOrders(ids) { const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('orders', id))); await b.commit(); }
+
   async updateRequest(id, patch) { await this.F.updateDoc(this.d('requests', id), patch); }
   watchMessages(id, cb) {
     return this.F.onSnapshot(this.F.query(this.c('requests', id, 'messages'), this.F.orderBy('at')), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))));
@@ -274,6 +316,17 @@ export class FirebaseBackend {
     b.update(this.d('requests', id), { updatedAt: msg.at, ...(msg.from !== 'system' ? { lastMsg: msg.text, lastFrom: msg.from } : {}), ...unread, ...patch });
     await b.commit();
   }
+}
+
+function authMsg(e) {
+  const c = e.code || '';
+  if (/email-already-in-use/.test(c)) return 'Bu e-posta ile zaten üyelik var. Giriş yapın ya da şifrenizi sıfırlayın.';
+  if (/invalid-email/.test(c)) return 'E-posta adresi geçersiz görünüyor.';
+  if (/weak-password/.test(c)) return 'Şifre en az 6 karakter olmalı.';
+  if (/user-not-found|wrong-password|invalid-credential|invalid-login/.test(c)) return 'E-posta veya şifre hatalı.';
+  if (/too-many-requests/.test(c)) return 'Çok fazla deneme yapıldı, biraz sonra tekrar deneyin.';
+  if (/network/.test(c)) return 'Bağlantı hatası, internetinizi kontrol edin.';
+  return e.message;
 }
 
 const PUB_FIELDS = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img'];

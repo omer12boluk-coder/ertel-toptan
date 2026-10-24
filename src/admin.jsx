@@ -408,9 +408,9 @@ export function CustomerSheet({ c, onClose }) {
 
 // =========================================================================
 // Ayarlar
-const SECTIONS = [['genel', 'Genel'], ['anasayfa', 'Bayi ana sayfası'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['kategori', 'Kategoriler'], ['veri', 'Veri'], ['hesap', 'Hesabım']];
+const SECTIONS = [['genel', 'Genel'], ['anasayfa', 'Bayi ana sayfası'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['magaza', 'Online mağaza'], ['kategori', 'Kategoriler'], ['veri', 'Veri'], ['hesap', 'Hesabım']];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], kategori: ['categories'] };
+const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -589,12 +589,26 @@ export function Settings() {
             <Field label="WhatsApp (905xx…)"><input id="s-wa" inputMode="tel" value={d.shop.whatsapp} onChange={(e) => set('shop.whatsapp', e.target.value)} /></Field>
           </div>
           <Field label="Teslim notu" hint="Sepet ekranının altında görünür"><textarea id="s-pn" rows="2" value={d.shop.pickupNote} onChange={(e) => set('shop.pickupNote', e.target.value)} /></Field>
-          <h3>Online vitrin ({location.host}/magaza)</h3>
-          <p className="fine">Müşteri giriş yapmadan ürünleri seçer, “WhatsApp’tan gönder”e basar; size sadece bir link gelir. Linki açınca resimli tabloyu görürsünüz. Fiyat vermek için linkin altındaki “Yönetim panelinde fiyatla”ya ya da Talepler’deki “Vitrin listesi”ne basın; fiyatlı yeni linki müşteriye gönderirsiniz. Hiçbir şey kaydedilmez, Talepler’e düşmez.</p>
-          <Toggle id="s-pub" label="Online vitrin açık" checked={d.access.publicShop} onChange={(v) => set('access.publicShop', v)} />
-          <div className="input-btn"><input id="s-publink" readOnly value={links.shop()} /><button type="button" className="btn sm outline" onClick={() => copyText(links.shop(), 'Vitrin linki kopyalandı')}>Kopyala</button></div>
+        </>}
+
+        {sec === 'magaza' && <>
+          <p className="fine">Herkese açık mağaza: <b>{location.host}/magaza</b>. Müşteri ürünleri sepete ekler, <b>Sepeti onayla</b> ile teslimat, fatura ve ödeme bilgilerini girip siparişi tamamlar; sipariş <b>Siparişler</b>’e düşer. İsterse üye olur (bilgileri bir dahakine hazır gelir), isterse misafir devam eder. Ayrıca sepeti sadece link olarak WhatsApp’tan da gönderebilir (o liste hiçbir yere kaydedilmez).</p>
+          <Toggle id="s-pub" label="Online mağaza açık" checked={d.access.publicShop} onChange={(v) => set('access.publicShop', v)} />
+          <div className="input-btn"><input id="s-publink" readOnly value={links.shop()} /><button type="button" className="btn sm outline" onClick={() => copyText(links.shop(), 'Mağaza linki kopyalandı')}>Kopyala</button></div>
           <ShopInvite />
-          <Field label="Ödeme / havale bilgisi" hint="Vitrin müşterisi teklifi onaylayınca görür. IBAN, alıcı adı, açıklama vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00\nAçıklamaya talep numarasını yazın.'} /></Field>
+          <h3>Sipariş</h3>
+          <Toggle id="s-ord" label="Mağazadan sipariş alınsın" hint="Kapalıysa müşteri sepeti sadece WhatsApp’tan liste linki olarak gönderir" checked={d.orders.enabled !== false} onChange={(v) => set('orders.enabled', v)} />
+          <Toggle id="s-osign" label="Müşteriler mağazaya üye olabilsin" hint="Adres ve fatura bilgileri kayıtlı kalır, siparişlerini takip ederler" checked={d.orders.signup !== false} onChange={(v) => set('orders.signup', v)} />
+          <h3>Teslimat</h3>
+          <Toggle id="s-ocargo" label="Kargo ile gönderim" checked={d.orders.cargo !== false} onChange={(v) => set('orders.cargo', v)} />
+          <Toggle id="s-opick" label="Dükkandan teslim al" checked={d.orders.pickup !== false} onChange={(v) => set('orders.pickup', v)} />
+          <Field label="Kargo notu" hint="Sepet ve sipariş ekranında görünür"><input id="s-onote" value={d.orders.cargoNote || ''} onChange={(e) => set('orders.cargoNote', e.target.value)} /></Field>
+          <h3>Ödeme seçenekleri</h3>
+          <Toggle id="s-ohav" label="Havale / EFT" checked={d.orders.payHavale !== false} onChange={(v) => set('orders.payHavale', v)} />
+          <Toggle id="s-ocard" label="Kredi kartı (ödeme linki gönderilir)" hint="Siparişi onaylayınca müşteriye ödeme linkini siz gönderirsiniz" checked={d.orders.payCard !== false} onChange={(v) => set('orders.payCard', v)} />
+          <Toggle id="s-oshop" label="Dükkanda ödeme" hint="Sadece dükkandan teslim alırken" checked={d.orders.payShop !== false} onChange={(v) => set('orders.payShop', v)} />
+          <Field label="Havale / EFT bilgisi" hint="Sipariş verilince müşterinin sipariş sayfasında görünür. IBAN, alıcı adı vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00'} /></Field>
+          <Field label="Sipariş alındı mesajı" hint="Sipariş verilince teşekkür kutusunda görünür"><textarea id="s-odone" rows="2" value={d.orders.doneNote || ''} onChange={(e) => set('orders.doneNote', e.target.value)} /></Field>
         </>}
 
         {sec === 'kategori' && <>

@@ -76,6 +76,18 @@ export const DEFAULT_SETTINGS = {
     profilePhoto: true,
     history: true,
   },
+  // Online mağaza siparişleri (/magaza): misafir ya da üye sipariş verir, Yönetim paneli > Siparişler'e düşer
+  orders: {
+    enabled: true, // "Siparişi tamamla" açık mı (kapalıysa sadece WhatsApp listesi)
+    cargo: true, // kargo ile gönderim
+    pickup: true, // dükkandan teslim al
+    payHavale: true, // havale / EFT
+    payCard: true, // kredi kartı (ödeme linki gönderilir)
+    payShop: true, // dükkanda ödeme (sadece dükkandan teslimde)
+    signup: true, // mağazada üye olunabilsin
+    cargoNote: 'Kargo ücreti ve teslim süresi sipariş onayında bildirilir.',
+    doneNote: 'Siparişiniz bize ulaştı. En kısa sürede kontrol edip size dönüş yapacağız.',
+  },
   home: { title: '', subtitle: '', announcements: [], banners: [] }, // bayi ana sayfası (Ayarlar > Bayi ana sayfası)
   categories: {}, // { "42": { name: "...", hidden: false, order: 0 } }
 };
@@ -181,4 +193,18 @@ export const TYPE = {
 };
 
 export const OPEN_STATUSES = ['new', 'offered', 'accepted', 'ready'];
+
+// Online mağaza siparişleri
+export const ORDER_STATUS = {
+  new: { label: 'Yeni', tone: 'info', cust: 'Siparişiniz alındı' },
+  confirmed: { label: 'Onaylandı', tone: 'ok', cust: 'Onaylandı, hazırlanıyor' },
+  shipped: { label: 'Kargoda', tone: 'ok', cust: 'Kargoya verildi' },
+  ready: { label: 'Teslime hazır', tone: 'ok', cust: 'Dükkandan teslim alabilirsiniz' },
+  done: { label: 'Tamamlandı', tone: 'muted', cust: 'Teslim edildi' },
+  cancelled: { label: 'İptal', tone: 'bad', cust: 'İptal edildi' },
+};
+export const ORDER_OPEN = ['new', 'confirmed', 'shipped', 'ready'];
+export const PAY = { havale: 'Havale / EFT', card: 'Kredi kartı (ödeme linki)', shop: 'Dükkanda ödeme' };
+export const DELIVERY = { cargo: 'Kargo ile gönderim', pickup: 'Dükkandan teslim al' };
+export const ILLER = ['Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Aksaray', 'Amasya', 'Ankara', 'Antalya', 'Ardahan', 'Artvin', 'Aydın', 'Balıkesir', 'Bartın', 'Batman', 'Bayburt', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Düzce', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Iğdır', 'Isparta', 'İstanbul', 'İzmir', 'Kahramanmaraş', 'Karabük', 'Karaman', 'Kars', 'Kastamonu', 'Kayseri', 'Kilis', 'Kırıkkale', 'Kırklareli', 'Kırşehir', 'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Mardin', 'Mersin', 'Muğla', 'Muş', 'Nevşehir', 'Niğde', 'Ordu', 'Osmaniye', 'Rize', 'Sakarya', 'Samsun', 'Şanlıurfa', 'Siirt', 'Sinop', 'Sivas', 'Şırnak', 'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Uşak', 'Van', 'Yalova', 'Yozgat', 'Zonguldak'];
 export const EMAIL_DOMAIN = 'toptan.ertelgsm.app';

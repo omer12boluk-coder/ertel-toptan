@@ -117,17 +117,17 @@ export function Stepper({ value, onChange, min = 0, small }) {
   );
 }
 
-export function StatusPill({ status }) {
-  const st = STATUS[status] || { label: status, tone: 'muted' };
+export function StatusPill({ status, map = STATUS }) {
+  const st = map[status] || { label: status, tone: 'muted' };
   return <span className={'pill tone-' + st.tone}>{st.label}</span>;
 }
 
-export function Field({ label, hint, children, row }) {
+export function Field({ label, hint, children, row, error, opt, className = '' }) {
   return (
-    <label className={'field' + (row ? ' row' : '')}>
-      <span className="field-l">{label}</span>
+    <label className={'field' + (row ? ' row' : '') + (error ? ' bad' : '') + (className ? ' ' + className : '')}>
+      <span className="field-l">{label}{opt && <small className="opt"> (isteğe bağlı)</small>}</span>
       {children}
-      {hint && <span className="field-h">{hint}</span>}
+      {error ? <span className="field-e">{error}</span> : hint && <span className="field-h">{hint}</span>}
     </label>
   );
 }

@@ -38,7 +38,7 @@ const priced = (r) => r.status !== 'new';
 const listRate = (r, live) => (r.rate && r.rate.usd > 0 ? r.rate : live);
 
 // ---- Sayfadaki tablo --------------------------------------------------------
-export function ListPaper({ r, items: itemsIn, rate: rateIn }) {
+export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true }) {
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const live = useRate();
@@ -52,9 +52,9 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn }) {
       <header className="paper-h">
         <img src={S.brand.logo || LOGO_MARK} alt="" />
         <div className="paper-shop"><b>{S.shop.name}</b><span>{[S.shop.address, S.shop.phone].filter(Boolean).join(' · ')}</span></div>
-        <div className="paper-no"><span>Ürün listesi</span><b className="num">#{r.no}</b><small>{new Date(r.updatedAt || r.createdAt).toLocaleDateString('tr-TR')}</small></div>
+        <div className="paper-no"><span>{label || 'Ürün listesi'}</span><b className="num">#{r.no}</b><small>{new Date(r.updatedAt || r.createdAt).toLocaleDateString('tr-TR')}</small></div>
       </header>
-      {(r.gname || r.userName) && <div className="paper-who">Müşteri: <b>{r.gname || r.userName}</b></div>}
+      {who && (r.gname || r.userName) && <div className="paper-who">Müşteri: <b>{r.gname || r.userName}</b></div>}
       <div className="paper-scroll">
         <table className="ptable">
           <thead><tr><th className="c">#</th><th>Ürün</th><th className="r">Adet</th><th className="r">{priced(r) ? 'Fiyat' : 'Liste fiyatı'}</th><th className="r">Tutar</th></tr></thead>

@@ -3,6 +3,7 @@
 //   /magaza           herkese açık vitrin (giriş yok): ürünler + listem
 //   /magaza/l/<kod>   vitrin listesi (ürünler linkin içinde, hiçbir yere kaydedilmez)  /admin/l/<kod> yönetici fiyatlar
 //   /magaza/t/<no>    eski vitrin talepleri (sadece görüntüleme)
+//   /magaza/s/<no>    mağaza siparişi (müşteri takip eder)     /admin/s/<no> yönetici siparişi açar
 //   /b2b              bayi uygulaması             /b2b/t/<no>   bayinin talebi (WhatsApp linki; eski /t/<no> da çalışır)
 //   /admin            yönetim paneli              /admin/t/<no> talep / liste (WhatsApp linki)
 // Claude demo sayfasında adres değişmediği için #admin / #magaza / #b2b da kabul edilir.
@@ -16,6 +17,7 @@ export const ROUTE = {
   b2b: under('/b2b') || path.startsWith('/t/'),
   reqId: (path.match(/\/t\/([\w-]+)$/) || [])[1] || null,
   listCode: (path.match(/\/l\/([\w-]+)$/) || [])[1] || null, // vitrin listesi (bkz. listcode.js)
+  orderId: (path.match(/\/s\/([\w-]+)$/) || [])[1] || null, // mağaza siparişi: /magaza/s/<no>, /admin/s/<no>
 };
 ROUTE.landing = !ROUTE.admin && !ROUTE.shop && !ROUTE.b2b;
 
@@ -24,6 +26,8 @@ export const links = {
   userRequest: (id) => `${location.origin}/b2b/t/${id}`,
   guestRequest: (id) => `${location.origin}/magaza/t/${id}`,
   shop: () => `${location.origin}/magaza`,
+  order: (id) => `${location.origin}/magaza/s/${id}`,
+  adminOrder: (id) => `${location.origin}/admin/s/${id}`,
   b2b: () => `${location.origin}/b2b`,
   // ürünün sitedeki sayfası (adres bilinmiyorsa site /x-pmu<no> ile ürüne yönlendirir)
   product: (p, S) => (!p ? null : p.u ? S.catalog.siteUrl + p.u : S.catalog.siteUrl + '/x-pmu' + p.id),

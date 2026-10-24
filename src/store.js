@@ -23,6 +23,12 @@ export const store = {
     intent: null, // başka ekrandan gelen istek: 'newProduct' | 'newCustomer'
     guestInfo: null,
     rate: null, // Harem Altın dolar satış kuru { usd, src, at }
+    member: null, // online mağaza üyesi (giriş yaptıysa)
+    myOrders: [], // mağaza üyesinin siparişleri
+    orders: [], // yönetici: mağaza siparişleri
+    members: [], // yönetici: mağaza üyeleri
+    openOrder: null, // açık sipariş (mağazada takip sayfası, yönetimde detay)
+    orderJust: false, // sipariş az önce verildi (teşekkür kutusu)
   },
   get() { return this.s; },
   set(patch) { this.s = { ...this.s, ...(typeof patch === 'function' ? patch(this.s) : patch) }; subs.forEach((f) => f()); },
@@ -67,6 +73,7 @@ export function freshStart() {
   try { sessionStorage.clear(); } catch {}
 }
 
-export function go(tab) { store.set({ tab, openReq: null }); window.scrollTo(0, 0); }
+export function go(tab) { store.set({ tab, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0); }
+export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: !!just }); window.scrollTo(0, 0); }
 export const home = () => go(store.s.user?.role === 'admin' ? 'talepler' : store.s.user?.role === 'public' ? 'katalog' : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }

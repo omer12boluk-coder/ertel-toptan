@@ -138,6 +138,34 @@ export class DemoBackend {
     this.db.messages[id] = msgs.map((m) => ({ id: rid(), ...m }));
     this.persist(); return id;
   }
+  // ---- Online mağaza üyeleri + siparişleri (demo)
+  mem() { return (this.db.members = this.db.members || {}); }
+  ord() { return (this.db.orders = this.db.orders || {}); }
+  onMember(cb) { this.memberCb = cb; const m = this.mem()[this.db.shopSession]; cb(m ? this.pub(m) : null); return () => {}; }
+  async memberSignup({ email, password, name, phone }) {
+    if (Object.values(this.mem()).some((m) => m.email === email)) throw new Error('Bu e-posta ile zaten üyelik var. Giriş yapın ya da şifrenizi sıfırlayın.');
+    const uid = 'm_' + rid();
+    const m = { uid, email, pw: password, name, phone, createdAt: now(), addresses: [], invoice: { type: 'person' } };
+    this.mem()[uid] = m; this.db.shopSession = uid; this.persist(); this.memberCb?.(this.pub(m)); return this.pub(m);
+  }
+  async memberLogin(email, pw) {
+    const m = Object.values(this.mem()).find((x) => x.email === email);
+    if (!m || m.pw !== pw) throw new Error('E-posta veya şifre hatalı.');
+    this.db.shopSession = m.uid; this.persist(); this.memberCb?.(this.pub(m));
+  }
+  async memberLogout() { this.db.shopSession = null; this.persist(); this.memberCb?.(null); }
+  async memberReset() {}
+  async saveMember(m) { const o = this.mem()[m.uid]; Object.assign(o, m); this.persist(); this.memberCb?.(this.pub(o)); }
+  watchMembers(cb) { return this.sub(() => cb(Object.values(this.mem()).map((m) => this.pub(m)))); }
+  async deleteMember(uid) { delete this.mem()[uid]; this.persist(); }
+  newOrderId() { return 'o' + rid() + rid(); }
+  async placeOrder(o, id) { id = id || this.newOrderId(); this.ord()[id] = { ...o, id }; this.persist(); return id; }
+  watchOrder(id, cb) { return this.sub(() => cb(this.ord()[id] ? { ...this.ord()[id] } : null)); }
+  watchMyOrders(uid, cb) { return this.sub(() => cb(Object.values(this.ord()).filter((o) => o.uid === uid).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
+  watchOrders(cb) { return this.sub(() => cb(Object.values(this.ord()).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
+  async updateOrder(id, patch) { Object.assign(this.ord()[id], patch); this.persist(); }
+  async deleteOrders(ids) { for (const id of ids) delete this.ord()[id]; this.persist(); }
+
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
   async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => p); }
   async hasPublicCatalog() { return true; }

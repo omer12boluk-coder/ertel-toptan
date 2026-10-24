@@ -47,6 +47,30 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ---- Online mağaza (/magaza) üyeleri: e-posta + şifre ile ayrı hesap; sadece kendi kaydını görür / değiştirir
+    match /members/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'phone', 'createdAt', 'addresses', 'invoice']);
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && request.resource.data.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'addresses', 'invoice', 'email']));
+      allow delete: if isAdmin();
+    }
+    // ---- Online mağaza siparişleri: misafir ya da üye oluşturur (sadece "yeni" durumda); takip linki (tahmin edilemez kimlik) ile açılır
+    match /orders/{id} {
+      function own() { return signedIn() && resource.data.uid == request.auth.uid; }
+      allow get: if true;
+      allow list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if request.resource.data.status == 'new'
+        && (request.resource.data.uid == null || (signedIn() && request.resource.data.uid == request.auth.uid))
+        && request.resource.data.items is list && request.resource.data.items.size() > 0 && request.resource.data.items.size() <= 300
+        && request.resource.data.keys().hasOnly(['no', 'uid', 'member', 'status', 'createdAt', 'updatedAt', 'unread', 'history', 'items', 'total', 'rate', 'contact', 'delivery', 'invoice', 'pay', 'note']);
+      // üye kendi siparişini sadece "yeni" iken iptal edebilir
+      allow update: if isAdmin() || (own() && resource.data.status == 'new' && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'history']));
+      allow delete: if isAdmin();
+    }
+
     match /requests/{id} {
       function isGuestReq() { return resource.data.get('guest', false) == true; }
       function mine() { return signedIn() && resource.data.uid == request.auth.uid; }

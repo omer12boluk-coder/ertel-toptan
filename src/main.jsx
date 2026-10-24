@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest } from './store.js';
+import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE } from './config.js';
@@ -13,7 +13,9 @@ import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
-import { GuestCartBar } from './guestcart.jsx';
+import { CartBar } from './guestcart.jsx';
+import { OrderPage, Account } from './checkout.jsx';
+import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
 import { idbGet, idbSet } from './idb.js';
@@ -40,8 +42,9 @@ async function boot() {
   const cfg = window.FIREBASE_CONFIG;
   const fb = cfg && cfg.apiKey;
   // Yönetici paneli ayrı bir oturum kullanır: aynı tarayıcıda bir sekmede yönetici, diğerinde bayi açık kalabilir
-  const area = ADMIN_ROUTE ? 'admin' : 'user';
-  const A = fb ? new FirebaseBackend(cfg, area === 'admin' ? 'admin' : undefined) : new DemoBackend(await loadSeed(), loadSeedDesc, area);
+  // Online mağaza üyeleri de ayrı oturum kullanır (bayi / yönetici girişini etkilemez)
+  const area = ADMIN_ROUTE ? 'admin' : ROUTE.shop ? 'shop' : 'user';
+  const A = fb ? new FirebaseBackend(cfg, area === 'user' ? undefined : area) : new DemoBackend(await loadSeed(), loadSeedDesc, area);
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
   store.set({ api: A });
   startRate(A);
@@ -103,12 +106,14 @@ function startSession(u, A) {
   unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
   if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
   if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
+  if (admin && A.watchOrders) { unsubs.push(A.watchOrders((orders) => store.set({ orders }))); unsubs.push(A.watchMembers((members) => store.set({ members }))); }
   loadCart();
   if (admin) syncNow(false).catch(() => {});
   // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
   store.set({ boot: 'ready', tab: admin ? 'talepler' : 'anasayfa', openReq: null });
   if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
   if (admin && ROUTE.listCode) { store.set({ vitrinCode: ROUTE.listCode }); history.replaceState(null, '', '/admin'); }
+  if (admin && ROUTE.orderId) { openOrder(ROUTE.orderId); history.replaceState(null, '', '/admin'); }
 }
 
 // Ayarlar, katalog ve özel fiyatlar aynı anda indirilir (sırayla değil)
@@ -167,18 +172,28 @@ function migrate(S) {
 async function bootShop(A) {
   if (store.s.settings.access?.publicShop === false) { store.set({ boot: 'error', bootError: 'Online vitrin şu an kapalı.' }); return; }
   store.set({ user: { uid: 'guest', role: 'public', name: 'Ziyaretçi' }, boot: 'loading' });
+  // Mağaza üyeliği: giriş yaptıysa bilgileri ve siparişleri
+  let unOrders = null;
+  A.onMember?.((m) => {
+    unOrders?.(); unOrders = null;
+    store.set({ member: m, myOrders: [] });
+    if (m) unOrders = A.watchMyOrders(m.uid, (myOrders) => store.set({ myOrders }));
+  });
+  // Sipariş takip linki (/magaza/s/<no>) katalog beklemeden açılır
+  if (ROUTE.orderId) { loadCart(); store.set({ boot: 'ready' }); openOrder(ROUTE.orderId); }
   // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
-  if (ROUTE.reqId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
+  if (ROUTE.reqId && !ROUTE.orderId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
   const firstTab = ROUTE.listCode ? 'liste' : 'katalog';
   if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
   if (cached) setCatalog(cached.items);
-  if (cached && !ROUTE.reqId && !ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: firstTab, openReq: null }); }
+  const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId;
+  if (cached && !direct) { loadCart(); store.set({ boot: 'ready', tab: firstTab, openReq: null }); }
   try {
     setCatalog(await A.loadPublicCatalog());
     A.watchCatalog?.((items) => items && setCatalog(items), true);
-    if (!ROUTE.reqId && !ROUTE.listCode && !cached) { loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
-  } catch (e) { if (!ROUTE.reqId && !ROUTE.listCode && !cached) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
+    if (!direct && !cached) { loadCart(); store.set({ boot: 'ready', tab: 'katalog', openReq: null }); }
+  } catch (e) { if (!direct && !cached) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
 }
 
 // Tema: yöneticinin varsayılanı + her cihazın kendi seçimi (üst menüdeki güneş/ay düğmesi)
@@ -303,9 +318,10 @@ function Login() {
   );
 }
 
-const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Katalog', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Profil', 'user']];
-const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['siparis', 'Sipariş formu', 'tag'], ['katalog', 'Ürünler', 'box'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
-const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart']];
+// [sekme, ad, ikon, telefondaki kısa ad]
+const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Hesabım', 'user']];
+const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
 function pageMenu(e, role) {
@@ -317,6 +333,8 @@ function pageMenu(e, role) {
     { label: 'Ana sayfa', icon: 'home', onClick: home },
     { label: admin ? 'Ürün ara' : 'Ürün ara', icon: 'search', onClick: findProduct },
     !admin && { label: 'Sepete git', icon: 'cart', onClick: () => go('sepet') },
+    pub && { label: 'Hesabım', icon: 'user', onClick: () => go('hesap') },
+    admin && { label: 'Mağaza siparişleri', icon: 'box', onClick: () => go('siparisler') },
     !pub && { label: admin ? 'Gelen talepler' : 'Taleplerim', icon: 'chat', onClick: () => go('talepler') },
     admin && '-',
     admin && { label: 'Yeni ürün ekle', icon: 'plus', onClick: () => { go('katalog'); store.set({ intent: 'newProduct' }); } },
@@ -329,7 +347,7 @@ function pageMenu(e, role) {
 }
 
 function Shell() {
-  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen } = useStore();
+  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
   const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC : NAV_USER;
@@ -344,7 +362,11 @@ function Shell() {
   }, [unread]);
   const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length);
   const priceN = useStore((s) => (admin ? s.catalog.filter((p) => p.pc).length : 0));
-  const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : 0);
+  const newOrders = useStore((s) => (admin ? s.orders.filter((o) => o.unread).length : 0));
+  const member = useStore((s) => s.member);
+  const prevOrders = useRef(newOrders);
+  useEffect(() => { if (admin && newOrders > prevOrders.current) toast('Mağazadan yeni sipariş geldi', 'info'); prevOrders.current = newOrders; }, [newOrders]);
+  const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders : 0);
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
@@ -352,9 +374,9 @@ function Shell() {
         <div className="topbar-in">
           <Brand small onClick={home} />
           {admin && <span className="admin-badge"><Icon n="shield" s={14} />Yönetim paneli</span>}
-          {pub && <span className="pub-badge">Online vitrin</span>}
+          {pub && <span className="pub-badge">Online mağaza</span>}
           <nav className="topnav" aria-label="Ana menü">
-            {nav.map(([k, l, i]) => (
+            {nav.filter(([k]) => !(pub && k === 'hesap')).map(([k, l, i]) => (
               <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
                 <Icon n={i} s={18} />{l}{badge(k) > 0 && <span className="badge">{badge(k)}</span>}
               </button>
@@ -362,6 +384,9 @@ function Shell() {
           </nav>
           {!admin && <a className="icon-btn to-landing" href="/" title="Giriş sayfasına dön (Mağaza / Bayi girişi)" aria-label="Giriş sayfasına dön"><Icon n="home" s={19} /></a>}
           <ThemeButton />
+          {pub && (member
+            ? <button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button>
+            : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')}><Icon n="user" s={16} />Giriş yap</button>)}
           {!pub && (
             <button className="me" onClick={() => go(admin ? 'ayarlar' : 'profil')} aria-label="Profil">
               <span className="me-t"><b>{user.name || user.username}</b><small>{admin ? 'Yönetici' : user.shop}</small></span>
@@ -386,16 +411,19 @@ function Shell() {
         {tab === 'profil' && !pub && <Profile />}
         {tab === 'musteriler' && admin && <Customers />}
         {tab === 'siparis' && admin && <OrderForm />}
+        {tab === 'siparisler' && admin && <Orders />}
+        {tab === 'siparis' && pub && <OrderPage id={openOrderId} />}
+        {tab === 'hesap' && pub && <Account />}
         {tab === 'ayarlar' && admin && <Settings />}
       </main>
-      {pub && <GuestCartBar />}
+      {!admin && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
       <nav className="botnav" aria-label="Alt menü">
-        {nav.map(([k, l, i]) => (
+        {nav.map(([k, l, i, sh]) => (
           <button key={k} className={'botnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
             <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span className="badge">{badge(k)}</span>}</span>
-            <span>{l}</span>
+            <span>{sh || l}</span>
           </button>
         ))}
       </nav>
