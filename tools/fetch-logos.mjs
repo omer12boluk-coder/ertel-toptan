@@ -2,19 +2,22 @@
 // Çıktı: brand-assets/<marka>-<n>.<uzantı> + manifest.json — sonra elle seçilip hosting/public/brands/ altına alınır.
 import { mkdir, writeFile } from 'node:fs/promises';
 const SITES = {
-  '2uul': ['https://2uultool.com/', 'https://www.unionrepair.com/2uul/'],
-  aixun: ['https://aixuntech.com/', 'https://www.unionrepair.com/aixun/'],
-  jcid: ['http://www.jcidtech.com/', 'https://www.unionrepair.com/jcid/'],
-  mechanic: ['https://www.mechanicgroup.cn/', 'https://www.unionrepair.com/mechanic/'],
-  qianli: ['https://www.qianli.cn/en/', 'https://www.unionrepair.com/qianli/'],
+  ersa: ['https://www.ersa.com/en/'],
+  fluke: ['https://www.fluke.com/en-us'],
+  unit: ['https://meters.uni-trend.com/', 'https://www.uni-trend.com/'],
+  korad: ['https://www.koradtechnology.com/'],
+  quick: ['https://www.quick-global.com/', 'https://www.quicksolder.com/en/'],
+  yihua: ['https://www.yihuatools.com/', 'https://www.yihua-soldering.com/'],
   megaidea: ['https://www.qianli.cn/en/pro'],
-  sunshine: ['https://www.exinxun.com/', 'https://www.unionrepair.com/sunshine/'],
-  relife: ['https://chinarelife.com/?lang=en', 'https://relife-tools.com/', 'https://www.unionrepair.com/relife/'],
-  luban: ['https://original-luban-tools.com/', 'https://www.unionrepair.com/luban/'],
-  amaoe: ['https://www.unionrepair.com/amaoe/'],
-  jbc: ['https://www.jbctools.com/'],
-  quick: ['https://www.quicksolder.com/'],
-  amscope: ['https://amscope.com/'],
+  mijing: ['https://www.mijing.cn/', 'http://www.mijing-tools.com/'],
+  rf4: ['https://www.rf4.com.cn/', 'https://rf4tools.com/'],
+  xzz: ['https://www.xinzhizao.com/', 'https://xzz.ltd/'],
+  ycs: ['https://www.ycstools.com/'],
+  maant: ['https://www.maant.com/'],
+  kaisi: ['https://www.kaisi.com.cn/', 'https://kaisitools.com/'],
+  sugon: ['https://www.sugon-tools.com/', 'https://sugontools.com/'],
+  ossteam: ['https://www.ossteam.com/'],
+  ifixes: ['https://ifixes.com/'],
 };
 const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36' };
 const abs = (u, base) => { try { return new URL(u.replace(/&amp;/g, '&'), base).href; } catch { return null; } };
