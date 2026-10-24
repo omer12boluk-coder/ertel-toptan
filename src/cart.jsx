@@ -9,6 +9,7 @@ import { waLink, links } from './route.js';
 import { fmt, priceFor, totals, fmtTotals, now, soon } from './utils.js';
 import { TYPE } from './config.js';
 import { encodeList, listLink, listItems, listRecord } from './listcode.js';
+import { ProductSheet, Lightbox, imageList } from './catalog.jsx';
 import { renderListImages, currentRate, ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { Checkout } from './checkout.jsx';
 
@@ -57,6 +58,9 @@ function EmptyCart() {
 // ---- 1. adım: sepet (iki tarafta da aynı) ------------------------------------------------
 function CartStep({ items, pub, orders, coming, onConfirm }) {
   const S = useStore((s) => s.settings);
+  const byId = useStore((s) => s.byId);
+  const [sheetP, setSheetP] = useState(null);
+  const [lb, setLb] = useState(null);
   const rate = useRate();
   const tot = totals(items, 'offer');
   const tList = totals(items, 'list');
@@ -70,6 +74,9 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
     '-',
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: it.k, onClick: () => copyText(it.k) },
   ], it.n.slice(0, 40));
+  const prodOf = (it) => byId.get(it.id) || it;
+  const openSheet = (it) => setSheetP(prodOf(it));
+  const openImg = (it) => { const p = prodOf(it); const u = imageList(p, S, 'lg'); if (u.length) setLb({ urls: u, thumbs: imageList(p, S, 'sm'), title: p.n }); else openSheet(it); };
   return (
     <div className="page cart-page">
       <div className="cart-head">
@@ -81,13 +88,13 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
           <li className="gline gline-h" aria-hidden="true"><span>Ürün</span><span className="gline-ctl"><span className="r">Birim fiyat</span><span className="c">Adet</span><span className="r">Toplam</span><span /></span></li>
           {items.map((it) => (
             <li key={it.id} className="gline" onContextMenu={(e) => menu(e, it)}>
-              <a className="gline-p" href={links.product(it, S)} target="_blank" rel="noopener" title="Ürünü yeni sekmede incele">
-                <Thumb p={it} size="sm" />
-                <span className="cline-info">
+              <div className="gline-p">
+                <button type="button" className="gline-img" onClick={() => openImg(it)} aria-label="Resmi büyüt"><Thumb p={it} size="sm" /></button>
+                <button type="button" className="cline-info gline-name" onClick={() => openSheet(it)} title="Ürünü aç">
                   <span className="prow-name">{it.n}</span>
                   <span className="prow-meta"><code>{it.k}</code>{!pub && S.pricing.showRetail && it.list > 0 && it.list !== it.offer && <span className="strike">Liste {fmt(it.list, it.cur)}</span>}</span>
-                </span>
-              </a>
+                </button>
+              </div>
               <div className="gline-ctl">
                 <span className="num gline-unit" data-l="Birim">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}</span>
                 <Stepper small value={it.qty} onChange={(v) => setQty(it.id, v)} />
@@ -122,6 +129,8 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
           <p className="fine">{coming ? 'Şimdilik siparişinizi WhatsApp’tan gönderin, hemen dönüş yapalım.' : pub ? S.orders?.cargoNote || '' : S.shop.pickupNote}</p>
         </aside>
       </div>
+      {sheetP && <ProductSheet p={sheetP} onClose={() => setSheetP(null)} />}
+      {lb && <Lightbox urls={lb.urls} thumbs={lb.thumbs} title={lb.title} onClose={() => setLb(null)} />}
     </div>
   );
 }

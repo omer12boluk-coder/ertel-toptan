@@ -1955,3 +1955,10 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .dz-canvas { padding-top: 40px; }
 .dz-resize { left: 22px; bottom: 16px; translate: none; }
 .dz-blk:hover { outline-color: color-mix(in oklab, var(--accent) 30%, transparent); }
+/* sepet satırı: resme basınca büyür, ada basınca ürün penceresi */
+.gline-img, .gline-name, button.pt-t { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; min-width: 0; }
+.gline-img { flex: none; border-radius: 10px; }
+.gline-img .thumb { transition: transform .2s var(--ease); } .gline-img:hover .thumb { transform: scale(1.06); }
+.gline-name:hover .prow-name, button.pt-t:hover > span { color: var(--accent); text-decoration: underline; }
+.gline-p:hover .prow-name { text-decoration: none; color: inherit; }
+.gline-p .gline-name:hover .prow-name { color: var(--accent); text-decoration: underline; }

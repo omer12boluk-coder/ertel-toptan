@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, go } from './store.js';
 import { Icon, Empty, Thumb, Sheet, Stepper, VatLines, copyText } from './ui.jsx';
 import { decodeList, encodeList, listItems, listRecord, listLink } from './listcode.js';
-import { Lightbox, imageList } from './catalog.jsx';
+import { Lightbox, imageList, ProductSheet } from './catalog.jsx';
 import { links, waLink } from './route.js';
 import { fmt, totals, fmtTotals, when, ls, roundStep, vatOf } from './utils.js';
 import { LOGO_MARK } from './config.js';
@@ -43,6 +43,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true }
   const byId = useStore((s) => s.byId);
   const live = useRate();
   const [zoom, setZoom] = useState(null); // ürün resmini büyüt
+  const [sheet, setSheet] = useState(null); // ürün adına basınca uygulamadaki ürün penceresi
   const items = itemsIn || r.items || [];
   const rate = rateIn !== undefined ? rateIn : listRate(r, live);
   const tot = totals(items, 'offer');
@@ -69,7 +70,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true }
                   <td className="pt-name">
                     <div className="pt-row">
                       <button className="pt-img" onClick={() => big.length && setZoom({ urls: big, title: it.n })} aria-label="Resmi büyüt" disabled={!big.length}><Thumb p={p} size="sm" /></button>
-                      <a className="pt-t" href={links.product(p, S)} target="_blank" rel="noopener" title="Ürün sayfasını yeni sekmede aç"><span>{it.n}</span><code>{it.k}</code></a>
+                      {byId.get(it.id) ? <button type="button" className="pt-t" onClick={() => setSheet(byId.get(it.id))} title="Ürünü aç"><span>{it.n}</span><code>{it.k}</code></button> : <span className="pt-t"><span>{it.n}</span><code>{it.k}</code></span>}
                     </div>
                   </td>
                   <td className="r num pt-qty">{it.qty}</td>
@@ -93,6 +94,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true }
         <VatLines by={tot} rate={rate} />
       </footer>
       {zoom && <Lightbox urls={zoom.urls} title={zoom.title} onClose={() => setZoom(null)} />}
+      {sheet && <ProductSheet p={sheet} onClose={() => setSheet(null)} />}
     </article>
   );
 }

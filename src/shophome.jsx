@@ -313,6 +313,7 @@ function Hero({ slides, open, brands, heroH }) {
   const E = useContext(DesignCtx);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
+  const resumeT = useRef(0);
   const track = useRef(null);
   const n = slides.length;
   useEffect(() => {
@@ -324,7 +325,7 @@ function Hero({ slides, open, brands, heroH }) {
   const onScroll = (e) => { const el = e.currentTarget; const k = Math.round(el.scrollLeft / el.clientWidth); if (k !== i) setI(k); };
   return (
     <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} aria-roledescription="carousel">
-      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => setPaused(true)}>
+      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), 4000); }}>
         {slides.map((s, k) => <Slide key={k} k={k} s={s} on={k === i} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
