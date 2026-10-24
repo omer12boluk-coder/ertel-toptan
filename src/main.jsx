@@ -169,15 +169,16 @@ function migrate(S) {
   // 24.10.2026: yeni logo (kalın çizgili) ve tek tip marka kutuları, üyelik + sipariş açıldı (bir kez uygulanır; sonra panelden değiştirilebilir)
   if ((S.v || 0) < 3 && S.shopHome?.brands && !S.shopHome.brands.some((b) => /amscope/i.test(b.name || ''))) S.shopHome = { ...S.shopHome, brands: [...S.shopHome.brands, { name: 'AmScope', color: '#1f3a8a', logo: '/brands/amscope.png', link: 'brand:AmScope' }] };
   if (S.v === 2) S.v = 3;
-  // v4: logosu bulunan yeni markalar ana sayfa kutularına (bir kez)
-  if (S.v === 3) {
-    if (S.shopHome?.brands) { const have = new Set(S.shopHome.brands.map((b) => (b.name || '').toLowerCase())); const add = DEFAULT_SETTINGS.shopHome.brands.filter((b) => ['quick', 'rf4', 'yihua', 'uni-t'].includes(b.name.toLowerCase()) && !have.has(b.name.toLowerCase())); if (add.length) S.shopHome = { ...S.shopHome, brands: [...S.shopHome.brands, ...add] }; }
-    S.v = 4;
-  }
+  if (S.v === 3) S.v = 4;
   if ((S.v || 0) < 2) {
     S.v = 4; S.brand.logo = ''; S.brand.logoWide = '';
     S.orders = { ...S.orders, checkoutSoon: false, accountsSoon: false };
     if (S.shopHome?.brands) { const def = DEFAULT_SETTINGS.shopHome.brands; S.shopHome = { ...S.shopHome, brands: S.shopHome.brands.map((b) => { const d = def.find((x) => x.name.toLowerCase() === (b.name || '').toLowerCase()); return d && (!b.logo || b.logo.startsWith('/brands/')) ? { ...b, color: d.color, logo: d.logo } : b; }) }; }
+  }
+  // v5: logosu bulunan yeni markalar ana sayfa kutularına (bir kez; sonra panelden çıkarılabilir)
+  if ((S.v || 0) < 5) {
+    if (S.shopHome?.brands) { const have = new Set(S.shopHome.brands.map((b) => (b.name || '').toLowerCase())); const add = DEFAULT_SETTINGS.shopHome.brands.filter((b) => ['quick', 'rf4', 'yihua', 'uni-t'].includes(b.name.toLowerCase()) && !have.has(b.name.toLowerCase())); if (add.length) S.shopHome = { ...S.shopHome, brands: [...S.shopHome.brands, ...add] }; }
+    S.v = 5;
   }
   return S;
 }
