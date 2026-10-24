@@ -134,7 +134,7 @@ export function rowsToProducts(rows) {
   const K = {
     id: ['urun_id', 'Ürün ID', 'id', 'ID'], k: ['urun_stok_kod', 'Stok Kodu', 'stok_kod', 'kod'], n: ['urun_isim', 'Ürün Adı', 'isim', 'urun_adi'],
     c: ['urun_kategori_kod', 'Ürün Kategori Id 1', 'kategori_kod'], c2: ['Ürün Kategori Id 2'], r: ['urun_satis_fiyat', 'Fiyat', 'satis_fiyat'],
-    w: ['urunum_pro_s_price', 'İndirimli Fiyat', 'toptan', 'toptan_fiyat'], cur: ['urun_pb', 'Para Birimi', 'pb'], s: ['urun_stok', 'stok', 'Stok', 'Miktar'],
+    sale: ['urunum_pro_s_price', 'İndirimli Fiyat'], w: ['toptan', 'toptan_fiyat'], cur: ['urun_pb', 'Para Birimi', 'pb'], s: ['urun_stok', 'stok', 'Stok', 'Miktar'],
     a: ['urun_durum', 'Ürün Durumu', 'durum'], b: ['Marka', 'marka'], t: ['Etiketler', 'etiketler'], u: ['Ürün URL'], desc: ['Ürün Açıklaması'],
   };
   const imgCols = Array.from({ length: 10 }, (_, i) => 'Ürün Resmi ' + (i + 1));
@@ -148,6 +148,8 @@ export function rowsToProducts(rows) {
     if (v('c') != null) p.c = Number(v('c')) || 0;
     if (has(o, K.c2)) { const c2 = Number(v('c2')); if (c2 && c2 !== p.c) p.c2 = c2; }
     if (v('r') != null) p.r = Number(v('r')) || 0;
+    // liste fiyatı = sitedeki gerçek satış fiyatı: "İndirimli Fiyat" doluysa (ve normalden düşükse) o; toptan bunun üstüne hesaplanır
+    if (Number(v('sale')) > 0 && (!(p.r > 0) || Number(v('sale')) < p.r)) p.r = Number(v('sale'));
     if (Number(v('w')) > 0) p.w = Number(v('w'));
     if (v('cur') != null) { const pb = String(v('cur')).toUpperCase(); p.cur = pb === 'TL' ? 'TRY' : pb; }
     if (v('s') != null) p.s = Number(v('s')) || 0;

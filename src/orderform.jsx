@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, toast } from './store.js';
 import { Icon, Thumb, Stepper, VatLines, Empty, copyText } from './ui.jsx';
 import { links, waLink } from './route.js';
-import { fmt, totals, fmtTotals, norm, roundStep, ls } from './utils.js';
+import { fmt, totals, fmtTotals, norm, roundStep, ls, priceFor } from './utils.js';
 import { renderListImages, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
 import { encodeList, listLink } from './listcode.js';
 
@@ -101,7 +101,7 @@ export function OrderForm() {
               return (
                 <li key={p.id}>
                   <Thumb p={p} size="sm" />
-                  <span className="cline-info"><span className="prow-name">{p.n}</span><span className="prow-meta"><code>{p.k}</code><span>Liste {fmt(p.r, p.cur)}</span>{p.w != null && <span>Toptan {fmt(p.w, p.cur)}</span>}</span></span>
+                  <span className="cline-info"><span className="prow-name">{p.n}</span><span className="prow-meta"><code>{p.k}</code><span>Liste {fmt(p.r, p.cur)}</span>{(() => { const t = priceFor(p, S, null).mine; return t != null && <span>Toptan {fmt(t, p.cur)}</span>; })()}</span></span>
                   <button className={'btn sm ' + (inCart ? 'outline' : 'add')} onClick={() => add(p)}><Icon n="plus" s={15} />{inCart ? `Ekli (${inCart.qty})` : 'Ekle'}</button>
                 </li>
               );
