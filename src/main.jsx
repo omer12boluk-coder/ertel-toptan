@@ -51,7 +51,7 @@ async function boot() {
   startRate(A);
   startVersionCheck();
   // Logo / dükkan bilgisi: cihazda kayıtlıysa hemen kullan, sunucudakini arkadan al
-  const applyPub = (pub) => pub && store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub })) });
+  const applyPub = (pub) => pub && store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub, v: pub.v || 0 })) });
   const cachedPub = ls.get('pub-info', null);
   applyPub(cachedPub);
   const pubP = A.publicInfo().then((pub) => { if (pub) { ls.set('pub-info', pub); if (!store.s.user || store.s.user.role === 'public') applyPub(pub); } }).catch(() => {});
