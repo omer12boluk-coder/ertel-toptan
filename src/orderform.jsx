@@ -88,13 +88,18 @@ export function OrderForm() {
     <div className="page oform">
       <div className="page-h">
         <h1 className="page-t">Sipariş formu <span className="muted">#{d.no}</span></h1>
-        {d.items.length > 0 && <button className="btn sm ghost danger" onClick={clear}><Icon n="trash" s={15} />Yeni form</button>}
+        <span className="row-btns">
+          {rows.length > 0 && <button className="btn sm wa" onClick={() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Icon n="wa" s={15} />Müşteriye gönder</button>}
+          {d.items.length > 0 && <button className="btn sm ghost danger" onClick={clear}><Icon n="trash" s={15} />Yeni form</button>}
+        </span>
       </div>
 
       <div className="oform-grid">
         <section className="oform-pick">
           <div className="search"><Icon n="search" s={18} /><input id="of-search" type="search" placeholder="Ürün adı veya stok kodu ile ara…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus /></div>
           {q && results.length === 0 && <p className="fine">Eşleşen ürün yok.</p>}
+          {!q && <p className="fine oform-hint">Ürün adı ya da stok kodu yazın; sonuçlar burada, kendi kutusunda listelenir.</p>}
+          {q && results.length > 0 && <span className="oform-count">{results.length} sonuç</span>}
           <ul className="oform-res">
             {results.map((p) => {
               const inCart = d.items.find((it) => it.id === p.id);
@@ -109,6 +114,7 @@ export function OrderForm() {
           </ul>
         </section>
 
+        <div className="oform-right">
         <section className="oform-cart">
           <label className="field"><span className="field-l">Müşteri <small className="opt">(resimde görünür, isteğe bağlı)</small></span><input id="of-name" value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="ör. Kadıköy GSM – Ahmet" /></label>
           {rows.length === 0 ? <Empty icon="cart" title="Form boş">Soldan ürün arayıp ekleyin.</Empty> : (
@@ -139,38 +145,39 @@ export function OrderForm() {
             </>
           )}
         </section>
+        {rows.length > 0 && (
+          <section className="oform-out" id="of-out">
+            <div className="oform-out-h">
+              <h2>Müşteriye gönder</h2>
+              <div className="row-btns">
+                {canShareImgs && <button className="btn wa" disabled={!imgs || busy} onClick={shareImgs}><Icon n="wa" s={16} />{imgs && imgs.length > 1 ? `Tabloyu gönder (${imgs.length} resim)` : 'Tabloyu WhatsApp’ta gönder'}</button>}
+                <a className={'btn ' + (canShareImgs ? 'outline' : 'wa')} href={waLink('', 'Siparişiniz:\n' + link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’ta gönder</a>
+                <button className="btn outline" onClick={() => copyText(link, 'Link kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
+              </div>
+            </div>
+            {!imgs ? <div className="list-wait"><div className="spinner" /></div> : (
+              <>
+                {imgs.length > 1 && (
+                  <div className="banner warn oform-multi"><Icon n="copy" /><div><b>Liste {imgs.length} resim oldu.</b> WhatsApp’a hepsini sırayla gönderin: her resmin üstündeki <b>Kopyala</b> ile kopyalayıp yapıştırın.</div></div>
+                )}
+                <div className={'oform-imgs' + (imgs.length > 1 ? ' many' : '')}>
+                  {imgs.map((m, i) => (
+                    <figure key={m.url}>
+                      <figcaption>
+                        <b>{imgs.length > 1 ? `Resim ${i + 1} / ${imgs.length}` : 'Liste resmi'}</b>
+                        <button className="btn sm primary" disabled={busy} onClick={() => copyImg(i)}><Icon n="copy" s={15} />{imgs.length > 1 ? `${i + 1}. resmi kopyala` : 'Resmi kopyala'}</button>
+                      </figcaption>
+                      <img src={m.url} alt={`Sipariş resmi ${i + 1}`} />
+                    </figure>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+        )}
+        </div>
       </div>
 
-      {rows.length > 0 && (
-        <section className="oform-out">
-          <div className="oform-out-h">
-            <h2>Müşteriye gönder</h2>
-            <div className="row-btns">
-              {canShareImgs && <button className="btn wa" disabled={!imgs || busy} onClick={shareImgs}><Icon n="wa" s={16} />{imgs && imgs.length > 1 ? `Tabloyu gönder (${imgs.length} resim)` : 'Tabloyu WhatsApp’ta gönder'}</button>}
-              <a className={'btn ' + (canShareImgs ? 'outline' : 'wa')} href={waLink('', 'Siparişiniz:\n' + link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’ta gönder</a>
-              <button className="btn outline" onClick={() => copyText(link, 'Link kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
-            </div>
-          </div>
-          {!imgs ? <div className="list-wait"><div className="spinner" /></div> : (
-            <>
-              {imgs.length > 1 && (
-                <div className="banner warn oform-multi"><Icon n="copy" /><div><b>Liste {imgs.length} resim oldu.</b> WhatsApp’a hepsini sırayla gönderin: her resmin üstündeki <b>Kopyala</b> ile kopyalayıp yapıştırın.</div></div>
-              )}
-              <div className={'oform-imgs' + (imgs.length > 1 ? ' many' : '')}>
-                {imgs.map((m, i) => (
-                  <figure key={m.url}>
-                    <figcaption>
-                      <b>{imgs.length > 1 ? `Resim ${i + 1} / ${imgs.length}` : 'Liste resmi'}</b>
-                      <button className="btn sm primary" disabled={busy} onClick={() => copyImg(i)}><Icon n="copy" s={15} />{imgs.length > 1 ? `${i + 1}. resmi kopyala` : 'Resmi kopyala'}</button>
-                    </figcaption>
-                    <img src={m.url} alt={`Sipariş resmi ${i + 1}`} />
-                  </figure>
-                ))}
-              </div>
-            </>
-          )}
-        </section>
-      )}
     </div>
   );
 }
