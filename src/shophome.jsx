@@ -60,7 +60,11 @@ function useReveal() {
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
     el.querySelectorAll('.rv').forEach((x) => io.observe(x));
     if (el.classList.contains('rv')) io.observe(el);
-    return () => io.disconnect();
+    // yedek: bazı tarayıcılarda (arka plandaki sekme, uygulama içi tarayıcı) gözlemci geç kalabiliyor
+    const check = () => el.querySelectorAll('.rv:not(.in)').forEach((x) => { if (x.getBoundingClientRect().top < innerHeight * 0.95) x.classList.add('in'); });
+    const t = setTimeout(check, 600);
+    addEventListener('scroll', check, { passive: true });
+    return () => { io.disconnect(); clearTimeout(t); removeEventListener('scroll', check); };
   });
   return ref;
 }
