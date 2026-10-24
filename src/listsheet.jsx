@@ -118,14 +118,14 @@ function wrap(ctx, text, w, maxLines) {
   return out;
 }
 
-export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {}) {
+export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn, maxH } = {}) {
   const S = store.s.settings;
   const items = itemsIn || r.items || [];
   const tl = (tlIn ?? r.tl ?? true) && !!rate;
   try { await Promise.all(['700 40px "Barlow Condensed"', '600 24px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif', '500 18px "JetBrains Mono"', '400 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'].map((f) => document.fonts.load(f))); } catch {}
   const logo = await loadImg(S.brand.logo || LOGO_MARK);
   const pics = await Promise.all(items.map((it) => loadImg(thumbSrc(it, S), true)));
-  const W = 1080, P = 48, MAXH = 1700;
+  const W = 1080, P = 48, MAXH = maxH || 1700; // bir resmin en fazla yüksekliği; aşarsa sonraki resme geçer
   const accent = S.brand.accent || '#2f55b0', priceC = S.brand.priceAccent || '#c2410c';
   const cols = [['#', 44, 'c'], ['', 84, 'c'], ['Ürün', 0, 'l'], ['Adet', 96, 'r'], [priced(r) ? 'Fiyat' : 'Liste fiyatı', 150, 'r'], ['Tutar', 160, 'r']];
   const fixed = cols.reduce((n, c) => n + c[1], 0);
@@ -145,6 +145,13 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
     cur.push(row); h += row.h;
   });
   if (cur.length || !pages.length) pages.push(cur);
+  // sayfalara eşit dağıt (son resimde tek satır kalmasın); sığmazsa ilk dağılım kalır
+  if (pages.length > 1) {
+    const per = Math.ceil(rows.length / pages.length);
+    const even = Array.from({ length: pages.length }, (_, i) => rows.slice(i * per, (i + 1) * per)).filter((x) => x.length);
+    const fits = even.every((pg, i) => HEAD + THEAD + PFOOT + pg.reduce((n, x) => n + x.h, 0) + (i === even.length - 1 ? FOOT : 0) <= MAXH);
+    if (fits) pages.splice(0, pages.length, ...even);
+  }
   const tot = totals(items, 'offer');
   const tTL = tl ? toTL(tot, rate) : null;
   const blobs = [];

@@ -14,6 +14,7 @@ import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { GuestCartBar } from './guestcart.jsx';
+import { OrderForm } from './orderform.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
 import { idbGet, idbSet } from './idb.js';
 
@@ -302,7 +303,7 @@ function Login() {
 }
 
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Katalog', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Profil', 'user']];
-const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['katalog', 'Ürünler', 'box'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['siparis', 'Sipariş formu', 'tag'], ['katalog', 'Ürünler', 'box'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart']];
 
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
@@ -382,6 +383,7 @@ function Shell() {
         {tab === 'talepler' && <Requests />}
         {tab === 'profil' && !pub && <Profile />}
         {tab === 'musteriler' && admin && <Customers />}
+        {tab === 'siparis' && admin && <OrderForm />}
         {tab === 'ayarlar' && admin && <Settings />}
       </main>
       {pub && <GuestCartBar />}

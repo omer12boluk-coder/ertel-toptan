@@ -12,6 +12,8 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 - Firebase projesi `erteltoptan`, Spark (ücretsiz) plan. Kullanıcı Blaze istemiyor; Storage / Cloud Functions yok.
 - Adresler: `/` giriş sayfası (Online mağaza / Bayi girişi), `/b2b` bayi uygulaması (ana sayfa + katalog…), `/admin` yönetim paneli (ayrı oturum), `/magaza` herkese açık vitrin (sadece ürünler + listem), `/magaza/l/<kod>` vitrin listesi: veritabanına KAYDEDİLMEZ, ürün/adet/fiyat linkin içinde (`src/listcode.js`); `/admin/l/<kod>` yönetici fiyatlar ve yeni link + PNG üretir (`src/listsheet.jsx`). Vitrinden talep oluşturulamaz (kurallar). Eski `/magaza/t/<id>` sadece görüntülenir, `/b2b/t/<id>` (eski `/t/<id>` de çalışır) ve `/admin/t/<id>` talep linkleri.
 - Excel içe aktarma (Ayarlar > Veri): ürün no ya da stok kodu eşleşirse günceller; aynı stok koduyla ikinci ürün asla eklenmez (`src/xlsx.js` mergeCatalog).
+- Yönetim paneli > Sipariş formu (`src/orderform.jsx`): yönetici ürün arayıp sepet yapar, fiyat yazar; liste resmi (gerekirse birkaç resim, her biri ayrı "Kopyala") + fiyatlı link. Kaydedilmez, taslak cihazda.
+- KDV: `pricing.vatPct` / `pricing.showVat`; sadece toplamın altında bilgi. Herkese açık ayar kopyası (`settings/public`) gösterimle ilgili fiyat alanlarını da taşır.
 - Bayi ana sayfası içeriği `settings.home` (Ayarlar > Bayi ana sayfası).
 - Yönetici talepleri (sağ tık / çoklu seçim / talep içi) ve müşterileri tamamen silebilir (Firebase Auth hesabı silinmez, kayıt silindiği için giriş açılmaz).
 
