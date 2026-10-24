@@ -296,6 +296,7 @@ function Login() {
             ? <p className="fine center">Hesabınız yok mu? <button type="button" className="link" onClick={() => { setErr(''); setView('signup'); }}>Bayi olarak üye olun</button></p>
             : <p className="fine center">Hesabınız yok mu? {S.shop.name} ile iletişime geçin{S.shop.phone ? ': ' + S.shop.phone : '.'}</p>)}
           {view === 'signup' && <p className="fine center"><button type="button" className="link" onClick={() => { setErr(''); setView('login'); }}>Zaten hesabım var, giriş yap</button></p>}
+          {!adminPage && <p className="fine center"><a className="link" href="/">← Giriş sayfasına dön</a></p>}
         </form>
       )}
     </div>
@@ -359,6 +360,7 @@ function Shell() {
               </button>
             ))}
           </nav>
+          {!admin && <a className="icon-btn to-landing" href="/" title="Giriş sayfasına dön (Mağaza / Bayi girişi)" aria-label="Giriş sayfasına dön"><Icon n="home" s={19} /></a>}
           <ThemeButton />
           {!pub && (
             <button className="me" onClick={() => go(admin ? 'ayarlar' : 'profil')} aria-label="Profil">

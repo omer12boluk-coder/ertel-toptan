@@ -13,7 +13,7 @@ import { encodeList, listLink } from './listcode.js';
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
 const KEY = 'order-draft';
-const MAX_H = 2600; // bir resim ~18 satıra kadar tek parça; daha uzunsa yeni resim
+
 
 export function OrderForm() {
   const { catalog, byId, settings: S } = useStore();
@@ -60,7 +60,7 @@ export function OrderForm() {
     const my = ++gen.current;
     const t = setTimeout(async () => {
       try {
-        const blobs = await renderListImages(rec, { rate, tl: true, maxH: MAX_H });
+        const blobs = await renderListImages(rec, { rate, tl: true });
         if (my !== gen.current) return;
         setImgs(blobs.map((b, i) => ({ file: new File([b], `siparis-${d.no}${blobs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' }), url: URL.createObjectURL(b) })));
       } catch (e) { console.warn(e); }

@@ -118,130 +118,132 @@ function wrap(ctx, text, w, maxLines) {
   return out;
 }
 
-export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn, maxH } = {}) {
+// Liste resmi: bir resimde en fazla 12 ürün (fazlası sonraki resimlere eşit dağılır); yazılar hiç küçülmez.
+// Tablo kenarları yuvarlatılmış bir kutunun içinde; resim, kullanılan alan kadar kırpılır (altta boşluk kalmaz).
+const PER_PAGE = 12;
+function rrect(x, X, Y, W, H, R) { x.beginPath(); x.moveTo(X + R, Y); x.arcTo(X + W, Y, X + W, Y + H, R); x.arcTo(X + W, Y + H, X, Y + H, R); x.arcTo(X, Y + H, X, Y, R); x.arcTo(X, Y, X + W, Y, R); x.closePath(); }
+export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {}) {
   const S = store.s.settings;
+  const FB = 'Barlow, "Segoe UI", Roboto, Arial, sans-serif', FD = '"Barlow Condensed", "Arial Narrow", Arial, sans-serif', FM = '"JetBrains Mono", Consolas, monospace';
   const items = itemsIn || r.items || [];
   const tl = (tlIn ?? r.tl ?? true) && !!rate;
-  try { await Promise.all(['700 40px "Barlow Condensed"', '600 24px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif', '500 18px "JetBrains Mono"', '400 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'].map((f) => document.fonts.load(f))); } catch {}
+  try { await Promise.all(['700 40px "Barlow Condensed"', '600 24px Barlow', '500 18px "JetBrains Mono"', '400 20px Barlow'].map((f) => document.fonts.load(f))); } catch {}
   const logo = await loadImg(S.brand.logo || LOGO_MARK);
   const pics = await Promise.all(items.map((it) => loadImg(thumbSrc(it, S), true)));
-  const W = 1080, P = 48, MAXH = maxH || 1700; // bir resmin en fazla yüksekliği; aşarsa sonraki resme geçer
-  const accent = S.brand.accent || '#2f55b0', priceC = S.brand.priceAccent || '#c2410c';
-  const cols = [['#', 44, 'c'], ['', 84, 'c'], ['Ürün', 0, 'l'], ['Adet', 96, 'r'], [priced(r) ? 'Fiyat' : 'Liste fiyatı', 150, 'r'], ['Tutar', 160, 'r']];
-  const fixed = cols.reduce((n, c) => n + c[1], 0);
-  cols[2][1] = W - 2 * P - fixed;
+  const W = 1080, P = 40, TW = W - 2 * P, PAD = 18; // tablo kutusu iç boşluğu
+  const priceC = S.brand.priceAccent || '#c2410c', ink = '#111827', mute = '#6b7280', soft = '#9ca3af', line = '#e5e7eb';
+  // sütunlar (tablo kutusunun içinde)
+  const cols = [['#', 40, 'c'], ['', 84, 'c'], ['Ürün', 0, 'l'], ['Adet', 86, 'c'], [priced(r) ? 'Fiyat' : 'Liste fiyatı', 140, 'r'], ['Tutar', 140, 'r']];
+  cols[2][1] = TW - 2 * PAD - cols.reduce((n, c) => n + c[1], 0);
   const meas = document.createElement('canvas').getContext('2d');
-  meas.font = '600 23px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
-  const rows = items.map((it, k) => { const lines = wrap(meas, it.n, cols[2][1] - 20, 3); return { it, k, lines, h: Math.max(96, 26 + lines.length * 29 + 26) }; });
+  meas.font = '600 23px ' + FB;
+  const rows = items.map((it, k) => { const lines = wrap(meas, it.n, cols[2][1] - 16, 3); return { it, k, lines, h: Math.max(92, 24 + lines.length * 29 + 30) }; });
+  // sayfalar: en fazla 12 ürün, eşit dağıt
+  const nPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
+  const per = Math.ceil(rows.length / nPages) || 1;
+  const pages = Array.from({ length: nPages }, (_, i) => rows.slice(i * per, (i + 1) * per));
   const vat0 = vatOf(totals(items, 'offer'), S.pricing.vatPct ?? 20);
   const vat = S.pricing.showVat === false ? { pct: 0 } : vat0;
-  const HEAD = 250, THEAD = 52, FOOT = (tl ? 210 : 160) + (vat.pct ? 64 : 0), PFOOT = 56;
-  // sayfalara böl
-  const pages = []; let cur = [], h = HEAD + THEAD + PFOOT;
-  rows.forEach((row, i) => {
-    const isLast = i === rows.length - 1;
-    const need = row.h + (isLast ? FOOT : 0);
-    if (cur.length && h + need > MAXH) { pages.push(cur); cur = []; h = HEAD + THEAD + PFOOT; }
-    cur.push(row); h += row.h;
-  });
-  if (cur.length || !pages.length) pages.push(cur);
-  // sayfalara eşit dağıt (son resimde tek satır kalmasın); sığmazsa ilk dağılım kalır
-  if (pages.length > 1) {
-    const per = Math.ceil(rows.length / pages.length);
-    const even = Array.from({ length: pages.length }, (_, i) => rows.slice(i * per, (i + 1) * per)).filter((x) => x.length);
-    const fits = even.every((pg, i) => HEAD + THEAD + PFOOT + pg.reduce((n, x) => n + x.h, 0) + (i === even.length - 1 ? FOOT : 0) <= MAXH);
-    if (fits) pages.splice(0, pages.length, ...even);
-  }
   const tot = totals(items, 'offer');
   const tTL = tl ? toTL(tot, rate) : null;
+  const who = r.gname || r.userName;
   const blobs = [];
   for (let pi = 0; pi < pages.length; pi++) {
     const last = pi === pages.length - 1;
-    const H = HEAD + THEAD + pages[pi].reduce((n, x) => n + x.h, 0) + (last ? FOOT : 0) + PFOOT;
-    const c = document.createElement('canvas'); c.width = W; c.height = H;
-    const x = c.getContext('2d');
-    x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
-    x.fillStyle = accent; x.fillRect(0, 0, W, 10);
-    // başlık
-    if (logo) { x.save(); x.beginPath(); x.arc(P + 44, 96, 44, 0, Math.PI * 2); x.clip(); x.drawImage(logo, P, 52, 88, 88); x.restore(); }
-    x.fillStyle = '#111827'; x.font = '700 44px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.textBaseline = 'alphabetic'; x.textAlign = 'left';
-    x.fillText(S.shop.name || '', P + 108, 96);
-    x.fillStyle = '#6b7280'; x.font = '400 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
-    x.fillText([S.shop.address, S.shop.phone].filter(Boolean).join(' · '), P + 108, 126);
-    x.textAlign = 'right';
-    x.fillStyle = '#6b7280'; x.font = '600 16px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText('ÜRÜN LİSTESİ', W - P, 70);
-    x.fillStyle = '#111827'; x.font = '700 40px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText('#' + r.no, W - P, 110);
-    x.fillStyle = '#6b7280'; x.font = '400 18px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(new Date(r.updatedAt || r.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }), W - P, 136);
-    x.textAlign = 'left';
-    const who = r.gname || r.userName;
-    x.fillStyle = '#374151'; x.font = '400 21px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
-    if (who) { x.fillText('Müşteri: ', P, 196); const ww = x.measureText('Müşteri: ').width; x.font = '700 21px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(who, P + ww, 196); }
-    if (pages.length > 1) { x.textAlign = 'right'; x.font = '600 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillStyle = accent; x.fillText(`Sayfa ${pi + 1} / ${pages.length}`, W - P, 196); x.textAlign = 'left'; }
-    // tablo başlığı
-    let y = HEAD - 30;
-    x.fillStyle = '#eef2fb'; x.fillRect(P, y, W - 2 * P, THEAD);
-    x.fillStyle = '#374151'; x.font = '700 17px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
-    let cx = P;
+    const c = document.createElement('canvas'); c.width = W; c.height = 4000;
+    const x = c.getContext('2d'); x.textBaseline = 'alphabetic';
+    x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height);
+    // --- başlık
+    if (logo) { x.save(); x.beginPath(); x.arc(P + 40, 76, 40, 0, Math.PI * 2); x.clip(); x.drawImage(logo, P, 36, 80, 80); x.restore(); }
+    x.textAlign = 'left'; x.fillStyle = ink; x.font = '700 44px ' + FD; x.fillText(S.shop.name || '', P + 100, 76);
+    x.fillStyle = mute; x.font = '400 20px ' + FB; x.fillText([S.shop.address, S.shop.phone].filter(Boolean).join(' · '), P + 100, 106);
+    x.textAlign = 'right'; x.fillStyle = mute; x.font = '600 15px ' + FB; x.fillText('ÜRÜN LİSTESİ', W - P, 52);
+    x.fillStyle = ink; x.font = '700 40px ' + FD; x.fillText('#' + r.no, W - P, 90);
+    x.fillStyle = mute; x.font = '400 18px ' + FB; x.fillText(new Date(r.updatedAt || r.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }), W - P, 116);
+    let y = 140;
+    if (who || pages.length > 1) {
+      x.textAlign = 'left'; x.fillStyle = '#374151'; x.font = '400 21px ' + FB;
+      if (who) { x.fillText('Müşteri: ', P, y + 24); const ww = x.measureText('Müşteri: ').width; x.font = '700 21px ' + FB; x.fillText(who, P + ww, y + 24); }
+      if (pages.length > 1) { x.textAlign = 'right'; x.font = '700 19px ' + FB; x.fillStyle = S.brand.accent || '#2f55b0'; x.fillText(`Sayfa ${pi + 1} / ${pages.length}`, W - P, y + 24); }
+      y += 40;
+    }
+    y += 6;
+    // --- tablo kutusu (yuvarlak köşeli)
+    const THEAD = 50, bodyH = pages[pi].reduce((n, row) => n + row.h, 0), boxH = THEAD + bodyH + 8;
+    const top = y;
+    x.save(); rrect(x, P, top, TW, boxH, 18); x.clip();
+    x.fillStyle = '#fff'; x.fillRect(P, top, TW, boxH);
+    x.fillStyle = '#f1f5f9'; x.fillRect(P, top, TW, THEAD);
+    x.fillStyle = '#475569'; x.font = '700 15px ' + FB;
+    let cx = P + PAD;
     for (const [t, w, al] of cols) {
       x.textAlign = al === 'r' ? 'right' : al === 'c' ? 'center' : 'left';
-      x.fillText(t.toLocaleUpperCase('tr'), al === 'r' ? cx + w - 10 : al === 'c' ? cx + w / 2 : cx + 10, y + 33);
+      x.fillText(t.toLocaleUpperCase('tr'), al === 'r' ? cx + w - 8 : al === 'c' ? cx + w / 2 : cx + 8, top + 32);
       cx += w;
     }
-    y += THEAD;
-    // satırlar
-    for (const row of pages[pi]) {
+    y = top + THEAD;
+    pages[pi].forEach((row, ri) => {
       const { it, k, lines } = row;
-      if (k % 2) { x.fillStyle = '#f8f9fb'; x.fillRect(P, y, W - 2 * P, row.h); }
-      x.strokeStyle = '#e5e7eb'; x.lineWidth = 1; x.beginPath(); x.moveTo(P, y + row.h - .5); x.lineTo(W - P, y + row.h - .5); x.stroke();
+      if (ri) { x.fillStyle = '#eef2f7'; x.fillRect(P + PAD, y, TW - 2 * PAD, 1); }
       const mid = y + row.h / 2 + 8;
       const sum = it.offer == null ? null : Number(it.offer) * it.qty;
-      cx = P;
       const cells = [String(k + 1), null, null, String(it.qty), it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur), sum == null ? '—' : fmt(sum, it.cur)];
+      cx = P + PAD;
       cols.forEach(([, w, al], ci) => {
         if (ci === 1) {
-          const sz = 68, ix = cx + (w - sz) / 2, iy = y + (row.h - sz) / 2;
-          x.fillStyle = '#fff'; x.fillRect(ix, iy, sz, sz); x.strokeStyle = '#e5e7eb'; x.strokeRect(ix + .5, iy + .5, sz - 1, sz - 1);
+          const sz = 64, ix = cx + (w - sz) / 2, iy = y + (row.h - sz) / 2;
+          rrect(x, ix, iy, sz, sz, 10); x.fillStyle = '#fff'; x.fill(); x.strokeStyle = line; x.lineWidth = 1.5; x.stroke();
           const im = pics[k];
-          if (im) { const sc = Math.min((sz - 6) / im.width, (sz - 6) / im.height); const dw = im.width * sc, dh = im.height * sc; try { x.drawImage(im, ix + (sz - dw) / 2, iy + (sz - dh) / 2, dw, dh); } catch {} }
+          if (im) { x.save(); rrect(x, ix + 2, iy + 2, sz - 4, sz - 4, 8); x.clip(); const sc = Math.min((sz - 8) / im.width, (sz - 8) / im.height); const dw = im.width * sc, dh = im.height * sc; try { x.drawImage(im, ix + (sz - dw) / 2, iy + (sz - dh) / 2, dw, dh); } catch {} x.restore(); }
         } else if (ci === 2) {
-          x.textAlign = 'left'; x.fillStyle = '#111827'; x.font = '600 23px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
-          lines.forEach((ln, li) => x.fillText(ln, cx + 10, y + 26 + 22 + li * 29));
-          x.fillStyle = '#6b7280'; x.font = '500 17px "JetBrains Mono", Consolas, monospace'; x.fillText(it.k || '', cx + 10, y + 26 + 22 + lines.length * 29 - 2);
+          const t0 = y + row.h / 2 - (lines.length * 29 + 20) / 2 + 22;
+          x.textAlign = 'left'; x.fillStyle = ink; x.font = '600 23px ' + FB;
+          lines.forEach((ln, li) => x.fillText(ln, cx + 8, t0 + li * 29));
+          x.fillStyle = soft; x.font = '500 16px ' + FM; x.fillText(it.k || '', cx + 8, t0 + lines.length * 29);
         } else {
           x.textAlign = al === 'r' ? 'right' : 'center';
-          x.fillStyle = ci === 0 ? '#9ca3af' : ci === 6 ? '#6b7280' : ci === 5 ? '#111827' : '#1f2937';
-          x.font = ci === 5 || ci === 3 ? '700 24px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif' : ci === 0 ? '500 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif' : '500 22px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
-          x.fillText(cells[ci], al === 'r' ? cx + w - 10 : cx + w / 2, mid);
+          x.fillStyle = ci === 0 ? soft : ci === 5 ? priceC : ink;
+          x.font = ci === 5 ? '700 26px ' + FD : ci === 3 ? '700 24px ' + FB : ci === 4 ? '500 23px ' + FB : '500 18px ' + FB;
+          x.fillText(cells[ci], al === 'r' ? cx + w - 8 : cx + w / 2, mid);
         }
         cx += w;
       });
       y += row.h;
-    }
-    // toplam
+    });
+    x.restore();
+    rrect(x, P + .75, top + .75, TW - 1.5, boxH - 1.5, 18); x.strokeStyle = line; x.lineWidth = 1.5; x.stroke();
+    y = top + boxH + 20;
+    // --- toplam kutusu (son resimde)
     if (last) {
-      y += 30;
-      x.textAlign = 'left'; x.fillStyle = '#6b7280'; x.font = '500 21px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
-      x.fillText(`${items.length} kalem · ${items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet`, P, y + 30);
-      x.textAlign = 'right'; x.fillStyle = '#374151'; x.font = '600 20px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText('TOPLAM', W - P - 230, y + 30);
-      x.fillStyle = priceC; x.font = '700 46px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText(fmtTotals(tot), W - P, y + 36);
-      y += 56;
-      if (tTL != null) { // TL: genel toplamın (KDV hariç) karşılığı, hemen altında
-        x.fillStyle = '#111827'; x.font = '700 30px "Barlow Condensed", "Arial Narrow", Arial, sans-serif'; x.fillText('≈ ' + fmtTL(tTL), W - P, y + 24);
-        x.fillStyle = '#9ca3af'; x.font = '400 16px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(rateLabel(rate), W - P, y + 48);
-        y += 62;
+      const fh = 84 + (tTL != null ? 52 : 0) + (vat.pct ? 56 : 0);
+      rrect(x, P, y, TW, fh, 16); x.fillStyle = '#f8fafc'; x.fill();
+      x.textAlign = 'left'; x.fillStyle = mute; x.font = '500 21px ' + FB;
+      x.fillText(`${items.length} kalem · ${items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet`, P + 24, y + 48);
+      x.textAlign = 'right'; x.fillStyle = mute; x.font = '700 15px ' + FB; x.fillText('TOPLAM', W - P - 24, y + 24 + 6);
+      x.fillStyle = priceC; x.font = '700 48px ' + FD; x.fillText(fmtTotals(tot), W - P - 24, y + 70);
+      let fy = y + 70;
+      if (tTL != null) {
+        x.fillStyle = ink; x.font = '700 28px ' + FD; x.fillText('≈ ' + fmtTL(tTL), W - P - 24, fy + 34);
+        x.fillStyle = soft; x.font = '400 15px ' + FB; x.fillText(rateLabel(rate), W - P - 24, fy + 54);
+        fy += 52;
       }
-      if (vat.pct) { // KDV: küçük tek satır
-        x.fillStyle = '#e5e7eb'; x.fillRect(W - P - 520, y + 4, 520, 1);
+      if (vat.pct) {
+        x.fillStyle = line; x.fillRect(W - P - 24 - 560, fy + 14, 560, 1);
         const inc = fmtTotals(vat.inc) + (tTL != null ? ' (≈ ' + fmtTL(tTL * (1 + vat.pct / 100)) + ')' : '');
-        x.fillStyle = '#6b7280'; x.font = '400 17px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.fillText(`KDV %${vat.pct} ${fmtTotals(vat.vat)}  ·  KDV dahil ${inc}`, W - P, y + 32);
-        y += 44;
+        x.fillStyle = mute; x.font = '400 17px ' + FB; x.fillText(`KDV %${vat.pct} ${fmtTotals(vat.vat)}  ·  KDV dahil ${inc}`, W - P - 24, fy + 40);
       }
-      x.textAlign = 'left'; x.fillStyle = '#6b7280'; x.font = '400 19px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif';
+      y += fh + 16;
+    } else {
+      x.textAlign = 'right'; x.fillStyle = S.brand.accent || '#2f55b0'; x.font = '700 20px ' + FB; x.fillText(`Devamı ${pi + 2}. resimde →`, W - P, y + 20);
+      y += 36;
     }
-    // alt bilgi
-    x.fillStyle = '#9ca3af'; x.font = '400 16px Barlow, \"Segoe UI\", Roboto, Arial, sans-serif'; x.textAlign = 'center';
-    x.fillText(`${S.shop.name || ''}${S.shop.whatsapp ? ' · WhatsApp ' + S.shop.whatsapp : ''}${pages.length > 1 ? ` · Sayfa ${pi + 1}/${pages.length}` : ''}`, W / 2, H - 22);
-    blobs.push(await new Promise((res) => c.toBlob(res, 'image/png')));
+    // --- alt bilgi
+    x.fillStyle = soft; x.font = '400 16px ' + FB; x.textAlign = 'center';
+    x.fillText(`${S.shop.name || ''}${S.shop.whatsapp ? ' · WhatsApp ' + S.shop.whatsapp : ''}${pages.length > 1 ? ` · Sayfa ${pi + 1}/${pages.length}` : ''}`, W / 2, y + 22);
+    const H = Math.ceil(y + 40);
+    const out = document.createElement('canvas'); out.width = W; out.height = H;
+    out.getContext('2d').drawImage(c, 0, 0);
+    blobs.push(await new Promise((res) => out.toBlob(res, 'image/png')));
   }
   return blobs;
 }
