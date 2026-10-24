@@ -116,9 +116,9 @@ export function OrderForm() {
               <table className="itable vle oform-t">
                 <thead><tr><th>Ürün</th><th className="r">Adet</th><th className="r">Liste</th><th className="r">Fiyat</th><th className="r">Tutar</th><th /></tr></thead>
                 <tbody>
-                  {rows.map(({ id, qty, price, p }) => (
+                  {rows.map(({ id, qty, price, p }, i) => (
                     <tr key={id}>
-                      <td className="it-name"><div className="of-prod"><Thumb p={p} size="sm" /><span><a href={links.product(p, S)} target="_blank" rel="noopener"><span>{p.n}</span></a><code>{p.k}</code></span></div></td>
+                      <td className="it-name"><div className="of-prod"><span className="of-no num">{i + 1}</span><Thumb p={p} size="sm" /><span><a href={links.product(p, S)} target="_blank" rel="noopener"><span>{p.n}</span></a><code>{p.k}</code></span></div></td>
                       <td className="r it-qty" data-l="Adet"><Stepper small min={1} value={qty} onChange={(v) => upd(id, { qty: v })} /></td>
                       <td className="r num muted it-list">{fmt(p.r, p.cur)}</td>
                       <td className="r it-offer" data-l="Fiyat">

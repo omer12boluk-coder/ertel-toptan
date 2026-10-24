@@ -1034,3 +1034,4 @@ a.btn { text-decoration: none; }
 .paper-sum { gap: 6px; }
 .paper-sum > b { margin: 2px 0; }
 .paper .vat { padding-top: 12px; margin-top: 2px; gap: 6px 14px; }
+.of-no { flex: none; width: 22px; text-align: right; color: var(--muted); font-weight: 600; font-size: 14px; }
