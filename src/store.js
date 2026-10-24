@@ -74,6 +74,6 @@ export function freshStart() {
 }
 
 export function go(tab) { store.set({ tab, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0); }
-export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: !!just }); window.scrollTo(0, 0); }
+export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: just || false }); window.scrollTo(0, 0); }
 export const home = () => go(store.s.user?.role === 'admin' ? 'talepler' : store.s.user?.role === 'public' ? 'katalog' : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }

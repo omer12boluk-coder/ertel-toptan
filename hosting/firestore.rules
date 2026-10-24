@@ -51,10 +51,18 @@ service cloud.firestore {
     match /members/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
       allow create: if signedIn() && request.auth.uid == uid && request.resource.data.uid == uid
-        && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'phone', 'createdAt', 'addresses', 'invoice']);
-      allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'phone', 'createdAt', 'addresses', 'invoice', 'username']);
+      // değişiklik için e-posta doğrulanmış olmalı
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && request.auth.token.email_verified == true && request.resource.data.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'addresses', 'invoice', 'email']));
       allow delete: if isAdmin();
+    }
+    // kullanıcı adı → e-posta (kullanıcı adıyla giriş için); sadece adı bilinerek okunur, listelenemez
+    match /usernames/{name} {
+      allow get: if true;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.keys().hasOnly(['uid', 'email'])
+        && name.matches('^[a-z0-9._-]{3,20}$');
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
     // ---- Online mağaza siparişleri: misafir ya da üye oluşturur (sadece "yeni" durumda); takip linki (tahmin edilemez kimlik) ile açılır
     match /orders/{id} {

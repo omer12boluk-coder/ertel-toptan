@@ -14,7 +14,7 @@ import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { CartBar } from './guestcart.jsx';
-import { OrderPage, Account } from './checkout.jsx';
+import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
@@ -181,13 +181,14 @@ async function bootShop(A) {
   });
   // Sipariş takip linki (/magaza/s/<no>) katalog beklemeden açılır
   if (ROUTE.orderId) { loadCart(); store.set({ boot: 'ready' }); openOrder(ROUTE.orderId); }
+  if (ROUTE.authAction) { loadCart(); store.set({ boot: 'ready', tab: 'islem' }); }
   // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
   if (ROUTE.reqId && !ROUTE.orderId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
   const firstTab = ROUTE.listCode ? 'liste' : 'katalog';
   if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
   if (cached) setCatalog(cached.items);
-  const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId;
+  const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId || ROUTE.authAction;
   if (cached && !direct) { loadCart(); store.set({ boot: 'ready', tab: firstTab, openReq: null }); }
   try {
     setCatalog(await A.loadPublicCatalog());
@@ -378,7 +379,7 @@ function Shell() {
           <nav className="topnav" aria-label="Ana menü">
             {nav.filter(([k]) => !(pub && k === 'hesap')).map(([k, l, i]) => (
               <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
-                <Icon n={i} s={18} />{l}{badge(k) > 0 && <span className="badge">{badge(k)}</span>}
+                <Icon n={i} s={18} />{l}{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}
               </button>
             ))}
           </nav>
@@ -414,6 +415,7 @@ function Shell() {
         {tab === 'siparisler' && admin && <Orders />}
         {tab === 'siparis' && pub && <OrderPage id={openOrderId} />}
         {tab === 'hesap' && pub && <Account />}
+        {tab === 'islem' && pub && <AuthAction />}
         {tab === 'ayarlar' && admin && <Settings />}
       </main>
       {!admin && <CartBar />}
@@ -422,7 +424,7 @@ function Shell() {
       <nav className="botnav" aria-label="Alt menü">
         {nav.map(([k, l, i, sh]) => (
           <button key={k} className={'botnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
-            <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span className="badge">{badge(k)}</span>}</span>
+            <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
             <span>{sh || l}</span>
           </button>
         ))}

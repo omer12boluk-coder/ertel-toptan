@@ -142,19 +142,29 @@ export class DemoBackend {
   mem() { return (this.db.members = this.db.members || {}); }
   ord() { return (this.db.orders = this.db.orders || {}); }
   onMember(cb) { this.memberCb = cb; const m = this.mem()[this.db.shopSession]; cb(m ? this.pub(m) : null); return () => {}; }
-  async memberSignup({ email, password, name, phone }) {
+  async usernameFree(n) { return !Object.values(this.mem()).some((m) => m.username === n); }
+  async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' } }, keep) {
     if (Object.values(this.mem()).some((m) => m.email === email)) throw new Error('Bu e-posta ile zaten üyelik var. Giriş yapın ya da şifrenizi sıfırlayın.');
+    if (username && !(await this.usernameFree(username))) throw new Error('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
     const uid = 'm_' + rid();
-    const m = { uid, email, pw: password, name, phone, createdAt: now(), addresses: [], invoice: { type: 'person' } };
-    this.mem()[uid] = m; this.db.shopSession = uid; this.persist(); this.memberCb?.(this.pub(m)); return this.pub(m);
+    const m = { uid, email, pw: password, name, phone, username, createdAt: now(), addresses, invoice, verified: true }; // demoda e-posta doğrulaması atlanır
+    this.mem()[uid] = m; this.persist();
+    if (keep) this.db.shopSession = uid;
+    return { ...this.pub(m), verifySent: true };
   }
-  async memberLogin(email, pw) {
-    const m = Object.values(this.mem()).find((x) => x.email === email);
-    if (!m || m.pw !== pw) throw new Error('E-posta veya şifre hatalı.');
+  async memberDone() { this.db.shopSession = null; this.persist(); }
+  async memberLogin(id, pw) {
+    id = String(id).trim().toLowerCase();
+    const m = Object.values(this.mem()).find((x) => x.email === id || x.username === id);
+    if (!m || m.pw !== pw) throw new Error('E-posta / kullanıcı adı veya şifre hatalı.');
     this.db.shopSession = m.uid; this.persist(); this.memberCb?.(this.pub(m));
   }
+  async memberResendVerify(id) { return id; }
   async memberLogout() { this.db.shopSession = null; this.persist(); this.memberCb?.(null); }
-  async memberReset() {}
+  async memberReset(id) { const m = Object.values(this.mem()).find((x) => x.email === id || x.username === id); return m?.email || id; }
+  async authCheckReset() { return 'demo@ornek.com'; }
+  async authConfirmReset() {}
+  async authVerifyEmail() {}
   async saveMember(m) { const o = this.mem()[m.uid]; Object.assign(o, m); this.persist(); this.memberCb?.(this.pub(o)); }
   watchMembers(cb) { return this.sub(() => cb(Object.values(this.mem()).map((m) => this.pub(m)))); }
   async deleteMember(uid) { delete this.mem()[uid]; this.persist(); }

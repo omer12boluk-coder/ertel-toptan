@@ -223,7 +223,7 @@ function Members() {
       {open && (
         <Sheet title={open.name || open.email} sub={`Üye · ${when(open.createdAt)}`} onClose={() => setOpen(null)} footer={<><button className="btn ghost danger" onClick={() => del(open)}><Icon n="trash" s={15} />Üyeyi sil</button>{open.phone && <a className="btn wa" href={waLink(open.phone, `Merhaba ${open.name || ''},`)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp</a>}</>}>
           <div className="o-info one">
-            <div className="o-card"><h3>İletişim</h3><p>{open.email}</p>{open.phone && <p className="num">{open.phone}</p>}</div>
+            <div className="o-card"><h3>İletişim</h3>{open.username && <p>Kullanıcı adı: <b>{open.username}</b></p>}<p>{open.email}</p>{open.phone && <p className="num">{open.phone}</p>}</div>
             <div className="o-card"><h3>Fatura</h3><InvoiceText inv={open.invoice} name={open.name} /></div>
             <div className="o-card"><h3>Adresler</h3>{(open.addresses || []).length ? open.addresses.map((a) => <p key={a.id}><b>{a.title || 'Adres'}:</b> {addrLine(a)}</p>) : <p className="muted">Kayıtlı adres yok</p>}</div>
           </div>

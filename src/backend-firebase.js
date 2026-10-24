@@ -32,6 +32,7 @@ export class FirebaseBackend {
     this.tabOnly = this.appName !== 'shop' && sessionStorage.getItem('auth-tab') === '1'; // mağaza üyesi oturumu her zaman cihazda kalır
     this.auth = U.initializeAuth(this.app, { persistence: this.tabOnly ? U.browserSessionPersistence : [U.browserLocalPersistence, U.indexedDBLocalPersistence] }); // önce localStorage: bazı telefon / WhatsApp içi tarayıcılarda IndexedDB cevap vermeyip girişi kilitliyor
     // WhatsApp / Instagram içi tarayıcılarda canlı bağlantı takılabiliyor; gerekirse otomatik olarak uzun yoklamaya geçer
+    this.auth.languageCode = 'tr'; // doğrulama / şifre e-postaları Türkçe
     try { this.db = F.initializeFirestore(this.app, { experimentalAutoDetectLongPolling: true }); } catch { this.db = F.getFirestore(this.app); }
   }
   d(...p) { return this.F.doc(this.db, ...p); }
@@ -262,38 +263,73 @@ export class FirebaseBackend {
     b.delete(this.d('users', uid)); b.delete(this.d('userPrices', uid)); b.delete(this.d('userNotes', uid));
     await b.commit();
   }
-  // ---- Online mağaza üyeleri (e-posta + şifre). Bayi / yönetici oturumundan tamamen ayrı (ayrı Firebase örneği: 'shop')
+  // ---- Online mağaza üyeleri (e-posta + şifre, isteğe bağlı kullanıcı adı). Bayi / yönetici oturumundan tamamen ayrı (ayrı Firebase örneği: 'shop')
+  // Üye olunca doğrulama e-postası gider; e-postasını doğrulamayan giriş yapamaz.
   onMember(cb) {
     this.memberCb = cb;
     return this.U.onAuthStateChanged(this.auth, async (u) => {
-      if (!u) return cb(null);
       if (this.signingUp) return;
+      if (!u || !u.emailVerified) return cb(null);
       try { const s = await timeout(this.F.getDoc(this.d('members', u.uid))); cb({ uid: u.uid, email: u.email, ...(s.exists() ? s.data() : {}) }); }
       catch { cb({ uid: u.uid, email: u.email }); }
     });
   }
-  async memberSignup({ email, password, name, phone }) {
+  actionUrl() { return { url: location.origin + '/magaza' }; }
+  async usernameFree(name) { const s = await timeout(this.F.getDoc(this.d('usernames', name))); return !s.exists(); }
+  // keep: true → sipariş adımında üye olunca sipariş yazılana kadar oturum açık kalır; sonra memberDone() çağrılır
+  async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' } }, keep) {
+    if (username && !(await this.usernameFree(username))) throw new Error('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
     this.signingUp = true;
+    let cred;
+    try { cred = await this.U.createUserWithEmailAndPassword(this.auth, email, password); }
+    catch (e) { this.signingUp = false; throw new Error(authMsg(e)); }
     try {
-      let cred;
-      try { cred = await this.U.createUserWithEmailAndPassword(this.auth, email, password); }
-      catch (e) { throw new Error(authMsg(e)); }
-      const m = { uid: cred.user.uid, email, name, phone, createdAt: now(), addresses: [], invoice: { type: 'person' } };
+      const m = { uid: cred.user.uid, email, name, phone, createdAt: now(), addresses, invoice, ...(username ? { username } : {}) };
       await timeout(this.F.setDoc(this.d('members', m.uid), m));
-      this.memberCb?.(m);
-      return m;
-    } finally { this.signingUp = false; }
+      if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid: m.uid, email })).catch((e) => console.warn(e));
+      await this.U.sendEmailVerification(cred.user, this.actionUrl()).catch((e) => console.warn(e));
+      if (!keep) await this.memberDone();
+      return { ...m, verifySent: true };
+    } catch (e) { await this.memberDone(); throw e; }
   }
-  async memberLogin(email, pw) { try { await this.U.signInWithEmailAndPassword(this.auth, email, pw); } catch (e) { throw new Error(authMsg(e)); } }
+  async memberDone() { this.signingUp = false; await this.U.signOut(this.auth); }
+  async emailOf(id) {
+    id = String(id || '').trim().toLowerCase();
+    if (id.includes('@')) return id;
+    const s = await timeout(this.F.getDoc(this.d('usernames', id)));
+    if (!s.exists()) throw new Error('Bu kullanıcı adıyla üyelik bulunamadı.');
+    return s.data().email;
+  }
+  async memberLogin(id, pw) {
+    const email = await this.emailOf(id);
+    let cred;
+    try { cred = await this.U.signInWithEmailAndPassword(this.auth, email, pw); } catch (e) { throw new Error(authMsg(e)); }
+    if (!cred.user.emailVerified) { await this.U.signOut(this.auth); const e = new Error('E-posta adresiniz henüz doğrulanmadı. Size gönderdiğimiz e-postadaki bağlantıya tıklayın.'); e.code = 'unverified'; throw e; }
+  }
+  async memberResendVerify(id, pw) {
+    const email = await this.emailOf(id);
+    this.signingUp = true;
+    try { const c = await this.U.signInWithEmailAndPassword(this.auth, email, pw); await this.U.sendEmailVerification(c.user, this.actionUrl()); }
+    catch (e) { throw new Error(authMsg(e)); }
+    finally { await this.memberDone(); }
+    return email;
+  }
   async memberLogout() { await this.U.signOut(this.auth); }
-  async memberReset(email) { try { await this.U.sendPasswordResetEmail(this.auth, email); } catch (e) { throw new Error(authMsg(e)); } }
+  async memberReset(id) { const email = await this.emailOf(id); try { await this.U.sendPasswordResetEmail(this.auth, email, this.actionUrl()); } catch (e) { throw new Error(authMsg(e)); } return email; }
+  // E-postadaki bağlantılar (Firebase > Authentication > Templates > işlem adresi: /magaza/islem)
+  async authCheckReset(code) { try { return await this.U.verifyPasswordResetCode(this.auth, code); } catch (e) { throw new Error(authMsg(e)); } }
+  async authConfirmReset(code, pw) { try { await this.U.confirmPasswordReset(this.auth, code, pw); } catch (e) { throw new Error(authMsg(e)); } }
+  async authVerifyEmail(code) { try { await this.U.applyActionCode(this.auth, code); } catch (e) { throw new Error(authMsg(e)); } }
   async saveMember(m) {
     const { uid, ...rest } = m;
     await timeout(this.F.setDoc(this.d('members', uid), { uid, ...rest }, { merge: true }));
     this.memberCb?.(m);
   }
   watchMembers(cb) { return this.F.onSnapshot(this.c('members'), (s) => cb(s.docs.map((x) => ({ uid: x.id, ...x.data() }))), (e) => console.warn(e)); }
-  async deleteMember(uid) { await this.F.deleteDoc(this.d('members', uid)); }
+  async deleteMember(uid) {
+    const s = await this.F.getDoc(this.d('members', uid)); const un = s.exists() && s.data().username;
+    const b = this.F.writeBatch(this.db); b.delete(this.d('members', uid)); if (un) b.delete(this.d('usernames', un)); await b.commit();
+  }
 
   // ---- Online mağaza siparişleri
   newOrderId() { return this.F.doc(this.c('orders')).id; }
@@ -324,6 +360,8 @@ function authMsg(e) {
   if (/invalid-email/.test(c)) return 'E-posta adresi geçersiz görünüyor.';
   if (/weak-password/.test(c)) return 'Şifre en az 6 karakter olmalı.';
   if (/user-not-found|wrong-password|invalid-credential|invalid-login/.test(c)) return 'E-posta veya şifre hatalı.';
+  if (/expired-action-code|invalid-action-code/.test(c)) return 'Bu bağlantının süresi dolmuş ya da daha önce kullanılmış. Yeniden isteyin.';
+  if (/user-disabled/.test(c)) return 'Bu hesap kapatılmış.';
   if (/too-many-requests/.test(c)) return 'Çok fazla deneme yapıldı, biraz sonra tekrar deneyin.';
   if (/network/.test(c)) return 'Bağlantı hatası, internetinizi kontrol edin.';
   return e.message;

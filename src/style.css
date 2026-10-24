@@ -1164,3 +1164,69 @@ a.btn { text-decoration: none; }
 .co-who-t { flex: 1; min-width: 200px; }
 .co-who > span.co-who-t { flex: 1; }
 @media (max-width: 560px) { .acct .profile-card .page-t { font-size: 22px; } .acct .profile-card { gap: 12px; } }
+/* sepet: WhatsApp'tan gönder + linki kopyala (yan yana) */
+.wa-row { display: flex; gap: 8px; }
+.wa-row .wa-main { flex: 1; min-height: 48px; font-size: 15.5px; font-weight: 700; }
+.wa-row .wa-copy { width: 48px; min-height: 48px; flex: none; }
+.wa-row [aria-disabled="true"] { opacity: .5; pointer-events: none; }
+
+/* ===== animasyonlar: hafif, sadece transform / opacity (telefonda akıcı) ===== */
+:root { --ease: cubic-bezier(.2, .7, .2, 1); --spring: cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes slideUp { from { opacity: 0; transform: translate(-50%, 24px); } }
+@keyframes shine { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+/* sayfa / sekme geçişi */
+.main > * { animation: rise .32s var(--ease) both; }
+.plist > li { animation: rise .35s var(--ease) both; }
+.plist > li:nth-child(2) { animation-delay: .02s; } .plist > li:nth-child(3) { animation-delay: .04s; } .plist > li:nth-child(4) { animation-delay: .06s; }
+.plist > li:nth-child(5) { animation-delay: .08s; } .plist > li:nth-child(6) { animation-delay: .1s; } .plist > li:nth-child(n+7) { animation-delay: .12s; }
+.olist > li, .co-sec, .o-card, .set-card, .done-card, .cart-sum, .gline { animation: rise .3s var(--ease) both; }
+.co-sec:nth-child(2) { animation-delay: .04s; } .co-sec:nth-child(3) { animation-delay: .08s; } .co-sec:nth-child(4) { animation-delay: .12s; } .co-sec:nth-child(5) { animation-delay: .16s; }
+/* ürün satırı: üzerine gelince tıklanabilir olduğu belli olsun */
+.prow { position: relative; transition: background .18s var(--ease), box-shadow .18s var(--ease); }
+.prow::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); transform: scaleY(0); transition: transform .2s var(--ease); }
+.prow-main { cursor: pointer; }
+.prow .thumb { transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
+.prow-name { transition: color .15s; }
+@media (hover: hover) {
+  .prow:hover { background: color-mix(in oklab, var(--accent) 4%, var(--surface)); }
+  .prow:hover::before { transform: scaleY(1); }
+  .prow:hover .thumb { transform: scale(1.06); box-shadow: 0 4px 14px -6px rgb(0 0 0 / .35); }
+  .prow:hover .prow-name { color: var(--accent); }
+  .ocard, .seg-card, .addr-card:not(.static), .tile, .door, .rcard, .cat-link { transition: transform .18s var(--ease), box-shadow .18s var(--ease), border-color .15s, background .15s; }
+  .ocard:hover, .tile:hover, .rcard:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -12px rgb(10 20 40 / .35); }
+  .seg-card:hover, .addr-card:not(.static):hover { transform: translateY(-1px); }
+  .door:hover { transform: translateY(-3px); box-shadow: 0 16px 34px -18px rgb(10 20 40 / .45); }
+  .gline:hover { background: var(--surface-2); }
+  .gline-p .thumb { transition: transform .2s var(--ease); } .gline-p:hover .thumb { transform: scale(1.06); }
+  .btn.primary:hover:not(:disabled), .btn.wa:hover:not(:disabled) { box-shadow: 0 6px 16px -8px color-mix(in oklab, var(--accent) 80%, black); }
+  .gbar:hover { transform: translateX(-50%) translateY(-2px); }
+  .topnav-b:hover .ic, .botnav-b:hover .ic { transform: translateY(-1px); }
+}
+/* basınca hafif çökme */
+.btn, .icon-btn, .chip, .topnav-b, .botnav-b, .ocard, .seg-card, .addr-card, .tile, .gbar, .stepper button { transition: transform .12s var(--ease), background .15s, border-color .15s, box-shadow .18s, color .15s; }
+.btn:active:not(:disabled), .icon-btn:active, .chip:active, .ocard:active, .seg-card:active, .addr-card:not(.static):active, .tile:active, .stepper button:active { transform: scale(.96); }
+.gbar:active { transform: translateX(-50%) scale(.98); }
+.botnav-b .ic, .topnav-b .ic { transition: transform .2s var(--spring); }
+.botnav-b.on .ic { transform: translateY(-1px) scale(1.08); }
+/* sepete ekleme: düğme ve sepet rozeti zıplar */
+.btn.add { transition: transform .12s var(--ease), background .15s, color .15s; }
+.btn.add:hover .ic { transform: rotate(90deg); }
+.btn.add .ic { transition: transform .25s var(--spring); }
+.prow-side .stepper { animation: rise .22s var(--spring) both; }
+.badge { animation: pop .35s var(--spring); }
+.gbar { animation: slideUp .35s var(--spring) both; transition: transform .2s var(--ease), box-shadow .2s; }
+.gbar-n b { animation: pop .35s var(--spring); }
+/* seçim kartları: radyo noktası yumuşak */
+.radio { transition: border-width .18s var(--spring), border-color .15s; }
+/* takip çubuğu dolar gibi */
+.track li::before { transform-origin: left; transition: background .3s; }
+.track li.on .track-dot { animation: pop .5s var(--spring); }
+/* resim yüklenirken parıltı */
+.thumb img { animation: fade .3s ease both; }
+.toast { animation: rise .25s var(--spring); }
+.sheet { animation: up .28s var(--spring); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; }
+}

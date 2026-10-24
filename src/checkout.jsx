@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder } from './store.js';
 import { Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
-import { fmt, totals, fmtTotals, when, ls, rid, now } from './utils.js';
+import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername } from './utils.js';
 import { ORDER_STATUS, PAY, DELIVERY, ILLER } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -15,6 +15,8 @@ const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
 const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(e || '').trim());
 const digits = (v) => String(v || '').replace(/\D/g, '');
+const unameOk = (u) => /^[a-z0-9._-]{3,20}$/.test(u);
+const suggestUser = (email) => cleanUsername(String(email || '').split('@')[0]).slice(0, 20);
 const blankAddr = () => ({ id: rid(), title: '', city: '', district: '', address: '' });
 export const addrLine = (a) => (!a ? '' : [a.address, [a.district, a.city].filter(Boolean).join(' / ')].filter(Boolean).join(', '));
 // Firestore "undefined" kabul etmez: boş alanları temizle
@@ -86,7 +88,7 @@ export function Checkout({ items, onBack }) {
     if (f.contact.name.trim().length < 3) e.name = 'Adınızı ve soyadınızı yazın';
     if (digits(f.contact.phone).length !== 11) e.phone = 'Telefonu 0(5xx) xxx xx xx şeklinde yazın';
     if (f.contact.email.trim() && !emailOk(f.contact.email)) e.email = 'E-posta adresi geçersiz';
-    if (!member && f.signup) { if (!emailOk(f.contact.email)) e.email = 'Üyelik için e-posta gerekli'; if (f.pw.length < 6) e.pw = 'Şifre en az 6 karakter olmalı'; }
+    if (!member && f.signup) { if (!emailOk(f.contact.email)) e.email = 'Üyelik için e-posta gerekli'; if (f.pw.length < 6) e.pw = 'Şifre en az 6 karakter olmalı'; if (f.uname && !unameOk(f.uname)) e.uname = '3-20 karakter: harf, rakam, nokta, tire'; }
     if (f.method === 'cargo') Object.assign(e, addrErrors(delivAddr, 'addr'));
     if (f.inv.type === 'company') {
       if (f.inv.company.trim().length < 2) e['inv.company'] = 'Firma ünvanını yazın';
@@ -108,12 +110,18 @@ export function Checkout({ items, onBack }) {
     try {
       let uid = member?.uid || null;
       const email = f.contact.email.trim().toLowerCase();
-      if (!member && f.signup) { const m = await A.memberSignup({ email, password: f.pw, name: f.contact.name.trim(), phone: f.contact.phone }); uid = m.uid; }
-      const t = now(), no = orderNo(), id = A.newOrderId();
       const cleanA = (a) => a && { city: a.city, district: a.district.trim(), address: a.address.trim(), ...(a.title ? { title: a.title } : {}) };
       const inv = f.inv.type === 'company'
         ? { type: 'company', company: f.inv.company.trim(), taxOffice: f.inv.taxOffice.trim(), taxNo: digits(f.inv.taxNo) }
         : { type: 'person', ...(f.inv.tc ? { tc: digits(f.inv.tc) } : {}) };
+      // sipariş verirken üye ol: hesap + bilgiler kaydedilir, doğrulama e-postası gider; sipariş yazılınca oturum kapanır (doğrulayınca giriş yapar)
+      let signedUp = false;
+      if (!member && f.signup) {
+        const addr = f.method === 'cargo' ? [{ ...cleanA(delivAddr), id: rid(), title: 'Adresim' }] : [];
+        const m = await A.memberSignup({ email, password: f.pw, name: f.contact.name.trim(), phone: f.contact.phone, username: f.uname || undefined, addresses: addr, invoice: inv }, true);
+        uid = m.uid; signedUp = true;
+      }
+      const t = now(), no = orderNo(), id = A.newOrderId();
       const order = strip({
         no, uid, member: !!uid, status: 'new', createdAt: t, updatedAt: t, unread: 1, history: [{ s: 'new', at: t }],
         items: items.map(({ id: pid, k, n, cur, qty, offer, pi, u }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u })),
@@ -123,21 +131,22 @@ export function Checkout({ items, onBack }) {
         invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' && !f.billSame ? cleanA(f.bill) : null },
         pay: f.pay, note: f.note.trim(),
       });
-      await A.placeOrder(order, id);
+      try { await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
       // üye: yeni adresi ve fatura bilgisini hesaba kaydet
-      if (uid) {
+      if (uid && !signedUp) {
         const m = store.s.member || { uid };
         const patch = { uid, name: m.name || order.contact.name, phone: m.phone || order.contact.phone, invoice: inv };
         let addrs = m.addresses || [];
         if (f.method === 'cargo' && (f.addrId === 'new' || !saved.length) && (f.saveAddr || f.signup)) addrs = [...addrs, { ...cleanA(delivAddr), id: rid(), title: delivAddr.title || (addrs.length ? 'Adres ' + (addrs.length + 1) : 'Adresim') }];
         patch.addresses = addrs;
         try { await A.saveMember({ ...m, ...patch }); } catch (x) { console.warn(x); }
-      } else {
+      }
+      if (!member) {
         ls.set('my-orders', [{ id, no, at: t }, ...myLocalOrders()].slice(0, 20));
         ls.set('guest-checkout', { contact: order.contact, addr: f.method === 'cargo' ? { ...cleanA(delivAddr), id: 'g' } : null, inv: f.inv }); // bu cihazda bir dahakine hazır gelsin
       }
       clearCart();
-      openOrder(id, true);
+      openOrder(id, signedUp ? 'verify' : true);
     } catch (x) { toast('Sipariş gönderilemedi: ' + x.message, 'bad'); }
     setBusy(false);
   }
@@ -234,8 +243,12 @@ export function Checkout({ items, onBack }) {
 
           {!member && O.signup !== false && (
             <section className="co-sec co-signup">
-              <label className="mini-check big"><input type="checkbox" checked={f.signup} onChange={(e) => set({ signup: e.target.checked })} /><span><b>Bu bilgilerle üye ol</b> <small className="muted">— bir dahaki siparişte her şey hazır gelir, siparişlerinizi takip edersiniz</small></span></label>
-              {f.signup && <Field label="Şifre belirleyin" error={err.pw} hint="En az 6 karakter"><PasswordInput id="co-pw" autoComplete="new-password" value={f.pw} onChange={(e) => set({ pw: e.target.value })} /></Field>}
+              <label className="mini-check big"><input type="checkbox" checked={f.signup} onChange={(e) => set({ signup: e.target.checked, uname: f.uname || suggestUser(f.contact.email) })} /><span><b>Bu bilgilerle üye ol</b> <small className="muted">— bir dahaki siparişte her şey hazır gelir, siparişlerinizi takip edersiniz</small></span></label>
+              {f.signup && <div className="row2">
+                <Field label="Kullanıcı adı" opt error={err.uname} hint="E-posta yerine bununla da giriş yapabilirsiniz"><input id="co-uname" autoCapitalize="none" value={f.uname} placeholder={suggestUser(f.contact.email)} onChange={(e) => set({ uname: cleanUsername(e.target.value).slice(0, 20) })} /></Field>
+                <Field label="Şifre belirleyin" error={err.pw} hint="En az 6 karakter"><PasswordInput id="co-pw" autoComplete="new-password" value={f.pw} onChange={(e) => set({ pw: e.target.value })} /></Field>
+              </div>}
+              {f.signup && <p className="fine">Siparişten sonra e-postanıza bir doğrulama bağlantısı gelir; ona tıklayınca üyeliğiniz açılır.</p>}
             </section>
           )}
         </div>
@@ -276,7 +289,7 @@ function initForm(m, methods, guest) {
     addr: !m && g.addr ? { ...blankAddr(), ...g.addr } : blankAddr(),
     saveAddr: true,
     inv: { type: inv0.type || 'person', tc: inv0.tc || '', company: inv0.company || '', taxOffice: inv0.taxOffice || '', taxNo: inv0.taxNo || '' },
-    billSame: true, bill: blankAddr(), pay: 'havale', note: '', signup: false, pw: '',
+    billSame: true, bill: blankAddr(), pay: 'havale', note: '', signup: false, pw: '', uname: '',
   };
 }
 
@@ -315,6 +328,7 @@ export function OrderPage({ id }) {
             <button className="btn outline" onClick={() => copyText(link, 'Sipariş linki kopyalandı')}><Icon n="copy" s={16} />Takip linkini kopyala</button>
             <button className="btn ghost" onClick={() => go('katalog')}>Alışverişe devam et</button>
           </div>
+          {orderJust === 'verify' && <div className="banner info verify-note"><Icon n="check" /><div><b>Üyeliğinizi tamamlayın:</b> <span>{o.contact?.email}</span> adresine bir doğrulama bağlantısı gönderdik. Bağlantıya tıklayınca giriş yapabilir, siparişlerinizi Hesabım’dan takip edebilirsiniz. Gelmediyse gereksiz (spam) klasörüne bakın.</div></div>}
           {!o.uid && <p className="fine">Bu sayfanın linkini saklayın; siparişinizin durumunu buradan takip edebilirsiniz.</p>}
         </div>
       )}
@@ -374,58 +388,134 @@ function PayInfo({ o }) {
 // Giriş / üye ol (Hesabım sayfasında ve sipariş adımında pencere olarak)
 function AuthForm({ onDone, compact }) {
   const { api: A, settings: S } = useStore();
-  const [view, setView] = useState('login'); // login | signup | reset | resetSent
-  const [f, setF] = useState({ email: '', pw: '', pw2: '', name: '', phone: '' });
+  const [view, setView] = useState('login'); // login | signup | reset | resetSent | verifySent | unverified
+  const [f, setF] = useState({ id: '', email: '', uname: '', pw: '', pw2: '', name: '', phone: '' });
   const [err, setErr] = useState('');
+  const [sentTo, setSentTo] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e?.target ? e.target.value : e }));
   const canSignup = S.orders?.signup !== false;
+  const go2 = (v) => { setErr(''); setView(v); };
   async function submit(e) {
     e.preventDefault(); setErr('');
-    const email = f.email.trim().toLowerCase();
-    if (!emailOk(email)) return setErr('E-posta adresini kontrol edin.');
     setBusy(true);
     try {
-      if (view === 'login') { await A.memberLogin(email, f.pw); toast('Giriş yapıldı'); onDone?.(); }
-      else if (view === 'signup') {
+      if (view === 'login') {
+        if (!f.id.trim()) throw new Error('E-posta ya da kullanıcı adınızı yazın.');
+        await A.memberLogin(f.id, f.pw); toast('Giriş yapıldı'); onDone?.();
+      } else if (view === 'signup') {
+        const email = f.email.trim().toLowerCase();
         if (f.name.trim().length < 3) throw new Error('Adınızı ve soyadınızı yazın.');
+        if (!emailOk(email)) throw new Error('E-posta adresini kontrol edin.');
+        if (f.uname && !unameOk(f.uname)) throw new Error('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).');
         if (phoneDigits(f.phone).length !== 11) throw new Error('Telefonu 0(5xx) xxx xx xx şeklinde yazın.');
         if (f.pw.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
         if (f.pw !== f.pw2) throw new Error('Şifreler aynı değil.');
-        await A.memberSignup({ email, password: f.pw, name: f.name.trim(), phone: f.phone });
-        toast('Üyeliğiniz oluşturuldu'); onDone?.();
-      } else { await A.memberReset(email); setView('resetSent'); }
-    } catch (x) { setErr(x.message); }
+        await A.memberSignup({ email, password: f.pw, name: f.name.trim(), phone: f.phone, username: f.uname || undefined });
+        setSentTo(email); setF((x) => ({ ...x, id: f.uname || email, pw: '' })); setView(A.mode === 'demo' ? 'login' : 'verifySent');
+        if (A.mode === 'demo') toast('Üyeliğiniz oluşturuldu, giriş yapın');
+      } else if (view === 'reset') {
+        if (!f.id.trim()) throw new Error('E-posta ya da kullanıcı adınızı yazın.');
+        setSentTo(await A.memberReset(f.id)); setView('resetSent');
+      }
+    } catch (x) { if (x.code === 'unverified') setView('unverified'); setErr(x.message); }
     setBusy(false);
   }
-  if (view === 'resetSent') return (
-    <div className="auth-form">
-      <p>Şifre sıfırlama bağlantısını <b>{f.email}</b> adresine gönderdik. E-postanızı (gerekirse gereksiz klasörünü) kontrol edin.</p>
-      <button className="btn outline" onClick={() => setView('login')}>Girişe dön</button>
+  async function resend() {
+    setBusy(true); setErr('');
+    try { setSentTo(await A.memberResendVerify(f.id, f.pw)); setView('verifySent'); } catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  if (view === 'resetSent' || view === 'verifySent') return (
+    <div className="auth-form auth-sent">
+      <span className="sent-ic"><Icon n="send" s={26} /></span>
+      {view === 'resetSent'
+        ? <p>Bu bilgilerle bir üyelik varsa <b>{sentTo}</b> adresine şifre yenileme bağlantısı gönderdik. Bağlantıya tıklayıp yeni şifrenizi belirleyin.</p>
+        : <p><b>{sentTo}</b> adresine bir doğrulama bağlantısı gönderdik. Bağlantıya tıklayınca üyeliğiniz açılır ve giriş yapabilirsiniz.</p>}
+      <p className="fine">E-posta birkaç dakika içinde gelir. Gelmediyse <b>gereksiz (spam)</b> klasörüne bakın.</p>
+      <button className="btn outline" onClick={() => go2('login')}>Girişe dön</button>
     </div>
   );
   return (
     <form className="auth-form" onSubmit={submit}>
-      {view !== 'reset' && canSignup && (
+      {['login', 'signup'].includes(view) && canSignup && (
         <div className="tabs auth-tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={view === 'login'} className={'tab' + (view === 'login' ? ' on' : '')} onClick={() => { setErr(''); setView('login'); }}>Giriş yap</button>
-          <button type="button" role="tab" aria-selected={view === 'signup'} className={'tab' + (view === 'signup' ? ' on' : '')} onClick={() => { setErr(''); setView('signup'); }}>Üye ol</button>
+          <button type="button" role="tab" aria-selected={view === 'login'} className={'tab' + (view === 'login' ? ' on' : '')} onClick={() => go2('login')}>Giriş yap</button>
+          <button type="button" role="tab" aria-selected={view === 'signup'} className={'tab' + (view === 'signup' ? ' on' : '')} onClick={() => go2('signup')}>Üye ol</button>
         </div>
       )}
-      {view === 'reset' && <p className="fine">E-posta adresinizi yazın, şifre sıfırlama bağlantısı gönderelim.</p>}
+      {view === 'reset' && <p className="fine">E-posta adresinizi ya da kullanıcı adınızı yazın; şifre yenileme bağlantısı gönderelim.</p>}
       {view === 'signup' && <>
         <Field label="Ad soyad"><input id="m-name" autoComplete="name" value={f.name} onChange={set('name')} /></Field>
-        <Field label="Cep telefonu"><PhoneInput id="m-phone" value={f.phone} onChange={set('phone')} /></Field>
+        <Field label="E-posta" hint="Doğrulama bağlantısı buraya gelir"><input id="m-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={(e) => { const v = e.target.value; setF((x) => ({ ...x, email: v, uname: x.unameTouched ? x.uname : suggestUser(v) })); }} /></Field>
+        <div className="row2">
+          <Field label="Kullanıcı adı" opt hint="E-posta yerine bununla da girebilirsiniz"><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
+          <Field label="Cep telefonu"><PhoneInput id="m-phone" value={f.phone} onChange={set('phone')} /></Field>
+        </div>
       </>}
-      <Field label="E-posta"><input id="m-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={set('email')} required /></Field>
+      {view !== 'signup' && <Field label="E-posta ya da kullanıcı adı"><input id="m-id" autoComplete="username" autoCapitalize="none" value={f.id} onChange={set('id')} required /></Field>}
       {view !== 'reset' && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}
       {view === 'signup' && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}
       {err && <p className="err">{err}</p>}
-      <button className="btn primary big center-btn" disabled={busy}>{busy ? 'Bekleyin…' : view === 'login' ? 'Giriş yap' : view === 'signup' ? 'Üye ol' : 'Bağlantı gönder'}</button>
-      {view === 'login' && <button type="button" className="link center" onClick={() => { setErr(''); setView('reset'); }}>Şifremi unuttum</button>}
-      {view === 'reset' && <button type="button" className="link center" onClick={() => setView('login')}>← Girişe dön</button>}
-      {!compact && <p className="fine center">Üye olmadan da sipariş verebilirsiniz: sepeti onaylayıp bilgilerinizi yazmanız yeterli.</p>}
+      {view === 'unverified'
+        ? <button type="button" className="btn primary big center-btn" disabled={busy} onClick={resend}>{busy ? 'Bekleyin…' : 'Doğrulama e-postasını tekrar gönder'}</button>
+        : <button className="btn primary big center-btn" disabled={busy}>{busy ? 'Bekleyin…' : view === 'signup' ? 'Üye ol' : view === 'reset' ? 'Bağlantı gönder' : 'Giriş yap'}</button>}
+      {view === 'login' && <button type="button" className="link center" onClick={() => go2('reset')}>Şifremi unuttum</button>}
+      {['reset', 'unverified'].includes(view) && <button type="button" className="link center" onClick={() => go2('login')}>← Girişe dön</button>}
+      {view === 'signup' && <p className="fine center">Üye olunca e-postanıza bir doğrulama bağlantısı gelir; ona tıklayınca üyeliğiniz açılır.</p>}
+      {!compact && view === 'login' && <p className="fine center">Üye olmadan da sipariş verebilirsiniz: sepeti onaylayıp bilgilerinizi yazmanız yeterli.</p>}
     </form>
+  );
+}
+
+// E-postadaki bağlantı: şifre yenileme ya da e-posta doğrulama (/magaza/islem?mode=…&oobCode=…)
+export function AuthAction() {
+  const A = useStore((s) => s.api);
+  const q = new URLSearchParams(location.search);
+  const mode = q.get('mode'), code = q.get('oobCode');
+  const [st, setSt] = useState('wait'); // wait | form | done | err
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState(''); const [pw2, setPw2] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!code) { setErr('Bağlantı eksik görünüyor.'); setSt('err'); return; }
+    if (mode === 'resetPassword') A.authCheckReset(code).then((e) => { setEmail(e); setSt('form'); }, (e) => { setErr(e.message); setSt('err'); });
+    else if (mode === 'verifyEmail') A.authVerifyEmail(code).then(() => setSt('done'), (e) => { setErr(e.message); setSt('err'); });
+    else { setErr('Bu bağlantı tanınmadı.'); setSt('err'); }
+  }, []);
+  async function save(e) {
+    e.preventDefault(); setErr('');
+    if (pw.length < 6) return setErr('Şifre en az 6 karakter olmalı.');
+    if (pw !== pw2) return setErr('Şifreler aynı değil.');
+    setBusy(true);
+    try { await A.authConfirmReset(code, pw); setSt('done'); } catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  const toAccount = () => { history.replaceState(null, '', '/magaza'); go('hesap'); };
+  return (
+    <div className="page narrow acct">
+      <div className="set-card auth-action">
+        {st === 'wait' && <div className="list-wait"><div className="spinner" aria-label="Yükleniyor" /></div>}
+        {st === 'err' && <><h1 className="page-t">Bağlantı geçersiz</h1><p className="err">{err}</p><button className="btn outline" onClick={toAccount}>Hesabım’a git</button></>}
+        {st === 'form' && (
+          <form className="auth-form" onSubmit={save}>
+            <h1 className="page-t">Yeni şifre belirleyin</h1>
+            <p className="muted">{email}</p>
+            <Field label="Yeni şifre" hint="En az 6 karakter"><PasswordInput id="ra-pw" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} required /></Field>
+            <Field label="Yeni şifre (tekrar)"><PasswordInput id="ra-pw2" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} required /></Field>
+            {err && <p className="err">{err}</p>}
+            <button className="btn primary big center-btn" disabled={busy}>{busy ? 'Bekleyin…' : 'Şifreyi kaydet'}</button>
+          </form>
+        )}
+        {st === 'done' && <div className="auth-form auth-sent">
+          <span className="sent-ic"><Icon n="check" s={28} /></span>
+          <h1 className="page-t">{mode === 'verifyEmail' ? 'E-postanız doğrulandı' : 'Şifreniz değişti'}</h1>
+          <p className="muted">{mode === 'verifyEmail' ? 'Üyeliğiniz açıldı. Şimdi giriş yapabilirsiniz.' : 'Yeni şifrenizle giriş yapabilirsiniz.'}</p>
+          <button className="btn primary" onClick={toAccount}>Giriş yap</button>
+        </div>}
+      </div>
+    </div>
   );
 }
 function AuthSheet({ onClose }) {
@@ -483,7 +573,7 @@ function MemberHome() {
         <Avatar u={m} size={64} />
         <div className="acct-id">
           <h1 className="page-t">{m.name || 'Hesabım'}</h1>
-          <p className="muted">{m.email}</p>{m.phone && <p className="muted num">{m.phone}</p>}
+          <p className="muted">{m.email}</p>{m.username && <p className="muted">Kullanıcı adı: <b>{m.username}</b></p>}{m.phone && <p className="muted num">{m.phone}</p>}
         </div>
         <button className="btn sm ghost danger" onClick={() => A.memberLogout().then(() => toast('Çıkış yapıldı'))}><Icon n="out" s={16} />Çıkış</button>
       </div>

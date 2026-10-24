@@ -36,10 +36,9 @@ export function Cart() {
   useEffect(() => { if (!items.length && step !== 'cart') setStep('cart'); }, [items.length]);
   if (!items.length) return <EmptyCart />;
   if (step === 'checkout') return <Checkout items={items} onBack={() => to('cart')} />;
-  if (step === 'wa') return <ShopWhatsApp items={items} onBack={() => to('cart')} />;
   if (step === 'send') return <BayiSend items={items} onBack={() => to('cart')} />;
   const orders = pub && S.orders?.enabled !== false;
-  return <CartStep items={items} pub={pub} onConfirm={() => to(pub ? (orders ? 'checkout' : 'wa') : 'send')} onWhatsApp={orders ? () => to('wa') : null} />;
+  return <CartStep items={items} pub={pub} orders={orders} onConfirm={() => (pub && !orders ? null : to(pub ? 'checkout' : 'send'))} />;
 }
 
 function EmptyCart() {
@@ -55,7 +54,7 @@ function EmptyCart() {
 }
 
 // ---- 1. adım: sepet (iki tarafta da aynı) ------------------------------------------------
-function CartStep({ items, pub, onConfirm, onWhatsApp }) {
+function CartStep({ items, pub, orders, onConfirm }) {
   const S = useStore((s) => s.settings);
   const rate = useRate();
   const tot = totals(items, 'offer');
@@ -105,16 +104,13 @@ function CartStep({ items, pub, onConfirm, onWhatsApp }) {
             {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
           </div>
           <VatLines by={tot} />
-          <button className="btn primary big" onClick={onConfirm}>
-            <Icon n="check" />
-            <span><b>Sepeti onayla</b><small>{pub ? (onWhatsApp ? 'Teslimat ve fatura bilgileri' : 'WhatsApp’tan gönderin') : 'Hazırlatın ya da fiyat sorun'}</small></span>
-          </button>
-          {onWhatsApp && (
-            <button className="btn wa-soft big" onClick={onWhatsApp}>
-              <Icon n="wa" />
-              <span><b>WhatsApp’tan liste gönder</b><small>Sadece listenin linki gider, birlikte konuşuruz</small></span>
+          {(!pub || orders) && (
+            <button className="btn primary big" onClick={onConfirm}>
+              <Icon n="check" />
+              <span><b>Sepeti onayla</b><small>{pub ? 'Teslimat ve fatura bilgileri' : 'Hazırlatın ya da fiyat sorun'}</small></span>
             </button>
           )}
+          {pub && <ShopWhatsApp items={items} />}
           <p className="fine">{pub ? S.orders?.cargoNote || '' : S.shop.pickupNote}</p>
         </aside>
       </div>
@@ -122,53 +118,19 @@ function CartStep({ items, pub, onConfirm, onWhatsApp }) {
   );
 }
 
-// ---- Mağaza: WhatsApp'tan liste linki (kaydedilmez) ----------------------------------------
-function ShopWhatsApp({ items, onBack }) {
-  const { byId, settings: S } = useStore();
+// ---- Mağaza: sepeti WhatsApp'tan liste linki olarak gönder (hiçbir yere kaydedilmez; ara sayfa yok)
+function ShopWhatsApp({ items }) {
+  const S = useStore((s) => s.settings);
   const [no] = useState(newNo);
-  const [sharedImgs, setSharedImgs] = useState(false);
-  const [files, setFiles] = useState(null);
-  const ids = useMemo(() => items.map(({ id, qty }) => ({ id, qty })), [JSON.stringify(items.map((i) => [i.id, i.qty]))]);
-  const tot = totals(items, 'offer');
-  const link = useMemo(() => listLink(encodeList({ no, at: Date.now(), items: ids })), [no, ids]);
+  const key = items.map((i) => i.id + ':' + i.qty).join(',');
+  const link = useMemo(() => listLink(encodeList({ no, at: Date.now(), items: items.map(({ id, qty }) => ({ id, qty })) })), [no, key]);
   const wa = S.shop.whatsapp ? waLink(S.shop.whatsapp, link) : null;
-  const rec = useMemo(() => { const L = { no, at: Date.now(), rows: ids.map((i) => ({ ...i, price: null })), priced: false }; return listRecord(L, listItems(L, byId)); }, [no, ids, byId]);
-  const phone = isPhone() && !!navigator.share;
-  useEffect(() => {
-    setFiles(null);
-    if (!phone) return;
-    let live = true;
-    renderListImages(rec, { rate: currentRate() }).then((blobs) => { if (live) setFiles(blobs.map((b, i) => new File([b], `liste-${no}${blobs.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' }))); }).catch(() => {});
-    return () => { live = false; };
-  }, [rec]);
-  async function send() {
-    // telefon: önce resimler (paylaş menüsü), sonra link ayrı mesaj olarak
-    if (phone && files?.length && navigator.canShare?.({ files })) {
-      try { await navigator.share({ files }); setSharedImgs(true); return; }
-      catch (e) { if (e.name === 'AbortError') return; }
-    }
-    if (!wa) return toast('Dükkan WhatsApp numarası girilmemiş', 'bad');
-    window.open(wa, '_blank', 'noopener');
-  }
   return (
-    <div className="page send-step">
-      <div className="send-bar">
-        <button className="btn sm ghost" onClick={onBack}><Icon n="back" s={16} />Sepet</button>
-        <div className="send-t"><b>Liste #{no}</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
-        <div className="send-btns">
-          <button className="btn wa" onClick={send} disabled={(phone && !files) || (!phone && !wa)}><Icon n="wa" s={17} />{phone && !files ? 'Hazırlanıyor…' : 'WhatsApp’tan gönder'}</button>
-          <button className="btn outline" onClick={() => copyText(link, 'Link kopyalandı — WhatsApp’ta yapıştırın')}><Icon n="copy" s={16} />Linki kopyala</button>
-        </div>
-      </div>
-      {sharedImgs ? (
-        <div className="gsend-done">
-          <span><b>Resimler gönderildi.</b> Şimdi listenin linkini de gönderin:</span>
-          <a className="btn wa" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’tan gönder</a>
-        </div>
-      ) : <p className="fine send-hint">İsterseniz <b>Linki kopyala</b>’ya dokunup WhatsApp’ta yapıştırarak da gönderebilirsiniz.</p>}
-      {!S.shop.whatsapp && <p className="err">Dükkan WhatsApp numarası henüz girilmemiş.</p>}
-      <ListPaper r={rec} rate={currentRate()} />
-      <button className="btn sm ghost danger gclear" onClick={() => { freshStart(); go('katalog'); toast('Sepet temizlendi'); }}><Icon n="check" s={15} />Gönderdim, sepeti temizle</button>
+    <div className="wa-row">
+      {wa
+        ? <a className="btn wa-soft wa-main" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={19} />WhatsApp’tan gönder</a>
+        : <span className="btn wa-soft wa-main" aria-disabled="true"><Icon n="wa" s={19} />WhatsApp’tan gönder</span>}
+      <button className="btn outline icon wa-copy" onClick={() => copyText(link, 'Liste linki kopyalandı, WhatsApp’ta yapıştırın')} aria-label="Liste linkini kopyala" title="Liste linkini kopyala"><Icon n="copy" s={18} /></button>
     </div>
   );
 }
