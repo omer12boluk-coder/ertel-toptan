@@ -18,6 +18,13 @@ const P = {
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
   x: 'M6 6l12 12M18 6 6 18',
+  chev: 'M6 9l6 6 6-6',
+  drag: 'M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01',
+  undo: 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
+  brush: 'M12 3a9 9 0 1 0 0 18c1 0 1.6-.7 1.6-1.6 0-.9-.8-1.3-.8-2.1 0-.8.7-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-4.9-4-8.8-9-8.8zM7.5 11.5h.01M10 7.5h.01M15 7.5h.01',
+  vsize: 'M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4',
+  monitor: 'M3 5h18v11H3zM8 20h8M12 16v4',
+  mobile: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
   back: 'M15 5l-7 7 7 7',
   check: 'M5 12.5l4.5 4.5L19 7.5',
   camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
@@ -144,6 +151,21 @@ export function Toggle({ checked, onChange, label, hint, id }) {
       <input id={id} type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
       <span className="toggle-s" aria-hidden="true" />
     </label>
+  );
+}
+
+// Açılır-kapanır grup: başlığa basınca açılır, varsayılan kapalı
+export function Fold({ title, hint, badge, children, open: init = false, className = '' }) {
+  const [open, setOpen] = useState(init);
+  return (
+    <section className={'fold' + (open ? ' open' : '') + (className ? ' ' + className : '')}>
+      <button type="button" className="fold-h" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="fold-t"><b>{title}</b>{hint && <small>{hint}</small>}</span>
+        {badge != null && badge !== '' && <span className="fold-badge">{badge}</span>}
+        <Icon n="chev" s={18} className="fold-chev" />
+      </button>
+      {open && <div className="fold-b">{children}</div>}
+    </section>
   );
 }
 

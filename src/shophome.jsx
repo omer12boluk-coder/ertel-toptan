@@ -1,8 +1,8 @@
 // Online mağaza ana sayfası (/magaza → Ana sayfa): büyük reklam alanı, avantajlar, marka kutuları,
 // kare reklam kutuları (bento), ürün rafları ve alt WhatsApp bandı. İçerik: Ayarlar > Mağaza ana sayfası (settings.shopHome).
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, setQty, go, api, toast } from './store.js';
-import { Icon, Thumb, Stepper, Field, Toggle } from './ui.jsx';
+import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
 import { fmt, norm, priceFor, resizeForWeb } from './utils.js';
 import { waLink } from './route.js';
 import { ProductSheet, useTree } from './catalog.jsx';
@@ -75,86 +75,169 @@ const isLight = (hex) => { const m = /^#?([\da-f]{6})$/i.exec(hex || ''); if (!m
 const spot = (e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`); };
 
 // =================================================================================================
-export function ShopHome() {
-  const { settings: S, catalog } = useStore();
+// Tasarım modu: ShopHome bu bağlamla sarılınca bölümler seçilebilir / sürüklenebilir olur (designer.jsx)
+export const DesignCtx = createContext(null);
+export const rid = () => Math.random().toString(36).slice(2, 8);
+export const FIXED = { hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', cta: 'Alt bant' };
+const railKey = (r, i) => 'rail:' + (r.id || i);
+// Bölüm sırası: kayıtlı sıra + sonradan eklenenler; silinmiş olanlara ait kayıtlar atılır
+export function layoutOf(H) {
+  const rails = H.sections || [];
+  const valid = ['hero', 'usps', 'marquee', 'brands', 'promos', ...rails.map(railKey), ...Object.keys(H.blocks || {}).map((id) => 'b:' + id), 'cta'];
+  const L = (Array.isArray(H.layout) ? H.layout : []).filter((k) => valid.includes(k));
+  for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
+  return L;
+}
+export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün rafı · ' + ((H.sections || []).find((r, i) => railKey(r, i) === k)?.title || '') : (H.blocks?.[k.slice(2)]?.t === 'banner' ? 'Görsel bant' : 'Başlık · ' + (H.blocks?.[k.slice(2)]?.title || '')));
+// sürükleyerek sıralama: aynı gruptaki [data-dz][data-i] öğelerinin üstüne gelince yer değiştirir; hiç sürüklenmezse tıklama sayılır
+export function dragSort(e, group, idx, onMove, onClick) {
+  if (e.button > 0) return;
+  const x0 = e.clientX, y0 = e.clientY; let cur = idx, moved = false;
+  const mv = (ev) => {
+    if (!moved && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 7) return;
+    if (!moved) { moved = true; document.body.classList.add('dz-dragging'); }
+    ev.preventDefault();
+    const t = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(`[data-dz="${group}"]`);
+    if (t) { const j = Number(t.dataset.i); if (j !== cur && !Number.isNaN(j)) { onMove(cur, j); cur = j; } }
+    if (ev.clientY < 70) scrollBy(0, -18); else if (ev.clientY > innerHeight - 70) scrollBy(0, 18);
+  };
+  const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); document.body.classList.remove('dz-dragging'); if (!moved) onClick?.(); };
+  addEventListener('pointermove', mv, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+}
+export const moveItem = (list, from, to) => { const n = [...list]; const [x] = n.splice(from, 1); n.splice(to, 0, x); return n; };
+
+export function ShopHome({ S: Sover }) {
+  const E = useContext(DesignCtx);
+  const store_ = useStore();
+  const S = Sover || store_.settings; const catalog = store_.catalog;
   const H = S.shopHome || {};
   const [product, setProduct] = useState(null);
   const open = useOpenLink();
   const ref = useReveal();
-  const link = (l) => () => open(l, setProduct);
+  const link = (l) => () => (E ? null : open(l, setProduct));
   const counts = useMemo(() => { const m = new Map(); for (const p of catalog) if (p.b && p.a !== 0) m.set(norm(p.b), (m.get(norm(p.b)) || 0) + 1); return m; }, [catalog]);
-  // logo ve renk: kutuda ayrıca verilmediyse Ayarlar > Markalar'dan
+  // logo, renk ve logo boyutu: kutuda ayrıca verilmediyse Ayarlar > Markalar'dan
   const BL = S.brandLogos || {};
-  const bl = (n) => BL[n] || BL[Object.keys(BL).find((k) => norm(k) === norm(n || '')) || ''] || {};
-  const brands = (H.brands || []).filter((b) => b.name || b.logo).map((b) => ({ ...b, logo: b.logo || bl(b.name).logo || '', color: bl(b.name).color || b.color }));
-  const promos = (H.promos || []).filter((x) => x.title || x.img);
-  const slides = (H.slides || []).filter((x) => x.title || x.img);
-  return (
-    <div className="sh" ref={ref}>
-      {slides.length > 0 && <Hero slides={slides} open={link} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} />}
+  const blKey = (n) => (BL[n] ? n : Object.keys(BL).find((k) => norm(k) === norm(n || '')) || n);
+  const bl = (n) => BL[blKey(n)] || {};
+  const brands = (H.brands || []).map((b, idx) => ({ ...b, idx, logo: b.logo || bl(b.name).logo || '', color: bl(b.name).color || b.color, scale: bl(b.name).scale || 1 })).filter((b) => b.name || b.logo);
+  const promos = (H.promos || []).map((x, idx) => ({ ...x, idx })).filter((x) => x.title || x.img || E);
+  const slides = (H.slides || []).filter((x) => x.title || x.img || E);
+  const hidden = new Set(H.hidden || []);
+  const L = layoutOf(H);
+  const sel = E?.sel;
+  const pick = (kind, i) => (e) => { e?.stopPropagation?.(); E.select(kind, i); };
+  const ls = Number(H.brandLogoScale) || 1;
 
-      {(H.usps || []).some((u) => u.title) && (
-        <section className="sh-usps rv" aria-label="Avantajlar">
-          {(H.usps || []).filter((u) => u.title).map((u, i) => (
-            <div key={i} className="sh-usp" style={{ '--i': i }}><span className="sh-usp-ic"><Icon n={u.icon || 'check'} s={20} /></span><span><b>{u.title}</b>{u.text && <small>{u.text}</small>}</span></div>
+  const render = (k) => {
+    if (k === 'hero') return slides.length > 0 ? <Hero slides={slides} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'usps') return (H.usps || []).some((u) => u.title) ? (
+      <section className="sh-usps rv" aria-label="Avantajlar">
+        {(H.usps || []).filter((u) => u.title).map((u, i) => (
+          <div key={i} className="sh-usp" style={{ '--i': i }}><span className="sh-usp-ic"><Icon n={u.icon || 'check'} s={20} /></span><span><b>{u.title}</b>{u.text && <small>{u.text}</small>}</span></div>
+        ))}
+      </section>
+    ) : E && <Empty label="Avantaj yok" />;
+    if (k === 'marquee') return brands.length > 0 && H.marquee !== 'off' ? <Marquee items={brands} style={H.marquee || 'color'} speed={H.mqSpeed} ls={ls} /> : E && <Empty label={H.marquee === 'off' ? 'Kayan şerit kapalı (ayarından açın)' : 'Marka yok'} />;
+    if (k === 'brands') return (brands.length > 0 || E) && (
+      <section className="sh-sec rv">
+        <SecHead title={H.brandsTitle || 'Markalar'} sub={H.brandsSub ?? 'Dünyanın önde gelen tamir ekipmanı üreticileri'} onTitle={E && ((t) => E.set('shopHome.brandsTitle', t))} />
+        <div className={'sh-brands bs-' + (H.brandSize || 'md')}>
+          {brands.map((b, i) => (
+            <button key={(b.name || '') + b.idx} data-dz="brand" data-i={b.idx}
+              className={'sh-brand' + (b.logo ? ' has-logo' : isLight(b.color) ? ' light' : '') + (sel?.kind === 'brand' && sel.i === b.idx ? ' dz-sel' : '')}
+              style={{ '--c': b.color || '#111827', '--i': i, '--len': Math.max(4, (b.name || '').length), '--ls': b.scale * ls }}
+              onClick={E ? stop : link(b.link || 'brand:' + b.name)} onMouseMove={spot}
+              onPointerDown={E ? (e) => dragSort(e, 'brand', b.idx, (f, t) => E.set('shopHome.brands', moveItem(E.get('brands'), f, t)), () => E.select('brand', b.idx)) : undefined}>
+              <span className="sh-brand-glow" aria-hidden="true" />
+              {b.logo ? <ShopImg v={b.logo} className="sh-brand-logo" alt={b.name} /> : <b className="sh-brand-word">{b.name}</b>}
+              <span className="sh-brand-f"><span>{counts.get(norm(b.name)) > 0 ? counts.get(norm(b.name)) + ' ürün' : b.name}</span></span>
+              <span className="sh-brand-arrow"><Icon n="back" s={16} className="flip" /></span>
+            </button>
           ))}
-        </section>
-      )}
+          {E && <button className="sh-brand dz-add" onClick={pick('brand', -1)}><Icon n="plus" s={26} /><small>Marka ekle</small></button>}
+        </div>
+      </section>
+    );
+    if (k === 'promos') return (promos.length > 0 || E) && (
+      <section className="sh-sec rv">
+        <SecHead title={H.promosTitle || 'Öne çıkanlar'} onTitle={E && ((t) => E.set('shopHome.promosTitle', t))} />
+        <div className="sh-bento">
+          {promos.map((x, i) => (
+            <button key={x.idx} data-dz="promo" data-i={x.idx} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? (isProdImg(x.img) ? ' prod' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (sel?.kind === 'promo' && sel.i === x.idx ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i }}
+              onClick={E ? stop : link(x.link)} onMouseMove={spot}
+              onPointerDown={E ? (e) => dragSort(e, 'promo', x.idx, (f, t) => E.set('shopHome.promos', moveItem(E.get('promos'), f, t)), () => E.select('promo', x.idx)) : undefined}>
+              {x.img && (isProdImg(x.img) ? <span className="sh-box-prod"><ShopImg v={x.img} /></span> : <ShopImg v={x.img} className="sh-box-img" />)}
+              <span className="sh-box-shade" aria-hidden="true" />
+              <span className="sh-box-t">
+                {x.tag && <span className="sh-tag">{x.tag}</span>}
+                {x.title && <b>{x.title}</b>}
+                {x.text && <small>{x.text}</small>}
+              </span>
+              {x.link && <span className="sh-box-go"><Icon n="back" s={18} className="flip" /></span>}
+            </button>
+          ))}
+          {E && <button className="sh-box sz-sq dz-add" onClick={pick('promo', -1)}><Icon n="plus" s={26} /><small>Kutu ekle</small></button>}
+        </div>
+      </section>
+    );
+    if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
+    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : <HeadBlock b={b} onTitle={E && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
+    if (k === 'cta') return H.cta?.title ? (
+      <section className="sh-cta rv">
+        <div><b>{H.cta.title}</b>{H.cta.text && <p>{H.cta.text}</p>}</div>
+        <div className="sh-cta-btns">
+          {S.shop.whatsapp && <a className="btn wa big-ish" href={E ? undefined : waLink(S.shop.whatsapp, 'Merhaba, bir ürün soracaktım:')} target="_blank" rel="noopener"><Icon n="wa" s={18} />WhatsApp’tan yazın</a>}
+          <button className="btn sh-cta-ghost" onClick={E ? undefined : () => go('katalog')}><Icon n="grid" s={16} />Tüm ürünler</button>
+        </div>
+      </section>
+    ) : E && <Empty label="Alt bant boş (başlık yazın)" />;
+    return null;
+  };
 
-      {brands.length > 0 && <>
-        {H.marquee !== 'off' && <Marquee items={brands} style={H.marquee || 'color'} />}
-        <section className="sh-sec rv">
-          <SecHead title={H.brandsTitle || 'Markalar'} sub="Dünyanın önde gelen tamir ekipmanı üreticileri" />
-          <div className="sh-brands">
-            {brands.map((b, i) => (
-              <button key={i} className={'sh-brand' + (b.logo ? ' has-logo' : isLight(b.color) ? ' light' : '')} style={{ '--c': b.color || '#111827', '--i': i, '--len': Math.max(4, (b.name || '').length) }} onClick={link(b.link || 'brand:' + b.name)} onMouseMove={spot}>
-                <span className="sh-brand-glow" aria-hidden="true" />
-                {b.logo ? <ShopImg v={b.logo} className="sh-brand-logo" alt={b.name} /> : <b className="sh-brand-word">{b.name}</b>}
-                <span className="sh-brand-f"><span>{counts.get(norm(b.name)) > 0 ? counts.get(norm(b.name)) + ' ürün' : b.name}</span></span>
-                <span className="sh-brand-arrow"><Icon n="back" s={16} className="flip" /></span>
-              </button>
-            ))}
-          </div>
-        </section>
-      </>}
-
-      {promos.length > 0 && (
-        <section className="sh-sec rv">
-          <SecHead title={H.promosTitle || 'Öne çıkanlar'} />
-          <div className="sh-bento">
-            {promos.map((x, i) => (
-              <button key={i} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? (isProdImg(x.img) ? ' prod' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '')} style={{ '--c': x.color || '#0f172a', '--i': i }} onClick={link(x.link)} onMouseMove={spot}>
-                {x.img && (isProdImg(x.img) ? <span className="sh-box-prod"><ShopImg v={x.img} /></span> : <ShopImg v={x.img} className="sh-box-img" />)}
-                <span className="sh-box-shade" aria-hidden="true" />
-                <span className="sh-box-t">
-                  {x.tag && <span className="sh-tag">{x.tag}</span>}
-                  {x.title && <b>{x.title}</b>}
-                  {x.text && <small>{x.text}</small>}
-                </span>
-                {x.link && <span className="sh-box-go"><Icon n="back" s={18} className="flip" /></span>}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {(H.sections || []).map((sec, i) => <Rail key={i} sec={sec} open={link} onProduct={setProduct} />)}
-
-      {H.cta?.title && (
-        <section className="sh-cta rv">
-          <div><b>{H.cta.title}</b>{H.cta.text && <p>{H.cta.text}</p>}</div>
-          <div className="sh-cta-btns">
-            {S.shop.whatsapp && <a className="btn wa big-ish" href={waLink(S.shop.whatsapp, 'Merhaba, bir ürün soracaktım:')} target="_blank" rel="noopener"><Icon n="wa" s={18} />WhatsApp’tan yazın</a>}
-            <button className="btn sh-cta-ghost" onClick={() => go('katalog')}><Icon n="grid" s={16} />Tüm ürünler</button>
-          </div>
-        </section>
-      )}
+  return (
+    <div className={'sh' + (E ? ' dz' : '')} ref={ref} style={H.gap ? { gap: H.gap + 'px' } : undefined}>
+      {L.map((k, i) => {
+        if (!E) return hidden.has(k) ? null : <Frag key={k}>{render(k)}</Frag>;
+        return <E.Block key={k} k={k} i={i} L={L} hidden={hidden.has(k)}>{render(k)}</E.Block>;
+      })}
       {product && <ProductSheet p={product} onClose={() => setProduct(null)} />}
     </div>
   );
 }
+const Frag = ({ children }) => children || null;
+const stop = (e) => e.stopPropagation();
+const Empty = ({ label }) => <div className="dz-empty">{label}</div>;
 
-function SecHead({ title, sub, more, rail }) {
+// yeni bölüm türleri: başlık ve tek görsel bant
+function HeadBlock({ b, onTitle }) {
+  return (
+    <section className={'sh-headblk rv al-' + (b.align || 'left') + ' hs-' + (b.size || 'md')}>
+      {b.tag && <span className="sh-tag">{b.tag}</span>}
+      <h2 {...editable(onTitle)}>{b.title || (onTitle ? 'Başlık yazın' : '')}</h2>
+      {b.sub && <p>{b.sub}</p>}
+    </section>
+  );
+}
+function BannerBlock({ b, open, edit }) {
+  if (!b.img) return edit ? <Empty label="Görsel bant: resim seçin" /> : null;
+  return (
+    <section className="sh-banner rv" style={{ '--bh': (Number(b.h) || 0) > 0 ? b.h + 'px' : undefined }}>
+      <button className="sh-banner-in" onClick={b.link ? open(b.link) : undefined} disabled={!b.link && !edit}>
+        <ShopImg v={b.img} className="sh-banner-img" alt={b.alt || ''} />
+      </button>
+    </section>
+  );
+}
+// tasarım modunda başlıklar yerinde yazılır
+function editable(onTitle) {
+  if (!onTitle) return {};
+  return { contentEditable: true, suppressContentEditableWarning: true, spellCheck: false, className: 'dz-text', onPointerDown: (e) => e.stopPropagation(), onClick: (e) => e.stopPropagation(),
+    onKeyDown: (e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } },
+    onBlur: (e) => { const t = e.currentTarget.textContent.trim(); if (t) onTitle(t); } };
+}
+
+function SecHead({ title, sub, more, rail, onTitle }) {
   const [edge, setEdge] = useState([true, false]);
   useEffect(() => {
     const el = rail?.current; if (!el) return;
@@ -165,7 +248,7 @@ function SecHead({ title, sub, more, rail }) {
   const by = (d) => { const el = rail.current; el.scrollBy({ left: d * el.clientWidth * 0.9 }); };
   return (
     <div className="sh-head">
-      <div><h2>{title}</h2>{sub && <p>{sub}</p>}</div>
+      <div><h2 {...editable(onTitle)}>{title}</h2>{sub && <p>{sub}</p>}</div>
       <div className="sh-head-r">
         {more && <button className="sh-more" onClick={more}>Tümünü gör <Icon n="back" s={15} className="flip" /></button>}
         {rail && !(edge[0] && edge[1]) && <span className="sh-arrows"><button className="sh-arrow" disabled={edge[0]} onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={17} /></button><button className="sh-arrow" disabled={edge[1]} onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={17} className="flip" /></button></span>}
@@ -175,13 +258,13 @@ function SecHead({ title, sub, more, rail }) {
 }
 
 // kayan marka şeridi: logosu olan markada orijinal logo (şeride uysun diye beyaza boyanır), yoksa adı
-function Marquee({ items, style }) {
+function Marquee({ items, style, speed, ls = 1 }) {
   if (!items.length) return null;
   const row = [...items, ...items, ...items];
   return (
-    <div className={'sh-mq mq-' + style} aria-hidden="true">
+    <div className={'sh-mq mq-' + style} aria-hidden="true" style={{ '--mq-dur': (Number(speed) || 46) + 's' }}>
       <div className="sh-mq-in">{[...row, ...row].map((b, i) => (
-        <span key={i} className="sh-mq-it" style={{ '--c': b.color || '#64748b' }}>
+        <span key={i} className="sh-mq-it" style={{ '--c': b.color || '#64748b', '--ls': (b.scale || 1) * ls }}>
           {b.logo ? <ShopImg v={b.logo} className="sh-mq-logo" alt={b.name} /> : <b>{b.name}</b>}
         </span>
       ))}</div>
@@ -190,23 +273,25 @@ function Marquee({ items, style }) {
 }
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
-function Hero({ slides, open, brands }) {
+function Hero({ slides, open, brands, heroH }) {
+  const E = useContext(DesignCtx);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const track = useRef(null);
   const n = slides.length;
   useEffect(() => {
-    if (n < 2 || paused) return;
+    if (n < 2 || paused || E) return;
     const t = setTimeout(() => goTo((i + 1) % n), 6500);
     return () => clearTimeout(t);
   }, [i, paused, n]);
   function goTo(k) { const el = track.current; if (!el) return; el.scrollTo({ left: k * el.clientWidth, behavior: 'smooth' }); setI(k); }
   const onScroll = (e) => { const el = e.currentTarget; const k = Math.round(el.scrollLeft / el.clientWidth); if (k !== i) setI(k); };
   return (
-    <section className="sh-hero" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} aria-roledescription="carousel">
+    <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => setPaused(true)}>
-        {slides.map((s, k) => <Slide key={k} s={s} on={k === i} open={open} logo={slideLogo(s, brands)} />)}
+        {slides.map((s, k) => <Slide key={k} k={k} s={s} on={k === i} open={open} logo={slideLogo(s, brands)} />)}
       </div>
+      {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>
         <div className="sh-dots">{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>
         <button className="sh-hero-nav prev" onClick={() => goTo((i - 1 + n) % n)} aria-label="Önceki"><Icon n="back" s={20} /></button>
@@ -222,27 +307,38 @@ function slideLogo(s, brands) {
   const name = (s.link || '').startsWith('brand:') ? s.link.slice(6) : s.tag;
   return brands.find((b) => b.logo && norm(b.name) === norm(name || ''))?.logo || null;
 }
-function Slide({ s, on, open, logo }) {
+// reklamın içindeki öğeler (logo, başlık, yazı, buton, görsel) tasarım modunda tutulup taşınır, döndürülür, 3B eğilir
+export const FX_NAMES = { logo: 'Logo / etiket', title: 'Başlık', text: 'Açıklama', cta: 'Buton', art: 'Görsel' };
+// konum telefonda orantılı küçülür (--fxk)
+export const fxTransform = (f) => f ? `translate(calc(${f.x || 0}px * var(--fxk, 1)), calc(${f.y || 0}px * var(--fxk, 1))) perspective(900px) rotateX(${f.rx || 0}deg) rotateY(${f.ry || 0}deg) rotate(${f.r || 0}deg) scale(${f.s || 1})` : undefined;
+function Slide({ s, on, open, logo, k }) {
+  const E = useContext(DesignCtx);
   const cover = s.layout === 'cover' && s.img;
+  const fx = (el, cls = '') => {
+    const f = s.fx?.[el]; const style = f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
+    if (!E) return { className: cls || undefined, style };
+    const selOn = E.sel?.kind === 'fx' && E.sel.slide === k && E.sel.el === el;
+    return { className: (cls ? cls + ' ' : '') + 'dz-fx' + (selOn ? ' on' : ''), style, 'data-fx-name': FX_NAMES[el], onClick: (e) => e.stopPropagation(), onPointerDown: (e) => E.fxDrag(e, k, el) };
+  };
   return (
     <article className={'sh-slide th-' + (s.theme || 'night') + (cover ? ' cover' : '') + (on ? ' on' : '')} onClick={cover && s.link && !s.cta ? open(s.link) : undefined}>
       {cover ? <ShopImg v={s.img} className="sh-slide-bg" /> : <>
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}
       <div className="sh-slide-t">
-        {logo ? <span className="sh-slide-logo"><ShopImg v={logo} alt={s.tag || ''} /></span> : s.tag && <span className="sh-tag glow">{s.tag}</span>}
-        {s.title && <h1>{s.title}</h1>}
-        {s.text && <p>{s.text}</p>}
-        {s.cta && s.link && <button className="sh-cta-btn" onClick={(e) => { e.stopPropagation(); open(s.link)(); }}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button>}
+        {logo ? <span {...fx('logo', 'sh-slide-logo')}><ShopImg v={logo} alt={s.tag || ''} /></span> : s.tag && <span {...fx('logo', 'sh-tag glow')}>{s.tag}</span>}
+        {s.title && <h1 {...fx('title')}>{s.title}</h1>}
+        {s.text && <p {...fx('text')}>{s.text}</p>}
+        {s.cta && s.link && <span {...fx('cta', 'sh-cta-wrap')}><button className="sh-cta-btn" onClick={(e) => { e.stopPropagation(); open(s.link)(); }}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button></span>}
       </div>
-      {!cover && s.img && <div className="sh-slide-art"><span className="sh-halo" aria-hidden="true" />{isProdImg(s.img) ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</div>}
+      {!cover && s.img && <div {...fx('art', 'sh-slide-art')}><span className="sh-halo" aria-hidden="true" />{isProdImg(s.img) ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</div>}
       {!cover && !s.img && <div className="sh-slide-art word" aria-hidden="true"><b>{(s.tag || s.title || '').split(' ')[0]}</b></div>}
     </article>
   );
 }
 
 // ---- ürün rafı -------------------------------------------------------------------------------------
-function Rail({ sec, open, onProduct }) {
+function Rail({ sec, open, onProduct, onTitle, edit }) {
   const { catalog, byId } = useStore();
   const tree = useTree();
   const railRef = useRef(null);
@@ -256,19 +352,20 @@ function Rail({ sec, open, onProduct }) {
     if (sec.mode === 'new') { const flagged = r.filter((p) => p.nw); r = (flagged.length >= limit ? flagged : r); }
     return [...r].sort((a, b) => b.id - a.id).slice(0, limit);
   }, [catalog, byId, sec, tree]);
-  if (!list.length) return null;
+  if (!list.length) return edit ? <Empty label={'Ürün rafı “' + (sec.title || '') + '”: ürün bulunamadı'} /> : null;
   const more = sec.mode === 'brand' ? () => open('brand:' + sec.brand)() : sec.mode === 'cat' ? () => open('cat:' + sec.cat)() : () => go('katalog');
   return (
     <section className="sh-sec rv">
-      <SecHead title={sec.title || 'Ürünler'} more={more} rail={railRef} />
+      <SecHead title={sec.title || 'Ürünler'} more={edit ? undefined : more} rail={railRef} onTitle={onTitle} />
       <div className="sh-rail" ref={railRef}>{list.map((p, i) => <PCard key={p.id} p={p} i={i} isNew={sec.mode === 'new' || p.nw} onOpen={() => onProduct(p)} />)}</div>
     </section>
   );
 }
 function PCard({ p, i, isNew, onOpen }) {
   const { settings: S, user, userPrices, cart } = useStore();
+  const E = useContext(DesignCtx);
   const qty = cart[p.id] || 0;
-  const pr = priceFor(p, S, user, userPrices);
+  const pr = E ? priceFor(p, S, { role: 'public' }, null) : priceFor(p, S, user, userPrices); // tasarımda müşterinin gördüğü fiyat
   return (
     <div className="sh-card" style={{ '--i': i }} onMouseMove={spot}>
       <button className="sh-card-img" onClick={onOpen} aria-label={p.n}>
@@ -282,7 +379,7 @@ function PCard({ p, i, isNew, onOpen }) {
           <b className="sh-card-p">{pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur)}</b>
           {qty > 0
             ? <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
-            : <button className="sh-add" onClick={() => { setQty(p.id, 1); toast('Sepete eklendi'); }} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
+            : <button className="sh-add" onClick={() => { if (E) return; setQty(p.id, 1); toast('Sepete eklendi'); }} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
         </div>
       </div>
     </div>
@@ -363,139 +460,217 @@ function LinkPick({ v = '', onChange, label = 'Tıklanınca' }) {
   );
 }
 
-function Rows({ list, set, title, add, render, max = 20, sub }) {
-  const mv = (i, d) => { const n = [...list]; const [x] = n.splice(i, 1); n.splice(i + d, 0, x); set(n); };
+// Liste düzenleyici: her satır başlığına basınca açılır (varsayılan kapalı), ok ya da sürükle ile sıralanır
+export function Rows({ list, set, title, add, render, max = 20, sub, openIdx = -1, group }) {
+  const [open, setOpen] = useState(openIdx);
+  useEffect(() => { if (openIdx >= 0) setOpen(openIdx); }, [openIdx]);
+  const g = useMemo(() => group || 'rows-' + rid(), [group]);
+  const lref = useRef(list); lref.current = list; // sürüklerken hep en güncel liste
+  const mv = (i, d) => { set(moveItem(list, i, i + d)); setOpen(open === i ? i + d : open === i + d ? i : open); };
   return (
     <div className="she-rows">
       {list.map((it, i) => (
-        <div key={i} className="she-row">
+        <div key={i} className={'she-row' + (open === i ? ' open' : '')} data-dz={g} data-i={i}>
           <div className="she-row-h">
-            <b>{title(it, i)}</b>
+            <span className="she-grip" title="Sürükleyip sıralayın" onPointerDown={(e) => dragSort(e, g, i, (f, t) => { const n = moveItem(lref.current, f, t); lref.current = n; set(n); })}><Icon n="drag" s={16} /></span>
+            <button type="button" className="she-row-t" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i}><b>{title(it, i)}</b><Icon n="chev" s={16} className="fold-chev" /></button>
             <span className="row-btns">
               <button type="button" className="icon-btn sm" disabled={i === 0} onClick={() => mv(i, -1)} aria-label="Yukarı" title="Yukarı taşı"><Icon n="back" s={15} className="rot90" /></button>
               <button type="button" className="icon-btn sm" disabled={i === list.length - 1} onClick={() => mv(i, 1)} aria-label="Aşağı" title="Aşağı taşı"><Icon n="back" s={15} className="rot-90" /></button>
-              <button type="button" className="icon-btn sm" onClick={() => set(list.filter((_, j) => j !== i))} aria-label="Sil" title="Sil"><Icon n="trash" s={15} /></button>
+              <button type="button" className="icon-btn sm" onClick={() => { set(list.filter((_, j) => j !== i)); setOpen(-1); }} aria-label="Sil" title="Sil"><Icon n="trash" s={15} /></button>
             </span>
           </div>
-          {render(it, (patch) => set(list.map((x, j) => (j === i ? { ...x, ...patch } : x))), i)}
+          {open === i && <div className="she-row-b">{render(it, (patch) => set(list.map((x, j) => (j === i ? { ...x, ...patch } : x))), i)}</div>}
         </div>
       ))}
-      {list.length < max && <button type="button" className="btn sm outline she-add" onClick={add}><Icon n="plus" s={15} />{sub}</button>}
+      {list.length < max && <button type="button" className="btn sm outline she-add" onClick={() => { add(); setOpen(list.length); }}><Icon n="plus" s={15} />{sub}</button>}
     </div>
   );
 }
 
-export function ShopHomeEditor({ d, set }) {
-  const H = d.shopHome || {};
+// ---- tek tek öğe alanları (Ayarlar ve Tasarım modu aynı alanları kullanır) -------------------------
+export const NEW = {
+  slide: () => ({ layout: 'split', theme: 'night', tag: '', title: 'Yeni reklam', text: '', cta: 'İncele', link: '', img: '' }),
+  usp: () => ({ icon: 'check', title: 'Yeni avantaj', text: '' }),
+  promo: () => ({ size: 'sq', color: '#0f172a', tag: '', title: 'Yeni kutu', text: '', link: '', img: '' }),
+  rail: () => ({ id: rid(), title: 'Yeni raf', mode: 'new', limit: 10 }),
+  brand: (name = '') => ({ name, color: '#1f2937', link: name ? 'brand:' + name : '' }),
+};
+export function SlideFields({ s, up }) {
+  return <>
+    <div className="row3">
+      <Field label="Görünüm"><select value={s.layout || 'split'} onChange={(e) => up({ layout: e.target.value })}><option value="split">Yazı + ürün görseli</option><option value="cover">Tam resim (banner)</option></select></Field>
+      <Field label="Renk teması"><select value={s.theme || 'night'} onChange={(e) => up({ theme: e.target.value })}>{Object.entries(THEMES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+      <Field label="Küçük etiket" opt><input value={s.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. Yeni · Stokta" /></Field>
+    </div>
+    <Field label="Başlık"><input value={s.title || ''} onChange={(e) => up({ title: e.target.value })} placeholder="ör. Aixun T3A ile tanışın" /></Field>
+    <Field label="Açıklama" opt><input value={s.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
+    <Field label="Marka logosu" hint="Otomatik: reklam bir markaya gidiyorsa ya da etiket marka adıysa o markanın logosu görünür"><select value={s.logo === 'none' ? 'none' : ''} onChange={(e) => up({ logo: e.target.value === 'none' ? 'none' : '' })}><option value="">Otomatik</option><option value="none">Logo gösterme</option></select></Field>
+    <div className="row2">
+      <Field label="Buton yazısı" opt><input value={s.cta || ''} onChange={(e) => up({ cta: e.target.value })} placeholder="ör. Hemen incele" /></Field>
+      <LinkPick v={s.link} onChange={(link) => up({ link })} />
+    </div>
+    <ImgPick v={s.img} onChange={(img) => up({ img })} alpha={s.layout !== 'cover'} max={s.layout === 'cover' ? 1800 : 1000} hint={s.layout === 'cover' ? 'Yatay banner (ör. 1600×640)' : 'Saydam arka planlı ürün resmi en iyisi; ürünün kendi resmi beyaz kart içinde görünür'} prodOk />
+  </>;
+}
+export function UspFields({ u, up }) {
+  return <div className="row3">
+    <Field label="Simge"><select value={u.icon || 'check'} onChange={(e) => up({ icon: e.target.value })}>{ICONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+    <Field label="Başlık"><input value={u.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
+    <Field label="Alt yazı" opt><input value={u.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
+  </div>;
+}
+export function PromoFields({ x, up }) {
+  return <>
+    <div className="row3">
+      <Field label="Boyut"><select value={x.size || 'sq'} onChange={(e) => up({ size: e.target.value })}>{Object.entries(SIZES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+      <Field label="Renk"><span className="she-color"><input type="color" value={x.color || '#0f172a'} onChange={(e) => up({ color: e.target.value })} /><code>{x.color}</code></span></Field>
+      <Field label="Küçük etiket" opt><input value={x.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. %20 indirim" /></Field>
+    </div>
+    <div className="row2">
+      <Field label="Başlık"><input value={x.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
+      <Field label="Alt yazı" opt><input value={x.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
+    </div>
+    <LinkPick v={x.link} onChange={(link) => up({ link })} />
+    <ImgPick v={x.img} onChange={(img) => up({ img })} max={x.size === 'big' || x.size === 'wide' ? 1400 : 900} hint="Kare kutuya kare, geniş kutuya yatay resim. Yazısı olan hazır banner için başlığı boş bırakın." prodOk />
+  </>;
+}
+export function RailFields({ x, up }) {
   const catalog = useStore((s) => s.catalog);
   const byId = useStore((s) => s.byId);
   const tree = useTree();
   const brands = useMemo(() => [...new Set(catalog.map((p) => p.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr')), [catalog]);
   const cats = useMemo(() => { const out = []; const walk = (ns, dd) => ns.forEach((n) => { out.push([n.id, '— '.repeat(dd) + n.name]); walk(n.children, dd + 1); }); walk(tree.roots, 0); return out; }, [tree]);
-  const S = (k, v) => set('shopHome.' + k, v);
   return <>
-    <p className="fine">Online mağazaya girenlerin ilk gördüğü sayfa. Değişiklikleri yapıp <b>Kaydet</b>’e basın, sonra <a href="/magaza" target="_blank" rel="noopener">mağazayı yeni sekmede açıp</a> bakın. Resimler otomatik küçültülür.</p>
-    <Toggle id="sh-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => S('enabled', v)} />
-
-    <h3>1 · Büyük reklam alanı</h3>
-    <p className="fine">Sırayla kayan büyük kartlar. “Ürün görselli”de arka planı saydam ürün resmi (PNG) çok iyi durur; “Tam resim”de hazır banner (ör. 1600×640) kullanın.</p>
-    <Rows list={H.slides || []} set={(v) => S('slides', v)} max={6} sub="Reklam ekle" title={(s, i) => `${i + 1}. ${s.title || 'Reklam'}`}
-      add={() => S('slides', [...(H.slides || []), { layout: 'split', theme: 'night', tag: '', title: '', text: '', cta: 'İncele', link: '', img: '' }])}
-      render={(s, up) => <>
-        <div className="row3">
-          <Field label="Görünüm"><select value={s.layout || 'split'} onChange={(e) => up({ layout: e.target.value })}><option value="split">Yazı + ürün görseli</option><option value="cover">Tam resim (banner)</option></select></Field>
-          <Field label="Renk teması"><select value={s.theme || 'night'} onChange={(e) => up({ theme: e.target.value })}>{Object.entries(THEMES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-          <Field label="Küçük etiket" opt><input value={s.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. Yeni · Stokta" /></Field>
-        </div>
-        <Field label="Başlık"><input value={s.title || ''} onChange={(e) => up({ title: e.target.value })} placeholder="ör. Aixun T3A ile tanışın" /></Field>
-        <Field label="Marka logosu" hint="Otomatik: reklam bir markaya gidiyorsa ya da etiket marka adıysa o markanın logosu etiketin yerinde görünür"><select value={s.logo === 'none' ? 'none' : s.logo ? 'set' : ''} onChange={(e) => up({ logo: e.target.value === 'none' ? 'none' : e.target.value === 'set' ? (H.brands || []).find((b) => b.logo)?.logo || '' : '' })}><option value="">Otomatik</option><option value="none">Logo gösterme</option></select></Field>
-        <Field label="Açıklama" opt><input value={s.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
-        <div className="row2">
-          <Field label="Buton yazısı" opt><input value={s.cta || ''} onChange={(e) => up({ cta: e.target.value })} placeholder="ör. Hemen incele" /></Field>
-          <LinkPick v={s.link} onChange={(link) => up({ link })} />
-        </div>
-        <ImgPick v={s.img} onChange={(img) => up({ img })} alpha={s.layout !== 'cover'} max={s.layout === 'cover' ? 1800 : 1000} hint={s.layout === 'cover' ? 'Yatay banner (ör. 1600×640)' : 'Saydam arka planlı ürün resmi en iyisi; ürünün kendi resmi beyaz kart içinde görünür'} prodOk />
-      </>} />
-
-    <h3>2 · Avantaj şeridi</h3>
-    <Rows list={H.usps || []} set={(v) => S('usps', v)} max={4} sub="Avantaj ekle" title={(u, i) => u.title || `${i + 1}. avantaj`}
-      add={() => S('usps', [...(H.usps || []), { icon: 'check', title: '', text: '' }])}
-      render={(u, up) => <div className="row3">
-        <Field label="Simge"><select value={u.icon || 'check'} onChange={(e) => up({ icon: e.target.value })}>{ICONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-        <Field label="Başlık"><input value={u.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
-        <Field label="Alt yazı" opt><input value={u.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
-      </div>} />
-
-    <h3>3 · Marka kutuları</h3>
-    <div className="row2">
-      <Field label="Bölüm başlığı"><input value={H.brandsTitle || ''} onChange={(e) => S('brandsTitle', e.target.value)} placeholder="Markalar" /></Field>
-      <Field label="Kayan marka şeridi"><select value={H.marquee || 'color'} onChange={(e) => S('marquee', e.target.value)}><option value="color">Açık zemin, renkli logolar</option><option value="dark">Koyu zemin, logolar beyaz kartlarda</option><option value="mono">Sade gri, üstüne gelince renkli</option><option value="off">Gösterme</option></select></Field>
+    <div className="row3">
+      <Field label="Başlık"><input value={x.title || ''} onChange={(e) => up({ title: e.target.value })} placeholder="ör. Haftanın fırsatları" /></Field>
+      <Field label="Hangi ürünler"><select value={x.mode || 'new'} onChange={(e) => up({ mode: e.target.value })}>{Object.entries(MODES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+      <Field label="En fazla"><select value={x.limit || 10} onChange={(e) => up({ limit: Number(e.target.value) })}>{[4, 5, 6, 8, 10, 12, 16, 20].map((n) => <option key={n} value={n}>{n} ürün</option>)}</select></Field>
     </div>
-    <p className="fine">Logolar ve marka renkleri <b>Ayarlar &gt; Markalar</b>’dan gelir; burada bir kutuya ayrıca logo verirseniz o kullanılır.</p>
-    <p className="fine">Kare kutular; adlar ayrıca kayan şeritte de döner. Logo yüklemezseniz marka adı büyük yazıyla görünür. Logo için saydam PNG (beyaz ya da açık renkli) en iyisi.</p>
-    <Rows list={H.brands || []} set={(v) => S('brands', v)} max={24} sub="Marka ekle" title={(b, i) => b.name || `${i + 1}. marka`}
-      add={() => S('brands', [...(H.brands || []), { name: '', color: '#1f2937', link: '' }])}
-      render={(b, up) => <>
-        <div className="row3">
-          <Field label="Marka adı"><input list="sh-brands" value={b.name || ''} onChange={(e) => up({ name: e.target.value, link: !b.link || b.link === 'brand:' + b.name ? 'brand:' + e.target.value : b.link })} /></Field>
-          <Field label="Kutu rengi"><span className="she-color"><input type="color" value={b.color || '#1f2937'} onChange={(e) => up({ color: e.target.value })} /><code>{b.color}</code></span></Field>
-          <LinkPick v={b.link} onChange={(link) => up({ link })} />
-        </div>
-        <ImgPick v={b.logo} onChange={(logo) => up({ logo })} alpha max={500} label="Logo" />
-      </>} />
-    <datalist id="sh-brands">{brands.map((b) => <option key={b} value={b} />)}</datalist>
-
-    <h3>4 · Kare reklam kutuları</h3>
-    <Field label="Bölüm başlığı"><input value={H.promosTitle || ''} onChange={(e) => S('promosTitle', e.target.value)} placeholder="Öne çıkanlar" /></Field>
-    <p className="fine">Dörtlü ızgara: kare, geniş, uzun ve büyük kare kutuları karıştırarak dergi gibi bir düzen kurun. Resimli kutularda yazı resmin üstünde durur.</p>
-    <Rows list={H.promos || []} set={(v) => S('promos', v)} max={16} sub="Kutu ekle" title={(x, i) => x.title || `${i + 1}. kutu`}
-      add={() => S('promos', [...(H.promos || []), { size: 'sq', color: '#0f172a', tag: '', title: '', text: '', link: '', img: '' }])}
-      render={(x, up) => <>
-        <div className="row3">
-          <Field label="Boyut"><select value={x.size || 'sq'} onChange={(e) => up({ size: e.target.value })}>{Object.entries(SIZES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-          <Field label="Renk"><span className="she-color"><input type="color" value={x.color || '#0f172a'} onChange={(e) => up({ color: e.target.value })} /><code>{x.color}</code></span></Field>
-          <Field label="Küçük etiket" opt><input value={x.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. %20 indirim" /></Field>
-        </div>
-        <div className="row2">
-          <Field label="Başlık"><input value={x.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
-          <Field label="Alt yazı" opt><input value={x.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
-        </div>
-        <LinkPick v={x.link} onChange={(link) => up({ link })} />
-        <ImgPick v={x.img} onChange={(img) => up({ img })} max={x.size === 'big' || x.size === 'wide' ? 1400 : 900} hint="Kare kutuya kare, geniş kutuya yatay resim. Ürünün kendi resmi beyaz kart içinde görünür; yazısı olan hazır banner için başlığı boş bırakın." prodOk />
-      </>} />
-
-    <h3>5 · Ürün rafları</h3>
-    <Rows list={H.sections || []} set={(v) => S('sections', v)} max={8} sub="Raf ekle" title={(x, i) => x.title || `${i + 1}. raf`}
-      add={() => S('sections', [...(H.sections || []), { title: '', mode: 'new', limit: 10 }])}
-      render={(x, up) => <>
-        <div className="row3">
-          <Field label="Başlık"><input value={x.title || ''} onChange={(e) => up({ title: e.target.value })} placeholder="ör. Haftanın fırsatları" /></Field>
-          <Field label="Hangi ürünler"><select value={x.mode || 'new'} onChange={(e) => up({ mode: e.target.value })}>{Object.entries(MODES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-          <Field label="En fazla"><select value={x.limit || 10} onChange={(e) => up({ limit: Number(e.target.value) })}>{[4, 5, 6, 8, 10, 12, 16, 20].map((n) => <option key={n} value={n}>{n} ürün</option>)}</select></Field>
-        </div>
-        {x.mode === 'brand' && <Field label="Marka"><select value={x.brand || ''} onChange={(e) => up({ brand: e.target.value })}><option value="">Seçin</option>{brands.map((b) => <option key={b}>{b}</option>)}</select></Field>}
-        {x.mode === 'cat' && <Field label="Kategori"><select value={x.cat ?? ''} onChange={(e) => up({ cat: e.target.value })}><option value="">Seçin</option>{cats.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>}
-        {x.mode === 'manual' && <div className="field">
-          <span className="field-l">Ürünler ({(x.ids || []).length})</span>
-          <div className="she-chips">{(x.ids || []).map((id) => byId.get(id) && <span key={id} className="she-chip"><Thumb p={byId.get(id)} size="sm" />{byId.get(id).n}<button type="button" onClick={() => up({ ids: x.ids.filter((y) => y !== id) })} aria-label="Kaldır"><Icon n="x" s={14} /></button></span>)}</div>
-          <ProductSearch onPick={(p) => !(x.ids || []).includes(p.id) && up({ ids: [...(x.ids || []), p.id] })} placeholder="Rafa ürün ekle: ad ya da stok kodu yazın…" />
-        </div>}
-      </>} />
-
-    <h3>6 · Alt bant</h3>
+    {x.mode === 'brand' && <Field label="Marka"><select value={x.brand || ''} onChange={(e) => up({ brand: e.target.value })}><option value="">Seçin</option>{brands.map((b) => <option key={b}>{b}</option>)}</select></Field>}
+    {x.mode === 'cat' && <Field label="Kategori"><select value={x.cat ?? ''} onChange={(e) => up({ cat: e.target.value })}><option value="">Seçin</option>{cats.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select></Field>}
+    {x.mode === 'manual' && <div className="field">
+      <span className="field-l">Ürünler ({(x.ids || []).length})</span>
+      <div className="she-chips">{(x.ids || []).map((id) => byId.get(id) && <span key={id} className="she-chip"><Thumb p={byId.get(id)} size="sm" />{byId.get(id).n}<button type="button" onClick={() => up({ ids: x.ids.filter((y) => y !== id) })} aria-label="Kaldır"><Icon n="x" s={14} /></button></span>)}</div>
+      <ProductSearch onPick={(p) => !(x.ids || []).includes(p.id) && up({ ids: [...(x.ids || []), p.id] })} placeholder="Rafa ürün ekle: ad ya da stok kodu yazın…" />
+    </div>}
+  </>;
+}
+// Marka kutusu: logo, renk ve logo boyutu Markalar kaydına yazılır (her yerde aynı görünsün)
+export function BrandFields({ b, up, d, set }) {
+  const catalog = useStore((s) => s.catalog);
+  const brands = useMemo(() => [...new Set(catalog.map((p) => p.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr')), [catalog]);
+  const BL = d.brandLogos || {};
+  const key = BL[b.name] ? b.name : Object.keys(BL).find((k) => norm(k) === norm(b.name || '')) || b.name;
+  const e = BL[key] || {};
+  const upBL = (patch) => key && set('brandLogos', { ...BL, [key]: { ...e, ...patch } });
+  return <>
     <div className="row2">
-      <Field label="Başlık" opt><input value={H.cta?.title || ''} onChange={(e) => S('cta', { ...(H.cta || {}), title: e.target.value })} placeholder="Boşsa bant görünmez" /></Field>
-      <Field label="Yazı" opt><input value={H.cta?.text || ''} onChange={(e) => S('cta', { ...(H.cta || {}), text: e.target.value })} /></Field>
+      <Field label="Marka adı"><input list="sh-brands" value={b.name || ''} onChange={(ev) => up({ name: ev.target.value, link: !b.link || b.link === 'brand:' + b.name ? 'brand:' + ev.target.value : b.link })} /></Field>
+      <LinkPick v={b.link} onChange={(link) => up({ link })} />
+    </div>
+    <datalist id="sh-brands">{brands.map((x) => <option key={x} value={x} />)}</datalist>
+    {key && <>
+      <div className="row2">
+        <Field label="Marka rengi" hint="Üstüne gelince ışık ve logo yoksa yazı rengi"><span className="she-color"><input type="color" value={e.color || b.color || '#1f2937'} onChange={(ev) => upBL({ color: ev.target.value })} /><code>{e.color || b.color}</code></span></Field>
+        <ScaleField v={e.scale || 1} onChange={(scale) => upBL({ scale })} label="Logo boyutu" />
+      </div>
+      <ImgPick v={b.logo || e.logo || ''} onChange={(logo) => { upBL({ logo }); if (b.logo) up({ logo: '' }); }} alpha max={600} label="Logo" hint="Markalar ayarına kaydedilir; kayan şeritte ve reklamlarda da bu logo kullanılır" />
+    </>}
+  </>;
+}
+export function ScaleField({ v, onChange, label = 'Boyut', min = 0.4, max = 1.6 }) {
+  return <Field label={label}><span className="she-scale"><input type="range" min={min} max={max} step="0.05" value={v} onChange={(e) => onChange(Number(e.target.value))} /><code>%{Math.round(v * 100)}</code>{v !== 1 && <button type="button" className="linkish" onClick={() => onChange(1)}>sıfırla</button>}</span></Field>;
+}
+export function BlockFields({ b, up }) {
+  if (b.t === 'banner') return <>
+    <ImgPick v={b.img} onChange={(img) => up({ img })} max={1800} label="Görsel" hint="Tam genişlik yatay görsel (ör. 1600×400)" />
+    <LinkPick v={b.link} onChange={(link) => up({ link })} />
+    <Field label="Yükseklik" hint="0 = görselin kendi oranı"><span className="she-scale"><input type="range" min="0" max="600" step="10" value={Number(b.h) || 0} onChange={(e) => up({ h: Number(e.target.value) })} /><code>{Number(b.h) ? b.h + ' px' : 'otomatik'}</code></span></Field>
+  </>;
+  return <>
+    <Field label="Başlık"><input value={b.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
+    <Field label="Alt yazı" opt><input value={b.sub || ''} onChange={(e) => up({ sub: e.target.value })} /></Field>
+    <div className="row3">
+      <Field label="Küçük etiket" opt><input value={b.tag || ''} onChange={(e) => up({ tag: e.target.value })} /></Field>
+      <Field label="Hizalama"><select value={b.align || 'left'} onChange={(e) => up({ align: e.target.value })}><option value="left">Sola</option><option value="center">Ortaya</option></select></Field>
+      <Field label="Büyüklük"><select value={b.size || 'md'} onChange={(e) => up({ size: e.target.value })}><option value="sm">Küçük</option><option value="md">Orta</option><option value="lg">Büyük</option></select></Field>
     </div>
   </>;
 }
+export function FxFields({ f = {}, up, reset }) {
+  const R = (label, key, min, max, step, unit, def = 0) => (
+    <Field label={label}><span className="she-scale"><input type="range" min={min} max={max} step={step} value={f[key] ?? def} onChange={(e) => up({ [key]: Number(e.target.value) })} /><code>{key === 's' ? '%' + Math.round((f.s ?? 1) * 100) : (f[key] ?? def) + unit}</code></span></Field>
+  );
+  return <>
+    <p className="fine">Öğeyi reklamın üstünde tutup sürükleyerek yerini değiştirin. Aşağıdan boyut, döndürme ve 3B eğim verin.</p>
+    {R('Boyut', 's', 0.3, 2.5, 0.05, '', 1)}
+    {R('Döndür', 'r', -45, 45, 1, '°')}
+    {R('3B eğim: sağa-sola', 'ry', -60, 60, 1, '°')}
+    {R('3B eğim: öne-arkaya', 'rx', -60, 60, 1, '°')}
+    <div className="row2">
+      {R('Yatay konum', 'x', -600, 600, 1, ' px')}
+      {R('Dikey konum', 'y', -400, 400, 1, ' px')}
+    </div>
+    <button type="button" className="btn sm ghost" onClick={reset}><Icon n="refresh" s={15} />Bu öğeyi sıfırla</button>
+  </>;
+}
+export const MQ_STYLES = { color: 'Açık zemin, renkli logolar', dark: 'Koyu zemin, logolar beyaz kartlarda', mono: 'Sade gri, üstüne gelince renkli', off: 'Gösterme' };
 
-// Ayarlar > Markalar: katalogdaki her markaya logo ve renk
+export function ShopHomeEditor({ d, set }) {
+  const H = d.shopHome || {};
+  const S = (k, v) => set('shopHome.' + k, v);
+  return <>
+    <div className="dz-cta">
+      <span><b>Tasarım modu</b><small>Mağaza sayfasının üstünde sürükle-bırak ile düzenleyin: sıralama, boyut, yeni başlık ve bölümler.</small></span>
+      <button type="button" className="btn primary sm" onClick={() => go('tasarim')}><Icon n="brush" s={16} />Tasarım modunu aç</button>
+    </div>
+    <Toggle id="sh-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => S('enabled', v)} />
+
+    <Fold title="Büyük reklam alanı" hint="Sırayla kayan büyük kartlar" badge={(H.slides || []).length}>
+      <p className="fine">“Ürün görselli”de arka planı saydam ürün resmi (PNG) çok iyi durur; “Tam resim”de hazır banner (ör. 1600×640) kullanın.</p>
+      <Field label="Yükseklik" hint="0 = otomatik"><span className="she-scale"><input type="range" min="0" max="720" step="10" value={Number(H.heroH) || 0} onChange={(e) => S('heroH', Number(e.target.value) < 260 ? 0 : Number(e.target.value))} /><code>{Number(H.heroH) ? H.heroH + ' px' : 'otomatik'}</code></span></Field>
+      <Rows list={H.slides || []} set={(v) => S('slides', v)} max={8} sub="Reklam ekle" title={(s, i) => `${i + 1}. ${s.title || 'Reklam'}`} add={() => S('slides', [...(H.slides || []), NEW.slide()])} render={(s, up) => <SlideFields s={s} up={up} />} />
+    </Fold>
+
+    <Fold title="Avantaj şeridi" hint="Orijinal ürün, hızlı kargo…" badge={(H.usps || []).length}>
+      <Rows list={H.usps || []} set={(v) => S('usps', v)} max={4} sub="Avantaj ekle" title={(u, i) => u.title || `${i + 1}. avantaj`} add={() => S('usps', [...(H.usps || []), NEW.usp()])} render={(u, up) => <UspFields u={u} up={up} />} />
+    </Fold>
+
+    <Fold title="Marka kutuları ve kayan şerit" hint="Logolar Markalar ayarından gelir" badge={(H.brands || []).length}>
+      <div className="row3">
+        <Field label="Bölüm başlığı"><input value={H.brandsTitle || ''} onChange={(e) => S('brandsTitle', e.target.value)} placeholder="Markalar" /></Field>
+        <Field label="Kutu büyüklüğü"><select value={H.brandSize || 'md'} onChange={(e) => S('brandSize', e.target.value)}><option value="sm">Küçük (satırda 8)</option><option value="md">Orta (satırda 5)</option><option value="lg">Büyük (satırda 4)</option></select></Field>
+        <Field label="Kayan şerit"><select value={H.marquee || 'color'} onChange={(e) => S('marquee', e.target.value)}>{Object.entries(MQ_STYLES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+      </div>
+      <ScaleField v={Number(H.brandLogoScale) || 1} onChange={(v) => S('brandLogoScale', v)} label="Tüm logoların boyutu" />
+      <Rows list={H.brands || []} set={(v) => S('brands', v)} max={30} sub="Marka ekle" title={(b, i) => b.name || `${i + 1}. marka`} add={() => S('brands', [...(H.brands || []), NEW.brand()])} render={(b, up) => <BrandFields b={b} up={up} d={d} set={set} />} />
+    </Fold>
+
+    <Fold title="Kare reklam kutuları" hint="Dergi gibi karışık boyutlu kutular" badge={(H.promos || []).length}>
+      <Field label="Bölüm başlığı"><input value={H.promosTitle || ''} onChange={(e) => S('promosTitle', e.target.value)} placeholder="Öne çıkanlar" /></Field>
+      <Rows list={H.promos || []} set={(v) => S('promos', v)} max={16} sub="Kutu ekle" title={(x, i) => x.title || `${i + 1}. kutu`} add={() => S('promos', [...(H.promos || []), NEW.promo()])} render={(x, up) => <PromoFields x={x} up={up} />} />
+    </Fold>
+
+    <Fold title="Ürün rafları" hint="Yeni gelenler, marka, kategori ya da elle seçilen ürünler" badge={(H.sections || []).length}>
+      <Rows list={H.sections || []} set={(v) => S('sections', v)} max={10} sub="Raf ekle" title={(x, i) => x.title || `${i + 1}. raf`} add={() => S('sections', [...(H.sections || []), NEW.rail()])} render={(x, up) => <RailFields x={x} up={up} />} />
+    </Fold>
+
+    <Fold title="Alt bant" hint="WhatsApp ve Tüm ürünler düğmeli kapanış bandı">
+      <div className="row2">
+        <Field label="Başlık" opt><input value={H.cta?.title || ''} onChange={(e) => S('cta', { ...(H.cta || {}), title: e.target.value })} placeholder="Boşsa bant görünmez" /></Field>
+        <Field label="Yazı" opt><input value={H.cta?.text || ''} onChange={(e) => S('cta', { ...(H.cta || {}), text: e.target.value })} /></Field>
+      </div>
+    </Fold>
+  </>;
+}
+
+// Ayarlar > Markalar: katalogdaki her markaya logo, renk ve logo boyutu (satıra basınca açılır)
 export function BrandLogosEditor({ d, set }) {
   const catalog = useStore((s) => s.catalog);
   const BL = d.brandLogos || {};
   const [q, setQ] = useState('');
-  // Aynı marka farklı yazılmış olabilir (Uni-t / Uni-T): kayıtlı anahtarla birleştir
+  const [open, setOpen] = useState(null);
   const keyOf = (n) => (BL[n] ? n : Object.keys(BL).find((k) => norm(k) === norm(n)) || n);
   const list = useMemo(() => {
     const m = new Map(); for (const p of catalog) if (p.b) { const k = keyOf(p.b); m.set(k, (m.get(k) || 0) + 1); }
@@ -506,15 +681,24 @@ export function BrandLogosEditor({ d, set }) {
   const t = norm(q);
   const missing = list.filter(([n]) => !BL[n]?.logo).length;
   return <>
-    <p className="fine">Her markanın logosu ve rengi. Ana sayfadaki marka kutuları, kayan şerit ve o markaya giden reklamlar bunları kullanır. Logo için <b>saydam arka planlı PNG</b> en iyisi (beyaz zeminde okunacak renkli logo). {missing > 0 && <>Logosu olmayan <b>{missing}</b> marka var.</>}</p>
+    <p className="fine">Ana sayfadaki marka kutuları, kayan şerit ve o markaya giden reklamlar buradaki logoyu, rengi ve boyutu kullanır. Bir markaya basınca ayarları açılır. Logo için <b>saydam arka planlı PNG</b> en iyisi. {missing > 0 && <>Logosu olmayan <b>{missing}</b> marka var.</>}</p>
     <div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Marka ara…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
     <div className="bl-list">
       {list.filter(([n]) => !t || norm(n).includes(t)).map(([n, c]) => (
-        <div key={n} className={'bl-row' + (BL[n]?.logo ? '' : ' no-logo')}>
-          <div className="bl-h"><b>{n}</b><small className="muted">{c} ürün</small>
-            <span className="she-color"><input type="color" aria-label={n + ' rengi'} value={BL[n]?.color || '#64748b'} onChange={(e) => up(n, { color: e.target.value })} /></span>
-          </div>
-          <ImgPick v={BL[n]?.logo || ''} onChange={(logo) => up(n, { logo })} alpha max={600} label="Logo" />
+        <div key={n} className={'bl-row' + (BL[n]?.logo ? '' : ' no-logo') + (open === n ? ' open' : '')}>
+          <button type="button" className="bl-h" onClick={() => setOpen(open === n ? null : n)} aria-expanded={open === n}>
+            <span className="bl-thumb" style={{ '--c': BL[n]?.color || '#64748b' }}>{BL[n]?.logo ? <ShopImg v={BL[n].logo} alt="" /> : <b>{n.slice(0, 2)}</b>}</span>
+            <span className="bl-n"><b>{n}</b><small className="muted">{c} ürün{BL[n]?.logo ? '' : ' · logo yok'}</small></span>
+            <i className="bl-dot" style={{ background: BL[n]?.color || '#cbd5e1' }} />
+            <Icon n="chev" s={16} className="fold-chev" />
+          </button>
+          {open === n && <div className="bl-b">
+            <div className="row2">
+              <Field label="Marka rengi"><span className="she-color"><input type="color" aria-label={n + ' rengi'} value={BL[n]?.color || '#64748b'} onChange={(e) => up(n, { color: e.target.value })} /><code>{BL[n]?.color || '—'}</code></span></Field>
+              <ScaleField v={BL[n]?.scale || 1} onChange={(scale) => up(n, { scale })} label="Logo boyutu" />
+            </div>
+            <ImgPick v={BL[n]?.logo || ''} onChange={(logo) => up(n, { logo })} alpha max={600} label="Logo" />
+          </div>}
         </div>
       ))}
     </div>

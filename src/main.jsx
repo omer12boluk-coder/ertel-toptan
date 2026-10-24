@@ -16,6 +16,7 @@ import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome } from './shophome.jsx';
+import { ShopDesigner } from './designer.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
@@ -336,7 +337,7 @@ function Login() {
 
 // [sekme, ad, ikon, telefondaki kısa ad]
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Hesabım', 'user']];
-const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 const shopFirst = () => (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa');
 
@@ -356,6 +357,7 @@ function pageMenu(e, role) {
     admin && '-',
     admin && { label: 'Yeni ürün ekle', icon: 'plus', onClick: () => { go('katalog'); store.set({ intent: 'newProduct' }); } },
     admin && { label: 'Yeni müşteri ekle', icon: 'users', onClick: () => { go('musteriler'); store.set({ intent: 'newCustomer' }); } },
+    admin && { label: 'Mağaza tasarımı', icon: 'brush', onClick: () => go('tasarim') },
     admin && { label: 'Vitrin linkini kopyala', icon: 'copy', hint: '/magaza', onClick: () => copyText(links.shop(), 'Vitrin linki kopyalandı') },
     '-',
     { label: 'Temayı değiştir', icon: 'moon', onClick: () => document.querySelector('[data-theme-btn]')?.click() },
@@ -363,7 +365,31 @@ function pageMenu(e, role) {
   ]);
 }
 
+// /siparisformu: menüsüz, tek sayfa sipariş formu (yönetim panelinin oturumunu kullanır)
+function FormOnlyShell() {
+  const { user, api: A } = useStore();
+  useEffect(() => { document.title = 'Sipariş formu'; const m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex, nofollow'; document.head.appendChild(m); }, []);
+  return (
+    <div className="shell admin form-only tab-siparis">
+      <header className="topbar">
+        <div className="topbar-in">
+          <Brand small />
+          <span className="admin-badge"><Icon n="tag" s={14} />Sipariş formu</span>
+          <span className="top-sp" />
+          <ThemeButton />
+          <button className="icon-btn logout-btn" onClick={() => A.logout()} aria-label="Çıkış yap" title="Çıkış yap"><Icon n="out" s={18} /></button>
+        </div>
+      </header>
+      <main className="main"><OrderForm /></main>
+    </div>
+  );
+}
+
 function Shell() {
+  if (ROUTE.formOnly) return <FormOnlyShell />;
+  return <ShellFull />;
+}
+function ShellFull() {
   const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0 } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
@@ -436,12 +462,13 @@ function Shell() {
         {tab === 'hesap' && pub && <Account />}
         {tab === 'islem' && pub && <AuthAction />}
         {tab === 'ayarlar' && admin && <Settings />}
+        {tab === 'tasarim' && admin && <ShopDesigner />}
       </main>
       {!admin && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
       <nav className="botnav" aria-label="Alt menü">
-        {nav.map(([k, l, i, sh]) => (
+        {nav.filter(([k]) => k !== 'tasarim').map(([k, l, i, sh]) => (
           <button key={k} className={'botnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
             <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
             <span>{sh || l}</span>

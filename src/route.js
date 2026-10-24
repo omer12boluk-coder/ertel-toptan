@@ -11,8 +11,11 @@ const path = location.pathname.replace(/\/+$/, '') || '/';
 const hash = location.hash.slice(1);
 const under = (p) => path === p || path.startsWith(p + '/') || hash === p.slice(1);
 
+// /siparisformu: sadece sipariş formu (yönetici oturumuyla; sitede hiçbir yerden link verilmez)
+const formOnly = path === '/siparisformu' || hash === 'siparisformu';
 export const ROUTE = {
-  admin: under('/admin'),
+  formOnly,
+  admin: under('/admin') || formOnly,
   shop: under('/magaza'),
   b2b: under('/b2b') || path.startsWith('/t/'),
   reqId: (path.match(/\/t\/([\w-]+)$/) || [])[1] || null,

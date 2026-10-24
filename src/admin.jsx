@@ -1,6 +1,6 @@
 import { ShopHomeEditor, BrandLogosEditor } from './shophome.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, api, store, setCatalog, toast, openRequest } from './store.js';
+import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls } from './utils.js';
@@ -409,14 +409,28 @@ export function CustomerSheet({ c, onClose }) {
 
 // =========================================================================
 // Ayarlar
-const SECTIONS = [['genel', 'Genel'], ['anasayfa', 'Bayi ana sayfası'], ['magazaana', 'Mağaza ana sayfası'], ['markalar', 'Markalar'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['magaza', 'Online mağaza'], ['kategori', 'Kategoriler'], ['veri', 'Veri'], ['hesap', 'Hesabım']];
+const SECTIONS = [
+  ['genel', 'Genel', 'Uygulama adı, renkler, logo, özellikler', 'gear'],
+  ['magazaana', 'Mağaza ana sayfası', 'Reklamlar, marka kutuları, raflar (liste hâlinde)', 'store'],
+  ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star'],
+  ['magaza', 'Online mağaza', 'Sipariş, teslimat, ödeme, kargo firmaları, bildirimler', 'cart'],
+  ['anasayfa', 'Bayi ana sayfası', 'Bayilerin giriş yapınca gördüğü sayfa', 'home'],
+  ['fiyat', 'Fiyatlandırma', 'Toptan indirimi, KDV, kur', 'tag'],
+  ['kademe', 'Kademeler', 'Bayi indirim kademeleri', 'users'],
+  ['katalog', 'Katalog', 'Stok gösterimi, sayfa, arama', 'grid'],
+  ['talep', 'Talepler', 'Bayi talepleri ve mesajlar', 'chat'],
+  ['dukkan', 'Dükkan', 'Adres, telefon, WhatsApp, erişim', 'phone'],
+  ['kategori', 'Kategoriler', 'Kategori adları ve sırası', 'list'],
+  ['veri', 'Veri', 'Excel içe / dışa aktarma, yedek', 'upload'],
+  ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
+];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
 const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
   const [d, setD] = useState(() => structuredClone(settings));
-  const [sec, setSec] = useState('genel');
+  const [sec, setSec] = useState(null); // hepsi kapalı başlar
   const [busy, setBusy] = useState(false);
   const [imp, setImp] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -473,23 +487,8 @@ export function Settings() {
     walk(tree.roots, 0); return out;
   }, [catalog]);
 
-  return (
-    <div className="page settings">
-      <div className="page-h">
-        <h1 className="page-t">Ayarlar</h1>
-        <span className="muted">{A.mode === 'demo' ? 'Demo modu · veriler bu tarayıcıda' : 'Firebase’e bağlı'}</span>
-      </div>
-      <div className="chips scroll sec-nav">{SECTIONS.map(([k, l]) => <button key={k} className={'chip' + (sec === k ? ' on' : '') + (secDirty(k) ? ' dirty' : '')} onClick={() => setSec(k)}>{l}{secDirty(k) && <i className="dirty-dot" aria-label="kaydedilmedi" />}</button>)}</div>
-
-      {sec === 'hesap' ? <Profile embedded /> : <div className="set-card">
-        <div className={'set-head' + (dirty ? ' dirty' : '')}>
-          <h2>{SECTIONS.find((x) => x[0] === sec)?.[1]}</h2>
-          {dirty && <span className="unsaved"><i className="dirty-dot" />Kaydedilmedi{!secDirty(sec) && ' (başka bölümde)'}</span>}
-          {sec !== 'veri' && <>
-            {dirty && <button className="btn sm ghost" onClick={() => setD(structuredClone(settings))}>Geri al</button>}
-            <button className="btn sm primary" onClick={save} disabled={busy || !dirty}><Icon n="check" s={15} />{busy ? 'Kaydediliyor…' : dirty ? 'Kaydet' : 'Kaydedildi'}</button>
-          </>}
-        </div>
+  // açık bölümün içeriği
+  const body = <>
         {sec === 'genel' && <>
           <div className="row2">
             <Field label="Uygulama adı"><input id="s-name" value={d.brand.appName} onChange={(e) => set('brand.appName', e.target.value)} /></Field>
@@ -666,7 +665,36 @@ export function Settings() {
         {sec === 'anasayfa' && <HomeEditor d={d} set={set} />}
         {sec === 'magazaana' && <ShopHomeEditor d={d} set={set} />}
         {sec === 'markalar' && <BrandLogosEditor d={d} set={set} />}
-      </div>}
+  </>;
+  const openSec = (k) => { const n = sec === k ? null : k; setSec(n); if (n) requestAnimationFrame(() => document.getElementById('acc-' + k)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); };
+
+  return (
+    <div className="page settings">
+      <div className="page-h">
+        <h1 className="page-t">Ayarlar</h1>
+        <span className="muted">{A.mode === 'demo' ? 'Demo modu · veriler bu tarayıcıda' : 'Firebase’e bağlı'}</span>
+      </div>
+      <p className="fine set-intro">Bir başlığa basınca açılır, tekrar basınca kapanır. Mağazanın görünüşünü sürükle-bırak ile düzenlemek için <button type="button" className="linkish" onClick={() => go('tasarim')}>Tasarım modu</button>.</p>
+      <div className="acc">
+        {SECTIONS.map(([k, l, hint, ic]) => (
+          <section key={k} id={'acc-' + k} className={'acc-i' + (sec === k ? ' open' : '')}>
+            <button type="button" className="acc-h" aria-expanded={sec === k} onClick={() => openSec(k)}>
+              <span className="acc-ic"><Icon n={ic} s={18} /></span>
+              <span className="acc-t"><b>{l}</b><small>{hint}</small></span>
+              {secDirty(k) && <i className="dirty-dot" aria-label="kaydedilmedi" />}
+              <Icon n="chev" s={18} className="acc-chev" />
+            </button>
+            {sec === k && (k === 'hesap' ? <div className="acc-b"><Profile embedded /></div> : <div className="set-card acc-b">{body}</div>)}
+          </section>
+        ))}
+      </div>
+      {dirty && (
+        <div className="save-bar" role="status">
+          <span><i className="dirty-dot" />Kaydedilmemiş değişiklik var</span>
+          <button className="btn sm ghost" onClick={() => setD(structuredClone(settings))}>Geri al</button>
+          <button className="btn sm primary" onClick={save} disabled={busy}><Icon n="check" s={15} />{busy ? 'Kaydediliyor…' : 'Kaydet'}</button>
+        </div>
+      )}
 
       {imp && (
         <Sheet title="Excel içe aktarma" sub={imp.file} onClose={() => setImp(null)} footer={<><button className="btn ghost" onClick={() => setImp(null)}>Vazgeç</button><button className="btn primary" onClick={applyImport} disabled={busy}>Uygula</button></>}>
