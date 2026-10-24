@@ -95,13 +95,14 @@ const spot = (e) => { const r = e.currentTarget.getBoundingClientRect(); e.curre
 // Tasarım modu: ShopHome bu bağlamla sarılınca bölümler seçilebilir / sürüklenebilir olur (designer.jsx)
 export const DesignCtx = createContext(null);
 export const rid = () => Math.random().toString(36).slice(2, 8);
-export const FIXED = { hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', cta: 'Alt bant' };
+export const FIXED = { search: 'Arama kutusu', hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', cta: 'Alt bant' };
 const railKey = (r, i) => 'rail:' + (r.id || i);
 // Bölüm sırası: kayıtlı sıra + sonradan eklenenler; silinmiş olanlara ait kayıtlar atılır
 export function layoutOf(H) {
   const rails = H.sections || [];
-  const valid = ['hero', 'usps', 'marquee', 'brands', 'promos', ...rails.map(railKey), ...Object.keys(H.blocks || {}).map((id) => 'b:' + id), 'cta'];
+  const valid = ['search', 'hero', 'usps', 'marquee', 'brands', 'promos', ...rails.map(railKey), ...Object.keys(H.blocks || {}).map((id) => 'b:' + id), 'cta'];
   const L = (Array.isArray(H.layout) ? H.layout : []).filter((k) => valid.includes(k));
+  if (!L.includes('search')) L.unshift('search'); // arama kutusu yoksa en üste
   for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
   return L;
 }
@@ -147,6 +148,7 @@ export function ShopHome({ S: Sover }) {
   const ls = Number(H.brandLogoScale) || 1;
 
   const render = (k) => {
+    if (k === 'search') return <SearchBlock hints={H.searchHints} onProduct={E ? () => E.select('search') : setProduct} edit={!!E} />;
     if (k === 'hero') return slides.length > 0 ? <Hero slides={slides} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
     if (k === 'usps') return (H.usps || []).some((u) => u.title) ? (
       <section className="sh-usps rv" aria-label="Avantajlar">
@@ -225,6 +227,57 @@ export function ShopHome({ S: Sover }) {
 const Frag = ({ children }) => children || null;
 const stop = (e) => e.stopPropagation();
 const Empty = ({ label }) => <div className="dz-empty">{label}</div>;
+
+// ---- arama kutusu: yazdıkça ilk 6 ürün; ürüne basınca ürün penceresi, "tüm sonuçlar" ürünler sayfasına aramayla gider
+// (kaldırmak için: Tasarım modu ya da Ayarlar > Mağaza ana sayfası > Arama kutusu > gizle)
+const DEF_HINTS = ['havya ucu', 'mikroskop', 'JCID', 'ekran ayırma'];
+function SearchBlock({ hints, onProduct, edit }) {
+  const { catalog, settings: S, user, userPrices } = useStore();
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const [hi, setHi] = useState(0);
+  const res = useMemo(() => {
+    const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return { list: [], n: 0 };
+    const all = catalog.filter((p) => p.a !== 0 && !p.so && t.every((x) => p._s?.includes(x)));
+    return { list: all.slice(0, 6), n: all.length };
+  }, [q, catalog]);
+  const goAll = (text = q) => { if (!text.trim()) return; store.set({ catalogGo: { q: text.trim() } }); go('katalog'); };
+  const pick = (p) => { setOpen(false); onProduct(p); };
+  const key = (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, res.list.length)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (res.list[hi] && hi < res.list.length) pick(res.list[hi]); else goAll(); }
+    else if (e.key === 'Escape') setOpen(false);
+  };
+  const H = (hints && hints.length ? hints : DEF_HINTS).filter(Boolean);
+  return (
+    <section className="sh-search" onClick={edit ? undefined : (e) => e.stopPropagation()}>
+      <div className={'sh-search-box' + (open && q ? ' open' : '')}>
+        <Icon n="search" s={22} />
+        <input type="search" value={q} disabled={edit} placeholder="Ne arıyorsunuz? Ürün adı, marka ya da stok kodu…" aria-label="Ürün ara"
+          onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 180)} onKeyDown={key} />
+        {q && <button type="button" className="sh-search-x" onClick={() => { setQ(''); setOpen(false); }} aria-label="Temizle"><Icon n="x" s={16} /></button>}
+        <button type="button" className="btn primary sh-search-go" onClick={() => goAll()} disabled={edit}>Ara</button>
+        {open && q.trim() && (
+          <div className="sh-search-res" role="listbox">
+            {res.list.length === 0 ? <p className="sh-search-none">“{q}” ile eşleşen ürün yok.</p> : res.list.map((p, i) => {
+              const pr = priceFor(p, S, user, userPrices);
+              return (
+                <button type="button" key={p.id} role="option" aria-selected={i === hi} className={'sh-search-it' + (i === hi ? ' on' : '')} onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(p)}>
+                  <Thumb p={p} size="sm" />
+                  <span className="sh-search-n"><b>{p.n}</b><small>{[p.b, p.k].filter(Boolean).join(' · ')}</small></span>
+                  <b className="sh-search-p num">{pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur)}</b>
+                </button>
+              );
+            })}
+            {res.n > 0 && <button type="button" className={'sh-search-all' + (hi === res.list.length ? ' on' : '')} onMouseDown={(e) => e.preventDefault()} onClick={() => goAll()}>“{q}” için tüm sonuçları gör ({res.n}) <Icon n="back" s={15} className="flip" /></button>}
+          </div>
+        )}
+      </div>
+      {H.length > 0 && <div className="sh-search-hints"><span>Sık arananlar:</span>{H.map((h) => <button key={h} type="button" className="chip" disabled={edit} onClick={() => goAll(h)}>{h}</button>)}</div>}
+    </section>
+  );
+}
 
 // yeni bölüm türleri: başlık ve tek görsel bant
 function HeadBlock({ b, onTitle }) {
@@ -663,6 +716,11 @@ export function ShopHomeEditor({ d, set }) {
       <button type="button" className="btn primary sm" onClick={() => go('tasarim')}><Icon n="brush" s={16} />Tasarım modunu aç</button>
     </div>
     <Toggle id="sh-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => S('enabled', v)} />
+
+    <Fold title="Arama kutusu" hint="Sayfanın en üstünde ürün arama">
+      <Toggle id="sh-search" label="Arama kutusunu göster" hint="Yazdıkça ilk 6 ürün çıkar; ürüne basınca ürün penceresi açılır" checked={!(H.hidden || []).includes('search')} onChange={(v) => S('hidden', v ? (H.hidden || []).filter((x) => x !== 'search') : [...(H.hidden || []), 'search'])} />
+      <Field label="Sık arananlar" hint="Virgülle ayırın; kutunun altında tıklanabilir öneriler olarak görünür. Boş bırakırsanız varsayılanlar."><input value={(H.searchHints || []).join(', ')} onChange={(e) => S('searchHints', e.target.value.split(',').map((x) => x.trim()).filter(Boolean))} placeholder={DEF_HINTS.join(', ')} /></Field>
+    </Fold>
 
     <Fold title="Büyük reklam alanı" hint="Sırayla kayan büyük kartlar" badge={(H.slides || []).length}>
       <p className="fine">“Ürün görselli”de arka planı saydam ürün resmi (PNG) çok iyi durur; “Tam resim”de hazır banner (ör. 1600×640) kullanın.</p>

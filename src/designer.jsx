@@ -293,7 +293,11 @@ function Panel({ sel, d, H, set, close, heroI, removeBlock, setSel }) {
   } else {
     const k = sel.k;
     title = blockLabel(k, H);
-    if (k === 'hero') body = <>
+    if (k === 'search') body = <>
+      <p className="fine">Müşteri yazdıkça ilk 6 ürün çıkar; ürüne basınca ürün penceresi açılır, “Ara” ya da Enter ürünler sayfasına aramayla gider. Kaldırmak için üstteki göz simgesiyle gizleyin.</p>
+      <Field label="Sık arananlar" hint="Virgülle ayırın"><input value={(H.searchHints || []).join(', ')} placeholder="havya ucu, mikroskop, JCID, ekran ayırma" onChange={(e) => S('searchHints', e.target.value.split(',').map((x) => x.trim()).filter(Boolean))} /></Field>
+    </>;
+    else if (k === 'hero') body = <>
       <Field label="Yükseklik" hint="Reklam alanının alt kenarındaki tutamaçla da çekebilirsiniz. 0 = otomatik"><span className="she-scale"><input type="range" min="0" max="760" step="10" value={Number(H.heroH) || 0} onChange={(e) => S('heroH', Number(e.target.value) < 260 ? 0 : Number(e.target.value))} /><code>{Number(H.heroH) ? H.heroH + ' px' : 'otomatik'}</code></span></Field>
       <Rows list={H.slides || []} set={(v) => S('slides', v)} max={8} sub="Reklam ekle" openIdx={heroI} title={(s, i) => `${i + 1}. ${s.title || 'Reklam'}`} add={() => S('slides', [...(H.slides || []), NEW.slide()])} render={(s, up) => <SlideFields s={s} up={up} />} />
     </>;
