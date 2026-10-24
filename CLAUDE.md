@@ -18,7 +18,7 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 - Yönetici talepleri (sağ tık / çoklu seçim / talep içi) ve müşterileri tamamen silebilir (Firebase Auth hesabı silinmez, kayıt silindiği için giriş açılmaz).
 
 ## Site eşitleme
-- `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı (r) = sitedeki gerçek satış fiyatı: `sale_price` (indirimli) varsa o, yoksa `price`. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Excel'de de "İndirimli Fiyat" doluysa r odur. Sipariş formu varsayılan fiyatı r. Sitede olmayan ürünü `so=1` ile gizler.
+- `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı (r) = sitedeki normal (üstü çizili) `price`; sitedeki indirimli fiyat toptan (w) olarak Excel'den gelir ("İndirimli Fiyat" → w) — kullanıcı böyle istedi (24.10.2026'da bir kez indirimliye çevrilip geri alındı). Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sipariş formu varsayılan fiyatı r (liste), toptan değil. Sitede olmayan ürünü `so=1` ile gizler.
 - `worker/index.js` Cloudflare Worker "ertel-b2b-watch": dakikada bir beslemeyi kontrol eder, değişince sync'i tetikler (Actions "Bekçiyi yayınla" yükler). workers.dev adresi `hosting/public/config.js` → `window.WATCH_URL`: `GET /rate` Harem Altın dolar satış kuru, `POST /check` (panel açılınca), `POST /sync` ("Şimdi eşitle").
 - Ürün adları `src/clean.js` ile temizlenir (Windows-1252 kalıntısı, &#..; kodları).
 - Siteye toplu istek atma (IP engeli yemiştik). Beslemede stok adedi yok.

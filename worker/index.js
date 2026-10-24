@@ -99,7 +99,7 @@ export function parseFeed(xml) {
   while (i >= 0) {
     const j = xml.indexOf('</entry>', i);
     const e = xml.slice(i, j);
-    items.push({ id: field(e, 'id', 0), sig: field(e, 'title', 0) + '|' + field(e, 'image_link', 0) + '|' + field(e, 'brand', 0) + '|' + field(e, 'availability', 0), tl: (() => { const r = parseFloat(field(e, 'price', 0)) || 0, s = parseFloat(field(e, 'sale_price', 0)) || 0; return s > 0 && (!r || s < r) ? s : r; })() });
+    items.push({ id: field(e, 'id', 0), sig: field(e, 'title', 0) + '|' + field(e, 'image_link', 0) + '|' + field(e, 'brand', 0) + '|' + field(e, 'availability', 0), tl: parseFloat(field(e, 'price', 0)) || 0 });
     i = xml.indexOf('<entry>', j);
   }
   return items;

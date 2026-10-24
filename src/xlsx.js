@@ -148,8 +148,7 @@ export function rowsToProducts(rows) {
     if (v('c') != null) p.c = Number(v('c')) || 0;
     if (has(o, K.c2)) { const c2 = Number(v('c2')); if (c2 && c2 !== p.c) p.c2 = c2; }
     if (v('r') != null) p.r = Number(v('r')) || 0;
-    // sitedeki gerçek satış fiyatı: "İndirimli Fiyat" doluysa odur (üstü çizili "Fiyat" değil). Toptan fiyata dokunulmaz.
-    if (Number(v('w')) > 0 && (!(p.r > 0) || Number(v('w')) < p.r)) p.r = Number(v('w'));
+    if (Number(v('w')) > 0) p.w = Number(v('w'));
     if (v('cur') != null) { const pb = String(v('cur')).toUpperCase(); p.cur = pb === 'TL' ? 'TRY' : pb; }
     if (v('s') != null) p.s = Number(v('s')) || 0;
     if (v('a') != null) p.a = Number(v('a')) ? 1 : 0;
