@@ -83,12 +83,15 @@ export function ShopHome() {
   const ref = useReveal();
   const link = (l) => () => open(l, setProduct);
   const counts = useMemo(() => { const m = new Map(); for (const p of catalog) if (p.b && p.a !== 0) m.set(norm(p.b), (m.get(norm(p.b)) || 0) + 1); return m; }, [catalog]);
-  const brands = (H.brands || []).filter((b) => b.name || b.logo);
+  // logo ve renk: kutuda ayrıca verilmediyse Ayarlar > Markalar'dan
+  const BL = S.brandLogos || {};
+  const bl = (n) => BL[n] || BL[Object.keys(BL).find((k) => norm(k) === norm(n || '')) || ''] || {};
+  const brands = (H.brands || []).filter((b) => b.name || b.logo).map((b) => ({ ...b, logo: b.logo || bl(b.name).logo || '', color: bl(b.name).color || b.color }));
   const promos = (H.promos || []).filter((x) => x.title || x.img);
   const slides = (H.slides || []).filter((x) => x.title || x.img);
   return (
     <div className="sh" ref={ref}>
-      {slides.length > 0 && <Hero slides={slides} open={link} brands={brands} />}
+      {slides.length > 0 && <Hero slides={slides} open={link} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} />}
 
       {(H.usps || []).some((u) => u.title) && (
         <section className="sh-usps rv" aria-label="Avantajlar">
@@ -99,7 +102,7 @@ export function ShopHome() {
       )}
 
       {brands.length > 0 && <>
-        <Marquee items={brands} />
+        {H.marquee !== 'off' && <Marquee items={brands} style={H.marquee || 'color'} />}
         <section className="sh-sec rv">
           <SecHead title={H.brandsTitle || 'Markalar'} sub="Dünyanın önde gelen tamir ekipmanı üreticileri" />
           <div className="sh-brands">
@@ -172,12 +175,16 @@ function SecHead({ title, sub, more, rail }) {
 }
 
 // kayan marka şeridi: logosu olan markada orijinal logo (şeride uysun diye beyaza boyanır), yoksa adı
-function Marquee({ items }) {
+function Marquee({ items, style }) {
   if (!items.length) return null;
   const row = [...items, ...items, ...items];
   return (
-    <div className="sh-marquee" aria-hidden="true">
-      <div className="sh-marquee-in">{[...row, ...row].map((b, i) => <span key={i}>{b.logo ? <ShopImg v={b.logo} className="sh-mq-logo" alt={b.name} /> : b.name}<i>✦</i></span>)}</div>
+    <div className={'sh-mq mq-' + style} aria-hidden="true">
+      <div className="sh-mq-in">{[...row, ...row].map((b, i) => (
+        <span key={i} className="sh-mq-it" style={{ '--c': b.color || '#64748b' }}>
+          {b.logo ? <ShopImg v={b.logo} className="sh-mq-logo" alt={b.name} /> : <b>{b.name}</b>}
+        </span>
+      ))}</div>
     </div>
   );
 }
@@ -289,7 +296,7 @@ const ICONS = [['shield', 'Kalkan'], ['box', 'Kutu / kargo'], ['chat', 'Mesaj'],
 const SIZES = { sq: 'Kare (1×1)', wide: 'Geniş (2×1)', tall: 'Uzun (1×2)', big: 'Büyük kare (2×2)' };
 const MODES = { new: 'Yeni gelenler (otomatik)', brand: 'Bir markanın ürünleri', cat: 'Bir kategorinin ürünleri', manual: 'Elle seçtiğim ürünler' };
 
-function ImgPick({ v, onChange, alpha, max = 1600, label = 'Görsel', hint, prodOk }) {
+export function ImgPick({ v, onChange, alpha, max = 1600, label = 'Görsel', hint, prodOk }) {
   const src = useShopImg(v);
   const [busy, setBusy] = useState(false);
   async function pick(e) {
@@ -420,7 +427,11 @@ export function ShopHomeEditor({ d, set }) {
       </div>} />
 
     <h3>3 · Marka kutuları</h3>
-    <Field label="Bölüm başlığı"><input value={H.brandsTitle || ''} onChange={(e) => S('brandsTitle', e.target.value)} placeholder="Markalar" /></Field>
+    <div className="row2">
+      <Field label="Bölüm başlığı"><input value={H.brandsTitle || ''} onChange={(e) => S('brandsTitle', e.target.value)} placeholder="Markalar" /></Field>
+      <Field label="Kayan marka şeridi"><select value={H.marquee || 'color'} onChange={(e) => S('marquee', e.target.value)}><option value="color">Açık zemin, renkli logolar</option><option value="dark">Koyu zemin, logolar beyaz kartlarda</option><option value="mono">Sade gri, üstüne gelince renkli</option><option value="off">Gösterme</option></select></Field>
+    </div>
+    <p className="fine">Logolar ve marka renkleri <b>Ayarlar &gt; Markalar</b>’dan gelir; burada bir kutuya ayrıca logo verirseniz o kullanılır.</p>
     <p className="fine">Kare kutular; adlar ayrıca kayan şeritte de döner. Logo yüklemezseniz marka adı büyük yazıyla görünür. Logo için saydam PNG (beyaz ya da açık renkli) en iyisi.</p>
     <Rows list={H.brands || []} set={(v) => S('brands', v)} max={24} sub="Marka ekle" title={(b, i) => b.name || `${i + 1}. marka`}
       add={() => S('brands', [...(H.brands || []), { name: '', color: '#1f2937', link: '' }])}
@@ -475,6 +486,37 @@ export function ShopHomeEditor({ d, set }) {
     <div className="row2">
       <Field label="Başlık" opt><input value={H.cta?.title || ''} onChange={(e) => S('cta', { ...(H.cta || {}), title: e.target.value })} placeholder="Boşsa bant görünmez" /></Field>
       <Field label="Yazı" opt><input value={H.cta?.text || ''} onChange={(e) => S('cta', { ...(H.cta || {}), text: e.target.value })} /></Field>
+    </div>
+  </>;
+}
+
+// Ayarlar > Markalar: katalogdaki her markaya logo ve renk
+export function BrandLogosEditor({ d, set }) {
+  const catalog = useStore((s) => s.catalog);
+  const BL = d.brandLogos || {};
+  const [q, setQ] = useState('');
+  // Aynı marka farklı yazılmış olabilir (Uni-t / Uni-T): kayıtlı anahtarla birleştir
+  const keyOf = (n) => (BL[n] ? n : Object.keys(BL).find((k) => norm(k) === norm(n)) || n);
+  const list = useMemo(() => {
+    const m = new Map(); for (const p of catalog) if (p.b) { const k = keyOf(p.b); m.set(k, (m.get(k) || 0) + 1); }
+    for (const k of Object.keys(BL)) if (!m.has(k)) m.set(k, 0);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [catalog, d.brandLogos]);
+  const up = (name, patch) => set('brandLogos', { ...BL, [name]: { ...(BL[name] || {}), ...patch } });
+  const t = norm(q);
+  const missing = list.filter(([n]) => !BL[n]?.logo).length;
+  return <>
+    <p className="fine">Her markanın logosu ve rengi. Ana sayfadaki marka kutuları, kayan şerit ve o markaya giden reklamlar bunları kullanır. Logo için <b>saydam arka planlı PNG</b> en iyisi (beyaz zeminde okunacak renkli logo). {missing > 0 && <>Logosu olmayan <b>{missing}</b> marka var.</>}</p>
+    <div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Marka ara…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+    <div className="bl-list">
+      {list.filter(([n]) => !t || norm(n).includes(t)).map(([n, c]) => (
+        <div key={n} className={'bl-row' + (BL[n]?.logo ? '' : ' no-logo')}>
+          <div className="bl-h"><b>{n}</b><small className="muted">{c} ürün</small>
+            <span className="she-color"><input type="color" aria-label={n + ' rengi'} value={BL[n]?.color || '#64748b'} onChange={(e) => up(n, { color: e.target.value })} /></span>
+          </div>
+          <ImgPick v={BL[n]?.logo || ''} onChange={(logo) => up(n, { logo })} alpha max={600} label="Logo" />
+        </div>
+      ))}
     </div>
   </>;
 }

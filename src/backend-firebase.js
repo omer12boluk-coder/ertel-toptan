@@ -100,7 +100,7 @@ export class FirebaseBackend {
   async savePublicSettings(S) {
     const p = S.pricing || {};
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
-      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, v: S.v || 0 });
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, v: S.v || 0 });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan
@@ -268,9 +268,14 @@ export class FirebaseBackend {
     this.memberCb = cb;
     return this.U.onAuthStateChanged(this.auth, async (u) => {
       if (this.signingUp) return;
-      if (!u || !u.emailVerified) return cb(null);
-      try { const s = await timeout(this.F.getDoc(this.d('members', u.uid))); cb({ uid: u.uid, email: u.email, ...(s.exists() ? s.data() : {}) }); }
-      catch { cb({ uid: u.uid, email: u.email }); }
+      if (!u) return cb(null);
+      try {
+        const s = await timeout(this.F.getDoc(this.d('members', u.uid)));
+        const data = s.exists() ? s.data() : {};
+        // yönetici panelden açtığı hesaplar e-posta doğrulaması beklemez
+        if (!u.emailVerified && !data.byAdmin) return cb(null);
+        cb({ uid: u.uid, email: u.email, ...data });
+      } catch { cb(u.emailVerified ? { uid: u.uid, email: u.email } : null); }
     });
   }
   actionUrl() { return { url: location.origin + '/magaza' }; }
@@ -303,7 +308,8 @@ export class FirebaseBackend {
     const email = await this.emailOf(id);
     let cred;
     try { cred = await this.U.signInWithEmailAndPassword(this.auth, email, pw); } catch (e) { throw new Error(authMsg(e)); }
-    if (!cred.user.emailVerified) { await this.U.signOut(this.auth); const e = new Error('E-posta adresiniz henüz doğrulanmadı. Size gönderdiğimiz e-postadaki bağlantıya tıklayın.'); e.code = 'unverified'; throw e; }
+    const byAdmin = !cred.user.emailVerified && (await timeout(this.F.getDoc(this.d('members', cred.user.uid))).then((x) => x.exists() && x.data().byAdmin, () => false));
+    if (!cred.user.emailVerified && !byAdmin) { await this.U.signOut(this.auth); const e = new Error('E-posta adresiniz henüz doğrulanmadı. Size gönderdiğimiz e-postadaki bağlantıya tıklayın.'); e.code = 'unverified'; throw e; }
   }
   async memberResendVerify(id, pw) {
     const email = await this.emailOf(id);
@@ -323,6 +329,21 @@ export class FirebaseBackend {
     const { uid, ...rest } = m;
     await timeout(this.F.setDoc(this.d('members', uid), { uid, ...rest }, { merge: true }));
     this.memberCb?.(m);
+  }
+  // Yönetici panelden yeni mağaza üyesi açar: hesap ayrı, geçici bir Firebase örneğinde oluşturulur (yönetici oturumu etkilenmez)
+  async adminCreateMember({ email, password, name, phone, username }) {
+    if (username && !(await this.usernameFree(username))) throw new Error('Bu kullanıcı adı alınmış.');
+    const tmp = this.A.initializeApp(this.config, 'mk' + Date.now());
+    try {
+      const auth = this.U.initializeAuth(tmp, { persistence: this.U.inMemoryPersistence });
+      let cred; try { cred = await this.U.createUserWithEmailAndPassword(auth, email, password); } catch (e) { throw new Error(authMsg(e)); }
+      const uid = cred.user.uid;
+      await this.U.signOut(auth);
+      const m = { uid, email, name, phone, createdAt: now(), addresses: [], invoice: { type: 'person' }, byAdmin: true, ...(username ? { username } : {}) };
+      await timeout(this.F.setDoc(this.d('members', uid), m));
+      if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid, email }));
+      return m;
+    } finally { this.A.deleteApp(tmp).catch(() => {}); }
   }
   watchMembers(cb) { return this.F.onSnapshot(this.c('members'), (s) => cb(s.docs.map((x) => ({ uid: x.id, ...x.data() }))), (e) => console.warn(e)); }
   async deleteMember(uid) {

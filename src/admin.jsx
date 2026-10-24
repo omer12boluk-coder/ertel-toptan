@@ -1,4 +1,4 @@
-import { ShopHomeEditor } from './shophome.jsx';
+import { ShopHomeEditor, BrandLogosEditor } from './shophome.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
@@ -409,9 +409,9 @@ export function CustomerSheet({ c, onClose }) {
 
 // =========================================================================
 // Ayarlar
-const SECTIONS = [['genel', 'Genel'], ['anasayfa', 'Bayi ana sayfası'], ['magazaana', 'Mağaza ana sayfası'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['magaza', 'Online mağaza'], ['kategori', 'Kategoriler'], ['veri', 'Veri'], ['hesap', 'Hesabım']];
+const SECTIONS = [['genel', 'Genel'], ['anasayfa', 'Bayi ana sayfası'], ['magazaana', 'Mağaza ana sayfası'], ['markalar', 'Markalar'], ['fiyat', 'Fiyatlandırma'], ['kademe', 'Kademeler'], ['katalog', 'Katalog'], ['talep', 'Talepler'], ['dukkan', 'Dükkan'], ['magaza', 'Online mağaza'], ['kategori', 'Kategoriler'], ['veri', 'Veri'], ['hesap', 'Hesabım']];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
+const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -609,11 +609,13 @@ export function Settings() {
           <Toggle id="s-ocargo" label="Kargo ile gönderim" checked={d.orders.cargo !== false} onChange={(v) => set('orders.cargo', v)} />
           <Toggle id="s-opick" label="Dükkandan teslim al" checked={d.orders.pickup !== false} onChange={(v) => set('orders.pickup', v)} />
           <Field label="Kargo notu" hint="Sepet ve sipariş ekranında görünür"><input id="s-onote" value={d.orders.cargoNote || ''} onChange={(e) => set('orders.cargoNote', e.target.value)} /></Field>
+          <Field label="Kargo firmaları" hint="Her satıra bir firma. Siparişi “Kargoda” yaparken bunlardan seçersiniz."><textarea id="s-cargos" rows="4" value={(d.orders.cargoCompanies || []).join('\n')} onChange={(e) => set('orders.cargoCompanies', e.target.value.split('\n'))} onBlur={(e) => set('orders.cargoCompanies', e.target.value.split('\n').map((x) => x.trim()).filter(Boolean))} /></Field>
           <h3>Ödeme seçenekleri</h3>
           <Toggle id="s-ohav" label="Havale / EFT" checked={d.orders.payHavale !== false} onChange={(v) => set('orders.payHavale', v)} />
           <Toggle id="s-ocard" label="Kredi kartı (ödeme linki gönderilir)" hint="Siparişi onaylayınca müşteriye ödeme linkini siz gönderirsiniz" checked={d.orders.payCard !== false} onChange={(v) => set('orders.payCard', v)} />
           <Toggle id="s-oshop" label="Dükkanda ödeme" hint="Sadece dükkandan teslim alırken" checked={d.orders.payShop !== false} onChange={(v) => set('orders.payShop', v)} />
           <Field label="Havale / EFT bilgisi" hint="Sipariş verilince müşterinin sipariş sayfasında görünür. IBAN, alıcı adı vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00'} /></Field>
+          <NotifyCard />
           <Field label="Sipariş alındı mesajı" hint="Sipariş verilince teşekkür kutusunda görünür"><textarea id="s-odone" rows="2" value={d.orders.doneNote || ''} onChange={(e) => set('orders.doneNote', e.target.value)} /></Field>
         </>}
 
@@ -663,6 +665,7 @@ export function Settings() {
 
         {sec === 'anasayfa' && <HomeEditor d={d} set={set} />}
         {sec === 'magazaana' && <ShopHomeEditor d={d} set={set} />}
+        {sec === 'markalar' && <BrandLogosEditor d={d} set={set} />}
       </div>}
 
       {imp && (
@@ -982,7 +985,7 @@ export function DeleteCustomer({ c, onClose, onDone }) {
 
 // Müşteriye gönderilecek hazır mesaj (vitrin linkiyle)
 function ShopInvite() {
-  const t = `Merhaba, siparişinizi buradan kolayca verebilirsiniz 👇\n${links.shop()}\n\n1) İstediğiniz ürünlerde “Ekle”ye basın\n2) Alttaki “Sepete git”e basın\n3) “Sepeti onayla”ya, sonra yeşil “WhatsApp’tan gönder”e basın (ya da “Linki kopyala”ya dokunup WhatsApp’ta yapıştırın)\n\nListeniz bize gelir, fiyatı hemen yazarız.`;
+  const t = `Merhaba, siparişinizi buradan kolayca verebilirsiniz 👇\n${links.shop()}\n\n1) İstediğiniz ürünlerde “Sepete ekle”ye basın\n2) Üstteki “Sepet”e basın\n3) “Sepeti onayla” ile siparişinizi tamamlayın (ya da “WhatsApp’tan gönder” ile listeyi bize iletin)\n\nSiparişiniz bize ulaşır, hemen dönüş yaparız.`;
   return (
     <div className="invite">
       <b>Müşteriye göndereceğiniz hazır mesaj</b>
@@ -991,6 +994,32 @@ function ShopInvite() {
         <button className="btn sm primary" onClick={() => copyText(t, 'Mesaj kopyalandı')}><Icon n="copy" s={15} />Mesajı kopyala</button>
         <a className="btn sm wa" href={waLink('', t)} target="_blank" rel="noopener"><Icon n="wa" s={15} />WhatsApp’ta gönder</a>
       </div>
+    </div>
+  );
+}
+
+// Yeni sipariş bildirimi (bekçi üzerinden e-posta + WhatsApp)
+function NotifyCard() {
+  const [st, setSt] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const W = (window.WATCH_URL || '').replace(/\/$/, '');
+  useEffect(() => { if (W) fetch(W + '/').then((r) => r.json()).then((j) => setSt(j.notify || null)).catch(() => {}); }, []);
+  async function test() {
+    setBusy(true);
+    try { const r = await fetch(W + '/notify-test', { method: 'POST' }); const j = await r.json(); toast(j.ok ? 'Deneme bildirimi gönderildi; e-postanıza ve WhatsApp’ınıza bakın' : j.error || 'Gönderilemedi', j.ok ? 'ok' : 'bad'); }
+    catch (e) { toast('Gönderilemedi: ' + e.message, 'bad'); }
+    setBusy(false);
+  }
+  return (
+    <div className="invite notify-card">
+      <b>Yeni sipariş bildirimi</b>
+      <p className="fine">Mağazadan sipariş gelince size e-posta ve WhatsApp mesajı gelir (sipariş özeti + panelde açma linki).</p>
+      <p className="fine">E-posta: {st ? (st.email ? <b className="tone-ok-t">açık</b> : 'kapalı') : '…'} · WhatsApp: {st ? (st.whatsapp ? <b className="tone-ok-t">açık</b> : <b>kurulum bekliyor</b>) : '…'}</p>
+      <ul className="fine notify-steps">
+        <li><b>E-posta</b> ilk bildirimde FormSubmit’ten “Activate Form” e-postası gelir; bir kez tıklayın, sonraki siparişler doğrudan gelir.</li>
+        <li><b>WhatsApp</b> için CallMeBot’tan ücretsiz anahtar alınır (callmebot.com → WhatsApp). Gelen anahtarı GitHub’da depo ayarlarına <code>CALLMEBOT_KEY</code> adıyla ekleyip “Bekçiyi yayınla”yı çalıştırın.</li>
+      </ul>
+      {W && <button className="btn sm outline" disabled={busy} onClick={test}><Icon n="send" s={15} />{busy ? 'Gönderiliyor…' : 'Deneme bildirimi gönder'}</button>}
     </div>
   );
 }

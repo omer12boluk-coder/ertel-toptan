@@ -132,6 +132,8 @@ export function Checkout({ items, onBack }) {
         pay: f.pay, note: f.note.trim(),
       });
       try { await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
+      // dükkan sahibine bildirim (e-posta + WhatsApp, bekçi üzerinden); sipariş zaten kaydedildi, hata olursa önemli değil
+      if (window.WATCH_URL && A.mode === 'firebase') fetch(window.WATCH_URL.replace(/\/$/, '') + '/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }), keepalive: true }).catch(() => {});
       // üye: yeni adresi ve fatura bilgisini hesaba kaydet
       if (uid && !signedUp) {
         const m = store.s.member || { uid };
@@ -268,7 +270,7 @@ export function Checkout({ items, onBack }) {
               {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
             </div>
             <VatLines by={tot} />
-            <button className="btn primary big co-go" disabled={busy} onClick={submit}><Icon n="check" /><span><b>{busy ? 'Gönderiliyor…' : 'Siparişi tamamla'}</b><small>Ödeme şimdi alınmaz</small></span></button>
+            <button className="btn primary big co-go" disabled={busy} onClick={submit}><Icon n="check" /><span><b>{busy ? 'Gönderiliyor…' : 'Siparişi tamamla'}</b></span></button>
             {f.method === 'cargo' && O.cargoNote && <p className="fine">{O.cargoNote}</p>}
           </div>
         </aside>

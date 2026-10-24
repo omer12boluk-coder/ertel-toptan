@@ -2,7 +2,7 @@
 // Sipariş: durum adımları (Onayla → Kargoya ver / Teslime hazır → Tamamlandı), müşteriye WhatsApp, kargo takip no, iç not.
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, openOrder, go } from './store.js';
-import { Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, openMenu, copyText } from './ui.jsx';
+import { Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, now, norm } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY } from './config.js';
 import { links, waLink } from './route.js';
@@ -132,13 +132,19 @@ function OrderDetail({ id }) {
         <StatusPill status={o.status} map={ORDER_STATUS} />
       </div>
 
+      <div className="oa-status" role="radiogroup" aria-label="Sipariş durumu">
+        <span className="oa-status-l">Durum:</span>
+        {['new', 'confirmed', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
+          <button key={k} role="radio" aria-checked={o.status === k} disabled={busy} className={'oa-st tone-' + ORDER_STATUS[k].tone + (o.status === k ? ' on' : '')}
+            onClick={() => { if (o.status === k) return; if (k === 'shipped') setShip({ company: o.cargo?.company || '', code: o.cargo?.code || '' }); else if (k === 'cancelled') cancel(); else setStatus(k); }}>
+            {o.status === k && <Icon n="check" s={14} />}{ORDER_STATUS[k].label}
+          </button>
+        ))}
+      </div>
       <div className="oa-actions">
-        {next && <button className="btn primary" disabled={busy} onClick={goNext}><Icon n={next[2]} s={16} />{next[1]}</button>}
         {wa && <a className="btn wa" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />Müşteriye yaz</a>}
         <button className="btn outline" onClick={() => copyText(links.order(o.id), 'Müşterinin takip linki kopyalandı')}><Icon n="copy" s={15} />Takip linki</button>
         <span className="oa-sp" />
-        {ORDER_OPEN.includes(o.status) && <button className="btn ghost danger" onClick={cancel}><Icon n="x" s={15} />İptal et</button>}
-        {o.status === 'cancelled' && <button className="btn ghost" onClick={() => setStatus('new')}><Icon n="refresh" s={15} />Geri al</button>}
         <button className="icon-btn" onClick={del} aria-label="Siparişi sil" title="Siparişi sil"><Icon n="trash" s={17} /></button>
       </div>
 
@@ -179,8 +185,11 @@ function OrderDetail({ id }) {
         <Sheet title="Kargoya verildi" sub="Takip numarası müşterinin sipariş sayfasında görünür" onClose={() => setShip(null)}
           footer={<><button className="btn ghost" onClick={() => setShip(null)}>Vazgeç</button><button className="btn primary" disabled={busy} onClick={() => { const c = { company: ship.company.trim(), code: ship.code.trim() }; setShip(null); o.status === 'shipped' ? api().updateOrder(o.id, { cargo: c }).then(() => toast('Kargo bilgisi kaydedildi')) : setStatus('shipped', { cargo: c }); }}><Icon n="check" s={16} />Kaydet</button></>}>
           <div className="form-col">
-            <Field label="Kargo firması" opt><input id="ship-co" list="ship-cos" value={ship.company} onChange={(e) => setShip({ ...ship, company: e.target.value })} placeholder="ör. Yurtiçi Kargo" /></Field>
-            <datalist id="ship-cos">{['Yurtiçi Kargo', 'Aras Kargo', 'MNG Kargo', 'PTT Kargo', 'Sürat Kargo', 'UPS', 'DHL'].map((c) => <option key={c} value={c} />)}</datalist>
+            <div className="field"><span className="field-l">Kargo firması</span>
+              <div className="cargo-pick">{(S.orders?.cargoCompanies || []).map((c) => <button key={c} type="button" className={'chip' + (ship.company === c ? ' on' : '')} onClick={() => setShip({ ...ship, company: c })}>{c}</button>)}</div>
+              <input id="ship-co" value={ship.company} onChange={(e) => setShip({ ...ship, company: e.target.value })} placeholder="Listede yoksa yazın" />
+              <span className="field-h">Listeyi Ayarlar &gt; Online mağaza &gt; Kargo firmaları’ndan düzenleyebilirsiniz.</span>
+            </div>
             <Field label="Takip numarası" opt><input id="ship-code" value={ship.code} onChange={(e) => setShip({ ...ship, code: e.target.value })} /></Field>
           </div>
         </Sheet>
@@ -196,13 +205,17 @@ function Members() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [newOpen, setNewOpen] = useState(false);
   const count = useMemo(() => { const m = {}; for (const o of orders) if (o.uid) m[o.uid] = (m[o.uid] || 0) + 1; return m; }, [orders]);
   const t = norm(q.trim());
   const list = [...members].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).filter((m) => !t || norm([m.name, m.email, m.phone, m.invoice?.company].join(' ')).includes(t));
   const del = (m) => setConfirm({ title: 'Üyeyi sil', text: `${m.name || m.email} üyeliği silinecek (siparişleri kalır). Aynı e-postayla yeniden üye olamaz; gerekirse Firebase’den hesabı da silin.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteMember(m.uid).then(() => { toast('Üye silindi'); setOpen(null); }) });
   return (
     <>
-      <div className="toolbar"><div className="search"><Icon n="search" s={18} /><input id="mem-search" type="search" placeholder="Ad, e-posta, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div></div>
+      <div className="mem-bar">
+        <div className="search"><Icon n="search" s={18} /><input id="mem-search" type="search" placeholder="Ad, e-posta, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <button className="btn primary" onClick={() => setNewOpen(true)}><Icon n="plus" s={16} />Yeni üye</button>
+      </div>
       {list.length === 0 ? <Empty icon="users" title={members.length ? 'Eşleşen üye yok' : 'Henüz mağaza üyesi yok'}>{!members.length && <p>Müşteriler mağazada <b>Hesabım</b>’dan ya da sipariş verirken üye olabilir.</p>}</Empty> : (
         <ul className="olist">
           {list.map((m) => (
@@ -236,7 +249,45 @@ function Members() {
           </ul>
         </Sheet>
       )}
+      {newOpen && <NewMember onClose={() => setNewOpen(false)} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </>
+  );
+}
+
+// Panelden yeni mağaza üyesi: e-posta doğrulaması beklemeden giriş yapabilir
+function NewMember({ onClose }) {
+  const [f, setF] = useState({ name: '', email: '', phone: '', username: '', pw: '' });
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e?.target ? e.target.value : e }));
+  async function save() {
+    setErr('');
+    const email = f.email.trim().toLowerCase();
+    const username = norm(f.username).replace(/[^a-z0-9._-]/g, '').slice(0, 20);
+    if (f.name.trim().length < 2) return setErr('Adı yazın.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return setErr('E-posta adresi geçersiz.');
+    if (username && username.length < 3) return setErr('Kullanıcı adı en az 3 karakter olmalı.');
+    if (f.pw.length < 6) return setErr('Şifre en az 6 karakter olmalı.');
+    setBusy(true);
+    try { await api().adminCreateMember({ email, password: f.pw, name: f.name.trim(), phone: f.phone, username: username || undefined }); toast('Üye hesabı açıldı'); onClose(); }
+    catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  return (
+    <Sheet title="Yeni mağaza üyesi" sub="Hesap hemen açılır; e-posta doğrulaması gerekmez" onClose={onClose} footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn primary" disabled={busy} onClick={save}><Icon n="check" s={16} />{busy ? 'Açılıyor…' : 'Hesabı aç'}</button></>}>
+      <div className="form-col">
+        <Field label="Ad soyad"><input id="nm-name" value={f.name} onChange={set('name')} /></Field>
+        <div className="row2">
+          <Field label="E-posta"><input id="nm-email" type="email" autoCapitalize="none" value={f.email} onChange={set('email')} /></Field>
+          <Field label="Cep telefonu" opt><PhoneInput id="nm-phone" value={f.phone} onChange={set('phone')} /></Field>
+        </div>
+        <div className="row2">
+          <Field label="Kullanıcı adı" opt hint="E-posta yerine bununla da girer"><input id="nm-user" autoCapitalize="none" value={f.username} onChange={set('username')} /></Field>
+          <Field label="Şifre" hint="En az 6 karakter; müşteriye siz iletirsiniz"><input id="nm-pw" value={f.pw} onChange={set('pw')} /></Field>
+        </div>
+        {err && <p className="err">{err}</p>}
+      </div>
+    </Sheet>
   );
 }

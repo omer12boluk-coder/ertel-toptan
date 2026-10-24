@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
-import { norm, fmt, priceFor, catName, now } from './utils.js';
+import { norm, fmt, priceFor, catName, now, ls } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -78,6 +78,9 @@ export function Catalog({ admin }) {
   const [price, setPrice] = useState(''); // '' | 'u10' | '10-50' | '50-200' | '200+'
   const [newOnly, setNewOnly] = useState(false);
   const [imgOnly, setImgOnly] = useState(false);
+  // görünüm: kutu kutu (varsayılan) ya da sıra sıra; cihazda hatırlanır
+  const [view, setView0] = useState(() => (admin ? 'list' : ls.get('cat-view', 'grid')));
+  const setView = (v) => { setView0(v); if (!admin) ls.set('cat-view', v); };
   const tree = useTree();
   const intent = useStore((s) => s.intent);
   useEffect(() => { if (admin && intent === 'newProduct') { store.set({ intent: null }); setEdit({}); } }, [intent]);
@@ -216,7 +219,7 @@ export function Catalog({ admin }) {
           {admin && changedN > 0 && adminFilter !== 'pricechanged' && (
             <div className="banner warn price-alert"><Icon n="tag" /><div><b>{changedN} ürünün liste fiyatı değişti.</b> Toptan fiyatlarını kontrol edin; kontrol edene kadar toptan fiyat liste fiyatını geçemez.</div><button className="btn sm outline" onClick={() => setAdminFilter('pricechanged')}>Göster</button></div>
           )}
-          {user?.role === 'public' && <GuestGuide />}
+          
           {actives.length > 0 && (
             <div className="af-row" aria-label="Seçili filtreler">
               {actives.map(([l, off], i) => <button key={i} className="af-chip" onClick={off} title="Filtreyi kaldır">{l}<Icon n="x" s={13} /></button>)}
@@ -227,13 +230,17 @@ export function Catalog({ admin }) {
           {moreOutside > 0 && <div className="banner info widen"><Icon n="search" /><div>{scopeName} dışında da <b>{moreOutside} sonuç</b> var.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Tüm ürünlerde ara</button></div>}
           <div className="result-line">
             <span>{list.length.toLocaleString('tr-TR')} ürün{!widened && scopeName && <> · <b>{scopeName}</b></>}</span>
+            <span className="view-sw" role="group" aria-label="Görünüm">
+              <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Kutu kutu" title="Kutu kutu"><Icon n="grid" s={17} /></button>
+              <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Sıra sıra" title="Sıra sıra"><Icon n="list" s={17} /></button>
+            </span>
             {!admin && cartCount > 0 && <button className="link" onClick={() => go('sepet')}>Sepette {cartCount} kalem →</button>}
           </div>
 
           {shown.length === 0 ? (
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
           ) : (
-            <ul className="plist">
+            <ul className={'plist' + (view === 'grid' ? ' pgrid' : '')}>
               {shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
             </ul>
           )}

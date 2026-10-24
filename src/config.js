@@ -89,9 +89,26 @@ export const DEFAULT_SETTINGS = {
     checkoutSoon: false, // sepette "Sepeti onayla" (online sipariş) çok yakında
     accountsSoon: false, // Hesabım / üyelik çok yakında
     cargoNote: 'Kargo ücreti ve teslim süresi sipariş onayında bildirilir.',
+    cargoCompanies: ['Yurtiçi Kargo', 'Aras Kargo', 'MNG Kargo', 'PTT Kargo', 'Sürat Kargo', 'HepsiJet', 'Kolay Gelsin', 'UPS', 'DHL'],
     doneNote: 'Siparişiniz bize ulaştı. En kısa sürede kontrol edip size dönüş yapacağız.',
   },
   home: { title: '', subtitle: '', announcements: [], banners: [] },
+  // Marka logoları ve renkleri (Ayarlar > Markalar): ana sayfa kutuları, kayan şerit, reklamlar kullanır
+  brandLogos: {
+    JBC: { logo: '/brands/jbc.png', color: '#e11d2a' }, Aixun: { logo: '/brands/aixun-dark.png', color: '#c8102e' },
+    Mechanic: { logo: '/brands/mechanic-dark.png', color: '#1d4ed8' }, JCID: { logo: '/brands/jcid.png', color: '#1a9bf0' },
+    Sunshine: { logo: '/brands/sunshine.png', color: '#0067ae' }, Relife: { logo: '/brands/relife.png', color: '#22a447' },
+    '2UUL': { logo: '/brands/2uul.png', color: '#2fbf4a' }, Qianli: { logo: '/brands/qianli.png', color: '#b4232a' },
+    LUBAN: { logo: '/brands/luban.png', color: '#9b3ff0' }, Amaoe: { logo: '/brands/amaoe.png', color: '#f07d1a' },
+    AmScope: { logo: '/brands/amscope.png', color: '#1f3a8a' },
+    Quick: { logo: '/brands/quick.png', color: '#d71920' }, Yihua: { logo: '/brands/yihua.png', color: '#e30613' },
+    'Uni-T': { logo: '/brands/unit.png', color: '#d6001c' }, RF4: { logo: '/brands/rf4.png', color: '#119fa7' },
+    // Logosu henüz olmayanlar: adları marka renginde yazılır (Ayarlar > Markalar'dan logo eklenebilir)
+    YCS: { color: '#0f766e' }, 'Mega-Idea': { color: '#b4232a' }, 'Ma Ant': { color: '#16a34a' }, Mijing: { color: '#0e7490' },
+    XZZ: { color: '#2563eb' }, Lanrui: { color: '#7c3aed' }, 'OSS Team': { color: '#ea580c' }, TBK: { color: '#0369a1' },
+    Doseer: { color: '#be123c' }, Kaisi: { color: '#1d4ed8' }, SUGON: { color: '#dc2626' }, Ersa: { color: '#0057a8' },
+    Fluke: { color: '#c99700' }, Korad: { color: '#0b5394' }, Alpha: { color: '#334155' },
+  },
   // Online mağaza ana sayfası (Ayarlar > Mağaza ana sayfası). Resimler: 'si…' = shopimg kaydı, http… = dış link.
   // Link: 'brand:Aixun' | 'cat:3' | 'q:jbc uç' | 'p:1234' (ürün) | 'https://…' | ''
   shopHome: {
@@ -109,6 +126,7 @@ export const DEFAULT_SETTINGS = {
       { icon: 'tag', title: 'Uygun fiyat', text: 'Toptan ve perakende' },
     ],
     brandsTitle: 'Markalar',
+    marquee: 'color', // kayan şerit: color (açık zemin, renkli logolar) | dark (koyu zemin, logolar beyaz kartlarda) | mono (gri logolar, üstüne gelince renkli) | off
     // logolar markaların kendi sitelerinden (hosting/public/brands/)
     brands: [
       { name: 'JBC', color: '#e11d2a', logo: '/brands/jbc.png', link: 'brand:JBC' },
@@ -121,6 +139,11 @@ export const DEFAULT_SETTINGS = {
       { name: 'Qianli', color: '#b4232a', logo: '/brands/qianli.png', link: 'brand:Qianli' },
       { name: 'LUBAN', color: '#9b3ff0', logo: '/brands/luban.png', link: 'brand:LUBAN' },
       { name: 'Amaoe', color: '#f07d1a', logo: '/brands/amaoe.png', link: 'brand:Amaoe' },
+      { name: 'AmScope', color: '#1f3a8a', logo: '/brands/amscope.png', link: 'brand:AmScope' },
+      { name: 'Quick', color: '#d71920', logo: '/brands/quick.png', link: 'brand:Quick' },
+      { name: 'RF4', color: '#119fa7', logo: '/brands/rf4.png', link: 'brand:RF4' },
+      { name: 'Yihua', color: '#e30613', logo: '/brands/yihua.png', link: 'brand:Yihua' },
+      { name: 'Uni-T', color: '#d6001c', logo: '/brands/unit.png', link: 'brand:Uni-t' },
     ],
     promosTitle: 'Öne çıkanlar',
     // görseller: ürünlerin kendi resimleri (prod:<no>) ve sitenin bannerları (platincdn)

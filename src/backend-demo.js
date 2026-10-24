@@ -155,6 +155,11 @@ export class DemoBackend {
     if (keep) this.db.shopSession = uid;
     return { ...this.pub(m), verifySent: true };
   }
+  async adminCreateMember({ email, password, name, phone, username }) {
+    if (Object.values(this.mem()).some((m) => m.email === email)) throw new Error('Bu e-posta ile zaten üyelik var.');
+    const uid = 'm_' + rid(); const m = { uid, email, pw: password, name, phone, username, createdAt: now(), addresses: [], invoice: { type: 'person' }, byAdmin: true };
+    this.mem()[uid] = m; this.persist(); return this.pub(m);
+  }
   async memberDone() { this.db.shopSession = null; this.persist(); }
   async memberLogin(id, pw) {
     id = String(id).trim().toLowerCase();

@@ -21,6 +21,12 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 - Sepet ekranı mağaza ve bayi için ortak (`src/cart.jsx`); bayide son adım talep gönderme (sohbet Talepler'de). Menü adları iki tarafta aynı (Ürünler, Sepet, Hesabım), ürün düğmesi "Sepete ekle". Mağazada online sipariş ve üyelik açık ("Çok yakında" anahtarları settings.orders.checkoutSoon / accountsSoon; ?onizleme=1). Üst menüde ayrı sepet düğmesi (HeaderCart), sağ altta küçük sepet (CartBar). Uygulama adı ERTEL GSM, logo assets/logo-*.png (yeni ert mobile). Ayar göçü main.jsx migrate() `S.v`.
 - Yönetici talepleri (sağ tık / çoklu seçim / talep içi) ve müşterileri tamamen silebilir (Firebase Auth hesabı silinmez, kayıt silindiği için giriş açılmaz).
 
+- Marka logoları/renkleri: `settings.brandLogos` {Ad: {logo, color}} (Ayarlar > Markalar; ad büyük/küçük harf duyarsız eşleşir). Ana sayfa kutuları durağanken nötr, üstüne gelince marka renginde ışık. Kayan şerit stili `shopHome.marquee`: color (varsayılan, renkli logolar) / dark / mono / off. `settings/public` brandLogos'u da taşır.
+- Tüm ürünler: kutu (varsayılan, büyük resim) / satır görünümü (`cat-view`, cihazda).
+- Sipariş durumu yönetici tarafından serbest seçilir (Yeni…Tamamlandı, İptal); Kargoda seçilince kargo firması listeden (`settings.orders.cargoCompanies`, Ayarlar > Online mağaza) + takip no.
+- Yeni sipariş bildirimi: checkout → Worker `POST /notify {id}` (siparişi Firestore REST'ten okur, KV ile tekrar göndermez) → e-posta FormSubmit (NOTIFY_EMAIL, ilk mesajda aktivasyon tıklanmalı) + WhatsApp CallMeBot (NOTIFY_WA + secret CALLMEBOT_KEY). Ayarlar > Online mağaza'da "Deneme bildirimi gönder" (`/notify-test`).
+- Yönetici mağaza üyesi açabilir/görebilir/silebilir (Siparişler > Mağaza üyeleri). Panelden açılan üye `byAdmin: true` → e-posta doğrulaması gerekmez.
+
 ## Site eşitleme
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı (r) = sitedeki gerçek satış fiyatı: `sale_price` (indirimli) varsa o, yoksa `price` (Excel'de de "İndirimli Fiyat" → r). Toptan = ürüne özel w yoksa r'den % indirim (utils priceFor). 24.10.2026'da eski "indirimli = w" kayıtları temizlendi. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sipariş formu: arama listesinde liste + toptan görünür, eklenince liste fiyatı (r) geçer. Sitede olmayan ürünü `so=1` ile gizler.
 - `worker/index.js` Cloudflare Worker "ertel-b2b-watch": dakikada bir beslemeyi kontrol eder, değişince sync'i tetikler (Actions "Bekçiyi yayınla" yükler). workers.dev adresi `hosting/public/config.js` → `window.WATCH_URL`: `GET /rate` Harem Altın dolar satış kuru, `POST /check` (panel açılınca), `POST /sync` ("Şimdi eşitle").
@@ -29,7 +35,7 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 - Siteye toplu istek atma (IP engeli yemiştik). Beslemede stok adedi yok.
 
 ## Gizli ayarlar (GitHub Actions secrets) — değerlerini asla isteme/yazdırma
-FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_DISPATCH_TOKEN.
+FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_DISPATCH_TOKEN, CALLMEBOT_KEY (WhatsApp bildirimi; kullanıcı ekler).
 
 ## Açık konular
 - iyzico "link ile ödeme" entegrasyonu (kullanıcı başvuracak).

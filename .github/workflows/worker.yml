@@ -12,6 +12,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       GH_DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
+      CALLMEBOT_KEY: ${{ secrets.CALLMEBOT_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,6 +57,7 @@ jobs:
           set -o pipefail
           npx -y wrangler@3 deploy 2>&1 | tail -n 20 | tee out.txt || { echo "::error title=Yükleme hatası::$(tail -n 8 out.txt | tr '\n' ' ')"; exit 1; }
           printf '%s' "$GH_DISPATCH_TOKEN" | npx -y wrangler@3 secret put GH_TOKEN 2>&1 | tail -n 5 | tee out2.txt || { echo "::error title=Gizli ayar hatası::$(tail -n 5 out2.txt | tr '\n' ' ')"; exit 1; }
+          if [ -n "$CALLMEBOT_KEY" ]; then printf '%s' "$CALLMEBOT_KEY" | npx -y wrangler@3 secret put CALLMEBOT_KEY 2>&1 | tail -n 3; else echo "::warning title=WhatsApp bildirimi kapalı::CALLMEBOT_KEY gizli ayarı eklenince açılır."; fi
           echo "::notice title=Bekçi yayında::Dakikada bir siteyi kontrol ediyor."
       - name: Kur kontrol (Harem Altın)
         if: steps.ok.outputs.go == 'yes'

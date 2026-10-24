@@ -7,6 +7,7 @@
 //   GET  /rate   Harem Altın dolar satış kuru  → { usd, src: 'harem', at }
 //   POST /check  yönetim paneli açılınca: sitede değişiklik varsa hemen eşitler
 //   POST /sync   yönetim panelindeki "Şimdi eşitle": siteyi hemen kontrol edip eşitlemeyi başlatır
+//   POST /notify mağazada sipariş verilince: dükkan sahibine e-posta (FormSubmit) + WhatsApp (CallMeBot) bildirimi
 export default {
   async scheduled(event, env, ctx) { ctx.waitUntil(check(env)); },
   async fetch(req, env, ctx) {
@@ -30,7 +31,9 @@ export default {
       }
       if (url.pathname === '/check' && req.method === 'POST') return json({ result: await check(env) }); // sadece değişiklik varsa eşitler
       if (url.pathname === '/sync' && req.method === 'POST') return json({ result: await check(env, { force: true }) });
-      if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch' });
+      if (url.pathname === '/notify' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyOrder(env, String(b.id || ''))); }
+      if (url.pathname === '/notify-test' && req.method === 'POST') { if (await env.KV.get('ntest')) return json({ ok: false, error: 'Biraz bekleyip tekrar deneyin' }); await env.KV.put('ntest', '1', { expirationTtl: 120 }); return json(await notifySend(env, { subject: 'ERTEL GSM · bildirim denemesi', text: 'Bu bir deneme bildirimidir. Mağazadan sipariş gelince buna benzer bir mesaj alacaksınız.' })); }
+      if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: { email: !!env.NOTIFY_EMAIL, whatsapp: !!(env.NOTIFY_WA && env.CALLMEBOT_KEY) } });
     } catch (e) { return json({ error: String(e.message || e) }, 500); }
     return json({ error: 'bulunamadı' }, 404);
   },
@@ -146,4 +149,58 @@ export async function check(env, { force = false } = {}) {
   if (gh.status !== 204) return 'github ' + gh.status;
   await Promise.all([env.KV.put('sig', sig), env.KV.put('prices', JSON.stringify(prices)), env.KV.put('lastDispatch', String(Date.now()))]);
   return 'dispatched';
+}
+
+// ---- Sipariş bildirimi -----------------------------------------------------------------------------
+// Uygulama siparişi kaydedince /notify'a sadece sipariş kimliğini yollar. Bilgiler Firestore'dan okunur (sahte bildirim gönderilemez),
+// aynı sipariş için bir kez bildirilir. E-posta: FormSubmit (ilk seferde e-postadaki "Activate" ile onay ister). WhatsApp: CallMeBot.
+const FS = 'https://firestore.googleapis.com/v1/projects/erteltoptan/databases/(default)/documents/';
+function fsVal(v) {
+  if (!v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('nullValue' in v) return null;
+  if ('mapValue' in v) return Object.fromEntries(Object.entries(v.mapValue.fields || {}).map(([k, x]) => [k, fsVal(x)]));
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fsVal);
+  return null;
+}
+const money = (n, c = 'USD') => (c === 'USD' ? '$' : '') + Number(n || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + (c === 'USD' ? '' : ' ' + c);
+async function notifyOrder(env, id) {
+  if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
+  if (await env.KV.get('n:' + id)) return { ok: true, already: true };
+  const r = await fetch(FS + 'orders/' + id);
+  if (!r.ok) return { ok: false, error: 'sipariş yok' };
+  const doc = await r.json();
+  const o = Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
+  if (Date.now() - Date.parse(doc.createTime) > 30 * 60 * 1000) return { ok: false, error: 'eski sipariş' };
+  await env.KV.put('n:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
+  const tot = Object.entries(o.total || {}).map(([c, v]) => money(v, c)).join(' + ');
+  const lines = (o.items || []).map((i) => `• ${i.qty} × ${i.n} (${i.k || ''}) ${i.price != null ? money(i.price, i.cur) : ''}`).join('\n');
+  const deliv = o.delivery?.method === 'pickup' ? 'Dükkandan teslim' : 'Kargo' + (o.delivery?.addr ? ` · ${o.delivery.addr.district || ''} / ${o.delivery.addr.city || ''}` : '');
+  const pay = { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[o.pay] || o.pay;
+  const link = `https://erteltoptan.web.app/admin/s/${id}`;
+  const text = `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n${deliv} · ${pay}${o.note ? '\nNot: ' + o.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
+  return notifySend(env, { subject: `Yeni sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, short: `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${tot}\n${deliv}\nPanelde aç: ${link}`, replyTo: o.contact?.email });
+}
+async function notifySend(env, { subject, text, short, replyTo }) {
+  const out = {};
+  if (env.NOTIFY_EMAIL) {
+    try {
+      const r = await fetch('https://formsubmit.co/ajax/' + encodeURIComponent(env.NOTIFY_EMAIL), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Origin: 'https://erteltoptan.web.app', Referer: 'https://erteltoptan.web.app/' },
+        body: JSON.stringify({ _subject: subject, _template: 'box', _captcha: 'false', ...(replyTo ? { _replyto: replyTo } : {}), Mesaj: text }),
+      });
+      out.email = (await r.text()).slice(0, 300);
+    } catch (e) { out.email = 'hata: ' + e; }
+  }
+  if (env.NOTIFY_WA && env.CALLMEBOT_KEY) {
+    try {
+      const u = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(env.NOTIFY_WA)}&apikey=${encodeURIComponent(env.CALLMEBOT_KEY)}&text=${encodeURIComponent((short || text).slice(0, 1200))}`;
+      const r = await fetch(u); out.whatsapp = r.status + ' ' + (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 200);
+    } catch (e) { out.whatsapp = 'hata: ' + e; }
+  } else out.whatsapp = 'CALLMEBOT_KEY eklenmemiş';
+  return { ok: true, ...out };
 }
