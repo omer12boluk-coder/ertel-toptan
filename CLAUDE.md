@@ -35,8 +35,9 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 - Gece modu: marka kutuları ve kayan şerit koyu zemin; koyu yazılı logolar ShopImg onLoad'da tuvalle algılanır (`.ink`) ve gecede `invert + hue-rotate(180)` ile yalnız koyu kısımları açılır (renkler korunur).
 - Siparişler: "Seç" ile çoklu seçim + toplu silme (deleteOrders). Yönetim üst menüsünde Tasarım yok (ana sayfa kısayolu + Ayarlar); dar ekranda pasif sekmeler sadece simge, mağaza adı hiç kısaltılmaz.
 - Tasarım modu masaüstü araç çubuğu: bölümün sağ üstünde, aradaki boşlukta açık renkli küçük hap (içeriğin üstüne binmez).
-- Mağaza ana sayfası arama kutusu: layout bloğu `search` (yoksa en üste eklenir; gizlemek = `shopHome.hidden`'a 'search'), `shopHome.searchHints` (sık arananlar). Yazdıkça ilk 6 ürün, ürüne basınca ProductSheet, Ara/Enter → `catalogGo {q}`.
-- Sepet ve sipariş/liste kâğıdında ürün adı → ProductSheet, resim → Lightbox (PlatinMarket'e link yok). Banner telefonda dokunmadan 4 sn sonra yeniden kayar.
+- Mağazada arama: üst menüde küçük kutu (`HeaderSearch`, shophome.jsx; telefonda simge → üstte açılan kutu). Yazdıkça ilk 6 ürün, ürüne basınca ProductSheet, Enter/Tüm sonuçlar → `catalogGo {q}`. Ana sayfadaki büyük arama bloğu ve sık arananlar kaldırıldı (kullanıcı beğenmedi).
+- Banner otomatik geçişi: fare üstüne gelince durur, çekilince kalan süreden devam eder (sıfırlanmaz); ilerleme çizgisi de duraklar.
+- Sepet ve sipariş/liste kâğıdında ürün adı → ProductSheet, resim → Lightbox (PlatinMarket'e link yok). Banner telefonda dokunmadan 4 sn sonra yeniden kayar. Sipariş tamamla sayfasında belirgin "Sepete dön" düğmesi.
 - Ana ekrana ekleme: index.html başındaki küçük betik adrese göre manifest seçer: /admin ve /siparisformu → manifest-admin (ad "ERTEL Yönetim", lacivert + sarı kalkanlı icon-admin-*.png, start_url /admin), /magaza → manifest-magaza (start_url /magaza), diğerleri manifest-b2b.
 
 ## Site eşitleme

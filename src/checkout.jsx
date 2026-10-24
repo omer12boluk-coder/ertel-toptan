@@ -156,7 +156,7 @@ export function Checkout({ items, onBack }) {
   return (
     <div className="page checkout" ref={formRef}>
       <div className="send-bar">
-        <button className="btn sm ghost" onClick={onBack}><Icon n="back" s={16} />Sepet</button>
+        <button className="btn co-back-btn" onClick={onBack}><Icon n="back" s={17} /><Icon n="cart" s={17} />Sepete dön</button>
         <div className="send-t"><b>Siparişi tamamla</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
       </div>
       <div className="co-grid">

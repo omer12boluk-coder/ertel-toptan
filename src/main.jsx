@@ -15,7 +15,7 @@ import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
-import { ShopHome } from './shophome.jsx';
+import { ShopHome, HeaderSearch } from './shophome.jsx';
 import { ShopDesigner } from './designer.jsx';
 import { AdminHome } from './dashboard.jsx';
 import { Orders } from './orders.jsx';
@@ -428,6 +428,7 @@ function ShellFull() {
             ))}
           </nav>
           <span className="top-sp" />
+          {pub && <HeaderSearch />}
           {!admin && <HeaderCart on={tab === 'sepet'} />}
           {!admin && <a className="icon-btn to-landing" href="/" title="Giriş sayfasına dön (Mağaza / Bayi girişi)" aria-label="Giriş sayfasına dön"><Icon n="home" s={19} /></a>}
           <ThemeButton />
