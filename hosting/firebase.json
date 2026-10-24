@@ -4,7 +4,8 @@
     "ignore": ["firebase.json", "**/.*"],
     "headers": [
       { "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
-      { "source": "**/*.@(png|webmanifest)", "headers": [{ "key": "Cache-Control", "value": "max-age=86400" }] }
+      { "source": "**/*.@(png|webmanifest)", "headers": [{ "key": "Cache-Control", "value": "max-age=86400" }] },
+      { "source": "/fb/**", "headers": [{ "key": "Cache-Control", "value": "max-age=604800" }] }
     ],
     "rewrites": [{ "source": "**", "destination": "/index.html" }]
   },

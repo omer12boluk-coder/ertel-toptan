@@ -5,16 +5,28 @@ import { Icon } from './ui.jsx';
 import { totals, fmtTotals, soon } from './utils.js';
 import { useCartItems } from './cart.jsx';
 
+// Ekranın sağ altında küçük sepet düğmesi (ürünler ve ana sayfada, sepette ürün varken)
 export function CartBar() {
   const tab = useStore((s) => s.tab);
   const items = useCartItems();
   if (!['katalog', 'anasayfa'].includes(tab) || !items.length) return null;
   const tot = totals(items, 'offer');
   return (
-    <button className="gbar" onClick={() => go('sepet')}>
-      <span className="gbar-n"><Icon n="cart" s={20} /><b key={items.length}>{items.length}</b></span>
-      <span className="gbar-t"><b>Sepete git</b><small>{items.length} ürün · {fmtTotals(tot)}</small></span>
-      <span className="gbar-go">Sepeti onayla <Icon n="back" s={18} className="flip" /></span>
+    <button className="cart-fab" onClick={() => go('sepet')} aria-label={`Sepete git: ${items.length} ürün, ${fmtTotals(tot)}`} title="Sepete git">
+      <span className="cart-fab-ic"><Icon n="cart" s={22} /><b key={items.length}>{items.length}</b></span>
+      <span className="cart-fab-t">{fmtTotals(tot)}</span>
+    </button>
+  );
+}
+
+// Üst menüde ayrı, belirgin sepet düğmesi
+export function HeaderCart({ on }) {
+  const items = useCartItems();
+  const tot = totals(items, 'offer');
+  return (
+    <button className={'hcart' + (on ? ' on' : '') + (items.length ? ' full' : '')} onClick={() => go('sepet')} aria-label="Sepet">
+      <span className="hcart-ic"><Icon n="cart" s={20} />{items.length > 0 && <b key={items.length}>{items.length}</b>}</span>
+      <span className="hcart-t"><b>Sepet</b><small>{items.length ? fmtTotals(tot) : 'Boş'}</small></span>
     </button>
   );
 }

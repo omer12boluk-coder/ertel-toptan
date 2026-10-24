@@ -75,6 +75,9 @@ export function Catalog({ admin }) {
   const [catSheet, setCatSheet] = useState(false);
   const [adminFilter, setAdminFilter] = useState('all');
   const [brand, setBrand] = useState('');
+  const [price, setPrice] = useState(''); // '' | 'u10' | '10-50' | '50-200' | '200+'
+  const [newOnly, setNewOnly] = useState(false);
+  const [imgOnly, setImgOnly] = useState(false);
   const tree = useTree();
   const intent = useStore((s) => s.intent);
   useEffect(() => { if (admin && intent === 'newProduct') { store.set({ intent: null }); setEdit({}); } }, [intent]);
@@ -95,10 +98,15 @@ export function Catalog({ admin }) {
   }, [all]);
   const openPath = useMemo(() => new Set(cat == null ? [] : tree.ancestors(cat)), [cat, tree]);
 
-  const list = useMemo(() => {
+  const PR = { u10: [0, 10], '10-50': [10, 50], '50-200': [50, 200], '200+': [200, Infinity] };
+  const newest = useMemo(() => { const ids = all.filter((p) => p.nw).map((p) => p.id); return new Set(ids.length >= 20 ? ids : [...all].sort((a, b) => b.id - a.id).slice(0, 120).map((p) => p.id)); }, [all]);
+  // scoped: kategori + marka da uygulanır; false: sadece arama ve diğer filtreler (kategoride bulunamazsa tüm ürünlerden göstermek için)
+  const filterList = (scoped) => {
     const toks = norm(q).split(/\s+/).filter(Boolean);
     const useTags = admin || S.catalog.searchTags;
-    let r = all.filter((p) => (cat == null || pcats.get(p.id)?.has(cat)) && (!brand || p.b === brand) && (!stockOnly || p.s > 0)
+    const [lo, hi] = PR[price] || [0, Infinity];
+    let r = all.filter((p) => (!scoped || cat == null || pcats.get(p.id)?.has(cat)) && (!scoped || !brand || p.b === brand) && (!stockOnly || p.s > 0)
+      && (!price || (p.r >= lo && p.r < hi)) && (!newOnly || newest.has(p.id)) && (!imgOnly || p.pi || p.img)
       && toks.every((t) => p._s.includes(t) || (useTags && p._t.includes(t))));
     if (toks.length) r = [...r].sort((a, b) => toks.filter((t) => b._s.includes(t)).length - toks.filter((t) => a._s.includes(t)).length);
     if (admin && adminFilter === 'inactive') r = r.filter((p) => !p.a);
@@ -111,10 +119,30 @@ export function Catalog({ admin }) {
     if (sort === 'asc') r = [...r].sort((a, b) => a.r - b.r);
     if (sort === 'desc') r = [...r].sort((a, b) => b.r - a.r);
     if (sort === 'name') r = [...r].sort((a, b) => a.n.localeCompare(b.n, 'tr'));
+    if (sort === 'stock') r = [...r].sort((a, b) => (b.s > 0) - (a.s > 0));
     return r;
-  }, [all, q, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags]);
+  };
+  const deps = [all, q, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest];
+  const scopedList = useMemo(() => filterList(true), deps);
+  const scoped = cat != null || !!brand;
+  const globalList = useMemo(() => (q.trim() && scoped ? filterList(false) : null), deps);
+  // kategori / marka seçiliyken aranan şey orada yoksa: tüm ürünlerde ara (müşteri "neden çıkmıyor" demesin)
+  const widened = !!globalList && scopedList.length === 0 && globalList.length > 0;
+  const list = widened ? globalList : scopedList;
+  const moreOutside = globalList && !widened ? globalList.length - scopedList.length : 0;
+  const scopeName = [cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : null, brand || null].filter(Boolean).join(' · ');
+  const clearAll = () => { setQ(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); };
+  const actives = [
+    q.trim() && ['“' + q.trim() + '”', () => setQ('')],
+    cat != null && [tree.nodes.get(cat)?.name || catName(S, cat), () => setCat(null)],
+    brand && [brand, () => setBrand('')],
+    stockOnly && ['Stoktakiler', () => setStockOnly(false)],
+    price && [{ u10: '$10 altı', '10-50': '$10–50', '50-200': '$50–200', '200+': '$200 üstü' }[price], () => setPrice('')],
+    newOnly && ['Yeni gelenler', () => setNewOnly(false)],
+    imgOnly && ['Resimli', () => setImgOnly(false)],
+  ].filter(Boolean);
 
-  useEffect(() => setLimit(S.catalog.pageSize), [q, cat, sort, stockOnly, adminFilter, brand]);
+  useEffect(() => setLimit(S.catalog.pageSize), [q, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly]);
   const more = useCallback(() => setLimit((l) => l + S.catalog.pageSize), [S.catalog.pageSize]);
   const sentinel = useInfinite(more);
   const shown = list.slice(0, limit);
@@ -133,13 +161,21 @@ export function Catalog({ admin }) {
           <div className="toolbar">
             <div className="search">
               <Icon n="search" s={18} />
-              <input id="cat-search" type="search" placeholder="Ürün adı veya stok kodu… (ör. jcid face id)" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input id="cat-search" type="search" placeholder={scopeName ? `${scopeName} içinde ara… (tüm ürünlerde de bakarız)` : 'Ürün adı veya stok kodu… (ör. jcid face id)'} value={q} onChange={(e) => setQ(e.target.value)} />
               {q && <button className="icon-btn sm" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={16} /></button>}
             </div>
             <div className="chips" role="tablist" aria-label="Kategori">
               <button className="chip only-m" onClick={() => setCatSheet(true)}><Icon n="filter" s={15} />{cat == null ? 'Kategoriler' : tree.nodes.get(cat)?.name || catName(S, cat)}</button>
               {cat != null && <button className="chip on only-m" onClick={() => setCat(null)}>Tümü <Icon n="x" s={14} /></button>}
               <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>
+              <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>
+              <label className={'chip select' + (price ? ' on' : '')}>
+                <Icon n="tag" s={14} />
+                <select id="cat-price" value={price} onChange={(e) => setPrice(e.target.value)} aria-label="Fiyat aralığı">
+                  <option value="">Tüm fiyatlar</option><option value="u10">$10 altı</option><option value="10-50">$10 – $50</option><option value="50-200">$50 – $200</option><option value="200+">$200 üstü</option>
+                </select>
+              </label>
+              <button className={'chip' + (imgOnly ? ' on' : '')} onClick={() => setImgOnly(!imgOnly)}><Icon n="camera" s={14} />Resimli</button>
               {brands.length > 1 && (
                 <label className={'chip select' + (brand ? ' on' : '')}>
                   <select id="cat-brand" value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="Marka">
@@ -155,6 +191,7 @@ export function Catalog({ admin }) {
                   <option value="asc">Fiyat artan</option>
                   <option value="desc">Fiyat azalan</option>
                   <option value="name">İsim A–Z</option>
+                  <option value="stock">Stoktakiler önce</option>
                 </select>
               </label>
               {admin && (
@@ -180,13 +217,21 @@ export function Catalog({ admin }) {
             <div className="banner warn price-alert"><Icon n="tag" /><div><b>{changedN} ürünün liste fiyatı değişti.</b> Toptan fiyatlarını kontrol edin; kontrol edene kadar toptan fiyat liste fiyatını geçemez.</div><button className="btn sm outline" onClick={() => setAdminFilter('pricechanged')}>Göster</button></div>
           )}
           {user?.role === 'public' && <GuestGuide />}
+          {actives.length > 0 && (
+            <div className="af-row" aria-label="Seçili filtreler">
+              {actives.map(([l, off], i) => <button key={i} className="af-chip" onClick={off} title="Filtreyi kaldır">{l}<Icon n="x" s={13} /></button>)}
+              {actives.length > 1 && <button className="link af-clear" onClick={clearAll}>Tümünü temizle</button>}
+            </div>
+          )}
+          {widened && <div className="banner info widen"><Icon n="search" /><div><b>“{q.trim()}” {scopeName} içinde yok.</b> Tüm ürünlerde bulunan {list.length} sonucu gösteriyoruz.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Filtreyi kaldır</button></div>}
+          {moreOutside > 0 && <div className="banner info widen"><Icon n="search" /><div>{scopeName} dışında da <b>{moreOutside} sonuç</b> var.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Tüm ürünlerde ara</button></div>}
           <div className="result-line">
-            <span>{list.length.toLocaleString('tr-TR')} ürün{cat != null && <> · <b>{tree.nodes.get(cat)?.name || catName(S, cat)}</b></>}{brand && <> · <b>{brand}</b></>}</span>
+            <span>{list.length.toLocaleString('tr-TR')} ürün{!widened && scopeName && <> · <b>{scopeName}</b></>}</span>
             {!admin && cartCount > 0 && <button className="link" onClick={() => go('sepet')}>Sepette {cartCount} kalem →</button>}
           </div>
 
           {shown.length === 0 ? (
-            <Empty icon="search" title="Bu aramayla eşleşen ürün yok">Kelimeyi kısaltmayı veya kategoriyi “Tümü” yapmayı deneyin.</Empty>
+            <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
           ) : (
             <ul className="plist">
               {shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}

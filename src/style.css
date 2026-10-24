@@ -1496,3 +1496,55 @@ a.btn { text-decoration: none; }
   .sh-brands::-webkit-scrollbar { display: none; } .sh-brand { scroll-snap-align: start; }
   .sh-mq-logo { height: 24px; }
 }
+/* reklamda marka logosu */
+.sh-slide-logo { align-self: flex-start; display: inline-flex; align-items: center; height: 54px; padding: 10px 18px; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px -14px rgb(0 0 0 / .55), 0 0 0 1px rgb(255 255 255 / .2); }
+.sh-slide-logo img { height: 100%; width: auto; max-width: 200px; object-fit: contain; }
+@media (max-width: 700px) { .sh-slide-logo { height: 44px; padding: 8px 14px; } }
+/* marka kutuları: hepsi aynı beyaz zemin */
+.sh-brand.has-logo .sh-brand-logo { max-width: 70%; max-height: 40%; filter: none; }
+.sh-marquee:hover .sh-marquee-in { animation-play-state: running; }
+/* üst menü: ayrı ve belirgin sepet */
+.top-sp { flex: 1; }
+.shell .me { margin-left: 0; }
+.hcart { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px 0 8px; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); transition: background .15s, border-color .15s, transform .12s; }
+.hcart:hover { border-color: color-mix(in oklab, var(--accent) 50%, var(--line)); }
+.hcart.full { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 20px -10px var(--accent); }
+.hcart.on:not(.full) { background: var(--accent-soft); }
+.hcart-ic { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
+.hcart.full .hcart-ic { background: rgb(255 255 255 / .18); }
+.hcart-ic b { position: absolute; top: -5px; right: -7px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; display: grid; place-items: center; background: var(--price); color: #fff; font: 700 11px/1 var(--f-body); box-shadow: 0 0 0 2px var(--surface); animation: pop .35s var(--spring); }
+.hcart-t { display: flex; flex-direction: column; line-height: 1.1; text-align: left; }
+.hcart-t b { font-size: 14px; } .hcart-t small { font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
+@media (max-width: 899px) { .hcart { height: 40px; padding: 0 6px; } .hcart-t { display: none; } .shell:not(.admin) .to-landing { display: none; } }
+/* sağ altta küçük sepet */
+.cart-fab { position: fixed; z-index: 30; right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(var(--bot-h) + env(safe-area-inset-bottom, 0px) + 14px); display: inline-flex; align-items: center; gap: 8px; height: 54px; padding: 0 16px 0 7px; border-radius: 27px; background: var(--accent); color: var(--accent-ink); box-shadow: 0 14px 30px -12px color-mix(in oklab, var(--accent) 80%, #000); animation: rise .35s var(--spring) backwards; transition: transform .2s var(--ease); }
+.cart-fab:hover { transform: translateY(-2px); }
+.cart-fab-ic { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgb(255 255 255 / .18); }
+.cart-fab-ic b { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; display: grid; place-items: center; background: var(--price); color: #fff; font: 700 11px/1 var(--f-body); box-shadow: 0 0 0 2px var(--accent); animation: pop .35s var(--spring); }
+.cart-fab-t { font: 700 16px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+@media (min-width: 900px) { .cart-fab { bottom: 24px; right: 24px; } }
+.shell:not(.admin) .catalog { padding-bottom: 20px; }
+/* açılır listelerde seçenekler her zaman okunur (seçili koyu çipte bile) */
+select option, select optgroup { color: #131a2b; background: #fff; }
+[data-theme="dark"] select option { color: #e4e9f3; background: #151c2c; }
+/* seçili filtreler */
+.af-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.af-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 12px; border-radius: 15px; background: var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 600; transition: background .15s, transform .12s; }
+.af-chip:hover { background: color-mix(in oklab, var(--accent) 85%, black); }
+.af-chip .ic { opacity: .85; }
+.af-clear { font-size: 13px; margin-left: 4px; }
+.banner.widen { margin: 0; align-items: center; flex-wrap: wrap; }
+.banner.widen > div { flex: 1; min-width: 200px; }
+/* logolu marka kutuları: markanın kendi renginden beyaza geçen açık zemin, logo kendi renginde okunur */
+.sh-brand.has-logo { color: color-mix(in oklab, var(--c) 70%, #000);
+  background: radial-gradient(120% 100% at 100% 0%, color-mix(in oklab, var(--c) 34%, #fff) 0%, color-mix(in oklab, var(--c) 12%, #fff) 48%, #fff 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 22%, #fff), 0 16px 30px -22px var(--c); }
+.sh-brand.has-logo::before { background-image: radial-gradient(color-mix(in oklab, var(--c) 30%, transparent) 1px, transparent 1.5px); -webkit-mask-image: linear-gradient(225deg, #000, transparent 55%); mask-image: linear-gradient(225deg, #000, transparent 55%); }
+.sh-brand.has-logo::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: linear-gradient(90deg, var(--c), color-mix(in oklab, var(--c) 45%, #fff)); }
+.sh-brand.has-logo .sh-brand-glow { background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--c) 22%, transparent), transparent 62%); }
+.sh-brand.has-logo .sh-brand-f { opacity: .8; font-weight: 700; }
+.sh-brand.has-logo .sh-brand-arrow { background: var(--c); color: #fff; }
+.sh-brand.has-logo .sh-brand-logo.sq { max-height: 52%; max-width: 60%; }
+.sh-slide { isolation: isolate; }
+input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.hcart.full { padding-left: 10px; }

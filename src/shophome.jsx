@@ -32,7 +32,9 @@ export function useShopImg(v) {
 }
 export function ShopImg({ v, className, alt = '' }) {
   const src = useShopImg(v);
-  return src ? <img className={className} src={src} alt={alt} loading="lazy" decoding="async" /> : null;
+  // kare logolar (ör. yuvarlak amblem) yatay logolardan daha büyük gösterilir
+  const onLoad = (e) => { const i = e.currentTarget; if (i.naturalWidth && i.naturalWidth / i.naturalHeight < 1.7) i.classList.add('sq'); };
+  return src ? <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onLoad={onLoad} /> : null;
 }
 
 // ---- link: marka / kategori / arama / ürün / dış adres
@@ -86,7 +88,7 @@ export function ShopHome() {
   const slides = (H.slides || []).filter((x) => x.title || x.img);
   return (
     <div className="sh" ref={ref}>
-      {slides.length > 0 && <Hero slides={slides} open={link} />}
+      {slides.length > 0 && <Hero slides={slides} open={link} brands={brands} />}
 
       {(H.usps || []).some((u) => u.title) && (
         <section className="sh-usps rv" aria-label="Avantajlar">
@@ -102,7 +104,7 @@ export function ShopHome() {
           <SecHead title={H.brandsTitle || 'Markalar'} sub="Dünyanın önde gelen tamir ekipmanı üreticileri" />
           <div className="sh-brands">
             {brands.map((b, i) => (
-              <button key={i} className={'sh-brand' + (b.logo ? ' has-logo' : '') + (isLight(b.color) ? ' light' : '')} style={{ '--c': b.color || '#111827', '--i': i, '--len': Math.max(4, (b.name || '').length) }} onClick={link(b.link || 'brand:' + b.name)} onMouseMove={spot}>
+              <button key={i} className={'sh-brand' + (b.logo ? ' has-logo' : isLight(b.color) ? ' light' : '')} style={{ '--c': b.color || '#111827', '--i': i, '--len': Math.max(4, (b.name || '').length) }} onClick={link(b.link || 'brand:' + b.name)} onMouseMove={spot}>
                 <span className="sh-brand-glow" aria-hidden="true" />
                 {b.logo ? <ShopImg v={b.logo} className="sh-brand-logo" alt={b.name} /> : <b className="sh-brand-word">{b.name}</b>}
                 <span className="sh-brand-f"><span>{counts.get(norm(b.name)) > 0 ? counts.get(norm(b.name)) + ' ürün' : b.name}</span></span>
@@ -181,7 +183,7 @@ function Marquee({ items }) {
 }
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
-function Hero({ slides, open }) {
+function Hero({ slides, open, brands }) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const track = useRef(null);
@@ -196,7 +198,7 @@ function Hero({ slides, open }) {
   return (
     <section className="sh-hero" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => setPaused(true)}>
-        {slides.map((s, k) => <Slide key={k} s={s} on={k === i} open={open} />)}
+        {slides.map((s, k) => <Slide key={k} s={s} on={k === i} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {n > 1 && <>
         <div className="sh-dots">{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>
@@ -206,7 +208,14 @@ function Hero({ slides, open }) {
     </section>
   );
 }
-function Slide({ s, on, open }) {
+// reklam bir markaya gidiyorsa (ya da etiketinde marka adı varsa) o markanın logosu reklamda görünür
+function slideLogo(s, brands) {
+  if (s.logo === 'none') return null;
+  if (s.logo) return s.logo;
+  const name = (s.link || '').startsWith('brand:') ? s.link.slice(6) : s.tag;
+  return brands.find((b) => b.logo && norm(b.name) === norm(name || ''))?.logo || null;
+}
+function Slide({ s, on, open, logo }) {
   const cover = s.layout === 'cover' && s.img;
   return (
     <article className={'sh-slide th-' + (s.theme || 'night') + (cover ? ' cover' : '') + (on ? ' on' : '')} onClick={cover && s.link && !s.cta ? open(s.link) : undefined}>
@@ -214,7 +223,7 @@ function Slide({ s, on, open }) {
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}
       <div className="sh-slide-t">
-        {s.tag && <span className="sh-tag glow">{s.tag}</span>}
+        {logo ? <span className="sh-slide-logo"><ShopImg v={logo} alt={s.tag || ''} /></span> : s.tag && <span className="sh-tag glow">{s.tag}</span>}
         {s.title && <h1>{s.title}</h1>}
         {s.text && <p>{s.text}</p>}
         {s.cta && s.link && <button className="sh-cta-btn" onClick={(e) => { e.stopPropagation(); open(s.link)(); }}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button>}
@@ -392,6 +401,7 @@ export function ShopHomeEditor({ d, set }) {
           <Field label="Küçük etiket" opt><input value={s.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. Yeni · Stokta" /></Field>
         </div>
         <Field label="Başlık"><input value={s.title || ''} onChange={(e) => up({ title: e.target.value })} placeholder="ör. Aixun T3A ile tanışın" /></Field>
+        <Field label="Marka logosu" hint="Otomatik: reklam bir markaya gidiyorsa ya da etiket marka adıysa o markanın logosu etiketin yerinde görünür"><select value={s.logo === 'none' ? 'none' : s.logo ? 'set' : ''} onChange={(e) => up({ logo: e.target.value === 'none' ? 'none' : e.target.value === 'set' ? (H.brands || []).find((b) => b.logo)?.logo || '' : '' })}><option value="">Otomatik</option><option value="none">Logo gösterme</option></select></Field>
         <Field label="Açıklama" opt><input value={s.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
         <div className="row2">
           <Field label="Buton yazısı" opt><input value={s.cta || ''} onChange={(e) => up({ cta: e.target.value })} placeholder="ör. Hemen incele" /></Field>

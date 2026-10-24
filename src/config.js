@@ -10,7 +10,7 @@ export { LOGO_MARK, LOGO_WIDE };
 
 export const DEFAULT_SETTINGS = {
   brand: {
-    appName: 'ERTEL B2B',
+    appName: 'ERTEL GSM',
     tagline: 'Bayilere özel katalog',
     accent: '#2f55b0', // ana renk (logodaki lacivert)
     priceAccent: '#c2410c', // toptan fiyat rengi
@@ -86,8 +86,8 @@ export const DEFAULT_SETTINGS = {
     payShop: true, // dükkanda ödeme (sadece dükkandan teslimde)
     signup: true, // mağazada üye olunabilsin
     // "Çok yakında": sistem hazır ama müşteriye henüz açılmadı (Ayarlar > Online mağaza'dan tek tıkla açılır)
-    checkoutSoon: true, // sepette "Sepeti onayla" (online sipariş) çok yakında
-    accountsSoon: true, // Hesabım / üyelik çok yakında
+    checkoutSoon: false, // sepette "Sepeti onayla" (online sipariş) çok yakında
+    accountsSoon: false, // Hesabım / üyelik çok yakında
     cargoNote: 'Kargo ücreti ve teslim süresi sipariş onayında bildirilir.',
     doneNote: 'Siparişiniz bize ulaştı. En kısa sürede kontrol edip size dönüş yapacağız.',
   },
@@ -111,16 +111,16 @@ export const DEFAULT_SETTINGS = {
     brandsTitle: 'Markalar',
     // logolar markaların kendi sitelerinden (hosting/public/brands/)
     brands: [
-      { name: 'JBC', color: '#ffffff', logo: '/brands/jbc.png', link: 'brand:JBC' },
-      { name: 'Aixun', color: '#0b1530', logo: '/brands/aixun.png', link: 'brand:Aixun' },
-      { name: 'Mechanic', color: '#13306e', logo: '/brands/mechanic.png', link: 'brand:Mechanic' },
-      { name: 'JCID', color: '#ffffff', logo: '/brands/jcid.png', link: 'brand:JCID' },
-      { name: 'Sunshine', color: '#ffffff', logo: '/brands/sunshine.png', link: 'brand:Sunshine' },
-      { name: 'Relife', color: '#ffffff', logo: '/brands/relife.png', link: 'brand:Relife' },
-      { name: '2UUL', color: '#111827', link: 'brand:2UUL' },
-      { name: 'Qianli', color: '#b91c1c', link: 'brand:Qianli' },
-      { name: 'LUBAN', color: '#6d28d9', link: 'brand:LUBAN' },
-      { name: 'Amaoe', color: '#0e7490', link: 'brand:Amaoe' },
+      { name: 'JBC', color: '#e11d2a', logo: '/brands/jbc.png', link: 'brand:JBC' },
+      { name: 'Aixun', color: '#c8102e', logo: '/brands/aixun-dark.png', link: 'brand:Aixun' },
+      { name: 'Mechanic', color: '#1d4ed8', logo: '/brands/mechanic-dark.png', link: 'brand:Mechanic' },
+      { name: 'JCID', color: '#1a9bf0', logo: '/brands/jcid.png', link: 'brand:JCID' },
+      { name: 'Sunshine', color: '#0067ae', logo: '/brands/sunshine.png', link: 'brand:Sunshine' },
+      { name: 'Relife', color: '#22a447', logo: '/brands/relife.png', link: 'brand:Relife' },
+      { name: '2UUL', color: '#2fbf4a', logo: '/brands/2uul.png', link: 'brand:2UUL' },
+      { name: 'Qianli', color: '#b4232a', logo: '/brands/qianli.png', link: 'brand:Qianli' },
+      { name: 'LUBAN', color: '#9b3ff0', logo: '/brands/luban.png', link: 'brand:LUBAN' },
+      { name: 'Amaoe', color: '#f07d1a', logo: '/brands/amaoe.png', link: 'brand:Amaoe' },
     ],
     promosTitle: 'Öne çıkanlar',
     // görseller: ürünlerin kendi resimleri (prod:<no>) ve sitenin bannerları (platincdn)

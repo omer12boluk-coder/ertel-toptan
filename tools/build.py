@@ -30,7 +30,7 @@ FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="p
 body = f'<div id="root"></div>\n<script type="application/json" id="seed">{seed}</script>\n<script type="application/json" id="seed-desc">{seed_desc}</script>\n<script type="module">{appjs}</script>'
 body_hosted = f'<div id="root"></div>\n<script type="module">{appjs}</script>'
 
-art = f'''<title>ERTEL Toptan</title>
+art = f'''<title>ERTEL GSM</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 {FONTS}
 <style>{css}</style>
@@ -44,7 +44,7 @@ hosted = f'''<!doctype html>
 <meta charset="utf-8">
 <base href="/">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ERTEL Toptan</title>
+<title>ERTEL GSM</title>
 <meta name="theme-color" content="#2f55b0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">

@@ -20,11 +20,10 @@ export class FirebaseBackend {
   constructor(config, appName) { this.config = config; this.appName = appName; this.imgCache = new Map(); }
 
   async init() {
-    const [A, U, F] = await Promise.all([
-      import(/* @vite-ignore */ CDN + 'firebase-app.js'),
-      import(/* @vite-ignore */ CDN + 'firebase-auth.js'),
-      import(/* @vite-ignore */ CDN + 'firebase-firestore.js'),
-    ]);
+    // Firebase dosyaları önce kendi sitemizden (/fb/): telefon tarayıcılarının izleyici koruması gstatic.com'u geciktirebiliyor
+    const load = (base) => Promise.all(['app', 'auth', 'firestore'].map((m) => import(/* @vite-ignore */ base + 'firebase-' + m + '.js')));
+    let A, U, F;
+    try { [A, U, F] = await load(location.origin + '/fb/'); } catch { [A, U, F] = await load(CDN); }
     this.A = A; this.U = U; this.F = F;
     // Yönetici paneli ayrı bir Firebase örneği kullanır: aynı tarayıcıda yönetici ve bayi oturumları birbirini etkilemez
     this.app = this.appName ? A.initializeApp(this.config, this.appName) : A.initializeApp(this.config);
@@ -101,7 +100,7 @@ export class FirebaseBackend {
   async savePublicSettings(S) {
     const p = S.pricing || {};
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
-      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null });
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, v: S.v || 0 });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan

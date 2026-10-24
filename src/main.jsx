@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
-import { LOGO_MARK, LOGO_WIDE } from './config.js';
+import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS } from './config.js';
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
@@ -13,7 +13,7 @@ import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
-import { CartBar } from './guestcart.jsx';
+import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome } from './shophome.jsx';
 import { Orders } from './orders.jsx';
@@ -165,7 +165,13 @@ const stripLocal = (p) => { if (!p) return p; const { _s, _t, ...o } = p; return
 
 // Eski varsayılanları yenilerine taşı (elle değiştirilmiş değerlere dokunmaz)
 function migrate(S) {
-  if (S.brand.appName === 'ERTEL Toptan') S.brand.appName = 'ERTEL B2B';
+  if (['ERTEL Toptan', 'ERTEL B2B'].includes(S.brand.appName)) S.brand.appName = 'ERTEL GSM';
+  // 24.10.2026: yeni logo (kalın çizgili) ve tek tip marka kutuları, üyelik + sipariş açıldı (bir kez uygulanır; sonra panelden değiştirilebilir)
+  if ((S.v || 0) < 2) {
+    S.v = 2; S.brand.logo = ''; S.brand.logoWide = '';
+    S.orders = { ...S.orders, checkoutSoon: false, accountsSoon: false };
+    if (S.shopHome?.brands) { const def = DEFAULT_SETTINGS.shopHome.brands; S.shopHome = { ...S.shopHome, brands: S.shopHome.brands.map((b) => { const d = def.find((x) => x.name.toLowerCase() === (b.name || '').toLowerCase()); return d && (!b.logo || b.logo.startsWith('/brands/')) ? { ...b, color: d.color, logo: d.logo } : b; }) }; }
+  }
   return S;
 }
 
@@ -321,9 +327,9 @@ function Login() {
 }
 
 // [sekme, ad, ikon, telefondaki kısa ad]
-const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Hesabım', 'user']];
+const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Hesabım', 'user']];
 const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['ayarlar', 'Ayarlar', 'gear']];
-const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Ürünler', 'grid'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
+const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 const shopFirst = () => (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa');
 
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
@@ -379,12 +385,14 @@ function Shell() {
           {admin && <span className="admin-badge"><Icon n="shield" s={14} />Yönetim paneli</span>}
           {pub && <span className="pub-badge">Online mağaza</span>}
           <nav className="topnav" aria-label="Ana menü">
-            {nav.filter(([k]) => !(pub && k === 'hesap')).map(([k, l, i]) => (
+            {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet')).map(([k, l, i]) => (
               <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
                 <Icon n={i} s={18} />{l}{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}
               </button>
             ))}
           </nav>
+          <span className="top-sp" />
+          {!admin && <HeaderCart on={tab === 'sepet'} />}
           {!admin && <a className="icon-btn to-landing" href="/" title="Giriş sayfasına dön (Mağaza / Bayi girişi)" aria-label="Giriş sayfasına dön"><Icon n="home" s={19} /></a>}
           <ThemeButton />
           {pub && (member
