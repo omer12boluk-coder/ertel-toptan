@@ -30,6 +30,7 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 ## Site eşitleme
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı (r) = sitedeki gerçek satış fiyatı: `sale_price` (indirimli) varsa o, yoksa `price` (Excel'de de "İndirimli Fiyat" → r). Toptan = ürüne özel w yoksa r'den % indirim (utils priceFor). 24.10.2026'da eski "indirimli = w" kayıtları temizlendi. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sipariş formu: arama listesinde liste + toptan görünür, eklenince liste fiyatı (r) geçer. Sitede olmayan ürünü `so=1` ile gizler.
 - `worker/index.js` Cloudflare Worker "ertel-b2b-watch": dakikada bir beslemeyi kontrol eder, değişince sync'i tetikler (Actions "Bekçiyi yayınla" yükler). workers.dev adresi `hosting/public/config.js` → `window.WATCH_URL`: `GET /rate` Harem Altın dolar satış kuru, `POST /check` (panel açılınca), `POST /sync` ("Şimdi eşitle").
+- Uygulama içi tarayıcılar (Telegram/WhatsApp/Instagram): Auth sadece browserLocalPersistence (IndexedDB yoklaması girişi kilitliyordu), Firestore orada experimentalForceLongPolling, SDK yükleme ve idb işlemlerinde zaman aşımı.
 - Firebase SDK kendi sitemizden: hosting/public/fb/ (Actions "Firebase kütüphanesini siteye kopyala"); telefon tarayıcılarının izleyici koruması gstatic'i geciktiriyordu. Yoksa gstatic'e düşer.
 - Ürün adları `src/clean.js` ile temizlenir (Windows-1252 kalıntısı, &#..; kodları).
 - Siteye toplu istek atma (IP engeli yemiştik). Beslemede stok adedi yok.
@@ -38,5 +39,6 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_DISPATCH_TOKEN, TELEGRAM_TOKEN, RESEND_KEY (bildirim; kullanıcı ekler).
 
 ## Açık konular
+- E-postalar spam'e düşüyor: Firebase Auth e-postaları noreply@erteltoptan.firebaseapp.com'dan, sipariş bildirimi onboarding@resend.dev'den. Kalıcı çözüm ertelgsm.com DNS'ine kayıt ekleyip (Firebase Auth özel alan adı + Resend alan adı doğrulama) kendi adresimizden göndermek; DNS'i kimin yönettiği soruldu. Spam'deki e-postalarda Gmail linkleri kapatıyor.
 - iyzico "link ile ödeme" entegrasyonu (kullanıcı başvuracak).
 - Beslemede her üründe g:price (üstü çizili) + g:sale_price (gerçek satış) var; uygulama sale_price'ı liste fiyatı alır. 24.10.2026'da eski "indirimli = toptan (w)" kayıtları silindi (kullanıcı onayladı), toptan artık % kuralıyla.
