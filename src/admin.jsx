@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { waLink, links } from './route.js';
-import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals } from './utils.js';
+import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
@@ -1002,7 +1002,8 @@ function ShopInvite() {
 function NotifyCard() {
   const [st, setSt] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [code] = useState(() => String(Math.floor(100000 + Math.random() * 900000)));
+  // Kod sayfa yenilense de aynı kalsın (bota yazılan kod geçersiz olmasın)
+  const [code] = useState(() => { let c = ls.get('tg-code', ''); if (!/^\d{6}$/.test(c)) { c = String(Math.floor(100000 + Math.random() * 900000)); ls.set('tg-code', c); } return c; });
   const W = (window.WATCH_URL || '').replace(/\/$/, '');
   const load = () => W && fetch(W + '/').then((r) => r.json()).then((j) => setSt(j.notify || {})).catch(() => setSt({}));
   useEffect(() => { load(); }, []);

@@ -206,7 +206,11 @@ async function tgLink(env, code) {
   if (!/^\d{6}$/.test(code)) return { ok: false, error: 'Kod hatalı' };
   const r = await fetch(TG(env, 'getUpdates') + '?limit=100').then((x) => x.json()).catch(() => null);
   const m = (r?.result || []).map((u) => u.message).filter(Boolean).reverse().find((x) => (x.text || '').replace(/\D/g, '') === code && x.chat?.type === 'private');
-  if (!m) return { ok: false, error: 'Kod bota ulaşmamış. Kodu bota gönderip birkaç saniye sonra tekrar deneyin.' };
+  if (!m) {
+    const msgs = (r?.result || []).map((u) => u.message).filter(Boolean);
+    const last = msgs.length ? (msgs[msgs.length - 1].text || '(yazı değil)').slice(0, 40) : '';
+    return { ok: false, error: r?.ok === false ? 'Telegram hatası: ' + (r.description || '') : msgs.length ? `Kod bulunamadı. Bota en son gelen mesaj: “${last}”. Bota sadece ${code} yazıp gönderin.` : `Bota hiç mesaj gelmemiş. Telegram’da botun sohbetine ${code} yazıp gönderin, sonra tekrar Bağla’ya basın.` };
+  }
   const name = [m.chat.first_name, m.chat.last_name].filter(Boolean).join(' ') || m.chat.username || 'Telegram';
   await env.KV.put('tg-chat', JSON.stringify({ id: m.chat.id, name }));
   await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: m.chat.id, text: '✅ Bağlandı. Yeni mağaza siparişleri buraya bildirilecek.' }) }).catch(() => {});
