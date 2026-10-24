@@ -424,7 +424,7 @@ function AuthForm({ onDone, compact }) {
       <button className="btn primary big center-btn" disabled={busy}>{busy ? 'Bekleyin…' : view === 'login' ? 'Giriş yap' : view === 'signup' ? 'Üye ol' : 'Bağlantı gönder'}</button>
       {view === 'login' && <button type="button" className="link center" onClick={() => { setErr(''); setView('reset'); }}>Şifremi unuttum</button>}
       {view === 'reset' && <button type="button" className="link center" onClick={() => setView('login')}>← Girişe dön</button>}
-      {!compact && <p className="fine center">Üye olmadan da sipariş verebilirsiniz; sepette “Misafir olarak devam et”.</p>}
+      {!compact && <p className="fine center">Üye olmadan da sipariş verebilirsiniz: sepeti onaylayıp bilgilerinizi yazmanız yeterli.</p>}
     </form>
   );
 }
