@@ -137,7 +137,10 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
   cols[2][1] = TW - 2 * PAD - cols.reduce((n, c) => n + c[1], 0);
   const meas = document.createElement('canvas').getContext('2d');
   meas.font = '600 23px ' + FB;
-  const rows = items.map((it, k) => { const lines = wrap(meas, it.n, cols[2][1] - 16, 3); return { it, k, lines, h: Math.max(92, 24 + lines.length * 29 + 30) }; });
+  const rows0 = items.map((it, k) => { const lines = wrap(meas, it.n, cols[2][1] - 16, 3); return { it, k, lines, h: Math.max(92, 24 + lines.length * 29 + 30) }; });
+  // birden fazla resim varsa bütün satırlar aynı yükseklikte olsun (resimler aynı ölçüde çıksın)
+  const rowH = Math.max(...rows0.map((r0) => r0.h), 92);
+  const rows = rows0.length > PER_PAGE ? rows0.map((r0) => ({ ...r0, h: rowH })) : rows0;
   // sayfalar: en fazla 12 ürün, eşit dağıt
   const nPages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
   const per = Math.ceil(rows.length / nPages) || 1;
@@ -147,7 +150,8 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
   const tot = totals(items, 'offer');
   const tTL = tl ? toTL(tot, rate) : null;
   const who = r.gname || r.userName;
-  const blobs = [];
+  const canvases = [];
+  const fhOf = () => 84 + (tTL != null ? 52 : 0) + (vat.pct ? 56 : 0);
   for (let pi = 0; pi < pages.length; pi++) {
     const last = pi === pages.length - 1;
     const c = document.createElement('canvas'); c.width = W; c.height = 4000;
@@ -234,15 +238,29 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
       }
       y += fh + 16;
     } else {
-      x.textAlign = 'right'; x.fillStyle = S.brand.accent || '#2f55b0'; x.font = '700 20px ' + FB; x.fillText(`Devamı ${pi + 2}. resimde →`, W - P, y + 20);
-      y += 36;
+      // devam ediyor işareti: toplam kutusuyla aynı yerde, aynı ölçüde; sayfa noktaları + ok
+      const fh = fhOf();
+      rrect(x, P + 1, y + 1, TW - 2, fh - 2, 16); x.setLineDash([8, 7]); x.strokeStyle = '#cbd5e1'; x.lineWidth = 2; x.stroke(); x.setLineDash([]);
+      const cy = y + fh / 2, n = pages.length, gap = 26, x0 = W / 2 - ((n - 1) * gap) / 2 - 24;
+      for (let d = 0; d < n; d++) { x.beginPath(); x.arc(x0 + d * gap, cy, d === pi ? 8 : 6, 0, Math.PI * 2); x.fillStyle = d === pi ? (S.brand.accent || '#2f55b0') : '#cbd5e1'; x.fill(); }
+      const ax = x0 + (n - 1) * gap + 34; x.strokeStyle = S.brand.accent || '#2f55b0'; x.lineWidth = 4; x.lineCap = 'round'; x.lineJoin = 'round';
+      x.beginPath(); x.moveTo(ax, cy); x.lineTo(ax + 34, cy); x.moveTo(ax + 22, cy - 11); x.lineTo(ax + 34, cy); x.lineTo(ax + 22, cy + 11); x.stroke();
+      y += fh + 16;
     }
     // --- alt bilgi
     x.fillStyle = soft; x.font = '400 16px ' + FB; x.textAlign = 'center';
     x.fillText(`${S.shop.name || ''}${S.shop.whatsapp ? ' · WhatsApp ' + S.shop.whatsapp : ''}${pages.length > 1 ? ` · Sayfa ${pi + 1}/${pages.length}` : ''}`, W / 2, y + 22);
-    const H = Math.ceil(y + 40);
+    canvases.push({ c, used: Math.ceil(y + 40), footY: y });
+  }
+  // bütün resimler aynı yükseklikte: kısa kalanın tablosunun altı boş bırakılır, alt bilgi en alta taşınır
+  const H = Math.max(...canvases.map((v) => v.used));
+  const blobs = [];
+  for (const v of canvases) {
     const out = document.createElement('canvas'); out.width = W; out.height = H;
-    out.getContext('2d').drawImage(c, 0, 0);
+    const o = out.getContext('2d'); o.fillStyle = '#fff'; o.fillRect(0, 0, W, H);
+    const body = v.footY; // alt bilgi satırından önceki kısım
+    o.drawImage(v.c, 0, 0, W, body, 0, 0, W, body);
+    o.drawImage(v.c, 0, body, W, v.used - body, 0, H - (v.used - body), W, v.used - body);
     blobs.push(await new Promise((res) => out.toBlob(res, 'image/png')));
   }
   return blobs;
