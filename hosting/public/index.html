@@ -1489,7 +1489,10 @@ a.btn { text-decoration: none; }
 .sh-box.prod.sz-tall .sh-box-t, .sh-box.prod.sz-big .sh-box-t { max-width: 92%; }
 @media (hover: hover) { .sh-box.prod:hover .sh-box-prod { transform: rotate(0deg) scale(1.06); } }
 .sh-box.notext .sh-box-shade { opacity: 0 !important; }
-.sh-box.has-img.notext .sh-box-img { object-fit: cover; }
+.sh-box.has-img.notext { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+.sh-box.has-img.notext::before { display: none; }
+.sh-box.has-img.notext .sh-box-img { object-fit: contain; }
+.sh-box.prod.sz-sq .sh-box-t { max-width: 100%; }
 @media (max-width: 700px) { .sh-box.prod.sz-sq .sh-box-prod { width: 52%; top: 8%; right: 7%; } .sh-box.prod .sh-box-t { max-width: 100%; } .sh-pcard { width: 70%; padding: 14px; border-radius: 22px; } }
 /* orijinal logolar */
 .sh-mq-logo { height: 30px; width: auto; max-width: 180px; object-fit: contain; filter: brightness(0) invert(1); opacity: .95; }
@@ -1511,7 +1514,7 @@ a.btn { text-decoration: none; }
 }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '6448b27a49';</script>
+<script>window.__BUILD = '29025a0a90';</script>
 </head>
 <body>
 <div id="root"></div>
