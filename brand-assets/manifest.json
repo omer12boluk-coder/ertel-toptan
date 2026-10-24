@@ -1,0 +1,340 @@
+{
+  "ersa": [
+    {
+      "page": "https://www.ersa.com/en/",
+      "status": 404
+    }
+  ],
+  "fluke": [
+    {
+      "page": "https://www.fluke.com/en-us",
+      "status": 200
+    },
+    {
+      "file": "fluke-1.png",
+      "src": "https://media.fluke.com/99821b21-4ec4-4c06-bdac-b35600b9624d_original%20file.png",
+      "bytes": 917890,
+      "from": "https://www.fluke.com/en-us"
+    },
+    {
+      "file": "fluke-2.jpg",
+      "src": "https://media.fluke.com/f5f35764-1e5e-48e3-b8bb-b4ba00076472_original%20file.jpg",
+      "bytes": 91204,
+      "from": "https://www.fluke.com/en-us"
+    },
+    {
+      "file": "fluke-3.jpg",
+      "src": "https://media.fluke.com/6dd4c89b-bfa6-4fc8-ba2d-b3980141539a_original%20file.jpg",
+      "bytes": 176795,
+      "from": "https://www.fluke.com/en-us"
+    },
+    {
+      "file": "fluke-4.png",
+      "src": "https://media.fluke.com/4bac5fc8-7d69-44e7-bb11-b108002c25de_original%20file.png",
+      "bytes": 15106,
+      "from": "https://www.fluke.com/en-us"
+    },
+    {
+      "file": "fluke-5.png",
+      "src": "https://media.fluke.com/7ce435ce-b7b2-48c9-9c6d-b108002d8e6a_original%20file.png",
+      "bytes": 8830,
+      "from": "https://www.fluke.com/en-us"
+    },
+    {
+      "file": "fluke-6.png",
+      "src": "https://media.fluke.com/f0ac353b-2bcd-4db5-90bc-b108002c3535_original%20file.png",
+      "bytes": 7568,
+      "from": "https://www.fluke.com/en-us"
+    },
+    {
+      "file": "fluke-7.png",
+      "src": "https://media.fluke.com/87e76708-8814-4678-b389-b108002d479f_original%20file.png",
+      "bytes": 158353,
+      "from": "https://www.fluke.com/en-us"
+    },
+    {
+      "file": "fluke-8.png",
+      "src": "https://media.fluke.com/2c7fefd5-6144-412e-a2b2-b108002c118d_original%20file.png",
+      "bytes": 10135,
+      "from": "https://www.fluke.com/en-us"
+    }
+  ],
+  "unit": [
+    {
+      "page": "https://meters.uni-trend.com/",
+      "status": 200
+    },
+    {
+      "file": "unit-1.png",
+      "src": "https://meters.uni-trend.com/wp-content/uploads/2021/10/UNIT.png",
+      "bytes": 899,
+      "from": "https://meters.uni-trend.com/"
+    },
+    {
+      "file": "unit-2.png",
+      "src": "https://meters.uni-trend.com/wp-content/uploads/2022/06/cropped-Site-icon-32x32.png",
+      "bytes": 581,
+      "from": "https://meters.uni-trend.com/"
+    },
+    {
+      "file": "unit-3.png",
+      "src": "https://meters.uni-trend.com/wp-content/uploads/2022/06/cropped-Site-icon-192x192.png",
+      "bytes": 4200,
+      "from": "https://meters.uni-trend.com/"
+    },
+    {
+      "file": "unit-4.png",
+      "src": "https://meters.uni-trend.com/wp-content/uploads/2022/06/cropped-Site-icon-180x180.png",
+      "bytes": 14230,
+      "from": "https://meters.uni-trend.com/"
+    },
+    {
+      "file": "unit-5.jpg",
+      "src": "https://meters.uni-trend.com/wp-content/uploads/2023/04/SM_DS-Ratio.jpg",
+      "bytes": 418563,
+      "from": "https://meters.uni-trend.com/"
+    },
+    {
+      "page": "https://www.uni-trend.com/",
+      "status": 200
+    },
+    {
+      "file": "unit-6.png",
+      "src": "https://www.uni-trend.com/wp-content/uploads/2021/10/UNIT.png",
+      "bytes": 899,
+      "from": "https://www.uni-trend.com/"
+    },
+    {
+      "file": "unit-7.png",
+      "src": "https://www.uni-trend.com/wp-content/uploads/2022/06/cropped-cropped-Site-icon-32x32.png",
+      "bytes": 581,
+      "from": "https://www.uni-trend.com/"
+    },
+    {
+      "file": "unit-8.png",
+      "src": "https://www.uni-trend.com/wp-content/uploads/2022/06/cropped-cropped-Site-icon-192x192.png",
+      "bytes": 4200,
+      "from": "https://www.uni-trend.com/"
+    },
+    {
+      "file": "unit-9.png",
+      "src": "https://www.uni-trend.com/wp-content/uploads/2022/06/cropped-cropped-Site-icon-180x180.png",
+      "bytes": 14230,
+      "from": "https://www.uni-trend.com/"
+    }
+  ],
+  "korad": [
+    {
+      "page": "https://www.koradtechnology.com/",
+      "status": 200
+    },
+    {
+      "file": "korad-1.jpg",
+      "src": "https://omo-oss-image.thefastimg.com/portal-saas/pg2026020217270081785/cms/image/2d9e1976-f97a-467b-b636-afa740d1a2c2.jpg",
+      "bytes": 515525,
+      "from": "https://www.koradtechnology.com/"
+    },
+    {
+      "file": "korad-2.ico",
+      "src": "https://www.koradtechnology.com/favicon.ico",
+      "bytes": 1150,
+      "from": "https://www.koradtechnology.com/"
+    }
+  ],
+  "quick": [
+    {
+      "page": "https://www.quick-global.com/",
+      "status": 200
+    },
+    {
+      "file": "quick-1.png",
+      "src": "https://www.quick-global.com/static/index/zm001/img/f-logo.png",
+      "bytes": 1872,
+      "from": "https://www.quick-global.com/"
+    },
+    {
+      "file": "quick-2.png",
+      "src": "https://www.quick-global.com/uploads/20220214/3e96bd4ee842e53a25e889bc781ef14c.png",
+      "bytes": 1303,
+      "from": "https://www.quick-global.com/"
+    },
+    {
+      "page": "https://www.quicksolder.com/en/",
+      "status": 200
+    }
+  ],
+  "yihua": [
+    {
+      "page": "https://www.yihuatools.com/",
+      "status": 200
+    },
+    {
+      "file": "yihua-1.png",
+      "src": "https://www.yihuatools.com/cdn/shop/files/YIHUA_Corp_Lg_Trans_Wht_R.png?v=1791861219&width=3840",
+      "bytes": 29562,
+      "from": "https://www.yihuatools.com/"
+    },
+    {
+      "file": "yihua-2.png",
+      "src": "https://www.yihuatools.com/cdn/shop/files/yihua_thumbnail.png?crop=center&height=32&v=1792748680&width=32",
+      "bytes": 1535,
+      "from": "https://www.yihuatools.com/"
+    },
+    {
+      "page": "https://www.yihua-soldering.com/",
+      "status": 200
+    },
+    {
+      "file": "yihua-3.png",
+      "src": "https://www.yihua-soldering.com/upload/2181/logo/logo.png",
+      "bytes": 4188,
+      "from": "https://www.yihua-soldering.com/"
+    },
+    {
+      "file": "yihua-4.jpg",
+      "src": "https://www.yihua-soldering.com/upload/2181/banner/banneren03-1.jpg",
+      "bytes": 511595,
+      "from": "https://www.yihua-soldering.com/"
+    },
+    {
+      "file": "yihua-5.jpg",
+      "src": "https://www.yihua-soldering.com/upload/2181/b/11_2_5_hot_air_rework_station_00.jpg",
+      "bytes": 66479,
+      "from": "https://www.yihua-soldering.com/"
+    },
+    {
+      "file": "yihua-6.jpg",
+      "src": "https://www.yihua-soldering.com/upload/2181/b/9-3-yihua-936a-ii-939d-iii-constant-temperature-soldering-station_01.jpg",
+      "bytes": 79874,
+      "from": "https://www.yihua-soldering.com/"
+    },
+    {
+      "file": "yihua-7.jpg",
+      "src": "https://www.yihua-soldering.com/upload/2181/b/23_2_bga_preheating_station_00.jpg",
+      "bytes": 42898,
+      "from": "https://www.yihua-soldering.com/"
+    },
+    {
+      "file": "yihua-8.jpg",
+      "src": "https://www.yihua-soldering.com/upload/2181/b/9-1-yihua-926led-iii-926led-iv-digital-soldering-iron-station_a01.jpg",
+      "bytes": 66904,
+      "from": "https://www.yihua-soldering.com/"
+    },
+    {
+      "file": "yihua-9.ico",
+      "src": "https://www.yihua-soldering.com/favicon.ico",
+      "bytes": 4286,
+      "from": "https://www.yihua-soldering.com/"
+    }
+  ],
+  "megaidea": [
+    {
+      "page": "https://www.qianli.cn/en/pro",
+      "status": 200
+    },
+    {
+      "file": "megaidea-1.png",
+      "src": "https://www.qianli.cn/en/static/upload/image/20210513/1620891672252417.png",
+      "bytes": 3301,
+      "from": "https://www.qianli.cn/en/pro"
+    },
+    {
+      "file": "megaidea-2.png",
+      "src": "https://www.qianli.cn/en/static/upload/image/20220620/1655709223795146.png",
+      "bytes": 1981,
+      "from": "https://www.qianli.cn/en/pro"
+    },
+    {
+      "file": "megaidea-3.png",
+      "src": "https://www.qianli.cn/en/static/upload/image/20210520/1621504085730882.png",
+      "bytes": 1196,
+      "from": "https://www.qianli.cn/en/pro"
+    }
+  ],
+  "mijing": [
+    {
+      "page": "https://www.mijing.cn/",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "page": "http://www.mijing-tools.com/",
+      "error": "TypeError: fetch failed"
+    }
+  ],
+  "rf4": [
+    {
+      "page": "https://www.rf4.com.cn/",
+      "status": 200
+    },
+    {
+      "page": "https://rf4tools.com/",
+      "status": 200
+    },
+    {
+      "file": "rf4-1.png",
+      "src": "https://25554348.s21i.faiusr.com/4/3/ABUIABAEGAAgtZ320wYogcmdnwcwmwc44QM.png",
+      "bytes": 31861,
+      "from": "https://rf4tools.com/"
+    },
+    {
+      "file": "rf4-2.png",
+      "src": "https://25554348.s21i.faiusr.com/5/3/ABUIABAEGAAgvLfHwAYo5JPwmAYw5wQ4wAI.ico",
+      "bytes": 36219,
+      "from": "https://rf4tools.com/"
+    }
+  ],
+  "xzz": [
+    {
+      "page": "https://www.xinzhizao.com/",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "page": "https://xzz.ltd/",
+      "error": "TypeError: fetch failed"
+    }
+  ],
+  "ycs": [
+    {
+      "page": "https://www.ycstools.com/",
+      "error": "TypeError: fetch failed"
+    }
+  ],
+  "maant": [
+    {
+      "page": "https://www.maant.com/",
+      "error": "TypeError: fetch failed"
+    }
+  ],
+  "kaisi": [
+    {
+      "page": "https://www.kaisi.com.cn/",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "page": "https://kaisitools.com/",
+      "error": "TypeError: fetch failed"
+    }
+  ],
+  "sugon": [
+    {
+      "page": "https://www.sugon-tools.com/",
+      "error": "TypeError: fetch failed"
+    },
+    {
+      "page": "https://sugontools.com/",
+      "error": "TypeError: fetch failed"
+    }
+  ],
+  "ossteam": [
+    {
+      "page": "https://www.ossteam.com/",
+      "error": "TypeError: fetch failed"
+    }
+  ],
+  "ifixes": [
+    {
+      "page": "https://ifixes.com/",
+      "status": 200
+    }
+  ]
+}
