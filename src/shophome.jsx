@@ -257,12 +257,30 @@ function SecHead({ title, sub, more, rail, onTitle }) {
   );
 }
 
-// kayan marka şeridi: logosu olan markada orijinal logo (şeride uysun diye beyaza boyanır), yoksa adı
+// kayan marka şeridi: dev bir kayan katman yerine kendi içinde kayan kutu (iPhone'da kaybolma / titreme olmasın).
+// Telefonda parmakla da kaydırılabilir; bırakınca kendiliğinden devam eder. Ekranda değilken durur.
 function Marquee({ items, style, speed, ls = 1 }) {
+  const ref = useRef(null);
+  const row = items.length >= 8 ? items : [...items, ...items, ...items];
+  useEffect(() => {
+    const el = ref.current; if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let raf = 0, last = performance.now(), pos = el.scrollLeft, held = false, visible = true, t = 0;
+    const dur = Number(speed) || 46;
+    const tick = (now) => {
+      const dt = Math.min(64, now - last); last = now;
+      if (!held && visible) { const half = el.scrollWidth / 2; if (half > 0) { pos += (half / dur) * dt / 1000; if (pos >= half) pos -= half; el.scrollLeft = pos; } }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    const hold = () => { held = true; clearTimeout(t); };
+    const release = () => { clearTimeout(t); t = setTimeout(() => { const half = el.scrollWidth / 2; pos = el.scrollLeft % half; held = false; last = performance.now(); }, 1500); };
+    el.addEventListener('touchstart', hold, { passive: true }); el.addEventListener('touchend', release, { passive: true });
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(([e]) => { visible = e.isIntersecting; last = performance.now(); }) : null; io?.observe(el);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); io?.disconnect(); el.removeEventListener('touchstart', hold); el.removeEventListener('touchend', release); };
+  }, [items.length, speed]);
   if (!items.length) return null;
-  const row = [...items, ...items, ...items];
   return (
-    <div className={'sh-mq mq-' + style} aria-hidden="true" style={{ '--mq-dur': (Number(speed) || 46) + 's' }}>
+    <div ref={ref} className={'sh-mq mq-' + style} aria-hidden="true">
       <div className="sh-mq-in">{[...row, ...row].map((b, i) => (
         <span key={i} className="sh-mq-it" style={{ '--c': b.color || '#64748b', '--ls': (b.scale || 1) * ls }}>
           {b.logo ? <ShopImg v={b.logo} className="sh-mq-logo" alt={b.name} /> : <b>{b.name}</b>}

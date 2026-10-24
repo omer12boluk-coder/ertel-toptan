@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder } from './store.js';
+import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS } from './config.js';
@@ -49,6 +49,7 @@ async function boot() {
   const A = fb ? new FirebaseBackend(cfg, area === 'user' ? undefined : area) : new DemoBackend(await loadSeed(), loadSeedDesc, area);
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
   store.set({ api: A });
+  startHistory(() => (store.s.user?.role === 'admin' ? 'talepler' : store.s.user?.role === 'public' ? shopFirst() : 'anasayfa'));
   startRate(A);
   startVersionCheck();
   // Logo / dükkan bilgisi: cihazda kayıtlıysa hemen kullan, sunucudakini arkadan al
@@ -112,7 +113,7 @@ function startSession(u, A) {
   loadCart();
   if (admin) syncNow(false).catch(() => {});
   // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
-  store.set({ boot: 'ready', tab: admin ? 'talepler' : 'anasayfa', openReq: null });
+  store.set({ boot: 'ready', tab: tabFromPath() || (admin ? 'talepler' : 'anasayfa'), openReq: null });
   if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
   if (admin && ROUTE.listCode) { store.set({ vitrinCode: ROUTE.listCode }); history.replaceState(null, '', '/admin'); }
   if (admin && ROUTE.orderId) { openOrder(ROUTE.orderId); history.replaceState(null, '', '/admin'); }
@@ -201,7 +202,7 @@ async function bootShop(A) {
   // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
   if (ROUTE.reqId && !ROUTE.orderId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
-  const firstTab = ROUTE.listCode ? 'liste' : shopFirst();
+  const firstTab = ROUTE.listCode ? 'liste' : tabFromPath() || shopFirst();
   if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
   if (cached) setCatalog(cached.items);
   const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId || ROUTE.authAction;
@@ -209,7 +210,7 @@ async function bootShop(A) {
   try {
     setCatalog(await A.loadPublicCatalog());
     A.watchCatalog?.((items) => items && setCatalog(items), true);
-    if (!direct && !cached) { loadCart(); store.set({ boot: 'ready', tab: shopFirst(), openReq: null }); }
+    if (!direct && !cached) { loadCart(); store.set({ boot: 'ready', tab: firstTab, openReq: null }); }
   } catch (e) { if (!direct && !cached) store.set({ boot: 'error', bootError: 'Vitrin yüklenemedi: ' + e.message }); }
 }
 

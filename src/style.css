@@ -1807,3 +1807,27 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .oform-count { font-size: 12.5px; color: var(--muted); font-weight: 600; margin-bottom: -6px; }
 .oform-hint { margin: 0; }
 .oform-out { scroll-margin-top: calc(var(--top-h) + 16px); border-color: color-mix(in oklab, #25d366 35%, var(--line)); }
+
+/* ===== Telefonda uygulama gibi: sayfa yana kaymaz, sadece kayması gereken şeritler kayar ===== */
+html, body { overflow-x: hidden; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
+html { overscroll-behavior-x: none; }
+.shell, .main { max-width: 100vw; }
+.sh-mq { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.sh-mq::-webkit-scrollbar { display: none; }
+.sh-mq-in { animation: none !important; }
+.sh-brands, .sh-rail, .sh-hero-track, .sh-usps { overscroll-behavior-x: contain; }
+/* reklam kutularında yazı her zaman ürün resminin üstünde */
+.sh-box-t { position: relative; z-index: 2; }
+@media (max-width: 700px) {
+  .sh-box-go { display: none; }
+  .sh-box.prod.sz-wide .sh-box-prod, .sh-box.prod.sz-big .sh-box-prod { height: auto; width: 42%; top: 9%; right: 6%; }
+  .sh-box.prod.sz-wide .sh-box-t { max-width: 54%; }
+  .sh-box.prod.sz-wide .sh-box-t b { font-size: 20px; line-height: 1.1; }
+  /* beliren animasyonlar telefonda kısa ve sade (titreme / kaybolup gelme olmasın) */
+  .rv, .rv .sh-brand, .rv .sh-box, .rv .sh-card, .rv .sh-usp { transform: none !important; }
+  .rv { transition: opacity .35s ease; }
+  .rv.in .sh-brand, .rv.in .sh-box, .rv.in .sh-card, .rv.in .sh-usp { transition: opacity .3s ease; transition-delay: 0s !important; }
+}
+/* markalar: telefonda da sayfa kenarına hizalı (diğer raflar gibi), kenarın altına girmesin */
+@media (max-width: 700px) { .sh-brands { margin-inline: 0; padding: 4px 0 10px; scroll-padding-inline: 0; } }
