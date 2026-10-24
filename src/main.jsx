@@ -418,12 +418,12 @@ function ShellFull() {
       <header className="topbar">
         <div className="topbar-in">
           <Brand small onClick={home} />
-          {admin && <span className="admin-badge"><Icon n="shield" s={14} />Yönetim paneli</span>}
+          {admin && <span className="admin-badge" title="Yönetim paneli"><Icon n="shield" s={14} /><span className="badge-t">Yönetim paneli</span></span>}
           {pub && <span className="pub-badge">Online mağaza</span>}
           <nav className="topnav" aria-label="Ana menü">
-            {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet')).map(([k, l, i]) => (
-              <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
-                <Icon n={i} s={18} />{l}{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}
+            {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet') && k !== 'tasarim').map(([k, l, i]) => (
+              <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)} title={l}>
+                <Icon n={i} s={18} /><span className="topnav-l">{l}</span>{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}
               </button>
             ))}
           </nav>

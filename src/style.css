@@ -1160,7 +1160,7 @@ a.btn { text-decoration: none; }
 .me-t b { white-space: nowrap; }
 @media (min-width: 900px) and (max-width: 1500px) { .shell.admin .me-t { display: none; } .shell.admin .topnav-b { padding: 0 10px; } .shell.admin .topnav { margin-left: 10px; } }
 @media (min-width: 900px) and (max-width: 1240px) { .shell.admin .admin-badge { display: none; } .shell.admin .brand-t { display: none; } }
-@media (min-width: 900px) and (max-width: 1040px) { .shell.admin .topnav-b .ic { display: none; } }
+
 .co-who-t { flex: 1; min-width: 200px; }
 .co-who > span.co-who-t { flex: 1; }
 @media (max-width: 560px) { .acct .profile-card .page-t { font-size: 22px; } .acct .profile-card { gap: 12px; } }
@@ -1915,3 +1915,43 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .dash-ft { flex: 1; min-width: 0; display: flex; flex-direction: column; } .dash-ft b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .dash-ft small { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dash-fv { font: 700 15px/1 var(--f-display); white-space: nowrap; }
 @media (max-width: 640px) { .dash-hero { padding: 20px; border-radius: 20px; } .dash-feed .pill { display: none; } }
+
+/* ===== Üst menü: mağaza adı hiç kısaltılmaz; yer darsa menü sıkışır ===== */
+.topbar-in .brand { flex: none; }
+.brand-t b { overflow: visible; text-overflow: clip; }
+.topbar-in .admin-badge, .topbar-in .pub-badge { flex: none; }
+.topnav { min-width: 0; flex-wrap: nowrap; }
+.shell.admin .topnav { margin-left: 8px; gap: 2px; }
+@media (max-width: 1500px) { .shell.admin .topnav-b { padding: 0 9px; gap: 6px; font-size: 14px; } }
+@media (max-width: 1280px) { .shell.admin .admin-badge .badge-t { display: none; } .shell.admin .admin-badge { padding: 0 8px; } }
+@media (max-width: 1240px) and (min-width: 900px) { .shell.admin .topnav-b:not(.on) .topnav-l { display: none; } .shell.admin .topnav-b { padding: 0 10px; } }
+.shell.admin .topnav { flex: 0 1 auto; overflow: hidden; }
+@media (min-width: 900px) and (max-width: 1240px) { .shell.admin .brand-t { display: flex; } .shell.admin .admin-badge { display: inline-flex; } }
+@media (max-width: 560px) { .shell.admin .brand-t { display: flex; } .shell.admin .brand-t b { font-size: 17px; } .shell.admin .admin-badge .badge-t { display: none; } .shell.admin .admin-badge { padding: 0; width: 28px; justify-content: center; } }
+
+/* ===== Gece modu: marka kutuları ve kayan şerit ===== */
+:root[data-theme="dark"] .sh-brand.has-logo { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 14px 30px -24px rgb(0 0 0 / .9); }
+:root[data-theme="dark"] .sh-brand.has-logo .sh-brand-f { color: var(--muted); }
+:root[data-theme="dark"] .sh-brand-logo.ink, :root[data-theme="dark"] .sh-mq-logo.ink { filter: invert(1) hue-rotate(180deg) brightness(1.08) !important; }
+:root[data-theme="dark"] .mq-color { background: color-mix(in oklab, var(--surface) 70%, var(--bg)); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sh-brand.has-logo { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 14px 30px -24px rgb(0 0 0 / .9); }
+  :root:not([data-theme="light"]) .sh-brand.has-logo .sh-brand-f { color: var(--muted); }
+  :root:not([data-theme="light"]) .sh-brand-logo.ink, :root:not([data-theme="light"]) .sh-mq-logo.ink { filter: invert(1) hue-rotate(180deg) brightness(1.08) !important; }
+  :root:not([data-theme="light"]) .mq-color { background: color-mix(in oklab, var(--surface) 70%, var(--bg)); }
+}
+.ocard.picked { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 7%, var(--surface)); }
+.ocheck { width: 22px; height: 22px; flex: none; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; color: transparent; }
+.ocheck.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Tasarım modu (masaüstü): araç çubuğu içeriğin üstüne binmesin — bölümün sağ üstünde, aradaki boşlukta küçük açık bir hap */
+.dz-bar { left: auto; right: 6px; top: -34px; padding: 2px; gap: 0; border-radius: 10px; background: var(--surface); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 8px 20px -12px rgb(15 23 42 / .35); }
+.dz-bar .dz-name { color: var(--fg); font-size: 12px; padding: 0 6px; max-width: 200px; }
+.dz-bar .dz-ib, .dz-bar .dz-grip { width: 26px; height: 26px; color: var(--muted); }
+.dz-bar .dz-ib:hover:not(:disabled), .dz-bar .dz-grip:hover { background: var(--surface-2); color: var(--fg); }
+.dz-bar .dz-ib.danger:hover { background: #fee2e2; color: #dc2626; }
+.dz-blk.dz-on > .dz-bar { border-color: var(--accent); }
+.dz-blk.dz-on > .dz-bar .dz-name { color: var(--accent); }
+.dz-canvas { padding-top: 40px; }
+.dz-resize { left: 22px; bottom: 16px; translate: none; }
+.dz-blk:hover { outline-color: color-mix(in oklab, var(--accent) 30%, transparent); }

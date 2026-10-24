@@ -30,10 +30,27 @@ export function useShopImg(v) {
   }, [v, direct]);
   return isProdImg(v) || direct ? direct : src;
 }
+const inkCache = new Map();
+function isInk(img) {
+  const key = img.currentSrc || img.src; if (inkCache.has(key)) return inkCache.get(key);
+  let ink = false;
+  try {
+    const w = 64, h = Math.max(1, Math.round((64 * img.naturalHeight) / img.naturalWidth)); const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, w, h); const d = g.getImageData(0, 0, w, h).data;
+    let n = 0, dark = 0;
+    for (let k = 0; k < d.length; k += 4) { if (d[k + 3] < 140) continue; n++; const l = (0.2126 * d[k] + 0.7152 * d[k + 1] + 0.0722 * d[k + 2]) / 255; const sat = Math.max(d[k], d[k + 1], d[k + 2]) - Math.min(d[k], d[k + 1], d[k + 2]); if ((l < 0.2 && sat < 130) || (l < 0.28 && sat < 70)) dark++; }
+    ink = n > 0 && dark / n > 0.18;
+  } catch {}
+  inkCache.set(key, ink); return ink;
+}
 export function ShopImg({ v, className, alt = '' }) {
   const src = useShopImg(v);
   // kare logolar (ör. yuvarlak amblem) yatay logolardan daha büyük gösterilir
-  const onLoad = (e) => { const i = e.currentTarget; if (i.naturalWidth && i.naturalWidth / i.naturalHeight < 1.7) i.classList.add('sq'); };
+  const onLoad = (e) => {
+    const i = e.currentTarget; if (i.naturalWidth && i.naturalWidth / i.naturalHeight < 1.7) i.classList.add('sq');
+    // koyu yazılı logo mu? (gece modunda yalnız koyu kısımları açılır; renkler korunur)
+    if (/logo/.test(className || '') && isInk(i)) i.classList.add('ink');
+  };
   return src ? <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onLoad={onLoad} /> : null;
 }
 

@@ -23,6 +23,7 @@ export function Orders() {
   const [filter, setFilter] = useState('open');
   const [q, setQ] = useState('');
   const [confirm, setConfirm] = useState(null);
+  const [sel, setSel] = useState(null); // çoklu seçim (Set) ya da kapalı
   const newN = orders.filter((o) => o.status === 'new').length;
   const list = useMemo(() => {
     let r = orders;
@@ -34,12 +35,15 @@ export function Orders() {
   }, [orders, filter, q]);
 
   if (openId) return <OrderDetail id={openId} />;
+  const toggle = (id) => setSel((x) => { const n = new Set(x); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const delMany = () => { const ids = [...sel]; setConfirm({ title: `${ids.length} siparişi sil`, text: 'Seçilen siparişler tamamen silinecek. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteOrders(ids).then(() => { toast(ids.length + ' sipariş silindi'); setSel(null); }, (e) => toast('Silinemedi: ' + e.message, 'bad')) }); };
   const del = (o) => setConfirm({ title: 'Siparişi sil', text: `#${o.no} numaralı sipariş tamamen silinecek. Geri alınamaz.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteOrders([o.id]).then(() => toast('Sipariş silindi'), (e) => toast('Silinemedi: ' + e.message, 'bad')) });
   const menu = (e, o) => openMenu(e, [
     { label: 'Aç', icon: 'eye', onClick: () => openOrder(o.id) },
     o.contact?.phone && { label: 'Müşteriye WhatsApp’tan yaz', icon: 'wa', onClick: () => window.open(waLink(o.contact.phone, custMsg(o, S)), '_blank', 'noopener') },
     { label: 'Müşterinin takip linkini kopyala', icon: 'copy', onClick: () => copyText(links.order(o.id), 'Takip linki kopyalandı') },
     '-',
+    { label: 'Seç', icon: 'check', onClick: () => setSel(new Set([o.id])) },
     { label: 'Siparişi sil', icon: 'trash', danger: true, onClick: () => del(o) },
   ], '#' + o.no);
 
@@ -47,7 +51,10 @@ export function Orders() {
     <div className="page orders-page">
       <div className="page-h">
         <h1 className="page-t">Mağaza siparişleri{newN > 0 && <span className="muted"> · {newN} yeni</span>}</h1>
-        <button className="btn sm outline" onClick={() => copyText(links.shop(), 'Mağaza linki kopyalandı')}><Icon n="copy" s={15} />Mağaza linki</button>
+        <span className="row-btns">
+          {view === 'orders' && orders.length > 0 && <button className={'btn sm ' + (sel ? 'primary' : 'outline')} onClick={() => setSel(sel ? null : new Set())}><Icon n="check" s={15} />{sel ? 'Seçimi kapat' : 'Seç'}</button>}
+          <button className="btn sm outline" onClick={() => copyText(links.shop(), 'Mağaza linki kopyalandı')}><Icon n="copy" s={15} />Mağaza linki</button>
+        </span>
       </div>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={view === 'orders'} className={'tab' + (view === 'orders' ? ' on' : '')} onClick={() => setView('orders')}>Siparişler ({orders.length})</button>
@@ -60,6 +67,13 @@ export function Orders() {
             {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'new' && newN > 0 ? ` (${newN})` : ''}</button>)}
           </div>
         </div>
+        {sel && (
+          <div className="sel-bar">
+            <label className="mini-check"><input type="checkbox" checked={list.length > 0 && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : new Set())} />Tümü ({list.length})</label>
+            <span className="muted">{sel.size} seçili</span>
+            <button className="btn sm danger" disabled={!sel.size} onClick={delMany}><Icon n="trash" s={15} />Seçilenleri sil</button>
+          </div>
+        )}
         {list.length === 0 ? (
           <Empty icon="box" title={orders.length ? 'Bu filtrede sipariş yok' : 'Henüz mağaza siparişi yok'}>
             {!orders.length && <p>Müşteriler <b>/magaza</b>’da sepeti onaylayıp siparişi tamamlayınca burada görünür.</p>}
@@ -68,7 +82,8 @@ export function Orders() {
           <ul className="olist">
             {list.map((o) => (
               <li key={o.id} onContextMenu={(e) => menu(e, o)}>
-                <button className={'ocard' + (o.unread ? ' unread' : '')} onClick={() => openOrder(o.id)}>
+                <button className={'ocard' + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))}>
+                  {sel && <span className={'ocheck' + (sel.has(o.id) ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}
                   <span className="ocard-b">
                     <span className="ocard-top">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} />{o.member && <span className="tag">Üye</span>}</span>
                     <span className="ocard-who"><b>{o.contact?.name}</b>{o.invoice?.type === 'company' && o.invoice.company ? ` · ${o.invoice.company}` : ''}</span>
