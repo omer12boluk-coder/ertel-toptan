@@ -1992,3 +1992,5 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 /* Sipariş sayfası: sepete dön düğmesi belirgin */
 .co-back-btn { gap: 6px; height: 42px; padding: 0 16px 0 12px; border-radius: 12px; background: var(--accent-soft, color-mix(in oklab, var(--accent) 12%, var(--surface))); color: var(--accent); border: 1.5px solid color-mix(in oklab, var(--accent) 40%, var(--line)); font-weight: 700; }
 .co-back-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* üst menü bilgisayarda bir tık daha ferah (tavana yapışık durmasın) */
+@media (min-width: 900px) { :root { --top-h: 64px; } }
