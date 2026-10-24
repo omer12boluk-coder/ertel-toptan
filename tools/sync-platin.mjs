@@ -53,6 +53,14 @@ ratios.sort((a, b) => a - b);
 const rate = ratios[Math.floor(ratios.length / 2)];
 if (!rate) throw new Error('Kur hesaplanamadı');
 
+{ // tanı: beslemede indirimli fiyat var mı, w'li ürünlerde besleme hangi fiyatı veriyor
+  const nSale = (xml.match(/<g:sale_price>/g) || []).length;
+  let mr = 0, mw = 0, mx = 0; const ex = [];
+  for (const p of cat) { const f = feed.get(p.id); if (!f || p.cur !== 'USD' || !(p.w > 0) || !(p.r > 0) || p.w === p.r) continue;
+    const u = f.tl / rate; if (Math.abs(u - p.r) < 0.02 * p.r) mr++; else if (Math.abs(u - p.w) < 0.02 * p.w) mw++; else { mx++; if (ex.length < 5) ex.push(`${p.k} r${p.r} w${p.w} besleme${round2(u)}`); } }
+  const e7 = xml.split('<entry>').slice(1).find((e) => Number(tag(e, 'id')) === 7);
+  note('Tanı', `sale_price etiketi: ${nSale} · w'li ürünlerde besleme=liste ${mr}, =toptan ${mw}, ikisi de değil ${mx} ${ex.join(' | ')} · id7: price=${e7 ? tag(e7, 'price') : '-'} sale=${e7 ? tag(e7, 'sale_price') : '-'}`);
+}
 const st = { price: [], hidden: 0, shown: 0, img: 0, name: 0, added: [] };
 const round2 = (v) => Math.round(v * 100) / 100;
 for (const p of cat) {
