@@ -1,0 +1,24 @@
+name: Firebase kütüphanesini siteye kopyala
+# Telefon tarayıcılarının izleyici koruması gstatic.com'u geciktirebiliyor; Firebase dosyaları kendi sitemizden (/fb/) sunulur.
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          V=10.12.2
+          mkdir -p hosting/public/fb
+          for m in app auth firestore; do
+            curl -fsSL "https://www.gstatic.com/firebasejs/$V/firebase-$m.js" -o "hosting/public/fb/firebase-$m.js"
+          done
+          # birbirlerini gstatic'ten çağırmasınlar: kendi klasörümüzden
+          sed -i "s#https://www.gstatic.com/firebasejs/$V/#./#g" hosting/public/fb/*.js
+          grep -c "gstatic.com/firebasejs" hosting/public/fb/*.js || true
+          ls -la hosting/public/fb
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git add hosting/public/fb
+          git commit -m "Firebase kütüphanesi siteye kopyalandı (/fb/)" || exit 0
+          git push
