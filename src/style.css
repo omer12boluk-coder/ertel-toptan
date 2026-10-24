@@ -1999,3 +1999,12 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .gal-single .thumb { width: 100% !important; height: 100% !important; max-width: none; border: 0 !important; border-radius: 0 !important; background: #fff; box-shadow: none !important; }
 .gal-single .thumb img { width: 100%; height: 100%; object-fit: contain; }
 .gal-single .gal-zoom { top: 10px; right: 10px; bottom: auto; width: 34px; height: 34px; }
+/* arama: her ekranda önce simge; basınca yazılabilir kutu açılır (masaüstünde yerinde, telefonda üstte) */
+.hsearch-btn { display: grid; }
+.hsearch-box { display: none; }
+@media (min-width: 900px) {
+  .hsearch.mob-open .hsearch-btn { display: none; }
+  .hsearch.mob-open .hsearch-box { display: flex; width: 320px; background: var(--surface); border-color: var(--accent); animation: hs-open .22s var(--ease) both; }
+  .hsearch.mob-open .hsearch-box:focus-within { width: 320px; }
+}
+@keyframes hs-open { from { width: 40px; opacity: .4; } to { width: 320px; opacity: 1; } }
