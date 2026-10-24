@@ -18,6 +18,7 @@ function open() {
 export async function idbGet(k) {
   const db = await open(); if (!db) return undefined;
   return new Promise((res) => {
+    setTimeout(() => res(undefined), 2500); // takılırsa boş say
     try { const q = db.transaction(ST).objectStore(ST).get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(undefined); }
     catch { res(undefined); }
   });
@@ -25,6 +26,7 @@ export async function idbGet(k) {
 export async function idbSet(k, v) {
   const db = await open(); if (!db) return false;
   return new Promise((res) => {
+    setTimeout(() => res(false), 4000);
     try { const t = db.transaction(ST, 'readwrite'); t.objectStore(ST).put(v, k); t.oncomplete = () => res(true); t.onerror = () => res(false); }
     catch { res(false); }
   });

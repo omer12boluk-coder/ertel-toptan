@@ -23,16 +23,21 @@ export class FirebaseBackend {
     // Firebase dosyaları önce kendi sitemizden (/fb/): telefon tarayıcılarının izleyici koruması gstatic.com'u geciktirebiliyor
     const load = (base) => Promise.all(['app', 'auth', 'firestore'].map((m) => import(/* @vite-ignore */ base + 'firebase-' + m + '.js')));
     let A, U, F;
-    try { [A, U, F] = await load(location.origin + '/fb/'); } catch { [A, U, F] = await load(CDN); }
+    try { [A, U, F] = await timeout(load(location.origin + '/fb/'), 12000); } catch { [A, U, F] = await timeout(load(CDN), 20000); }
     this.A = A; this.U = U; this.F = F;
     // Yönetici paneli ayrı bir Firebase örneği kullanır: aynı tarayıcıda yönetici ve bayi oturumları birbirini etkilemez
     this.app = this.appName ? A.initializeApp(this.config, this.appName) : A.initializeApp(this.config);
     // Oturum: yönetici paneli ve "beni hatırlama" seçilen girişler sadece o sekmede yaşar (sekmeler birbirini etkilemez)
     this.tabOnly = this.appName !== 'shop' && sessionStorage.getItem('auth-tab') === '1'; // mağaza üyesi oturumu her zaman cihazda kalır
-    this.auth = U.initializeAuth(this.app, { persistence: this.tabOnly ? U.browserSessionPersistence : [U.browserLocalPersistence, U.indexedDBLocalPersistence] }); // önce localStorage: bazı telefon / WhatsApp içi tarayıcılarda IndexedDB cevap vermeyip girişi kilitliyor
+    // Oturum sadece localStorage'da: Firebase listedeki her saklama yerini açılışta yokluyor; Telegram / WhatsApp / Instagram içi
+    // tarayıcılarda IndexedDB hiç cevap vermeyince giriş sonsuza kadar dönüyordu. localStorage yoksa (gizli mod vb.) sadece bu sekme.
+    let lsOk = true; try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); } catch { lsOk = false; }
+    this.auth = U.initializeAuth(this.app, { persistence: this.tabOnly ? U.browserSessionPersistence : lsOk ? U.browserLocalPersistence : U.inMemoryPersistence });
     // WhatsApp / Instagram içi tarayıcılarda canlı bağlantı takılabiliyor; gerekirse otomatik olarak uzun yoklamaya geçer
     this.auth.languageCode = 'tr'; // doğrulama / şifre e-postaları Türkçe
-    try { this.db = F.initializeFirestore(this.app, { experimentalAutoDetectLongPolling: true }); } catch { this.db = F.getFirestore(this.app); }
+    // Uygulama içi tarayıcılarda canlı bağlantı (WebChannel) takılabiliyor: orada baştan uzun yoklama kullan
+    const inApp = /Telegram|FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|MicroMessenger|; wv\)|GSA\//i.test(navigator.userAgent) || typeof window.TelegramWebviewProxy !== 'undefined';
+    try { this.db = F.initializeFirestore(this.app, inApp ? { experimentalForceLongPolling: true } : { experimentalAutoDetectLongPolling: true }); } catch { this.db = F.getFirestore(this.app); }
   }
   d(...p) { return this.F.doc(this.db, ...p); }
   c(...p) { return this.F.collection(this.db, ...p); }

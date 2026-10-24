@@ -454,7 +454,7 @@ function Shell() {
 // Açılış ekranı: uzun sürerse (zayıf bağlantı, WhatsApp içi tarayıcı) yeniden deneme ve tarayıcıda açma seçeneği çıkar
 function Splash() {
   const [slow, setSlow] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setSlow(true), 9000); return () => clearTimeout(t); }, []);
+  useEffect(() => { const t = setTimeout(() => setSlow(true), 7000); return () => clearTimeout(t); }, []);
   return (
     <div className="splash">
       <Brand />
@@ -466,7 +466,7 @@ function Splash() {
             <button className="btn primary" onClick={() => location.reload()}><Icon n="refresh" s={16} />Tekrar dene</button>
             <button className="btn outline" onClick={() => copyText(location.href, 'Link kopyalandı — tarayıcınıza yapıştırın')}><Icon n="copy" s={16} />Linki kopyala</button>
           </div>
-          <p className="fine">WhatsApp içinden açtıysanız sağ üstteki ⋮ menüsünden “Tarayıcıda aç”ı seçin.</p>
+          <p className="fine">Telegram, WhatsApp ya da Instagram içinden açtıysanız menüden (⋯ / ⋮) <b>“Safari’de aç”</b> ya da <b>“Tarayıcıda aç”</b>ı seçin.</p>
         </div>
       )}
     </div>

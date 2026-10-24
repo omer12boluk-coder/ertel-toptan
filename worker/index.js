@@ -155,7 +155,7 @@ export async function check(env, { force = false } = {}) {
 
 // ---- Sipariş bildirimi -----------------------------------------------------------------------------
 // Uygulama siparişi kaydedince /notify'a sadece sipariş kimliğini yollar. Bilgiler Firestore'dan okunur (sahte bildirim gönderilemez),
-// aynı sipariş için bir kez bildirilir. E-posta: FormSubmit (ilk seferde e-postadaki "Activate" ile onay ister). WhatsApp: CallMeBot.
+// aynı sipariş için bir kez bildirilir. Kanallar: Telegram + e-posta (Resend), aşağıda.
 const FS = 'https://firestore.googleapis.com/v1/projects/erteltoptan/databases/(default)/documents/';
 function fsVal(v) {
   if (!v) return null;
@@ -184,7 +184,14 @@ async function notifyOrder(env, id) {
   const pay = { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[o.pay] || o.pay;
   const link = `https://erteltoptan.web.app/admin/s/${id}`;
   const text = `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n${deliv} · ${pay}${o.note ? '\nNot: ' + o.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
-  return notifySend(env, { subject: `Yeni sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, short: `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${tot}\n${deliv}\nPanelde aç: ${link}`, replyTo: o.contact?.email });
+  return notifySend(env, { subject: `Yeni sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, link, short: `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${tot}\n${deliv}\nPanelde aç: ${link}`, replyTo: o.contact?.email });
+}
+// E-posta gövdesi: düz metin + belirgin "Panelde aç" düğmesi
+const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function mailHtml(subject, text, link) {
+  const body = esc(text.replace(/\n*Panelde aç: \S+\s*$/, '')).replace(/\n/g, '<br>');
+  const btn = link ? `<p style="margin:24px 0 8px"><a href="${esc(link)}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:10px">Siparişi panelde aç</a></p><p style="color:#64748b;font-size:12px">Düğme açılmazsa: ${esc(link)}</p>` : '';
+  return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.55;color:#0f172a;max-width:560px"><h2 style="font-size:18px;margin:0 0 12px">${esc(subject)}</h2><div>${body}</div>${btn}<p style="color:#94a3b8;font-size:12px;margin-top:24px">ERTEL GSM · erteltoptan.web.app</p></div>`;
 }
 // ---- bildirim kanalları ----
 // Telegram: TELEGRAM_TOKEN (BotFather) + KV 'tg-chat' (panelden kodla bağlanır)
@@ -216,7 +223,7 @@ async function tgLink(env, code) {
   await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: m.chat.id, text: '✅ Bağlandı. Yeni mağaza siparişleri buraya bildirilecek.' }) }).catch(() => {});
   return { ok: true, name };
 }
-async function notifySend(env, { subject, text, short, replyTo }) {
+async function notifySend(env, { subject, text, short, replyTo, link }) {
   const out = {};
   if (env.TELEGRAM_TOKEN) {
     const chat = JSON.parse((await env.KV.get('tg-chat')) || 'null');
@@ -230,7 +237,7 @@ async function notifySend(env, { subject, text, short, replyTo }) {
     try {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: 'ERTEL GSM <onboarding@resend.dev>', to: [env.NOTIFY_EMAIL], subject, text, ...(replyTo ? { reply_to: replyTo } : {}) }),
+        body: JSON.stringify({ from: 'ERTEL GSM <onboarding@resend.dev>', to: [env.NOTIFY_EMAIL], subject, text, html: mailHtml(subject, text, link), ...(replyTo ? { reply_to: replyTo } : {}) }),
       });
       const j = await r.json().catch(() => ({})); out.email = r.ok ? 'gönderildi' : 'hata: ' + (j.message || r.status);
     } catch (e) { out.email = 'hata: ' + e; }
