@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore, api, store, toast } from './store.js';
 import { initials, hue, vatOf, fmtTotals } from './utils.js';
 import { STATUS } from './config.js';
@@ -58,7 +59,8 @@ export function Sheet({ title, onClose, children, footer, wide, sub }) {
     openSheets++; document.body.classList.add('noscroll');
     return () => { window.removeEventListener('keydown', k); if (--openSheets <= 0) { openSheets = 0; document.body.classList.remove('noscroll'); } };
   }, []);
-  return (
+  // pencere sayfanın en üstüne (body) çizilir: içinde bulunduğu kutu ne olursa olsun ekrana göre konumlanır
+  return createPortal(
     <div className="sheet-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={'sheet' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={title}>
         <header className="sheet-h">
@@ -68,7 +70,8 @@ export function Sheet({ title, onClose, children, footer, wide, sub }) {
         <div className="sheet-b">{children}</div>
         {footer && <footer className="sheet-f">{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

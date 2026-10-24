@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now } from './utils.js';
@@ -423,7 +424,7 @@ export function Lightbox({ urls, thumbs, start = 0, title, onClose }) {
     requestAnimationFrame(() => { const sc = img.parentElement; sc.scrollLeft = fx * img.offsetWidth - sc.clientWidth / 2; sc.scrollTop = fy * img.offsetHeight - sc.clientHeight / 2; });
   }
   const many = urls.length > 1;
-  return (
+  return createPortal(
     <div className={'lb' + (many ? ' many' : '')} role="dialog" aria-modal="true" aria-label={title}>
       <div className={'lb-track' + (zoomed ? ' locked' : '')} ref={track} onScroll={(e) => { if (!zoomed) { const el = e.currentTarget; const n = Math.round(el.scrollLeft / el.clientWidth); if (n !== iRef.current) setI(n); } }}>
         {urls.map((u, k) => (
@@ -442,7 +443,8 @@ export function Lightbox({ urls, thumbs, start = 0, title, onClose }) {
       {i > 0 && <button className="lb-btn lb-nav prev" onClick={() => go(i - 1)} aria-label="Önceki"><Icon n="back" s={24} /></button>}
       {i < urls.length - 1 && <button className="lb-btn lb-nav next" onClick={() => go(i + 1)} aria-label="Sonraki"><Icon n="back" s={24} /></button>}
       {many && <div className="lb-strip"><ThumbStrip dark n={urls.length} active={i} onPick={go} render={(k) => <img src={thumbs?.[k] || urls[k]} alt="" loading="lazy" />} /></div>}
-    </div>
+    </div>,
+    document.body
   );
 }
 
