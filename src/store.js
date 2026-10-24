@@ -78,7 +78,7 @@ export function freshStart() {
 const SLUGS = {
   magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap' },
   b2b: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', talepler: 'talepler', profil: 'profil' },
-  admin: { talepler: '', siparisler: 'siparisler', siparis: 'form', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
+  admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
 };
 const area = () => { const m = /^\/(magaza|b2b|admin)(\/|$)/.exec(location.pathname); return m ? m[1] : null; };
 export function tabFromPath() { const a = area(); if (!a) return null; const seg = location.pathname.split('/')[2] || ''; if (!seg) return null; const e = Object.entries(SLUGS[a]).find(([, x]) => x === seg); return e ? e[0] : null; }
@@ -100,5 +100,5 @@ export function startHistory(defTab) {
 }
 export function go(tab) { if (tab !== store.s.tab || store.s.openOrder || store.s.openReq) pushTab(tab); store.set({ tab, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0); }
 export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: just || false }); window.scrollTo(0, 0); }
-export const home = () => go(store.s.user?.role === 'admin' ? 'talepler' : store.s.user?.role === 'public' ? (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa') : 'anasayfa');
+export const home = () => go(store.s.user?.role === 'admin' ? 'anasayfa' : store.s.user?.role === 'public' ? (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa') : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }

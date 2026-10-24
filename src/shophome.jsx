@@ -261,9 +261,10 @@ function SecHead({ title, sub, more, rail, onTitle }) {
 // Telefonda parmakla da kaydırılabilir; bırakınca kendiliğinden devam eder. Ekranda değilken durur.
 function Marquee({ items, style, speed, ls = 1 }) {
   const ref = useRef(null);
-  const row = items.length >= 8 ? items : [...items, ...items, ...items];
+  const phone = matchMedia('(max-width: 700px)').matches; // masaüstünde eskisi gibi CSS ile kayar
+  const row = phone && items.length >= 8 ? items : [...items, ...items, ...items];
   useEffect(() => {
-    const el = ref.current; if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const el = ref.current; if (!el || !phone || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     let raf = 0, last = performance.now(), pos = el.scrollLeft, held = false, visible = true, t = 0;
     const dur = Number(speed) || 46;
     const tick = (now) => {
@@ -277,10 +278,10 @@ function Marquee({ items, style, speed, ls = 1 }) {
     el.addEventListener('touchstart', hold, { passive: true }); el.addEventListener('touchend', release, { passive: true });
     const io = 'IntersectionObserver' in window ? new IntersectionObserver(([e]) => { visible = e.isIntersecting; last = performance.now(); }) : null; io?.observe(el);
     return () => { cancelAnimationFrame(raf); clearTimeout(t); io?.disconnect(); el.removeEventListener('touchstart', hold); el.removeEventListener('touchend', release); };
-  }, [items.length, speed]);
+  }, [items.length, speed, phone]);
   if (!items.length) return null;
   return (
-    <div ref={ref} className={'sh-mq mq-' + style} aria-hidden="true">
+    <div ref={ref} className={'sh-mq mq-' + style} aria-hidden="true" style={{ '--mq-dur': (Number(speed) || 46) + 's' }}>
       <div className="sh-mq-in">{[...row, ...row].map((b, i) => (
         <span key={i} className="sh-mq-it" style={{ '--c': b.color || '#64748b', '--ls': (b.scale || 1) * ls }}>
           {b.logo ? <ShopImg v={b.logo} className="sh-mq-logo" alt={b.name} /> : <b>{b.name}</b>}

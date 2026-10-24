@@ -17,6 +17,7 @@ import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome } from './shophome.jsx';
 import { ShopDesigner } from './designer.jsx';
+import { AdminHome } from './dashboard.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
@@ -49,7 +50,7 @@ async function boot() {
   const A = fb ? new FirebaseBackend(cfg, area === 'user' ? undefined : area) : new DemoBackend(await loadSeed(), loadSeedDesc, area);
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
   store.set({ api: A });
-  startHistory(() => (store.s.user?.role === 'admin' ? 'talepler' : store.s.user?.role === 'public' ? shopFirst() : 'anasayfa'));
+  startHistory(() => (store.s.user?.role === 'public' ? shopFirst() : 'anasayfa'));
   startRate(A);
   startVersionCheck();
   // Logo / dükkan bilgisi: cihazda kayıtlıysa hemen kullan, sunucudakini arkadan al
@@ -113,7 +114,7 @@ function startSession(u, A) {
   loadCart();
   if (admin) syncNow(false).catch(() => {});
   // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
-  store.set({ boot: 'ready', tab: tabFromPath() || (admin ? 'talepler' : 'anasayfa'), openReq: null });
+  store.set({ boot: 'ready', tab: tabFromPath() || 'anasayfa', openReq: null });
   if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
   if (admin && ROUTE.listCode) { store.set({ vitrinCode: ROUTE.listCode }); history.replaceState(null, '', '/admin'); }
   if (admin && ROUTE.orderId) { openOrder(ROUTE.orderId); history.replaceState(null, '', '/admin'); }
@@ -338,7 +339,7 @@ function Login() {
 
 // [sekme, ad, ikon, telefondaki kısa ad]
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Hesabım', 'user']];
-const NAV_ADMIN = [['talepler', 'Talepler', 'chat'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Talepler', 'chat'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 const shopFirst = () => (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa');
 
@@ -450,6 +451,7 @@ function ShellFull() {
       )}
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
+        {tab === 'anasayfa' && admin && <AdminHome />}
         {tab === 'anasayfa' && pub && <ShopHome />}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'katalog' && <Catalog admin={admin} />}
@@ -469,7 +471,7 @@ function ShellFull() {
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
       <nav className="botnav" aria-label="Alt menü">
-        {nav.filter(([k]) => k !== 'tasarim').map(([k, l, i, sh]) => (
+        {nav.filter(([k]) => k !== 'tasarim' && !(admin && k === 'musteriler')).map(([k, l, i, sh]) => (
           <button key={k} className={'botnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
             <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
             <span>{sh || l}</span>
