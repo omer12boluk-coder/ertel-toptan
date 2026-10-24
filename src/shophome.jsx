@@ -9,19 +9,26 @@ import { ProductSheet, useTree } from './catalog.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı' };
 
-// ---- resim: 'si…' = mağaza resmi (Firestore), http/data = doğrudan
+// ---- resim: 'si…' = mağaza resmi (Firestore), 'prod:<no>' = ürünün kendi resmi, http/data = doğrudan
 const imgCache = new Map();
+export const isProdImg = (v) => typeof v === 'string' && v.startsWith('prod:');
+function prodImg(v) {
+  const p = store.s.byId.get(Number(v.slice(5))); const S = store.s.settings;
+  if (!p) return null; if (p.img && p.img !== 'fs') return p.img;
+  return p.pi ? (S.catalog.imageLarge || S.catalog.imageThumb).replaceAll('{pi}', p.pi).replaceAll('{kod}', p.k).replaceAll('{id}', p.id) : null;
+}
 export function useShopImg(v) {
-  const direct = !v ? null : /^(https?:|data:)/.test(v) ? v : null;
+  const byId = useStore((s) => s.byId);
+  const direct = !v ? null : /^(https?:|data:|\/)/.test(v) ? v : isProdImg(v) ? prodImg(v) : null;
   const [src, setSrc] = useState(direct || imgCache.get(v) || null);
   useEffect(() => {
-    if (!v || direct) { setSrc(direct); return; }
+    if (!v || direct || isProdImg(v)) { setSrc(direct); return; }
     if (imgCache.has(v)) { setSrc(imgCache.get(v)); return; }
     let live = true;
     api()?.getShopImage?.(v).then((d) => { if (d) imgCache.set(v, d); if (live) setSrc(d); }).catch(() => {});
     return () => { live = false; };
-  }, [v]);
-  return src;
+  }, [v, direct]);
+  return isProdImg(v) || direct ? direct : src;
 }
 export function ShopImg({ v, className, alt = '' }) {
   const src = useShopImg(v);
@@ -57,6 +64,7 @@ function useReveal() {
   });
   return ref;
 }
+const isLight = (hex) => { const m = /^#?([\da-f]{6})$/i.exec(hex || ''); if (!m) return false; const n = parseInt(m[1], 16); const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255]; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.62; };
 // imleci takip eden ışık (kutuların üstünde)
 const spot = (e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`); };
 
@@ -85,15 +93,15 @@ export function ShopHome() {
       )}
 
       {brands.length > 0 && <>
-        <Marquee words={brands.map((b) => b.name).filter(Boolean)} />
+        <Marquee items={brands} />
         <section className="sh-sec rv">
           <SecHead title={H.brandsTitle || 'Markalar'} sub="Dünyanın önde gelen tamir ekipmanı üreticileri" />
           <div className="sh-brands">
             {brands.map((b, i) => (
-              <button key={i} className="sh-brand" style={{ '--c': b.color || '#111827', '--i': i, '--len': Math.max(4, (b.name || '').length) }} onClick={link(b.link || 'brand:' + b.name)} onMouseMove={spot}>
+              <button key={i} className={'sh-brand' + (b.logo ? ' has-logo' : '') + (isLight(b.color) ? ' light' : '')} style={{ '--c': b.color || '#111827', '--i': i, '--len': Math.max(4, (b.name || '').length) }} onClick={link(b.link || 'brand:' + b.name)} onMouseMove={spot}>
                 <span className="sh-brand-glow" aria-hidden="true" />
                 {b.logo ? <ShopImg v={b.logo} className="sh-brand-logo" alt={b.name} /> : <b className="sh-brand-word">{b.name}</b>}
-                <span className="sh-brand-f"><span>{b.logo ? b.name : counts.get(norm(b.name)) > 0 ? counts.get(norm(b.name)) + ' ürün' : 'Ürünler'}</span></span>
+                <span className="sh-brand-f"><span>{counts.get(norm(b.name)) > 0 ? counts.get(norm(b.name)) + ' ürün' : b.name}</span></span>
                 <span className="sh-brand-arrow"><Icon n="back" s={16} className="flip" /></span>
               </button>
             ))}
@@ -106,8 +114,8 @@ export function ShopHome() {
           <SecHead title={H.promosTitle || 'Öne çıkanlar'} />
           <div className="sh-bento">
             {promos.map((x, i) => (
-              <button key={i} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? ' has-img' : '')} style={{ '--c': x.color || '#0f172a', '--i': i }} onClick={link(x.link)} onMouseMove={spot}>
-                {x.img && <ShopImg v={x.img} className="sh-box-img" />}
+              <button key={i} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? (isProdImg(x.img) ? ' prod' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '')} style={{ '--c': x.color || '#0f172a', '--i': i }} onClick={link(x.link)} onMouseMove={spot}>
+                {x.img && (isProdImg(x.img) ? <span className="sh-box-prod"><ShopImg v={x.img} /></span> : <ShopImg v={x.img} className="sh-box-img" />)}
                 <span className="sh-box-shade" aria-hidden="true" />
                 <span className="sh-box-t">
                   {x.tag && <span className="sh-tag">{x.tag}</span>}
@@ -157,12 +165,13 @@ function SecHead({ title, sub, more, rail }) {
   );
 }
 
-function Marquee({ words }) {
-  if (!words.length) return null;
-  const row = [...words, ...words, ...words];
+// kayan marka şeridi: logosu olan markada orijinal logo (şeride uysun diye beyaza boyanır), yoksa adı
+function Marquee({ items }) {
+  if (!items.length) return null;
+  const row = [...items, ...items, ...items];
   return (
     <div className="sh-marquee" aria-hidden="true">
-      <div className="sh-marquee-in">{[...row, ...row].map((w, i) => <span key={i}>{w}<i>✦</i></span>)}</div>
+      <div className="sh-marquee-in">{[...row, ...row].map((b, i) => <span key={i}>{b.logo ? <ShopImg v={b.logo} className="sh-mq-logo" alt={b.name} /> : b.name}<i>✦</i></span>)}</div>
     </div>
   );
 }
@@ -206,7 +215,7 @@ function Slide({ s, on, open }) {
         {s.text && <p>{s.text}</p>}
         {s.cta && s.link && <button className="sh-cta-btn" onClick={(e) => { e.stopPropagation(); open(s.link)(); }}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button>}
       </div>
-      {!cover && s.img && <div className="sh-slide-art"><span className="sh-halo" aria-hidden="true" /><ShopImg v={s.img} className="sh-float" /></div>}
+      {!cover && s.img && <div className="sh-slide-art"><span className="sh-halo" aria-hidden="true" />{isProdImg(s.img) ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</div>}
       {!cover && !s.img && <div className="sh-slide-art word" aria-hidden="true"><b>{(s.tag || s.title || '').split(' ')[0]}</b></div>}
     </article>
   );
@@ -267,7 +276,7 @@ const ICONS = [['shield', 'Kalkan'], ['box', 'Kutu / kargo'], ['chat', 'Mesaj'],
 const SIZES = { sq: 'Kare (1×1)', wide: 'Geniş (2×1)', tall: 'Uzun (1×2)', big: 'Büyük kare (2×2)' };
 const MODES = { new: 'Yeni gelenler (otomatik)', brand: 'Bir markanın ürünleri', cat: 'Bir kategorinin ürünleri', manual: 'Elle seçtiğim ürünler' };
 
-function ImgPick({ v, onChange, alpha, max = 1600, label = 'Görsel', hint }) {
+function ImgPick({ v, onChange, alpha, max = 1600, label = 'Görsel', hint, prodOk }) {
   const src = useShopImg(v);
   const [busy, setBusy] = useState(false);
   async function pick(e) {
@@ -283,7 +292,9 @@ function ImgPick({ v, onChange, alpha, max = 1600, label = 'Görsel', hint }) {
       <div className="she-img">
         <label className={'she-img-box' + (alpha ? ' alpha' : '')}>{busy ? <span className="spinner" /> : src ? <img src={src} alt="" /> : <span><Icon n="upload" s={18} />Resim seç</span>}<input type="file" accept="image/*" hidden onChange={pick} /></label>
         <div className="she-img-r">
-          <input aria-label={label + ' linki'} placeholder="ya da resim linki yapıştırın (https://…)" value={/^https?:/.test(v || '') ? v : ''} onChange={(e) => onChange(e.target.value.trim())} />
+          {isProdImg(v) ? <span className="she-chip">Ürün resmi: {store.s.byId.get(Number(v.slice(5)))?.n || 'ürün'}</span>
+            : <input aria-label={label + ' linki'} placeholder="ya da resim linki yapıştırın (https://…)" value={/^(https?:|\/)/.test(v || '') ? v : ''} onChange={(e) => onChange(e.target.value.trim())} />}
+          {!alpha || prodOk ? <ProductSearch onPick={(p) => onChange('prod:' + p.id)} placeholder="ya da bir ürünün kendi resmini kullanın: ürün arayın…" /> : null}
           {v && <button type="button" className="btn sm ghost danger" onClick={() => onChange('')}>Görseli kaldır</button>}
           {hint && <span className="field-h">{hint}</span>}
         </div>
@@ -382,7 +393,7 @@ export function ShopHomeEditor({ d, set }) {
           <Field label="Buton yazısı" opt><input value={s.cta || ''} onChange={(e) => up({ cta: e.target.value })} placeholder="ör. Hemen incele" /></Field>
           <LinkPick v={s.link} onChange={(link) => up({ link })} />
         </div>
-        <ImgPick v={s.img} onChange={(img) => up({ img })} alpha={s.layout !== 'cover'} max={s.layout === 'cover' ? 1800 : 1000} hint={s.layout === 'cover' ? 'Yatay banner (ör. 1600×640)' : 'Saydam arka planlı ürün resmi en iyisi'} />
+        <ImgPick v={s.img} onChange={(img) => up({ img })} alpha={s.layout !== 'cover'} max={s.layout === 'cover' ? 1800 : 1000} hint={s.layout === 'cover' ? 'Yatay banner (ör. 1600×640)' : 'Saydam arka planlı ürün resmi en iyisi; ürünün kendi resmi beyaz kart içinde görünür'} prodOk />
       </>} />
 
     <h3>2 · Avantaj şeridi</h3>
@@ -425,7 +436,7 @@ export function ShopHomeEditor({ d, set }) {
           <Field label="Alt yazı" opt><input value={x.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
         </div>
         <LinkPick v={x.link} onChange={(link) => up({ link })} />
-        <ImgPick v={x.img} onChange={(img) => up({ img })} max={x.size === 'big' || x.size === 'wide' ? 1400 : 900} hint="Kare kutuya kare, geniş kutuya yatay resim" />
+        <ImgPick v={x.img} onChange={(img) => up({ img })} max={x.size === 'big' || x.size === 'wide' ? 1400 : 900} hint="Kare kutuya kare, geniş kutuya yatay resim. Ürünün kendi resmi beyaz kart içinde görünür; yazısı olan hazır banner için başlığı boş bırakın." prodOk />
       </>} />
 
     <h3>5 · Ürün rafları</h3>

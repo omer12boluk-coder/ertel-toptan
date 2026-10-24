@@ -1459,3 +1459,37 @@ a.btn { text-decoration: none; }
 .she-chip { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; }
 .she-chip .thumb { width: 30px; height: 30px; }
 .she-chip button { margin-left: auto; color: var(--muted); }
+/* ürün resmiyle reklam: beyaz kart içinde, eğik ve süzülen */
+.sh-pcard { position: relative; width: min(82%, 400px); aspect-ratio: 1; padding: 22px; border-radius: 30px; background: #fff; box-shadow: 0 40px 70px -30px rgb(0 0 0 / .7), 0 0 0 10px rgb(255 255 255 / .06); transform: rotate(-4deg); animation: float 6s ease-in-out infinite; }
+.sh-pcard img { width: 100%; height: 100%; object-fit: contain; border-radius: 14px; }
+.sh-pcard::after { content: ""; position: absolute; inset: -30px; z-index: -1; border-radius: 50%; background: radial-gradient(circle, color-mix(in oklab, var(--g1) 55%, transparent), transparent 65%); filter: blur(20px); }
+.sh-box.prod { align-items: stretch; flex-direction: column; justify-content: flex-end; }
+.sh-box-prod { position: absolute; z-index: -1; top: 10%; right: 8%; width: 56%; aspect-ratio: 1; padding: 10px; border-radius: 20px; background: #fff; box-shadow: 0 24px 40px -20px rgb(0 0 0 / .55); transform: rotate(5deg); transition: transform .5s var(--spring); }
+.sh-box-prod img { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+.sh-box.prod.sz-wide .sh-box-prod { width: auto; height: 74%; top: 13%; right: 6%; }
+.sh-box.prod.sz-tall .sh-box-prod { width: 74%; top: 8%; right: 13%; }
+.sh-box.prod.sz-big .sh-box-prod { width: 58%; top: 8%; right: 7%; }
+.sh-box.prod .sh-box-t { max-width: 60%; }
+.sh-box.prod.sz-tall .sh-box-t, .sh-box.prod.sz-big .sh-box-t { max-width: 92%; }
+@media (hover: hover) { .sh-box.prod:hover .sh-box-prod { transform: rotate(0deg) scale(1.06); } }
+.sh-box.notext .sh-box-shade { opacity: 0 !important; }
+.sh-box.has-img.notext .sh-box-img { object-fit: cover; }
+@media (max-width: 700px) { .sh-box.prod.sz-sq .sh-box-prod { width: 52%; top: 8%; right: 7%; } .sh-box.prod .sh-box-t { max-width: 100%; } .sh-pcard { width: 70%; padding: 14px; border-radius: 22px; } }
+/* orijinal logolar */
+.sh-mq-logo { height: 30px; width: auto; max-width: 180px; object-fit: contain; filter: brightness(0) invert(1); opacity: .95; }
+.sh-marquee span:has(.sh-mq-logo) { -webkit-text-stroke: 0; }
+.sh-brand.has-logo .sh-brand-logo { max-width: 68%; max-height: 34%; filter: drop-shadow(0 4px 10px rgb(0 0 0 / .18)); }
+.sh-brand.light { color: #0f172a; background: radial-gradient(120% 90% at 0% 0%, #fff 0%, #f7f9fc 60%, #edf1f7 100%); box-shadow: inset 0 0 0 1px var(--line), 0 14px 28px -22px rgb(10 20 40 / .4); }
+.sh-brand.light::before { background-image: radial-gradient(rgb(15 23 42 / .08) 1px, transparent 1.4px); }
+.sh-brand.light .sh-brand-glow { background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--accent) 16%, transparent), transparent 60%); }
+.sh-brand.light .sh-brand-logo { filter: none; }
+.sh-brand.light .sh-brand-f { opacity: .65; }
+.sh-brand.light .sh-brand-arrow { background: var(--accent-soft); color: var(--accent); }
+[data-theme="dark"] .sh-brand.light { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1); }
+.sh-brands { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 900px) { .sh-brands { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 700px) {
+  .sh-brands { display: grid; grid-auto-flow: column; grid-template-columns: none; grid-template-rows: repeat(2, auto); grid-auto-columns: 38%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -16px; padding: 4px 16px 10px; }
+  .sh-brands::-webkit-scrollbar { display: none; } .sh-brand { scroll-snap-align: start; }
+  .sh-mq-logo { height: 24px; }
+}

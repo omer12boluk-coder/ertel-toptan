@@ -97,8 +97,10 @@ export const DEFAULT_SETTINGS = {
   shopHome: {
     enabled: true,
     slides: [
-      { layout: 'split', theme: 'night', tag: 'Yeni gelenler', title: 'Tamir masanızın yeni yıldızları', text: 'Aixun, 2UUL, Mechanic, Luban ve daha fazlası. Orijinal ürün, hızlı kargo.', cta: 'Yeni ürünleri gör', link: 'q:', img: '' },
-      { layout: 'split', theme: 'ember', tag: 'Aixun', title: 'Akıllı havya istasyonları', text: 'T3A, T420D ve uçları stokta. Profesyoneller için hız ve hassasiyet.', cta: 'Aixun ürünleri', link: 'brand:Aixun', img: '' },
+      { layout: 'split', theme: 'night', tag: 'Yeni gelenler', title: 'Tamir masanızın yeni yıldızları', text: 'Aixun, JCID, Mechanic, Sunshine, Luban ve daha fazlası. Orijinal ürün, aynı gün kargo.', cta: 'Yeni ürünleri gör', link: 'q:', img: 'prod:2882' },
+      { layout: 'split', theme: 'ember', tag: 'Aixun', title: 'Akıllı havya istasyonları', text: 'T420D çift kanallı istasyon ve C210 / C245 / C115 uçları stokta.', cta: 'Aixun ürünleri', link: 'brand:Aixun', img: 'prod:1758' },
+      { layout: 'split', theme: 'volt', tag: 'JCID', title: 'Face ID ve True Tone onarımı', text: 'JC V1SE adaptörleriyle iPhone 17 serisine kadar tam destek.', cta: 'JCID ürünleri', link: 'brand:JCID', img: 'prod:3001' },
+      { layout: 'split', theme: 'violet', tag: 'AmScope', title: 'Net görüş, rahat çalışma', text: 'Stereo mikroskoplar, başlıklar ve lensler.', cta: 'Mikroskopları gör', link: 'q:mikroskop', img: 'prod:3064' },
     ],
     usps: [
       { icon: 'shield', title: 'Orijinal ürün', text: 'Distribütör güvencesi' },
@@ -107,22 +109,29 @@ export const DEFAULT_SETTINGS = {
       { icon: 'tag', title: 'Uygun fiyat', text: 'Toptan ve perakende' },
     ],
     brandsTitle: 'Markalar',
+    // logolar markaların kendi sitelerinden (hosting/public/brands/)
     brands: [
+      { name: 'JBC', color: '#ffffff', logo: '/brands/jbc.png', link: 'brand:JBC' },
+      { name: 'Aixun', color: '#0b1530', logo: '/brands/aixun.png', link: 'brand:Aixun' },
+      { name: 'Mechanic', color: '#13306e', logo: '/brands/mechanic.png', link: 'brand:Mechanic' },
+      { name: 'JCID', color: '#ffffff', logo: '/brands/jcid.png', link: 'brand:JCID' },
+      { name: 'Sunshine', color: '#ffffff', logo: '/brands/sunshine.png', link: 'brand:Sunshine' },
+      { name: 'Relife', color: '#ffffff', logo: '/brands/relife.png', link: 'brand:Relife' },
       { name: '2UUL', color: '#111827', link: 'brand:2UUL' },
-      { name: 'Aixun', color: '#0b3b8c', link: 'brand:Aixun' },
-      { name: 'Mechanic', color: '#c2410c', link: 'brand:Mechanic' },
-      { name: 'LUBAN', color: '#6d28d9', link: 'brand:LUBAN' },
-      { name: 'JCID', color: '#0e7490', link: 'brand:JCID' },
       { name: 'Qianli', color: '#b91c1c', link: 'brand:Qianli' },
-      { name: 'Sunshine', color: '#ca8a04', link: 'brand:Sunshine' },
-      { name: 'Relife', color: '#15803d', link: 'brand:Relife' },
+      { name: 'LUBAN', color: '#6d28d9', link: 'brand:LUBAN' },
+      { name: 'Amaoe', color: '#0e7490', link: 'brand:Amaoe' },
     ],
     promosTitle: 'Öne çıkanlar',
+    // görseller: ürünlerin kendi resimleri (prod:<no>) ve sitenin bannerları (platincdn)
     promos: [
-      { size: 'big', color: '#0f172a', tag: 'Kampanya', title: 'Mikroskop ve kamera setleri', text: 'Net görüntü, rahat çalışma', link: 'q:mikroskop', img: '' },
-      { size: 'sq', color: '#c2410c', tag: '', title: 'Havya uçları', text: 'JBC, Quick, Aixun', link: 'q:uç', img: '' },
-      { size: 'sq', color: '#0b3b8c', tag: '', title: 'Programlayıcılar', text: 'JCID, Qianli', link: 'q:programlayıcı', img: '' },
-      { size: 'wide', color: '#14532d', tag: 'Stokta', title: 'Ekran ayırma ve UV ekipmanları', text: 'Atölyeniz için her şey', link: 'q:ayırma', img: '' },
+      { size: 'big', color: '#0f172a', tag: 'Kampanya', title: 'Mikroskop ve kamera setleri', text: '4K dijital ve stereo mikroskoplar', link: 'q:mikroskop', img: 'prod:3028' },
+      { size: 'sq', color: '#c2410c', tag: '', title: 'Havya uçları', text: 'JBC, Quick, Aixun, Qianli', link: 'q:havya ucu', img: 'prod:2965' },
+      { size: 'sq', color: '#0b3b8c', tag: '', title: 'Programlayıcılar', text: 'Luban, JCID, Qianli', link: 'q:programlayıcı', img: 'prod:2853' },
+      { size: 'wide', color: '#14532d', tag: 'Stokta', title: 'Ekran ayırma ekipmanları', text: 'Isıtıcılı ayırıcılar, pedler, aparatlar', link: 'q:ayırma', img: 'prod:3037' },
+      { size: 'wide', color: '#111827', tag: '', title: '', text: '', link: 'q:', img: 'https://platincdn.com/3519/dosyalar/images/yeni%20koleksiyon%20(1)(1).jpg' },
+      { size: 'sq', color: '#111827', tag: '', title: '', text: '', link: 'p:319', img: 'https://platincdn.com/3519/dosyalar/images/dw.jpg' },
+      { size: 'sq', color: '#111827', tag: '', title: '', text: '', link: 'p:3', img: 'https://platincdn.com/3519/dosyalar/images/jbcc_298x350.jpg' },
     ],
     sections: [
       { title: 'Yeni gelenler', mode: 'new', limit: 10 },
