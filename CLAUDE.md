@@ -18,7 +18,7 @@ Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL
 - Yönetici talepleri (sağ tık / çoklu seçim / talep içi) ve müşterileri tamamen silebilir (Firebase Auth hesabı silinmez, kayıt silindiği için giriş açılmaz).
 
 ## Site eşitleme
-- `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler.
+- `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı (r) = sitedeki gerçek satış fiyatı: `sale_price` (indirimli) varsa o, yoksa `price`. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Excel'de de "İndirimli Fiyat" doluysa r odur. Sipariş formu varsayılan fiyatı r. Sitede olmayan ürünü `so=1` ile gizler.
 - `worker/index.js` Cloudflare Worker "ertel-b2b-watch": dakikada bir beslemeyi kontrol eder, değişince sync'i tetikler (Actions "Bekçiyi yayınla" yükler). workers.dev adresi `hosting/public/config.js` → `window.WATCH_URL`: `GET /rate` Harem Altın dolar satış kuru, `POST /check` (panel açılınca), `POST /sync` ("Şimdi eşitle").
 - Ürün adları `src/clean.js` ile temizlenir (Windows-1252 kalıntısı, &#..; kodları).
 - Siteye toplu istek atma (IP engeli yemiştik). Beslemede stok adedi yok.
@@ -28,4 +28,4 @@ FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_DISPAT
 
 ## Açık konular
 - iyzico "link ile ödeme" entegrasyonu (kullanıcı başvuracak).
-- 142 üründe sitedeki indirimli fiyat toptan fiyat (w) olarak kullanılıyor; kullanıcıya teyit ettirilecek.
+- ~142 üründe eskiden sitedeki indirimli fiyat toptan fiyat (w) olarak yazılmıştı; artık liste fiyatı da o. Bu w'ler silinsin mi (yüzde kuralı uygulansın) kullanıcıya sorulacak.

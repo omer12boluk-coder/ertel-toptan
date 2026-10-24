@@ -27,7 +27,9 @@ const feed = new Map();
 for (const e of xml.split('<entry>').slice(1)) {
   const id = Number(tag(e, 'id'));
   if (!id) continue;
-  const price = parseFloat(tag(e, 'price')) || 0;
+  // sitedeki gerçek satış fiyatı: indirim varsa indirimli fiyat (sale_price), yoksa normal fiyat
+  const reg = parseFloat(tag(e, 'price')) || 0, sale = parseFloat(tag(e, 'sale_price')) || 0;
+  const price = sale > 0 && (!reg || sale < reg) ? sale : reg;
   const img = tag(e, 'image_link');
   feed.set(id, {
     id, n: cleanText(unesc(tag(e, 'title'))), k: tag(e, 'mpn'), b: cleanText(unesc(tag(e, 'brand'))),
@@ -67,6 +69,8 @@ for (const p of cat) {
   if (p.cur === 'USD' && f.tl > 0) {
     const usd = round2(f.tl / rate);
     if (Math.abs(usd - p.r) > Math.max(0.05, p.r * 0.005)) {
+      // geçiş: eskiden indirimli fiyat "toptan" (w) sayılıyordu; liste fiyatı artık o fiyat olunca uyarı koyma
+      if (p.w != null && Math.abs(usd - p.w) <= Math.max(0.05, p.w * 0.005)) { st.price.push(`${p.k}: ${p.r} → ${usd} (indirimli fiyat)`); p.r = usd; delete p.pc; continue; }
       const r0 = p.pc ? p.pc.r0 : p.r;
       st.price.push(`${p.k}: ${p.r} → ${usd}`);
       p.r = usd;

@@ -47,7 +47,7 @@ export function OrderForm() {
   function add(p) {
     setD((x) => x.items.some((it) => it.id === p.id)
       ? { ...x, items: x.items.map((it) => (it.id === p.id ? { ...it, qty: it.qty + 1 } : it)) }
-      : { ...x, items: [...x.items, { id: p.id, qty: 1, price: p.w ?? (p.r > 0 ? p.r : null) }] });
+      : { ...x, items: [...x.items, { id: p.id, qty: 1, price: p.r > 0 ? p.r : null }] });
     toast('Eklendi: ' + (p.n.length > 40 ? p.n.slice(0, 38) + '…' : p.n));
   }
   function clear() { setD({ no: newNo(), name: '', items: [] }); setImgs(null); setQ(''); }
