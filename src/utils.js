@@ -125,3 +125,8 @@ export const usernameOk = (u) => /^[a-z0-9._-]{3,30}$/.test(u);
 export const cleanUsername = (u) => norm(u).trim().replace(/\s+/g, '.').replace(/[^a-z0-9._-]/g, '');
 
 export { cleanText } from './clean.js';
+
+// "Çok yakında" özellikleri: müşteriye kapalı. Önizleme: /magaza?onizleme=1 (bu cihazda açılır), ?onizleme=0 kapatır.
+try { const q = new URLSearchParams(location.search).get('onizleme'); if (q === '1') localStorage.setItem('shop-preview', '1'); if (q === '0') localStorage.removeItem('shop-preview'); } catch {}
+export const shopPreview = () => { try { return localStorage.getItem('shop-preview') === '1'; } catch { return false; } };
+export const soon = (S, k) => S.orders?.[k] !== false && !shopPreview();

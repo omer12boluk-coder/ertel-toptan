@@ -1233,3 +1233,13 @@ a.btn { text-decoration: none; }
 
 /* animasyon bitince hiçbir dönüşüm kalmasın: açılan pencereler (ürün detayı vb.) her zaman ekrana göre konumlanır */
 .prow-main:focus-visible { outline-offset: -2px; border-radius: 8px; }
+/* "Çok yakında" (kolay kaldırılır: Ayarlar > Online mağaza) */
+.soon-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 11px; background: color-mix(in oklab, #f5b20b 22%, var(--surface)); color: #8a5a00; font: 700 11px/1 var(--f-body); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+[data-theme="dark"] .soon-tag { color: #f5c24a; }
+.soon-btn { position: relative; cursor: not-allowed; opacity: .55; filter: saturate(.6); pointer-events: none; }
+.soon-btn .soon-tag { position: absolute; top: -10px; right: 10px; background: #fff; border: 1px solid var(--line); }
+.soon-btn { overflow: visible; }
+.soon-card { align-items: center; text-align: center; padding: 34px 22px; }
+.soon-card p { margin: 0; max-width: 52ch; }
+.soon-ic { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.soon-admin { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: color-mix(in oklab, #f5b20b 9%, var(--surface)); border: 1px dashed color-mix(in oklab, #f5b20b 45%, var(--line)); }

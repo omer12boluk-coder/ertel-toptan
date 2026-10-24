@@ -270,7 +270,7 @@ function ProductRow({ p, admin, onOpen }) {
         ) : qty > 0 ? (
           <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
         ) : (
-          <button className="btn sm add" onClick={() => setQty(p.id, 1)} disabled={p.s <= 0 && S.catalog.stockMode !== 'hidden' && false}><Icon n="plus" s={15} />Ekle</button>
+          <button className="btn sm add" onClick={() => setQty(p.id, 1)} disabled={p.s <= 0 && S.catalog.stockMode !== 'hidden' && false}><Icon n="plus" s={15} />Sepete ekle</button>
         )}
       </div>
     </li>

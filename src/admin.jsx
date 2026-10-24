@@ -598,6 +598,11 @@ export function Settings() {
           <ShopInvite />
           <h3>Sipariş</h3>
           <Toggle id="s-ord" label="Mağazadan sipariş alınsın" hint="Kapalıysa müşteri sepeti sadece WhatsApp’tan liste linki olarak gönderir" checked={d.orders.enabled !== false} onChange={(v) => set('orders.enabled', v)} />
+          <div className="soon-admin">
+            <Toggle id="s-csoon" label="Online sipariş: “Çok yakında” göster" hint="Açıkken müşteri sepette “Sepeti onayla”yı pasif görür, sadece WhatsApp’tan gönderir. Sistemi açmak için kapatın." checked={d.orders.checkoutSoon !== false} onChange={(v) => set('orders.checkoutSoon', v)} />
+            <Toggle id="s-asoon" label="Üyelik / Hesabım: “Çok yakında” göster" hint="Açıkken Hesabım sayfasında “Çok yakında hizmetinizde” yazar." checked={d.orders.accountsSoon !== false} onChange={(v) => set('orders.accountsSoon', v)} />
+            <p className="fine">Kendiniz denemek için: <a href="/magaza?onizleme=1" target="_blank" rel="noopener">/magaza?onizleme=1</a> (bu cihazda “yakında” kalkar; geri almak için <code>?onizleme=0</code>).</p>
+          </div>
           <Toggle id="s-osign" label="Müşteriler mağazaya üye olabilsin" hint="Adres ve fatura bilgileri kayıtlı kalır, siparişlerini takip ederler" checked={d.orders.signup !== false} onChange={(v) => set('orders.signup', v)} />
           <h3>Teslimat</h3>
           <Toggle id="s-ocargo" label="Kargo ile gönderim" checked={d.orders.cargo !== false} onChange={(v) => set('orders.cargo', v)} />

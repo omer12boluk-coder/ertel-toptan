@@ -85,6 +85,9 @@ export const DEFAULT_SETTINGS = {
     payCard: true, // kredi kartı (ödeme linki gönderilir)
     payShop: true, // dükkanda ödeme (sadece dükkandan teslimde)
     signup: true, // mağazada üye olunabilsin
+    // "Çok yakında": sistem hazır ama müşteriye henüz açılmadı (Ayarlar > Online mağaza'dan tek tıkla açılır)
+    checkoutSoon: true, // sepette "Sepeti onayla" (online sipariş) çok yakında
+    accountsSoon: true, // Hesabım / üyelik çok yakında
     cargoNote: 'Kargo ücreti ve teslim süresi sipariş onayında bildirilir.',
     doneNote: 'Siparişiniz bize ulaştı. En kısa sürede kontrol edip size dönüş yapacağız.',
   },

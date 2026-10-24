@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder } from './store.js';
 import { Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
-import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername } from './utils.js';
+import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon } from './utils.js';
 import { ORDER_STATUS, PAY, DELIVERY, ILLER } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -163,7 +163,7 @@ export function Checkout({ items, onBack }) {
             <div className="co-who">
               <Icon n="user" s={20} />
               <span className="co-who-t"><b>Misafir olarak devam ediyorsunuz.</b> Üyeyseniz giriş yapın, bilgileriniz otomatik dolsun.</span>
-              <button className="btn sm outline" onClick={() => setAuth(true)}>Giriş yap</button>
+              {!soon(S, 'accountsSoon') && <button className="btn sm outline" onClick={() => setAuth(true)}>Giriş yap</button>}
             </div>
           ) : (
             <div className="co-who on">
@@ -241,7 +241,7 @@ export function Checkout({ items, onBack }) {
             <Field label="Sipariş notu" opt><textarea id="co-note" rows="2" placeholder="ör. Faturayı ürünle birlikte gönderin" value={f.note} onChange={(e) => set({ note: e.target.value })} /></Field>
           </section>
 
-          {!member && O.signup !== false && (
+          {!member && O.signup !== false && !soon(S, 'accountsSoon') && (
             <section className="co-sec co-signup">
               <label className="mini-check big"><input type="checkbox" checked={f.signup} onChange={(e) => set({ signup: e.target.checked, uname: f.uname || suggestUser(f.contact.email) })} /><span><b>Bu bilgilerle üye ol</b> <small className="muted">— bir dahaki siparişte her şey hazır gelir, siparişlerinizi takip edersiniz</small></span></label>
               {f.signup && <div className="row2">
@@ -527,6 +527,19 @@ function AuthSheet({ onClose }) {
 export function Account() {
   const member = useStore((s) => s.member);
   const S = useStore((s) => s.settings);
+  // çok yakında: üyelik hazır ama müşteriye henüz açık değil (Ayarlar > Online mağaza)
+  if (!member && soon(S, 'accountsSoon')) return (
+    <div className="page narrow acct">
+      <div className="set-card soon-card">
+        <span className="soon-ic"><Icon n="user" s={30} /></span>
+        <span className="soon-tag">Çok yakında</span>
+        <h1 className="page-t">Hesabım çok yakında hizmetinizde</h1>
+        <p className="muted">Üye olup adres ve fatura bilgilerinizi kaydedebilecek, siparişlerinizi buradan takip edebileceksiniz. Şimdilik ürünleri sepete ekleyip WhatsApp’tan gönderebilirsiniz.</p>
+        <button className="btn primary" onClick={() => go('katalog')}><Icon n="grid" s={16} />Ürünlere göz at</button>
+      </div>
+      <ShopCard S={S} />
+    </div>
+  );
   if (!member) return (
     <div className="page narrow acct">
       <div className="acct-hero">

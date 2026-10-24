@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useStore, go } from './store.js';
 import { Icon } from './ui.jsx';
-import { totals, fmtTotals } from './utils.js';
+import { totals, fmtTotals, soon } from './utils.js';
 import { useCartItems } from './cart.jsx';
 
 export function CartBar() {
@@ -20,13 +20,14 @@ export function CartBar() {
 }
 
 export function GuestGuide() {
-  const orders = useStore((s) => s.settings.orders?.enabled !== false);
+  const S = useStore((s) => s.settings);
+  const orders = S.orders?.enabled !== false && !soon(S, 'checkoutSoon');
   const [off, setOff] = useState(() => { try { return sessionStorage.getItem('guide-off') === '1'; } catch { return false; } });
   if (off) return null;
   return (
     <div className="gguide">
       <ol>
-        <li><b>1</b><span>İstediğiniz ürünlerde <b>Ekle</b>’ye basın</span></li>
+        <li><b>1</b><span>İstediğiniz ürünlerde <b>Sepete ekle</b>’ye basın</span></li>
         <li><b>2</b><span>Alttaki <b>Sepete git</b>’e basın</span></li>
         <li><b>3</b><span>{orders ? <b>Sepeti onayla</b> : null}{orders ? <>, bilgilerinizi girip <b>Siparişi tamamla</b> <small className="muted">(ya da listeyi WhatsApp’tan gönderin)</small></> : <>Sepette yeşil <b>WhatsApp’tan gönder</b>’e basın</>}</span></li>
       </ol>

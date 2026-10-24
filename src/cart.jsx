@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore, setQty, clearCart, freshStart, api, openRequest, toast, go } from './store.js';
 import { Icon, Thumb, Stepper, Empty, VatLines, copyText, openMenu } from './ui.jsx';
 import { waLink, links } from './route.js';
-import { fmt, priceFor, totals, fmtTotals, now } from './utils.js';
+import { fmt, priceFor, totals, fmtTotals, now, soon } from './utils.js';
 import { TYPE } from './config.js';
 import { encodeList, listLink, listItems, listRecord } from './listcode.js';
 import { renderListImages, currentRate, ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -37,8 +37,9 @@ export function Cart() {
   if (!items.length) return <EmptyCart />;
   if (step === 'checkout') return <Checkout items={items} onBack={() => to('cart')} />;
   if (step === 'send') return <BayiSend items={items} onBack={() => to('cart')} />;
-  const orders = pub && S.orders?.enabled !== false;
-  return <CartStep items={items} pub={pub} orders={orders} onConfirm={() => (pub && !orders ? null : to(pub ? 'checkout' : 'send'))} />;
+  const orders = pub && S.orders?.enabled !== false && !soon(S, 'checkoutSoon');
+  const coming = pub && S.orders?.enabled !== false && soon(S, 'checkoutSoon');
+  return <CartStep items={items} pub={pub} orders={orders} coming={coming} onConfirm={() => (pub && !orders ? null : to(pub ? 'checkout' : 'send'))} />;
 }
 
 function EmptyCart() {
@@ -46,7 +47,7 @@ function EmptyCart() {
     <div className="page narrow">
       <h1 className="page-t">Sepet</h1>
       <Empty icon="cart" title="Sepetiniz boş">
-        <p>Ürünlerin yanındaki <b>Ekle</b> düğmesine basın, sonra buraya gelin.</p>
+        <p>Ürünlerin yanındaki <b>Sepete ekle</b> düğmesine basın, sonra buraya gelin.</p>
         <button className="btn primary" onClick={() => go('katalog')}><Icon n="grid" s={16} />Ürünlere git</button>
       </Empty>
     </div>
@@ -54,7 +55,7 @@ function EmptyCart() {
 }
 
 // ---- 1. adım: sepet (iki tarafta da aynı) ------------------------------------------------
-function CartStep({ items, pub, orders, onConfirm }) {
+function CartStep({ items, pub, orders, coming, onConfirm }) {
   const S = useStore((s) => s.settings);
   const rate = useRate();
   const tot = totals(items, 'offer');
@@ -110,8 +111,15 @@ function CartStep({ items, pub, orders, onConfirm }) {
               <span><b>Sepeti onayla</b><small>{pub ? 'Teslimat ve fatura bilgileri' : 'Hazırlatın ya da fiyat sorun'}</small></span>
             </button>
           )}
-          {pub && <ShopWhatsApp items={items} />}
-          <p className="fine">{pub ? S.orders?.cargoNote || '' : S.shop.pickupNote}</p>
+          {coming && ( // çok yakında: sistem hazır, müşteriye henüz açık değil (Ayarlar > Online mağaza)
+            <div className="btn primary big soon-btn" aria-disabled="true">
+              <Icon n="check" />
+              <span><b>Sepeti onayla</b><small>Online sipariş çok yakında hizmetinizde</small></span>
+              <span className="soon-tag">Yakında</span>
+            </div>
+          )}
+          {pub && <ShopWhatsApp items={items} strong={!orders} />}
+          <p className="fine">{coming ? 'Şimdilik siparişinizi WhatsApp’tan gönderin, hemen dönüş yapalım.' : pub ? S.orders?.cargoNote || '' : S.shop.pickupNote}</p>
         </aside>
       </div>
     </div>
@@ -119,7 +127,7 @@ function CartStep({ items, pub, orders, onConfirm }) {
 }
 
 // ---- Mağaza: sepeti WhatsApp'tan liste linki olarak gönder (hiçbir yere kaydedilmez; ara sayfa yok)
-function ShopWhatsApp({ items }) {
+function ShopWhatsApp({ items, strong }) {
   const S = useStore((s) => s.settings);
   const [no] = useState(newNo);
   const key = items.map((i) => i.id + ':' + i.qty).join(',');
@@ -128,7 +136,7 @@ function ShopWhatsApp({ items }) {
   return (
     <div className="wa-row">
       {wa
-        ? <a className="btn wa-soft wa-main" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={19} />WhatsApp’tan gönder</a>
+        ? <a className={'btn wa-main ' + (strong ? 'wa' : 'wa-soft')} href={wa} target="_blank" rel="noopener"><Icon n="wa" s={19} />WhatsApp’tan gönder</a>
         : <span className="btn wa-soft wa-main" aria-disabled="true"><Icon n="wa" s={19} />WhatsApp’tan gönder</span>}
       <button className="btn outline icon wa-copy" onClick={() => copyText(link, 'Liste linki kopyalandı, WhatsApp’ta yapıştırın')} aria-label="Liste linkini kopyala" title="Liste linkini kopyala"><Icon n="copy" s={18} /></button>
     </div>
