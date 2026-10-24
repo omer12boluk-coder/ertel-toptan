@@ -151,7 +151,7 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
   const tTL = tl ? toTL(tot, rate) : null;
   const who = r.gname || r.userName;
   const canvases = [];
-  const fhOf = () => 84 + (tTL != null ? 52 : 0) + (vat.pct ? 56 : 0);
+  const fhOf = () => 126 + (tTL != null ? 72 : 0) + (vat.pct ? 64 : 0);
   for (let pi = 0; pi < pages.length; pi++) {
     const last = pi === pages.length - 1;
     const c = document.createElement('canvas'); c.width = W; c.height = 4000;
@@ -219,22 +219,24 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
     y = top + boxH + 20;
     // --- toplam kutusu (son resimde)
     if (last) {
-      const fh = 84 + (tTL != null ? 52 : 0) + (vat.pct ? 56 : 0);
-      rrect(x, P, y, TW, fh, 16); x.fillStyle = '#f8fafc'; x.fill();
+      // toplam kutusu: öğeler arasında rahat boşluk (etiket → tutar → TL → kur → çizgi → KDV)
+      const fh = fhOf();
+      rrect(x, P, y, TW, fh, 18); x.fillStyle = '#f8fafc'; x.fill();
+      const R = W - P - 32;
       x.textAlign = 'left'; x.fillStyle = mute; x.font = '500 21px ' + FB;
-      x.fillText(`${items.length} kalem · ${items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet`, P + 24, y + 48);
-      x.textAlign = 'right'; x.fillStyle = mute; x.font = '700 15px ' + FB; x.fillText('TOPLAM', W - P - 24, y + 24 + 6);
-      x.fillStyle = priceC; x.font = '700 48px ' + FD; x.fillText(fmtTotals(tot), W - P - 24, y + 70);
-      let fy = y + 70;
+      x.fillText(`${items.length} kalem · ${items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet`, P + 32, y + 50);
+      x.textAlign = 'right'; x.fillStyle = mute; x.font = '700 15px ' + FB; x.fillText('TOPLAM', R, y + 40);
+      x.fillStyle = priceC; x.font = '700 52px ' + FD; x.fillText(fmtTotals(tot), R, y + 98);
+      let fy = y + 98;
       if (tTL != null) {
-        x.fillStyle = ink; x.font = '700 28px ' + FD; x.fillText('≈ ' + fmtTL(tTL), W - P - 24, fy + 34);
-        x.fillStyle = soft; x.font = '400 15px ' + FB; x.fillText(rateLabel(rate), W - P - 24, fy + 54);
-        fy += 52;
+        x.fillStyle = ink; x.font = '700 30px ' + FD; x.fillText('≈ ' + fmtTL(tTL), R, fy + 46);
+        x.fillStyle = soft; x.font = '400 15px ' + FB; x.fillText(rateLabel(rate), R, fy + 72);
+        fy += 72;
       }
       if (vat.pct) {
-        x.fillStyle = line; x.fillRect(W - P - 24 - 560, fy + 14, 560, 1);
+        x.fillStyle = line; x.fillRect(R - 560, fy + 24, 560, 1);
         const inc = fmtTotals(vat.inc) + (tTL != null ? ' (≈ ' + fmtTL(tTL * (1 + vat.pct / 100)) + ')' : '');
-        x.fillStyle = mute; x.font = '400 17px ' + FB; x.fillText(`KDV %${vat.pct} ${fmtTotals(vat.vat)}  ·  KDV dahil ${inc}`, W - P - 24, fy + 40);
+        x.fillStyle = mute; x.font = '400 17px ' + FB; x.fillText(`KDV %${vat.pct}  ${fmtTotals(vat.vat)}     ·     KDV dahil  ${inc}`, R, fy + 58);
       }
       y += fh + 16;
     } else {

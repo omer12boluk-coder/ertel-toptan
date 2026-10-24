@@ -1029,3 +1029,8 @@ a.btn { text-decoration: none; }
 .of-prod { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .of-prod .thumb { width: 46px; height: 46px; flex: none; background: #fff; }
 .of-prod > span { display: flex; flex-direction: column; min-width: 0; }
+/* toplam kutusu (sayfada): daha rahat aralıklar */
+.paper-f { padding: 18px 22px; gap: 12px; }
+.paper-sum { gap: 6px; }
+.paper-sum > b { margin: 2px 0; }
+.paper .vat { padding-top: 12px; margin-top: 2px; gap: 6px 14px; }
