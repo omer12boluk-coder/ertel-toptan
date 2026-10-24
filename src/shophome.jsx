@@ -141,14 +141,14 @@ export function ShopHome({ S: Sover }) {
     if (k === 'marquee') return brands.length > 0 && H.marquee !== 'off' ? <Marquee items={brands} style={H.marquee || 'color'} speed={H.mqSpeed} ls={ls} /> : E && <Empty label={H.marquee === 'off' ? 'Kayan şerit kapalı (ayarından açın)' : 'Marka yok'} />;
     if (k === 'brands') return (brands.length > 0 || E) && (
       <section className="sh-sec rv">
-        <SecHead title={H.brandsTitle || 'Markalar'} sub={H.brandsSub ?? 'Dünyanın önde gelen tamir ekipmanı üreticileri'} onTitle={E && ((t) => E.set('shopHome.brandsTitle', t))} />
+        <SecHead title={H.brandsTitle || 'Markalar'} sub={H.brandsSub ?? 'Dünyanın önde gelen tamir ekipmanı üreticileri'} onTitle={E && !E.mobile && ((t) => E.set('shopHome.brandsTitle', t))} />
         <div className={'sh-brands bs-' + (H.brandSize || 'md')}>
           {brands.map((b, i) => (
             <button key={(b.name || '') + b.idx} data-dz="brand" data-i={b.idx}
               className={'sh-brand' + (b.logo ? ' has-logo' : isLight(b.color) ? ' light' : '') + (sel?.kind === 'brand' && sel.i === b.idx ? ' dz-sel' : '')}
               style={{ '--c': b.color || '#111827', '--i': i, '--len': Math.max(4, (b.name || '').length), '--ls': b.scale * ls }}
-              onClick={E ? stop : link(b.link || 'brand:' + b.name)} onMouseMove={spot}
-              onPointerDown={E ? (e) => dragSort(e, 'brand', b.idx, (f, t) => E.set('shopHome.brands', moveItem(E.get('brands'), f, t)), () => E.select('brand', b.idx)) : undefined}>
+              onClick={E ? (E.mobile ? (e) => { stop(e); E.select('brand', b.idx); } : stop) : link(b.link || 'brand:' + b.name)} onMouseMove={spot}
+              onPointerDown={E && !E.mobile ? (e) => dragSort(e, 'brand', b.idx, (f, t) => E.set('shopHome.brands', moveItem(E.get('brands'), f, t)), () => E.select('brand', b.idx)) : undefined}>
               <span className="sh-brand-glow" aria-hidden="true" />
               {b.logo ? <ShopImg v={b.logo} className="sh-brand-logo" alt={b.name} /> : <b className="sh-brand-word">{b.name}</b>}
               <span className="sh-brand-f"><span>{counts.get(norm(b.name)) > 0 ? counts.get(norm(b.name)) + ' ürün' : b.name}</span></span>
@@ -161,12 +161,12 @@ export function ShopHome({ S: Sover }) {
     );
     if (k === 'promos') return (promos.length > 0 || E) && (
       <section className="sh-sec rv">
-        <SecHead title={H.promosTitle || 'Öne çıkanlar'} onTitle={E && ((t) => E.set('shopHome.promosTitle', t))} />
+        <SecHead title={H.promosTitle || 'Öne çıkanlar'} onTitle={E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t))} />
         <div className="sh-bento">
           {promos.map((x, i) => (
             <button key={x.idx} data-dz="promo" data-i={x.idx} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? (isProdImg(x.img) ? ' prod' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (sel?.kind === 'promo' && sel.i === x.idx ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i }}
-              onClick={E ? stop : link(x.link)} onMouseMove={spot}
-              onPointerDown={E ? (e) => dragSort(e, 'promo', x.idx, (f, t) => E.set('shopHome.promos', moveItem(E.get('promos'), f, t)), () => E.select('promo', x.idx)) : undefined}>
+              onClick={E ? (E.mobile ? (e) => { stop(e); E.select('promo', x.idx); } : stop) : link(x.link)} onMouseMove={spot}
+              onPointerDown={E && !E.mobile ? (e) => dragSort(e, 'promo', x.idx, (f, t) => E.set('shopHome.promos', moveItem(E.get('promos'), f, t)), () => E.select('promo', x.idx)) : undefined}>
               {x.img && (isProdImg(x.img) ? <span className="sh-box-prod"><ShopImg v={x.img} /></span> : <ShopImg v={x.img} className="sh-box-img" />)}
               <span className="sh-box-shade" aria-hidden="true" />
               <span className="sh-box-t">
@@ -181,8 +181,8 @@ export function ShopHome({ S: Sover }) {
         </div>
       </section>
     );
-    if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
-    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : <HeadBlock b={b} onTitle={E && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
+    if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
+    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
     if (k === 'cta') return H.cta?.title ? (
       <section className="sh-cta rv">
         <div><b>{H.cta.title}</b>{H.cta.text && <p>{H.cta.text}</p>}</div>
@@ -334,7 +334,7 @@ function Slide({ s, on, open, logo, k }) {
   const cover = s.layout === 'cover' && s.img;
   const fx = (el, cls = '') => {
     const f = s.fx?.[el]; const style = f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
-    if (!E) return { className: cls || undefined, style };
+    if (!E || E.mobile) return { className: cls || undefined, style };
     const selOn = E.sel?.kind === 'fx' && E.sel.slide === k && E.sel.el === el;
     return { className: (cls ? cls + ' ' : '') + 'dz-fx' + (selOn ? ' on' : ''), style, 'data-fx-name': FX_NAMES[el], onClick: (e) => e.stopPropagation(), onPointerDown: (e) => E.fxDrag(e, k, el) };
   };

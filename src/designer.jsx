@@ -26,7 +26,9 @@ export function ShopDesigner() {
   const d = designDraft || prepare(settings);
   const base = useMemo(() => JSON.stringify(prepare(settings)), [settings]);
   const dirty = !!designDraft && JSON.stringify(designDraft) !== base;
-  const [sel, setSel] = useState(null);
+  const [sel, setSel] = useState(null);   // açık ayar paneli
+  const [pick, setPick] = useState(null); // telefonda dokunarak seçilen (sadece seçer, panel açmaz)
+  const mobile = useMobile();
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [width, setWidth] = useState('full');
@@ -60,19 +62,22 @@ export function ShopDesigner() {
   const L = H.layout;
   const setL = (n) => set('shopHome.layout', n);
   const select = (kind, i) => {
-    if (kind === 'promo' && i === -1) { const n = [...(H.promos || []), NEW.promo()]; set('shopHome.promos', n); setSel({ kind: 'promo', i: n.length - 1 }); return; }
-    setSel(kind === 'brand' || kind === 'promo' ? { kind, i } : { kind: 'blk', k: kind });
+    if (kind === 'promo' && i === -1) { const n = [...(H.promos || []), NEW.promo()]; set('shopHome.promos', n); (mobile ? setPick : setSel)({ kind: 'promo', i: n.length - 1 }); return; }
+    if (kind === 'brand' && i === -1) { setSel({ kind: 'brand', i: -1 }); return; }
+    const v = kind === 'brand' || kind === 'promo' ? { kind, i } : { kind: 'blk', k: kind };
+    if (mobile) setPick(v); else setSel(v);
   };
+  const tapBlock = (k) => (mobile ? setPick({ kind: 'blk', k }) : setSel({ kind: 'blk', k }));
   function addBlock(at, type) {
     let key;
     if (type === 'rail') { const r = NEW.rail(); set('shopHome.sections', [...H.sections, r]); key = 'rail:' + r.id; }
     else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
-    const n = [...L]; n.splice(at, 0, key); setL(n); setSel({ kind: 'blk', k: key });
+    const n = [...L]; n.splice(at, 0, key); setL(n); if (mobile) setPick({ kind: 'blk', k: key }); setSel({ kind: 'blk', k: key });
   }
   function removeBlock(k) {
     if (k.startsWith('rail:')) set('shopHome.sections', H.sections.filter((r) => 'rail:' + r.id !== k));
     else { const b = { ...H.blocks }; delete b[k.slice(2)]; set('shopHome.blocks', b); }
-    setL(L.filter((x) => x !== k)); setSel(null);
+    setL(L.filter((x) => x !== k)); setSel(null); setPick(null);
   }
   const toggleHide = (k) => { const h = new Set(H.hidden || []); h.has(k) ? h.delete(k) : h.add(k); set('shopHome.hidden', [...h]); };
 
@@ -92,17 +97,17 @@ export function ShopDesigner() {
     const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); document.body.classList.remove('dz-dragging'); if (!moved) setSel({ kind: 'fx', slide, el }); };
     addEventListener('pointermove', mv); addEventListener('pointerup', up);
   };
-  const E = { H, L, get, fxDrag, sel, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, Block: DzBlock, HeroTools: DzHeroTools };
+  const E = { H, L, get, fxDrag, mobile, sel: mobile ? pick : sel, tapBlock, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, Block: DzBlock, HeroTools: DzHeroTools };
   const view = useMemo(() => withDefaults(d), [d]);
 
   return (
-    <div className={'page dz-page' + (sel ? ' has-panel' : '')}>
+    <div className={'page dz-page' + (sel ? ' has-panel' : '') + (mobile ? ' dz-mobile' : '') + (mobile && pick ? ' has-pick' : '')}>
       <div className="dz-top">
-        <span className="dz-title"><Icon n="brush" s={18} /><b>Tasarım modu</b><small>Mağaza ana sayfası · bölüme tıklayın, tutup sürükleyin</small></span>
-        <span className="dz-dev" role="group" aria-label="Önizleme genişliği">
+        <span className="dz-title"><Icon n="brush" s={18} /><b>Tasarım modu</b><small>{mobile ? 'Bir bölüme ya da kutuya dokunun, alttaki düğmelerle düzenleyin' : 'Mağaza ana sayfası · bölüme tıklayın, tutup sürükleyin'}</small></span>
+        {!mobile && <span className="dz-dev" role="group" aria-label="Önizleme genişliği">
           <button className={width === 'full' ? 'on' : ''} onClick={() => setWidth('full')} title="Bilgisayar"><Icon n="monitor" s={16} /></button>
           <button className={width === 'phone' ? 'on' : ''} onClick={() => setWidth('phone')} title="Telefon genişliği (yaklaşık)"><Icon n="mobile" s={16} /></button>
-        </span>
+        </span>}
         <button className="btn sm ghost" onClick={undo} disabled={!hist.current.list.length} title="Geri al (Ctrl+Z)"><Icon n="undo" s={15} />Geri al</button>
         <a className="btn sm ghost" href="/magaza" target="_blank" rel="noopener"><Icon n="ext" s={15} />Mağazayı aç</a>
         {dirty && <button className="btn sm ghost" onClick={discard}>Vazgeç</button>}
@@ -111,23 +116,90 @@ export function ShopDesigner() {
       {!(H.layout || []).length && <p className="fine">Bölüm yok.</p>}
       <div className={'dz-canvas w-' + width}>
         <DesignCtx.Provider value={E}>
-          <AddBetween onAdd={(type) => addBlock(0, type)} top />
+          {!mobile && <AddBetween onAdd={(type) => addBlock(0, type)} top />}
           <ShopHome S={view} />
         </DesignCtx.Provider>
       </div>
+      {mobile && pick && !sel && <MobileBar pick={pick} setPick={setPick} H={H} d={d} set={set} setSel={setSel} L={L} setL={setL} toggleHide={toggleHide} removeBlock={removeBlock} addBlock={addBlock} />}
       {sel && <Panel sel={sel} d={d} H={H} set={set} close={() => setSel(null)} heroI={heroI.current} removeBlock={removeBlock} setSel={setSel} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 }
 
+function useMobile() {
+  const q = '(max-width: 800px), (pointer: coarse)';
+  const [m, setM] = useState(() => matchMedia(q).matches);
+  useEffect(() => { const mq = matchMedia(q); const f = () => setM(mq.matches); mq.addEventListener?.('change', f); return () => mq.removeEventListener?.('change', f); }, []);
+  return m;
+}
+const SIZES_CYCLE = ['sq', 'wide', 'tall', 'big'];
+const SIZE_NAMES = { sq: 'Kare', wide: 'Geniş', tall: 'Uzun', big: 'Büyük' };
+// telefonda seçilen öğe için alttaki düğme çubuğu: dokunma sadece seçer, değişiklik buradaki net düğmelerle yapılır
+function MobileBar({ pick, setPick, H, d, set, setSel, L, setL, toggleHide, removeBlock, addBlock }) {
+  const [adding, setAdding] = useState(false);
+  const S = (k, v) => set('shopHome.' + k, v);
+  const B = ({ ic, children, on, danger, disabled, rot }) => <button className={'mb-b' + (danger ? ' danger' : '')} disabled={disabled} onClick={on}><Icon n={ic} s={19} className={rot || ''} /><span>{children}</span></button>;
+  let title = '', btns = null;
+  if (pick.kind === 'blk') {
+    const k = pick.k; const i = L.indexOf(k); const hidden = (H.hidden || []).includes(k); const custom = k.startsWith('rail:') || k.startsWith('b:');
+    title = blockLabel(k, H);
+    btns = <>
+      <B ic="back" rot="rot90" on={() => setL(moveItem(L, i, i - 1))} disabled={i <= 0}>Yukarı</B>
+      <B ic="back" rot="rot-90" on={() => setL(moveItem(L, i, i + 1))} disabled={i >= L.length - 1}>Aşağı</B>
+      {k === 'hero' && <B ic="minus" on={() => S('heroH', Math.max(260, (Number(H.heroH) || 480) - 40))}>Kısalt</B>}
+      {k === 'hero' && <B ic="plus" on={() => S('heroH', Math.min(760, (Number(H.heroH) || 480) + 40))}>Uzat</B>}
+      {k === 'brands' && <B ic="grid" on={() => S('brandSize', { sm: 'md', md: 'lg', lg: 'sm' }[H.brandSize || 'md'])}>{{ sm: 'Küçük', md: 'Orta', lg: 'Büyük' }[H.brandSize || 'md']}</B>}
+      <B ic={hidden ? 'eyeoff' : 'eye'} on={() => toggleHide(k)}>{hidden ? 'Göster' : 'Gizle'}</B>
+      <B ic="edit" on={() => setSel({ kind: 'blk', k })}>Düzenle</B>
+      <B ic="plus" on={() => setAdding(!adding)}>Altına ekle</B>
+      {custom && <B ic="trash" danger on={() => removeBlock(k)}>Sil</B>}
+    </>;
+  } else if (pick.kind === 'brand') {
+    const b = H.brands[pick.i]; if (!b) return null;
+    const BL = d.brandLogos || {}; const key = BL[b.name] ? b.name : Object.keys(BL).find((x) => norm(x) === norm(b.name || '')) || b.name; const sc = BL[key]?.scale || 1;
+    const upS = (v) => key && set('brandLogos', { ...BL, [key]: { ...(BL[key] || {}), scale: Math.round(Math.min(1.6, Math.max(0.4, v)) * 100) / 100 } });
+    const mv = (dd) => { const j = pick.i + dd; if (j < 0 || j >= H.brands.length) return; S('brands', moveItem(H.brands, pick.i, j)); setPick({ kind: 'brand', i: j }); };
+    title = 'Marka · ' + (b.name || '') + ' · logo %' + Math.round(sc * 100);
+    btns = <>
+      <B ic="back" on={() => mv(-1)} disabled={pick.i === 0}>Öne al</B>
+      <B ic="back" rot="flip" on={() => mv(1)} disabled={pick.i === H.brands.length - 1}>Sona al</B>
+      <B ic="minus" on={() => upS(sc - 0.1)}>Logo küçült</B>
+      <B ic="plus" on={() => upS(sc + 0.1)}>Logo büyüt</B>
+      <B ic="edit" on={() => setSel({ kind: 'brand', i: pick.i })}>Düzenle</B>
+      <B ic="trash" danger on={() => { S('brands', H.brands.filter((_, j) => j !== pick.i)); setPick(null); }}>Kaldır</B>
+    </>;
+  } else if (pick.kind === 'promo') {
+    const x = H.promos[pick.i]; if (!x) return null;
+    const mv = (dd) => { const j = pick.i + dd; if (j < 0 || j >= H.promos.length) return; S('promos', moveItem(H.promos, pick.i, j)); setPick({ kind: 'promo', i: j }); };
+    const nxt = SIZES_CYCLE[(SIZES_CYCLE.indexOf(x.size || 'sq') + 1) % 4];
+    title = 'Kutu · ' + (x.title || pick.i + 1);
+    btns = <>
+      <B ic="back" on={() => mv(-1)} disabled={pick.i === 0}>Öne al</B>
+      <B ic="back" rot="flip" on={() => mv(1)} disabled={pick.i === H.promos.length - 1}>Sona al</B>
+      <B ic="expand" on={() => S('promos', H.promos.map((y, j) => (j === pick.i ? { ...y, size: nxt } : y)))}>{SIZE_NAMES[x.size || 'sq']}</B>
+      <B ic="edit" on={() => setSel({ kind: 'promo', i: pick.i })}>Düzenle</B>
+      <B ic="trash" danger on={() => { S('promos', H.promos.filter((_, j) => j !== pick.i)); setPick(null); }}>Sil</B>
+    </>;
+  }
+  return (
+    <div className="dz-mbar" role="toolbar" aria-label="Seçilen öğe">
+      <div className="dz-mbar-h"><b>{title}</b><button className="icon-btn sm" onClick={() => setPick(null)} aria-label="Seçimi kaldır"><Icon n="x" s={16} /></button></div>
+      {adding && pick.kind === 'blk' && <div className="dz-mbar-add">
+        {[['head', 'Başlık'], ['rail', 'Ürün rafı'], ['banner', 'Görsel bant']].map(([t, l]) => <button key={t} onClick={() => { addBlock(L.indexOf(pick.k) + 1, t); setAdding(false); }}><Icon n="plus" s={15} />{l}</button>)}
+      </div>}
+      <div className="dz-mbar-b">{btns}</div>
+    </div>
+  );
+}
+
 // bölüm çerçevesi: üstte araç çubuğu (sürükle, sıra, gizle, ayar, sil), altta "Bölüm ekle"
 function DzBlock({ k, i, hidden, children }) {
-  const { H, L, get, sel, setSel, setL, toggleHide, removeBlock, addBlock } = useContext(DesignCtx);
+  const { H, L, get, sel, setSel, tapBlock, mobile, setL, toggleHide, removeBlock, addBlock } = useContext(DesignCtx);
   const on = sel?.kind === 'blk' && sel.k === k;
   const custom = k.startsWith('rail:') || k.startsWith('b:');
   return (
-    <div className={'dz-blk' + (on ? ' dz-on' : '') + (hidden ? ' dz-hid' : '')} data-dz="sec" data-i={i} onClick={() => setSel({ kind: 'blk', k })}>
+    <div className={'dz-blk' + (on ? ' dz-on' : '') + (hidden ? ' dz-hid' : '')} data-dz="sec" data-i={i} onClick={() => tapBlock(k)}>
       <div className="dz-bar" onClick={(e) => e.stopPropagation()}>
         <span className="dz-grip" title="Tutup sürükleyin" onPointerDown={(e) => dragSort(e, 'sec', i, (f, t) => setL(moveItem(get('layout'), f, t)))}><Icon n="drag" s={16} /></span>
         <button className="dz-name" onClick={() => setSel({ kind: 'blk', k })}>{blockLabel(k, H)}{hidden && <em>gizli</em>}</button>
@@ -138,7 +210,7 @@ function DzBlock({ k, i, hidden, children }) {
         {custom && <button className="dz-ib danger" onClick={() => removeBlock(k)} title="Bölümü sil"><Icon n="trash" s={15} /></button>}
       </div>
       {children}
-      <AddBetween onAdd={(type) => addBlock(i + 1, type)} />
+      {!mobile && <AddBetween onAdd={(type) => addBlock(i + 1, type)} />}
     </div>
   );
 }
