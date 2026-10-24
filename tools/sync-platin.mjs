@@ -69,8 +69,6 @@ for (const p of cat) {
   if (p.cur === 'USD' && f.tl > 0) {
     const usd = round2(f.tl / rate);
     if (Math.abs(usd - p.r) > Math.max(0.05, p.r * 0.005)) {
-      // tek seferlik geçiş: eskiden indirimli fiyat toptan (w) olarak yazılmıştı → artık liste fiyatı o, toptan % indirimle hesaplanır
-      if (p.w != null && Math.abs(usd - p.w) <= Math.max(0.05, p.w * 0.005)) { st.price.push(`${p.k}: ${p.r} → ${usd} (indirimli fiyat, toptan otomatik)`); p.r = usd; p.w = null; delete p.pc; continue; }
       const r0 = p.pc ? p.pc.r0 : p.r;
       st.price.push(`${p.k}: ${p.r} → ${usd}`);
       p.r = usd;
