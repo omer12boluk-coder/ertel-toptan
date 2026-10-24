@@ -28,4 +28,4 @@ FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_DISPAT
 
 ## Açık konular
 - iyzico "link ile ödeme" entegrasyonu (kullanıcı başvuracak).
-- Beslemede her üründe g:price (üstü çizili) + g:sale_price (gerçek satış) var. 24.10.2026'da 142 ürünün liste fiyatı indirimli fiyata indi; bu ürünlerde toptan (w) = liste fiyatı kaldı (eskiden indirimli fiyat w'ye yazılmıştı). Bu w'ler silinsin mi (yüzde kuralı uygulansın) kullanıcıya soruldu.
+- Beslemede her üründe g:price (üstü çizili) + g:sale_price (gerçek satış) var; uygulama sale_price'ı liste fiyatı alır. 24.10.2026'da eski "indirimli = toptan (w)" kayıtları silindi (kullanıcı onayladı), toptan artık % kuralıyla.
