@@ -476,7 +476,7 @@ export function VideoThumb({ src: src0, poster }) {
 export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', auto = true, className = '' }) {
   const src = mediaUrl(src0);
   const v = useRef(null);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(auto); // dokununca oynayanlar sesli başlar
   const [playing, setPlaying] = useState(false);
   const [prog, setProg] = useState(0);
   const [err, setErr] = useState(false);

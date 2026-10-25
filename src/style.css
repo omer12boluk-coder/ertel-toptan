@@ -1729,7 +1729,7 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .dz-dev { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 2px; background: var(--surface-2); }
 .dz-dev button { border: 0; background: none; width: 34px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); cursor: pointer; }
 .dz-dev button.on { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgb(0 0 0 / .15); }
-.dz-canvas { margin-inline: auto; transition: max-width .3s var(--ease); }
+.dz-canvas { margin-inline: auto; transition: max-width .3s var(--ease); overflow-anchor: none; padding-bottom: 45vh; }
 .dz-canvas.w-phone { max-width: 420px; }
 .dz-page.has-panel .dz-canvas { margin-right: min(400px, 40vw); }
 .dz .rv { opacity: 1 !important; transform: none !important; }
@@ -2279,3 +2279,25 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .gal-vid-time { bottom: 26px; }
 .gal-vid-snd, .gal-vid-big { transition: opacity .15s; }
 .gal-vid:has(.gal-vid-seek.on) :is(.gal-vid-snd, .gal-vid-big, .gal-vid-play) { opacity: 0; pointer-events: none; }
+
+/* video bölümü: genişlik (--vw), yerleşim (--vp 0 sol · .5 orta · 1 sağ), bir sırada 1-3 video */
+.sh-video { max-width: none !important; }
+.sh-video-row { width: 100%; }
+.sh-video-in { position: relative; width: var(--vw, 100%); margin-left: calc((100% - var(--vw, 100%)) * var(--vp, .5)); }
+.sh-video-grid { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); gap: 14px; }
+.sh-video.al-left .sh-video-h { text-align: left; }
+.sh-video.al-right .sh-video-h { text-align: right; }
+.sh-video.al-center .sh-video-h { text-align: center; }
+@media (max-width: 700px) {
+  .sh-video-in { width: max(var(--vw, 100%), 64%); margin-left: calc((100% - max(var(--vw, 100%), 64%)) * var(--vp, .5)); }
+  .sh-video-grid { gap: 8px; }
+}
+/* tasarım modu tutamaçları */
+.sh-vh { position: absolute; z-index: 3; opacity: 0; transition: opacity .15s; }
+.dz-blk:hover .sh-vh, .dz-on .sh-vh, .sh-video-in.dragging .sh-vh { opacity: 1; }
+.sh-vh-move { top: -15px; left: 50%; translate: -50% 0; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 15px; font: 600 12.5px/1 var(--f-body);
+  color: var(--fg); background: color-mix(in oklab, var(--surface) 94%, transparent); box-shadow: 0 4px 14px -6px rgb(0 0 0 / .4); cursor: grab; touch-action: none; }
+.sh-vh-l, .sh-vh-r { top: 50%; width: 10px; height: 54px; margin-top: -27px; border-radius: 6px; background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 4px 12px -4px rgb(0 0 0 / .4); cursor: ew-resize; touch-action: none; }
+.sh-vh-l { left: 8px; } .sh-vh-r { right: 8px; }
+.sh-video-in.dragging { outline: 2px dashed var(--accent); outline-offset: 6px; border-radius: 18px; }
+.vid-item { display: grid; gap: 6px; padding-bottom: 10px; border-bottom: 1px dashed var(--line); margin-bottom: 4px; }

@@ -2,7 +2,7 @@
 // Bölümler seçilir, sürüklenip sıralanır, gizlenir; marka / reklam kutuları elle taşınır; büyük reklam alanı
 // alt kenarından tutulup boyutlandırılır; araya başlık, ürün rafı ya da görsel bant eklenir.
 // Değişiklikler Ayarlar'daki aynı kayda (settings.shopHome + settings.brandLogos) yazılır: iki taraf hep aynı.
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { useStore, store, api, toast, go } from './store.js';
 import { Icon, Field, Toggle, Confirm } from './ui.jsx';
 import { withDefaults, norm } from './utils.js';
@@ -42,8 +42,24 @@ export function ShopDesigner() {
     const now = Date.now();
     if (now - hist.current.t > 600) { hist.current.list.push(cur); if (hist.current.list.length > 60) hist.current.list.shift(); }
     hist.current.t = now;
+    // ekran sabit kalsın: düzenlenen bölümün ekrandaki yeri ölçülür, çizim sonrası aynı yere geri getirilir
+    const ak = selRef.current?.kind === 'blk' ? selRef.current.k : pickRef.current?.kind === 'blk' ? pickRef.current.k : null;
+    const ael = ak ? document.querySelector(`.dz-blk[data-k="${CSS.escape(ak)}"]`) : null;
+    anchor.current = { k: ael ? ak : null, top: ael ? ael.getBoundingClientRect().top : 0, docH: document.documentElement.scrollHeight };
     store.set({ designDraft: setPath(cur, path, v) });
   };
+  const anchor = useRef(null);
+  const selRef = useRef(null); selRef.current = sel;
+  const pickRef = useRef(null); pickRef.current = pick;
+  useLayoutEffect(() => {
+    const a = anchor.current; anchor.current = null; if (!a) return;
+    // sayfa kısaldıysa tasarım alanı eski yüksekliğini korusun (tarayıcı kaydırmayı kendi düzeltip sayfayı oynatmasın)
+    const cv = document.querySelector('.dz-canvas'); const shrink = a.docH - document.documentElement.scrollHeight;
+    if (cv && shrink > 0) cv.style.minHeight = cv.offsetHeight + shrink + 'px';
+    if (!a.k) return;
+    const el = document.querySelector(`.dz-blk[data-k="${CSS.escape(a.k)}"]`); if (!el) return;
+    const dy = el.getBoundingClientRect().top - a.top; if (Math.abs(dy) > 1) scrollBy(0, dy);
+  }, [designDraft]);
   const undo = () => { const prev = hist.current.list.pop(); if (prev) { store.set({ designDraft: prev }); hist.current.t = 0; } };
   useEffect(() => {
     const k = (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.target.closest('input, textarea, [contenteditable="true"]')) { e.preventDefault(); undo(); } if (e.key === 'Escape') setSel(null); };
@@ -71,7 +87,7 @@ export function ShopDesigner() {
   function addBlock(at, type) {
     let key;
     if (type === 'rail') { const r = NEW.rail(); set('shopHome.sections', [...H.sections, r]); key = 'rail:' + r.id; }
-    else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : type === 'video' ? { t: 'video', src: '', ratio: '16:9', title: '' } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
+    else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : type === 'video' ? { t: 'video', vids: [{ src: '' }], ratio: '16:9', wp: 100, pos: 0.5, title: '' } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
     const n = [...L]; n.splice(at, 0, key); setL(n); if (mobile) setPick({ kind: 'blk', k: key }); setSel({ kind: 'blk', k: key });
   }
   function removeBlock(k) {
@@ -199,7 +215,7 @@ function DzBlock({ k, i, hidden, children }) {
   const on = sel?.kind === 'blk' && sel.k === k;
   const custom = k.startsWith('rail:') || k.startsWith('b:');
   return (
-    <div className={'dz-blk' + (on ? ' dz-on' : '') + (hidden ? ' dz-hid' : '')} data-dz="sec" data-i={i} onClick={() => tapBlock(k)}>
+    <div className={'dz-blk' + (on ? ' dz-on' : '') + (hidden ? ' dz-hid' : '')} data-dz="sec" data-i={i} data-k={k} onClick={() => tapBlock(k)}>
       <div className="dz-bar" onClick={(e) => e.stopPropagation()}>
         <span className="dz-grip" title="Tutup sürükleyin" onPointerDown={(e) => dragSort(e, 'sec', i, (f, t) => setL(moveItem(get('layout'), f, t)))}><Icon n="drag" s={16} /></span>
         <button className="dz-name" onClick={() => setSel({ kind: 'blk', k })}>{blockLabel(k, H)}{hidden && <em>gizli</em>}</button>

@@ -199,7 +199,7 @@ export function ShopHome({ S: Sover }) {
       </section>
     );
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
-    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : b.t === 'video' ? <VideoBlock b={b} edit={!!E} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
+    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : b.t === 'video' ? <VideoBlock b={b} edit={!!E} up={E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
     if (k === 'cta') return H.cta?.title ? (
       <section className="sh-cta rv">
         <div><b>{H.cta.title}</b>{H.cta.text && <p>{H.cta.text}</p>}</div>
@@ -301,17 +301,60 @@ function HeadBlock({ b, onTitle }) {
 // Video bölümü (Tasarım modunda "Bölüm ekle > Video"): link (Cloudflare ya da doğrudan .mp4), ebat ve genişlik seçilir.
 // Ekranda görünürken sessiz döngülü oynar; köşedeki düğmeyle tam ekran izlenir.
 export const VIDEO_RATIOS = [['16:9', 'Yatay (16:9)'], ['21:9', 'Geniş (21:9)'], ['1:1', 'Kare'], ['4:5', 'Dikey (4:5)'], ['9:16', 'Hikâye (9:16)']];
-function VideoBlock({ b, edit }) {
-  const ref = useRef(null);
-  const [vis, setVis] = useState(false);
-  useEffect(() => { const el = ref.current; if (!el || !('IntersectionObserver' in window)) { setVis(true); return; } const io = new IntersectionObserver(([e]) => setVis(e.isIntersecting && e.intersectionRatio > 0.4), { threshold: [0, 0.4, 0.8] }); io.observe(el); return () => io.disconnect(); }, []);
+export const videoList = (b) => (b.vids?.length ? b.vids : [{ src: b.src || '', poster: b.poster || '' }]);
+export function videoGeom(b) {
   const [rw, rh] = String(b.ratio || '16:9').split(':').map(Number);
-  const w = b.w || (rh > rw ? 'sm' : rh === rw ? 'md' : 'full');
+  const n = videoList(b).length;
+  const W = b.wp != null ? Number(b.wp) : b.w === 'sm' ? 36 : b.w === 'md' ? 60 : b.w === 'full' ? 100 : n > 1 ? 100 : rh > rw ? 36 : rh === rw ? 60 : 100;
+  return { rw: rw || 16, rh: rh || 9, W: Math.min(100, Math.max(15, W)), pos: b.pos != null ? Number(b.pos) : 0.5 };
+}
+function VideoBlock({ b, edit, up }) {
+  const ref = useRef(null);
+  const row = useRef(null);
+  const [vis, setVis] = useState(false);
+  const [live, setLive] = useState(null); // sürüklerken anlık genişlik / konum
+  useEffect(() => { const el = ref.current; if (!el || !('IntersectionObserver' in window)) { setVis(true); return; } const io = new IntersectionObserver(([e]) => setVis(e.isIntersecting && e.intersectionRatio > 0.4), { threshold: [0, 0.4, 0.8] }); io.observe(el); return () => io.disconnect(); }, []);
+  const list = videoList(b);
+  const g = videoGeom(b);
+  const W = live ? live.W : g.W, pos = live ? live.pos : g.pos;
+  // Tasarım modu (bilgisayar): ortadaki "Taşı" ile sağa-sola, kenar tutamaçlarıyla boyut; kenarlara ve ortaya yapışır
+  const drag = (mode) => (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const rw = row.current.getBoundingClientRect().width; const W0 = (g.W / 100) * rw; const x0 = (rw - W0) * g.pos; const sx = e.clientX;
+    let cur = { W: g.W, pos: g.pos };
+    document.body.classList.add('dz-dragging');
+    const mv = (ev) => {
+      const dx = ev.clientX - sx; let w = W0, x = x0;
+      if (mode === 'move') x = Math.min(rw - w, Math.max(0, x0 + dx));
+      else if (mode === 'r') w = Math.min(rw - x0, Math.max(rw * 0.15, W0 + dx));
+      else { const x1 = x0 + W0; w = Math.min(x1, Math.max(rw * 0.15, W0 - dx)); x = x1 - w; }
+      let p = rw - w > 1 ? x / (rw - w) : 0.5;
+      for (const sn of [0, 0.5, 1]) if (Math.abs(p - sn) < 0.035) p = sn;
+      let ww = Math.round((w / rw) * 100); if (ww > 97) ww = 100;
+      cur = { W: ww, pos: Math.round(p * 1000) / 1000 }; setLive(cur);
+    };
+    const end = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', end); document.body.classList.remove('dz-dragging'); setLive(null); up({ wp: cur.W, pos: cur.pos }); };
+    addEventListener('pointermove', mv); addEventListener('pointerup', end);
+  };
+  const al = pos < 0.25 ? 'left' : pos > 0.75 ? 'right' : 'center';
   return (
-    <section ref={ref} className={'sh-video rv vw-' + w + ' al-' + (b.align || 'center')}>
+    <section ref={ref} className={'sh-video rv al-' + al}>
       {(b.title || b.sub) && <div className="sh-video-h">{b.title && <h2>{b.title}</h2>}{b.sub && <p>{b.sub}</p>}</div>}
-      <div className="sh-video-box" style={{ aspectRatio: `${rw || 16} / ${rh || 9}` }}>
-        {b.src ? <PlayVideo src={b.src} poster={b.poster && !String(b.poster).startsWith('si:') ? b.poster : undefined} active={vis && !edit} /> : edit ? <span className="sh-video-empty"><Icon n="play" s={28} />Video linki girin</span> : null}
+      <div className="sh-video-row" ref={row}>
+        <div className={'sh-video-in' + (live ? ' dragging' : '')} style={{ '--vw': W + '%', '--vp': pos }}>
+          <div className="sh-video-grid" style={{ '--n': list.length }}>
+            {list.map((x, i) => (
+              <div key={i} className="sh-video-box" style={{ aspectRatio: `${g.rw} / ${g.rh}` }}>
+                {x.src ? <PlayVideo src={x.src} poster={x.poster && !String(x.poster).startsWith('si:') ? x.poster : undefined} active={vis && !edit} auto={b.play === 'auto'} /> : edit ? <span className="sh-video-empty"><Icon n="play" s={28} />Video linki girin</span> : null}
+              </div>
+            ))}
+          </div>
+          {up && <>
+            <button type="button" className="sh-vh sh-vh-move" onPointerDown={drag('move')} onClick={(e) => e.stopPropagation()} title="Tutup sağa-sola çekin"><Icon n="drag" s={14} />Taşı · %{W}</button>
+            <span className="sh-vh sh-vh-l" onPointerDown={drag('l')} onClick={(e) => e.stopPropagation()} title="Tutup çekin: boyut" />
+            <span className="sh-vh sh-vh-r" onPointerDown={drag('r')} onClick={(e) => e.stopPropagation()} title="Tutup çekin: boyut" />
+          </>}
+        </div>
       </div>
     </section>
   );
@@ -734,16 +777,34 @@ export function ScaleField({ v, onChange, label = 'Boyut', min = 0.4, max = 1.6 
   return <Field label={label}><span className="she-scale"><input type="range" min={min} max={max} step="0.05" value={v} onChange={(e) => onChange(Number(e.target.value))} /><code>%{Math.round(v * 100)}</code>{v !== 1 && <button type="button" className="linkish" onClick={() => onChange(1)}>sıfırla</button>}</span></Field>;
 }
 export function BlockFields({ b, up }) {
-  if (b.t === 'video') return <>
-    <Field label="Video linki" hint="Doğrudan video dosyası (.mp4). Cloudflare'deki videolar: https://ertel-b2b-watch.omer-12boluk.workers.dev/v/ad.mp4 — dosyayı gönderin, oraya koyalım."><input inputMode="url" placeholder="https://…/video.mp4" value={b.src || ''} onChange={(e) => up({ src: e.target.value.trim() })} /></Field>
-    <Field label="Ebat"><span className="seg seg-wrap">{VIDEO_RATIOS.map(([x, l]) => <button key={x} type="button" className={(b.ratio || '16:9') === x ? 'on' : ''} onClick={() => up({ ratio: x, w: null })}>{l}</button>)}</span></Field>
-    <Field label="Genişlik" hint="Dikey videolar dar gösterilirse sayfayı kaplamaz"><span className="seg">{[['full', 'Tam'], ['md', 'Orta'], ['sm', 'Dar']].map(([x, l]) => { const [rw, rh] = String(b.ratio || '16:9').split(':').map(Number); const cur = b.w || (rh > rw ? 'sm' : rh === rw ? 'md' : 'full'); return <button key={x} type="button" className={cur === x ? 'on' : ''} onClick={() => up({ w: x })}>{l}</button>; })}</span></Field>
-    <div className="row2">
-      <Field label="Başlık" opt><input value={b.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
-      <Field label="Alt yazı" opt><input value={b.sub || ''} onChange={(e) => up({ sub: e.target.value })} /></Field>
-    </div>
-    <Field label="Kapak resmi linki" opt hint="Video yüklenene kadar görünür"><input inputMode="url" placeholder="https://…/kapak.jpg" value={b.poster || ''} onChange={(e) => up({ poster: e.target.value.trim() })} /></Field>
-  </>;
+  if (b.t === 'video') {
+    const list = videoList(b); const g = videoGeom(b);
+    const setList = (l) => up({ vids: l, src: null, poster: null });
+    return <>
+      <p className="fine">Bilgisayarda videoyu ortadaki <b>Taşı</b> ile sağa-sola çekin, kenarlarından tutup büyütüp küçültün.</p>
+      {list.map((x, i) => (
+        <div key={i} className="vid-item">
+          <Field label={list.length > 1 ? `${i + 1}. video linki` : 'Video linki'} hint={i === 0 ? 'Doğrudan video dosyası (.mp4); R2 linkleri de olur.' : undefined}>
+            <span className="input-btn"><input inputMode="url" placeholder="https://…/video.mp4" value={x.src || ''} onChange={(e) => setList(list.map((y, j) => (j === i ? { ...y, src: e.target.value.trim() } : y)))} />
+              {list.length > 1 && <button type="button" className="btn sm ghost" aria-label="Videoyu kaldır" onClick={() => setList(list.filter((_, j) => j !== i))}><Icon n="trash" s={15} /></button>}</span>
+          </Field>
+          <Field label="Kapak resmi linki" opt hint="Dokununca oynatmada video başlamadan bu görünür"><input inputMode="url" placeholder="Boşsa videodan bir kare" value={x.poster || ''} onChange={(e) => setList(list.map((y, j) => (j === i ? { ...y, poster: e.target.value.trim() } : y)))} /></Field>
+        </div>
+      ))}
+      {list.length < 3 && <button type="button" className="btn sm outline" onClick={() => setList([...list, { src: '', poster: '' }])}><Icon n="plus" s={15} />Yanına video ekle (aynı sırada)</button>}
+      <Field label="Oynatma" hint={b.play === 'auto' ? 'Ekrana gelince sessiz ve döngülü kendiliğinden oynar' : 'Kapak (ya da videodan bir kare) görünür; dokununca sesli oynar'}><span className="seg">{[['tap', 'Dokununca'], ['auto', 'Otomatik']].map(([x, l]) => <button key={x} type="button" className={(b.play || 'tap') === x ? 'on' : ''} onClick={() => up({ play: x })}>{l}</button>)}</span></Field>
+      <Field label="Ebat"><span className="seg seg-wrap">{VIDEO_RATIOS.map(([x, l]) => <button key={x} type="button" className={(b.ratio || '16:9') === x ? 'on' : ''} onClick={() => up({ ratio: x })}>{l}</button>)}</span></Field>
+      <Field label="Genişlik" hint="Sayfa genişliğine göre; telefonda en az %64"><span className="she-scale"><input type="range" min="15" max="100" step="1" value={g.W} onChange={(e) => up({ wp: Number(e.target.value) })} /><code>%{g.W}</code></span></Field>
+      {g.W < 100 && <>
+        <Field label="Yerleşim"><span className="seg">{[[0, 'Sola'], [0.5, 'Ortaya'], [1, 'Sağa']].map(([x, l]) => <button key={x} type="button" className={g.pos === x ? 'on' : ''} onClick={() => up({ pos: x })}>{l}</button>)}</span></Field>
+        <Field label="İnce ayar"><span className="she-scale"><input type="range" min="0" max="1" step="0.01" value={g.pos} onChange={(e) => up({ pos: Number(e.target.value) })} /><code>{Math.round(g.pos * 100)}</code></span></Field>
+      </>}
+      <div className="row2">
+        <Field label="Başlık" opt><input value={b.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
+        <Field label="Alt yazı" opt><input value={b.sub || ''} onChange={(e) => up({ sub: e.target.value })} /></Field>
+      </div>
+    </>;
+  }
   if (b.t === 'banner') return <>
     <ImgPick v={b.img} onChange={(img) => up({ img })} max={1800} label="Görsel" hint="Tam genişlik yatay görsel (ör. 1600×400)" />
     <LinkPick v={b.link} onChange={(link) => up({ link })} />
