@@ -36,6 +36,8 @@ export default {
       if (url.pathname === '/notify-test' && req.method === 'POST') { if (await env.KV.get('ntest')) return json({ ok: false, error: 'Biraz bekleyip tekrar deneyin' }); await env.KV.put('ntest', '1', { expirationTtl: 120 }); return json(await notifySend(env, { subject: 'ERTEL GSM · bildirim denemesi', text: 'Bu bir deneme bildirimidir. Mağazadan sipariş gelince buna benzer bir mesaj alacaksınız.' })); }
       if (url.pathname === '/tg-link' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await tgLink(env, String(b.code || ''))); }
       if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: await notifyStatus(env) });
+      // Ürün videosu: iPhone Safari videoyu parça parça (Range) ister; dosya bekçinin kendi dosyalarından okunup dilimlenir
+      if (url.pathname.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD') && env.ASSETS) return await serveVideo(req, env, url, cors);
     } catch (e) { return json({ error: String(e.message || e) }, 500); }
     return json({ error: 'bulunamadı' }, 404);
   },
@@ -252,4 +254,23 @@ async function notifySend(env, { subject, text, short, replyTo, link }) {
     } catch (e) { out.email = 'hata: ' + e; }
   }
   return { ok: true, ...out };
+}
+
+async function serveVideo(req, env, url, cors) {
+  const name = url.pathname.slice(3);
+  if (!/^[\w.-]+\.(mp4|webm|jpg|webp)$/.test(name)) return new Response('yok', { status: 404, headers: cors });
+  const a = await env.ASSETS.fetch(new Request(new URL('/_m/' + name, url.origin)));
+  if (!a.ok) return new Response('yok', { status: 404, headers: cors });
+  const buf = await a.arrayBuffer();
+  const size = buf.byteLength;
+  const type = name.endsWith('.mp4') ? 'video/mp4' : name.endsWith('.webm') ? 'video/webm' : name.endsWith('.jpg') ? 'image/jpeg' : 'image/webp';
+  const base = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400', ...cors, 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges' };
+  const m = /bytes=(\d*)-(\d*)/.exec(req.headers.get('Range') || '');
+  if (!m) return new Response(req.method === 'HEAD' ? null : buf, { headers: { ...base, 'Content-Length': String(size) } });
+  let start = m[1] === '' ? size - Number(m[2]) : Number(m[1]);
+  let end = m[1] !== '' && m[2] !== '' ? Number(m[2]) : size - 1;
+  if (m[1] === '') end = size - 1;
+  if (!(start >= 0) || start >= size || end < start) return new Response(null, { status: 416, headers: { ...base, 'Content-Range': `bytes */${size}` } });
+  end = Math.min(end, size - 1);
+  return new Response(req.method === 'HEAD' ? null : buf.slice(start, end + 1), { status: 206, headers: { ...base, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) } });
 }

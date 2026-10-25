@@ -18,7 +18,7 @@ const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',',
 export function ProductEdit({ p, onClose }) {
   const { catalog, settings: S } = useStore();
   const isNew = !p;
-  const [f, setF] = useState(() => p ? { ...p } : { id: Math.max(0, ...catalog.map((x) => x.id)) + 1, k: '', c: 0, r: 0, w: null, n: '', cur: 'USD', s: 0, a: 1 });
+  const [f, setF] = useState(() => p ? { ...p } : { id: Math.max(9000000, ...catalog.map((x) => x.id)) + 1, k: '', c: 0, r: 0, w: null, n: '', cur: 'USD', s: 0, a: 1, man: 1 });
   const [busy, setBusy] = useState(false);
   const [imgUrl, setImgUrl] = useState(p?.img && p.img !== 'fs' ? p.img : '');
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
@@ -50,6 +50,7 @@ export function ProductEdit({ p, onClose }) {
       // Toptan fiyat elle değiştirildiyse ya da "kontrol ettim" denildiyse fiyat uyarısı kalkar
       if (rec.pc && (pcOk || String(rec.w ?? '') !== String(p?.w ?? ''))) delete rec.pc;
       delete rec.nw; // yönetici gördü
+      if (!rec.vd) delete rec.vd;
       if (rec.so && rec.a) delete rec.so; // elle açıldıysa eşitleme artık karışmaz
       rec.t = (rec.t || '').split(',').map((x) => x.trim()).filter(Boolean).join(',');
       rec.b = (rec.b || '').trim();
@@ -99,6 +100,7 @@ export function ProductEdit({ p, onClose }) {
             {(f.img || imgUrl) && <button className="btn sm ghost danger" onClick={removeImg}>Kaldır</button>}
           </div>
           <Field label="veya resim adresi (URL)"><input id="pe-img" placeholder="https://…" value={imgUrl} onChange={(e) => setImgUrl(e.target.value)} disabled={f.img === 'fs'} /></Field>
+          <Field label="Video linki" opt hint="Ürün penceresinde resimlerin yanında sitenin kendi oynatıcısıyla oynar (sessiz, döngülü; dokununca durur). Doğrudan video dosyası linki (.mp4) olmalı."><input id="pe-vd" inputMode="url" placeholder="https://…/video.mp4" value={f.vd || ''} onChange={(e) => set('vd', e.target.value.trim() || undefined)} /></Field>
         </div>
         <div className="form-col">
           <Field label="Ürün adı"><textarea id="pe-name" rows="2" value={f.n} onChange={(e) => set('n', e.target.value)} /></Field>

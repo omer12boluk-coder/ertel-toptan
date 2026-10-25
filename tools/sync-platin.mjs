@@ -58,6 +58,7 @@ const round2 = (v) => Math.round(v * 100) / 100;
 for (const p of cat) {
   const f = feed.get(p.id);
   if (!f) {
+    if (p.man) continue; // yönetimden elle eklenen ürün: sitede olmaması normal, gizlenmez
     if (p.a && !p.so) { p.a = 0; p.so = 1; st.hidden++; } // sitede satışta değil
     continue;
   }
@@ -98,7 +99,7 @@ function chunks(arr, max = 650000) {
   for (const x of arr) { const s = JSON.stringify(x).length * 1.15; if (cur.length && size + s > max) { out.push(cur); cur = []; size = 0; } cur.push(x); size += s; }
   if (cur.length) out.push(cur); return out;
 }
-const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img'];
+const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'man'];
 const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; return o; };
 async function writeChunked(col, items, key) {
   const ps = chunks(items);

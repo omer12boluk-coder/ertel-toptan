@@ -4,6 +4,11 @@ main = "worker/index.js"
 compatibility_date = "2025-06-01"
 workers_dev = true # uygulamanın kullandığı küçük web adresi (/rate, /sync)
 
+# Ürün videoları (deneme): worker/media/_m/ içindeki dosyalar /v/<ad> adresinden parça parça (Range) verilir
+[assets]
+directory = "./worker/media"
+binding = "ASSETS"
+
 [triggers]
 crons = ["* * * * *"]
 

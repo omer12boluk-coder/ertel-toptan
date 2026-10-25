@@ -30,7 +30,8 @@ export function useVisibleProducts(admin) {
 export function imageList(p, S, size) {
   const t = size === 'lg' ? S.catalog.imageLarge || S.catalog.imageThumb : S.catalog.imageThumb;
   const files = [p.pi, ...(p.im || [])].filter(Boolean);
-  return t && t.includes('{pi}') ? files.map((f) => t.replaceAll('{pi}', f)) : [];
+  const abs = (f) => /^(https?:)?\/\/|^\//.test(f); // tam adres (elle eklenen resim) olduğu gibi kullanılır
+  return files.map((f) => (abs(f) ? f : t && t.includes('{pi}') ? t.replaceAll('{pi}', f) : null)).filter(Boolean);
 }
 
 export function stockInfo(p, S) {
@@ -365,12 +366,13 @@ export function Gallery({ p }) {
   const S = useStore((s) => s.settings);
   const urls = imageList(p, S, 'lg');
   const thumbs = imageList(p, S, 'sm');
-  const slides = (p.img ? [null] : []).concat(urls); // null = elle yüklenen resim
+  // kaydırma sayfaları: elle yüklenen resim (fs), siteden resimler; video varsa ikinci sırada
+  const slides = (p.img ? [{ t: 'fs' }] : []).concat(urls.map((u, z) => ({ t: 'img', u, z, th: thumbs[z] || u })));
+  if (p.vd) slides.splice(Math.min(1, slides.length), 0, { t: 'vid', u: p.vd, poster: urls[0] });
   const [i, setI] = useState(0);
   const [bad, setBad] = useState({});
   const [zoom, setZoom] = useState(null);
   const track = useRef(null);
-  const off = p.img ? 1 : 0;
   const box = zoom != null && <Lightbox urls={urls} thumbs={thumbs} start={zoom} title={p.n} onClose={() => setZoom(null)} />;
   if (slides.length <= 1) return (
     <>
@@ -390,26 +392,57 @@ export function Gallery({ p }) {
     setI(Math.round(el.scrollLeft / w));
   };
   const grab = () => { aim.current = null; }; // parmakla kaydırmaya başlayınca normal takibe dön
+  const isVid = slides[i]?.t === 'vid';
   return (
     <div className="gallery">
       <div className="gal-stage">
         <div className="gal-track" ref={track} onScroll={onScroll} onTouchStart={grab} onWheel={grab}>
-          {slides.map((u, k) => (
+          {slides.map((x, k) => (
             <div className="gal-slide" key={k}>
-              {u == null ? <Thumb p={{ ...p, pi: null }} size="lg" /> : bad[k] ? <Thumb p={{ ...p, pi: null, img: null }} size="lg" /> : (
-                <button className="gal-open" onClick={() => setZoom(k - off)} aria-label="Resmi büyüt">
-                  <img src={u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} onError={() => setBad((b) => ({ ...b, [k]: 1 }))} />
+              {x.t === 'fs' ? <Thumb p={{ ...p, pi: null }} size="lg" />
+                : x.t === 'vid' ? <GalVideo src={x.u} poster={x.poster} active={i === k} />
+                : bad[k] ? <Thumb p={{ ...p, pi: null, img: null }} size="lg" /> : (
+                <button className="gal-open" onClick={() => setZoom(x.z)} aria-label="Resmi büyüt">
+                  <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} onError={() => setBad((b) => ({ ...b, [k]: 1 }))} />
                 </button>
               )}
             </div>
           ))}
         </div>
-        <span className="gal-count num"><Icon n="zoom" s={13} /> {i + 1} / {slides.length}</span>
-        {i > 0 && <button className="gal-nav prev" onClick={() => goTo(i - 1)} aria-label="Önceki resim"><Icon n="back" s={18} /></button>}
-        {i < slides.length - 1 && <button className="gal-nav next" onClick={() => goTo(i + 1)} aria-label="Sonraki resim"><Icon n="back" s={18} /></button>}
+        {!isVid && <span className="gal-count num"><Icon n="zoom" s={13} /> {i + 1} / {slides.length}</span>}
+        {i > 0 && <button className="gal-nav prev" onClick={() => goTo(i - 1)} aria-label="Önceki"><Icon n="back" s={18} /></button>}
+        {i < slides.length - 1 && <button className="gal-nav next" onClick={() => goTo(i + 1)} aria-label="Sonraki"><Icon n="back" s={18} /></button>}
       </div>
-      <ThumbStrip n={slides.length} active={i} onPick={goTo} render={(k) => (slides[k] == null ? <Thumb p={{ ...p, pi: null }} size="sm" /> : <img src={thumbs[k - off] || slides[k]} alt="" loading="lazy" />)} />
+      <ThumbStrip n={slides.length} active={i} onPick={goTo} render={(k) => {
+        const x = slides[k];
+        if (x.t === 'fs') return <Thumb p={{ ...p, pi: null }} size="sm" />;
+        if (x.t === 'vid') return <span className="gal-th-vid">{x.poster && <img src={thumbs[0] || x.poster} alt="" loading="lazy" />}<i><Icon n="play" s={14} /></i></span>;
+        return <img src={x.th} alt="" loading="lazy" />;
+      }} />
       {box}
+    </div>
+  );
+}
+
+// Ürün videosu: sitenin kendi oynatıcısı gibi (tarayıcı düğmeleri yok). Sayfası görünürken sessiz ve döngülü oynar,
+// dokununca durur/devam eder, köşedeki düğmeyle ses açılır. Başka sayfaya kayınca durur.
+function GalVideo({ src, poster, active }) {
+  const v = useRef(null);
+  const [muted, setMuted] = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const [prog, setProg] = useState(0);
+  const [err, setErr] = useState(false);
+  useEffect(() => { const el = v.current; if (!el) return; if (active) el.play().catch(() => {}); else el.pause(); }, [active]);
+  const toggle = () => { const el = v.current; if (!el) return; el.paused ? el.play().catch(() => {}) : el.pause(); };
+  if (err) return <div className="gal-vid-err"><Icon n="play" s={26} /><span>Video açılamadı</span></div>;
+  return (
+    <div className={'gal-vid' + (playing ? ' playing' : '')}>
+      <video ref={v} src={src} poster={poster} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
+        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => setErr(true)}
+        onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); }} onClick={toggle} />
+      {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={28} /></button>}
+      <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>
+      <span className="gal-vid-bar"><i style={{ transform: `scaleX(${prog})` }} /></span>
     </div>
   );
 }

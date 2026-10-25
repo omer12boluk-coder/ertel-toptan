@@ -2132,3 +2132,21 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .pdesc .pdesc-body { max-height: none; }
   .pdesc .pdesc-body::after, .pdesc > .link { display: none; }
 }
+
+/* Ürün videosu (galeride, sitenin kendi oynatıcısı gibi) */
+.gal-vid { position: relative; width: 100%; height: 100%; background: #0d1120; overflow: hidden; }
+.gal-vid video { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; }
+.gal-vid-play { position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  background: rgb(10 14 30 / .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: 0 0 0 1px rgb(255 255 255 / .25); animation: gvp-in .25s ease both; }
+.gal-vid-play .ic path { fill: currentColor; }
+.gal-vid-play .ic { transform: translateX(2px); }
+.gal-vid-snd { position: absolute; left: 10px; bottom: 14px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  background: rgb(10 14 30 / .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.gal-vid-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgb(255 255 255 / .2); }
+.gal-vid-bar i { display: block; height: 100%; background: #fff; transform-origin: left; transition: transform .25s linear; }
+.gal-vid-err { width: 100%; height: 100%; display: grid; place-content: center; justify-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+@keyframes gvp-in { from { opacity: 0; transform: scale(.85); } }
+.gal-th-vid { position: relative; display: block; width: 100%; height: 100%; background: #0d1120; }
+.gal-th-vid img { width: 100%; height: 100%; object-fit: cover; opacity: .75; }
+.gal-th-vid i { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; }
+.gal-th-vid .ic path { fill: currentColor; }

@@ -19,6 +19,9 @@ const P = {
   minus: 'M5 12h14',
   x: 'M6 6l12 12M18 6 6 18',
   chev: 'M6 9l6 6 6-6',
+  play: 'M7.5 5.2v13.6a.6.6 0 0 0 .9.5l10.6-6.8a.6.6 0 0 0 0-1L8.4 4.7a.6.6 0 0 0-.9.5z',
+  sound: 'M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',
+  mute: 'M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16.5 9.5l5 5M21.5 9.5l-5 5',
   drag: 'M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01',
   undo: 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
   brush: 'M12 3a9 9 0 1 0 0 18c1 0 1.6-.7 1.6-1.6 0-.9-.8-1.3-.8-2.1 0-.8.7-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-4.9-4-8.8-9-8.8zM7.5 11.5h.01M10 7.5h.01M15 7.5h.01',
@@ -121,7 +124,8 @@ export function Thumb({ p, size = 'md' }) {
     if (p.img === 'fs') { let live = true; setSrc(null); api().getImage(p.id).then((d) => live && setSrc(d)); return () => { live = false; }; }
     if (p.img) return setSrc(p.img);
     const t = size === 'lg' ? S.catalog.imageLarge || S.catalog.imageThumb : S.catalog.imageThumb;
-    if (!t || (t.includes('{pi}') && !p.pi)) return setSrc(null);
+    if (!(/^(https?:)?\/\/|^\//.test(p.pi || '')) && (!t || (t.includes('{pi}') && !p.pi))) return setSrc(null);
+    if (/^(https?:)?\/\/|^\//.test(p.pi || '')) return setSrc(p.pi); // tam adres (elle eklenen ürün resmi)
     setSrc(t.replaceAll('{pi}', p.pi || '').replaceAll('{kod}', p.k).replaceAll('{id}', p.id));
   }, [p?.id, p?.img, p?.pi, S.catalog.imageThumb, S.catalog.imageLarge, size]);
   const brand = (p?.n || '?').split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '').slice(0, 6);
