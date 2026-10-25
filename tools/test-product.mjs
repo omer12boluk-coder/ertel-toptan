@@ -23,6 +23,10 @@ if (MODE === 'kontrol') { // canlı linkler gerçekten çalışıyor mu (iPhone'
       const h = await fetch(p.vd, { method: 'HEAD' }); line += ` · boyut=${h.headers.get('content-length')}`;
       const buf = Buffer.from(await (await fetch(p.vd)).arrayBuffer());
       const at = (t) => buf.indexOf(Buffer.from(t));
+      const ac = at('avcC'); if (ac >= 0) line += ` · avcC profil=${buf[ac + 5]} uyum=${buf[ac + 6]} seviye=${buf[ac + 7]}`;
+      const a1 = at('avc1'); if (a1 >= 0) line += ` · boyut ${buf.readUInt16BE(a1 + 28)}x${buf.readUInt16BE(a1 + 30)}`;
+      for (const t of ['colr', 'mdcv', 'clli', 'dvcC', 'dvvC', 'sgpd', 'edts', 'elst']) if (at(t) >= 0) line += ' ' + t;
+      const tr = []; let i = -1; while ((i = buf.indexOf(Buffer.from('hdlr'), i + 1)) >= 0 && i < 200000) tr.push(buf.slice(i + 12, i + 16).toString()); line += ' izler=' + tr.join(',');
       line += ` · moov@${at('moov')} mdat@${at('mdat')} codec=${['avc1', 'hvc1', 'hev1', 'av01', 'vp09'].filter((c) => at(c) >= 0).join('/')} ses=${['mp4a', 'ac-3', 'Opus'].filter((c) => at(c) >= 0).join('/')}`;
     } catch (e) { line += ' → HATA ' + e.message; }
     console.log('::notice title=Video::' + line);
