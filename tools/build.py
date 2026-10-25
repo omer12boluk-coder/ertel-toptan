@@ -44,7 +44,7 @@ hosted = f'''<!doctype html>
 <head>
 <meta charset="utf-8">
 <base href="/">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>ERTEL GSM</title>
 <meta name="theme-color" content="#2f55b0">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -66,7 +66,7 @@ hosted = f'''<!doctype html>
 </html>
 '''
 (PUB / 'index.html').write_text(hosted)
-(ROOT / 'DEMO.html').write_text('<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body>' + art + '</body></html>')
+(ROOT / 'DEMO.html').write_text('<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"></head><body>' + art + '</body></html>')
 (PUB / 'seed-products.json').write_text(js(products))
 (PUB / 'version.json').write_text(json.dumps({'v': BUILD}))
 (PUB / 'seed-desc.json').write_text(js(descs))

@@ -62,16 +62,43 @@ export function Icon({ n, s = 20, className = '' }) {
 
 let openSheets = 0;
 export function Sheet({ title, onClose, children, footer, wide, sub }) {
+  const ref = useRef(null);
+  const bg = useRef(null);
   useEffect(() => {
     const k = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', k);
     openSheets++; document.body.classList.add('noscroll');
     return () => { window.removeEventListener('keydown', k); if (--openSheets <= 0) { openSheets = 0; document.body.classList.remove('noscroll'); } };
   }, []);
+  // Telefonda: pencereyi tutup aşağı çekince kapanır (üst kısımdan ya da içerik en üstteyken her yerden)
+  const drag = useRef(null);
+  const onTouchStart = (e) => {
+    if (!matchMedia('(max-width: 700px)').matches || e.touches.length !== 1) return;
+    const body = ref.current.querySelector('.sheet-b');
+    const fromTop = e.target.closest('.sheet-h, .sheet-grab');
+    if (!fromTop && (!body || body.scrollTop > 0 || e.target.closest('input, textarea, select, .gal-track, .gal-thumbs'))) return;
+    drag.current = { y0: e.touches[0].clientY, t0: Date.now(), dy: 0, on: false };
+  };
+  const onTouchMove = (e) => {
+    const d = drag.current; if (!d) return;
+    const dy = e.touches[0].clientY - d.y0;
+    if (!d.on) { if (dy < 6) { if (dy < -6) drag.current = null; return; } d.on = true; ref.current.style.transition = 'none'; }
+    d.dy = Math.max(0, dy);
+    ref.current.style.transform = `translateY(${d.dy}px)`;
+    if (bg.current) bg.current.style.background = `rgb(8 16 13 / ${Math.max(0, 0.45 * (1 - d.dy / 500)).toFixed(3)})`;
+  };
+  const onTouchEnd = () => {
+    const d = drag.current; drag.current = null; if (!d || !d.on) return;
+    const el = ref.current; const fast = d.dy / Math.max(1, Date.now() - d.t0) > 0.6;
+    el.style.transition = 'transform .22s ease';
+    if (d.dy > 110 || (fast && d.dy > 40)) { el.style.transform = 'translateY(100%)'; if (bg.current) { bg.current.style.transition = 'background .22s'; bg.current.style.background = 'transparent'; } setTimeout(onClose, 200); }
+    else { el.style.transform = ''; if (bg.current) bg.current.style.background = ''; }
+  };
   // pencere sayfanın en üstüne (body) çizilir: içinde bulunduğu kutu ne olursa olsun ekrana göre konumlanır
   return createPortal(
-    <div className="sheet-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={'sheet' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={title}>
+    <div ref={bg} className="sheet-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div ref={ref} className={'sheet' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={title} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+        <span className="sheet-grab" aria-hidden="true" />
         <header className="sheet-h">
           <div className="sheet-title"><h2>{title}</h2>{sub && <p>{sub}</p>}</div>
           <button className="icon-btn" onClick={onClose} aria-label="Kapat"><Icon n="x" /></button>

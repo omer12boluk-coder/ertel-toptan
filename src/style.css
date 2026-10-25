@@ -2046,3 +2046,18 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .hsearch.closing .hsearch-box > .ic { color: var(--muted); }
 }
 @keyframes hs-fade { from { opacity: 0; } }
+
+/* ===== SADECE TELEFON: uygulama gibi dokunuş ===== */
+@media (hover: none) and (pointer: coarse) {
+  /* iki parmakla büyütme ve çift dokunup yakınlaştırma kapalı (büyük resim penceresi hariç) */
+  html, body { touch-action: pan-x pan-y; }
+  /* yazı alanına dokununca iPhone yakınlaştırmasın: 16px'ten küçük yazı alanında otomatik yakınlaştırıyordu */
+  input, select, textarea { font-size: max(16px, 1em) !important; }
+}
+.sheet-grab { display: none; }
+@media (max-width: 700px) {
+  /* pencerenin üstünde tutma çubuğu: aşağı çekince kapanır */
+  .sheet-grab { display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 8px auto -6px; flex: none; }
+  .sheet-h { touch-action: none; }
+  .sheet-b { overscroll-behavior-y: contain; }
+}

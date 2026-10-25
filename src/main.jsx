@@ -553,5 +553,9 @@ function App() {
   );
 }
 
+// Telefonda iki parmakla sayfayı büyütme kapalı (uygulama gibi); iOS Safari bazı durumlarda CSS'i dinlemediği için ayrıca engellenir
+if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
+  for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => { if (!e.target.closest?.('.lb')) e.preventDefault(); }, { passive: false });
+}
 createRoot(document.getElementById('root')).render(<App />);
 boot();
