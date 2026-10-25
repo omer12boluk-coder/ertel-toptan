@@ -368,7 +368,7 @@ export function Gallery({ p }) {
   const thumbs = imageList(p, S, 'sm');
   // kaydırma sayfaları: elle yüklenen resim (fs), siteden resimler; video varsa ikinci sırada
   const slides = (p.img ? [{ t: 'fs' }] : []).concat(urls.map((u, z) => ({ t: 'img', u, z, th: thumbs[z] || u })));
-  if (p.vd) slides.splice(Math.min(1, slides.length), 0, { t: 'vid', u: p.vd, poster: urls[0] });
+  if (p.vd) slides.splice(Math.min(1, slides.length), 0, { t: 'vid', u: p.vd, poster: p.vdp || '' });
   const [i, setI] = useState(0);
   const [bad, setBad] = useState({});
   const [zoom, setZoom] = useState(null);
@@ -416,12 +416,45 @@ export function Gallery({ p }) {
       <ThumbStrip n={slides.length} active={i} onPick={goTo} render={(k) => {
         const x = slides[k];
         if (x.t === 'fs') return <Thumb p={{ ...p, pi: null }} size="sm" />;
-        if (x.t === 'vid') return <span className="gal-th-vid">{x.poster && <img src={thumbs[0] || x.poster} alt="" loading="lazy" />}<i><Icon n="play" s={14} /></i></span>;
+        if (x.t === 'vid') return <VideoThumb src={x.u} poster={x.poster} />;
         return <img src={x.th} alt="" loading="lazy" />;
       }} />
       {box}
     </div>
   );
+}
+
+// Videonun küçük resmi: verilmiş kapak varsa o; yoksa videonun ~1. saniyesinden bir kare alınır (bellekte saklanır).
+// Kare alınamazsa (video sitesi izin vermiyorsa) '' döner; o zaman küçük resimde videonun kendisi duraklatılmış gösterilir.
+const frameCache = new Map();
+export function useVideoFrame(src, given) {
+  const [u, setU] = useState(() => given || frameCache.get(src) || null);
+  useEffect(() => {
+    if (given) { setU(given); return; }
+    if (!src) { setU(''); return; }
+    if (frameCache.has(src)) { setU(frameCache.get(src)); return; }
+    let dead = false;
+    const v = document.createElement('video');
+    const done = (x) => { clearTimeout(to); if (x) frameCache.set(src, x); if (!dead) setU(x || ''); v.removeAttribute('src'); try { v.load(); } catch {} };
+    const to = setTimeout(() => done(''), 9000);
+    v.crossOrigin = 'anonymous'; v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.addEventListener('loadedmetadata', () => { v.currentTime = Math.min(1.2, (v.duration || 4) * 0.12); }, { once: true });
+    v.addEventListener('seeked', () => {
+      try {
+        const k = Math.min(1, 720 / (v.videoWidth || 720)); const c = document.createElement('canvas');
+        c.width = Math.round((v.videoWidth || 720) * k); c.height = Math.round((v.videoHeight || 720) * k);
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); done(c.toDataURL('image/jpeg', 0.82));
+      } catch { done(''); }
+    }, { once: true });
+    v.addEventListener('error', () => done(''), { once: true });
+    v.src = src;
+    return () => { dead = true; clearTimeout(to); };
+  }, [src, given]);
+  return u; // null: hazırlanıyor · '': alınamadı · adres: resim
+}
+export function VideoThumb({ src, poster }) {
+  const f = useVideoFrame(src, poster);
+  return <span className="gal-th-vid">{f ? <img src={f} alt="" /> : f === '' ? <video src={src + '#t=1'} muted playsInline preload="metadata" /> : null}<i><Icon n="play" s={14} /></i></span>;
 }
 
 // Video: sitenin kendi oynatıcısı gibi (tarayıcı düğmeleri yok). Görünürken sessiz ve döngülü oynar, dokununca
@@ -434,20 +467,22 @@ export function PlayVideo({ src, poster, active = true, fit = 'cover', auto = tr
   const [prog, setProg] = useState(0);
   const [err, setErr] = useState(false);
   const [big, setBig] = useState(null); // tam ekranda açılırken kalınan saniye
+  const frame = useVideoFrame(src, poster);
+  const pst = frame || undefined;
   useEffect(() => { const el = v.current; if (!el || big != null) return; if (active && auto) el.play().catch(() => {}); else el.pause(); }, [active, auto, big]);
   const toggle = () => { const el = v.current; if (!el) return; el.paused ? el.play().catch(() => {}) : el.pause(); };
   const open = () => { const el = v.current; el?.pause(); setBig(el ? el.currentTime : 0); };
   if (err) return <div className={'gal-vid-err ' + className}><Icon n="play" s={26} /><span>Video açılamadı</span></div>;
   return (
     <div className={'gal-vid' + (playing ? ' playing' : '') + ' ' + className}>
-      <video ref={v} src={src} poster={poster || undefined} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
+      <video ref={v} src={src} poster={pst} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
         style={{ objectFit: fit }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => setErr(true)}
         onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); }} onClick={toggle} />
       {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={28} /></button>}
       <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>
       <button className="gal-vid-big" onClick={open} aria-label="Büyüt" title="Büyük izle"><Icon n="full" s={17} /></button>
       <span className="gal-vid-bar"><i style={{ transform: `scaleX(${prog})` }} /></span>
-      {big != null && <VideoViewer src={src} poster={poster} start={big} onClose={(t) => { setBig(null); const el = v.current; if (el && t != null) { el.currentTime = t; } }} />}
+      {big != null && <VideoViewer src={src} poster={pst} start={big} onClose={(t) => { setBig(null); const el = v.current; if (el && t != null) { el.currentTime = t; } }} />}
     </div>
   );
 }

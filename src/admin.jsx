@@ -51,7 +51,8 @@ export function ProductEdit({ p, onClose }) {
       // Toptan fiyat elle değiştirildiyse ya da "kontrol ettim" denildiyse fiyat uyarısı kalkar
       if (rec.pc && (pcOk || String(rec.w ?? '') !== String(p?.w ?? ''))) delete rec.pc;
       delete rec.nw; // yönetici gördü
-      if (!rec.vd) delete rec.vd;
+      if (!rec.vd) { delete rec.vd; delete rec.vdp; }
+      if (!rec.vdp) delete rec.vdp;
       if (rec.so && rec.a) delete rec.so; // elle açıldıysa eşitleme artık karışmaz
       rec.t = (rec.t || '').split(',').map((x) => x.trim()).filter(Boolean).join(',');
       rec.b = (rec.b || '').trim();
@@ -102,6 +103,7 @@ export function ProductEdit({ p, onClose }) {
           </div>
           <Field label="veya resim adresi (URL)"><input id="pe-img" placeholder="https://…" value={imgUrl} onChange={(e) => setImgUrl(e.target.value)} disabled={f.img === 'fs'} /></Field>
           <Field label="Video linki" opt hint="Ürün penceresinde resimlerin yanında sitenin kendi oynatıcısıyla oynar (sessiz, döngülü; dokununca durur). Doğrudan video dosyası linki (.mp4) olmalı."><input id="pe-vd" inputMode="url" placeholder="https://…/video.mp4" value={f.vd || ''} onChange={(e) => set('vd', e.target.value.trim() || undefined)} /></Field>
+          {f.vd && <Field label="Video kapak resmi" opt hint="Boşsa videonun ilk saniyelerinden bir kare otomatik kullanılır"><input id="pe-vdp" inputMode="url" placeholder="https://…/kapak.jpg" value={f.vdp || ''} onChange={(e) => set('vdp', e.target.value.trim() || undefined)} /></Field>}
         </div>
         <div className="form-col">
           <Field label="Ürün adı"><textarea id="pe-name" rows="2" value={f.n} onChange={(e) => set('n', e.target.value)} /></Field>

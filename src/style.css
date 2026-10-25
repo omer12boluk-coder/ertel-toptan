@@ -2147,8 +2147,9 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .gal-vid-err { width: 100%; height: 100%; display: grid; place-content: center; justify-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
 @keyframes gvp-in { from { opacity: 0; transform: scale(.85); } }
 .gal-th-vid { position: relative; display: block; width: 100%; height: 100%; background: #0d1120; }
-.gal-th-vid img { width: 100%; height: 100%; object-fit: cover; opacity: .75; }
-.gal-th-vid i { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; }
+.gal-th-vid img, .gal-th-vid video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.gal-th-vid i { position: absolute; inset: 0; margin: auto; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgb(10 14 30 / .55); box-shadow: 0 0 0 1px rgb(255 255 255 / .35); }
+.gal-th-vid i .ic { width: 11px; height: 11px; transform: translateX(1px); }
 .gal-th-vid .ic path { fill: currentColor; }
 
 /* Mağaza üst menüsü: telefonda mağaza adı "Online mağaza" etiketinin üstünde küçük; "Giriş yap" kısalır */
