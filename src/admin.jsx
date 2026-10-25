@@ -603,9 +603,7 @@ export function Settings() {
           <Toggle id="s-tags" label="Gizli etiketleri aramada kullan" hint="Bayiler etiketleri görmez ama “jbc uç” gibi aramalarda ürün bulunur" checked={d.catalog.searchTags} onChange={(v) => set('catalog.searchTags', v)} />
           <Toggle id="s-brand" label="Markayı göster" checked={d.catalog.showBrand} onChange={(v) => set('catalog.showBrand', v)} />
           <Toggle id="s-desc" label="Ürün açıklamasını göster" hint="Siteden gelen açıklama ürün detayında görünür" checked={d.catalog.showDescription} onChange={(v) => set('catalog.showDescription', v)} />
-          <h3>Ürün açılışı</h3>
-    <Field label="Online mağazada ürüne basınca" hint="Pencere: sayfanın üstünde açılır (varsayılan). Sayfa: ayrı ürün sayfası, adres çubuğunda ürün linki olur."><span className="seg">{[['sheet', 'Pencere'], ['page', 'Sayfa']].map(([x, l]) => <button key={x} type="button" className={(C.productView || 'sheet') === x ? 'on' : ''} onClick={() => set('cards.productView', x)}>{l}</button>)}</span></Field>
-    <h3>Ürün resimleri</h3>
+          <h3>Ürün resimleri</h3>
           <p className="fine">Resimler sitenizden (PlatinMarket) gösterilir, Firebase’de yer kaplamaz. Yeni eklenen ürünlerin resimlerini Ayarlar → Veri → “Resimleri siteden eşle” ile çekebilirsiniz. Elle yüklediğiniz resim her zaman önceliklidir.</p>
           <div className="row2">
             <Field label="Liste resmi adresi" hint="{pi} = siteden eşlenen dosya adı"><input id="s-imgt" value={d.catalog.imageThumb} onChange={(e) => set('catalog.imageThumb', e.target.value)} /></Field>
