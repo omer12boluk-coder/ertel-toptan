@@ -554,12 +554,15 @@ createRoot(document.getElementById('root')).render(<App />);
 boot();
 
 // Telefon alt menüsü: seçili sekmenin küçük hapı iOS gibi parmağı izler. Basılı tutup kaydırınca hap hafifçe büyüyerek
-// parmakla birlikte kayar, bırakılan sekmeye yumuşakça oturup eski boyuna döner. Kısa dokunuşta da hap yeni sekmeye kayar.
+// parmakla birebir kayar (DOM'a doğrudan yazılır, gecikme yok), bırakılan sekmeye yumuşakça oturup eski boyuna döner.
+// iPhone alt kenar hareketi dokunuşu elinden alırsa (touchcancel) yine son gösterilen sekmeye geçer.
 function BotNav({ items, tab, badge }) {
   const ref = useRef(null);
-  const [drag, setDrag] = useState(null); // { x, i }
+  const pill = useRef(null);
+  const [hov, setHov] = useState(-1);
   const [geo, setGeo] = useState(null); // { cs: [sekme ortaları], top }
   const st = useRef(null);
+  const live = useRef({});
   const keys = items.map((x) => x[0]).join(',');
   const measure = () => {
     const el = ref.current; if (!el) return;
@@ -567,39 +570,51 @@ function BotNav({ items, tab, badge }) {
     const bs = [...el.querySelectorAll('.botnav-b')];
     const ic = el.querySelector('.botnav-i');
     if (!bs.length || !ic) return;
-    setGeo({ cs: bs.map((b) => { const q = b.getBoundingClientRect(); return q.left - r.left + q.width / 2; }), top: ic.getBoundingClientRect().top - r.top, ws: bs.map((b) => b.getBoundingClientRect()) });
+    setGeo({ cs: bs.map((b) => { const q = b.getBoundingClientRect(); return q.left - r.left + q.width / 2; }), top: ic.getBoundingClientRect().top - r.top });
   };
   useLayoutEffect(() => { measure(); const f = () => measure(); addEventListener('resize', f); return () => removeEventListener('resize', f); }, [keys]);
-  const at = (x) => {
-    const el = ref.current; if (!el || !geo) return null;
-    const r = el.getBoundingClientRect(); const lx = x - r.left;
-    let i = 0, best = 1e9; geo.cs.forEach((c, n) => { const d = Math.abs(c - lx); if (d < best) { best = d; i = n; } });
-    return { x: Math.min(geo.cs[geo.cs.length - 1], Math.max(geo.cs[0], lx)), i };
-  };
-  const move = (e) => {
-    const t = e.touches[0]; if (!t) return;
-    const d = at(t.clientX); if (!d) return;
-    if (st.current && st.current.i != null && st.current.i !== d.i) { try { navigator.vibrate?.(6); } catch {} }
-    if (st.current) st.current.i = d.i;
-    setDrag(d);
-  };
-  const start = (e) => { st.current = { i: null }; move(e); };
-  const end = (e) => {
-    const s = st.current; st.current = null; setDrag(null);
-    if (!s || s.i == null) return;
-    const t = e.changedTouches?.[0];
-    if (t && t.clientY < ref.current.getBoundingClientRect().top - 40) return; // menüden yukarı çekip bıraktıysa vazgeç
-    e.preventDefault(); // tıklama tekrar tetiklenmesin
-    go(items[s.i][0]);
-  };
-  const cancel = () => { st.current = null; setDrag(null); };
+  live.current = { geo, items };
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const place = (x) => { if (pill.current) pill.current.style.transform = `translateX(${x - 26}px)`; };
+    const track = (cx) => {
+      const { geo: g } = live.current; if (!g) return;
+      const r = el.getBoundingClientRect(); const lx = cx - r.left;
+      const x = Math.min(g.cs[g.cs.length - 1], Math.max(g.cs[0], lx));
+      let i = 0, best = 1e9; g.cs.forEach((c, n) => { const d = Math.abs(c - lx); if (d < best) { best = d; i = n; } });
+      const s = st.current; if (!s) return;
+      if (s.i !== i) { if (s.i != null) { s.moved = true; try { navigator.vibrate?.(6); } catch {} } s.i = i; setHov(i); }
+      place(x);
+    };
+    const finish = (go_) => {
+      const s = st.current; st.current = null;
+      el.classList.remove('dragging', 'pressing'); setHov(-1);
+      if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x - 26}px)`; // aktif sekmeye yumuşakça döner
+      if (s && s.i != null && go_) go(live.current.items[s.i][0]);
+    };
+    const start = (e) => { const t = e.touches[0]; if (!t || e.touches.length > 1) return; st.current = { i: null }; el.classList.add('pressing'); track(t.clientX); };
+    const move = (e) => { if (!st.current) return; e.preventDefault(); el.classList.add('dragging'); const t = e.touches[0]; if (t) track(t.clientX); };
+    const end = (e) => {
+      if (!st.current) return;
+      const t = e.changedTouches?.[0];
+      const away = t && t.clientY < el.getBoundingClientRect().top - 40; // menüden yukarı çekip bıraktıysa vazgeç
+      e.preventDefault(); // tıklama tekrar tetiklenmesin
+      finish(!away);
+    };
+    const cancel = () => finish(true); // sistem hareketi dokunuşu aldı: son gösterilen sekmeye geç
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end, { passive: false });
+    el.addEventListener('touchcancel', cancel);
+    return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', cancel); };
+  }, []);
   const ai = items.findIndex((x) => x[0] === tab);
-  const px = drag ? drag.x : geo && ai >= 0 ? geo.cs[ai] : null;
+  const px = geo && ai >= 0 ? geo.cs[ai] : null;
   return (
-    <nav ref={ref} className={'botnav' + (drag ? ' dragging' : '')} aria-label="Alt menü" onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={cancel}>
-      {geo && px != null && <span className="botnav-pill" style={{ top: geo.top, transform: `translateX(${px - 26}px)` }} aria-hidden="true"><i /></span>}
+    <nav ref={ref} className="botnav" aria-label="Alt menü">
+      {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px - 26}px)` }} aria-hidden="true"><i /></span>}
       {items.map(([k, l, i, sh], n) => (
-        <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (drag && drag.i === n ? ' hov' : '')} onClick={() => go(k)}>
+        <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => go(k)}>
           <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
           <span>{sh || l}</span>
         </button>
