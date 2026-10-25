@@ -2,7 +2,7 @@
 //   Mağaza: Sepet → "Sepeti onayla" → sipariş bilgileri (checkout.jsx) → Yönetim paneli > Siparişler
 //           ya da "WhatsApp'tan liste gönder" → sadece liste linki gider (hiçbir yere kaydedilmez)
 //   Bayi:   Sepet → "Sepeti onayla" → talep türü / not → talep kaydedilir (sohbet Talepler'de devam eder)
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, setQty, clearCart, freshStart, api, openRequest, toast, go } from './store.js';
 import { Icon, Thumb, Stepper, Empty, VatLines, copyText, openMenu } from './ui.jsx';
 import { waLink, links } from './route.js';
@@ -55,12 +55,56 @@ function EmptyCart() {
   );
 }
 
+// Telefonda satırı sola çekince arkadan kırmızı "Sil" çıkar; sonuna kadar çekilirse hemen silinir.
+const COARSE = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
+function SwipeLine({ id, open, setOpen, onDelete, children, onContextMenu }) {
+  const row = useRef(null);
+  const st = useRef(null);
+  const [dx, setDx] = useState(0);
+  const [drag, setDrag] = useState(false);
+  const [gone, setGone] = useState(false);
+  const W = 92;
+  useEffect(() => { if (open !== id && !drag) setDx(0); }, [open]);
+  useEffect(() => {
+    const el = row.current; if (!el || !COARSE) return;
+    const start = (e) => { const t = e.touches[0]; st.current = { x: t.clientX, y: t.clientY, base: open === id ? -W : 0, mode: null }; };
+    const move = (e) => {
+      const s0 = st.current; if (!s0) return; const t = e.touches[0];
+      const ddx = t.clientX - s0.x, ddy = t.clientY - s0.y;
+      if (!s0.mode) { if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8) return; s0.mode = Math.abs(ddx) > Math.abs(ddy) ? 'h' : 'v'; if (s0.mode === 'h') setDrag(true); }
+      if (s0.mode !== 'h') return;
+      e.preventDefault();
+      let x = s0.base + ddx; if (x > 0) x = x / 4; if (x < -W) x = -W + (x + W) * 0.55;
+      s0.x1 = x; setDx(x);
+    };
+    const end = () => {
+      const s0 = st.current; st.current = null; if (!s0 || s0.mode !== 'h') return;
+      setDrag(false);
+      const x = s0.x1 ?? 0; const w = el.getBoundingClientRect().width;
+      if (x < -w * 0.55) { setGone(true); setDx(-w); setTimeout(onDelete, 220); return; }
+      if (x < -W / 2) { setDx(-W); setOpen(id); } else { setDx(0); if (open === id) setOpen(null); }
+    };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+    return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); };
+  }, [open, id]);
+  return (
+    <li className={'gl-sw' + (gone ? ' gone' : '')} ref={row} onContextMenu={onContextMenu}>
+      {COARSE && <button type="button" className="gl-del" style={{ opacity: dx < -4 ? 1 : 0 }} onClick={() => { setGone(true); setTimeout(onDelete, 200); }} aria-label="Sepetten çıkar"><Icon n="trash" s={20} /><span>Sil</span></button>}
+      <div className={'gline' + (drag ? ' dragging' : '')} style={dx ? { transform: `translate3d(${dx}px,0,0)` } : undefined}
+        onClickCapture={(e) => { if (open === id) { e.stopPropagation(); e.preventDefault(); setOpen(null); } }}>{children}</div>
+    </li>
+  );
+}
+
 // ---- 1. adım: sepet (iki tarafta da aynı) ------------------------------------------------
 function CartStep({ items, pub, orders, coming, onConfirm }) {
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const [sheetP, setSheetP] = useState(null);
   const [lb, setLb] = useState(null);
+  const [swOpen, setSwOpen] = useState(null); // telefonda sola çekilip "Sil" açılan satır
   const rate = useRate();
   const tot = totals(items, 'offer');
   const tList = totals(items, 'list');
@@ -87,7 +131,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
         <ul className="clist gclist">
           <li className="gline gline-h" aria-hidden="true"><span>Ürün</span><span className="gline-ctl"><span className="r">Birim fiyat</span><span className="c">Adet</span><span className="r">Toplam</span><span /></span></li>
           {items.map((it) => (
-            <li key={it.id} className="gline" onContextMenu={(e) => menu(e, it)}>
+            <SwipeLine key={it.id} id={it.id} open={swOpen} setOpen={setSwOpen} onDelete={() => setQty(it.id, 0)} onContextMenu={(e) => menu(e, it)}>
               <div className="gline-p">
                 <button type="button" className="gline-img" onClick={() => openImg(it)} aria-label="Resmi büyüt"><Thumb p={it} size="sm" /></button>
                 <button type="button" className="cline-info gline-name" onClick={() => openSheet(it)} title="Ürünü aç">
@@ -97,11 +141,11 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
               </div>
               <div className="gline-ctl">
                 <span className="num gline-unit" data-l="Birim">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}</span>
-                <Stepper small value={it.qty} onChange={(v) => setQty(it.id, v)} />
+                <Stepper small min={1} value={it.qty} onChange={(v) => setQty(it.id, v)} />
                 <b className="num gline-sum">{it.offer == null ? '—' : fmt(it.offer * it.qty, it.cur)}</b>
                 <button className="icon-btn sm" onClick={() => setQty(it.id, 0)} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
               </div>
-            </li>
+            </SwipeLine>
           ))}
         </ul>
         <aside className="cart-sum">
@@ -129,7 +173,11 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
           <p className="fine">{coming ? 'Şimdilik siparişinizi WhatsApp’tan gönderin, hemen dönüş yapalım.' : pub ? S.orders?.cargoNote || '' : S.shop.pickupNote}</p>
         </aside>
       </div>
-      {sheetP && <ProductSheet p={sheetP} onClose={() => setSheetP(null)} />}
+      {(orders || !pub) && <div className="cart-bar" aria-hidden="false">
+        <span className="cart-bar-t"><small>{pub ? 'Toplam' : 'Toptan toplam'}</small><b className="num">{fmtTotals(tot)}</b></span>
+        <button className="btn primary" onClick={onConfirm}><Icon n="check" s={18} />Sepeti onayla</button>
+      </div>}
+      {sheetP && <ProductSheet p={sheetP} viewOnly onClose={() => setSheetP(null)} />}
       {lb && <Lightbox urls={lb.urls} thumbs={lb.thumbs} title={lb.title} onClose={() => setLb(null)} />}
     </div>
   );

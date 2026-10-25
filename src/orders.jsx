@@ -113,7 +113,10 @@ export function tcOk(v) {
   return ((c10 + 10) % 10) === n[9] && n.slice(0, 10).reduce((a, b) => a + b, 0) % 10 === n[10];
 }
 export const needsInvoice = (inv) => !!inv && (inv.type === 'company' ? vknOk(inv.taxNo) || tcOk(inv.taxNo) : tcOk(inv.tc));
+// eksiksiz fatura: geçerli vergi / TC no + (kurumsalda unvan ve vergi dairesi) + adres → yeşil çerçeveli kart
+export const fullInvoice = (inv, deliv) => needsInvoice(inv) && (inv.type !== 'company' || (inv.company && inv.taxOffice)) && !!(inv.addr?.address || (inv.same !== false && deliv?.address));
 
+const invoiceCopy = (o) => { const i = o.invoice || {}; const a = i.addr || o.delivery?.addr || {}; return [i.type === 'company' ? [i.company, i.taxOffice, i.taxNo].filter(Boolean).join(' / ') : [o.contact?.name, i.tc && 'TC ' + i.tc].filter(Boolean).join(' / '), a.address, ['Türkiye', a.city, a.district].filter(Boolean).join(' / '), o.contact?.phone].filter(Boolean).join('\n'); };
 // ---- Sipariş detayı ---------------------------------------------------------------------------
 function OrderDetail({ id }) {
   const { orders, settings: S } = useStore();
@@ -197,7 +200,9 @@ function OrderDetail({ id }) {
           <p><b>{DELIVERY[o.delivery?.method] || ''}</b></p>
           {o.delivery?.addr && <>{(o.delivery.addr.name || o.delivery.addr.phone) && <p><b>{o.delivery.addr.name}</b>{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></>}
         </div>
-        <div className={'o-card' + (needsInvoice(o.invoice) ? ' inv-yes' : '')}><h3>Fatura{needsInvoice(o.invoice) && <span className="tag ok">Fatura kesilecek</span>}</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} /></div>
+        {fullInvoice(o.invoice, o.delivery?.addr)
+          ? <div className="o-card inv-full"><h3>Fatura bilgileri<span className="inv-ok" title="Fatura kesilecek"><Icon n="check" s={13} /></span><button className="oc-copy" onClick={() => copyText(invoiceCopy(o), 'Fatura bilgileri kopyalandı')} title="Kopyala" aria-label="Fatura bilgilerini kopyala"><Icon n="copy" s={15} /></button></h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>
+          : <div className={'o-card' + (needsInvoice(o.invoice) ? ' inv-yes' : '')}><h3>Fatura{needsInvoice(o.invoice) && <span className="tag ok">Vergi no geçerli · adres eksik</span>}</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>}
         <div className="o-card"><h3>Ödeme</h3><p><b>{PAY[o.pay] || '—'}</b></p>{o.pay === 'card' && <p className="muted">Onaylayınca müşteriye ödeme linki gönderin.</p>}</div>
       </div>
       {o.note && <p className="o-note"><b>Müşterinin notu:</b> {o.note}</p>}

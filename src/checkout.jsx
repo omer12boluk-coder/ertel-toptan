@@ -4,7 +4,7 @@
 //   Account    Hesabım: giriş, üye ol, şifre sıfırlama, siparişlerim, adreslerim, bilgilerim
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, store, api, toast, go, clearCart, openOrder } from './store.js';
+import { useStore, store, api, toast, go, clearCart, openOrder, openAcct } from './store.js';
 import { Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER } from './config.js';
@@ -143,7 +143,8 @@ export function Checkout({ items, onBack }) {
         total: tot, rate: rate?.usd || null,
         contact: { name: f.contact.name.trim(), phone: f.contact.phone, email },
         delivery: { method: f.method, addr: f.method === 'cargo' ? cleanA(delivAddr) : null },
-        invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' && !f.billSame ? cleanA(f.bill, false) : null },
+        // teslimat adresiyle aynıysa adres faturaya da yazılır (fatura kendi başına eksiksiz okunsun)
+        invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' ? (f.billSame ? cleanA(delivAddr) : cleanA(f.bill, false)) : null },
         pay: f.pay, note: f.note.trim(),
       });
       try { await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
@@ -332,7 +333,7 @@ export function OrderPage({ id }) {
   return (
     <div className="page order-page">
       <div className="list-top">
-        <button className="btn sm ghost" onClick={() => go(member ? 'hesap' : 'katalog')}><Icon n="back" s={16} />{member ? 'Siparişlerim' : 'Ürünler'}</button>
+        <button className="btn sm ghost" onClick={() => (member ? openAcct('orders') : go('katalog'))}><Icon n="back" s={16} />{member ? 'Siparişlerim' : 'Ürünler'}</button>
         <StatusPill status={o.status} map={ORDER_STATUS} />
       </div>
       {orderJust && (
@@ -366,7 +367,7 @@ export function OrderPage({ id }) {
       <div className="o-info">
         <div className="o-card"><h3>İletişim</h3><p><b>{o.contact?.name}</b></p><p className="num">{o.contact?.phone}</p>{o.contact?.email && <p>{o.contact.email}</p>}</div>
         <div className="o-card"><h3>Teslimat</h3><p><b>{DELIVERY[o.delivery?.method] || ''}</b></p>{o.delivery?.addr ? <>{o.delivery.addr.name && <p>{o.delivery.addr.name}{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></> : <p>{[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}</p>}</div>
-        <div className="o-card"><h3>Fatura</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} /></div>
+        <div className="o-card"><h3>Fatura</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>
       </div>
       {o.note && <p className="o-note"><b>Notunuz:</b> {o.note}</p>}
 
@@ -416,15 +417,19 @@ export function PushCard({ ids, compact }) {
   );
 }
 
-export function InvoiceText({ inv, name, deliv }) {
+export function InvoiceText({ inv, name, deliv, phone }) {
   if (!inv) return null;
-  const addr = inv.same === false ? inv.addr : deliv;
-  return <>
+  const addr = inv.addr || (inv.same !== false ? deliv : null); // eski siparişlerde "aynı" ise teslimat adresi
+  const where = addr ? ['Türkiye', addr.city, addr.district].filter(Boolean).join(' / ') : '';
+  const tels = [phone, addr?.phone].filter((x, i, a) => x && a.indexOf(x) === i);
+  return <div className="inv-text">
     {inv.type === 'company'
-      ? <><p><b>{inv.company}</b></p><p>{inv.taxOffice} VD · <span className="num">{inv.taxNo}</span></p></>
-      : <><p><b>Bireysel</b> · {name}</p>{inv.tc && <p className="num">TC {inv.tc}</p>}</>}
-    {addr && <p className="muted">{inv.same === false ? addrLine(addr) : 'Teslimat adresi ile aynı'}</p>}
-  </>;
+      ? <p><b>{inv.company}</b>{inv.taxOffice && <> / {inv.taxOffice}</>}{inv.taxNo && <> / <span className="num">{inv.taxNo}</span></>}</p>
+      : <p><b>{name}</b>{inv.tc ? <> / TC <span className="num">{inv.tc}</span></> : <span className="muted"> · Bireysel</span>}</p>}
+    {addr?.address && <p>{addr.address}</p>}
+    {where && <p>{where}</p>}
+    {tels.length > 0 && <p className="num">{tels.join('    ')}</p>}
+  </div>;
 }
 
 function PayInfo({ o }) {
@@ -642,12 +647,12 @@ function LocalOrders({ inSheet }) {
 }
 
 // Üye hesabı: profil başlığı + seçilerek açılan satırlar (her biri kendi penceresinde)
+// Hesabım: bilgisayarda solda profil + menü, sağda seçilen bölüm (sayfa); telefonda menü listesi → bölüm ayrı sayfa (geri: Hesabım)
+const ACCT_T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', notif: 'Bildirimler', pay: 'Ödeme bilgilerim' };
 function MemberHome() {
-  const { member: m, myOrders, api: A, settings: S } = useStore();
-  const [open, setOpen] = useState(null);
+  const { member: m, myOrders, api: A, settings: S, acct } = useStore();
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
-  const local = myLocalOrders().length;
   async function pickPhoto(e) {
     const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
     setBusy(true);
@@ -656,69 +661,99 @@ function MemberHome() {
     setBusy(false);
   }
   const removePhoto = () => A.saveMember({ ...m, photo: null }).then(() => toast('Fotoğraf kaldırıldı'));
-  const active = myOrders.filter((o) => !['done', 'cancelled'].includes(o.status)).length;
+  const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
+  const pushOk = S.orders?.push !== false && pushState() !== 'unsupported';
   const rows = [
     ['orders', 'box', 'Siparişlerim', myOrders.length ? `${myOrders.length} sipariş${active ? ` · ${active} devam ediyor` : ''}` : 'Henüz sipariş yok'],
     ['addr', 'pin', 'Adreslerim', (m.addresses || []).length ? `${m.addresses.length} kayıtlı adres` : 'Adres ekleyin'],
     ['info', 'user', 'Profil bilgilerim', [m.name, m.phone].filter(Boolean).join(' · ') || 'Ad soyad, telefon'],
     ['inv', 'tag', 'Fatura bilgilerim', m.invoice?.type === 'company' ? m.invoice.company || 'Kurumsal' : 'Bireysel'],
-    S.orders?.push !== false && pushState() !== 'unsupported' && ['notif', 'bell', 'Bildirimler', pushState() === 'on' ? 'Açık · sipariş durumu' : 'Sipariş durumunu telefonunuza haber verelim'],
+    pushOk && ['notif', 'bell', 'Bildirimler', pushState() === 'on' ? 'Açık · sipariş durumu' : 'Sipariş durumunu haber verelim'],
     ['pay', 'cart', 'Ödeme bilgilerim', 'Kayıtlı kartlar', true],
-    local > 0 && ['local', 'mobile', 'Bu cihazdan verilen siparişler', `${local} sipariş`],
   ].filter(Boolean);
-  const T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', pay: 'Ödeme bilgilerim', local: 'Bu cihazdan verilen siparişler', notif: 'Bildirimler' };
+  const view = acct && ACCT_T[acct] ? acct : null;
+  const body = {
+    orders: () => <MyOrders />,
+    addr: () => <Addresses />,
+    info: () => <MyInfo part="info" />,
+    inv: () => <MyInfo part="inv" />,
+    notif: () => <>
+      <PushCard ids={myOrders.filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id)} />
+      {!myOrders.some((o) => ORDER_OPEN.includes(o.status)) && <p className="fine">Açık siparişiniz olunca bildirimleri buradan açabilirsiniz. Bir kez açarsanız sonraki siparişleriniz kendiliğinden bağlanır.</p>}
+    </>,
+    pay: () => <div className="soon-card acct-soon"><span className="soon-ic"><Icon n="cart" s={28} /></span><span className="soon-tag">Çok yakında</span><h3>Kayıtlı kartlar</h3><p className="muted">Kartlarınızı güvenle kaydedip tek dokunuşla ödeyebileceksiniz. Şimdilik siparişte havale, kart linki ya da dükkânda ödeme seçebilirsiniz.</p></div>,
+  };
   return (
-    <div className="page narrow acct acct-hub">
-      <div className="hub-head">
-        <button className={'hub-av' + (busy ? ' busy' : '')} onClick={() => fileRef.current?.click()} aria-label="Profil fotoğrafını değiştir" title="Fotoğrafı değiştir">
-          <Avatar u={m} size={76} /><span className="hub-cam"><Icon n="camera" s={15} /></span>
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPhoto} />
-        <div className="hub-id"><h1>{m.name || 'Hesabım'}</h1><p className="muted">{m.email}</p>{m.photo && <button className="linkish" onClick={removePhoto}>Fotoğrafı kaldır</button>}</div>
-      </div>
-      <ul className="hub-list">
-        {rows.map(([k, ic, t, sub, isSoon]) => (
-          <li key={k}><button className="hub-row" onClick={() => setOpen(k)}>
-            <span className="hub-ic"><Icon n={ic} s={19} /></span>
-            <span className="hub-t"><b>{t}{isSoon && <span className="soon-tag sm">Çok yakında</span>}</b><small>{sub}</small></span>
-            {k === 'orders' && active > 0 && <span className="badge">{active}</span>}
-            <Icon n="back" s={16} className="flip hub-chev" />
-          </button></li>
-        ))}
-      </ul>
-      <button className="hub-out" onClick={() => A.memberLogout().then(() => toast('Çıkış yapıldı'))}><Icon n="out" s={17} />Çıkış yap</button>
-      {open && (
-        <Sheet title={T[open]} onClose={() => setOpen(null)}>
-          {open === 'orders' && <MyOrders onPick={() => setOpen(null)} />}
-          {open === 'addr' && <Addresses />}
-          {open === 'info' && <MyInfo part="info" />}
-          {open === 'inv' && <MyInfo part="inv" />}
-          {open === 'pay' && <div className="soon-card in-sheet"><span className="soon-ic"><Icon n="cart" s={28} /></span><span className="soon-tag">Çok yakında</span><p className="muted">Kartlarınızı güvenle kaydedip tek dokunuşla ödeyebileceksiniz. Şimdilik siparişte havale, kart linki ya da dükkânda ödeme seçebilirsiniz.</p></div>}
-          {open === 'local' && <LocalOrders inSheet />}
-          {open === 'notif' && <PushCard compact ids={myOrders.filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id)} />}
-          {open === 'notif' && !myOrders.some((o) => ORDER_OPEN.includes(o.status)) && <p className="fine">Açık siparişiniz olunca bildirimleri buradan açabilirsiniz. Bir kez açarsanız sonraki siparişleriniz kendiliğinden bağlanır.</p>}
-        </Sheet>
-      )}
+    <div className={'page acct2' + (view ? ' has-view' : '')}>
+      <aside className="acct-side">
+        <div className="acct-prof">
+          <button className={'hub-av' + (busy ? ' busy' : '')} onClick={() => fileRef.current?.click()} aria-label="Profil fotoğrafını değiştir" title="Fotoğrafı değiştir">
+            <Avatar u={m} size={72} /><span className="hub-cam"><Icon n="camera" s={14} /></span>
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPhoto} />
+          <div className="hub-id"><h1>{m.name || 'Hesabım'}</h1><p className="muted">{m.email}</p>{m.photo && <button className="linkish" onClick={removePhoto}>Fotoğrafı kaldır</button>}</div>
+        </div>
+        <nav className="acct-nav" aria-label="Hesabım">
+          <button className={'acct-nav-i ov' + (!view ? ' on' : '')} onClick={() => openAcct(null)}><span className="hub-ic"><Icon n="home" s={18} /></span><span className="hub-t"><b>Hesap özeti</b></span></button>
+          {rows.map(([k, ic, t, sub, isSoon]) => (
+            <button key={k} className={'acct-nav-i' + (view === k ? ' on' : '')} onClick={() => openAcct(k)}>
+              <span className="hub-ic"><Icon n={ic} s={18} /></span>
+              <span className="hub-t"><b>{t}{isSoon && <span className="soon-tag sm">Yakında</span>}</b><small>{sub}</small></span>
+              {k === 'orders' && active > 0 && <span className="badge">{active}</span>}
+              <Icon n="back" s={16} className="flip hub-chev" />
+            </button>
+          ))}
+        </nav>
+        <button className="hub-out" onClick={() => A.memberLogout().then(() => { openAcct(null); toast('Çıkış yapıldı'); })}><Icon n="out" s={17} />Çıkış yap</button>
+      </aside>
+      <section className="acct-main">
+        {view ? <>
+          <div className="acct-main-h">
+            <button className="acct-back" onClick={() => history.state?.acct ? history.back() : openAcct(null)}><Icon n="back" s={18} /><span>Hesabım</span></button>
+            <h2>{ACCT_T[view]}</h2>
+          </div>
+          <div className="acct-body" key={view}>{body[view]()}</div>
+        </> : <AcctOverview m={m} myOrders={myOrders} active={active} />}
+      </section>
     </div>
   );
 }
-function MyOrders({ onPick }) {
-  const myOrders = useStore((s) => s.myOrders);
-  if (!myOrders.length) return <Empty icon="cart" title="Henüz siparişiniz yok"><button className="btn primary" onClick={() => { onPick(); go('katalog'); }}>Ürünlere git</button></Empty>;
+// Hesap özeti (bilgisayarda sağ taraf): selam, kısa sayılar, son siparişler
+function AcctOverview({ m, myOrders, active }) {
+  const first = (m.name || '').split(' ')[0];
+  const stats = [['box', active, 'Devam eden sipariş', 'orders'], ['check', myOrders.length, 'Toplam sipariş', 'orders'], ['pin', (m.addresses || []).length, 'Kayıtlı adres', 'addr']];
   return (
-    <ul className="olist">
-      {myOrders.map((o) => (
-        <li key={o.id}>
-          <button className="ocard" onClick={() => { onPick(); openOrder(o.id); }}>
-            <span className="ocard-b">
-              <span className="ocard-top"><b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /></span>
-              <span className="muted">{when(o.createdAt)} · {(o.items || []).length} ürün · {DELIVERY[o.delivery?.method]}</span>
-            </span>
-            <b className="num ocard-sum">{fmtTotals(o.total || totals(orderItems(o), 'offer'))}</b>
-            <Icon n="back" s={16} className="flip" />
-          </button>
-        </li>
-      ))}
+    <div className="acct-ov">
+      <div className="acct-hello"><h2>Merhaba{first ? ', ' + first : ''} 👋</h2><p className="muted">Siparişlerinizi takip edin, adres ve fatura bilgilerinizi buradan düzenleyin.</p></div>
+      <div className="acct-stats">{stats.map(([ic, n, l, k]) => <button key={l} className="acct-stat" onClick={() => openAcct(k)}><span className="hub-ic"><Icon n={ic} s={18} /></span><b className="num">{n}</b><small>{l}</small></button>)}</div>
+      <div className="acct-sec-h"><h3>Son siparişler</h3>{myOrders.length > 3 && <button className="linkish" onClick={() => openAcct('orders')}>Tümünü gör</button>}</div>
+      <MyOrders limit={3} />
+    </div>
+  );
+}
+// sipariş kartı: içindeki ürünlerin küçük resimleri (en çok 5, fazlası "+3")
+function MyOrders({ limit }) {
+  const myOrders = useStore((s) => s.myOrders);
+  if (!myOrders.length) return <Empty icon="cart" title="Henüz siparişiniz yok"><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty>;
+  const list = limit ? myOrders.slice(0, limit) : myOrders;
+  return (
+    <ul className="mo-list">
+      {list.map((o) => {
+        const its = o.items || []; const qty = its.reduce((t, i) => t + (Number(i.qty) || 0), 0);
+        const show = its.slice(0, 5); const more = its.length - show.length;
+        return (
+          <li key={o.id}>
+            <button className="mo-card" onClick={() => openOrder(o.id)}>
+              <span className="mo-top"><b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /><span className="muted mo-date">{when(o.createdAt)}</span><b className="num mo-sum">{fmtTotals(o.total || totals(orderItems(o), 'offer'))}</b></span>
+              <span className="mo-thumbs">
+                {show.map((it, i) => <span key={i} className="mo-th" title={it.n}><Thumb p={it} size="sm" />{it.qty > 1 && <i className="num">×{it.qty}</i>}</span>)}
+                {more > 0 && <span className="mo-more num">+{more}</span>}
+              </span>
+              <span className="mo-foot muted">{its.length === 1 ? its[0].n : `${show[0]?.n || ''}${its.length > 1 ? ` ve ${its.length - 1} ürün daha` : ''}`} · {qty} adet · {DELIVERY[o.delivery?.method] || ''}<Icon n="back" s={15} className="flip" /></span>
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

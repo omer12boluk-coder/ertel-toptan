@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory } from './store.js';
+import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS } from './config.js';
@@ -211,6 +211,7 @@ async function bootShop(A) {
   if (ROUTE.reqId && !ROUTE.orderId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
   const firstTab = ROUTE.listCode ? 'liste' : tabFromPath() || shopFirst();
+  if (firstTab === 'hesap') store.set({ acct: acctFromPath() });
   if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
   if (cached) setCatalog(cached.items);
   const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId || ROUTE.authAction;
@@ -484,7 +485,7 @@ function ShellFull() {
         {tab === 'ayarlar' && admin && <Settings />}
         {tab === 'tasarim' && admin && <ShopDesigner />}
       </main>
-      {pub && tab !== 'katalog' && <ShopFooter compact={tab !== 'anasayfa'} />}
+      {pub && !['katalog', 'sepet', 'hesap'].includes(tab) && <ShopFooter compact={tab !== 'anasayfa'} />}
       {!admin && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}

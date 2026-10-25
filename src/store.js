@@ -90,15 +90,25 @@ function pushTab(tab) {
     if (location.pathname !== url || store.s.tab !== tab) history.pushState({ tab }, '', url);
   } catch {}
 }
+// Hesabım alt sayfaları: /magaza/hesap/<bölüm> (telefonda geri kaydırınca Hesabım'a döner)
+export const ACCT = { orders: 'siparisler', addr: 'adresler', info: 'profil', inv: 'fatura', notif: 'bildirimler', pay: 'odeme' };
+export function acctFromPath() { const m = /^\/magaza\/hesap\/([\w-]+)/.exec(location.pathname); const e = m && Object.entries(ACCT).find(([, x]) => x === m[1]); return e ? e[0] : null; }
+export function openAcct(v) {
+  try {
+    history.replaceState({ ...(history.state || {}), tab: 'hesap', acct: store.s.acct || null, y: scrollY }, '');
+    history.pushState({ tab: 'hesap', acct: v || null }, '', '/magaza/hesap' + (v ? '/' + ACCT[v] : ''));
+  } catch {}
+  store.set({ tab: 'hesap', acct: v || null, openOrder: null }); window.scrollTo(0, 0);
+}
 export function startHistory(defTab) {
   addEventListener('popstate', (e) => {
     const st = e.state || {};
     const tab = st.tab || tabFromPath() || defTab();
-    store.set({ tab, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
+    store.set({ tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
     requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, st.y || 0)));
   });
 }
-export function go(tab) { if (tab !== store.s.tab || store.s.openOrder || store.s.openReq) pushTab(tab); store.set({ tab, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0); }
+export function go(tab) { if (tab !== store.s.tab || store.s.openOrder || store.s.openReq || store.s.acct) pushTab(tab); store.set({ tab, acct: null, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0); }
 export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: just || false }); window.scrollTo(0, 0); }
 export const home = () => go(store.s.user?.role === 'admin' ? 'anasayfa' : store.s.user?.role === 'public' ? (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa') : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }
