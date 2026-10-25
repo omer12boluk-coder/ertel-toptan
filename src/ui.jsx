@@ -63,15 +63,33 @@ export function Icon({ n, s = 20, className = '' }) {
   );
 }
 
-let openSheets = 0;
+let openSheets = 0, lockY = 0;
 export function Sheet({ title, onClose, children, footer, wide, sub }) {
   const ref = useRef(null);
   const bg = useRef(null);
   useEffect(() => {
     const k = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', k);
+    const y0 = scrollY;
     openSheets++; document.body.classList.add('noscroll');
-    return () => { window.removeEventListener('keydown', k); if (--openSheets <= 0) { openSheets = 0; document.body.classList.remove('noscroll'); } };
+    // Telefon: iPhone "overflow: hidden"ı dinlemiyor, pencerede kaydırırken arkadaki sayfa da kayıyordu → sayfa olduğu yerde dondurulur
+    const phone = matchMedia('(max-width: 700px)').matches;
+    if (phone && openSheets === 1) { lockY = y0; Object.assign(document.body.style, { position: 'fixed', top: -lockY + 'px', left: '0', right: '0', width: '100%' }); }
+    // aşağı çekerken içerik/sayfa da kaymasın (React'in dokunma dinleyicisi bunu engelleyemiyor)
+    const el = ref.current;
+    const tm = (e) => { if (drag.current?.on && e.cancelable) e.preventDefault(); };
+    el?.addEventListener('touchmove', tm, { passive: false });
+    // arka plana (karartılmış alan) dokunup kaydırmak hiçbir şeyi kaydırmasın
+    const bgEl = bg.current;
+    const bm = (e) => { if (e.target === bgEl && e.cancelable) e.preventDefault(); };
+    bgEl?.addEventListener('touchmove', bm, { passive: false });
+    return () => {
+      window.removeEventListener('keydown', k); el?.removeEventListener('touchmove', tm); bgEl?.removeEventListener('touchmove', bm);
+      if (--openSheets <= 0) {
+        openSheets = 0; document.body.classList.remove('noscroll');
+        if (document.body.style.position === 'fixed') { Object.assign(document.body.style, { position: '', top: '', left: '', right: '', width: '' }); scrollTo(0, lockY); }
+      }
+    };
   }, []);
   // Telefonda: pencereyi tutup aşağı çekince kapanır (üst kısımdan ya da içerik en üstteyken her yerden)
   const drag = useRef(null);
