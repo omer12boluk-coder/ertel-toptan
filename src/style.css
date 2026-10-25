@@ -2033,3 +2033,16 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 @media (max-width: 899px) { .hsearch.mob-open.closing .hsearch-box { animation: hs-close-m .2s var(--ease) both; } }
 @keyframes hs-open-m { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
 @media (max-width: 899px) { .hsearch.mob-open:not(.closing) .hsearch-box { animation: hs-open-m .2s var(--ease) both; } }
+/* arama: kutunun büyüteci simgeyle aynı yerde ve boyutta; kapanırken kutu simgenin boyutuna iner, büyüteç hiç kaybolmaz */
+@media (min-width: 900px) {
+  .hsearch-box { padding-left: 9.5px; gap: 8px; }
+  .hsearch-box > .ic { flex: none; }
+  @keyframes hs-open { from { width: 40px; border-color: transparent; background: transparent; border-radius: 20px; } to { width: 320px; } }
+  @keyframes hs-close { from { width: 320px; } to { width: 40px; border-color: transparent; background: transparent; border-radius: 20px; } }
+  .hsearch.mob-open .hsearch-box { animation-duration: .24s; }
+  .hsearch.mob-open.closing .hsearch-box { animation: hs-close .24s var(--ease) both; }
+  .hsearch.mob-open .hsearch-box input, .hsearch.mob-open .hsearch-x { animation: hs-fade .2s .06s ease both; }
+  .hsearch.closing .hsearch-box input, .hsearch.closing .hsearch-x { animation: none; opacity: 0; transition: opacity .08s; }
+  .hsearch.closing .hsearch-box > .ic { color: var(--muted); }
+}
+@keyframes hs-fade { from { opacity: 0; } }

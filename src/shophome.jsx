@@ -263,7 +263,7 @@ export function HeaderSearch() {
     <div ref={wrap} className={'hsearch' + (mob ? ' mob-open' : '') + (closing ? ' closing' : '')}>
       <button type="button" className="icon-btn hsearch-btn" onClick={() => { clearTimeout(closeT.current); setClosing(false); setMob(true); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
       <div className="hsearch-box">
-        <Icon n="search" s={17} />
+        <Icon n="search" s={19} />
         <input ref={inp} type="search" value={q} placeholder="Ürün ara…" aria-label="Ürün ara"
           onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => { setOpen(false); if (!inp.current?.value) close(); }, 180)} onKeyDown={key} />
         {(q || mob) && <button type="button" className="hsearch-x" onMouseDown={(e) => e.preventDefault()} onClick={() => { if (q) setQ(''); else close(); }} aria-label="Temizle"><Icon n="x" s={14} /></button>}
