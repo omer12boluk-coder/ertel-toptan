@@ -2125,3 +2125,10 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .tp-rel { transition: transform .5s cubic-bezier(.22, 1.5, .4, 1), box-shadow .3s ease !important; }
   .lp-press { transform: scale(.955) !important; }
 }
+
+/* Telefonda ürün penceresi: resim şeridi sadece yana kayar; açıklama baştan tam görünür ("Devamını göster" yok) */
+@media (max-width: 700px) {
+  .gal-track { overflow-y: hidden; overscroll-behavior-x: contain; }
+  .pdesc .pdesc-body { max-height: none; }
+  .pdesc .pdesc-body::after, .pdesc > .link { display: none; }
+}

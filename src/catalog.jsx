@@ -380,12 +380,20 @@ export function Gallery({ p }) {
       {box}
     </>
   );
-  const goTo = (k) => { setI(k); const el = track.current; if (el) el.scrollTo({ left: k * el.clientWidth, behavior: 'smooth' }); };
-  const onScroll = (e) => { const el = e.currentTarget; setI(Math.round(el.scrollLeft / el.clientWidth)); };
+  // Küçük resme basınca kayma bitene kadar ara resimler "seçili" sayılmasın (çerçeve bir ona bir buna atlıyordu)
+  const aim = useRef(null);
+  const goTo = (k) => { setI(k); const el = track.current; if (!el) return; aim.current = { k, t: Date.now() }; el.scrollTo({ left: k * el.clientWidth, behavior: 'smooth' }); };
+  const onScroll = (e) => {
+    const el = e.currentTarget; const w = el.clientWidth || 1;
+    const a = aim.current;
+    if (a) { if (Math.abs(el.scrollLeft - a.k * w) < 2 || Date.now() - a.t > 900) aim.current = null; else return; }
+    setI(Math.round(el.scrollLeft / w));
+  };
+  const grab = () => { aim.current = null; }; // parmakla kaydırmaya başlayınca normal takibe dön
   return (
     <div className="gallery">
       <div className="gal-stage">
-        <div className="gal-track" ref={track} onScroll={onScroll}>
+        <div className="gal-track" ref={track} onScroll={onScroll} onTouchStart={grab} onWheel={grab}>
           {slides.map((u, k) => (
             <div className="gal-slide" key={k}>
               {u == null ? <Thumb p={{ ...p, pi: null }} size="lg" /> : bad[k] ? <Thumb p={{ ...p, pi: null, img: null }} size="lg" /> : (
