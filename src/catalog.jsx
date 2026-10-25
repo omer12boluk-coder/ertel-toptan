@@ -427,7 +427,13 @@ export function Gallery({ p }) {
 // Videonun küçük resmi: verilmiş kapak varsa o; yoksa videonun ~1. saniyesinden bir kare alınır (bellekte saklanır).
 // Kare alınamazsa (video sitesi izin vermiyorsa) '' döner; o zaman küçük resimde videonun kendisi duraklatılmış gösterilir.
 const frameCache = new Map();
-export function useVideoFrame(src, given) {
+// r2.dev adresleri bazı internet sağlayıcılarında açılmıyor → bekçi (workers.dev) üzerinden aktarılır
+export function mediaUrl(u) {
+  const m = /^https?:\/\/pub-([0-9a-f]{32})\.r2\.dev\/(.+)$/.exec(String(u || '').trim());
+  return m && window.WATCH_URL ? `${window.WATCH_URL}/r2/${m[1]}/${m[2]}` : u;
+}
+export function useVideoFrame(src0, given) {
+  const src = mediaUrl(src0);
   const [u, setU] = useState(() => given || frameCache.get(src) || null);
   useEffect(() => {
     if (given) { setU(given); return; }
@@ -458,7 +464,8 @@ export function useVideoFrame(src, given) {
   }, [src, given]);
   return u; // null: hazırlanıyor · '': alınamadı · adres: resim
 }
-export function VideoThumb({ src, poster }) {
+export function VideoThumb({ src: src0, poster }) {
+  const src = mediaUrl(src0);
   const f = useVideoFrame(src, poster);
   return <span className="gal-th-vid">{f ? <img src={f} alt="" /> : f === '' ? <video src={src + '#t=1'} muted playsInline preload="metadata" /> : null}<i><Icon n="play" s={14} /></i></span>;
 }
@@ -466,7 +473,8 @@ export function VideoThumb({ src, poster }) {
 // Video: sitenin kendi oynatıcısı gibi (tarayıcı düğmeleri yok). Görünürken sessiz ve döngülü oynar, dokununca
 // durur/devam eder, köşede ses ve büyütme düğmesi, altta ilerleme çizgisi. Büyüt → tam ekran izleme (VideoViewer).
 // Ürün penceresi (galeri) ve mağaza ana sayfasındaki video bölümü bunu kullanır.
-export function PlayVideo({ src, poster, active = true, fit = 'cover', auto = true, className = '' }) {
+export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', auto = true, className = '' }) {
+  const src = mediaUrl(src0);
   const v = useRef(null);
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(false);

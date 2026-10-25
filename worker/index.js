@@ -38,6 +38,8 @@ export default {
       if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: await notifyStatus(env) });
       // Ürün videosu: iPhone Safari videoyu parça parça (Range) ister; dosya bekçinin kendi dosyalarından okunup dilimlenir
       if (url.pathname.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD') && env.ASSETS) return await serveVideo(req, env, url, cors);
+      // R2 videoları: bazı Türk internet sağlayıcıları r2.dev adresini engelliyor; video bekçi üzerinden (Cloudflare içinden) parça parça aktarılır
+      if (url.pathname.startsWith('/r2/') && (req.method === 'GET' || req.method === 'HEAD')) return await proxyR2(req, url, cors);
     } catch (e) { return json({ error: String(e.message || e) }, 500); }
     return json({ error: 'bulunamadı' }, 404);
   },
@@ -273,4 +275,16 @@ async function serveVideo(req, env, url, cors) {
   if (!(start >= 0) || start >= size || end < start) return new Response(null, { status: 416, headers: { ...base, 'Content-Range': `bytes */${size}` } });
   end = Math.min(end, size - 1);
   return new Response(req.method === 'HEAD' ? null : buf.slice(start, end + 1), { status: 206, headers: { ...base, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) } });
+}
+
+async function proxyR2(req, url, cors) {
+  const m = /^\/r2\/([0-9a-f]{32})\/([\w.\-~%/]+)$/.exec(url.pathname);
+  if (!m || m[2].includes('..')) return new Response('yok', { status: 404, headers: cors });
+  const h = new Headers();
+  const range = req.headers.get('Range'); if (range) h.set('Range', range);
+  const r = await fetch(`https://pub-${m[1]}.r2.dev/${m[2]}`, { method: req.method, headers: h, cf: { cacheEverything: true, cacheTtl: 86400 } });
+  const out = new Headers({ ...cors, 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges', 'Cache-Control': 'public, max-age=86400' });
+  for (const k of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified']) { const v = r.headers.get(k); if (v) out.set(k, v); }
+  if (!out.has('accept-ranges')) out.set('accept-ranges', 'bytes');
+  return new Response(req.method === 'HEAD' ? null : r.body, { status: r.status, headers: out });
 }

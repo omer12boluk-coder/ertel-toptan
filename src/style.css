@@ -2259,3 +2259,6 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .vv-seek b { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .45); transition: transform .15s; }
 .vv-seek.on .vv-seek-t { height: 6px; }
 .vv-seek.on b { transform: scale(1.35); }
+/* Yönetim üst menüsü: geniş ekranda da sekmeler kırpılmasın (içerik 1320px'e sığmak zorunda) → sağdaki isim yazısı masaüstünde gizli, baş harfli yuvarlak kalır */
+@media (min-width: 900px) { .shell.admin .me-t { display: none; } }
+@media (min-width: 900px) { .shell.admin .topnav-b { padding: 0 9px; gap: 6px; font-size: 14px; } .shell.admin .topbar-in { gap: 8px; } }
