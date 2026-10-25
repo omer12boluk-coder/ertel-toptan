@@ -235,6 +235,12 @@ export function HeaderSearch() {
   const [hi, setHi] = useState(0);
   const [prod, setProd] = useState(null);
   const inp = useRef(null);
+  const wrap = useRef(null);
+  useEffect(() => {
+    if (!mob) return;
+    const f = (e) => { if (!wrap.current?.contains(e.target) && !inp.current?.value) close(); };
+    document.addEventListener('pointerdown', f, true); return () => document.removeEventListener('pointerdown', f, true);
+  }, [mob]);
   const res = useMemo(() => {
     const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return { list: [], n: 0 };
     const all = catalog.filter((p) => p.a !== 0 && !p.so && t.every((x) => p._s?.includes(x)));
@@ -243,7 +249,7 @@ export function HeaderSearch() {
   const close = () => { setOpen(false); setMob(false); };
   const hideList = () => setOpen(false); // sadece sonuç listesi kapanır; kutu ve yazı yerinde kalır
   const goAll = () => { if (!q.trim()) return; store.set({ catalogGo: { q: q.trim() } }); go('katalog'); hideList(); inp.current?.blur(); };
-  const pick = (p) => { hideList(); inp.current?.blur(); setProd(p); };
+  const pick = (p) => { setQ(''); close(); inp.current?.blur(); setProd(p); }; // ürüne bakınca arama temizlenir
   const key = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, res.list.length)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
@@ -251,7 +257,7 @@ export function HeaderSearch() {
     else if (e.key === 'Escape') { if (q) hideList(); else close(); inp.current?.blur(); }
   };
   return (
-    <div className={'hsearch' + (mob ? ' mob-open' : '')}>
+    <div ref={wrap} className={'hsearch' + (mob ? ' mob-open' : '')}>
       <button type="button" className="icon-btn hsearch-btn" onClick={() => { setMob(true); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
       <div className="hsearch-box">
         <Icon n="search" s={17} />

@@ -16,6 +16,8 @@ export const DEFAULT_SETTINGS = {
     priceAccent: '#c2410c', // toptan fiyat rengi
     theme: 'light', // auto | light | dark  (her cihaz üst menüden kendine göre değiştirebilir)
     logo: '', // boşsa ERT Mobile amblemi kullanılır; Ayarlar > Genel'den değiştirilebilir
+    splashOn: true, // açılış ekranı (mağaza ve bayi; oturumda bir kez). Ayarlar > Genel'den kapatılır
+    splash: '/splash/dukkan.jpg',
     logoWide: '', // boşsa ERT Mobile yatay logo (giriş ekranı)
   },
   pricing: {

@@ -1,4 +1,4 @@
-import { ShopHomeEditor, BrandLogosEditor } from './shophome.jsx';
+import { ShopHomeEditor, BrandLogosEditor, ImgPick } from './shophome.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
@@ -506,6 +506,8 @@ export function Settings() {
               {d.brand.logo && <button className="btn sm ghost" onClick={() => set('brand.logo', '')}>ERT Mobile logosuna dön</button>}
             </div>
           </Field>
+          <Toggle id="s-splash" label="Açılış ekranı" hint="Mağaza ve bayi uygulaması açılırken kısa süre dükkân fotoğrafı görünür (oturumda bir kez, dokununca geçer)" checked={d.brand.splashOn !== false} onChange={(v) => set('brand.splashOn', v)} />
+          {d.brand.splashOn !== false && <ImgPick v={d.brand.splash || ''} onChange={(v) => set('brand.splash', v)} max={1400} label="Açılış ekranı resmi" hint="Dikey (telefon ekranı gibi) fotoğraf en iyisi" />}
           <h3>Özellikler</h3>
           <Toggle id="s-signup" label="Bayiler kendileri üye olabilsin" hint="Giriş ekranında “Bayi olarak üye olun” çıkar; siz onaylayana kadar giriş yapamazlar" checked={d.access.allowSignup} onChange={(v) => set('access.allowSignup', v)} />
           <Toggle id="s-photo" label="Profil fotoğrafı" hint="Müşteriler kendi fotoğrafını ekleyebilir" checked={d.features.profilePhoto} onChange={(v) => set('features.profilePhoto', v)} />

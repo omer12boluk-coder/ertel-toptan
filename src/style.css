@@ -2008,3 +2008,21 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .hsearch.mob-open .hsearch-box:focus-within { width: 320px; }
 }
 @keyframes hs-open { from { width: 40px; opacity: .4; } to { width: 320px; opacity: 1; } }
+
+/* ===== Açılış ekranı (dükkân fotoğrafı; Ayarlar > Genel > Açılış ekranı ile kapatılır) ===== */
+.intro { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: #0b1226; overflow: hidden; cursor: pointer; animation: intro-in .35s ease both; transition: opacity .5s ease, transform .5s ease; }
+.intro.out { opacity: 0; transform: scale(1.03); pointer-events: none; }
+.intro-bg { position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); object-fit: cover; filter: blur(28px) brightness(.55) saturate(1.2); }
+.intro-img { position: relative; height: 100%; width: 100%; object-fit: cover; animation: intro-zoom 4s ease-out both; }
+@media (min-width: 700px) { .intro-img { width: auto; max-width: min(520px, 90vw); height: 100%; object-fit: cover; box-shadow: 0 0 80px rgb(0 0 0 / .6); } }
+.intro::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgb(5 10 25 / .85)); pointer-events: none; }
+.intro-f { position: absolute; z-index: 2; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); display: flex; flex-direction: column; align-items: center; gap: 12px; color: #fff; text-align: center; animation: rise .6s .2s var(--ease) both; }
+.intro-f > span:first-of-type { display: flex; flex-direction: column; gap: 2px; }
+.intro-f b { font: 800 26px/1 var(--f-display); letter-spacing: .02em; } .intro-f small { opacity: .8; font-size: 14px; }
+.intro-logo { width: 64px; height: 64px; border-radius: 50%; background: #fff; padding: 4px; box-shadow: 0 10px 30px -8px rgb(0 0 0 / .6); }
+.intro-bar { width: 120px; height: 3px; border-radius: 2px; background: rgb(255 255 255 / .25); overflow: hidden; }
+.intro-bar i { display: block; height: 100%; width: 40%; border-radius: 2px; background: #fff; animation: intro-bar 1.1s ease-in-out infinite; }
+@keyframes intro-in { from { opacity: 0; } }
+@keyframes intro-zoom { from { transform: scale(1.06); } }
+@keyframes intro-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { .intro-img, .intro-bar i { animation: none; } }

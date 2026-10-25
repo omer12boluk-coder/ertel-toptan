@@ -511,6 +511,31 @@ function Toast() {
   return <div className={'toast tone-' + t.tone} role="status">{t.text}</div>;
 }
 
+// Açılış ekranı: dükkân fotoğrafı, uygulama açılırken kısa süre (oturumda bir kez; dokununca geçer).
+// Kaldırmak: Ayarlar > Genel > "Açılış ekranı" kapalı (brand.splashOn).
+function IntroSplash() {
+  const S = useStore((s) => s.settings);
+  const ready = useStore((s) => s.boot !== 'loading');
+  const want = S.brand.splashOn !== false && !!S.brand.splash && !ADMIN_ROUTE && (() => { try { return !sessionStorage.getItem('intro-seen'); } catch { return true; } })();
+  const [phase, setPhase] = useState(want ? 'in' : 'off');
+  const [minDone, setMinDone] = useState(false);
+  useEffect(() => { if (!want) return; try { sessionStorage.setItem('intro-seen', '1'); } catch {} const t = setTimeout(() => setMinDone(true), 1400); const max = setTimeout(() => setPhase('out'), 4500); return () => { clearTimeout(t); clearTimeout(max); }; }, []);
+  useEffect(() => { if (phase === 'in' && minDone && ready) setPhase('out'); }, [minDone, ready, phase]);
+  useEffect(() => { if (phase === 'out') { const t = setTimeout(() => setPhase('off'), 500); return () => clearTimeout(t); } }, [phase]);
+  if (phase === 'off') return null;
+  return (
+    <div className={'intro' + (phase === 'out' ? ' out' : '')} onClick={() => setPhase('out')} role="presentation">
+      <img className="intro-bg" src={S.brand.splash} alt="" aria-hidden="true" />
+      <img className="intro-img" src={S.brand.splash} alt="" />
+      <div className="intro-f">
+        <img className="intro-logo" src={S.brand.logo || LOGO_MARK} alt="" />
+        <span><b>{S.brand.appName}</b><small>{ROUTE.shop ? "Online mağaza" : S.brand.tagline}</small></span>
+        <span className="intro-bar"><i /></span>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   useTheme();
   const { boot: b, bootError } = useStore();
@@ -521,6 +546,7 @@ function App() {
       {b === 'error' && <div className="splash"><Brand /><p className="err">{bootError}</p><button className="btn outline" onClick={() => location.reload()}>Tekrar dene</button></div>}
       {b === 'login' && <Login />}
       {b === 'ready' && <Shell />}
+      <IntroSplash />
       <Toast />
       <ContextMenu />
     </>
