@@ -69,6 +69,9 @@ export const DEFAULT_SETTINGS = {
     whatsapp: '',
     pickupNote: 'Siparişiniz hazırlandığında dükkandan teslim alabilirsiniz.',
     payInfo: '', // vitrin müşterisine gösterilecek havale / ödeme bilgisi
+    // Telefonda dokunma: select 'smart' (sadece işe yarar yazılar seçilir) | 'none' (sadece yazı kutuları) | 'all' (her yer, eski hâli)
+    // longPress: uzun basınca işlem menüsü (sağ tık menüsü) · imgMenu: resimlere basılı tutunca telefonun kendi Kaydet/Paylaş menüsü
+    touch: { select: 'smart', longPress: true, imgMenu: false },
   },
   access: {
     allowSignup: true,

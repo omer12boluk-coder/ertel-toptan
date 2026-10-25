@@ -281,7 +281,7 @@ export function openMenu(e, items, title) {
   e.preventDefault(); e.stopPropagation();
   const list = items.filter(Boolean);
   if (!list.length) return;
-  store.set({ ctx: { x: e.clientX, y: e.clientY, items: list, title } });
+  store.set({ ctx: { x: e.clientX, y: e.clientY, items: list, title, touch: !!(e.nativeEvent || e).lp } });
 }
 export const closeMenu = () => store.s.ctx && store.set({ ctx: null });
 export async function copyText(t, label = 'Kopyalandı') {
@@ -289,6 +289,32 @@ export async function copyText(t, label = 'Kopyalandı') {
 }
 export function ContextMenu() {
   const ctx = useStore((s) => s.ctx);
+  return ctx?.touch ? <SheetMenu ctx={ctx} /> : <DeskMenu ctx={ctx} />;
+}
+// Telefonda uzun basınca: iOS tarzı alttan açılan işlem listesi + ayrı "Vazgeç" düğmesi; kapanırken aşağı kayar
+function SheetMenu({ ctx }) {
+  const [out, setOut] = useState(false);
+  const close = (fn) => { if (out) return; setOut(true); setTimeout(() => { closeMenu(); fn?.(); }, 190); };
+  useEffect(() => { const k = (e) => e.key === 'Escape' && close(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
+  return (
+    <div className={'ctx-sheet-bg' + (out ? ' out' : '')} onClick={() => close()} onContextMenu={(e) => e.preventDefault()}>
+      <div className="ctx-sheet" role="menu" onClick={(e) => e.stopPropagation()}>
+        <div className="ctx-sheet-list">
+          {ctx.title && <div className="ctx-sheet-t">{ctx.title}</div>}
+          {ctx.items.filter((it, i, a) => it !== '-' || (i > 0 && i < a.length - 1 && a[i - 1] !== '-')).map((it, i) => it === '-' ? <div key={i} className="ctx-sheet-sep" /> : (
+            <button key={i} role="menuitem" className={'ctx-sheet-item' + (it.danger ? ' danger' : '')} disabled={it.disabled} onClick={() => close(it.onClick)}>
+              <span className="ctx-l">{it.label}</span>
+              {it.hint && <span className="ctx-hint">{it.hint}</span>}
+              {it.icon && <Icon n={it.icon} s={19} />}
+            </button>
+          ))}
+        </div>
+        <button className="ctx-sheet-cancel" onClick={() => close()}>Vazgeç</button>
+      </div>
+    </div>
+  );
+}
+function DeskMenu({ ctx }) {
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
   useEffect(() => {

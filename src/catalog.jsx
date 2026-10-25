@@ -297,7 +297,7 @@ function ProductRow({ p, admin, onOpen }) {
     user?.role !== 'public' && S.requests.allowQuote && { label: 'Bu ürünü sor', icon: 'chat', onClick: () => askAbout(p, Math.max(1, qty)) },
     '-',
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
-    site && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
+    site && user?.role !== 'public' && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
     <li className={'prow' + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '')} onContextMenu={menu}>

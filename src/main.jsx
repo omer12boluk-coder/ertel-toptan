@@ -227,6 +227,14 @@ function useTheme() {
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
     document.title = S.brand.appName;
   }, [S.brand, dev]);
+  // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
+  const T = S.shop?.touch || {};
+  useEffect(() => {
+    const c = document.documentElement.classList;
+    c.remove('tsel-none', 'tsel-smart', 'tsel-all');
+    c.add('tsel-' + (['none', 'all'].includes(T.select) ? T.select : 'smart'));
+    c.toggle('timg', !!T.imgMenu);
+  }, [T.select, T.imgMenu]);
 }
 store.set({ deviceTheme: ls.get('device-theme', null) });
 function ThemeButton() {
@@ -346,6 +354,7 @@ const shopFirst = () => (store.s.settings.shopHome?.enabled === false ? 'katalog
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
 function pageMenu(e, role) {
   const t = e.target;
+  if (e.nativeEvent?.lp && role === 'public') return; // mağaza müşterisi boş yere uzun basınca menü çıkmasın
   if (t.closest('input, textarea, select, a, [contenteditable="true"], .ctx, .sheet, .lb') || getSelection()?.toString()) return; // tarayıcının kendi menüsü kalsın
   const admin = role === 'admin', pub = role === 'public';
   const findProduct = () => { go('katalog'); setTimeout(() => document.getElementById('cat-search')?.focus(), 50); };
@@ -549,6 +558,38 @@ function App() {
 // Telefonda iki parmakla sayfayı büyütme kapalı (uygulama gibi); iOS Safari bazı durumlarda CSS'i dinlemediği için ayrıca engellenir
 if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => { if (!e.target.closest?.('.lb')) e.preventDefault(); }, { passive: false });
+  setupLongPress();
+}
+
+// Telefonda uzun basınca, masaüstündeki sağ tık menüsü açılır (iPhone Safari'de sağ tık olayı hiç gelmez, Android'de
+// kendi menüsüyle karışmasın diye tarayıcınınki engellenir). Basılı tutulan kart hafifçe içe göçer, menü alttan açılır.
+function setupLongPress() {
+  let tm = null, sx = 0, sy = 0, el = null, fired = 0;
+  const NO = 'input, textarea, select, [contenteditable="true"], .ctx, .ctx-sheet-bg, .lb, .botnav, .dz, .sheet-grab';
+  const clear = () => { clearTimeout(tm); tm = null; el?.classList.remove('lp-press'); el = null; };
+  addEventListener('touchstart', (e) => {
+    clear();
+    const T = store.s.settings?.shop?.touch || {};
+    if (e.touches.length !== 1 || T.longPress === false || T.select === 'all') return;
+    const t = e.target; if (!(t instanceof Element) || t.closest(NO)) return;
+    const p = e.touches[0]; sx = p.clientX; sy = p.clientY;
+    el = t.closest('li, .ucard, .rcard, .ocard, .gline, .prow, .pcard');
+    tm = setTimeout(() => {
+      tm = null;
+      const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: sx, clientY: sy });
+      ev.lp = true;
+      t.dispatchEvent(ev);
+      if (store.s.ctx) { fired = Date.now(); try { navigator.vibrate?.(10); } catch {} }
+      el?.classList.remove('lp-press'); el = null;
+    }, 460);
+    if (el) setTimeout(() => tm && el?.classList.add('lp-press'), 120);
+  }, { passive: true });
+  addEventListener('touchmove', (e) => { if (!tm) return; const p = e.touches[0]; if (!p || Math.hypot(p.clientX - sx, p.clientY - sy) > 10) clear(); }, { passive: true });
+  addEventListener('touchend', (e) => { clear(); if (fired && Date.now() - fired < 2000) { e.preventDefault(); fired = 0; } }, { passive: false });
+  addEventListener('touchcancel', clear);
+  addEventListener('scroll', clear, true);
+  // Android'in kendi uzun basma menüsü: yazı kutuları dışında kapalı (bizimki açılıyor)
+  addEventListener('contextmenu', (e) => { if (!e.isTrusted) return; const t = e.target; if (t instanceof Element && t.closest('input, textarea, [contenteditable="true"]')) return; e.preventDefault(); e.stopPropagation(); }, true);
 }
 createRoot(document.getElementById('root')).render(<App />);
 boot();

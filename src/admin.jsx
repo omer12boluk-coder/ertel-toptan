@@ -606,6 +606,18 @@ export function Settings() {
             <p className="fine">Kendiniz denemek için: <a href="/magaza?onizleme=1" target="_blank" rel="noopener">/magaza?onizleme=1</a> (bu cihazda “yakında” kalkar; geri almak için <code>?onizleme=0</code>).</p>
           </div>
           <Toggle id="s-osign" label="Müşteriler mağazaya üye olabilsin" hint="Adres ve fatura bilgileri kayıtlı kalır, siparişlerini takip ederler" checked={d.orders.signup !== false} onChange={(v) => set('orders.signup', v)} />
+          <h3>Mobil dokunma seçenekleri</h3>
+          <p className="fine">Sadece telefon ve tablette geçerli (mağaza, bayi uygulaması ve yönetim paneli). Yanlışlıkla basılı tutunca yazıların maviyle seçilmesini engeller.</p>
+          <div className="seg-cards col" role="radiogroup" aria-label="Yazı seçme">
+            {[['smart', 'Sadece gerekli yerler', 'Önerilen. Ürün açıklaması, sipariş ve adres bilgileri, mesajlar seçilip kopyalanabilir; başlıklar, ürün adları, resimler ve menüler seçilmez.'],
+              ['none', 'Hiçbir yazı seçilmesin', 'Sadece yazı kutuları (e-posta, adres, arama…) seçilip kopyalanabilir.'],
+              ['all', 'Her yer seçilebilsin', 'Eski hâli: her yazıya basılı tutunca seçim açılır. Bu modda uzun basma menüsü çalışmaz.']].map(([k, t, sub]) => {
+              const on = (d.shop.touch?.select || 'smart') === k;
+              return <button key={k} type="button" role="radio" aria-checked={on} className={'seg-card' + (on ? ' on' : '')} onClick={() => set('shop.touch', { ...(d.shop.touch || {}), select: k })}><span className="radio" aria-hidden="true" /><span><b>{t}</b><small>{sub}</small></span></button>;
+            })}
+          </div>
+          <Toggle id="s-tlp" label="Uzun basınca işlem menüsü açılsın" hint="Masaüstündeki sağ tık menüsü: ürüne, siparişe, talebe ya da sepetteki ürüne basılı tutunca alttan seçenekler açılır (Sepete ekle, Kopyala, Sil…)" checked={d.shop.touch?.longPress !== false} onChange={(v) => set('shop.touch', { ...(d.shop.touch || {}), longPress: v })} />
+          <Toggle id="s-timg" label="Resimlere basılı tutunca telefonun menüsü açılsın" hint="Açıkken iPhone/Android’in kendi “Resmi kaydet / Paylaş” menüsü çıkar. Kapalı önerilir." checked={!!d.shop.touch?.imgMenu} onChange={(v) => set('shop.touch', { ...(d.shop.touch || {}), imgMenu: v })} />
           <h3>Teslimat</h3>
           <Toggle id="s-ocargo" label="Kargo ile gönderim" checked={d.orders.cargo !== false} onChange={(v) => set('orders.cargo', v)} />
           <Toggle id="s-opick" label="Dükkandan teslim al" checked={d.orders.pickup !== false} onChange={(v) => set('orders.pickup', v)} />

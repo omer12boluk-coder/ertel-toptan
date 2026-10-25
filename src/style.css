@@ -2079,3 +2079,39 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .shell.admin .botnav.pressing .botnav-pill i { box-shadow: 0 0 14px rgb(160 190 255 / .35); }
 .shell.admin .botnav.pressing .botnav-b:not(.hov) { color: var(--admin-dim); }
 .shell.admin .botnav-b.hov { color: #fff; }
+
+/* Telefonda yazı seçme / basılı tutma (Ayarlar > Online mağaza > Mobil dokunma seçenekleri) */
+@media (hover: none) and (pointer: coarse) {
+  html.tsel-none body, html.tsel-smart body { -webkit-user-select: none; user-select: none; }
+  html.tsel-smart :is(.pdesc-body, .o-card, .msg p, .msg.sys span, .share-box, .pay-info, .sheet code, .sel-ok),
+  html.tsel-smart :is(.pdesc-body, .o-card, .msg p, .share-box, .pay-info, .sel-ok) * { -webkit-user-select: text; user-select: text; }
+  html:is(.tsel-none, .tsel-smart) :is(input, textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; }
+  html:not(.tsel-all) body { -webkit-touch-callout: none; }
+  html.timg img { -webkit-touch-callout: default; }
+  html:not(.timg) img { -webkit-user-drag: none; }
+  .lp-press { transition: transform .32s var(--ease), filter .32s var(--ease) !important; transform: scale(.97) !important; filter: brightness(.96); }
+}
+
+/* Telefonda uzun basınca açılan işlem listesi (iOS tarzı) */
+.ctx-sheet-bg { position: fixed; inset: 0; z-index: 90; background: rgb(10 14 30 / .32); display: flex; align-items: flex-end; justify-content: center; animation: ctxbg-in .2s ease both; -webkit-user-select: none; user-select: none; }
+.ctx-sheet-bg.out { animation: ctxbg-out .19s ease both; }
+.ctx-sheet { width: min(100%, 440px); padding: 0 10px calc(10px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; animation: ctxs-in .32s cubic-bezier(.2, 1.15, .4, 1) both; }
+.ctx-sheet-bg.out .ctx-sheet { animation: ctxs-out .19s ease-in both; }
+.ctx-sheet-list, .ctx-sheet-cancel { background: var(--surface); box-shadow: 0 8px 30px rgb(0 0 0 / .18); border-radius: 14px; overflow: hidden; }
+.ctx-sheet-list { max-height: 62vh; overflow-y: auto; overscroll-behavior: contain; }
+.ctx-sheet-t { padding: 12px 16px 10px; font-size: 13px; color: var(--muted); text-align: center; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-sheet-item { width: 100%; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 18px; font-size: 16.5px; color: var(--fg); text-align: left; border-bottom: 1px solid var(--line); }
+.ctx-sheet-item:last-child { border-bottom: 0; }
+.ctx-sheet-item .ctx-l { flex: 1; min-width: 0; }
+.ctx-sheet-item .ctx-hint { color: var(--muted); font: 13px var(--f-mono); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctx-sheet-item .ic { color: var(--accent); flex: none; }
+.ctx-sheet-item.danger, .ctx-sheet-item.danger .ic { color: var(--bad, #d33); }
+.ctx-sheet-item:disabled { opacity: .4; }
+.ctx-sheet-item:active:not(:disabled) { background: color-mix(in oklab, var(--fg) 8%, transparent); }
+.ctx-sheet-sep { height: 7px; background: color-mix(in oklab, var(--fg) 6%, transparent); border-bottom: 1px solid var(--line); }
+.ctx-sheet-cancel { width: 100%; min-height: 54px; font-size: 17px; font-weight: 700; color: var(--accent); }
+.ctx-sheet-cancel:active { background: var(--surface-2); }
+@keyframes ctxbg-in { from { opacity: 0; } }
+@keyframes ctxbg-out { to { opacity: 0; } }
+@keyframes ctxs-in { from { transform: translateY(105%); } }
+@keyframes ctxs-out { to { transform: translateY(105%); } }
