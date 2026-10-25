@@ -63,18 +63,44 @@ export function Icon({ n, s = 20, className = '' }) {
   );
 }
 
-let openSheets = 0, lockY = 0;
+let openSheets = 0;
+// Telefon: pencere açıkken arkadaki sayfa kaymasın. Sayfaya dokunmadan (sabitlemek iPhone'da arka planın bir an boş
+// görünmesine yol açıyordu) dokunma hareketi süzülür: sadece pencerenin kaydırılabilir içi, kayabildiği yöne kayar.
+if (typeof window !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches) {
+  let sx = 0, sy = 0, ly = 0;
+  addEventListener('touchstart', (e) => { const t = e.touches[0]; if (t) { sx = t.clientX; sy = ly = t.clientY; } }, { passive: true, capture: true });
+  addEventListener('touchmove', (e) => {
+    if (!openSheets || !e.cancelable || e.touches.length !== 1) return;
+    const t = e.target instanceof Element ? e.target : null;
+    if (!t || !t.closest('.sheet-bg')) return; // pencere dışı (ör. büyük resim) kendi işine baksın
+    const p = e.touches[0]; const dx = p.clientX - sx, dy0 = p.clientY - sy; const dy = p.clientY - ly; ly = p.clientY;
+    // yana kaydırma: yana kayabilen bir kutunun içindeyse serbest (resim şeridi, küçük resimler)
+    if (Math.abs(dx) > Math.abs(dy0)) {
+      for (let el = t; el && !el.classList.contains('sheet-bg'); el = el.parentElement) {
+        const cs = getComputedStyle(el);
+        if (/(auto|scroll)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1) return;
+      }
+      e.preventDefault(); return;
+    }
+    // dikey: içinde dikey kayabilen bir kutu varsa ve o yöne kayabiliyorsa serbest
+    for (let el = t; el && !el.classList.contains('sheet-bg'); el = el.parentElement) {
+      const cs = getComputedStyle(el);
+      if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1) {
+        const atTop = el.scrollTop <= 0, atBot = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+        if ((dy > 0 && atTop) || (dy < 0 && atBot)) break; // kenarda: arkaya geçmesin
+        return;
+      }
+    }
+    e.preventDefault();
+  }, { passive: false, capture: true });
+}
 export function Sheet({ title, onClose, children, footer, wide, sub }) {
   const ref = useRef(null);
   const bg = useRef(null);
   useEffect(() => {
     const k = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', k);
-    const y0 = scrollY;
     openSheets++; document.body.classList.add('noscroll');
-    // Telefon: iPhone "overflow: hidden"ı dinlemiyor, pencerede kaydırırken arkadaki sayfa da kayıyordu → sayfa olduğu yerde dondurulur
-    const phone = matchMedia('(max-width: 700px)').matches;
-    if (phone && openSheets === 1) { lockY = y0; Object.assign(document.body.style, { position: 'fixed', top: -lockY + 'px', left: '0', right: '0', width: '100%' }); }
     // aşağı çekerken içerik/sayfa da kaymasın (React'in dokunma dinleyicisi bunu engelleyemiyor)
     const el = ref.current;
     const tm = (e) => { if (drag.current?.on && e.cancelable) e.preventDefault(); };
@@ -87,7 +113,6 @@ export function Sheet({ title, onClose, children, footer, wide, sub }) {
       window.removeEventListener('keydown', k); el?.removeEventListener('touchmove', tm); bgEl?.removeEventListener('touchmove', bm);
       if (--openSheets <= 0) {
         openSheets = 0; document.body.classList.remove('noscroll');
-        if (document.body.style.position === 'fixed') { Object.assign(document.body.style, { position: '', top: '', left: '', right: '', width: '' }); scrollTo(0, lockY); }
       }
     };
   }, []);

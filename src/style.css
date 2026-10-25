@@ -2168,3 +2168,5 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .shell.public .topbar-in .pub-id { margin-left: 2px; }
 }
 @media (max-width: 380px) { .shell.public .topbar-in { gap: 4px; } }
+/* Telefon: body overflow:hidden (html overflow-x: clip ile birlikte) sayfayı en üste atıyordu; pencere açıkken kaydırmayı ui.jsx touchmove süzgeci tutar */
+@media (hover: none) and (pointer: coarse) { body.noscroll { overflow: visible; } }
