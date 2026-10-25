@@ -1,58 +1,182 @@
-# ERTEL B2B — proje notları (Claude için)
+# ERTEL GSM — B2B katalog + online mağaza (Claude için proje notları)
 
-Bayilere (toptancılara) özel katalog + talep/teklif uygulaması. Sahibi: ERTEL GSM (ertelgsm.com, PlatinMarket). Kullanıcıyla Türkçe konuş, teknik olmayan dille anlat.
+Telefon tamir ekipmanı satan ERTEL GSM'in (ertelgsm.com, PlatinMarket altyapısı, Tahtakale/İstanbul) uygulaması. Üç bölüm:
+**bayilere (toptancılara) özel katalog + talep/teklif**, **herkese açık online mağaza** ve **yönetim paneli**. Canlı: https://erteltoptan.web.app
 
-## Yapı
-- `src/` React (esbuild ile tek dosya). Giriş: `main.jsx`. Ekranlar: `catalog.jsx`, `cart.jsx`, `requests.jsx`, `admin.jsx`. Veri katmanı: `backend-firebase.js` (canlı) / `backend-demo.js` (demo). Adresler: `route.js`.
-- `python3 tools/build.py` → `hosting/public/index.html` (+ DEMO.html). Derleme için node_modules'te react, react-dom, esbuild gerekir.
-- Varsayılan ayarlar ve kategori isimleri: `src/config.js`. Firestore kuralları: `hosting/firestore.rules`.
+**Kullanıcıyla Türkçe konuş, teknik olmayan dille anlat.** Kullanıcı tasarıma çok önem veriyor; küçük görsel kusurları fark eder. Bir ekran için istenen değişikliği başka ekranlara (ör. telefon isteği → masaüstü) yaymadan yap; yayman gerekiyorsa önce söyle.
 
-## Yayın
-- `main`'e push = GitHub Actions "Yayınla" → Firebase Hosting + kurallar (erteltoptan.web.app). Değişiklikten sonra build.py çalıştırıp çıktıyı da commit et.
-- Firebase projesi `erteltoptan`, Spark (ücretsiz) plan. Kullanıcı Blaze istemiyor; Storage / Cloud Functions yok.
-- Adresler: `/` giriş sayfası (Online mağaza / Bayi girişi), `/b2b` bayi uygulaması (ana sayfa + katalog…), `/admin` yönetim paneli (ayrı oturum), `/magaza` online mağaza (ürünler, sepet, sipariş, Hesabım), `/magaza/l/<kod>` vitrin listesi: veritabanına KAYDEDİLMEZ, ürün/adet/fiyat linkin içinde (`src/listcode.js`); `/admin/l/<kod>` yönetici fiyatlar ve yeni link + PNG üretir (`src/listsheet.jsx`). Mağazadan talep (sohbet) oluşturulamaz; sadece sipariş (kurallar). Eski `/magaza/t/<id>` sadece görüntülenir, `/b2b/t/<id>` (eski `/t/<id>` de çalışır) ve `/admin/t/<id>` talep linkleri.
-- Excel içe aktarma (Ayarlar > Veri): ürün no ya da stok kodu eşleşirse günceller; aynı stok koduyla ikinci ürün asla eklenmez (`src/xlsx.js` mergeCatalog).
-- Yönetim paneli > Sipariş formu (`src/orderform.jsx`): yönetici ürün arayıp sepet yapar, fiyat yazar; liste resmi (gerekirse birkaç resim, her biri ayrı "Kopyala") + fiyatlı link. Kaydedilmez, taslak cihazda.
-- KDV: `pricing.vatPct` / `pricing.showVat`; sadece toplamın altında bilgi. Herkese açık ayar kopyası (`settings/public`) gösterimle ilgili fiyat alanlarını da taşır.
-- Bayi ana sayfası içeriği `settings.home` (Ayarlar > Bayi ana sayfası).
-- Online mağaza siparişleri (`src/checkout.jsx`, yönetici: `src/orders.jsx`): /magaza'da Sepet → "Sepeti onayla" → iletişim / teslimat (kargo, dükkandan) / fatura (bireysel, kurumsal) / ödeme (havale, kart linki, dükkanda) → `orders` koleksiyonu → Yönetim paneli > Siparişler (durum: new → confirmed → shipped|ready → done, cancelled). Müşteri takip: /magaza/s/<id> (kimlik tahmin edilemez, herkes `get` edebilir, liste yok). Yönetici: /admin/s/<id>. Sepette ayrıca "WhatsApp'tan gönder" doğrudan WhatsApp'ı açar (ara sayfa yok) + yanında liste linkini kopyala (kaydedilmeyen link). Ayarlar > Online mağaza (`settings.orders`).
-- Mağaza üyeliği: e-posta doğrulamalı (doğrulamayan giriş yapamaz), isteğe bağlı kullanıcı adıyla giriş (`usernames/{ad}` → e-posta). E-postadaki bağlantılar uygulama içi sayfada açılabilir: /magaza/islem (Firebase > Authentication > Templates > işlem URL'si). E-posta + şifre, ayrı Firebase örneği ('shop', bayi/yönetici oturumunu etkilemez), `members/{uid}` (ad, telefon, adresler, fatura). Misafir de sipariş verir; misafirin bilgileri o cihazda hatırlanır (`guest-checkout`, `my-orders`).
-- Mağaza ana sayfası (`src/shophome.jsx`, `settings.shopHome`, Ayarlar > Mağaza ana sayfası): kayan büyük reklam alanı (temalar), avantaj şeridi, kayan marka şeridi + marka kare kutuları, bento kare reklam kutuları (sq/wide/tall/big), ürün rafları (yeni/marka/kategori/elle), alt WhatsApp bandı. Link biçimi: `brand:Ad`, `cat:3`, `q:kelime`, `p:ürünNo`, `https://…` → katalog `catalogGo` ile filtrelenir. Marka logoları hosting/public/brands/ (markaların sitelerinden; kutular marka rengiyle açık zemin). Resimler `shopimg/{id}` (Firestore, webp, cihazda IndexedDB önbellek); `settings/public` shopHome'u da taşır.
-- Sepet ekranı mağaza ve bayi için ortak (`src/cart.jsx`); bayide son adım talep gönderme (sohbet Talepler'de). Menü adları iki tarafta aynı (Ürünler, Sepet, Hesabım), ürün düğmesi "Sepete ekle". Mağazada online sipariş ve üyelik açık ("Çok yakında" anahtarları settings.orders.checkoutSoon / accountsSoon; ?onizleme=1). Üst menüde ayrı sepet düğmesi (HeaderCart), sağ altta küçük sepet (CartBar). Uygulama adı ERTEL GSM, logo assets/logo-*.png (yeni ert mobile). Ayar göçü main.jsx migrate() `S.v`.
-- Yönetici talepleri (sağ tık / çoklu seçim / talep içi) ve müşterileri tamamen silebilir (Firebase Auth hesabı silinmez, kayıt silindiği için giriş açılmaz).
+---
 
-- Marka logoları/renkleri: `settings.brandLogos` {Ad: {logo, color}} (Ayarlar > Markalar; ad büyük/küçük harf duyarsız eşleşir). Ana sayfa kutuları durağanken nötr, üstüne gelince marka renginde ışık. Kayan şerit stili `shopHome.marquee`: color (varsayılan, renkli logolar) / dark / mono / off. `settings/public` brandLogos'u da taşır.
-- Tüm ürünler: kutu (varsayılan, büyük resim) / satır görünümü (`cat-view`, cihazda).
-- Sipariş durumu yönetici tarafından serbest seçilir (Yeni…Tamamlandı, İptal); Kargoda seçilince kargo firması listeden (`settings.orders.cargoCompanies`, Ayarlar > Online mağaza) + takip no.
-- Yeni sipariş bildirimi: checkout → Worker `POST /notify {id}` (siparişi Firestore REST'ten okur, KV ile tekrar göndermez) → Telegram (secret TELEGRAM_TOKEN; alıcı sohbet KV `tg-chat`, panelde 6 haneli kodla `POST /tg-link`, sadece ilk bağlantı) + e-posta Resend (secret RESEND_KEY, onboarding@resend.dev → NOTIFY_EMAIL; Resend hesabı o e-postayla açılmalı; anahtar yoksa FormSubmit, ama FormSubmit Cloudflare'den 'Rate limit' veriyor). CallMeBot WhatsApp botu dolu olduğu için bırakıldı. Ayarlar > Online mağaza > "Deneme bildirimi gönder" (`/notify-test`).
-- Yönetici mağaza üyesi açabilir/görebilir/silebilir (Siparişler > Mağaza üyeleri). Panelden açılan üye `byAdmin: true` → e-posta doğrulaması gerekmez.
+## 1. Teknolojiler
 
-- Ayarlar: açılır-kapanır bölümler (hepsi kapalı başlar), kaydet çubuğu altta. Mağaza ana sayfası düzenleyicisinde gruplar (Fold) ve satırlar (Rows) da kapalı başlar, sürükleyerek sıralanır.
-- Tasarım modu (`src/designer.jsx`, yönetim paneli > Tasarım): ShopHome `DesignCtx` ile düzenlenebilir hâlde çizilir. Bölüm sırası `shopHome.layout` (hero, usps, marquee, brands, promos, rail:<id>, b:<id>, cta), gizliler `shopHome.hidden`, yeni bölümler `shopHome.blocks` {t:'head'|'banner'}. Marka/reklam kutuları sürüklenir; `heroH` (alt kenardan çekilir), `brandSize` sm/md/lg, `brandLogoScale`, `mqSpeed`, marka başına `brandLogos[ad].scale`. Reklam içi öğeler (logo, title, text, cta, art) `slides[i].fx[el]` = {x,y,s,r,rx,ry} (sürükle + 3B eğim; telefonda konum `--fxk` ile küçülür). Taslak `store.designDraft`, Kaydet = saveSettings (Ayarlar'la aynı kayıt). Raflara `id` verilir. Telefonda (≤800px ya da dokunmatik) ayrı kullanım: sürükleme / yerinde yazı / reklam içi öğe taşıma kapalı; dokunma sadece seçer (`pick`), alttaki koyu çubuktan (MobileBar) yukarı-aşağı, öne-sona, logo küçült-büyüt, kutu boyutu, gizle, Düzenle (panel), altına bölüm ekle.
-- `/siparisformu`: menüsüz tek sayfa sipariş formu, yönetici oturumunu kullanır (cihazda bir kez giriş, sonra şifre sormaz), noindex; sitede linki yok. Tamamen şifresiz yapılmadı: toptan fiyatlar Firestore'da yönetici yetkisiyle okunuyor.
-- Yönetim paneli ana sayfası (`src/dashboard.jsx`, AdminHome, varsayılan sekme `anasayfa`, /admin): hoş geldiniz, dönem (bugün/hafta/ay) özeti: sipariş, satış tutarı (USD + ≈TL, önceki döneme göre %), ortalama sepet, yeni üye, bayi talebi; kısayollar; son 14 gün grafiği; çok satanlar; akış (sipariş + talep). Talepler artık /admin/talepler. Telefon alt menüsünde Müşteriler ve Tasarım yok (ana sayfadaki kısayollardan).
-- Telefonda uygulama gibi (SADECE ≤700px; masaüstü eskisi gibi, kullanıcı istedi): html/body yana kaymaz (overflow-x clip), kayan şerit telefonda rAF ile kendi kutusunda kayar, masaüstünde eski CSS animasyonu (parmakla da kaydırılır; eski dev CSS animasyonu iPhone'da kayboluyordu). Sekmeler adreste: /magaza/urunler, /sepet, /hesap; /b2b/…; /admin/siparisler, /form, /urunler, /musteriler, /tasarim, /ayarlar (store.js SLUGS, pushState + popstate, geri gelince kaydırma yeri geri yüklenir).
-- Gece modu: marka kutuları ve kayan şerit koyu zemin; koyu yazılı logolar ShopImg onLoad'da tuvalle algılanır (`.ink`) ve gecede `invert + hue-rotate(180)` ile yalnız koyu kısımları açılır (renkler korunur).
-- Siparişler: "Seç" ile çoklu seçim + toplu silme (deleteOrders). Yönetim üst menüsünde Tasarım yok (ana sayfa kısayolu + Ayarlar); dar ekranda pasif sekmeler sadece simge, mağaza adı hiç kısaltılmaz.
-- Tasarım modu masaüstü araç çubuğu: bölümün sağ üstünde, aradaki boşlukta açık renkli küçük hap (içeriğin üstüne binmez).
-- Mağazada arama: üst menüde büyüteç simgesi (`HeaderSearch`, shophome.jsx); basınca masaüstünde yerinde 320px kutu, telefonda üstte kutu açılır. Ürüne basınca yazı silinir ve kutu kapanır; kutu boşken dışarıda herhangi bir yere dokununca kapanır (pointerdown dinleyicisi); açılış ve kapanış animasyonlu (`.closing`): masaüstünde kutu simge düğmesinin boyutuna (40px yuvarlak, kenarlıksız) iner, içindeki büyüteç hiç kaybolmadan simgenin tam yerine kayar. Tek resimli ürünün penceresi de tam genişlik kare (`.gal-single`). Yazdıkça ilk 6 ürün, ürüne basınca ProductSheet, Enter/Tüm sonuçlar → `catalogGo {q}`. Ana sayfadaki büyük arama bloğu ve sık arananlar kaldırıldı (kullanıcı beğenmedi).
-- Banner otomatik geçişi: fare üstüne gelince durur, çekilince kalan süreden devam eder (sıfırlanmaz); ilerleme çizgisi de duraklar.
-- Sepet ve sipariş/liste kâğıdında ürün adı → ProductSheet, resim → Lightbox (PlatinMarket'e link yok). Banner telefonda dokunmadan 4 sn sonra yeniden kayar. Sipariş tamamla sayfasında belirgin "Sepete dön" düğmesi.
-- Açılış ekranı (`IntroSplash`, main.jsx): dükkân fotoğrafı `brand.splash` (/splash/dukkan.jpg), oturumda bir kez, en az 1,4 sn / en çok 4,5 sn, dokununca geçer; yönetim panelinde yok. Kapatmak: Ayarlar > Genel > Açılış ekranı (`brand.splashOn`), resmi de oradan değişir.
-- Ana ekrana ekleme: index.html başındaki küçük betik adrese göre manifest seçer: /admin ve /siparisformu → manifest-admin (ad "ERTEL Yönetim", lacivert + sarı kalkanlı icon-admin-*.png, start_url /admin), /magaza → manifest-magaza (start_url /magaza), diğerleri manifest-b2b.
+| Katman | Ne kullanılıyor |
+|---|---|
+| Arayüz | React 19 (JSX), tek CSS dosyası (`src/style.css`), kendi küçük bileşen seti (`src/ui.jsx`), global durum `src/store.js` (useSyncExternalStore benzeri basit store) |
+| Paketleme | esbuild (node_modules'te), `python3 tools/build.py` → tek dosya `hosting/public/index.html` (+ deneme için `DEMO.html`). PNG logolar data URL olarak gömülür |
+| Veri / oturum | Firebase **Spark (ücretsiz)**: Authentication (e-posta/şifre) + Firestore. Storage ve Cloud Functions YOK (kullanıcı Blaze istemiyor). Firebase SDK 10.12.2, kendi sitemizden `/fb/` altından yüklenir |
+| Barındırma | Firebase Hosting (erteltoptan.web.app), PWA (service worker `hosting/public/sw.js`, manifest dosyaları) |
+| Arka plan işleri | Cloudflare Worker `ertel-b2b-watch` (`worker/index.js`, `wrangler.toml`, KV depo) — site eşitleme tetikleyici, kur, sipariş bildirimi |
+| Otomasyon | GitHub Actions (aşağıda) — repo `omer12boluk-coder/ertel-toptan` |
+| Bildirim | Telegram botu (@ertelsiparis_bot) + Resend e-posta |
+| Deneme | Playwright (Chromium) ile DEMO.html üzerinden; demo veri katmanı `backend-demo.js` (localStorage) |
 
-## Site eşitleme
-- `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı (r) = sitedeki gerçek satış fiyatı: `sale_price` (indirimli) varsa o, yoksa `price` (Excel'de de "İndirimli Fiyat" → r). Toptan = ürüne özel w yoksa r'den % indirim (utils priceFor). 24.10.2026'da eski "indirimli = w" kayıtları temizlendi. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sipariş formu: arama listesinde liste + toptan görünür, eklenince liste fiyatı (r) geçer. Sitede olmayan ürünü `so=1` ile gizler.
-- `worker/index.js` Cloudflare Worker "ertel-b2b-watch": dakikada bir beslemeyi kontrol eder, değişince sync'i tetikler (Actions "Bekçiyi yayınla" yükler). workers.dev adresi `hosting/public/config.js` → `window.WATCH_URL`: `GET /rate` Harem Altın dolar satış kuru, `POST /check` (panel açılınca), `POST /sync` ("Şimdi eşitle").
-- Uygulama içi tarayıcılar (Telegram/WhatsApp/Instagram): Auth sadece browserLocalPersistence (IndexedDB yoklaması girişi kilitliyordu), Firestore orada experimentalForceLongPolling, SDK yükleme ve idb işlemlerinde zaman aşımı.
-- Firebase SDK kendi sitemizden: hosting/public/fb/ (Actions "Firebase kütüphanesini siteye kopyala"); telefon tarayıcılarının izleyici koruması gstatic'i geciktiriyordu. Yoksa gstatic'e düşer.
-- Ürün adları `src/clean.js` ile temizlenir (Windows-1252 kalıntısı, &#..; kodları).
-- Siteye toplu istek atma (IP engeli yemiştik). Beslemede stok adedi yok.
+## 2. Klasör yapısı
 
-## Gizli ayarlar (GitHub Actions secrets) — değerlerini asla isteme/yazdırma
-FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_DISPATCH_TOKEN, TELEGRAM_TOKEN, RESEND_KEY (bildirim; kullanıcı ekler).
+```
+src/
+  main.jsx          giriş: boot(), oturum, sekme yönlendirme, üst/alt menü, Splash, IntroSplash (açılış ekranı), FormOnlyShell (/siparisformu), migrate()
+  route.js          adres çözümleme (ROUTE), linkler, waLink
+  store.js          global durum, go()/sekme geçmişi (pushState), sepet
+  config.js         DEFAULT_SETTINGS (tüm ayarların varsayılanı), kategori adları, ORDER_STATUS
+  ui.jsx            Icon, Sheet, Field, Toggle, Fold, Thumb, Confirm, ContextMenu…
+  utils.js          fmt, priceFor (fiyat kuralı), totals, deepMerge/withDefaults, ls (localStorage)
+  backend-firebase.js / backend-demo.js   veri katmanı (aynı arayüz)
+  catalog.jsx       ürün listesi (kutu/satır), filtreler, ProductSheet (ürün penceresi), Gallery, Lightbox
+  cart.jsx          ortak sepet (mağaza + bayi)
+  checkout.jsx      mağaza siparişi, üyelik/giriş, Hesabım, sipariş takip sayfası, e-posta işlem sayfası
+  orders.jsx        yönetim: mağaza siparişleri + mağaza üyeleri
+  requests.jsx      bayi talepleri (sohbet)
+  admin.jsx         yönetim: Müşteriler (bayiler), Ayarlar (açılır-kapanır bölümler), Profil
+  dashboard.jsx     yönetim ana sayfası (Genel bakış)
+  shophome.jsx      mağaza ana sayfası + ayar düzenleyicileri + HeaderSearch (üstteki arama) + marka logoları editörü
+  designer.jsx      Tasarım modu (mağaza ana sayfasını üstünde düzenleme)
+  orderform.jsx     yönetim: Sipariş formu (liste resmi + fiyatlı link)
+  listsheet.jsx / listcode.js   vitrin listesi (ürünler linkin içinde kodlu), liste kâğıdı / PNG
+  home.jsx          giriş sayfası (/) ve bayi ana sayfası
+  guestcart.jsx     HeaderCart (üst menü sepeti), CartBar (sağ alt küçük sepet)
+  watch.js          kur (Harem Altın) ve sürüm kontrolü, "Şimdi eşitle"
+  idb.js            IndexedDB önbellek (zaman aşımlı)
+  xlsx.js           Excel içe/dışa aktarma (mergeCatalog)
+  clean.js          ürün adı temizliği (Windows-1252 kalıntısı, &#..; kodları)
+  products.json / categories.json / descs.json   gömülü başlangıç verisi
+hosting/
+  firebase.json, firestore.rules, firestore.indexes.json
+  public/  index.html (derlenmiş), config.js (Firebase ayarı + WATCH_URL), sw.js, manifest-*.webmanifest,
+           icon-*.png, icon-admin-*.png, brands/*.png (marka logoları), splash/dukkan.jpg, fb/ (Firebase SDK)
+tools/      build.py, sync-platin.mjs (site eşitleme), fetch-logos.mjs (marka logosu toplama), convert*.py (eski veri dönüştürme)
+worker/     index.js (Cloudflare Worker)
+.github/workflows/  deploy.yml, sync.yml, worker.yml, vendor-firebase.yml, brand-assets.yml
+KURULUM.md  kullanıcıya yönelik kurulum anlatımı · README.md kısa tanıtım
+```
 
-## Açık konular
-- E-postalar spam'e düşüyor: Firebase Auth e-postaları noreply@erteltoptan.firebaseapp.com'dan, sipariş bildirimi onboarding@resend.dev'den. Kalıcı çözüm ertelgsm.com DNS'ine kayıt ekleyip (Firebase Auth özel alan adı + Resend alan adı doğrulama) kendi adresimizden göndermek; DNS'i kimin yönettiği soruldu. Spam'deki e-postalarda Gmail linkleri kapatıyor.
-- iyzico "link ile ödeme" entegrasyonu (kullanıcı başvuracak).
-- Beslemede her üründe g:price (üstü çizili) + g:sale_price (gerçek satış) var; uygulama sale_price'ı liste fiyatı alır. 24.10.2026'da eski "indirimli = toptan (w)" kayıtları silindi (kullanıcı onayladı), toptan artık % kuralıyla.
+## 3. Derleme, yayın, test
+
+- Değişiklikten sonra **`python3 tools/build.py`** çalıştır ve çıktıyı (`hosting/public/index.html`, `DEMO.html`, `version.json`) da commit et.
+- **`main`'e push = otomatik yayın.** GitHub Actions:
+  - **Yayınla** (`deploy.yml`): Firebase Hosting + Firestore kuralları.
+  - **Bekçiyi yayınla** (`worker.yml`): Cloudflare Worker'ı yükler, gizli ayarları (TELEGRAM_TOKEN, RESEND_KEY, GH_TOKEN) Worker'a koyar; `worker/`, `wrangler.toml` değişince kendiliğinden çalışır.
+  - **Siteyle eşitle** (`sync.yml`): PlatinMarket beslemesini okuyup katalogu günceller (Worker tetikler).
+  - **Firebase kütüphanesini siteye kopyala** (`vendor-firebase.yml`), **Marka logolarını getir** (`brand-assets.yml`, sonucu `brand-assets` dalına yazar).
+  - Elle çalıştırma: `gh workflow run <dosya>.yml --ref main`.
+- Commit mesajları Türkçe; yayından sonra `gh run list` ile bitmesini bekle, gerekirse canlıyı tarayıcıda kontrol et.
+- **Test:** Konteynerden canlı siteye/Firebase'e erişilemez. Deneme sunucusu `/tmp/claude-0/web/serve.py` (port 8765, her adrese DEMO.html, `/brands/` ve `/splash/` dosyalarını verir) + Playwright (`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`). Demo girişleri: yönetici `admin/admin`, bayi `ahmet/1234`. Telefon için 390×844 + `is_mobile/has_touch`.
+
+## 4. Adresler
+
+- `/` giriş sayfası (Online mağaza büyük / Bayi girişi). `/magaza` online mağaza, `/b2b` bayi uygulaması, `/admin` yönetim paneli (ayrı oturum).
+- Sekmeler adreste (store.js `SLUGS`, pushState + popstate; telefonda geri kaydırınca önceki sekmeye döner, kaydırma yeri geri gelir):
+  `/magaza/urunler|sepet|hesap`, `/b2b/urunler|sepet|talepler|profil`, `/admin` (ana sayfa), `/admin/talepler|siparisler|form|urunler|musteriler|tasarim|ayarlar`.
+- `/magaza/l/<kod>` vitrin listesi (veritabanına KAYDEDİLMEZ; ürün/adet/fiyat linkin içinde) · `/admin/l/<kod>` yönetici fiyatlar, yeni link + PNG üretir.
+- `/magaza/s/<id>` müşteri sipariş takibi (kimlik tahmin edilemez, herkes `get` edebilir, liste yok) · `/admin/s/<id>` yönetici.
+- `/b2b/t/<id>` (eski `/t/<id>` de) ve `/admin/t/<id>` talep linkleri · eski `/magaza/t/<id>` sadece görüntülenir.
+- `/magaza/islem` e-postadaki doğrulama / şifre sıfırlama bağlantıları (Firebase > Authentication > Templates > işlem URL'si).
+- `/siparisformu` menüsüz tek sayfa sipariş formu (aşağıda).
+- Ana ekrana ekleme: `index.html` başındaki küçük betik adrese göre manifest ekler: `/admin` ve `/siparisformu` → `manifest-admin` ("ERTEL Yönetim", lacivert + sarı kalkanlı `icon-admin-*.png`, start_url `/admin`); `/magaza` → `manifest-magaza`; diğerleri `manifest-b2b`.
+
+## 5. Veri modeli (Firestore)
+
+| Koleksiyon / belge | İçerik |
+|---|---|
+| `catalog/*` | tam katalog, parçalar hâlinde (~1500 ürün/belge, açılışta 2-3 okuma); yalnız yönetici + bayi |
+| `pubcatalog/*` | mağaza için herkese açık katalog (toptan fiyat yok) |
+| `desc/*`, `img/*` | ürün açıklamaları, elle yüklenen ürün resimleri |
+| `settings/main` + `settings/public` | tüm ayarlar; `public` herkese açık kopya (brand, shop, access, catalog, categories, gösterim fiyat alanları, orders, shopHome, brandLogos, `v`) |
+| `users/{uid}` | bayi ve yönetici hesapları (rol, kademe, ek indirim, aktif/bekliyor) |
+| `userPrices/{uid}`, `userNotes/{uid}` | bayiye özel fiyat ve notlar |
+| `requests/{id}` + `messages` | bayi talepleri / sohbet |
+| `orders/{id}` | mağaza siparişleri (durum, iletişim, teslimat, fatura, ödeme, kalemler, `total` {para birimi: tutar}) |
+| `members/{uid}`, `usernames/{ad}` | mağaza üyeleri (ad, telefon, adresler, fatura; `byAdmin`) ve kullanıcı adı → e-posta |
+| `shopimg/{id}` | mağaza ana sayfası resimleri (webp, Firestore'da; cihazda IndexedDB önbellek) |
+| `meta/owner`, `meta/sync` | kurulum sahibi, son eşitleme |
+
+Ürün alanları (kısa adlar): `id`, `k` stok kodu, `n` ad, `b` marka, `c`/`c2` kategori, `r` liste fiyatı, `w` ürüne özel toptan, `cur`, `s` stok, `a` aktif, `so` sitede yok (gizli), `pc` liste fiyatı değişti uyarısı, `nw` yeni, `pi`/`im` resim, `t` gizli etiketler, `u` site adresi.
+Ayar göçü: `main.jsx` → `migrate()`, sürüm `settings.v` (şu an 5). Ayarlar her zaman `withDefaults()` ile varsayılanlarla derin birleştirilir.
+
+## 6. Özellikler (bölüm bölüm)
+
+### Fiyat
+- **Liste fiyatı (r)** = sitedeki gerçek satış fiyatı: beslemede `sale_price` (indirimli) varsa o, yoksa `price`. Excel'de de "İndirimli Fiyat" → r.
+- **Toptan** = ürüne özel `w` varsa o, yoksa liste fiyatından % indirim (`pricing.discountPct`, `utils.priceFor`). Bayiye kademe + ek indirim, en üstte bayiye özel fiyat. Mağaza ziyaretçisi (`role: 'public'`) her zaman liste fiyatını görür.
+- KDV (`pricing.vatPct` / `showVat`) ürün fiyatına eklenmez; sadece toplamın altında bilgi satırı. TL karşılığı Harem Altın **dolar satış** kuru (ya da `pricing.manualRate`).
+
+### Bayi tarafı (/b2b)
+Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet (Talepler). Bayi ana sayfası `settings.home`. Bayiler kendileri başvurabilir (`access.allowSignup`), yönetici onaylar.
+
+### Online mağaza (/magaza)
+- Üst menü: Ana sayfa, Tüm ürünler, **arama (büyüteç simgesi, `HeaderSearch`)**, sepet düğmesi (HeaderCart), Giriş yap. Sağ altta küçük sepet (CartBar). Menü adları bayiyle aynı (Ürünler, Sepet, Hesabım), ürün düğmesi "Sepete ekle".
+- **Arama:** büyüteç → masaüstünde yerinde 320px kutu, telefonda üstte kutu. Yazdıkça ilk 6 ürün; ürüne basınca ürün penceresi (ProductSheet), yazı silinip kutu kapanır; Enter / "Tüm sonuçlar" → ürünler sayfası `catalogGo {q}`. Kutu boşken dışarıya dokununca kapanır. Açılış/kapanış animasyonlu; masaüstünde kapanırken kutu simge boyutuna iner, büyüteç kaybolmadan simgenin yerine kayar.
+- **Ana sayfa** (`shophome.jsx`, `settings.shopHome`): büyük reklam alanı (kayan banner, temalar), avantaj şeridi, kayan marka şeridi, marka kutuları, kare reklam kutuları (sq/wide/tall/big), ürün rafları (yeni/marka/kategori/elle), başlık ve görsel bant blokları, alt WhatsApp bandı. Link biçimi: `brand:Ad`, `cat:3`, `q:kelime`, `p:ürünNo`, `https://…`.
+  - Banner 6,5 sn'de bir geçer; fare üstündeyken durur, çekilince **kalan süreden** devam eder (ilerleme çizgisi de duraklar); telefonda dokunduktan 4 sn sonra yeniden kayar.
+  - Marka kutuları durağanken nötr, üstüne gelince marka renginde ışık. Logolar/renkler/logo boyutu `settings.brandLogos` {Ad: {logo, color, scale}} (ad büyük/küçük harf duyarsız). Logolar `hosting/public/brands/` (markaların kendi sitelerinden; AmScope, Quick, RF4, Yihua, Uni-T dahil).
+  - Kayan şerit stili `shopHome.marquee`: color (varsayılan) / dark / mono / off; hız `mqSpeed`. **Masaüstünde CSS animasyonu, telefonda (≤700px) rAF ile kendi kutusunda kayar ve parmakla kaydırılır** (eski dev CSS katmanı iPhone'da kaybolup titriyordu).
+- **Tüm ürünler:** kutu (varsayılan, büyük resim) / satır görünümü (`cat-view`, cihazda). Filtre çipleri ×'li; seçili kategoride sonuç yoksa arama tüm ürünlere genişler.
+- **Ürün penceresi:** resimler (tek resimli ürün de tam genişlik kare çerçevede, `.gal-single`), açıklama, adet, sepete ekle. Sepette ve sipariş/liste kâğıdında ürün adı → bu pencere, resim → büyük resim (PlatinMarket'e link YOK).
+- **Sipariş:** Sepet → "Sepeti onayla" → iletişim / teslimat (kargo, dükkândan) / fatura (bireysel, kurumsal) / ödeme (havale, kart linki, dükkânda) → `orders`. Belirgin "Sepete dön" düğmesi. Misafir de sipariş verir (bilgiler cihazda: `guest-checkout`, `my-orders`). Sepette ayrıca "WhatsApp'tan gönder" (doğrudan WhatsApp, ara sayfa yok) + liste linkini kopyala. "Çok yakında" anahtarları `orders.checkoutSoon` / `accountsSoon` (şu an kapalı; `?onizleme=1`).
+- **Üyelik:** e-posta + şifre, ayrı Firebase örneği ('shop'; bayi/yönetici oturumunu etkilemez), e-posta doğrulamalı (doğrulamayan giremez), isteğe bağlı kullanıcı adıyla giriş. Yöneticinin açtığı üye `byAdmin: true` → doğrulama gerekmez.
+- **Açılış ekranı** (`IntroSplash`): dükkân fotoğrafı `brand.splash` (/splash/dukkan.jpg), oturumda bir kez, en az 1,4 sn / en çok 4,5 sn, dokununca geçer; yönetim panelinde yok. Kapatma: Ayarlar > Genel > Açılış ekranı (`brand.splashOn`).
+- **Gece modu:** marka kutuları ve şerit koyu zemin; koyu yazılı logolar `ShopImg` yüklenince tuvalle algılanır (`.ink`) ve gecede `invert + hue-rotate(180deg)` ile sadece koyu kısımlar açılır (renkler korunur).
+
+### Yönetim paneli (/admin)
+- **Ana sayfa (Genel bakış, `dashboard.jsx`):** hoş geldiniz bandı, dönem (bugün/hafta/ay): mağaza siparişi, satış tutarı (USD + ≈TL, önceki döneme göre %), ortalama sepet, yeni üye, bayi talebi; kısayollar; son 14 gün grafiği; çok satanlar; akış (sipariş + talep). İptaller satışa sayılmaz.
+- **Talepler:** sağ tık / çoklu seçim / talep içinden silme. **Müşteriler (bayiler):** tamamen silinebilir (Auth hesabı kalır ama kayıt silindiği için giremez).
+- **Siparişler:** durum serbest seçilir (Yeni, Onaylandı, Kargoda, Teslime hazır, Tamamlandı, İptal); "Kargoda"da firma listeden (`orders.cargoCompanies`) + takip no. "Seç" ile çoklu seçim + toplu silme. **Mağaza üyeleri** sekmesi: görüntüle, sil, yeni üye aç.
+- **Sipariş formu** (`orderform.jsx`): ürün ara (liste + toptan görünür, eklenince liste fiyatı geçer), fiyat yaz, liste resmi (gerekirse birkaç resim, her biri ayrı "Kopyala") + fiyatlı link. Kaydedilmez, taslak cihazda. Arama sonuçları kendi kaydırmalı kutusunda; "Müşteriye gönder" sağ sütunda + başlıkta kısayol.
+- **`/siparisformu`:** menüsüz tek sayfa sipariş formu, yönetici oturumunu kullanır (cihazda bir kez giriş), noindex, sitede linki yok.
+- **Tasarım modu** (`designer.jsx`): mağaza ana sayfası düzenlenebilir hâlde çizilir (`DesignCtx`). Bölüm sırası `shopHome.layout` (hero, usps, marquee, brands, promos, `rail:<id>`, `b:<id>`, cta), gizliler `shopHome.hidden`, yeni bölümler `shopHome.blocks` {t:'head'|'banner'}. Masaüstü: kutuları/bölümleri sürükle, banner'ı alt kenardan boyutlandır (`heroH`), `brandSize` sm/md/lg, `brandLogoScale`, reklam içi öğeleri (logo/başlık/yazı/buton/görsel) taşı + döndür + 3B eğ (`slides[i].fx[el]` = {x,y,s,r,rx,ry}; telefonda konum `--fxk` ile küçülür), araç çubuğu bölümün sağ üstünde açık renkli küçük hap. Telefon (≤800px/dokunmatik): sürükleme kapalı, dokunma sadece seçer, alttaki koyu çubuktan (MobileBar) işlem. Taslak `store.designDraft`; Kaydet = `saveSettings` (Ayarlar'la aynı kayıt). Üst menüde yok; ana sayfa kısayolu ve Ayarlar'dan açılır.
+- **Ayarlar:** açılır-kapanır bölümler (hepsi kapalı başlar), kaydet çubuğu altta. Mağaza ana sayfası düzenleyicisinde gruplar (Fold) ve satırlar (Rows) da kapalı başlar, sürükleyerek sıralanır. Markalar bölümü: logo, renk, logo boyutu.
+- Excel içe aktarma (Ayarlar > Veri): ürün no ya da stok kodu eşleşirse günceller; **aynı stok koduyla ikinci ürün asla eklenmez** (`xlsx.js` mergeCatalog).
+- Üst menü: mağaza adı hiç kısaltılmaz; dar ekranda pasif sekmeler sadece simge. Telefon alt menüsünde Müşteriler ve Tasarım yok.
+
+## 7. Site eşitleme, Worker, bildirimler
+
+- `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler. Beslemede stok adedi yok. **Siteye toplu istek atma (IP engeli yemiştik).**
+- Cloudflare Worker `ertel-b2b-watch` (adresi `hosting/public/config.js` → `window.WATCH_URL`): dakikada bir beslemeyi kontrol eder, değişince eşitlemeyi tetikler. `GET /rate` Harem Altın dolar satış, `POST /check` (panel açılınca), `POST /sync` ("Şimdi eşitle").
+- **Yeni sipariş bildirimi:** checkout → Worker `POST /notify {id}` → siparişi Firestore REST'ten okur (sahte bildirim gönderilemez), KV ile bir kez gönderir →
+  - **Telegram** (secret `TELEGRAM_TOKEN`; alıcı sohbet KV `tg-chat`; panelde 6 haneli kodla `POST /tg-link`, sadece ilk bağlantı) — bağlı ve çalışıyor.
+  - **E-posta** Resend (secret `RESEND_KEY`, `onboarding@resend.dev` → `NOTIFY_EMAIL`, HTML + "Siparişi panelde aç" düğmesi).
+  - Ayarlar > Online mağaza > "Deneme bildirimi gönder" (`/notify-test`).
+- Uygulama içi tarayıcılar (Telegram/WhatsApp/Instagram): Auth sadece `browserLocalPersistence` (IndexedDB yoklaması girişi kilitliyordu), Firestore orada `experimentalForceLongPolling`, SDK yükleme ve idb işlemlerinde zaman aşımı; yavaşlarsa 7 sn sonra "Safari'de aç" yönlendirmesi.
+- Firebase SDK kendi sitemizden (`hosting/public/fb/`), yoksa gstatic'e düşer (telefon tarayıcılarının izleyici koruması gstatic'i geciktiriyordu).
+
+## 8. Önemli kararlar (neden böyle)
+
+- **Ücretsiz plan:** Firebase Spark kalacak (kullanıcının kartı/isteği yok). Resimler Firestore'da webp; dosya deposu yok. Arka plan işleri için ücretsiz Cloudflare Workers seçildi. PlatinMarket planında API yok → XML beslemesi + Worker.
+- **Liste fiyatı = sitedeki gerçek satış fiyatı (indirimli varsa o)**, toptan bunun üstüne % indirim. 24.10.2026'da eski "indirimli = toptan (w)" kayıtları silindi (kullanıcı onayladı).
+- **Vitrin listeleri veritabanına kaydedilmez** (her şey linkin içinde). Mağazadan talep/sohbet açılamaz, sadece sipariş.
+- **Bildirim:** CallMeBot WhatsApp botu dolu olduğu için bırakıldı; FormSubmit Cloudflare'den "rate limit" verdiği için Resend'e geçildi; Telegram ana kanal.
+- **`/siparisformu` tamamen şifresiz yapılmadı:** toptan fiyatlar Firestore'da yönetici yetkisiyle okunuyor; açık olsa fiyat listesi dışarı sızardı. Yerine cihazda bir kez giriş.
+- **Telefona özel düzenlemeler sadece telefonda** (≤700px): sayfa yana kaymaz (`overflow-x: clip`), kayan şerit kendi kutusunda kayar, beliren animasyonlar sade. Masaüstü eski davranışında kaldı (kullanıcı açıkça istedi).
+- **Ürün sayfaları uygulama içinde açılır**, PlatinMarket sitesine yönlendirme yok.
+- **Mağaza aramasında büyük blok ve "sık arananlar" istenmedi** → sadece üst menüde küçük büyüteç.
+- **Sekmeler adreste** (pushState): telefonda geri kaydırma uygulama içinde kalsın, sayfa yeniden yüklenmesin.
+- Yönetim panelinin ana ekran simgesi ayrı (lacivert + sarı kalkan) ki mağazadan ayırt edilsin.
+
+## 9. Gizli ayarlar (GitHub Actions secrets) — değerlerini ASLA isteme/yazdırma
+
+`FIREBASE_SERVICE_ACCOUNT`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `GH_DISPATCH_TOKEN`, `TELEGRAM_TOKEN`, `RESEND_KEY`. Kullanıcı kendisi GitHub'a ekler; anahtarları sohbete yazmasını isteme.
+
+## 10. Yarım kalan işler / açık konular
+
+- [ ] **E-postalar spam'e düşüyor** (üyelik doğrulama, şifre sıfırlama, sipariş bildirimi). Spam'deki e-postada Gmail linkleri de kapatıyor. Kullanıcı "sonra dönücem" dedi. Seçenekler:
+  - Kendi alan adı (ertelgsm.com DNS kayıtları → Firebase Auth özel alan adı + Resend alan doğrulama) — DNS'i kimin yönettiği soruldu, cevap bekleniyor.
+  - Ya da bu iş için yeni bir Gmail hesabı + uygulama şifresiyle Firebase Auth > Templates > **SMTP ayarları** (smtp.gmail.com, 587, STARTTLS). Kurulumu kullanıcı Firebase konsolunda yapacak; şifreyi bize vermeyecek.
+  - Kendi sipariş bildirimi için geçici çözüm: Gmail filtresi `from:onboarding@resend.dev` → "Asla spam'e gönderme".
+- [ ] **Banner'da video:** Santral Center ile ortak paylaşılan Instagram reeli (dükkân çekimi). Orijinal dosya Santral Center'dan istenecek. Gelince: banner'a "Video" görünümü (sessiz, döngülü, kapak resmi) eklenecek. Barındırma: önce site dosyaları (Spark'ta günlük indirme sınırı ~360 MB'a dikkat), ziyaret artarsa Cloudflare R2. Henüz kod yazılmadı.
+- [ ] **iyzico "link ile ödeme"** entegrasyonu (kullanıcı başvuracak). Sitede kart ödemesi şu an sadece Maximum kartla çalışıyor.
+- [ ] Telefonda ürün penceresi açıkken geri kaydırınca pencere kapanmıyor, önceki sekmeye gidiyor (pencereler geçmişe eklenmedi).
+- [ ] Logosu olmayan markalar: Fluke (sitede sadece ürün fotoğrafı), YCS, Ma Ant, Mijing, Kaisi, Sugon, XZZ, OSS Team, Mega-Idea… → adları marka renginde yazılıyor; kullanıcı Ayarlar > Markalar'dan ekleyebilir.
+- [ ] Gece modunda Qianli'nin kırmızısı pembeye kayıyor (isterse o logoya ayrı ayar).
+- [ ] Sipariş formu tablosunda uzun ürün adları dar sütunda çok satıra bölünüyor (sütun genişletilebilir).
+- [ ] Telefondaki kayan şerit düzeltmesinin geri alınıp alınmayacağı kullanıcıya soruldu (masaüstü zaten eski hâlinde); cevap gelmedi, şimdilik telefonda yeni yöntem duruyor.
+- [ ] Ana ekrana ekleyen müşterilere **sipariş durumu bildirimi** (web push) önerildi; istenirse yapılacak.
+- Fikir aşamasında (kod yok): uygulamayı başka sektörlere (ör. parfümcü) **şablon olarak satmak** — önerilen yol: mağazaya özel her şeyi tek "mağaza dosyasına" taşımak, tema paketleri, her müşteriye ayrı Firebase projesi + kurulum aracı. **Apple Developer** hesabı / App Store: şimdilik gerek görülmedi.
