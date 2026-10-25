@@ -41,6 +41,12 @@ export const DEFAULT_SETTINGS = {
     showTL: false, // dolar fiyatların TL karşılığını bayilere / vitrine de göster (yönetici her zaman görür)
     manualRate: '', // doluysa Harem Altın kuru yerine bu kur kullanılır (1 USD = ? TL)
   },
+  cards: { // ürün kartları (Ayarlar > Ürün kartları)
+    add: 'auto', // mağaza "Sepete ekle": auto (bilgisayarda kutu görünümünde simge, telefonda yazı) | text | icon (sepet+) | plus
+    addB2b: 'text', // bayi
+    hoverImgs: true, // bilgisayar: birden çok resimde üstüne gelince küçük resimler
+    swipeImgs: true, // telefon: kartta resimler parmakla kaydırılır
+  },
   tiers: [
     { id: 'standart', name: 'Standart', pct: 0 },
     { id: 'gumus', name: 'Gümüş', pct: 2 },

@@ -2574,10 +2574,10 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .btn.add .add-cart { display: none; position: relative; }
 .btn.add .add-cart i { position: absolute; right: -7px; top: -6px; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); color: #fff; font: 800 11px/14px var(--f-body); font-style: normal; text-align: center; box-shadow: 0 0 0 2px var(--accent-soft); }
 @media (min-width: 561px) {
-  .plist.pgrid .prow-side:not(:has(.price.dual)) .btn.add { width: 46px; height: 42px; padding: 0; justify-content: center; flex: none; border-radius: 12px; }
-  .plist.pgrid .prow-side:not(:has(.price.dual)) .btn.add .add-l, .plist.pgrid .prow-side:not(:has(.price.dual)) .btn.add .add-plus { display: none; }
-  .plist.pgrid .prow-side:not(:has(.price.dual)) .btn.add .add-cart { display: inline-grid; }
-  .plist.pgrid .prow-side:not(:has(.price.dual)) .price { min-width: 0; flex: 1; }
+  .plist.pgrid.add-auto .prow-side:not(:has(.price.dual)) .btn.add { width: 46px; height: 42px; padding: 0; justify-content: center; flex: none; border-radius: 12px; }
+  .plist.pgrid.add-auto .prow-side:not(:has(.price.dual)) .btn.add .add-l, .plist.pgrid.add-auto .prow-side:not(:has(.price.dual)) .btn.add .add-plus { display: none; }
+  .plist.pgrid.add-auto .prow-side:not(:has(.price.dual)) .btn.add .add-cart { display: inline-grid; }
+  .plist.pgrid.add-auto .prow-side:not(:has(.price.dual)) .price { min-width: 0; flex: 1; }
 }
 
 /* sayfa kısa olsa da alt bilgi en altta dursun */
@@ -2695,3 +2695,54 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .acct-nav-i .hub-t b { white-space: nowrap; display: flex; align-items: center; gap: 6px; }
 .acct-nav-i .soon-tag.sm { margin-left: 0; font-size: 9.5px; padding: 2px 6px; }
 .acct-body > :not(.mo-list) { max-width: 680px; }
+
+/* "Sepete ekle" görünümü (Ayarlar > Ürün kartları) */
+.plist.add-icon .btn.add, .plist.add-plus .btn.add { width: 46px; height: 42px; padding: 0 !important; justify-content: center; flex: none; border-radius: 12px; }
+.plist.add-icon .btn.add .add-l, .plist.add-icon .btn.add .add-plus, .plist.add-plus .btn.add .add-l { display: none; }
+.plist.add-icon .btn.add .add-cart { display: inline-grid; }
+.plist.add-plus .btn.add .add-plus { width: 20px; height: 20px; }
+.plist.add-icon .prow-side .price, .plist.add-plus .prow-side .price { min-width: 0; flex: 1; }
+@media (max-width: 560px) { .plist.pgrid.add-icon .prow-side, .plist.pgrid.add-plus .prow-side { flex-direction: row; align-items: flex-end; } }
+.plist.pgrid.add-icon .prow-side:has(.price.dual), .plist.pgrid.add-plus .prow-side:has(.price.dual) { flex-direction: row; align-items: flex-end; }
+.plist.pgrid.add-icon .prow-side:has(.price.dual) .btn.add, .plist.pgrid.add-plus .prow-side:has(.price.dual) .btn.add { width: 46px; }
+
+/* ---- Kart: bilgisayarda üstüne gelince yazılar aşağı kayıp kaybolur, yerine küçük resimler çıkar ---- */
+.plist.pgrid > li.prow { position: relative; }
+.plist.pgrid .cimg { overflow: visible; }
+.plist.pgrid .cimg-alt { position: absolute; inset: 12px 12px auto; width: calc(100% - 24px); aspect-ratio: 1; object-fit: contain; background: #fff; border-radius: 8px; opacity: 0; transition: opacity .22s ease; pointer-events: none; z-index: 1; }
+.plist.pgrid .cimg-alt.on { opacity: 1; }
+.plist.pgrid .cimg-bar { position: absolute; left: 16px; right: 16px; top: auto; bottom: 10px; display: flex; gap: 4px; z-index: 2; animation: none; opacity: 0; transition: opacity .2s; }
+.plist.pgrid .cimg.on .cimg-bar { opacity: 1; }
+.plist.pgrid .cimg-strip { position: absolute; left: 0; right: 0; top: 100%; bottom: auto; z-index: 3; display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 8px; padding: 14px 12px 12px; background: none; animation: none; pointer-events: none; }
+.plist.pgrid .cimg.on .cimg-strip { pointer-events: auto; }
+.plist.pgrid .cimg-th { width: 52px; height: 52px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; display: grid; place-items: center; overflow: hidden; opacity: 0; transform: translateY(26px) scale(.82);
+  transition: opacity .16s ease, transform .2s ease, border-color .15s, box-shadow .15s; }
+.plist.pgrid .cimg-th img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
+.plist.pgrid .cimg.on .cimg-th { opacity: 1; transform: none; transition: opacity .3s ease calc(.09s + var(--k) * .045s), transform .42s cubic-bezier(.2, .9, .3, 1.2) calc(.09s + var(--k) * .045s), border-color .15s, box-shadow .15s; }
+.plist.pgrid .cimg.on .cimg-th.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); transform: translateY(-2px); }
+.plist.pgrid .cimg-th.more { font: 700 13px/1 var(--f-display); color: var(--accent); background: var(--accent-soft); border-style: dashed; }
+.plist.pgrid > li.prow .prow-info, .plist.pgrid > li.prow .prow-side { transition: transform .38s cubic-bezier(.3, .8, .3, 1) .04s, opacity .28s ease .06s; }
+.plist.pgrid > li.prow.hov .prow-info, .plist.pgrid > li.prow.hov .prow-side { transform: translateY(70px); opacity: 0; pointer-events: none; transition: transform .34s cubic-bezier(.5, 0, .7, .4), opacity .2s ease; }
+.plist.pgrid > li.prow.hov .prow-side { transition-delay: .03s; }
+.plist.pgrid > li.prow.hov .thumb img { transform: none !important; }
+
+/* ---- Telefonda kartta resimleri kaydırma ---- */
+.cimg.sw { position: relative; display: block; }
+.cimg-sw { display: flex; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; border-bottom: 1px solid var(--line-2); background: #fff; }
+.cimg-sw::-webkit-scrollbar { display: none; }
+.cimg-sw-i { flex: 0 0 100%; aspect-ratio: 1; scroll-snap-align: start; scroll-snap-stop: always; display: grid; place-items: center; padding: 12px; }
+.plist.pgrid .cimg-sw-i .thumb { padding: 0 !important; border: 0 !important; width: 100%; aspect-ratio: 1; }
+.cimg-sw-i img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; -webkit-user-drag: none; pointer-events: none; }
+.cimg-dots { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; gap: 4px; pointer-events: none; }
+.cimg-dots i { width: 12px; height: 3px; border-radius: 2px; background: rgb(15 23 42 / .16); transition: width .25s var(--ease), background .25s; }
+.cimg-dots i.on { width: 20px; background: var(--accent); }
+.plist:not(.pgrid) .cimg.sw { display: contents; }
+.plist:not(.pgrid) .cimg.sw > .cimg-sw, .plist:not(.pgrid) .cimg-sw-i:first-child { display: contents; }
+.plist:not(.pgrid) .cimg-sw-i:not(:first-child), .plist:not(.pgrid) .cimg-dots { display: none; }
+
+/* ---- Ürün kartları ayarı: önizleme ---- */
+.pv-wrap { display: grid; grid-template-columns: repeat(2, minmax(0, 260px)); gap: 18px; padding: 16px; border-radius: var(--r); background: var(--bg, #eef2f7); border: 1px solid var(--line); justify-content: center; }
+.pv-wrap > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pv-cards { margin: 0; grid-template-columns: 1fr !important; }
+.pv-cards .prow-main { cursor: default; }
+@media (max-width: 560px) { .pv-wrap { grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; } }

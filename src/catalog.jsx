@@ -47,39 +47,45 @@ export function priceShow(S, role) {
   const P = S.pricing || {};
   return role === 'public' ? { tl: !!P.showTL, inc: !!P.showVatInc, plus: !!P.plusVat } : { tl: role === 'admin' || !!P.b2bTL, inc: !!P.b2bVatInc, plus: !!P.b2bPlusVat };
 }
-function PriceExtras({ v, cur }) {
-  const S = useStore((s) => s.settings);
-  const role = useStore((s) => s.user?.role);
+// "Sepete ekle" düğmesinin görünümü (Ayarlar > Ürün kartları): auto | text | icon | plus
+export const cardAdd = (S, role) => (role === 'public' || !role ? S.cards?.add : S.cards?.addB2b) || (role === 'public' || !role ? 'auto' : 'text');
+function PriceExtras({ v, cur, S: So, role: ro }) {
+  const S0 = useStore((s) => s.settings);
+  const r0 = useStore((s) => s.user?.role);
   const rate = useRate();
+  const S = So || S0, role = ro || r0;
   if (v == null || isNaN(v)) return null;
   const sh = priceShow(S, role);
   const vat = Number(S.pricing.vatPct) || 0;
   const tl = (x) => (rate && cur === 'USD' ? fmtTL(x * rate.usd) : cur === 'TRY' ? fmtTL(x) : null);
   const inc = sh.inc && vat > 0 ? v * (1 + vat / 100) : null;
   return <>
-    {sh.tl && <TLHint v={v} cur={cur} />}
+    {sh.tl && (rate && cur === 'USD' ? <span className="tl-hint num">≈ {fmtTL(v * rate.usd)}</span> : <TLHint v={v} cur={cur} />)}
     {inc != null && <span className="vat-inc num">KDV dahil {fmt(inc, cur)}{tl(inc) && cur !== 'TRY' ? ' · ' + tl(inc) : ''}</span>}
   </>;
 }
-const PlusVat = () => { const S = useStore((s) => s.settings); const role = useStore((s) => s.user?.role); return priceShow(S, role).plus && Number(S.pricing.vatPct) > 0 ? <em className="plusvat">+KDV</em> : null; };
+function PlusVat({ S: So, role: ro }) { const S0 = useStore((s) => s.settings); const r0 = useStore((s) => s.user?.role); const S = So || S0; return priceShow(S, ro || r0).plus && Number(S.pricing.vatPct) > 0 ? <em className="plusvat">+KDV</em> : null; }
 
-export function PriceBlock({ p, big }) {
-  const { settings: S, user, userPrices } = useStore();
-  const pr = priceFor(p, S, user, userPrices);
-  const admin = user?.role === 'admin';
-  if (user?.role === 'public') {
+// S / role verilirse (Ayarlar önizlemesi) o ayarlar ve o müşteri tipiyle çizilir
+export function PriceBlock({ p, big, S: So, role: ro }) {
+  const st = useStore();
+  const S = So || st.settings; const role = ro || st.user?.role;
+  const user = ro ? { role: ro, tier: S.tiers?.[0]?.id } : st.user;
+  const pr = priceFor(p, S, user, ro ? null : st.userPrices);
+  const ex = { S, role };
+  if (role === 'public') {
     return (
       <div className={'price' + (big ? ' big' : '')}>
-        {pr.mine == null ? <span className="price-ask">Fiyat sorun</span> : <span className="price-mine"><small>Fiyat:</small>{fmt(pr.mine, p.cur)}<PlusVat /></span>}
-        <PriceExtras v={pr.mine} cur={p.cur} />
+        {pr.mine == null ? <span className="price-ask">Fiyat sorun</span> : <span className="price-mine"><small>Fiyat:</small>{fmt(pr.mine, p.cur)}<PlusVat {...ex} /></span>}
+        <PriceExtras v={pr.mine} cur={p.cur} {...ex} />
       </div>
     );
   }
   if (!big && S.pricing.showRetail && pr.list > 0 && pr.mine != null) return (
     <div className="price dual">
       <span className="pv"><small>Liste</small><b className="num">{fmt(pr.list, p.cur)}</b></span>
-      <span className="pv mine"><small>{pr.src === 'ozel' ? 'Size özel' : 'Toptan'}</small><b className="num">{fmt(pr.mine, p.cur)}<PlusVat /></b></span>
-      <PriceExtras v={pr.mine} cur={p.cur} />
+      <span className="pv mine"><small>{pr.src === 'ozel' ? 'Size özel' : 'Toptan'}</small><b className="num">{fmt(pr.mine, p.cur)}<PlusVat {...ex} /></b></span>
+      <PriceExtras v={pr.mine} cur={p.cur} {...ex} />
     </div>
   );
   return (
@@ -87,9 +93,30 @@ export function PriceBlock({ p, big }) {
       {S.pricing.showRetail && pr.list > 0 && <span className="price-list">Liste: <b className="num">{fmt(pr.list, p.cur)}</b></span>}
       {pr.mine == null
         ? <span className="price-ask">Fiyat sorun</span>
-        : <span className="price-mine"><small>{pr.src === 'ozel' ? 'Size özel:' : 'Toptan:'}</small>{fmt(pr.mine, p.cur)}<PlusVat /></span>}
-      <PriceExtras v={pr.mine} cur={p.cur} />
+        : <span className="price-mine"><small>{pr.src === 'ozel' ? 'Size özel:' : 'Toptan:'}</small>{fmt(pr.mine, p.cur)}<PlusVat {...ex} /></span>}
+      <PriceExtras v={pr.mine} cur={p.cur} {...ex} />
     </div>
+  );
+}
+// Ayarlar > Ürün kartları önizlemesi: gerçek kart düzeniyle (mağaza ya da bayi)
+export function CardPreview({ p, S, role }) {
+  const st = stockInfo(p, S);
+  return (
+    <ul className={'plist pgrid pv-cards add-' + cardAdd(S, role)}>
+      <li className="prow">
+        <span className="prow-main">
+          <span className="cimg"><Thumb p={p} /></span>
+          <div className="prow-info">
+            <span className="prow-name">{p.n}</span>
+            <span className="prow-meta">{S.catalog.showBrand && p.b && <span className="brand-tag">{p.b}</span>}{st && <span className={'dot tone-' + st.tone}>{st.t}</span>}</span>
+          </div>
+        </span>
+        <div className="prow-side">
+          <PriceBlock p={p} S={S} role={role} />
+          <button className="btn sm add" type="button" aria-label="Sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-cart" aria-hidden="true"><Icon n="cart" s={18} /><i>+</i></span><span className="add-l">Sepete ekle</span></button>
+        </div>
+      </li>
+    </ul>
   );
 }
 
@@ -271,7 +298,7 @@ export function Catalog({ admin }) {
           {shown.length === 0 ? (
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
           ) : (
-            <ul className={'plist' + (view === 'grid' ? ' pgrid' : '')}>
+            <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + cardAdd(S, user?.role)}>
               {shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
             </ul>
           )}
@@ -311,6 +338,9 @@ function CatTree({ nodes, counts, cat, open, onPick, all: expandAll, admin, dept
 function ProductRow({ p, admin, onOpen }) {
   const { settings: S, cart, user } = useStore();
   const qty = cart[p.id] || 0;
+  const [hov, setHov] = useState(false); // bilgisayar: üstüne gelince (birden çok resim varsa) yazılar aşağı kayar, küçük resimler çıkar
+  const [ix, setIx] = useState(0);
+  const multi = FINE && S.cards?.hoverImgs !== false && [p.pi, ...(p.im || [])].filter(Boolean).length > 1;
   const st = stockInfo(p, S);
   const site = links.product(p, S);
   const menu = (e) => openMenu(e, admin ? [
@@ -331,9 +361,10 @@ function ProductRow({ p, admin, onOpen }) {
     site && user?.role !== 'public' && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
-    <li className={'prow' + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '')} onContextMenu={menu}>
+    <li className={'prow' + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '') + (hov && multi ? ' hov' : '')} onContextMenu={menu}
+      onMouseEnter={multi ? () => setHov(true) : undefined} onMouseLeave={multi ? () => { setHov(false); setIx(0); } : undefined}>
       <button className="prow-main" onClick={onOpen}>
-        <CardImg p={p} />
+        <CardImg p={p} hov={hov && multi} ix={ix} setIx={setIx} />
         <div className="prow-info">
           <span className="prow-name">{p.n}</span>
           <span className="prow-meta">
@@ -366,20 +397,41 @@ function ProductRow({ p, admin, onOpen }) {
 // Kart resmi: bilgisayarda üstüne gelince (birden fazla resim varsa) altta küçük resimler kayarak çıkar; küçük resmin
 // üstünde gezinince büyük resim değişir, fare çıkınca ilk resme döner (sadece kutu görünümünde; satır görünümünde gizli)
 const FINE = typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches;
-function CardImg({ p }) {
+function CardImg({ p, hov, ix, setIx }) {
   const S = useStore((s) => s.settings);
-  const [hov, setHov] = useState(false);
-  const [ix, setIx] = useState(0);
-  const urls = hov ? imageList(p, S, 'lg') : [];
-  const ths = hov ? imageList(p, S, 'sm') : [];
+  const [seen, setSeen] = useState(false); // küçük resimler bir kez yüklenince kapanırken de görünür kalsın (animasyon)
+  useEffect(() => { if (hov) setSeen(true); }, [hov]);
+  const n = [p.pi, ...(p.im || [])].filter(Boolean).length;
+  // telefon: birden çok resim varsa kartı açmadan parmakla kaydırılır, altta hangi resimde olduğunu gösteren çizgiler
+  if (!FINE && n > 1 && S.cards?.swipeImgs !== false) return <SwipeImgs p={p} />;
+  const urls = seen ? imageList(p, S, 'lg') : [];
+  const ths = seen ? imageList(p, S, 'sm') : [];
   return (
-    <span className={'cimg' + (hov && urls.length > 1 ? ' multi' : '')} onMouseEnter={() => FINE && setHov(true)} onMouseLeave={() => { setHov(false); setIx(0); }}>
+    <span className={'cimg' + (hov ? ' on' : '')}>
       <Thumb p={p} />
-      {hov && urls.length > 1 && <>
-        <img className={'cimg-alt' + (ix > 0 ? ' on' : '')} src={urls[ix] || urls[0]} alt="" />
-        <span className="cimg-bar">{urls.slice(0, 6).map((_, i) => <i key={i} className={i === ix ? 'on' : ''} />)}</span>
-        <span className="cimg-strip">{ths.slice(0, 5).map((u, i) => <span key={i} className={'cimg-th' + (i === ix ? ' on' : '')} onMouseEnter={() => setIx(i)}><img src={u} alt="" loading="lazy" /></span>)}</span>
+      {seen && urls.length > 1 && <>
+        <img className={'cimg-alt' + (hov && ix > 0 ? ' on' : '')} src={urls[ix] || urls[0]} alt="" />
+        <span className="cimg-bar" aria-hidden="true">{urls.slice(0, 6).map((_, i) => <i key={i} className={i === ix ? 'on' : ''} />)}</span>
+        <span className="cimg-strip" aria-hidden={!hov}>{ths.slice(0, 5).map((u, i) => <span key={i} className={'cimg-th' + (i === ix ? ' on' : '')} style={{ '--k': i }} onMouseEnter={() => setIx(i)}><img src={u} alt="" loading="lazy" /></span>)}{ths.length > 5 && <span className="cimg-th more" style={{ '--k': 5 }}>+{ths.length - 5}</span>}</span>
       </>}
+    </span>
+  );
+}
+// Telefonda kart resmi: yana kaydırılan resimler (kaydırma kartı açmaz), altta konum çizgileri
+function SwipeImgs({ p }) {
+  const S = useStore((s) => s.settings);
+  const urls = imageList(p, S, 'sm');
+  const [k, setK] = useState(0);
+  const ref = useRef(null);
+  const onScroll = () => { const el = ref.current; if (!el) return; const i = Math.round(el.scrollLeft / el.clientWidth); if (i !== k) setK(i); };
+  if (urls.length < 2) return <span className="cimg"><Thumb p={p} /></span>;
+  return (
+    <span className="cimg sw">
+      <span className="cimg-sw" ref={ref} onScroll={onScroll}>
+        <span className="cimg-sw-i"><Thumb p={p} /></span>
+        {urls.slice(1, 8).map((u, i) => <span key={i} className="cimg-sw-i"><img src={u} alt="" loading="lazy" draggable="false" /></span>)}
+      </span>
+      <span className="cimg-dots" aria-hidden="true">{urls.slice(0, 8).map((_, i) => <i key={i} className={i === k ? 'on' : ''} />)}</span>
     </span>
   );
 }

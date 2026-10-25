@@ -8,7 +8,7 @@ import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername,
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
-import { imageList } from './catalog.jsx';
+import { imageList, CardPreview } from './catalog.jsx';
 import { rateLabel } from './listsheet.jsx';
 import { syncNow } from './watch.js';
 import { Members } from './orders.jsx';
@@ -443,6 +443,7 @@ const SECTIONS = [
   ['anasayfa', 'Bayi ana sayfası', 'Bayilerin giriş yapınca gördüğü sayfa', 'home'],
   ['fiyat', 'Fiyatlandırma', 'Toptan indirimi, KDV, kur', 'tag'],
   ['kademe', 'Kademeler', 'Bayi indirim kademeleri', 'users'],
+  ['kart', 'Ürün kartları', 'Fiyat gösterimi, sepete ekle düğmesi, resimler · önizlemeli', 'grid'],
   ['katalog', 'Katalog', 'Stok gösterimi, sayfa, arama', 'grid'],
   ['talep', 'Talepler', 'Bayi talepleri ve mesajlar', 'chat'],
   ['dukkan', 'Dükkan', 'Adres, telefon, WhatsApp, erişim', 'phone'],
@@ -451,7 +452,7 @@ const SECTIONS = [
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
 ];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
+const SEC_KEYS = { kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -559,18 +560,7 @@ export function Settings() {
           <div className="row3">
             <Field label="Teklifte −/+ adımı (USD)"><select id="s-step" value={d.pricing.adjustStep} onChange={(e) => set('pricing.adjustStep', Number(e.target.value))}><option value="0.5">0,5</option><option value="1">1</option><option value="5">5</option><option value="10">10</option></select></Field>
           </div>
-          <h3>Ürün fiyatının gösterimi</h3>
-          <p className="fine">Dolar fiyat hep aynı kalır; altına seçtikleriniz eklenir. Online mağaza ve bayiler için ayrı seçilir. Siz TL karşılığını her zaman görürsünüz.</p>
-          <div className="pshow-grid">
-            <span /><b>Online mağaza</b><b>Bayiler</b>
-            {[['TL karşılığı', '“≈ 4.993 ₺”', 'showTL', 'b2bTL'], ['KDV dahil tutar (soluk)', '“KDV dahil 120 $ · 5.924 ₺”', 'showVatInc', 'b2bVatInc'], ['“+KDV” ibaresi', 'Fiyatın yanında küçük yazı', 'plusVat', 'b2bPlusVat']].map(([l, h, a, b]) => (
-              <Frag key={a}><span className="pshow-l">{l}<small>{h}</small></span>
-                {[a, b].map((k) => <label key={k} className="pshow-c"><input type="checkbox" id={'s-' + k} checked={!!d.pricing[k]} onChange={(e) => set('pricing.' + k, e.target.checked)} /></label>)}
-              </Frag>
-            ))}
-          </div>
-          <Toggle id="s-retail" label="Bayilere liste fiyatını da göster" hint="Toptan fiyatın yanında liste (perakende) fiyatı" checked={d.pricing.showRetail} onChange={(v) => set('pricing.showRetail', v)} />
-          <PriceShowPreview d={d} b2b={false} />
+          <p className="fine">Kartta TL karşılığı, KDV dahil tutar ve “+KDV” gösterimi: <button className="linkish" onClick={() => setSec('kart')}>Ürün kartları</button>.</p>
           <h3>Sepet ve toplam</h3>
           <Toggle id="s-save" label="Sepette avantaj tutarını göster" checked={d.pricing.showSaving} onChange={(v) => set('pricing.showSaving', v)} />
           <Toggle id="s-showvat" label="Toplamın altında KDV bilgisini göster" hint="Sepet, liste linki, liste resmi ve tekliflerde toplamın altında küçük bir satır: KDV ve KDV dahil toplam" checked={d.pricing.showVat !== false} onChange={(v) => set('pricing.showVat', v)} />
@@ -579,6 +569,8 @@ export function Settings() {
           <RateInfo />
           <Field label="Elle kur (isteğe bağlı)" hint="Boş bırakın: Harem Altın dolar satış kuru kullanılır. Doldurursanız onun yerine bu kur kullanılır. Müşterilere kuru göstermek için Tasarım modunda “Kur kutusu” ekleyin."><input id="s-rate" inputMode="decimal" placeholder="ör. 41,95" value={d.pricing.manualRate ?? ''} onChange={(e) => set('pricing.manualRate', e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} /></Field>
         </>}
+
+        {sec === 'kart' && <CardSettings d={d} set={set} />}
 
         {sec === 'kademe' && <>
           <p className="fine">Her bayiye bir kademe atanır. Kademe, genel indirim tablosunu kullanır; isterseniz kademeye <b>kendi tablosunu</b> ve üstüne ek % indirim verebilirsiniz. Bayiye özel ürün fiyatları her şeyin önündedir.</p>
@@ -1066,6 +1058,38 @@ function PriceTester({ d }) {
 }
 // Fiyat gösterimi önizlemesi (seçilen anahtarlarla bir ürün kartının fiyat kısmı)
 function Frag({ children }) { return children; }
+// Ürün kartları: mağaza ve bayi kartı yan yana önizleme + ayarlar
+const ADD_STYLES = [['auto', 'Otomatik'], ['text', 'Sepete ekle'], ['icon', 'Sepet +'], ['plus', 'Sadece +']];
+function CardSettings({ d, set }) {
+  const catalog = useStore((s) => s.catalog);
+  const S = withDefaults(d);
+  const sample = useMemo(() => catalog.find((p) => p.r >= 100 && p.r < 1000 && p.b && [p.pi, ...(p.im || [])].filter(Boolean).length > 1) || catalog.find((p) => p.r >= 100) || catalog[0], [catalog]);
+  const C = S.cards || {};
+  const addSeg = (k) => <span className="seg seg-wrap">{ADD_STYLES.map(([x, l]) => <button key={x} type="button" className={(C[k] || (k === 'add' ? 'auto' : 'text')) === x ? 'on' : ''} onClick={() => set('cards.' + k, x)}>{l}</button>)}</span>;
+  return <>
+    <p className="fine">Değiştirdikçe aşağıdaki kartlar güncellenir. Kaydedince mağazaya ve bayilere uygulanır.</p>
+    {sample && <div className="pv-wrap">
+      <div><span className="eyebrow">Online mağaza kartı</span><CardPreview p={sample} S={S} role="public" /></div>
+      <div><span className="eyebrow">Bayi kartı</span><CardPreview p={sample} S={S} role="customer" /></div>
+    </div>}
+    <h3>Fiyatın altında</h3>
+    <div className="pshow-grid">
+      <span /><b>Online mağaza</b><b>Bayiler</b>
+      {[['TL karşılığı', '“≈ 4.993 ₺”', 'showTL', 'b2bTL'], ['KDV dahil tutar (soluk)', '“KDV dahil 120 $ · 5.924 ₺”', 'showVatInc', 'b2bVatInc'], ['“+KDV” ibaresi', 'Fiyatın yanında küçük yazı', 'plusVat', 'b2bPlusVat'], ['Liste fiyatı (bayi)', 'Toptanın yanında liste fiyatı', null, 'showRetail']].map(([l, h, a, b]) => (
+        <Frag key={l}><span className="pshow-l">{l}<small>{h}</small></span>
+          {[a, b].map((k, i) => k ? <label key={i} className="pshow-c"><input type="checkbox" id={'s-' + k} checked={!!d.pricing[k]} onChange={(e) => set('pricing.' + k, e.target.checked)} /></label> : <span key={i} className="pshow-c muted">—</span>)}
+        </Frag>
+      ))}
+    </div>
+    <h3>“Sepete ekle” düğmesi</h3>
+    <Field label="Online mağaza" hint="Otomatik: bilgisayarda kutu görünümünde Sepet + simgesi, telefonda yazılı düğme">{addSeg('add')}</Field>
+    <Field label="Bayiler">{addSeg('addB2b')}</Field>
+    <h3>Ürün resimleri</h3>
+    <Toggle id="s-chov" label="Bilgisayarda küçük resimler" hint="Birden çok resmi olan ürünün üstüne gelince yazılar aşağı kayar, küçük resimler çıkar; üstlerinde gezince büyük resim değişir" checked={C.hoverImgs !== false} onChange={(v) => set('cards.hoverImgs', v)} />
+    <Toggle id="s-cswipe" label="Telefonda kaydırarak resimler" hint="Kartı açmadan resimler yana kaydırılır, altta hangi resimde olduğunu gösteren çizgiler" checked={C.swipeImgs !== false} onChange={(v) => set('cards.swipeImgs', v)} />
+    <Toggle id="s-cbrand" label="Marka adı" checked={d.catalog.showBrand !== false} onChange={(v) => set('catalog.showBrand', v)} />
+  </>;
+}
 function PriceShowPreview({ d }) {
   const live = useStore((s) => s.rate);
   const manual = Number(d.pricing.manualRate); const rate = manual > 0 ? manual : live?.usd || 0;
