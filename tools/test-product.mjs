@@ -21,6 +21,9 @@ if (MODE === 'kontrol') { // canlı linkler gerçekten çalışıyor mu (iPhone'
       const a = await fetch(p.vd, { headers: { Range: 'bytes=0-1', Origin: 'https://erteltoptan.web.app' }, redirect: 'follow' });
       line += ` → ${a.status} ${a.headers.get('content-type')} range=${a.headers.get('content-range')} acao=${a.headers.get('access-control-allow-origin')} final=${a.url}`;
       const h = await fetch(p.vd, { method: 'HEAD' }); line += ` · boyut=${h.headers.get('content-length')}`;
+      const buf = Buffer.from(await (await fetch(p.vd)).arrayBuffer());
+      const at = (t) => buf.indexOf(Buffer.from(t));
+      line += ` · moov@${at('moov')} mdat@${at('mdat')} codec=${['avc1', 'hvc1', 'hev1', 'av01', 'vp09'].filter((c) => at(c) >= 0).join('/')} ses=${['mp4a', 'ac-3', 'Opus'].filter((c) => at(c) >= 0).join('/')}`;
     } catch (e) { line += ' → HATA ' + e.message; }
     console.log('::notice title=Video::' + line);
   }
