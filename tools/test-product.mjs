@@ -4,6 +4,13 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 const MODE = process.argv[2] || 'ekle';
+if (MODE === 'kontrol') { // canlı linkler gerçekten çalışıyor mu (iPhone'un istediği gibi parça parça)
+  const WATCH0 = 'https://ertel-b2b-watch.omer-12boluk.workers.dev';
+  const r = await fetch(WATCH0 + '/v/deneme.mp4', { headers: { Range: 'bytes=0-99' } });
+  const r2 = await fetch('https://erteltoptan.web.app/test/deneme-1.jpg');
+  console.log(`::notice title=Kontrol::video ${r.status} ${r.headers.get('content-range')} ${r.headers.get('content-type')} · resim ${r2.status} ${r2.headers.get('content-type')}`);
+  process.exit(0);
+}
 const ID = 9000001;
 const WATCH = 'https://ertel-b2b-watch.omer-12boluk.workers.dev';
 initializeApp({ credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });

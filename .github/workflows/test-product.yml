@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       islem:
-        description: 'ekle / sil'
+        description: 'ekle / sil / kontrol'
         type: choice
-        options: [ekle, sil]
+        options: [ekle, sil, kontrol]
         default: ekle
 concurrency:
   group: sync
