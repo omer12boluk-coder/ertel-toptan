@@ -5,7 +5,7 @@ import { useStore, store, setQty, go, api, toast } from './store.js';
 import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
 import { fmt, norm, priceFor, resizeForWeb } from './utils.js';
 import { waLink } from './route.js';
-import { ProductSheet, useTree } from './catalog.jsx';
+import { ProductSheet, useTree, PlayVideo } from './catalog.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı' };
 
@@ -105,7 +105,7 @@ export function layoutOf(H) {
   for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
   return L;
 }
-export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün rafı · ' + ((H.sections || []).find((r, i) => railKey(r, i) === k)?.title || '') : (H.blocks?.[k.slice(2)]?.t === 'banner' ? 'Görsel bant' : 'Başlık · ' + (H.blocks?.[k.slice(2)]?.title || '')));
+export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün rafı · ' + ((H.sections || []).find((r, i) => railKey(r, i) === k)?.title || '') : (H.blocks?.[k.slice(2)]?.t === 'banner' ? 'Görsel bant' : H.blocks?.[k.slice(2)]?.t === 'video' ? 'Video' + (H.blocks[k.slice(2)].title ? ' · ' + H.blocks[k.slice(2)].title : '') : 'Başlık · ' + (H.blocks?.[k.slice(2)]?.title || '')));
 // sürükleyerek sıralama: aynı gruptaki [data-dz][data-i] öğelerinin üstüne gelince yer değiştirir; hiç sürüklenmezse tıklama sayılır
 export function dragSort(e, group, idx, onMove, onClick) {
   if (e.button > 0) return;
@@ -155,7 +155,7 @@ export function ShopHome({ S: Sover }) {
         ))}
       </section>
     ) : E && <Empty label="Avantaj yok" />;
-    if (k === 'marquee') return brands.length > 0 && H.marquee !== 'off' ? <Marquee items={brands} style={H.marquee || 'color'} speed={H.mqSpeed} ls={ls} /> : E && <Empty label={H.marquee === 'off' ? 'Kayan şerit kapalı (ayarından açın)' : 'Marka yok'} />;
+    if (k === 'marquee') return brands.length > 0 && H.marquee !== 'off' ? <Marquee items={brands} style={H.marquee || 'color'} speed={H.mqSpeed} speedM={H.mqSpeedM} ls={ls} /> : E && <Empty label={H.marquee === 'off' ? 'Kayan şerit kapalı (ayarından açın)' : 'Marka yok'} />;
     if (k === 'brands') return (brands.length > 0 || E) && (
       <section className="sh-sec rv">
         <SecHead title={H.brandsTitle || 'Markalar'} sub={H.brandsSub ?? 'Dünyanın önde gelen tamir ekipmanı üreticileri'} onTitle={E && !E.mobile && ((t) => E.set('shopHome.brandsTitle', t))} />
@@ -199,7 +199,7 @@ export function ShopHome({ S: Sover }) {
       </section>
     );
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
-    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
+    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : b.t === 'video' ? <VideoBlock b={b} edit={!!E} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
     if (k === 'cta') return H.cta?.title ? (
       <section className="sh-cta rv">
         <div><b>{H.cta.title}</b>{H.cta.text && <p>{H.cta.text}</p>}</div>
@@ -298,6 +298,24 @@ function HeadBlock({ b, onTitle }) {
     </section>
   );
 }
+// Video bölümü (Tasarım modunda "Bölüm ekle > Video"): link (Cloudflare ya da doğrudan .mp4), ebat ve genişlik seçilir.
+// Ekranda görünürken sessiz döngülü oynar; köşedeki düğmeyle tam ekran izlenir.
+export const VIDEO_RATIOS = [['16:9', 'Yatay (16:9)'], ['21:9', 'Geniş (21:9)'], ['1:1', 'Kare'], ['4:5', 'Dikey (4:5)'], ['9:16', 'Hikâye (9:16)']];
+function VideoBlock({ b, edit }) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => { const el = ref.current; if (!el || !('IntersectionObserver' in window)) { setVis(true); return; } const io = new IntersectionObserver(([e]) => setVis(e.isIntersecting && e.intersectionRatio > 0.4), { threshold: [0, 0.4, 0.8] }); io.observe(el); return () => io.disconnect(); }, []);
+  const [rw, rh] = String(b.ratio || '16:9').split(':').map(Number);
+  const w = b.w || (rh > rw ? 'sm' : rh === rw ? 'md' : 'full');
+  return (
+    <section ref={ref} className={'sh-video rv vw-' + w + ' al-' + (b.align || 'center')}>
+      {(b.title || b.sub) && <div className="sh-video-h">{b.title && <h2>{b.title}</h2>}{b.sub && <p>{b.sub}</p>}</div>}
+      <div className="sh-video-box" style={{ aspectRatio: `${rw || 16} / ${rh || 9}` }}>
+        {b.src ? <PlayVideo src={b.src} poster={b.poster && !String(b.poster).startsWith('si:') ? b.poster : undefined} active={vis && !edit} /> : edit ? <span className="sh-video-empty"><Icon n="play" s={28} />Video linki girin</span> : null}
+      </div>
+    </section>
+  );
+}
 function BannerBlock({ b, open, edit }) {
   if (!b.img) return edit ? <Empty label="Görsel bant: resim seçin" /> : null;
   return (
@@ -338,7 +356,7 @@ function SecHead({ title, sub, more, rail, onTitle }) {
 
 // kayan marka şeridi: dev bir kayan katman yerine kendi içinde kayan kutu (iPhone'da kaybolma / titreme olmasın).
 // Telefonda parmakla da kaydırılabilir; bırakınca kendiliğinden devam eder. Ekranda değilken durur.
-function Marquee({ items, style, speed, ls = 1 }) {
+function Marquee({ items, style, speed, speedM, ls = 1 }) { // speed: masaüstü, speedM: telefon (ayrı ayarlanır)
   const ref = useRef(null);
   const phone = matchMedia('(max-width: 700px)').matches; // masaüstünde eskisi gibi CSS ile kayar
   const row = phone && items.length >= 8 ? items : [...items, ...items, ...items];
@@ -349,7 +367,7 @@ function Marquee({ items, style, speed, ls = 1 }) {
     // Bırakınca fırlatma kayması bitene kadar bekler (kayma olayı 160 ms susunca), sonra yumuşakça hızlanarak devam eder.
     let raf = 0, last = performance.now(), pos = el.scrollLeft, held = false, visible = true, t = 0, ramp = 1;
     let sx = 0, sy = 0, touching = false, dragging = false;
-    const dur = Number(speed) || 46;
+    const dur = Number(speedM) || 46;
     const tick = (now) => {
       const dt = Math.min(64, now - last); last = now;
       if (!held && visible) {
@@ -383,7 +401,7 @@ function Marquee({ items, style, speed, ls = 1 }) {
     const io = 'IntersectionObserver' in window ? new IntersectionObserver(([e]) => { visible = e.isIntersecting; last = performance.now(); }) : null; io?.observe(el);
     return () => { cancelAnimationFrame(raf); clearTimeout(t); io?.disconnect(); inner.style.transform = '';
       el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); el.removeEventListener('scroll', onScroll); };
-  }, [items.length, speed, phone]);
+  }, [items.length, speedM, phone]);
   if (!items.length) return null;
   return (
     <div ref={ref} className={'sh-mq mq-' + style} aria-hidden="true" style={{ '--mq-dur': (Number(speed) || 46) + 's' }}>
@@ -716,6 +734,16 @@ export function ScaleField({ v, onChange, label = 'Boyut', min = 0.4, max = 1.6 
   return <Field label={label}><span className="she-scale"><input type="range" min={min} max={max} step="0.05" value={v} onChange={(e) => onChange(Number(e.target.value))} /><code>%{Math.round(v * 100)}</code>{v !== 1 && <button type="button" className="linkish" onClick={() => onChange(1)}>sıfırla</button>}</span></Field>;
 }
 export function BlockFields({ b, up }) {
+  if (b.t === 'video') return <>
+    <Field label="Video linki" hint="Doğrudan video dosyası (.mp4). Cloudflare'deki videolar: https://ertel-b2b-watch.omer-12boluk.workers.dev/v/ad.mp4 — dosyayı gönderin, oraya koyalım."><input inputMode="url" placeholder="https://…/video.mp4" value={b.src || ''} onChange={(e) => up({ src: e.target.value.trim() })} /></Field>
+    <Field label="Ebat"><span className="seg seg-wrap">{VIDEO_RATIOS.map(([x, l]) => <button key={x} type="button" className={(b.ratio || '16:9') === x ? 'on' : ''} onClick={() => up({ ratio: x, w: null })}>{l}</button>)}</span></Field>
+    <Field label="Genişlik" hint="Dikey videolar dar gösterilirse sayfayı kaplamaz"><span className="seg">{[['full', 'Tam'], ['md', 'Orta'], ['sm', 'Dar']].map(([x, l]) => { const [rw, rh] = String(b.ratio || '16:9').split(':').map(Number); const cur = b.w || (rh > rw ? 'sm' : rh === rw ? 'md' : 'full'); return <button key={x} type="button" className={cur === x ? 'on' : ''} onClick={() => up({ w: x })}>{l}</button>; })}</span></Field>
+    <div className="row2">
+      <Field label="Başlık" opt><input value={b.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
+      <Field label="Alt yazı" opt><input value={b.sub || ''} onChange={(e) => up({ sub: e.target.value })} /></Field>
+    </div>
+    <Field label="Kapak resmi linki" opt hint="Video yüklenene kadar görünür"><input inputMode="url" placeholder="https://…/kapak.jpg" value={b.poster || ''} onChange={(e) => up({ poster: e.target.value.trim() })} /></Field>
+  </>;
   if (b.t === 'banner') return <>
     <ImgPick v={b.img} onChange={(img) => up({ img })} max={1800} label="Görsel" hint="Tam genişlik yatay görsel (ör. 1600×400)" />
     <LinkPick v={b.link} onChange={(link) => up({ link })} />
@@ -775,6 +803,10 @@ export function ShopHomeEditor({ d, set }) {
         <Field label="Bölüm başlığı"><input value={H.brandsTitle || ''} onChange={(e) => S('brandsTitle', e.target.value)} placeholder="Markalar" /></Field>
         <Field label="Kutu büyüklüğü"><select value={H.brandSize || 'md'} onChange={(e) => S('brandSize', e.target.value)}><option value="sm">Küçük (satırda 8)</option><option value="md">Orta (satırda 5)</option><option value="lg">Büyük (satırda 4)</option></select></Field>
         <Field label="Kayan şerit"><select value={H.marquee || 'color'} onChange={(e) => S('marquee', e.target.value)}>{Object.entries(MQ_STYLES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
+      </div>
+      <div className="row2">
+        <Field label="Şerit hızı · bilgisayar" hint="Büyük sayı = yavaş"><span className="she-scale"><input type="range" min="15" max="200" step="1" value={Number(H.mqSpeed) || 46} onChange={(e) => S('mqSpeed', Number(e.target.value))} /><code>{Number(H.mqSpeed) || 46} sn</code></span></Field>
+        <Field label="Şerit hızı · telefon" hint="Büyük sayı = yavaş"><span className="she-scale"><input type="range" min="10" max="150" step="1" value={Number(H.mqSpeedM) || 46} onChange={(e) => S('mqSpeedM', Number(e.target.value))} /><code>{Number(H.mqSpeedM) || 46} sn</code></span></Field>
       </div>
       <ScaleField v={Number(H.brandLogoScale) || 1} onChange={(v) => S('brandLogoScale', v)} label="Tüm logoların boyutu" />
       <Rows list={H.brands || []} set={(v) => S('brands', v)} max={30} sub="Marka ekle" title={(b, i) => b.name || `${i + 1}. marka`} add={() => S('brands', [...(H.brands || []), NEW.brand()])} render={(b, up) => <BrandFields b={b} up={up} d={d} set={set} />} />

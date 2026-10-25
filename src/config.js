@@ -75,6 +75,21 @@ export const DEFAULT_SETTINGS = {
     // longPress: uzun basınca işlem menüsü (sağ tık menüsü) · imgMenu: resimlere basılı tutunca telefonun kendi Kaydet/Paylaş menüsü
     touch: { select: 'smart', longPress: true, imgMenu: false },
   },
+  // Mağaza alt bilgisi ve bilgi sayfaları (Ayarlar > Alt bilgi ve sayfalar). Sayfa metni: boş satır = paragraf, "- " = madde, **kalın**
+  footer: {
+    on: true,
+    about: 'Telefon tamircileri için ekipman ve sarf malzemeleri. Orijinal ürün, hızlı kargo.',
+    address: 'Tahtakale Mah. Tahtakale Cad. 7-1 Sok. No: 305, Santral Center (Eski Türk Telekom Binası), Fatih / İstanbul',
+    phones: [{ phone: '0(543) 722 76 36', name: 'Ömer Bölük' }],
+    email: 'omer.12boluk@gmail.com',
+    instagram: 'https://www.instagram.com/ertelgsmm/',
+    facebook: 'https://www.facebook.com/search/top?q=ertel%20telekom%C3%BCnikasyon%20&locale=tr_TR',
+    company: 'Ertel Telekomünikasyon Elektronik Bilgisayar San. ve Tic. Ltd. Şti.',
+    pages: [
+      { title: 'Kargo ve teslimat', body: 'Siparişleriniz anlaşmalı kargo firmamız **DHL** ile gönderilir. Dilerseniz **Yurtiçi Kargo** anlaşmamızla da gönderim yapabiliriz; sipariş notunda ya da WhatsApp üzerinden belirtmeniz yeterli.\n\n- Stokta olan ürünler genellikle aynı gün kargoya verilir.\n- Kargo ücreti ürün fiyatlarına dahil değildir ve alıcıya aittir.\n- Siparişiniz kargoya verildiğinde takip numarası size iletilir; siparişinizin durumunu Hesabım > Siparişlerim bölümünden izleyebilirsiniz.\n- Dilerseniz siparişinizi Tahtakale\'deki dükkânımızdan da teslim alabilirsiniz.' },
+      { title: 'İade ve değişim', body: 'Teslim aldığınız ürünü **14 gün** içinde iade edebilirsiniz.\n\n- Ürün kullanılmamış, hasarsız ve orijinal kutusuyla birlikte gönderilmelidir.\n- İade talebinizi WhatsApp ya da e-posta ile bize iletin; iade adresini ve süreci size bildirelim.\n- Ürün bize ulaşıp kontrol edildikten sonra ücretiniz, ödeme yaptığınız yönteme iade edilir.\n- Hatalı ya da hasarlı gelen ürünlerde kargo ücreti bize aittir.' },
+    ],
+  },
   access: {
     allowSignup: true,
     publicShop: true, // /magaza herkese açık vitrin // bayiler giriş ekranından kendileri üye olabilir; yönetici onaylayınca girebilir

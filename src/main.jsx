@@ -18,6 +18,7 @@ import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome, HeaderSearch } from './shophome.jsx';
 import { ShopDesigner } from './designer.jsx';
 import { AdminHome } from './dashboard.jsx';
+import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
@@ -477,6 +478,7 @@ function ShellFull() {
         {tab === 'ayarlar' && admin && <Settings />}
         {tab === 'tasarim' && admin && <ShopDesigner />}
       </main>
+      {pub && tab !== 'katalog' && <ShopFooter />}
       {!admin && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
@@ -588,7 +590,7 @@ function setupPress() {
 // kendi menüsüyle karışmasın diye tarayıcınınki engellenir). Basılı tutulan kart hafifçe içe göçer, menü alttan açılır.
 function setupLongPress() {
   let tm = null, sx = 0, sy = 0, el = null, fired = 0;
-  const NO = 'input, textarea, select, [contenteditable="true"], .ctx, .ctx-sheet-bg, .lb, .botnav, .dz, .sheet-grab';
+  const NO = 'input, textarea, select, [contenteditable="true"], .ctx, .ctx-sheet-bg, .lb, .botnav, .dz, .sheet-grab, .vv, .gal-vid';
   const clear = () => { clearTimeout(tm); tm = null; el?.classList.remove('lp-press'); el = null; };
   addEventListener('touchstart', (e) => {
     clear();

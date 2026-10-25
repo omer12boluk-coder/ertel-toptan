@@ -1,4 +1,5 @@
-import { ShopHomeEditor, BrandLogosEditor, ImgPick } from './shophome.jsx';
+import { ShopHomeEditor, BrandLogosEditor, ImgPick, Rows } from './shophome.jsx';
+import { RichText as PageText } from './footer.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
@@ -416,6 +417,7 @@ const SECTIONS = [
   ['magazaana', 'Mağaza ana sayfası', 'Reklamlar, marka kutuları, raflar (liste hâlinde)', 'store'],
   ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star'],
   ['magaza', 'Online mağaza', 'Sipariş, teslimat, ödeme, kargo firmaları, bildirimler', 'cart'],
+  ['altbilgi', 'Alt bilgi ve sayfalar', 'Mağazanın en altı: iletişim, sosyal medya, Kargo / İade sayfaları', 'list'],
   ['anasayfa', 'Bayi ana sayfası', 'Bayilerin giriş yapınca gördüğü sayfa', 'home'],
   ['fiyat', 'Fiyatlandırma', 'Toptan indirimi, KDV, kur', 'tag'],
   ['kademe', 'Kademeler', 'Bayi indirim kademeleri', 'users'],
@@ -596,6 +598,8 @@ export function Settings() {
           </div>
           <Field label="Teslim notu" hint="Sepet ekranının altında görünür"><textarea id="s-pn" rows="2" value={d.shop.pickupNote} onChange={(e) => set('shop.pickupNote', e.target.value)} /></Field>
         </>}
+
+        {sec === 'altbilgi' && <FooterSettings d={d} set={set} />}
 
         {sec === 'magaza' && <>
           <p className="fine">Herkese açık mağaza: <b>{location.host}/magaza</b>. Müşteri ürünleri sepete ekler, <b>Sepeti onayla</b> ile teslimat, fatura ve ödeme bilgilerini girip siparişi tamamlar; sipariş <b>Siparişler</b>’e düşer. İsterse üye olur (bilgileri bir dahakine hazır gelir), isterse misafir devam eder. Ayrıca sepeti sadece link olarak WhatsApp’tan da gönderebilir (o liste hiçbir yere kaydedilmez).</p>
@@ -1030,6 +1034,43 @@ export function DeleteCustomer({ c, onClose, onDone }) {
 }
 
 // Müşteriye gönderilecek hazır mesaj (vitrin linkiyle)
+// Ayarlar > Alt bilgi ve sayfalar: mağazanın en altındaki bilgiler ve bilgi sayfaları (Kargo ve teslimat, İade…)
+function FooterSettings({ d, set }) {
+  const F = d.footer || {};
+  const S = (k, v) => set('footer.' + k, v);
+  const [prev, setPrev] = useState(null);
+  return <>
+    <p className="fine">Mağazanın en altında görünür (ana sayfa, sepet, hesabım). Adres boşsa Dükkan ayarındaki adres, çalışma saati Dükkan ayarından gelir; WhatsApp simgesi Dükkan'daki WhatsApp numarasını kullanır.</p>
+    <Toggle id="f-on" label="Alt bilgi görünsün" checked={F.on !== false} onChange={(v) => S('on', v)} />
+    <Field label="Kısa tanıtım" opt><textarea rows="2" value={F.about || ''} onChange={(e) => S('about', e.target.value)} /></Field>
+    <Field label="Adres" opt><textarea rows="2" value={F.address || ''} placeholder={d.shop.address} onChange={(e) => S('address', e.target.value)} /></Field>
+    <h3>Telefonlar</h3>
+    {(F.phones || []).map((p, i) => (
+      <div className="row2 f-phone" key={i}>
+        <Field label={'Telefon ' + (i + 1)}><PhoneInput value={p.phone || ''} onChange={(v) => S('phones', F.phones.map((x, j) => (j === i ? { ...x, phone: v } : x)))} /></Field>
+        <Field label="Yanında yazacak isim" opt><span className="input-btn"><input value={p.name || ''} onChange={(e) => S('phones', F.phones.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} /><button type="button" className="btn sm ghost" aria-label="Telefonu sil" onClick={() => S('phones', F.phones.filter((_, j) => j !== i))}><Icon n="trash" s={15} /></button></span></Field>
+      </div>
+    ))}
+    <button type="button" className="btn sm outline" onClick={() => S('phones', [...(F.phones || []), { phone: '', name: '' }])}><Icon n="plus" s={15} />Telefon ekle</button>
+    <div className="row2">
+      <Field label="E-posta" opt><input type="email" value={F.email || ''} onChange={(e) => S('email', e.target.value.trim())} /></Field>
+      <Field label="Şirket unvanı" opt hint="En altta © yılın yanında"><input value={F.company || ''} onChange={(e) => S('company', e.target.value)} /></Field>
+    </div>
+    <div className="row2">
+      <Field label="Instagram linki" opt><input inputMode="url" value={F.instagram || ''} onChange={(e) => S('instagram', e.target.value.trim())} /></Field>
+      <Field label="Facebook linki" opt><input inputMode="url" value={F.facebook || ''} onChange={(e) => S('facebook', e.target.value.trim())} /></Field>
+    </div>
+    <h3>Bilgi sayfaları</h3>
+    <p className="fine">Alt bilgide link olarak görünür, dokununca pencerede açılır. Yazarken: boş satır = yeni paragraf, satır başında <code>- </code> = madde, <code>**kelime**</code> = kalın.</p>
+    <Rows list={F.pages || []} set={(v) => S('pages', v)} max={8} sub="Sayfa ekle" title={(p, i) => p.title || `${i + 1}. sayfa`} add={() => S('pages', [...(F.pages || []), { title: 'Yeni sayfa', body: '' }])} render={(p, up) => <>
+      <Field label="Başlık"><input value={p.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
+      <Field label="Metin"><textarea rows="9" value={p.body || ''} onChange={(e) => up({ body: e.target.value })} /></Field>
+      <button type="button" className="btn sm ghost" onClick={() => setPrev(p)}><Icon n="eye" s={15} />Önizle</button>
+    </>} />
+    {prev && <Sheet title={prev.title} onClose={() => setPrev(null)}><PageText text={prev.body} /></Sheet>}
+  </>;
+}
+
 function ShopInvite() {
   const t = `Merhaba, siparişinizi buradan kolayca verebilirsiniz 👇\n${links.shop()}\n\n1) İstediğiniz ürünlerde “Sepete ekle”ye basın\n2) Üstteki “Sepet”e basın\n3) “Sepeti onayla” ile siparişinizi tamamlayın (ya da “WhatsApp’tan gönder” ile listeyi bize iletin)\n\nSiparişiniz bize ulaşır, hemen dönüş yaparız.`;
   return (

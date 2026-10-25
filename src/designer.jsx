@@ -71,7 +71,7 @@ export function ShopDesigner() {
   function addBlock(at, type) {
     let key;
     if (type === 'rail') { const r = NEW.rail(); set('shopHome.sections', [...H.sections, r]); key = 'rail:' + r.id; }
-    else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
+    else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : type === 'video' ? { t: 'video', src: '', ratio: '16:9', title: '' } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
     const n = [...L]; n.splice(at, 0, key); setL(n); if (mobile) setPick({ kind: 'blk', k: key }); setSel({ kind: 'blk', k: key });
   }
   function removeBlock(k) {
@@ -186,7 +186,7 @@ function MobileBar({ pick, setPick, H, d, set, setSel, L, setL, toggleHide, remo
     <div className="dz-mbar" role="toolbar" aria-label="Seçilen öğe">
       <div className="dz-mbar-h"><b>{title}</b><button className="icon-btn sm" onClick={() => setPick(null)} aria-label="Seçimi kaldır"><Icon n="x" s={16} /></button></div>
       {adding && pick.kind === 'blk' && <div className="dz-mbar-add">
-        {[['head', 'Başlık'], ['rail', 'Ürün rafı'], ['banner', 'Görsel bant']].map(([t, l]) => <button key={t} onClick={() => { addBlock(L.indexOf(pick.k) + 1, t); setAdding(false); }}><Icon n="plus" s={15} />{l}</button>)}
+        {[['head', 'Başlık'], ['rail', 'Ürün rafı'], ['banner', 'Görsel bant'], ['video', 'Video']].map(([t, l]) => <button key={t} onClick={() => { addBlock(L.indexOf(pick.k) + 1, t); setAdding(false); }}><Icon n="plus" s={15} />{l}</button>)}
       </div>}
       <div className="dz-mbar-b">{btns}</div>
     </div>
@@ -252,6 +252,7 @@ function AddBetween({ onAdd, top }) {
         <button onClick={() => { onAdd('head'); setOpen(false); }}><b>Başlık</b><small>Büyük başlık + alt yazı</small></button>
         <button onClick={() => { onAdd('rail'); setOpen(false); }}><b>Ürün rafı</b><small>Yeni gelenler, marka, kategori…</small></button>
         <button onClick={() => { onAdd('banner'); setOpen(false); }}><b>Görsel bant</b><small>Tam genişlik resim, tıklanabilir</small></button>
+        <button onClick={() => { onAdd('video'); setOpen(false); }}><b>Video</b><small>Yatay, kare ya da dikey; büyütülerek izlenir</small></button>
       </div>}
     </div>
   );
@@ -300,7 +301,8 @@ function Panel({ sel, d, H, set, close, heroI, removeBlock, setSel }) {
     else if (k === 'usps') body = <Rows list={H.usps || []} set={(v) => S('usps', v)} max={4} sub="Avantaj ekle" openIdx={0} title={(u, i) => u.title || `${i + 1}. avantaj`} add={() => S('usps', [...(H.usps || []), NEW.usp()])} render={(u, up) => <UspFields u={u} up={up} />} />;
     else if (k === 'marquee') body = <>
       <Field label="Görünüm"><select value={H.marquee || 'color'} onChange={(e) => S('marquee', e.target.value)}>{Object.entries(MQ_STYLES).map(([x, l]) => <option key={x} value={x}>{l}</option>)}</select></Field>
-      <Field label="Hız" hint="Bir turun süresi; küçük = hızlı"><span className="she-scale"><input type="range" min="15" max="120" step="1" value={Number(H.mqSpeed) || 46} onChange={(e) => S('mqSpeed', Number(e.target.value))} /><code>{Number(H.mqSpeed) || 46} sn</code></span></Field>
+      <Field label="Hız · bilgisayar" hint="Bir turun süresi; büyük sayı = yavaş"><span className="she-scale"><input type="range" min="15" max="200" step="1" value={Number(H.mqSpeed) || 46} onChange={(e) => S('mqSpeed', Number(e.target.value))} /><code>{Number(H.mqSpeed) || 46} sn</code></span></Field>
+      <Field label="Hız · telefon" hint="Telefonda ayrı; büyük sayı = yavaş"><span className="she-scale"><input type="range" min="10" max="150" step="1" value={Number(H.mqSpeedM) || 46} onChange={(e) => S('mqSpeedM', Number(e.target.value))} /><code>{Number(H.mqSpeedM) || 46} sn</code></span></Field>
       <ScaleField v={Number(H.brandLogoScale) || 1} onChange={(v) => S('brandLogoScale', v)} label="Tüm logoların boyutu" />
       <p className="fine">Şeritte marka kutularındaki markalar döner; tek tek logo boyutu için bir marka kutusuna tıklayın.</p>
     </>;
