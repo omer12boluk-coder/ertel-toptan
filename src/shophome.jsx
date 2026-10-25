@@ -379,6 +379,10 @@ function Marquee({ items, style, speed, ls = 1 }) {
   );
 }
 
+// Telefon/tablet: dokunuş tarayıcıda "fare üstünde" sayılıp banner'ı kilitliyordu → telefonda fare olayları yok sayılır,
+// banner sadece parmak üstündeyken durur ve bırakınca kalan süreden devam eder (kaydırıp yeni reklama geçtiyse o reklam baştan sayar).
+const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
+
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
 function Hero({ slides, open, brands, heroH }) {
   const E = useContext(DesignCtx);
@@ -399,8 +403,8 @@ function Hero({ slides, open, brands, heroH }) {
   function goTo(k) { const el = track.current; if (!el) return; el.scrollTo({ left: k * el.clientWidth, behavior: 'smooth' }); setI(k); }
   const onScroll = (e) => { const el = e.currentTarget; const k = Math.round(el.scrollLeft / el.clientWidth); if (k !== i) setI(k); };
   return (
-    <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} aria-roledescription="carousel">
-      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), 4000); }}>
+    <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
+      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => setPaused(false)}>
         {slides.map((s, k) => <Slide key={k} k={k} s={s} on={k === i} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
