@@ -486,6 +486,12 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   useEffect(() => { const el = v.current; if (!el || big) return; if (active && auto) el.play().catch(() => {}); else el.pause(); }, [active, auto, big]);
   const toggle = () => { const el = v.current; if (!el) return; el.paused ? el.play().catch(() => {}) : el.pause(); };
   const open = () => setBig(true);
+  // alttaki süre çubuğu: parmakla / fareyle tutup ileri-geri çekilir (resim şeridini kaydırmaz)
+  const bar = useRef(null);
+  const [seek, setSeek] = useState(null);
+  const at = (e) => { const r = bar.current.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  const jump = (x) => { const el = v.current; if (!el || !el.duration) return; el.currentTime = x * el.duration; setProg(x); };
+  const fmtT = (x) => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
   if (err) return <div className={'gal-vid-err ' + className}><Icon n="play" s={26} /><span>Video açılamadı</span></div>;
   return (
     <div className={'gal-vid' + (playing ? ' playing' : '') + ' ' + className}>
@@ -495,7 +501,14 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
       {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={28} /></button>}
       <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>
       <button className="gal-vid-big" onClick={open} aria-label="Büyüt" title="Büyük izle"><Icon n="full" s={17} /></button>
-      <span className="gal-vid-bar"><i style={{ transform: `scaleX(${prog})` }} /></span>
+      <div className={'gal-vid-seek' + (seek != null ? ' on' : '')} ref={bar} role="slider" aria-label="Sar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((seek ?? prog) * 100)}
+        onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); const x = at(e); setSeek(x); jump(x); }}
+        onPointerMove={(e) => { if (seek == null) return; const x = at(e); setSeek(x); jump(x); }}
+        onPointerUp={() => setSeek(null)} onPointerCancel={() => setSeek(null)}
+        onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
+        <span className="gal-vid-bar"><i style={{ transform: `scaleX(${seek ?? prog})` }} /></span>
+        {seek != null && <><b className="gal-vid-knob" style={{ left: `calc(10px + ${seek} * (100% - 20px))` }} /><em className="gal-vid-time num" style={{ left: `clamp(30px, calc(10px + ${seek} * (100% - 20px)), calc(100% - 30px))` }}>{fmtT(seek * (v.current?.duration || 0))}</em></>}
+      </div>
       {big && v.current && <VideoViewer el={v.current} onClose={() => setBig(false)} />}
     </div>
   );
