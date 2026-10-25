@@ -2153,17 +2153,18 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 
 /* Mağaza üst menüsü: telefonda mağaza adı "Online mağaza" etiketinin üstünde küçük; "Giriş yap" kısalır */
 .pub-id { display: contents; }
-.pub-name { display: none; }
+.pub-name, .me-login-s { display: none; }
 @media (max-width: 560px) {
   .pub-id { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex: none; min-width: 0; }
   .pub-name { display: block; padding-left: 8px; font: 700 14px/1 var(--f-display); letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; color: var(--fg); }
   .pub-id .pub-badge { height: 19px; padding: 0 8px; font-size: 10.5px; border-radius: 10px; }
-  .me-login { width: 40px; height: 40px; padding: 0; border-radius: 50%; justify-content: center; flex: none; }
-  .me-login .ic { width: 19px; height: 19px; }
+  .btn.sm.me-login { flex-direction: column; gap: 3px; height: auto; min-height: 40px; padding: 0 1px; border: 0; background: none; box-shadow: none; flex: none; color: var(--accent); }
+  .me-login .ic { width: 21px; height: 21px; }
   .me-login-l { display: none; }
+  .me-login-s { display: block; font-size: 10.5px; font-weight: 700; line-height: 1; white-space: nowrap; }
 }
 @media (max-width: 560px) {
-  .shell.public .topbar-in { gap: 8px; }
+  .shell.public .topbar-in { gap: 7px; }
   .shell.public .topbar-in .pub-id { margin-left: 2px; }
 }
 @media (max-width: 380px) { .shell.public .topbar-in { gap: 4px; } }
