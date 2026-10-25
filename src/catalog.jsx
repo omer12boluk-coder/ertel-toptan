@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
@@ -480,23 +480,23 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   const [playing, setPlaying] = useState(false);
   const [prog, setProg] = useState(0);
   const [err, setErr] = useState(false);
-  const [big, setBig] = useState(null); // tam ekranda açılırken kalınan saniye
+  const [big, setBig] = useState(false); // tam ekranda mı (aynı video öğesi tam ekran katmanına taşınır)
   const frame = useVideoFrame(src, poster);
   const pst = frame || undefined;
-  useEffect(() => { const el = v.current; if (!el || big != null) return; if (active && auto) el.play().catch(() => {}); else el.pause(); }, [active, auto, big]);
+  useEffect(() => { const el = v.current; if (!el || big) return; if (active && auto) el.play().catch(() => {}); else el.pause(); }, [active, auto, big]);
   const toggle = () => { const el = v.current; if (!el) return; el.paused ? el.play().catch(() => {}) : el.pause(); };
-  const open = () => { const el = v.current; el?.pause(); setBig(el ? el.currentTime : 0); };
+  const open = () => setBig(true);
   if (err) return <div className={'gal-vid-err ' + className}><Icon n="play" s={26} /><span>Video açılamadı</span></div>;
   return (
     <div className={'gal-vid' + (playing ? ' playing' : '') + ' ' + className}>
       <video ref={v} src={src} poster={pst} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
         style={{ objectFit: fit }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => setErr(true)}
-        onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); }} onClick={toggle} />
+        onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); }} onClick={() => !big && toggle()} />
       {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={28} /></button>}
       <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>
       <button className="gal-vid-big" onClick={open} aria-label="Büyüt" title="Büyük izle"><Icon n="full" s={17} /></button>
       <span className="gal-vid-bar"><i style={{ transform: `scaleX(${prog})` }} /></span>
-      {big != null && <VideoViewer src={src} poster={pst} start={big} onClose={(t) => { setBig(null); const el = v.current; if (el && t != null) { el.currentTime = t; } }} />}
+      {big && v.current && <VideoViewer el={v.current} onClose={() => setBig(false)} />}
     </div>
   );
 }
@@ -520,24 +520,39 @@ function Scrub({ t, dur, onSeek }) {
 
 // Tam ekran video izleme: karanlık zemin, video ekrana sığar (kesilmez), sesli başlar. Dokununca düğmeler görünür /
 // gizlenir; ortada oynat-durdur, altta ileri-geri sarma çubuğu, süre ve ses. Kapat (×), Esc ya da aşağı kaydırma.
-export function VideoViewer({ src, poster, start = 0, onClose }) {
-  const v = useRef(null);
-  const [playing, setPlaying] = useState(false);
+export function VideoViewer({ el, onClose }) {
+  const slot = useRef(null);
+  const [playing, setPlaying] = useState(!el.paused);
   const [ui, setUi] = useState(true);
-  const [t, setT] = useState(start);
-  const [dur, setDur] = useState(0);
+  const [t, setT] = useState(el.currentTime || 0);
+  const [dur, setDur] = useState(el.duration || 0);
   const [muted, setMuted] = useState(false);
   const [out, setOut] = useState(false);
   const hideT = useRef(0);
-  const close = () => { if (out) return; setOut(true); const tt = v.current?.currentTime; setTimeout(() => onClose(tt), 180); };
-  const poke = () => { setUi(true); clearTimeout(hideT.current); hideT.current = setTimeout(() => { if (!v.current?.paused) setUi(false); }, 2600); };
-  useEffect(() => {
-    const el = v.current; if (el) { el.currentTime = start; el.play().catch(() => { el.muted = true; setMuted(true); el.play().catch(() => {}); }); }
-    const k = (e) => { if (e.key === 'Escape') close(); if (e.key === ' ') { e.preventDefault(); toggle(); } };
-    addEventListener('keydown', k); poke();
-    return () => { removeEventListener('keydown', k); clearTimeout(hideT.current); };
+  const close = () => { if (out) return; setOut(true); setTimeout(onClose, 180); };
+  const poke = () => { setUi(true); clearTimeout(hideT.current); hideT.current = setTimeout(() => { if (!el.paused) setUi(false); }, 2600); };
+  const toggle = () => { el.paused ? el.play().catch(() => {}) : el.pause(); poke(); };
+  // Küçük oynatıcıdaki video öğesinin kendisi buraya taşınır: yeniden yükleme yok, duraksamadan aynı yerden devam eder.
+  // Kapanınca yerine geri konur (ses eski hâline döner).
+  useLayoutEffect(() => {
+    const home = { parent: el.parentNode, style: el.getAttribute('style'), muted: el.muted };
+    slot.current.appendChild(el);
+    el.style.objectFit = 'contain'; el.style.pointerEvents = 'none';
+    el.muted = false;
+    if (el.paused) el.play().catch(() => { el.muted = true; setMuted(true); el.play().catch(() => {}); });
+    const on = { play: () => { setPlaying(true); poke(); }, pause: () => { setPlaying(false); setUi(true); }, timeupdate: () => setT(el.currentTime), durationchange: () => setDur(el.duration || 0), loadedmetadata: () => setDur(el.duration || 0), volumechange: () => setMuted(el.muted) };
+    for (const k in on) el.addEventListener(k, on[k]);
+    const kd = (e) => { if (e.key === 'Escape') close(); if (e.key === ' ') { e.preventDefault(); toggle(); } };
+    addEventListener('keydown', kd); poke();
+    return () => {
+      for (const k in on) el.removeEventListener(k, on[k]);
+      removeEventListener('keydown', kd); clearTimeout(hideT.current);
+      if (home.parent) home.parent.insertBefore(el, home.parent.firstChild);
+      if (home.style == null) el.removeAttribute('style'); else el.setAttribute('style', home.style);
+      el.muted = home.muted;
+      if (el.paused) el.play().catch(() => {});
+    };
   }, []);
-  const toggle = () => { const el = v.current; if (!el) return; el.paused ? el.play().catch(() => {}) : el.pause(); poke(); };
   const fmtT = (x) => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
   // telefonda aşağı kaydırınca kapanır
   const sw = useRef(null);
@@ -546,16 +561,15 @@ export function VideoViewer({ src, poster, start = 0, onClose }) {
       onTouchStart={(e) => { e.stopPropagation(); sw.current = e.target.closest('.vv-bar') ? null : { y: e.touches[0].clientY, x: e.touches[0].clientX }; }}
       onTouchMove={(e) => e.stopPropagation()} onTouchCancel={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); }}
       onTouchEnd={(e) => { e.stopPropagation(); const s0 = sw.current; sw.current = null; const p = e.changedTouches[0]; if (s0 && p.clientY - s0.y > 110 && Math.abs(p.clientX - s0.x) < 80) close(); }}>
-      <video ref={v} className="vv-v" src={src} poster={poster || undefined} playsInline loop muted={muted} preload="auto" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
-        onPlay={() => { setPlaying(true); poke(); }} onPause={() => { setPlaying(false); setUi(true); }} onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 0)}
-        onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onClick={() => (ui ? (playing ? setUi(false) : toggle()) : poke())} />
+      <div ref={slot} className="vv-slot" />
+      <div className="vv-tap" onClick={() => (ui ? (playing ? setUi(false) : toggle()) : poke())} />
       <button className="vv-x" onClick={close} aria-label="Kapat"><Icon n="x" s={22} /></button>
       <button className="vv-pp" onClick={toggle} aria-label={playing ? 'Durdur' : 'Oynat'}><Icon n={playing ? 'pause' : 'play'} s={30} /></button>
       <div className="vv-bar" onClick={(e) => e.stopPropagation()}>
         <span className="num">{fmtT(t)}</span>
-        <Scrub t={t} dur={dur} onSeek={(x) => { const el = v.current; if (!el || !dur) return; el.currentTime = x * dur; setT(el.currentTime); poke(); }} />
+        <Scrub t={t} dur={dur} onSeek={(x) => { if (!dur) return; el.currentTime = x * dur; setT(el.currentTime); poke(); }} />
         <span className="num">{fmtT(dur)}</span>
-        <button onClick={() => { setMuted((m) => !m); poke(); }} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={19} /></button>
+        <button onClick={() => { el.muted = !el.muted; setMuted(el.muted); poke(); }} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={19} /></button>
       </div>
     </div>,
     document.body

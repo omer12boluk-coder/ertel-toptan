@@ -2177,7 +2177,8 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   background: rgb(10 14 30 / .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .vv { position: fixed; inset: 0; z-index: 120; background: #000; display: grid; place-items: center; touch-action: none; animation: vv-in .22s ease both; -webkit-user-select: none; user-select: none; }
 .vv.out { animation: vv-out .18s ease both; }
-.vv-v { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.vv-slot, .vv-tap { position: absolute; inset: 0; }
+.vv-slot video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
 .vv-x, .vv-pp, .vv-bar { transition: opacity .25s ease, transform .25s ease; }
 .vv:not(.ui) .vv-x, .vv:not(.ui) .vv-pp, .vv:not(.ui) .vv-bar { opacity: 0; pointer-events: none; }
 .vv:not(.ui) { cursor: none; }
