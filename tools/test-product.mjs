@@ -9,6 +9,23 @@ if (MODE === 'kontrol') { // canlı linkler gerçekten çalışıyor mu (iPhone'
   const r = await fetch(WATCH0 + '/v/deneme.mp4', { headers: { Range: 'bytes=0-99' } });
   const r2 = await fetch('https://erteltoptan.web.app/test/deneme-1.jpg');
   console.log(`::notice title=Kontrol::video ${r.status} ${r.headers.get('content-range')} ${r.headers.get('content-type')} · resim ${r2.status} ${r2.headers.get('content-type')}`);
+  // videolu tüm ürünler: linkleri nasıl cevap veriyor (iPhone parça parça ister, kare almak için CORS gerekir)
+  initializeApp({ credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
+  const db0 = getFirestore();
+  const m0 = (await db0.doc('catalog/_meta').get()).data();
+  const ps0 = await Promise.all(Array.from({ length: m0.chunks }, (_, i) => db0.doc(`catalog/c${i}`).get()));
+  const vids = ps0.flatMap((x) => (x.exists ? x.data().items : [])).filter((p) => p.vd);
+  for (const p of vids) {
+    let line = `#${p.id} ${p.k} · ${p.vd}`;
+    try {
+      const a = await fetch(p.vd, { headers: { Range: 'bytes=0-1', Origin: 'https://erteltoptan.web.app' }, redirect: 'follow' });
+      line += ` → ${a.status} ${a.headers.get('content-type')} range=${a.headers.get('content-range')} acao=${a.headers.get('access-control-allow-origin')} final=${a.url}`;
+      const h = await fetch(p.vd, { method: 'HEAD' }); line += ` · boyut=${h.headers.get('content-length')}`;
+    } catch (e) { line += ' → HATA ' + e.message; }
+    console.log('::notice title=Video::' + line);
+  }
+  const blk = (await db0.doc('settings/public').get()).data()?.shopHome?.blocks || {};
+  for (const [id, b] of Object.entries(blk)) if (b.t === 'video') console.log(`::notice title=Ana sayfa video::${id} ${b.src}`);
   process.exit(0);
 }
 const ID = 9000001;
