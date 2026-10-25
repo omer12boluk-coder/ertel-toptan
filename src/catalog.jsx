@@ -42,19 +42,26 @@ export function stockInfo(p, S) {
 }
 
 // Fiyatın altındaki ek satırlar (Ayarlar > Fiyatlandırma > Ürün fiyatının gösterimi): TL karşılığı, soluk KDV dahil tutar
-function PriceExtras({ v, cur, admin }) {
+// Mağaza (public) ve bayi için ayrı seçilir: showTL/showVatInc/plusVat (mağaza), b2bTL/b2bVatInc/b2bPlusVat (bayi)
+export function priceShow(S, role) {
+  const P = S.pricing || {};
+  return role === 'public' ? { tl: !!P.showTL, inc: !!P.showVatInc, plus: !!P.plusVat } : { tl: role === 'admin' || !!P.b2bTL, inc: !!P.b2bVatInc, plus: !!P.b2bPlusVat };
+}
+function PriceExtras({ v, cur }) {
   const S = useStore((s) => s.settings);
+  const role = useStore((s) => s.user?.role);
   const rate = useRate();
   if (v == null || isNaN(v)) return null;
+  const sh = priceShow(S, role);
   const vat = Number(S.pricing.vatPct) || 0;
   const tl = (x) => (rate && cur === 'USD' ? fmtTL(x * rate.usd) : cur === 'TRY' ? fmtTL(x) : null);
-  const inc = S.pricing.showVatInc && vat > 0 ? v * (1 + vat / 100) : null;
+  const inc = sh.inc && vat > 0 ? v * (1 + vat / 100) : null;
   return <>
-    {(admin || S.pricing.showTL) && <TLHint v={v} cur={cur} />}
+    {sh.tl && <TLHint v={v} cur={cur} />}
     {inc != null && <span className="vat-inc num">KDV dahil {fmt(inc, cur)}{tl(inc) && cur !== 'TRY' ? ' · ' + tl(inc) : ''}</span>}
   </>;
 }
-const PlusVat = () => { const S = useStore((s) => s.settings); return S.pricing.plusVat && Number(S.pricing.vatPct) > 0 ? <em className="plusvat">+KDV</em> : null; };
+const PlusVat = () => { const S = useStore((s) => s.settings); const role = useStore((s) => s.user?.role); return priceShow(S, role).plus && Number(S.pricing.vatPct) > 0 ? <em className="plusvat">+KDV</em> : null; };
 
 export function PriceBlock({ p, big }) {
   const { settings: S, user, userPrices } = useStore();
@@ -72,7 +79,7 @@ export function PriceBlock({ p, big }) {
     <div className="price dual">
       <span className="pv"><small>Liste</small><b className="num">{fmt(pr.list, p.cur)}</b></span>
       <span className="pv mine"><small>{pr.src === 'ozel' ? 'Size özel' : 'Toptan'}</small><b className="num">{fmt(pr.mine, p.cur)}<PlusVat /></b></span>
-      <PriceExtras v={pr.mine} cur={p.cur} admin={admin} />
+      <PriceExtras v={pr.mine} cur={p.cur} />
     </div>
   );
   return (
@@ -81,7 +88,7 @@ export function PriceBlock({ p, big }) {
       {pr.mine == null
         ? <span className="price-ask">Fiyat sorun</span>
         : <span className="price-mine"><small>{pr.src === 'ozel' ? 'Size özel:' : 'Toptan:'}</small>{fmt(pr.mine, p.cur)}<PlusVat /></span>}
-      <PriceExtras v={pr.mine} cur={p.cur} admin={admin} />
+      <PriceExtras v={pr.mine} cur={p.cur} />
     </div>
   );
 }
@@ -181,7 +188,7 @@ export function Catalog({ admin }) {
         <aside className="cat-side" aria-label="Kategoriler">
           <h3 className="eyebrow">Kategoriler</h3>
           <button className={'cat-link' + (cat == null ? ' on' : '')} onClick={() => setCat(null)}><span>Tümü</span><b>{all.length}</b></button>
-          <CatTree nodes={tree.roots} counts={counts} cat={cat} open={openPath} onPick={setCat} admin={admin} />
+          <CatTree nodes={tree.roots} counts={counts} cat={cat} open={openPath} onPick={setCat} />
         </aside>
 
         <section className="cat-main">
@@ -276,7 +283,7 @@ export function Catalog({ admin }) {
         <Sheet title="Kategoriler" onClose={() => setCatSheet(false)}>
           <div className="cat-grid">
             <button className={'cat-link' + (cat == null ? ' on' : '')} onClick={() => { setCat(null); setCatSheet(false); }}><span>Tümü</span><b>{all.length}</b></button>
-            <CatTree nodes={tree.roots} counts={counts} cat={cat} all onPick={(c) => { setCat(c); setCatSheet(false); }} admin={admin} />
+            <CatTree nodes={tree.roots} counts={counts} cat={cat} all onPick={(c) => { setCat(c); setCatSheet(false); }} />
           </div>
         </Sheet>
       )}
@@ -349,7 +356,7 @@ function ProductRow({ p, admin, onOpen }) {
         ) : qty > 0 ? (
           <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
         ) : (
-          <button className="btn sm add" onClick={() => setQty(p.id, 1)} disabled={p.s <= 0 && S.catalog.stockMode !== 'hidden' && false}><Icon n="plus" s={15} />Sepete ekle</button>
+          <button className="btn sm add" onClick={() => setQty(p.id, 1)} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-cart" aria-hidden="true"><Icon n="cart" s={18} /><i>+</i></span><span className="add-l">Sepete ekle</span></button>
         )}
       </div>
     </li>

@@ -560,12 +560,17 @@ export function Settings() {
             <Field label="Teklifte −/+ adımı (USD)"><select id="s-step" value={d.pricing.adjustStep} onChange={(e) => set('pricing.adjustStep', Number(e.target.value))}><option value="0.5">0,5</option><option value="1">1</option><option value="5">5</option><option value="10">10</option></select></Field>
           </div>
           <h3>Ürün fiyatının gösterimi</h3>
-          <p className="fine">Dolar fiyat her zaman aynı kalır; altına isterseniz aşağıdakiler eklenir (bayi uygulaması ve online mağaza). Siz TL karşılığını her zaman görürsünüz.</p>
-          <Toggle id="s-tl" label="TL karşılığı" hint="Dolar fiyatın altında “≈ 4.993 ₺”" checked={d.pricing.showTL} onChange={(v) => set('pricing.showTL', v)} />
-          <Toggle id="s-vatinc" label="KDV dahil tutar (soluk)" hint="Kartın altında küçük, soluk satır: “KDV dahil 120 $ · 5.924 ₺”" checked={!!d.pricing.showVatInc} onChange={(v) => set('pricing.showVatInc', v)} />
-          <Toggle id="s-plusvat" label="“+KDV” ibaresi" hint="Dolar fiyatın yanında küçük “+KDV” yazısı" checked={!!d.pricing.plusVat} onChange={(v) => set('pricing.plusVat', v)} />
+          <p className="fine">Dolar fiyat hep aynı kalır; altına seçtikleriniz eklenir. Online mağaza ve bayiler için ayrı seçilir. Siz TL karşılığını her zaman görürsünüz.</p>
+          <div className="pshow-grid">
+            <span /><b>Online mağaza</b><b>Bayiler</b>
+            {[['TL karşılığı', '“≈ 4.993 ₺”', 'showTL', 'b2bTL'], ['KDV dahil tutar (soluk)', '“KDV dahil 120 $ · 5.924 ₺”', 'showVatInc', 'b2bVatInc'], ['“+KDV” ibaresi', 'Fiyatın yanında küçük yazı', 'plusVat', 'b2bPlusVat']].map(([l, h, a, b]) => (
+              <Frag key={a}><span className="pshow-l">{l}<small>{h}</small></span>
+                {[a, b].map((k) => <label key={k} className="pshow-c"><input type="checkbox" id={'s-' + k} checked={!!d.pricing[k]} onChange={(e) => set('pricing.' + k, e.target.checked)} /></label>)}
+              </Frag>
+            ))}
+          </div>
           <Toggle id="s-retail" label="Bayilere liste fiyatını da göster" hint="Toptan fiyatın yanında liste (perakende) fiyatı" checked={d.pricing.showRetail} onChange={(v) => set('pricing.showRetail', v)} />
-          <PriceShowPreview d={d} />
+          <PriceShowPreview d={d} b2b={false} />
           <h3>Sepet ve toplam</h3>
           <Toggle id="s-save" label="Sepette avantaj tutarını göster" checked={d.pricing.showSaving} onChange={(v) => set('pricing.showSaving', v)} />
           <Toggle id="s-showvat" label="Toplamın altında KDV bilgisini göster" hint="Sepet, liste linki, liste resmi ve tekliflerde toplamın altında küçük bir satır: KDV ve KDV dahil toplam" checked={d.pricing.showVat !== false} onChange={(v) => set('pricing.showVat', v)} />
@@ -1060,6 +1065,7 @@ function PriceTester({ d }) {
   );
 }
 // Fiyat gösterimi önizlemesi (seçilen anahtarlarla bir ürün kartının fiyat kısmı)
+function Frag({ children }) { return children; }
 function PriceShowPreview({ d }) {
   const live = useStore((s) => s.rate);
   const manual = Number(d.pricing.manualRate); const rate = manual > 0 ? manual : live?.usd || 0;
@@ -1067,7 +1073,7 @@ function PriceShowPreview({ d }) {
   const tl = (x) => (rate ? Math.round(x * rate).toLocaleString('tr-TR') + ' ₺' : '— ₺');
   return (
     <div className="preview-box pshow">
-      <span className="eyebrow">Kartta böyle görünür</span>
+      <span className="eyebrow">Mağaza kartında böyle görünür</span>
       <span className="pshow-main num">{fmt(v, 'USD')}{d.pricing.plusVat && vat > 0 && <em className="plusvat">+KDV</em>}</span>
       {d.pricing.showTL && <span className="tl-hint num">≈ {tl(v)}</span>}
       {d.pricing.showVatInc && vat > 0 && <span className="vat-inc num">KDV dahil {fmt(v * (1 + vat / 100), 'USD')} · {tl(v * (1 + vat / 100))}</span>}

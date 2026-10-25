@@ -36,7 +36,8 @@ export const DEFAULT_SETTINGS = {
     showVat: true, // toplamın altında KDV bilgisini göster
     vatPct: 20, // KDV oranı: sadece toplamın altında bilgi olarak gösterilir (0 = gösterme)
     showVatInc: false, // ürün fiyatının altında soluk "KDV dahil … $ · … ₺" satırı (bayi + vitrin)
-    plusVat: false, // fiyatın yanında küçük "+KDV" ibaresi
+    plusVat: false, // fiyatın yanında küçük "+KDV" ibaresi (online mağaza)
+    b2bTL: false, b2bVatInc: false, b2bPlusVat: false, // bayi uygulamasında aynı seçenekler (ayrı)
     showTL: false, // dolar fiyatların TL karşılığını bayilere / vitrine de göster (yönetici her zaman görür)
     manualRate: '', // doluysa Harem Altın kuru yerine bu kur kullanılır (1 USD = ? TL)
   },
