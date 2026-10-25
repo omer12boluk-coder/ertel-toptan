@@ -584,7 +584,7 @@ function setupLongPress() {
     }, 460);
     if (el) setTimeout(() => tm && el?.classList.add('lp-press'), 120);
   }, { passive: true });
-  addEventListener('touchmove', (e) => { if (!tm) return; const p = e.touches[0]; if (!p || Math.hypot(p.clientX - sx, p.clientY - sy) > 10) clear(); }, { passive: true });
+  addEventListener('touchmove', (e) => { if (!tm) return; const p = e.touches[0]; if (!p || Math.hypot(p.clientX - sx, p.clientY - sy) > 14) clear(); }, { passive: true });
   addEventListener('touchend', (e) => { clear(); if (fired && Date.now() - fired < 2000) { e.preventDefault(); fired = 0; } }, { passive: false });
   addEventListener('touchcancel', clear);
   addEventListener('scroll', clear, true);
