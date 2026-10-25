@@ -2813,3 +2813,9 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .pp-back { align-self: flex-start; }
 .pp-card { padding: 22px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); }
 @media (max-width: 700px) { .pp-card { padding: 12px; border-radius: 18px; } }
+/* ürün penceresi düğmeleri: daha küçük, dengeli (Sepete ekle ana, Hemen satın al hafif) */
+.pbuy-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.pbuy-btns .btn { height: 42px; font-size: 15px; padding: 0 18px; border-radius: 12px; flex: 1 1 0; max-width: 220px; }
+.pbuy-now { background: var(--accent-soft); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 25%, transparent); }
+.pbuy-now:hover { background: color-mix(in oklab, var(--accent) 18%, var(--surface)); }
+@media (max-width: 560px) { .pbuy-btns .btn { max-width: none; } }

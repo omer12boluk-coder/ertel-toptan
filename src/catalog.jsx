@@ -461,9 +461,9 @@ function ProductBody({ p, viewOnly, onDone }) {
             {pr.mine != null && <b className="num">{fmt(pr.mine * qty, p.cur)}</b>}
           </div>
           <div className="pbuy-btns">
-            <button className={'btn big ' + (canBuy ? 'outline' : 'primary')} onClick={add}><Icon n="cart" s={18} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>
-            {canBuy && <button className="btn big primary" onClick={buy}><Icon n="check" s={18} />Hemen satın al</button>}
-            {S.requests.allowQuote && !pub && <button className="btn big ghost" onClick={ask}><Icon n="chat" s={17} />Bu ürünü sor</button>}
+            <button className="btn primary" onClick={add}><Icon n="cart" s={18} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>
+            {canBuy && <button className="btn pbuy-now" onClick={buy}><Icon n="back" s={16} className="flip" />Hemen satın al</button>}
+            {S.requests.allowQuote && !pub && <button className="btn ghost" onClick={ask}><Icon n="chat" s={17} />Bu ürünü sor</button>}
           </div>
         </div>}
       </div>
