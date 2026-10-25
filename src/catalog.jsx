@@ -458,7 +458,7 @@ function ProductBody({ p, viewOnly, onDone }) {
           <div className="qty-line">
             <span>Adet</span>
             <Stepper value={qty} min={1} onChange={setQ} />
-            {pr.mine != null && <b className="num">{fmt(pr.mine * qty, p.cur)}</b>}
+            {pr.mine != null && <span className="pbuy-tot"><small>Toplam</small><b className="num">{fmt(pr.mine * qty, p.cur)}</b></span>}
           </div>
           <div className="pbuy-btns">
             <button className="btn primary" onClick={add}><Icon n="cart" s={18} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>

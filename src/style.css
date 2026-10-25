@@ -2819,3 +2819,11 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .pbuy-now { background: var(--accent-soft); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 25%, transparent); }
 .pbuy-now:hover { background: color-mix(in oklab, var(--accent) 18%, var(--surface)); }
 @media (max-width: 560px) { .pbuy-btns .btn { max-width: none; } }
+/* ürün penceresi düğmeleri: daha küçük, dengeli (Hemen satın al hafif) + belirgin toplam */
+.pbuy-btns { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; max-width: 460px; }
+.pbuy-btns .btn { height: 44px; font-size: 15px; border-radius: 12px; }
+.pbuy-btns .pb-buy { background: var(--accent-soft); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 22%, transparent); }
+.pbuy-btns .pb-buy:hover { background: color-mix(in oklab, var(--accent) 18%, var(--surface)); }
+.pbuy-tot { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.pbuy-tot small { font: 600 11px/1 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.pbuy-tot b { font: 700 30px/1 var(--f-display); color: var(--price); }
