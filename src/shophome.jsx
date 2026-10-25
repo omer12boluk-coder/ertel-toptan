@@ -345,14 +345,19 @@ function Marquee({ items, style, speed, ls = 1 }) {
   useEffect(() => {
     const el = ref.current; if (!el || !phone || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const inner = el.firstElementChild;
-    let raf = 0, last = performance.now(), pos = el.scrollLeft, held = false, visible = true, t = 0;
+    // Sadece parmakla YANA çekince durur; sayfayı aşağı kaydırırken ya da dokununca durmaz.
+    // Bırakınca fırlatma kayması bitene kadar bekler (kayma olayı 160 ms susunca), sonra yumuşakça hızlanarak devam eder.
+    let raf = 0, last = performance.now(), pos = el.scrollLeft, held = false, visible = true, t = 0, ramp = 1;
+    let sx = 0, sy = 0, touching = false, dragging = false;
     const dur = Number(speed) || 46;
     const tick = (now) => {
       const dt = Math.min(64, now - last); last = now;
       if (!held && visible) {
         const half = el.scrollWidth / 2;
         if (half > 0) {
-          pos += (half / dur) * dt / 1000; if (pos >= half) pos -= half;
+          if (ramp < 1) ramp = Math.min(1, ramp + dt / 700);
+          const k = ramp * ramp * (3 - 2 * ramp); // yumuşak hızlanma
+          pos += (half / dur) * dt / 1000 * k; if (pos >= half) pos -= half;
           // iPhone kaydırma konumunu tam piksele yuvarlıyor; yavaş kayarken takılmasın diye
           // tam kısmı kaydırmayla, kesirli kısmı transform ile veriyoruz (her karede pürüzsüz ilerler)
           const base = Math.floor(pos); el.scrollLeft = base; inner.style.transform = `translate3d(${(base - pos).toFixed(3)}px,0,0)`;
@@ -361,11 +366,23 @@ function Marquee({ items, style, speed, ls = 1 }) {
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    const hold = () => { held = true; clearTimeout(t); inner.style.transform = ''; };
-    const release = () => { clearTimeout(t); t = setTimeout(() => { const half = el.scrollWidth / 2; pos = el.scrollLeft % half; held = false; last = performance.now(); }, 1500); };
-    el.addEventListener('touchstart', hold, { passive: true }); el.addEventListener('touchend', release, { passive: true });
+    const resume = () => { const half = el.scrollWidth / 2; pos = half ? el.scrollLeft % half : 0; held = false; ramp = 0; last = performance.now(); };
+    const settle = () => { clearTimeout(t); t = setTimeout(() => { if (!touching) resume(); }, 160); };
+    const start = (e) => { const p0 = e.touches[0]; sx = p0.clientX; sy = p0.clientY; touching = true; dragging = false; };
+    const move = (e) => {
+      if (!touching || dragging) return; const p0 = e.touches[0]; if (!p0) return;
+      const dx = Math.abs(p0.clientX - sx), dy = Math.abs(p0.clientY - sy);
+      if (dx > 6 && dx > dy) { dragging = true; held = true; clearTimeout(t); inner.style.transform = ''; }
+      else if (dy > 6) touching = false; // dikey: sayfa kaydırılıyor, şerit karışmaz
+    };
+    const end = () => { touching = false; if (dragging) { dragging = false; settle(); } };
+    const onScroll = () => { if (held && !touching) settle(); }; // fırlatma kayması sürdükçe bekle
+    el.addEventListener('touchstart', start, { passive: true }); el.addEventListener('touchmove', move, { passive: true });
+    el.addEventListener('touchend', end, { passive: true }); el.addEventListener('touchcancel', end, { passive: true });
+    el.addEventListener('scroll', onScroll, { passive: true });
     const io = 'IntersectionObserver' in window ? new IntersectionObserver(([e]) => { visible = e.isIntersecting; last = performance.now(); }) : null; io?.observe(el);
-    return () => { cancelAnimationFrame(raf); clearTimeout(t); io?.disconnect(); inner.style.transform = ''; el.removeEventListener('touchstart', hold); el.removeEventListener('touchend', release); };
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); io?.disconnect(); inner.style.transform = '';
+      el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); el.removeEventListener('scroll', onScroll); };
   }, [items.length, speed, phone]);
   if (!items.length) return null;
   return (
