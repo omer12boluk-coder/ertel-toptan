@@ -488,7 +488,7 @@ function ShellFull() {
       {!admin && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
-      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && !(admin && k === 'musteriler'))} tab={tab} badge={badge} />
+      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && !(admin && k === 'siparis'))} tab={tab} badge={badge} />
     </div>
   );
 }
