@@ -87,7 +87,7 @@ export function ShopDesigner() {
   function addBlock(at, type) {
     let key;
     if (type === 'rail') { const r = NEW.rail(); set('shopHome.sections', [...H.sections, r]); key = 'rail:' + r.id; }
-    else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : type === 'video' ? { t: 'video', vids: [{ src: '' }], ratio: '16:9', wp: 100, pos: 0.5, title: '' } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
+    else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : type === 'video' ? { t: 'video', vids: [{ src: '' }], ratio: '16:9', wp: 100, pos: 0.5, title: '' } : type === 'rate' ? { t: 'rate', pos: 1, sc: 1, style: 'soft' } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
     const n = [...L]; n.splice(at, 0, key); setL(n); if (mobile) setPick({ kind: 'blk', k: key }); setSel({ kind: 'blk', k: key });
   }
   function removeBlock(k) {
@@ -202,7 +202,7 @@ function MobileBar({ pick, setPick, H, d, set, setSel, L, setL, toggleHide, remo
     <div className="dz-mbar" role="toolbar" aria-label="Seçilen öğe">
       <div className="dz-mbar-h"><b>{title}</b><button className="icon-btn sm" onClick={() => setPick(null)} aria-label="Seçimi kaldır"><Icon n="x" s={16} /></button></div>
       {adding && pick.kind === 'blk' && <div className="dz-mbar-add">
-        {[['head', 'Başlık'], ['rail', 'Ürün rafı'], ['banner', 'Görsel bant'], ['video', 'Video']].map(([t, l]) => <button key={t} onClick={() => { addBlock(L.indexOf(pick.k) + 1, t); setAdding(false); }}><Icon n="plus" s={15} />{l}</button>)}
+        {[['head', 'Başlık'], ['rail', 'Ürün rafı'], ['banner', 'Görsel bant'], ['video', 'Video'], ['rate', 'Kur kutusu']].map(([t, l]) => <button key={t} onClick={() => { addBlock(L.indexOf(pick.k) + 1, t); setAdding(false); }}><Icon n="plus" s={15} />{l}</button>)}
       </div>}
       <div className="dz-mbar-b">{btns}</div>
     </div>
@@ -269,6 +269,7 @@ function AddBetween({ onAdd, top }) {
         <button onClick={() => { onAdd('rail'); setOpen(false); }}><b>Ürün rafı</b><small>Yeni gelenler, marka, kategori…</small></button>
         <button onClick={() => { onAdd('banner'); setOpen(false); }}><b>Görsel bant</b><small>Tam genişlik resim, tıklanabilir</small></button>
         <button onClick={() => { onAdd('video'); setOpen(false); }}><b>Video</b><small>Yatay, kare ya da dikey; büyütülerek izlenir</small></button>
+        <button onClick={() => { onAdd('rate'); setOpen(false); }}><b>Kur kutusu</b><small>Güncel dolar kuru, küçük ve sade</small></button>
       </div>}
     </div>
   );

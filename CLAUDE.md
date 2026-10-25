@@ -101,13 +101,15 @@ KURULUM.md  kullanıcıya yönelik kurulum anlatımı · README.md kısa tanıt�
 | `meta/owner`, `meta/sync` | kurulum sahibi, son eşitleme |
 
 Ürün alanları (kısa adlar): `id`, `k` stok kodu, `n` ad, `b` marka, `c`/`c2` kategori, `r` liste fiyatı, `w` ürüne özel toptan, `cur`, `s` stok, `a` aktif, `so` sitede yok (gizli), `pc` liste fiyatı değişti uyarısı, `nw` yeni, `pi`/`im` resim, `t` gizli etiketler, `u` site adresi.
-Ayar göçü: `main.jsx` → `migrate()`, sürüm `settings.v` (şu an 5). Ayarlar her zaman `withDefaults()` ile varsayılanlarla derin birleştirilir.
+Ayar göçü: `main.jsx` → `migrate()`, sürüm `settings.v` (şu an 6). Ayarlar her zaman `withDefaults()` ile varsayılanlarla derin birleştirilir.
 
 ## 6. Özellikler (bölüm bölüm)
 
 ### Fiyat
 - **Liste fiyatı (r)** = sitedeki gerçek satış fiyatı: beslemede `sale_price` (indirimli) varsa o, yoksa `price`. Excel'de de "İndirimli Fiyat" → r.
-- **Toptan** = ürüne özel `w` varsa o, yoksa liste fiyatından % indirim (`pricing.discountPct`, `utils.priceFor`). Bayiye kademe + ek indirim, en üstte bayiye özel fiyat. Mağaza ziyaretçisi (`role: 'public'`) her zaman liste fiyatını görür.
+- **Toptan** = ürüne özel `w` varsa o, yoksa `pricing.mode`: **'steps' (varsayılan, 25.10.2026)** fiyat aralığına göre sabit USD indirim `pricing.steps` [{to (dahil), off}] (son satır to:null = ve üstü; `utils.stepOff`, indirim liste fiyatının yarısını geçmez, yuvarlama 0,01) — ya da 'pct' liste fiyatından % (`discountPct`, `roundStep`). Kademe kendi tablosunu alabilir (`tiers[i].steps`, boş = genel tablo) + ek % (`tiers[i].pct`; v6 göçünde hepsi 0 yapıldı, kullanıcı "şimdilik hepsi aynı" dedi). Sonra müşterinin ek %'si, en üstte bayiye özel fiyat. Mağaza ziyaretçisi (`role: 'public'`) her zaman liste fiyatını görür. Ayarlar > Fiyatlandırma'da tablo düzenleyici (`StepsEditor`, başlangıç = önceki satırın sınırı, kendiliğinden zincirlenir) + deneme (`PriceTester`).
+- **Fiyat gösterimi** (Ayarlar > Fiyatlandırma, bayi + mağaza): `showTL` (≈ TL), `showVatInc` (soluk "KDV dahil … $ · … ₺" satırı), `plusVat` (küçük "+KDV"); `PriceExtras` / `PlusVat` (catalog.jsx). Public ayarlara da yazılır.
+- **Kur kutusu** (Tasarım modu > Bölüm ekle > Kur kutusu, `blocks {t:'rate', pos, sc, style soft|line|dark, label, time}`): `RateBlock` + genel `FreeBox` (içerik genişliğinde kutu; tutup sağa-sola, sağ alt köşeden boyut).
 - KDV (`pricing.vatPct` / `showVat`) ürün fiyatına eklenmez; sadece toplamın altında bilgi satırı. TL karşılığı Harem Altın **dolar satış** kuru (ya da `pricing.manualRate`).
 
 ### Bayi tarafı (/b2b)
@@ -138,6 +140,7 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 
 ### Yönetim paneli (/admin)
 - **Ana sayfa (Genel bakış, `dashboard.jsx`):** hoş geldiniz bandı, dönem (bugün/hafta/ay): mağaza siparişi, satış tutarı (USD + ≈TL, önceki döneme göre %), ortalama sepet, yeni üye, bayi talebi; kısayollar; son 14 gün grafiği; çok satanlar; akış (sipariş + talep). İptaller satışa sayılmaz.
+- **Müşteriler** iki sekme: **Bayiler** / **Mağaza müşterileri** (`Members`, eskiden Siparişler'deydi; seçim cihazda `cust-kind`); Bayiler'de "Fiyat kuralları" kısayolu (intent `sec:fiyat` → Ayarlar o bölüm açık).
 - **Talepler:** sağ tık / çoklu seçim / talep içinden silme. **Müşteriler (bayiler):** tamamen silinebilir (Auth hesabı kalır ama kayıt silindiği için giremez).
 - **Siparişler:** durum serbest seçilir (Yeni, Onaylandı, Kargoda, Teslime hazır, Tamamlandı, İptal); "Kargoda"da firma listeden (`orders.cargoCompanies`) + takip no. "Seç" ile çoklu seçim + toplu silme. **Mağaza üyeleri** sekmesi: görüntüle, sil, yeni üye aç.
 - **Sipariş formu** (`orderform.jsx`): ürün ara (liste + toptan görünür, eklenince liste fiyatı geçer), fiyat yaz, liste resmi (gerekirse birkaç resim, her biri ayrı "Kopyala") + fiyatlı link. Kaydedilmez, taslak cihazda. Arama sonuçları kendi kaydırmalı kutusunda; "Müşteriye gönder" sağ sütunda + başlıkta kısayol.

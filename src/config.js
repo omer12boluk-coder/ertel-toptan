@@ -23,7 +23,11 @@ export const DEFAULT_SETTINGS = {
     logoWide: '', // boşsa ERT Mobile yatay logo (giriş ekranı)
   },
   pricing: {
-    discountPct: 10, // ürüne özel toptan fiyat yoksa liste fiyatından % indirim
+    mode: 'steps', // 'steps' = fiyat aralığına göre sabit USD indirim (aşağıdaki tablo), 'pct' = liste fiyatından % indirim
+    steps: [ // {to: bu fiyata kadar (dahil), off: USD indirim}; son satır to: null = ve üstü
+      { to: 5, off: 0.5 }, { to: 25, off: 1 }, { to: 60, off: 2 }, { to: 170, off: 3 }, { to: 300, off: 5 }, { to: 700, off: 10 }, { to: null, off: 20 },
+    ],
+    discountPct: 10, // mode 'pct' iken: ürüne özel toptan fiyat yoksa liste fiyatından % indirim
     noWholesale: 'discount', // 'discount' = indirimle hesapla, 'ask' = "Fiyat sorun" göster
     roundStep: 0.5, // toptan fiyat yuvarlama adımı (0.01 / 0.5 / 1)
     adjustStep: 1, // yönetici teklif ekranında -/+ butonlarının adımı
@@ -31,6 +35,8 @@ export const DEFAULT_SETTINGS = {
     showSaving: false, // sepette "avantajınız" satırını göster
     showVat: true, // toplamın altında KDV bilgisini göster
     vatPct: 20, // KDV oranı: sadece toplamın altında bilgi olarak gösterilir (0 = gösterme)
+    showVatInc: false, // ürün fiyatının altında soluk "KDV dahil … $ · … ₺" satırı (bayi + vitrin)
+    plusVat: false, // fiyatın yanında küçük "+KDV" ibaresi
     showTL: false, // dolar fiyatların TL karşılığını bayilere / vitrine de göster (yönetici her zaman görür)
     manualRate: '', // doluysa Harem Altın kuru yerine bu kur kullanılır (1 USD = ? TL)
   },

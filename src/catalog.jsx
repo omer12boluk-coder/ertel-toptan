@@ -6,7 +6,7 @@ import { norm, fmt, priceFor, catName, now, ls } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
-import { TLHint } from './listsheet.jsx';
+import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
 
 export function useTree() {
@@ -41,22 +41,38 @@ export function stockInfo(p, S) {
   return p.s <= S.catalog.lowStock ? { t: 'Az kaldı', tone: 'warn' } : { t: 'Stokta', tone: 'ok' };
 }
 
+// Fiyatın altındaki ek satırlar (Ayarlar > Fiyatlandırma > Ürün fiyatının gösterimi): TL karşılığı, soluk KDV dahil tutar
+function PriceExtras({ v, cur, admin }) {
+  const S = useStore((s) => s.settings);
+  const rate = useRate();
+  if (v == null || isNaN(v)) return null;
+  const vat = Number(S.pricing.vatPct) || 0;
+  const tl = (x) => (rate && cur === 'USD' ? fmtTL(x * rate.usd) : cur === 'TRY' ? fmtTL(x) : null);
+  const inc = S.pricing.showVatInc && vat > 0 ? v * (1 + vat / 100) : null;
+  return <>
+    {(admin || S.pricing.showTL) && <TLHint v={v} cur={cur} />}
+    {inc != null && <span className="vat-inc num">KDV dahil {fmt(inc, cur)}{tl(inc) && cur !== 'TRY' ? ' · ' + tl(inc) : ''}</span>}
+  </>;
+}
+const PlusVat = () => { const S = useStore((s) => s.settings); return S.pricing.plusVat && Number(S.pricing.vatPct) > 0 ? <em className="plusvat">+KDV</em> : null; };
+
 export function PriceBlock({ p, big }) {
   const { settings: S, user, userPrices } = useStore();
   const pr = priceFor(p, S, user, userPrices);
+  const admin = user?.role === 'admin';
   if (user?.role === 'public') {
     return (
       <div className={'price' + (big ? ' big' : '')}>
-        {pr.mine == null ? <span className="price-ask">Fiyat sorun</span> : <span className="price-mine"><small>Fiyat:</small>{fmt(pr.mine, p.cur)}</span>}
-        {S.pricing.showTL && <TLHint v={pr.mine} cur={p.cur} />}
+        {pr.mine == null ? <span className="price-ask">Fiyat sorun</span> : <span className="price-mine"><small>Fiyat:</small>{fmt(pr.mine, p.cur)}<PlusVat /></span>}
+        <PriceExtras v={pr.mine} cur={p.cur} />
       </div>
     );
   }
   if (!big && S.pricing.showRetail && pr.list > 0 && pr.mine != null) return (
     <div className="price dual">
       <span className="pv"><small>Liste</small><b className="num">{fmt(pr.list, p.cur)}</b></span>
-      <span className="pv mine"><small>{pr.src === 'ozel' ? 'Size özel' : 'Toptan'}</small><b className="num">{fmt(pr.mine, p.cur)}</b></span>
-      {(user?.role === 'admin' || S.pricing.showTL) && <TLHint v={pr.mine} cur={p.cur} />}
+      <span className="pv mine"><small>{pr.src === 'ozel' ? 'Size özel' : 'Toptan'}</small><b className="num">{fmt(pr.mine, p.cur)}<PlusVat /></b></span>
+      <PriceExtras v={pr.mine} cur={p.cur} admin={admin} />
     </div>
   );
   return (
@@ -64,8 +80,8 @@ export function PriceBlock({ p, big }) {
       {S.pricing.showRetail && pr.list > 0 && <span className="price-list">Liste: <b className="num">{fmt(pr.list, p.cur)}</b></span>}
       {pr.mine == null
         ? <span className="price-ask">Fiyat sorun</span>
-        : <span className="price-mine"><small>{pr.src === 'ozel' ? 'Size özel:' : 'Toptan:'}</small>{fmt(pr.mine, p.cur)}</span>}
-      {(user?.role === 'admin' || S.pricing.showTL) && <TLHint v={pr.mine} cur={p.cur} />}
+        : <span className="price-mine"><small>{pr.src === 'ozel' ? 'Size özel:' : 'Toptan:'}</small>{fmt(pr.mine, p.cur)}<PlusVat /></span>}
+      <PriceExtras v={pr.mine} cur={p.cur} admin={admin} />
     </div>
   );
 }

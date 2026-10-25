@@ -56,21 +56,33 @@ export function catName(S, code) {
 
 // ---- Fiyat hesabı --------------------------------------------------------
 // Öncelik: müşteriye özel fiyat > ürünün toptan fiyatı (veya % indirim) > kademe/ek indirim
+// Kademeli indirim tablosu: [{to, off}] — fiyat "to" dahil o satıra kadar; son satırın "to"su boş = ve üstü.
+// İndirim hiçbir zaman liste fiyatının yarısını geçmez (çok ucuz üründe fiyat sıfıra inmesin).
+export function stepOff(list, steps) {
+  const L = Number(list) || 0; if (!L || !Array.isArray(steps) || !steps.length) return 0;
+  const row = steps.find((r) => r.to == null || r.to === '' || L <= Number(r.to)) || steps[steps.length - 1];
+  return Math.min(Number(row.off) || 0, L / 2);
+}
 export function priceFor(p, S, me, userPrices) {
   const list = p.r;
   if (me && me.role === 'public') return { list, mine: list > 0 ? list : null, src: 'liste' };
   if (userPrices && userPrices[p.id] != null && userPrices[p.id] !== '') {
     return { list, mine: Number(userPrices[p.id]), src: 'ozel' };
   }
-  let base = p.w != null && p.w !== '' ? Number(p.w) : S.pricing.noWholesale === 'ask' ? null : list * (1 - (S.pricing.discountPct || 0) / 100);
+  const P = S.pricing || {};
+  const tier = me && me.role !== 'admin' ? (S.tiers || []).find((t) => t.id === me.tier) : null;
+  const steps = P.mode === 'steps'; // kademeli sabit USD indirimi (kademenin kendi tablosu varsa o)
+  let base = p.w != null && p.w !== '' ? Number(p.w)
+    : P.noWholesale === 'ask' ? null
+    : steps ? (list > 0 ? list - stepOff(list, tier?.steps?.length ? tier.steps : P.steps) : null)
+    : list * (1 - (P.discountPct || 0) / 100);
   if (base == null || !list && base === 0) return { list, mine: null, src: 'sor' };
   let src = 'toptan';
   if (me && me.role !== 'admin') {
-    const tier = (S.tiers || []).find((t) => t.id === me.tier);
     const pct = (Number(tier?.pct) || 0) + (Number(me.extraPct) || 0);
     if (pct) { base = base * (1 - pct / 100); src = 'kademe'; }
   }
-  let mine = roundStep(base, S.pricing.roundStep);
+  let mine = roundStep(base, steps && (p.w == null || p.w === '') ? 0.01 : P.roundStep);
   if (list > 0 && mine > list) mine = list; // liste fiyatı düşmüşse toptan hiçbir zaman listeden pahalı görünmez
   return { list, mine, src };
 }

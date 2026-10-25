@@ -56,10 +56,6 @@ export function Orders() {
           <button className="btn sm outline" onClick={() => copyText(links.shop(), 'Mağaza linki kopyalandı')}><Icon n="copy" s={15} />Mağaza linki</button>
         </span>
       </div>
-      <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={view === 'orders'} className={'tab' + (view === 'orders' ? ' on' : '')} onClick={() => setView('orders')}>Siparişler ({orders.length})</button>
-        <button role="tab" aria-selected={view === 'members'} className={'tab' + (view === 'members' ? ' on' : '')} onClick={() => setView('members')}>Mağaza üyeleri ({members.length})</button>
-      </div>
       {view === 'members' ? <Members /> : <>
         <div className="toolbar">
           <div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
@@ -230,7 +226,7 @@ function OrderDetail({ id }) {
 }
 
 // ---- Mağaza üyeleri -----------------------------------------------------------------------------
-function Members() {
+export function Members() {
   const { members, orders } = useStore();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);

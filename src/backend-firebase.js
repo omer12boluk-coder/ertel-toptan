@@ -105,7 +105,7 @@ export class FirebaseBackend {
   async savePublicSettings(S) {
     const p = S.pricing || {};
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
-      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, footer: S.footer || null, v: S.v || 0 });
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, showVatInc: !!p.showVatInc, plusVat: !!p.plusVat, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, footer: S.footer || null, v: S.v || 0 });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan

@@ -2381,3 +2381,61 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 /* ürün açıklaması: bilgisayarda da baştan tam ("Devamını göster" yok) */
 .pdesc .pdesc-body { max-height: none; }
 .pdesc .pdesc-body::after, .pdesc > .link { display: none; }
+
+/* ---- Fiyat gösterimi: +KDV, soluk KDV dahil satırı ---- */
+.plusvat { font: 600 10px/1 var(--f-body); font-style: normal; letter-spacing: .02em; color: var(--muted); margin-left: 4px; align-self: flex-start; padding-top: 2px; }
+.price.big .plusvat { font-size: 12px; }
+.vat-inc { font-size: 10.5px; color: var(--muted); opacity: .62; font-weight: 500; letter-spacing: .01em; }
+.price.big .vat-inc { font-size: 12px; }
+.price.dual .vat-inc { flex-basis: 100%; }
+.pshow { gap: 3px; }
+.pshow-main { display: flex; align-items: baseline; font: 700 22px/1.1 var(--f-display); color: var(--price); }
+
+/* ---- Kademeli indirim tablosu (Ayarlar > Fiyatlandırma) ---- */
+.steps-ed { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); }
+.steps-h { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 8px; font: 600 11px/1 var(--f-body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0 4px 2px; }
+.steps-row { display: grid; grid-template-columns: minmax(0, 1fr) 112px 34px; gap: 8px; align-items: center; }
+.steps-range { display: flex; align-items: center; gap: 8px; min-width: 0; font-variant-numeric: tabular-nums; }
+.steps-from { min-width: 72px; font-weight: 600; white-space: nowrap; }
+.steps-up { color: var(--muted); font-weight: 600; }
+.steps-to { display: flex; align-items: center; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); padding-right: 8px; width: 112px; }
+.steps-to input, .steps-off input { border: 0; box-shadow: none; min-width: 0; width: 100%; text-align: right; padding-inline: 8px; background: transparent; }
+.steps-to small { color: var(--muted); font-size: 11px; }
+.steps-off { display: flex; align-items: center; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); padding: 0 8px; color: var(--price); font-weight: 700; }
+.steps-off input { color: var(--price); font-weight: 700; }
+.steps-row.bad .steps-to { border-color: var(--bad); box-shadow: 0 0 0 3px color-mix(in oklab, var(--bad) 15%, transparent); }
+.bad-t { color: var(--bad); }
+.steps-ed > .btn { align-self: flex-start; margin-top: 4px; }
+@media (max-width: 480px) { .steps-from { min-width: 0; } .steps-to { width: 96px; } .steps-h, .steps-row { grid-template-columns: minmax(0, 1fr) 92px 30px; } }
+.tier-box { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.tier-list { display: flex; flex-direction: column; gap: 12px; }
+.pct-in span { font-size: 12px; white-space: nowrap; }
+.ptest { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--price-soft); }
+.ptest-in { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+.ptest-in input { width: 84px; text-align: right; }
+.ptest-out { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.ptest-out span { display: flex; flex-direction: column; gap: 2px; }
+.ptest-out small { font-size: 11px; color: var(--muted); font-weight: 600; }
+.ptest-out b { color: var(--price); font-size: 16px; }
+
+/* ---- Serbest kutu (FreeBox) + Kur kutusu ---- */
+.fbox-row { display: flex; align-items: center; width: 100%; }
+.fbox-sp { flex: 1 1 0; min-width: 0; }
+.fbox { position: relative; flex: none; max-width: 100%; font-size: calc(13px * var(--sc, 1)); }
+.fbox.editable { cursor: grab; touch-action: none; }
+.fbox.editable:hover { outline: 1.5px dashed color-mix(in oklab, var(--accent) 55%, transparent); outline-offset: 5px; border-radius: 12px; }
+.fbox.dragging { cursor: grabbing; outline: 1.5px solid var(--accent); outline-offset: 5px; border-radius: 12px; }
+.fbox-size { position: absolute; right: -11px; bottom: -11px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); cursor: nwse-resize; opacity: 0; transition: opacity .15s; }
+.fbox.editable:hover .fbox-size, .fbox.dragging .fbox-size { opacity: 1; }
+.sh-rate { padding: 4px 0; }
+.rate-pill { display: inline-flex; align-items: center; gap: .55em; padding: .5em .95em; border-radius: 999px; font-size: 1em; line-height: 1.2; white-space: nowrap; color: var(--muted); background: color-mix(in oklab, var(--surface-2) 70%, transparent); }
+.rate-pill b { color: var(--fg); font-weight: 650; font-size: 1.04em; }
+.rate-pill small { font-size: .84em; opacity: .75; }
+.rate-pill .rate-l { font-weight: 500; }
+.rate-dot { width: .5em; height: .5em; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 .22em color-mix(in oklab, var(--ok) 22%, transparent); flex: none; }
+.rate-pill.st-line { background: var(--surface); border: 1px solid var(--line); }
+.rate-pill.st-dark { background: #111827; color: #cbd5e1; }
+.rate-pill.st-dark b { color: #fff; }
+@media (max-width: 560px) { .rate-pill { gap: .45em; padding: .45em .8em; } .rate-pill .rate-l { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; } }
+.page-h.fixh { min-height: 44px; }
+.price.dual .tl-hint { text-align: left; }

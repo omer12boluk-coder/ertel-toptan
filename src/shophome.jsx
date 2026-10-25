@@ -6,6 +6,7 @@ import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
 import { fmt, norm, priceFor, resizeForWeb } from './utils.js';
 import { waLink } from './route.js';
 import { ProductSheet, useTree, PlayVideo } from './catalog.jsx';
+import { currentRate } from './listsheet.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı' };
 
@@ -105,7 +106,7 @@ export function layoutOf(H) {
   for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
   return L;
 }
-export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün rafı · ' + ((H.sections || []).find((r, i) => railKey(r, i) === k)?.title || '') : (H.blocks?.[k.slice(2)]?.t === 'banner' ? 'Görsel bant' : H.blocks?.[k.slice(2)]?.t === 'video' ? 'Video' + (H.blocks[k.slice(2)].title ? ' · ' + H.blocks[k.slice(2)].title : '') : 'Başlık · ' + (H.blocks?.[k.slice(2)]?.title || '')));
+export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün rafı · ' + ((H.sections || []).find((r, i) => railKey(r, i) === k)?.title || '') : (H.blocks?.[k.slice(2)]?.t === 'banner' ? 'Görsel bant' : H.blocks?.[k.slice(2)]?.t === 'rate' ? 'Kur kutusu' : H.blocks?.[k.slice(2)]?.t === 'video' ? 'Video' + (H.blocks[k.slice(2)].title ? ' · ' + H.blocks[k.slice(2)].title : '') : 'Başlık · ' + (H.blocks?.[k.slice(2)]?.title || '')));
 // sürükleyerek sıralama: aynı gruptaki [data-dz][data-i] öğelerinin üstüne gelince yer değiştirir; hiç sürüklenmezse tıklama sayılır
 export function dragSort(e, group, idx, onMove, onClick) {
   if (e.button > 0) return;
@@ -199,7 +200,9 @@ export function ShopHome({ S: Sover }) {
       </section>
     );
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
-    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : b.t === 'video' ? <VideoBlock b={b} edit={!!E} up={E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
+    if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; const up = E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null;
+      if (b.t === 'rate') return <RateBlock b={b} up={up} />;
+      return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : b.t === 'video' ? <VideoBlock b={b} edit={!!E} up={E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
     if (k === 'cta') return H.cta?.title ? (
       <section className="sh-cta rv">
         <div><b>{H.cta.title}</b>{H.cta.text && <p>{H.cta.text}</p>}</div>
@@ -359,6 +362,64 @@ function VideoBlock({ b, edit, up }) {
     </section>
   );
 }
+// ---- Serbest yerleşen küçük kutu (genişliği içeriği kadar): soldan sağa konum (pos 0..1) + boyut (sc)
+// Tasarım modunda (bilgisayar) kutunun kendisi tutulup sağa-sola çekilir (sol/orta/sağa yapışır), sağ alttaki tutamaç boyut.
+export function FreeBox({ pos = 0.5, sc = 1, up, children, className = '' }) {
+  const row = useRef(null), box = useRef(null);
+  const [live, setLive] = useState(null);
+  const P = live ? live.pos : pos, SC = live ? live.sc : sc;
+  const drag = (mode) => (e) => {
+    if (!up || e.button > 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const rw = row.current.getBoundingClientRect().width, bw = box.current.getBoundingClientRect().width;
+    const free = Math.max(1, rw - bw), x0 = free * pos, sx = e.clientX, sy = e.clientY;
+    let cur = { pos, sc }, moved = false;
+    document.body.classList.add('dz-dragging');
+    const mv = (ev) => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+      if (mode === 'move') { let p = Math.min(1, Math.max(0, (x0 + dx) / free)); for (const sn of [0, 0.5, 1]) if (Math.abs(p - sn) < 0.04) p = sn; cur = { pos: Math.round(p * 1000) / 1000, sc }; }
+      else { const k = Math.min(2.2, Math.max(0.6, sc * (1 + (dx + dy) / Math.max(120, bw)))); cur = { pos, sc: Math.round(k * 100) / 100 }; }
+      setLive(cur);
+    };
+    const end = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', end); document.body.classList.remove('dz-dragging'); setLive(null); if (moved) up(cur); };
+    addEventListener('pointermove', mv); addEventListener('pointerup', end);
+  };
+  return (
+    <div className={'fbox-row ' + className} ref={row}>
+      <span className="fbox-sp" style={{ flexGrow: P }} />
+      <div ref={box} className={'fbox' + (up ? ' editable' : '') + (live ? ' dragging' : '')} style={{ '--sc': SC }} onPointerDown={drag('move')}>
+        {children}
+        {up && <span className="fbox-size" onPointerDown={drag('size')} onClick={(e) => e.stopPropagation()} title="Tutup çekin: boyut" />}
+      </div>
+      <span className="fbox-sp" style={{ flexGrow: 1 - P }} />
+    </div>
+  );
+}
+
+// ---- Kur kutusu: müşteri kuru görür (Harem Altın dolar satış ya da elle girilen kur). Küçük, göze batmayan.
+function RateBlock({ b, up }) {
+  const rate = useStore((s) => currentRate(s));
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 30000); return () => clearInterval(t); }, []);
+  if (!rate && !up) return null;
+  const v = rate ? rate.usd.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '—';
+  const src = rate?.src === 'manual' ? 'Dolar kuru' : 'Harem Altın · dolar satış';
+  const at = rate?.at ? new Date(rate.at) : null;
+  const t = at ? at.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '';
+  return (
+    <section className="sh-rate">
+      <FreeBox pos={b.pos ?? 0.5} sc={b.sc || 1} up={up}>
+        <span className={'rate-pill st-' + (b.style || 'soft')}>
+          <span className="rate-dot" aria-hidden="true" />
+          <span className="rate-l">{b.label || src}</span>
+          <b className="num">1 $ = {v} ₺</b>
+          {b.time !== false && t && <small className="num">{t}</small>}
+        </span>
+      </FreeBox>
+    </section>
+  );
+}
+
 function BannerBlock({ b, open, edit }) {
   if (!b.img) return edit ? <Empty label="Görsel bant: resim seçin" /> : null;
   return (
@@ -777,6 +838,14 @@ export function ScaleField({ v, onChange, label = 'Boyut', min = 0.4, max = 1.6 
   return <Field label={label}><span className="she-scale"><input type="range" min={min} max={max} step="0.05" value={v} onChange={(e) => onChange(Number(e.target.value))} /><code>%{Math.round(v * 100)}</code>{v !== 1 && <button type="button" className="linkish" onClick={() => onChange(1)}>sıfırla</button>}</span></Field>;
 }
 export function BlockFields({ b, up }) {
+  if (b.t === 'rate') return <>
+    <p className="fine">Müşteri kuru buradan görür: Harem Altın dolar satış (Ayarlar > Fiyatlandırma’da elle kur yazdıysanız o). Bilgisayarda kutuyu tutup sağa-sola çekin, sağ alt köşesinden büyütüp küçültün.</p>
+    <Field label="Yazı" opt hint="Boşsa “Harem Altın · dolar satış”"><input value={b.label || ''} placeholder="Harem Altın · dolar satış" onChange={(e) => up({ label: e.target.value })} /></Field>
+    <Field label="Görünüm"><span className="seg">{[['soft', 'Sade'], ['line', 'Çerçeveli'], ['dark', 'Koyu']].map(([x, l]) => <button key={x} type="button" className={(b.style || 'soft') === x ? 'on' : ''} onClick={() => up({ style: x })}>{l}</button>)}</span></Field>
+    <Field label="Yerleşim"><span className="seg">{[[0, 'Sola'], [0.5, 'Ortaya'], [1, 'Sağa']].map(([x, l]) => <button key={x} type="button" className={(b.pos ?? 0.5) === x ? 'on' : ''} onClick={() => up({ pos: x })}>{l}</button>)}</span></Field>
+    <ScaleField v={b.sc || 1} min={0.6} max={2.2} onChange={(sc) => up({ sc })} />
+    <Toggle label="Güncellenme saati" checked={b.time !== false} onChange={(v) => up({ time: v })} />
+  </>;
   if (b.t === 'video') {
     const list = videoList(b); const g = videoGeom(b);
     const setList = (l) => up({ vids: l, src: null, poster: null });

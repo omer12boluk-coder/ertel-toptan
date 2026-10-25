@@ -11,6 +11,7 @@ import { buildTree, cleanHtml } from './cats.js';
 import { imageList } from './catalog.jsx';
 import { rateLabel } from './listsheet.jsx';
 import { syncNow } from './watch.js';
+import { Members } from './orders.jsx';
 
 const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')));
 
@@ -185,13 +186,15 @@ export function ProductEdit({ p, onClose }) {
 // =========================================================================
 // Müşteriler
 export function Customers() {
-  const { customers, settings: S, requests } = useStore();
+  const { customers, settings: S, requests, members = [] } = useStore();
+  const [kind, setKind0] = useState(() => ls.get('cust-kind', 'bayi'));
+  const setKind = (k) => { setKind0(k); ls.set('cust-kind', k); };
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [add, setAdd] = useState(false);
   const [del, setDel] = useState(null);
   const intent = useStore((s) => s.intent);
-  useEffect(() => { if (intent === 'newCustomer') { store.set({ intent: null }); setAdd(true); } }, [intent]);
+  useEffect(() => { if (intent === 'newCustomer') { store.set({ intent: null }); setKind('bayi'); setAdd(true); } }, [intent]);
   const pending = customers.filter((c) => c.pending);
   const custMenu = (e, c) => openMenu(e, [
     { label: 'Müşteriyi aç', icon: 'user', onClick: () => setOpen({ ...c, _tab: 'info' }) },
@@ -210,12 +213,29 @@ export function Customers() {
   const list = customers.filter((c) => !c.pending && (!q || norm(`${c.name} ${c.shop} ${c.username} ${c.phone}`).includes(norm(q))))
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
   const openCount = (uid) => requests.filter((r) => r.uid === uid && ['new', 'offered', 'accepted', 'ready'].includes(r.status)).length;
+  const kindTabs = (
+    <div className="tabs" role="tablist">
+      <button role="tab" aria-selected={kind === 'bayi'} className={'tab' + (kind === 'bayi' ? ' on' : '')} onClick={() => setKind('bayi')}>Bayiler ({customers.length - pending.length}){pending.length > 0 && <span className="badge">{pending.length}</span>}</button>
+      <button role="tab" aria-selected={kind === 'magaza'} className={'tab' + (kind === 'magaza' ? ' on' : '')} onClick={() => setKind('magaza')}>Mağaza müşterileri ({members.length})</button>
+    </div>
+  );
+  if (kind === 'magaza') return (
+    <div className="page">
+      <div className="page-h fixh"><h1 className="page-t">Müşteriler</h1></div>
+      {kindTabs}
+      <Members />
+    </div>
+  );
   return (
     <div className="page">
-      <div className="page-h">
-        <h1 className="page-t">Müşteriler <span className="muted">· {customers.length - pending.length}</span></h1>
-        <button className="btn primary" onClick={() => setAdd(true)}><Icon n="plus" s={16} />Yeni müşteri</button>
+      <div className="page-h fixh">
+        <h1 className="page-t">Müşteriler</h1>
+        <span className="row-btns">
+          <button className="btn outline" onClick={() => { store.set({ intent: 'sec:fiyat' }); go('ayarlar'); }}><Icon n="tag" s={16} />Fiyat kuralları</button>
+          <button className="btn primary" onClick={() => setAdd(true)}><Icon n="plus" s={16} />Yeni bayi</button>
+        </span>
       </div>
+      {kindTabs}
       {pending.length > 0 && <PendingList list={pending} />}
       <div className="search"><Icon n="search" s={18} /><input id="cust-search" type="search" placeholder="İsim, dükkan, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {list.length === 0 ? <Empty icon="users" title="Henüz müşteri yok">“Yeni müşteri” ile toptancılarınıza kullanıcı adı ve şifre oluşturun.</Empty> : (
@@ -436,7 +456,7 @@ const SEC_KEYS = { genel: ['brand', 'features'], anasayfa: ['home'], magazaana: 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
   const [d, setD] = useState(() => structuredClone(settings));
-  const [sec, setSec] = useState(null); // hepsi kapalı başlar
+  const [sec, setSec] = useState(() => { const i = store.s.intent; if (typeof i === 'string' && i.startsWith('sec:')) { store.set({ intent: null }); return i.slice(4); } return null; }); // hepsi kapalı başlar
   const [busy, setBusy] = useState(false);
   const [imp, setImp] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -523,38 +543,59 @@ export function Settings() {
         </>}
 
         {sec === 'fiyat' && <>
-          <p className="fine">Ürünün kendi toptan fiyatı varsa o kullanılır. Yoksa aşağıdaki kurala göre hesaplanır. Sonra müşterinin kademe ve ek indirimi uygulanır. Müşteriye özel fiyat her şeyin önündedir.</p>
-          <div className="row3">
-            <Field label="Toptan fiyatı olmayan ürünler"><select id="s-nw" value={d.pricing.noWholesale} onChange={(e) => set('pricing.noWholesale', e.target.value)}><option value="discount">Listeden % indirimle hesapla</option><option value="ask">“Fiyat sorun” göster</option></select></Field>
-            <Field label="Varsayılan indirim %"><input id="s-disc" inputMode="decimal" value={d.pricing.discountPct} onChange={(e) => set('pricing.discountPct', num(e.target.value) ?? 0)} disabled={d.pricing.noWholesale === 'ask'} /></Field>
+          <p className="fine">Öncelik sırası: müşteriye özel fiyat → ürünün kendi toptan fiyatı → aşağıdaki kural. Sonra (varsa) kademenin ve müşterinin ek % indirimi uygulanır.</p>
+          <Field label="Toptan fiyatı olmayan ürünler"><select id="s-nw" value={d.pricing.noWholesale === 'ask' ? 'ask' : d.pricing.mode === 'steps' ? 'steps' : 'pct'} onChange={(e) => { const v = e.target.value; set('pricing.noWholesale', v === 'ask' ? 'ask' : 'discount'); if (v !== 'ask') set('pricing.mode', v); }}>
+            <option value="steps">Fiyat aralığına göre sabit indirim (tablo)</option><option value="pct">Listeden % indirim</option><option value="ask">“Fiyat sorun” göster</option></select></Field>
+          {d.pricing.noWholesale !== 'ask' && d.pricing.mode === 'steps' && <>
+            <h3>İndirim tablosu <span className="muted">· tüm bayiler</span></h3>
+            <StepsEditor id="gen" steps={d.pricing.steps} onChange={(v) => set('pricing.steps', v)} />
+            <p className="fine">Bir satırın üst sınırını değiştirince sonraki aralık kendiliğinden ondan sonra başlar. Altın, Gümüş gibi kademelere ayrı tablo vermek için <button className="linkish" onClick={() => setSec('kademe')}>Kademeler</button>.</p>
+          </>}
+          {d.pricing.noWholesale !== 'ask' && d.pricing.mode !== 'steps' && <div className="row3">
+            <Field label="İndirim %"><input id="s-disc" inputMode="decimal" value={d.pricing.discountPct} onChange={(e) => set('pricing.discountPct', num(e.target.value) ?? 0)} /></Field>
             <Field label="Yuvarlama"><select id="s-round" value={d.pricing.roundStep} onChange={(e) => set('pricing.roundStep', Number(e.target.value))}><option value="0.01">Kuruşlu (0,01)</option><option value="0.5">0,50’ye</option><option value="1">Tam sayıya</option></select></Field>
-          </div>
+          </div>}
+          <PriceTester d={d} />
           <div className="row3">
             <Field label="Teklifte −/+ adımı (USD)"><select id="s-step" value={d.pricing.adjustStep} onChange={(e) => set('pricing.adjustStep', Number(e.target.value))}><option value="0.5">0,5</option><option value="1">1</option><option value="5">5</option><option value="10">10</option></select></Field>
           </div>
-          <Toggle id="s-retail" label="Liste fiyatını göster" hint="Üstü çizili perakende fiyat" checked={d.pricing.showRetail} onChange={(v) => set('pricing.showRetail', v)} />
+          <h3>Ürün fiyatının gösterimi</h3>
+          <p className="fine">Dolar fiyat her zaman aynı kalır; altına isterseniz aşağıdakiler eklenir (bayi uygulaması ve online mağaza). Siz TL karşılığını her zaman görürsünüz.</p>
+          <Toggle id="s-tl" label="TL karşılığı" hint="Dolar fiyatın altında “≈ 4.993 ₺”" checked={d.pricing.showTL} onChange={(v) => set('pricing.showTL', v)} />
+          <Toggle id="s-vatinc" label="KDV dahil tutar (soluk)" hint="Kartın altında küçük, soluk satır: “KDV dahil 120 $ · 5.924 ₺”" checked={!!d.pricing.showVatInc} onChange={(v) => set('pricing.showVatInc', v)} />
+          <Toggle id="s-plusvat" label="“+KDV” ibaresi" hint="Dolar fiyatın yanında küçük “+KDV” yazısı" checked={!!d.pricing.plusVat} onChange={(v) => set('pricing.plusVat', v)} />
+          <Toggle id="s-retail" label="Bayilere liste fiyatını da göster" hint="Toptan fiyatın yanında liste (perakende) fiyatı" checked={d.pricing.showRetail} onChange={(v) => set('pricing.showRetail', v)} />
+          <PriceShowPreview d={d} />
+          <h3>Sepet ve toplam</h3>
           <Toggle id="s-save" label="Sepette avantaj tutarını göster" checked={d.pricing.showSaving} onChange={(v) => set('pricing.showSaving', v)} />
           <Toggle id="s-showvat" label="Toplamın altında KDV bilgisini göster" hint="Sepet, liste linki, liste resmi ve tekliflerde toplamın altında küçük bir satır: KDV ve KDV dahil toplam" checked={d.pricing.showVat !== false} onChange={(v) => set('pricing.showVat', v)} />
-          <Field label="KDV oranı (%)" hint="Ürün fiyatlarına eklenmez; sadece toplamın altında “KDV” ve “KDV dahil toplam” olarak bilgi verilir. 0 yazarsanız gösterilmez."><input id="s-vat" inputMode="decimal" value={d.pricing.vatPct ?? 20} onChange={(e) => set('pricing.vatPct', e.target.value === '' ? 0 : Number(e.target.value.replace(',', '.')) || 0)} /></Field>
-          <h3>TL karşılığı</h3>
+          <Field label="KDV oranı (%)" hint="Ürün fiyatına eklenmez; sadece bilgi olarak gösterilir. 0 yazarsanız hiç gösterilmez."><input id="s-vat" inputMode="decimal" value={d.pricing.vatPct ?? 20} onChange={(e) => set('pricing.vatPct', e.target.value === '' ? 0 : Number(e.target.value.replace(',', '.')) || 0)} /></Field>
+          <h3>Kur</h3>
           <RateInfo />
-          <Field label="Elle kur (isteğe bağlı)" hint="Boş bırakın: Harem Altın dolar satış kuru kullanılır. Doldurursanız onun yerine bu kur kullanılır."><input id="s-rate" inputMode="decimal" placeholder="ör. 41,95" value={d.pricing.manualRate ?? ''} onChange={(e) => set('pricing.manualRate', e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} /></Field>
-          <Toggle id="s-tl" label="TL karşılığını bayilere ve vitrine de göster" hint="Kapalıyken sadece siz görürsünüz. Liste resmine eklemek her listede ayrıca seçilir." checked={d.pricing.showTL} onChange={(v) => set('pricing.showTL', v)} />
-          {sample && <div className="preview-box"><span className="eyebrow">Örnek</span><span>{sample.n}</span><span className="num">Liste {fmt(sample.r, sample.cur)} → Toptan <b>{fmt(priceFor(sample, withDefaults(d), null, null).mine, sample.cur)}</b></span></div>}
+          <Field label="Elle kur (isteğe bağlı)" hint="Boş bırakın: Harem Altın dolar satış kuru kullanılır. Doldurursanız onun yerine bu kur kullanılır. Müşterilere kuru göstermek için Tasarım modunda “Kur kutusu” ekleyin."><input id="s-rate" inputMode="decimal" placeholder="ör. 41,95" value={d.pricing.manualRate ?? ''} onChange={(e) => set('pricing.manualRate', e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} /></Field>
         </>}
 
         {sec === 'kademe' && <>
-          <p className="fine">Her müşteriye bir kademe atanır. Kademe indirimi, toptan fiyatın üzerine uygulanır.</p>
+          <p className="fine">Her bayiye bir kademe atanır. Kademe, genel indirim tablosunu kullanır; isterseniz kademeye <b>kendi tablosunu</b> ve üstüne ek % indirim verebilirsiniz. Bayiye özel ürün fiyatları her şeyin önündedir.</p>
           <div className="tier-list">
-            {d.tiers.map((t, i) => (
-              <div key={t.id} className="tier-row">
-                <input id={'tier-n-' + i} aria-label="Kademe adı" value={t.name} onChange={(e) => set('tiers', d.tiers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                <div className="pct-in"><span>−%</span><input id={'tier-p-' + i} aria-label="İndirim yüzdesi" inputMode="decimal" value={t.pct} onChange={(e) => set('tiers', d.tiers.map((x, j) => (j === i ? { ...x, pct: num(e.target.value) ?? 0 } : x)))} /></div>
-                <button className="icon-btn sm" disabled={d.tiers.length <= 1} onClick={() => set('tiers', d.tiers.filter((_, j) => j !== i))} aria-label="Sil"><Icon n="trash" s={15} /></button>
-              </div>
-            ))}
+            {d.tiers.map((t, i) => {
+              const upd = (patch) => set('tiers', d.tiers.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              const own = Array.isArray(t.steps) && t.steps.length > 0;
+              return (
+                <div key={t.id} className="tier-box">
+                  <div className="tier-row">
+                    <input id={'tier-n-' + i} aria-label="Kademe adı" value={t.name} onChange={(e) => upd({ name: e.target.value })} />
+                    <div className="pct-in" title="Tablodan sonra ek yüzde indirim"><span>ek −%</span><input id={'tier-p-' + i} aria-label="Ek indirim yüzdesi" inputMode="decimal" value={t.pct} onChange={(e) => upd({ pct: num(e.target.value) ?? 0 })} /></div>
+                    <button className="icon-btn sm" disabled={d.tiers.length <= 1} onClick={() => set('tiers', d.tiers.filter((_, j) => j !== i))} aria-label="Sil"><Icon n="trash" s={15} /></button>
+                  </div>
+                  {d.pricing.mode === 'steps' && <Toggle id={'tier-own-' + i} label="Kendi indirim tablosu" hint={own ? 'Bu kademe aşağıdaki tabloyu kullanır' : 'Kapalı: genel tabloyu kullanır'} checked={own} onChange={(v) => upd({ steps: v ? structuredClone(d.pricing.steps) : null })} />}
+                  {own && d.pricing.mode === 'steps' && <StepsEditor id={'t' + i} steps={t.steps} onChange={(v) => upd({ steps: v })} />}
+                </div>
+              );
+            })}
           </div>
           <button className="btn sm outline" onClick={() => set('tiers', [...d.tiers, { id: 'k' + Date.now().toString(36), name: 'Yeni kademe', pct: 0 }])}><Icon n="plus" s={15} />Kademe ekle</button>
+          {d.pricing.mode === 'steps' && <PriceTester d={d} />}
         </>}
 
         {sec === 'katalog' && <>
@@ -959,6 +1000,72 @@ export function SyncButton({ small }) {
     setTimeout(() => setBusy(false), 4000);
   }
   return <button className={'btn ' + (small ? 'chip' : 'outline')} onClick={go} disabled={busy} title="Sitedeki değişiklikleri hemen al"><Icon n="refresh" s={15} className={busy ? 'spin' : ''} />{busy ? 'Eşitleniyor…' : 'Şimdi eşitle'}</button>;
+}
+
+// Sayı kutusu: yazarken "27," gibi yarım değerleri bozmaz, odaktan çıkınca sayıya döner
+function NumIn({ value, onChange, ...rest }) {
+  const [t, setT] = useState(null);
+  const shown = t ?? (value == null || value === '' ? '' : String(value).replace('.', ','));
+  return <input inputMode="decimal" {...rest} value={shown} onFocus={() => setT(shown)} onBlur={() => setT(null)}
+    onChange={(e) => { const v = e.target.value.replace(/[^\d.,]/g, ''); setT(v); const n = num(v); onChange(n == null || isNaN(n) ? null : n); }} />;
+}
+const nf = (v) => Number(v).toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+// Kademeli indirim tablosu düzenleyicisi: her satır "önceki sınırın üstü – bu sınır (dahil)"; son satır "ve üstü"
+function StepsEditor({ id, steps = [], onChange }) {
+  const rows = steps.length ? steps : [{ to: null, off: 0 }];
+  const put = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const del = (i) => { const n = rows.filter((_, j) => j !== i); if (i === rows.length - 1 && n.length) n[n.length - 1] = { ...n[n.length - 1], to: null }; onChange(n); };
+  const add = () => { const n = [...rows]; const last = n.length - 1; const from = last > 0 ? Number(n[last - 1].to) || 0 : 0; n.splice(last, 0, { to: from ? Math.round(from * 2) : 100, off: n[last].off }); onChange(n); };
+  return (
+    <div className="steps-ed">
+      <div className="steps-h"><span>Ürün fiyatı (USD)</span><span>İndirim</span></div>
+      {rows.map((r, i) => {
+        const from = i === 0 ? 0 : Number(rows[i - 1].to);
+        const last = i === rows.length - 1;
+        const bad = !last && (r.to == null || Number(r.to) <= from);
+        return (
+          <div key={i} className={'steps-row' + (bad ? ' bad' : '')}>
+            <span className="steps-range">
+              <span className="steps-from">{i === 0 ? '0' : nf(from) + ' üstü'}</span>
+              <span className="muted">–</span>
+              {last ? <span className="steps-up">ve yukarısı</span> : <span className="steps-to"><NumIn id={`st-${id}-to-${i}`} aria-label="Üst sınır" value={r.to} onChange={(v) => put(i, { to: v })} /><small>dahil</small></span>}
+            </span>
+            <span className="steps-off"><span>−</span><NumIn id={`st-${id}-off-${i}`} aria-label="İndirim (USD)" value={r.off} onChange={(v) => put(i, { off: v ?? 0 })} /><span>$</span></span>
+            <button className="icon-btn sm" disabled={rows.length <= 1} onClick={() => del(i)} aria-label="Satırı sil"><Icon n="trash" s={14} /></button>
+          </div>
+        );
+      })}
+      {rows.some((r, i) => i < rows.length - 1 && (r.to == null || Number(r.to) <= (i ? Number(rows[i - 1].to) : 0))) && <p className="fine bad-t">Kırmızı satırın üst sınırı, bir önceki satırınkinden büyük olmalı.</p>}
+      <button className="btn sm outline" onClick={add}><Icon n="plus" s={14} />Aralık ekle</button>
+    </div>
+  );
+}
+// Deneme: bir liste fiyatı yazınca her kademenin göreceği toptan fiyat
+function PriceTester({ d }) {
+  const [v, setV] = useState(24);
+  const S = withDefaults(d);
+  const p = { id: '_t', r: Number(v) || 0, cur: 'USD' };
+  return (
+    <div className="ptest">
+      <label className="ptest-in"><span>Deneme: liste fiyatı</span><NumIn id="ptest" value={v} onChange={(x) => setV(x ?? 0)} /><span>$</span></label>
+      <div className="ptest-out">{S.tiers.map((t) => { const pr = priceFor(p, S, { role: 'customer', tier: t.id }, null); return <span key={t.id}><small>{t.name}</small><b className="num">{pr.mine == null ? '—' : fmt(pr.mine, 'USD')}</b></span>; })}</div>
+    </div>
+  );
+}
+// Fiyat gösterimi önizlemesi (seçilen anahtarlarla bir ürün kartının fiyat kısmı)
+function PriceShowPreview({ d }) {
+  const live = useStore((s) => s.rate);
+  const manual = Number(d.pricing.manualRate); const rate = manual > 0 ? manual : live?.usd || 0;
+  const v = 100, vat = Number(d.pricing.vatPct) || 0;
+  const tl = (x) => (rate ? Math.round(x * rate).toLocaleString('tr-TR') + ' ₺' : '— ₺');
+  return (
+    <div className="preview-box pshow">
+      <span className="eyebrow">Kartta böyle görünür</span>
+      <span className="pshow-main num">{fmt(v, 'USD')}{d.pricing.plusVat && vat > 0 && <em className="plusvat">+KDV</em>}</span>
+      {d.pricing.showTL && <span className="tl-hint num">≈ {tl(v)}</span>}
+      {d.pricing.showVatInc && vat > 0 && <span className="vat-inc num">KDV dahil {fmt(v * (1 + vat / 100), 'USD')} · {tl(v * (1 + vat / 100))}</span>}
+    </div>
+  );
 }
 
 function RateInfo() {

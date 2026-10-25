@@ -184,6 +184,12 @@ function migrate(S) {
     if (S.shopHome?.brands) { const have = new Set(S.shopHome.brands.map((b) => (b.name || '').toLowerCase())); const add = DEFAULT_SETTINGS.shopHome.brands.filter((b) => ['quick', 'rf4', 'yihua', 'uni-t'].includes(b.name.toLowerCase()) && !have.has(b.name.toLowerCase())); if (add.length) S.shopHome = { ...S.shopHome, brands: [...S.shopHome.brands, ...add] }; }
     S.v = 5;
   }
+  // v6 (25.10.2026): kademeli sabit USD toptan indirimi; kademeler şimdilik hepsi aynı (ekstra % yok). Sonra panelden ayrı ayarlanabilir.
+  if ((S.v || 0) < 6) {
+    S.pricing = { ...S.pricing, mode: 'steps' };
+    if (Array.isArray(S.tiers)) S.tiers = S.tiers.map((t) => ({ ...t, pct: 0 }));
+    S.v = 6;
+  }
   return S;
 }
 
