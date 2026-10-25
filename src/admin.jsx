@@ -657,6 +657,13 @@ export function Settings() {
             <p className="fine">Kendiniz denemek için: <a href="/magaza?onizleme=1" target="_blank" rel="noopener">/magaza?onizleme=1</a> (bu cihazda “yakında” kalkar; geri almak için <code>?onizleme=0</code>).</p>
           </div>
           <Toggle id="s-osign" label="Müşteriler mağazaya üye olabilsin" hint="Adres ve fatura bilgileri kayıtlı kalır, siparişlerini takip ederler" checked={d.orders.signup !== false} onChange={(v) => set('orders.signup', v)} />
+          <h3>Müşteriye bildirim</h3>
+          <Toggle id="s-push" label="Sipariş durumu bildirimi" hint="Müşteri sipariş sayfasında “Bildirimleri aç” der; siz durumu değiştirince (Onaylandı, Kargoda…) telefonuna bildirim gider. Android ve bilgisayarda hemen, iPhone’da site ana ekrana eklenince (iOS 16.4+) çalışır." checked={d.orders.push !== false} onChange={(v) => set('orders.push', v)} />
+          {d.orders.push !== false && <div className="push-texts">
+            {[['confirmed', 'Onaylandı'], ['shipped', 'Kargoda'], ['ready', 'Teslime hazır'], ['done', 'Tamamlandı'], ['cancelled', 'İptal']].map(([k, l]) => (
+              <Field key={k} label={l} hint={k === 'shipped' ? 'Sonuna kargo firması ve takip no kendiliğinden eklenir' : undefined}><input id={'s-pt-' + k} value={d.orders.pushTexts?.[k] ?? ''} onChange={(e) => set('orders.pushTexts', { ...(d.orders.pushTexts || {}), [k]: e.target.value })} /></Field>
+            ))}
+          </div>}
           <h3>Mobil dokunma seçenekleri</h3>
           <p className="fine">Sadece telefon ve tablette geçerli (mağaza, bayi uygulaması ve yönetim paneli). Yanlışlıkla basılı tutunca yazıların maviyle seçilmesini engeller.</p>
           <div className="seg-cards col" role="radiogroup" aria-label="Yazı seçme">

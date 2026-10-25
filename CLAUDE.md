@@ -164,6 +164,7 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - Ürün kartı: stok kodu sadece yöneticiye; masaüstünde (hover) birden fazla resimde altta küçük resimler, üstünde gezince büyük resim değişir (`CardImg`). Açıklama masaüstünde de tam açık.
 - B2B kart fiyatı `.price.dual`: Liste ve Toptan aynı boyda yan yana.
 - Marka kutusunda "Ürünleri gör →" (`shopHome.brandCta`, Tasarım > Marka kutuları anahtarı).
+- **Müşteriye sipariş durumu bildirimi (web push, 25.10.2026):** `src/push.js` (`pushState` on/off/denied/ios-home/unsupported, `enablePush(ids)`, `autoPush(id)` yeni siparişte sessizce, `pushStatus(id)` yönetici durum değiştirince). Sipariş sayfasında `PushCard` (checkout.jsx), Hesabım'da "Bildirimler" satırı. Worker: `GET /push/key` (VAPID anahtar çifti ilk istekte üretilir, KV `vapid`), `POST /push/sub {id, sub, hello}` (KV `ps:<id>`, en çok 5 cihaz; hello = "bildirimler açık" deneme bildirimi, dakikada bir), `POST /push/status {id}` (durumu Firestore'dan okur, aynı durum bir kez: KV `pl:<id>`; metinler `settings/public.orders.pushTexts`, kargoda takip no eklenir; 404/410 abonelikler silinir). Şifreleme RFC 8291 aes128gcm (Node ile çözülerek doğrulandı). `sw.js` push + notificationclick (sayfayı açar). SW artık `/sw.js` scope `/` (eskiden göreli yoldu). iPhone: `/magaza/s/<id>` sayfasında manifest eklenmez → ana ekrana eklenince doğrudan o sipariş açılır. Ayarlar > Online mağaza > Müşteriye bildirim (`orders.push`, metinler).
 - Sepet/hesap gibi sekmelerde alt bilgi küçük tek satır (`ShopFooter compact`), büyük hali sadece ana sayfada.
 
 ## 7. Site eşitleme, Worker, bildirimler
@@ -210,5 +211,4 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - [ ] Logosu olmayan markalar: Fluke (sitede sadece ürün fotoğrafı), YCS, Ma Ant, Mijing, Kaisi, Sugon, XZZ, OSS Team, Mega-Idea… → adları marka renginde yazılıyor; kullanıcı Ayarlar > Markalar'dan ekleyebilir.
 - [ ] Gece modunda Qianli'nin kırmızısı pembeye kayıyor (isterse o logoya ayrı ayar).
 - [ ] Sipariş formu tablosunda uzun ürün adları dar sütunda çok satıra bölünüyor (sütun genişletilebilir).
-- [ ] Ana ekrana ekleyen müşterilere **sipariş durumu bildirimi** (web push) önerildi; istenirse yapılacak.
 - Fikir aşamasında (kod yok): uygulamayı başka sektörlere (ör. parfümcü) **şablon olarak satmak** — önerilen yol: mağazaya özel her şeyi tek "mağaza dosyasına" taşımak, tema paketleri, her müşteriye ayrı Firebase projesi + kurulum aracı. **Apple Developer** hesabı / App Store: şimdilik gerek görülmedi.

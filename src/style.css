@@ -2542,3 +2542,18 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 /* tasarım modunda telefon önizlemesi: bölümler telefondaki gibi tam genişlik (video en az %64) */
 .dz-canvas.w-phone .wbox-in { width: max(var(--vw, 100%), var(--vmin, 100%)); margin-left: calc((100% - max(var(--vw, 100%), var(--vmin, 100%))) * var(--vp, .5)); }
 .wbox-row.vid > .wbox-in > .sh-vh-move { top: auto; bottom: -15px; }
+
+/* ---- Sipariş bildirimi kartı ---- */
+.push-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); margin: 4px 0 2px; }
+.push-card > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.push-card b { font-size: 15px; }
+.push-card small { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.push-card small svg { vertical-align: -2px; }
+.push-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none; color: var(--accent); background: var(--accent-soft); }
+.push-card.on .push-ic { color: var(--ok); background: color-mix(in oklab, var(--ok) 14%, var(--surface)); }
+.push-card.on { border-color: color-mix(in oklab, var(--ok) 35%, var(--line)); }
+.push-card.off .push-ic { color: var(--muted); background: var(--surface-2); }
+.push-card.compact { border: 0; padding: 4px 0; }
+@media (max-width: 480px) { .push-card { flex-wrap: wrap; } .push-card > .btn { width: 100%; justify-content: center; } }
+.push-texts { display: grid; gap: 6px; padding-left: 4px; }
+.push-card small b { font-size: inherit; color: var(--fg); }

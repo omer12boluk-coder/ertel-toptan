@@ -7,9 +7,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder } from './store.js';
 import { Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
-import { ORDER_STATUS, PAY, DELIVERY, ILLER } from './config.js';
+import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
+import { pushState, enablePush, autoPush, disablePush, isIOS } from './push.js';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -147,6 +148,7 @@ export function Checkout({ items, onBack }) {
       });
       try { await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
       // dükkan sahibine bildirim (e-posta + WhatsApp, bekçi üzerinden); sipariş zaten kaydedildi, hata olursa önemli değil
+      if (A.mode === 'firebase') autoPush(id);
       if (window.WATCH_URL && A.mode === 'firebase') fetch(window.WATCH_URL.replace(/\/$/, '') + '/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }), keepalive: true }).catch(() => {});
       // üye: yeni adresi ve fatura bilgisini hesaba kaydet
       if (uid && !signedUp) {
@@ -358,6 +360,7 @@ export function OrderPage({ id }) {
       )}
       {o.status === 'shipped' && o.cargo?.code && <div className="banner ok"><Icon n="box" /><div><b>Kargo takip:</b> {o.cargo.company} · <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')}>Kopyala</button></div></div>}
 
+      {o.status !== 'cancelled' && o.status !== 'done' && <PushCard ids={[o.id]} />}
       {o.status !== 'cancelled' && <PayInfo o={o} />}
 
       <div className="o-info">
@@ -373,6 +376,42 @@ export function OrderPage({ id }) {
         : !o.uid && <p className="fine center">Siparişte değişiklik ya da iptal için {wa ? <a className="link" href={wa} target="_blank" rel="noopener">WhatsApp’tan yazın</a> : 'bizi arayın'}.</p>)}
       <p className="fine center admin-hint">Dükkan sahibi misiniz? <a href={links.adminOrder(o.id)}>Yönetim panelinde aç</a></p>
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </div>
+  );
+}
+
+// Sipariş durumu bildirimi (web push): telefona "onaylandı / kargoda…" bildirimi
+export function PushCard({ ids, compact }) {
+  const S = useStore((st) => st.settings);
+  const [st, setSt] = useState(() => pushState());
+  const [busy, setBusy] = useState(false);
+  if (S.orders?.push === false || st === 'unsupported' || !ids.length) return null;
+  const on = async () => { setBusy(true); try { await enablePush(ids); setSt('on'); toast('Bildirimler açıldı'); } catch (e) { setSt(pushState()); toast(e.message, 'bad'); } setBusy(false); };
+  if (st === 'on') return (
+    <div className={'push-card on' + (compact ? ' compact' : '')}>
+      <span className="push-ic"><Icon n="bell" s={20} /></span>
+      <div><b>Bildirimler açık</b><small>Siparişiniz onaylanınca, kargoya verilince telefonunuza haber vereceğiz.</small></div>
+      {compact && <button className="btn sm ghost" onClick={() => { disablePush(); setSt('off'); }}>Kapat</button>}
+    </div>
+  );
+  if (st === 'ios-home') return (
+    <div className={'push-card ios' + (compact ? ' compact' : '')}>
+      <span className="push-ic"><Icon n="bell" s={20} /></span>
+      <div><b>Sipariş durumunu bildirimle alın</b>
+        <small>iPhone’da bildirim için sayfayı ana ekrana ekleyin: alttaki <b>Paylaş</b> <Icon n="share" s={13} /> düğmesi → <b>Ana Ekrana Ekle</b>. Sonra ana ekrandaki simgeden açıp buradan bildirimleri açın.</small></div>
+    </div>
+  );
+  if (st === 'denied') return (
+    <div className={'push-card off' + (compact ? ' compact' : '')}>
+      <span className="push-ic"><Icon n="bell" s={20} /></span>
+      <div><b>Bildirimler engellenmiş</b><small>{isIOS() ? 'Ayarlar > Bildirimler’den ERTEL GSM’e izin verin.' : 'Tarayıcının adres çubuğundaki kilit simgesinden bildirimlere izin verin.'}</small></div>
+    </div>
+  );
+  return (
+    <div className={'push-card' + (compact ? ' compact' : '')}>
+      <span className="push-ic"><Icon n="bell" s={20} /></span>
+      <div><b>Sipariş durumunu bildirimle alın</b><small>Onaylandı, kargoya verildi… her adımda telefonunuza haber verelim.</small></div>
+      <button className="btn sm primary" disabled={busy} onClick={on}>{busy ? 'Bekleyin…' : 'Bildirimleri aç'}</button>
     </div>
   );
 }
@@ -604,7 +643,7 @@ function LocalOrders({ inSheet }) {
 
 // Üye hesabı: profil başlığı + seçilerek açılan satırlar (her biri kendi penceresinde)
 function MemberHome() {
-  const { member: m, myOrders, api: A } = useStore();
+  const { member: m, myOrders, api: A, settings: S } = useStore();
   const [open, setOpen] = useState(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
@@ -623,10 +662,11 @@ function MemberHome() {
     ['addr', 'pin', 'Adreslerim', (m.addresses || []).length ? `${m.addresses.length} kayıtlı adres` : 'Adres ekleyin'],
     ['info', 'user', 'Profil bilgilerim', [m.name, m.phone].filter(Boolean).join(' · ') || 'Ad soyad, telefon'],
     ['inv', 'tag', 'Fatura bilgilerim', m.invoice?.type === 'company' ? m.invoice.company || 'Kurumsal' : 'Bireysel'],
+    S.orders?.push !== false && pushState() !== 'unsupported' && ['notif', 'bell', 'Bildirimler', pushState() === 'on' ? 'Açık · sipariş durumu' : 'Sipariş durumunu telefonunuza haber verelim'],
     ['pay', 'cart', 'Ödeme bilgilerim', 'Kayıtlı kartlar', true],
     local > 0 && ['local', 'mobile', 'Bu cihazdan verilen siparişler', `${local} sipariş`],
   ].filter(Boolean);
-  const T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', pay: 'Ödeme bilgilerim', local: 'Bu cihazdan verilen siparişler' };
+  const T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', pay: 'Ödeme bilgilerim', local: 'Bu cihazdan verilen siparişler', notif: 'Bildirimler' };
   return (
     <div className="page narrow acct acct-hub">
       <div className="hub-head">
@@ -655,6 +695,8 @@ function MemberHome() {
           {open === 'inv' && <MyInfo part="inv" />}
           {open === 'pay' && <div className="soon-card in-sheet"><span className="soon-ic"><Icon n="cart" s={28} /></span><span className="soon-tag">Çok yakında</span><p className="muted">Kartlarınızı güvenle kaydedip tek dokunuşla ödeyebileceksiniz. Şimdilik siparişte havale, kart linki ya da dükkânda ödeme seçebilirsiniz.</p></div>}
           {open === 'local' && <LocalOrders inSheet />}
+          {open === 'notif' && <PushCard compact ids={myOrders.filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id)} />}
+          {open === 'notif' && !myOrders.some((o) => ORDER_OPEN.includes(o.status)) && <p className="fine">Açık siparişiniz olunca bildirimleri buradan açabilirsiniz. Bir kez açarsanız sonraki siparişleriniz kendiliğinden bağlanır.</p>}
         </Sheet>
       )}
     </div>

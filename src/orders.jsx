@@ -7,6 +7,7 @@ import { fmt, totals, fmtTotals, when, now, norm } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper } from './listsheet.jsx';
+import { pushStatus } from './push.js';
 import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 
 const FILTERS = [['open', 'Açık'], ['new', 'Yeni'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
@@ -142,6 +143,7 @@ function OrderDetail({ id }) {
       const t = now();
       await api().updateOrder(o.id, { status: s, updatedAt: t, history: [...(o.history || []), { s, at: t, by: 'admin' }], ...extra });
       toast('Durum: ' + ORDER_STATUS[s].label);
+      if (api().mode === 'firebase') pushStatus(o.id); // müşteriye bildirim (açtıysa)
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
@@ -162,7 +164,7 @@ function OrderDetail({ id }) {
         <span className="oa-status-l">Durum:</span>
         {['new', 'confirmed', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
           <button key={k} role="radio" aria-checked={o.status === k} disabled={busy} className={'oa-st tone-' + ORDER_STATUS[k].tone + (o.status === k ? ' on' : '')}
-            onClick={() => { if (o.status === k) return; if (k === 'shipped') setShip({ company: o.cargo?.company || '', code: o.cargo?.code || '' }); else if (k === 'cancelled') cancel(); else setConfirm({ title: ORDER_STATUS[k].label, text: `#${o.no} “${ORDER_STATUS[k].label}” olarak işaretlensin mi? Müşteri takip sayfasında görür${S.notify?.push !== false ? ', bildirim açıksa telefonuna bildirim gider' : ''}.`, okLabel: 'Evet, değiştir', onOk: () => setStatus(k) }); }}>
+            onClick={() => { if (o.status === k) return; if (k === 'shipped') setShip({ company: o.cargo?.company || '', code: o.cargo?.code || '' }); else if (k === 'cancelled') cancel(); else setConfirm({ title: ORDER_STATUS[k].label, text: `#${o.no} “${ORDER_STATUS[k].label}” olarak işaretlensin mi? Müşteri takip sayfasında görür${S.orders?.push !== false ? ', bildirimleri açtıysa telefonuna bildirim gider' : ''}.`, okLabel: 'Evet, değiştir', onOk: () => setStatus(k) }); }}>
             {o.status === k && <Icon n="check" s={14} />}{ORDER_STATUS[k].label}
           </button>
         ))}

@@ -8,6 +8,7 @@
 //   POST /check  yönetim paneli açılınca: sitede değişiklik varsa hemen eşitler
 //   POST /sync   yönetim panelindeki "Şimdi eşitle": siteyi hemen kontrol edip eşitlemeyi başlatır
 //   POST /notify mağazada sipariş verilince: dükkan sahibine Telegram + e-posta (Resend) bildirimi
+//   GET  /push/key, POST /push/sub {id, sub}, POST /push/status {id}  müşteriye sipariş durumu bildirimi (web push)
 //   POST /tg-link {code} Telegram botuna yazılan kodu bulup o sohbeti bildirim alıcısı yapar (sadece ilk bağlantı)
 export default {
   async scheduled(event, env, ctx) { ctx.waitUntil(check(env)); },
@@ -36,6 +37,10 @@ export default {
       if (url.pathname === '/notify-test' && req.method === 'POST') { if (await env.KV.get('ntest')) return json({ ok: false, error: 'Biraz bekleyip tekrar deneyin' }); await env.KV.put('ntest', '1', { expirationTtl: 120 }); return json(await notifySend(env, { subject: 'ERTEL GSM · bildirim denemesi', text: 'Bu bir deneme bildirimidir. Mağazadan sipariş gelince buna benzer bir mesaj alacaksınız.' })); }
       if (url.pathname === '/tg-link' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await tgLink(env, String(b.code || ''))); }
       if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: await notifyStatus(env) });
+      // müşteriye sipariş durumu bildirimi (web push)
+      if (url.pathname === '/push/key') return json({ key: (await vapidKeys(env)).pub });
+      if (url.pathname === '/push/sub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); const r = await pushSub(env, b); if (r.ok && b.hello && !(await env.KV.get('ph:' + b.id))) { await env.KV.put('ph:' + b.id, '1', { expirationTtl: 60 }); ctx.waitUntil(pushStatus(env, String(b.id), true)); } return json(r); }
+      if (url.pathname === '/push/status' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushStatus(env, String(b.id || ''))); }
       // Ürün videosu: iPhone Safari videoyu parça parça (Range) ister; dosya bekçinin kendi dosyalarından okunup dilimlenir
       if (url.pathname.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD') && env.ASSETS) return await serveVideo(req, env, url, cors);
       // R2 videoları: bazı Türk internet sağlayıcıları r2.dev adresini engelliyor; video bekçi üzerinden (Cloudflare içinden) parça parça aktarılır
@@ -287,4 +292,92 @@ async function proxyR2(req, url, cors) {
   for (const k of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified']) { const v = r.headers.get(k); if (v) out.set(k, v); }
   if (!out.has('accept-ranges')) out.set('accept-ranges', 'bytes');
   return new Response(req.method === 'HEAD' ? null : r.body, { status: r.status, headers: out });
+}
+
+// ---- Müşteriye sipariş durumu bildirimi (Web Push) ------------------------------------------------------
+// Müşteri sipariş sayfasında "Bildirimleri aç" deyince tarayıcı aboneliği /push/sub ile siparişe bağlanır (KV: ps:<siparişId>).
+// Yönetici durumu değiştirince uygulama /push/status {id} çağırır; durum Firestore'dan okunur (sahte bildirim gönderilemez),
+// aynı durum için bir kez gönderilir. iPhone'da (iOS 16.4+) site ana ekrana eklenince çalışır.
+// Şifreleme: RFC 8291 (aes128gcm), kimlik: VAPID (RFC 8292). Anahtar çifti ilk istekte üretilip KV'de saklanır.
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+const cat = (...a) => { const n = a.reduce((x, y) => x + y.length, 0); const o = new Uint8Array(n); let i = 0; for (const x of a) { o.set(x, i); i += x.length; } return o; };
+const te = new TextEncoder();
+async function vapidKeys(env) {
+  let k = await env.KV.get('vapid', 'json');
+  if (k) return k;
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const pub = b64u(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  k = { pub, jwk }; await env.KV.put('vapid', JSON.stringify(k));
+  return k;
+}
+async function vapidAuth(env, endpoint) {
+  const k = await vapidKeys(env);
+  const aud = new URL(endpoint).origin;
+  const h = b64u(te.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const c = b64u(te.encode(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'mailto:' + (env.NOTIFY_EMAIL || 'omer.12boluk@gmail.com') })));
+  const key = await crypto.subtle.importKey('jwk', k.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, te.encode(h + '.' + c));
+  return `vapid t=${h}.${c}.${b64u(sig)}, k=${k.pub}`;
+}
+async function hkdf(salt, ikm, info, len) {
+  const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, len * 8));
+}
+export async function encryptPush(sub, payload) {
+  const uaPub = unb64u(sub.keys.p256dh), auth = unb64u(sub.keys.auth);
+  const as = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const asPub = new Uint8Array(await crypto.subtle.exportKey('raw', as.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', uaPub, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const ecdh = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, as.privateKey, 256));
+  const ikm = await hkdf(auth, ecdh, cat(te.encode('WebPush: info\0'), uaPub, asPub), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, te.encode('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, te.encode('Content-Encoding: nonce\0'), 12);
+  const k = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, k, cat(te.encode(payload), new Uint8Array([2]))));
+  const rs = new Uint8Array([0, 0, 16, 0]); // 4096
+  return cat(salt, rs, new Uint8Array([asPub.length]), asPub, ct);
+}
+async function pushOne(env, sub, data) {
+  const body = await encryptPush(sub, JSON.stringify(data));
+  const r = await fetch(sub.endpoint, { method: 'POST', body, headers: { Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' } });
+  return r.status;
+}
+const PUSH_TEXTS = { confirmed: 'Siparişiniz onaylandı, hazırlanıyor.', shipped: 'Siparişiniz kargoya verildi.', ready: 'Siparişiniz hazır, dükkândan teslim alabilirsiniz.', done: 'Siparişiniz teslim edildi. Teşekkür ederiz!', cancelled: 'Siparişiniz iptal edildi.' };
+async function fsDoc(path) {
+  const r = await fetch(FS + path); if (!r.ok) return null;
+  const doc = await r.json(); return Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
+}
+async function pushSub(env, b) {
+  const id = String(b.id || ''); const s = b.sub || {};
+  if (!/^[\w-]{10,40}$/.test(id) || !/^https:\/\//.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth) return { ok: false, error: 'eksik' };
+  if (!(await fsDoc('orders/' + id))) return { ok: false, error: 'sipariş yok' };
+  const list = (await env.KV.get('ps:' + id, 'json')) || [];
+  const n = [{ endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, ...list.filter((x) => x.endpoint !== s.endpoint)].slice(0, 5);
+  await env.KV.put('ps:' + id, JSON.stringify(n), { expirationTtl: 60 * 60 * 24 * 120 });
+  return { ok: true };
+}
+async function pushStatus(env, id, test) {
+  if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
+  const list = (await env.KV.get('ps:' + id, 'json')) || [];
+  if (!list.length) return { ok: true, sent: 0, subs: 0 };
+  const o = await fsDoc('orders/' + id); if (!o) return { ok: false, error: 'sipariş yok' };
+  const st = o.status || 'new';
+  if (!test) {
+    if (st === 'new' || (await env.KV.get('pl:' + id)) === st) return { ok: true, sent: 0, same: true };
+    await env.KV.put('pl:' + id, st, { expirationTtl: 60 * 60 * 24 * 120 });
+  }
+  const pub = (await fsDoc('settings/public')) || {};
+  const O = pub.orders || {};
+  if (O.push === false && !test) return { ok: true, sent: 0, off: true };
+  const shop = pub.brand?.appName || 'ERTEL GSM';
+  let body = test ? 'Bildirimler açık. Siparişinizin durumu değişince buradan haber vereceğiz.' : (O.pushTexts?.[st] || PUSH_TEXTS[st] || 'Siparişinizin durumu güncellendi.');
+  if (!test && st === 'shipped' && o.cargo?.code) body += ` ${o.cargo.company || 'Kargo'} takip no: ${o.cargo.code}`;
+  const data = { title: `${shop} · Sipariş #${o.no}`, body, url: '/magaza/s/' + id, tag: 'o-' + id };
+  const keep = []; let sent = 0;
+  for (const s of list) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
+  if (keep.length !== list.length) await env.KV.put('ps:' + id, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 120 });
+  return { ok: true, sent, subs: list.length };
 }

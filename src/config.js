@@ -119,6 +119,14 @@ export const DEFAULT_SETTINGS = {
     cargoNote: 'Kargo ücreti ve teslim süresi sipariş onayında bildirilir.',
     cargoCompanies: ['Yurtiçi Kargo', 'Aras Kargo', 'MNG Kargo', 'PTT Kargo', 'Sürat Kargo', 'HepsiJet', 'Kolay Gelsin', 'UPS', 'DHL'],
     doneNote: 'Siparişiniz bize ulaştı. En kısa sürede kontrol edip size dönüş yapacağız.',
+    push: true, // müşteri sipariş sayfasından bildirimleri açabilir; durum değişince telefonuna bildirim gider (web push, bekçi gönderir)
+    pushTexts: { // boşsa varsayılan metin
+      confirmed: 'Siparişiniz onaylandı, hazırlanıyor.',
+      shipped: 'Siparişiniz kargoya verildi.',
+      ready: 'Siparişiniz hazır, dükkândan teslim alabilirsiniz.',
+      done: 'Siparişiniz teslim edildi. Teşekkür ederiz!',
+      cancelled: 'Siparişiniz iptal edildi.',
+    },
   },
   home: { title: '', subtitle: '', announcements: [], banners: [] },
   // Marka logoları ve renkleri (Ayarlar > Markalar): ana sayfa kutuları, kayan şerit, reklamlar kullanır
