@@ -471,14 +471,7 @@ function ShellFull() {
       {!admin && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
-      <nav className="botnav" aria-label="Alt menü">
-        {nav.filter(([k]) => k !== 'tasarim' && !(admin && k === 'musteriler')).map(([k, l, i, sh]) => (
-          <button key={k} className={'botnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)}>
-            <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
-            <span>{sh || l}</span>
-          </button>
-        ))}
-      </nav>
+      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && !(admin && k === 'musteriler'))} tab={tab} badge={badge} />
     </div>
   );
 }
@@ -559,3 +552,49 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
 }
 createRoot(document.getElementById('root')).render(<App />);
 boot();
+
+// Telefon alt menüsü: iOS gibi parmağı basılı tutup sekmeler üstünde kaydırınca tema renginde parlak bir hap parmağı izler,
+// bırakılan sekmeye geçilir. Kısa dokunuş da aynı şekilde çalışır.
+function BotNav({ items, tab, badge }) {
+  const ref = useRef(null);
+  const [drag, setDrag] = useState(null); // { x, i, w }
+  const last = useRef(null); if (drag) last.current = drag;
+  const L = drag || last.current;
+  const st = useRef(null);
+  const at = (x) => {
+    const el = ref.current; if (!el) return null;
+    const bs = [...el.querySelectorAll('.botnav-b')]; const r = el.getBoundingClientRect();
+    let i = bs.findIndex((b) => { const q = b.getBoundingClientRect(); return x >= q.left && x < q.right; });
+    if (i < 0) i = x < r.left + r.width / 2 ? 0 : bs.length - 1;
+    const w = bs[0] ? bs[0].getBoundingClientRect().width : 60;
+    return { x: Math.min(r.width - w / 2, Math.max(w / 2, x - r.left)), i, w };
+  };
+  const move = (e) => {
+    const t = e.touches[0]; if (!t) return;
+    const d = at(t.clientX); if (!d) return;
+    if (st.current && st.current.i !== d.i) { st.current.moved = true; try { navigator.vibrate?.(6); } catch {} }
+    st.current = { ...(st.current || {}), i: d.i };
+    setDrag(d);
+  };
+  const start = (e) => { const t = e.touches[0]; st.current = { i: null, y: t.clientY }; move(e); };
+  const end = (e) => {
+    const s = st.current; st.current = null; setDrag(null);
+    if (!s || s.i == null) return;
+    const t = e.changedTouches?.[0];
+    if (t && t.clientY < ref.current.getBoundingClientRect().top - 40) return; // menüden yukarı çekip bıraktıysa vazgeç
+    e.preventDefault(); // tıklama tekrar tetiklenmesin
+    go(items[s.i][0]);
+  };
+  const cancel = () => { st.current = null; setDrag(null); };
+  return (
+    <nav ref={ref} className={'botnav' + (drag ? ' dragging' : '')} aria-label="Alt menü" onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={cancel}>
+      <span className="botnav-lens" style={L ? { width: L.w - 6, transform: `translateX(${L.x - (L.w - 6) / 2}px)` } : undefined} aria-hidden="true" />
+      {items.map(([k, l, i, sh], n) => (
+        <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (drag && drag.i === n ? ' hov' : '')} onClick={() => go(k)}>
+          <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
+          <span>{sh || l}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}

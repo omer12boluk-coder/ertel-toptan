@@ -2061,3 +2061,18 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .sheet-h { touch-action: none; }
   .sheet-b { overscroll-behavior-y: contain; }
 }
+
+/* Telefon alt menüsü: basılı tutup kaydırma (parlak hap parmağı izler) */
+.botnav { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.botnav-b { position: relative; z-index: 1; -webkit-tap-highlight-color: transparent; }
+.botnav-lens { position: absolute; z-index: 0; left: 0; top: 4px; height: calc(var(--bot-h) - 8px); border-radius: 18px; pointer-events: none; opacity: 0; transform: translateX(-100px) scale(.85);
+  background: color-mix(in oklab, var(--accent) 16%, transparent); box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent), 0 0 22px color-mix(in oklab, var(--accent) 40%, transparent);
+  transition: opacity .22s var(--ease), scale .22s var(--ease); }
+.botnav.dragging .botnav-lens { opacity: 1; scale: 1.06; transition: opacity .12s, scale .18s var(--spring); }
+.botnav.dragging .botnav-b.on:not(.hov) .botnav-i { background: transparent; }
+.botnav.dragging .botnav-b:not(.hov) { color: var(--muted); }
+.botnav-b.hov { color: var(--accent); }
+.botnav-b.hov .ic { transform: translateY(-2px) scale(1.14); }
+.shell.admin .botnav-lens { background: rgb(255 255 255 / .13); box-shadow: 0 0 0 1px rgb(255 255 255 / .16), 0 0 24px color-mix(in oklab, var(--accent-user, #2f55b0) 70%, #8fb0ff); }
+.shell.admin .botnav.dragging .botnav-b:not(.hov) { color: var(--admin-dim); }
+.shell.admin .botnav-b.hov { color: #fff; }

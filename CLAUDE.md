@@ -156,6 +156,7 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - **Bildirim:** CallMeBot WhatsApp botu dolu olduğu için bırakıldı; FormSubmit Cloudflare'den "rate limit" verdiği için Resend'e geçildi; Telegram ana kanal.
 - **`/siparisformu` tamamen şifresiz yapılmadı:** toptan fiyatlar Firestore'da yönetici yetkisiyle okunuyor; açık olsa fiyat listesi dışarı sızardı. Yerine cihazda bir kez giriş.
 - **Telefonda dokunuş (sadece telefon):** iki parmakla/çift dokunuşla büyütme kapalı (viewport `maximum-scale=1` + `touch-action: pan-x pan-y` + iOS `gesturestart` engeli; büyük resim penceresi `.lb` hariç), yazı alanları en az 16px (iPhone odaklanınca yakınlaştırmasın), pencereler (Sheet) üstteki tutma çubuğundan ya da içerik en üstteyken aşağı çekilince kapanır (≤700px).
+- **Telefon alt menüsü (`BotNav`, main.jsx):** iOS gibi basılı tutup sekmeler üstünde kaydırılır; tema renginde parlak hap (`.botnav-lens`) parmağı izler, bırakılan sekmeye geçilir (yukarı çekip bırakınca vazgeçer).
 - **Telefona özel düzenlemeler sadece telefonda** (≤700px): sayfa yana kaymaz (`overflow-x: clip`), kayan şerit kendi kutusunda kayar, beliren animasyonlar sade. Masaüstü eski davranışında kaldı (kullanıcı açıkça istedi).
 - **Ürün sayfaları uygulama içinde açılır**, PlatinMarket sitesine yönlendirme yok.
 - **Mağaza aramasında büyük blok ve "sık arananlar" istenmedi** → sadece üst menüde küçük büyüteç.
