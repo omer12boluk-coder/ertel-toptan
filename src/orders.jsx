@@ -85,7 +85,7 @@ export function Orders() {
                 <button className={'ocard' + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))}>
                   {sel && <span className={'ocheck' + (sel.has(o.id) ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}
                   <span className="ocard-b">
-                    <span className="ocard-top">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} />{o.member && <span className="tag">Üye</span>}</span>
+                    <span className="ocard-top">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} />{o.member && <span className="tag">Üye</span>}{needsInvoice(o.invoice) && <span className="tag ok">Fatura</span>}</span>
                     <span className="ocard-who"><b>{o.contact?.name}</b>{o.invoice?.type === 'company' && o.invoice.company ? ` · ${o.invoice.company}` : ''}</span>
                     <span className="muted">{when(o.createdAt)} · {(o.items || []).length} ürün · {DELIVERY[o.delivery?.method] || ''}{o.delivery?.addr?.city ? ` (${o.delivery.addr.city})` : ''} · {PAY[o.pay] || ''}</span>
                   </span>
@@ -101,6 +101,21 @@ export function Orders() {
     </div>
   );
 }
+
+// Geçerli vergi no (10 hane, VKN algoritması) ya da TC kimlik no (11 hane, algoritma) girilmişse fatura kesilmesi gerekir
+export function vknOk(v) {
+  const d = String(v || '').replace(/\D/g, ''); if (d.length !== 10) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) { const t = (Number(d[i]) + 9 - i) % 10; let x = (t * 2 ** (9 - i)) % 9; if (t !== 0 && x === 0) x = 9; sum += x; }
+  return (10 - (sum % 10)) % 10 === Number(d[9]);
+}
+export function tcOk(v) {
+  const d = String(v || '').replace(/\D/g, ''); if (d.length !== 11 || d[0] === '0') return false;
+  const n = d.split('').map(Number);
+  const c10 = ((n[0] + n[2] + n[4] + n[6] + n[8]) * 7 - (n[1] + n[3] + n[5] + n[7])) % 10;
+  return ((c10 + 10) % 10) === n[9] && n.slice(0, 10).reduce((a, b) => a + b, 0) % 10 === n[10];
+}
+export const needsInvoice = (inv) => !!inv && (inv.type === 'company' ? vknOk(inv.taxNo) || tcOk(inv.taxNo) : tcOk(inv.tc));
 
 // ---- Sipariş detayı ---------------------------------------------------------------------------
 function OrderDetail({ id }) {
@@ -151,7 +166,7 @@ function OrderDetail({ id }) {
         <span className="oa-status-l">Durum:</span>
         {['new', 'confirmed', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
           <button key={k} role="radio" aria-checked={o.status === k} disabled={busy} className={'oa-st tone-' + ORDER_STATUS[k].tone + (o.status === k ? ' on' : '')}
-            onClick={() => { if (o.status === k) return; if (k === 'shipped') setShip({ company: o.cargo?.company || '', code: o.cargo?.code || '' }); else if (k === 'cancelled') cancel(); else setStatus(k); }}>
+            onClick={() => { if (o.status === k) return; if (k === 'shipped') setShip({ company: o.cargo?.company || '', code: o.cargo?.code || '' }); else if (k === 'cancelled') cancel(); else setConfirm({ title: ORDER_STATUS[k].label, text: `#${o.no} “${ORDER_STATUS[k].label}” olarak işaretlensin mi? Müşteri takip sayfasında görür${S.notify?.push !== false ? ', bildirim açıksa telefonuna bildirim gider' : ''}.`, okLabel: 'Evet, değiştir', onOk: () => setStatus(k) }); }}>
             {o.status === k && <Icon n="check" s={14} />}{ORDER_STATUS[k].label}
           </button>
         ))}
@@ -174,22 +189,22 @@ function OrderDetail({ id }) {
 
       <div className="o-info">
         <div className="o-card">
-          <h3>Müşteri {o.member && <span className="tag">Üye</span>}</h3>
+          <h3>Müşteri {o.member && <span className="tag">Üye</span>}<button className="oc-copy" onClick={() => copyText([o.contact?.name, o.contact?.phone, o.contact?.email].filter(Boolean).join('\n'), 'Müşteri bilgisi kopyalandı')} title="Müşteri bilgisini kopyala" aria-label="Müşteri bilgisini kopyala"><Icon n="copy" s={15} /></button></h3>
           <p><b>{o.contact?.name}</b></p>
-          {o.contact?.phone && <p><a className="num" href={'tel:' + o.contact.phone.replace(/\D/g, '')}>{o.contact.phone}</a> <button className="link" onClick={() => copyText(o.contact.phone)}>Kopyala</button></p>}
+          {o.contact?.phone && <p><a className="num" href={'tel:' + o.contact.phone.replace(/\D/g, '')}>{o.contact.phone}</a></p>}
           {o.contact?.email && <p><a href={'mailto:' + o.contact.email}>{o.contact.email}</a></p>}
         </div>
         <div className="o-card">
-          <h3>Teslimat</h3>
+          <h3>Teslimat{o.delivery?.addr && <button className="oc-copy" onClick={() => copyText(`${o.delivery.addr.name || o.contact?.name}\n${o.delivery.addr.phone || o.contact?.phone}\n${addrLine(o.delivery.addr)}`, 'Kargo için adres kopyalandı')} title="Adresi kopyala (kargo için)" aria-label="Adresi kopyala"><Icon n="copy" s={15} /></button>}</h3>
           <p><b>{DELIVERY[o.delivery?.method] || ''}</b></p>
-          {o.delivery?.addr && <><p>{addrLine(o.delivery.addr)}</p><button className="link" onClick={() => copyText(`${o.contact?.name}\n${o.contact?.phone}\n${addrLine(o.delivery.addr)}`, 'Adres kopyalandı')}>Adresi kopyala (kargo için)</button></>}
+          {o.delivery?.addr && <>{(o.delivery.addr.name || o.delivery.addr.phone) && <p><b>{o.delivery.addr.name}</b>{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></>}
         </div>
-        <div className="o-card"><h3>Fatura</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} /></div>
+        <div className={'o-card' + (needsInvoice(o.invoice) ? ' inv-yes' : '')}><h3>Fatura{needsInvoice(o.invoice) && <span className="tag ok">Fatura kesilecek</span>}</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} /></div>
         <div className="o-card"><h3>Ödeme</h3><p><b>{PAY[o.pay] || '—'}</b></p>{o.pay === 'card' && <p className="muted">Onaylayınca müşteriye ödeme linki gönderin.</p>}</div>
       </div>
       {o.note && <p className="o-note"><b>Müşterinin notu:</b> {o.note}</p>}
 
-      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" />
+      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 
       <div className="set-card">
         <Field label="İç not" hint="Sadece siz görürsünüz"><textarea id="oa-note" rows="2" value={note ?? ''} onChange={(e) => setNote(e.target.value)} placeholder="ör. Kargo ücreti 150 TL, ödeme bekleniyor" /></Field>

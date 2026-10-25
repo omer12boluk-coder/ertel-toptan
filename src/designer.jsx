@@ -326,6 +326,7 @@ function Panel({ sel, d, H, set, close, heroI, removeBlock, setSel }) {
       <Field label="Başlık"><input value={H.brandsTitle || ''} placeholder="Markalar" onChange={(e) => S('brandsTitle', e.target.value)} /></Field>
       <Field label="Alt yazı" opt><input value={H.brandsSub ?? 'Dünyanın önde gelen tamir ekipmanı üreticileri'} onChange={(e) => S('brandsSub', e.target.value)} /></Field>
       <Field label="Kutu büyüklüğü"><span className="seg">{[['sm', 'Küçük'], ['md', 'Orta'], ['lg', 'Büyük']].map(([x, l]) => <button key={x} type="button" className={(H.brandSize || 'md') === x ? 'on' : ''} onClick={() => S('brandSize', x)}>{l}</button>)}</span></Field>
+      <Toggle id="dz-bcta" label="“Ürünleri gör →” yazısı" hint="Kutunun tıklanabilir olduğu belli olsun" checked={H.brandCta !== false} onChange={(v) => S('brandCta', v)} />
       <ScaleField v={Number(H.brandLogoScale) || 1} onChange={(v) => S('brandLogoScale', v)} label="Tüm logoların boyutu" />
       <p className="fine">Kutuları tutup sürükleyerek sıralayın. Bir kutuya tıklayınca o markanın logosu, rengi ve logo boyutu açılır (Ayarlar &gt; Markalar ile aynı kayıt).</p>
     </>;

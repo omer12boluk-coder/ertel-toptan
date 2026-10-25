@@ -168,7 +168,7 @@ export function ShopHome({ S: Sover }) {
               onPointerDown={E && !E.mobile ? (e) => dragSort(e, 'brand', b.idx, (f, t) => E.set('shopHome.brands', moveItem(E.get('brands'), f, t)), () => E.select('brand', b.idx)) : undefined}>
               <span className="sh-brand-glow" aria-hidden="true" />
               {b.logo ? <ShopImg v={b.logo} className="sh-brand-logo" alt={b.name} /> : <b className="sh-brand-word">{b.name}</b>}
-              <span className="sh-brand-f"><span>{counts.get(norm(b.name)) > 0 ? counts.get(norm(b.name)) + ' ürün' : b.name}</span></span>
+              <span className="sh-brand-f"><span>{counts.get(norm(b.name)) > 0 ? counts.get(norm(b.name)) + ' ürün' : b.name}</span>{H.brandCta !== false && <span className="sh-brand-cta">Ürünleri gör<Icon n="back" s={13} className="flip" /></span>}</span>
               <span className="sh-brand-arrow"><Icon n="back" s={16} className="flip" /></span>
             </button>
           ))}

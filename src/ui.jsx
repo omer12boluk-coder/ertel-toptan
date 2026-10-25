@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, api, store, toast } from './store.js';
 import { initials, hue, vatOf, fmtTotals } from './utils.js';
@@ -297,14 +297,25 @@ export function fmtPhone(v) {
   return s;
 }
 export const phoneDigits = (v) => String(v || '').replace(/\D/g, '');
+// Cep telefonu: dokununca "0" hazır gelir (542… diye yazmaya başlanır), her rakamdan sonra imleç sona alınır
+// (iPhone'da biçim eklenince imleç ortaya kaçıp rakamlar yanlış yere giriyordu); boş bırakılırsa "0" temizlenir.
 export function PhoneInput({ id, value, onChange, required }) {
+  const ref = useRef(null);
+  const atEnd = useRef(true);
+  const v = fmtPhone(value);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && atEnd.current && document.activeElement === el) { const n = el.value.length; try { el.setSelectionRange(n, n); } catch {} }
+  }, [v]);
   return (
-    <input id={id} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="0(5__) ___ __ __" value={fmtPhone(value)} required={required}
-      onChange={(e) => onChange(fmtPhone(e.target.value))}
+    <input ref={ref} id={id} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="0(5__) ___ __ __" value={v} required={required}
+      onFocus={() => { if (!phoneDigits(value)) { atEnd.current = true; onChange('0'); } }}
+      onBlur={() => { if (phoneDigits(value) === '0') onChange(''); }}
+      onChange={(e) => { const el = e.target; atEnd.current = (el.selectionStart ?? el.value.length) >= el.value.length - 1; onChange(fmtPhone(el.value)); }}
       onKeyDown={(e) => {
         const el = e.currentTarget;
         if (e.key === 'Backspace' && el.selectionStart === el.value.length && el.selectionEnd === el.value.length) {
-          e.preventDefault(); onChange(fmtPhone(phoneDigits(el.value).slice(0, -1)));
+          e.preventDefault(); atEnd.current = true; onChange(fmtPhone(phoneDigits(el.value).slice(0, -1)));
         }
       }} />
   );

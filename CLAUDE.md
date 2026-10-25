@@ -147,6 +147,18 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - Excel içe aktarma (Ayarlar > Veri): ürün no ya da stok kodu eşleşirse günceller; **aynı stok koduyla ikinci ürün asla eklenmez** (`xlsx.js` mergeCatalog).
 - Üst menü: mağaza adı hiç kısaltılmaz; dar ekranda pasif sekmeler sadece simge. İçerik 1320px'e sığmak zorunda: masaüstünde sağdaki isim yazısı gizli (sadece baş harf yuvarlağı), sekmeler kompakt (padding 9px, 14px), boşluk 8px — yoksa geniş ekranda Ayarlar kırpılıyordu. Telefon alt menüsünde Müşteriler ve Tasarım yok.
 
+### 25.10.2026 düzenlemeleri (grup 1)
+- **Sipariş/liste içindeki ürün penceresi** `ProductSheet viewOnly` (ListPaper `viewOnly`): sepete ekle ve adet yok (müşteri sipariş sayfası + yönetici sipariş detayı).
+- **Fatura kontrolü** (`orders.jsx` `vknOk` 10 hane, `tcOk` 11 hane, `needsInvoice`): geçerli vergi/TC no varsa listede "Fatura" etiketi, detayda yeşil çerçeveli `.o-card.inv-yes` + "Fatura kesilecek".
+- Sipariş detayında kopyalama küçük simge (`.oc-copy`, Müşteri / Teslimat başlığında). Durum değişikliği `Confirm` ile onaylanır.
+- **Adreste alıcı** adı + telefonu (`AddressFields recip`, yeni adreste zorunlu; üyelik bilgisinden bağımsız; eskiler iletişimden doldurulur).
+- **Hesabım = hub** (`MemberHome`): profil fotoğrafı (`members.photo`, 160px webp data URL, kural <60000), satırlar Siparişlerim / Adreslerim / Profil / Fatura / Ödeme bilgilerim (Çok yakında) / Bu cihazdan verilenler; her biri pencerede açılır. Dükkân bilgisi kartı kaldırıldı. Misafirde `LocalOrders` açılır-kapanır, seç + kaldır.
+- `PhoneInput` (ui.jsx): odaklanınca "0" kendiliğinden gelir.
+- Ürün kartı: stok kodu sadece yöneticiye; masaüstünde (hover) birden fazla resimde altta küçük resimler, üstünde gezince büyük resim değişir (`CardImg`). Açıklama masaüstünde de tam açık.
+- B2B kart fiyatı `.price.dual`: Liste ve Toptan aynı boyda yan yana.
+- Marka kutusunda "Ürünleri gör →" (`shopHome.brandCta`, Tasarım > Marka kutuları anahtarı).
+- Sepet/hesap gibi sekmelerde alt bilgi küçük tek satır (`ShopFooter compact`), büyük hali sadece ana sayfada.
+
 ## 7. Site eşitleme, Worker, bildirimler
 
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler. Beslemede stok adedi yok. **Siteye toplu istek atma (IP engeli yemiştik).**

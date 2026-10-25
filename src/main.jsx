@@ -478,7 +478,7 @@ function ShellFull() {
         {tab === 'ayarlar' && admin && <Settings />}
         {tab === 'tasarim' && admin && <ShopDesigner />}
       </main>
-      {pub && tab !== 'katalog' && <ShopFooter />}
+      {pub && tab !== 'katalog' && <ShopFooter compact={tab !== 'anasayfa'} />}
       {!admin && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
@@ -642,7 +642,7 @@ function BotNav({ items, tab, badge }) {
   live.current = { geo, items };
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    const place = (x) => { if (pill.current) pill.current.style.transform = `translateX(${x - 26}px)`; };
+    const place = (x) => { if (pill.current) pill.current.style.transform = `translateX(${x - 32}px)`; };
     const track = (cx) => {
       const { geo: g } = live.current; if (!g) return;
       const r = el.getBoundingClientRect(); const lx = cx - r.left;
@@ -655,7 +655,7 @@ function BotNav({ items, tab, badge }) {
     const finish = (go_) => {
       const s = st.current; st.current = null;
       el.classList.remove('dragging', 'pressing'); setHov(-1);
-      if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x - 26}px)`; // aktif sekmeye yumuşakça döner
+      if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x - 32}px)`; // aktif sekmeye yumuşakça döner
       if (s && s.i != null && go_) go(live.current.items[s.i][0]);
     };
     const start = (e) => { const t = e.touches[0]; if (!t || e.touches.length > 1) return; st.current = { i: null }; el.classList.add('pressing'); track(t.clientX); };
@@ -678,7 +678,7 @@ function BotNav({ items, tab, badge }) {
   const px = geo && ai >= 0 ? geo.cs[ai] : null;
   return (
     <nav ref={ref} className="botnav" aria-label="Alt menü">
-      {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px - 26}px)` }} aria-hidden="true"><i /></span>}
+      {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px - 32}px)` }} aria-hidden="true"><i /></span>}
       {items.map(([k, l, i, sh], n) => (
         <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => go(k)}>
           <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>

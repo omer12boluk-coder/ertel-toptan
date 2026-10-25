@@ -38,7 +38,7 @@ const priced = (r) => r.status !== 'new';
 const listRate = (r, live) => (r.rate && r.rate.usd > 0 ? r.rate : live);
 
 // ---- Sayfadaki tablo --------------------------------------------------------
-export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true }) {
+export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, viewOnly = false }) { // viewOnly: tamamlanmış sipariş — ürün penceresinde Sepete ekle yok
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const live = useRate();
@@ -94,7 +94,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true }
         <VatLines by={tot} rate={rate} />
       </footer>
       {zoom && <Lightbox urls={zoom.urls} title={zoom.title} onClose={() => setZoom(null)} />}
-      {sheet && <ProductSheet p={sheet} onClose={() => setSheet(null)} />}
+      {sheet && <ProductSheet p={sheet} viewOnly={viewOnly} onClose={() => setSheet(null)} />}
     </article>
   );
 }

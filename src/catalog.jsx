@@ -52,6 +52,13 @@ export function PriceBlock({ p, big }) {
       </div>
     );
   }
+  if (!big && S.pricing.showRetail && pr.list > 0 && pr.mine != null) return (
+    <div className="price dual">
+      <span className="pv"><small>Liste</small><b className="num">{fmt(pr.list, p.cur)}</b></span>
+      <span className="pv mine"><small>{pr.src === 'ozel' ? 'Size özel' : 'Toptan'}</small><b className="num">{fmt(pr.mine, p.cur)}</b></span>
+      {(user?.role === 'admin' || S.pricing.showTL) && <TLHint v={pr.mine} cur={p.cur} />}
+    </div>
+  );
   return (
     <div className={'price' + (big ? ' big' : '')}>
       {S.pricing.showRetail && pr.list > 0 && <span className="price-list">Liste: <b className="num">{fmt(pr.list, p.cur)}</b></span>}
@@ -303,11 +310,11 @@ function ProductRow({ p, admin, onOpen }) {
   return (
     <li className={'prow' + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '')} onContextMenu={menu}>
       <button className="prow-main" onClick={onOpen}>
-        <Thumb p={p} />
+        <CardImg p={p} />
         <div className="prow-info">
           <span className="prow-name">{p.n}</span>
           <span className="prow-meta">
-            <code>{p.k}</code>
+            {admin && <code>{p.k}</code>}
             {S.catalog.showBrand && p.b && <span className="brand-tag">{p.b}</span>}
             {st && <span className={'dot tone-' + st.tone}>{st.t}</span>}
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
@@ -333,14 +340,35 @@ function ProductRow({ p, admin, onOpen }) {
   );
 }
 
-export function ProductSheet({ p, onClose }) {
+// Kart resmi: bilgisayarda üstüne gelince (birden fazla resim varsa) altta küçük resimler kayarak çıkar; küçük resmin
+// üstünde gezinince büyük resim değişir, fare çıkınca ilk resme döner (sadece kutu görünümünde; satır görünümünde gizli)
+const FINE = typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+function CardImg({ p }) {
+  const S = useStore((s) => s.settings);
+  const [hov, setHov] = useState(false);
+  const [ix, setIx] = useState(0);
+  const urls = hov ? imageList(p, S, 'lg') : [];
+  const ths = hov ? imageList(p, S, 'sm') : [];
+  return (
+    <span className={'cimg' + (hov && urls.length > 1 ? ' multi' : '')} onMouseEnter={() => FINE && setHov(true)} onMouseLeave={() => { setHov(false); setIx(0); }}>
+      <Thumb p={p} />
+      {hov && urls.length > 1 && <>
+        <img className={'cimg-alt' + (ix > 0 ? ' on' : '')} src={urls[ix] || urls[0]} alt="" />
+        <span className="cimg-bar">{urls.slice(0, 6).map((_, i) => <i key={i} className={i === ix ? 'on' : ''} />)}</span>
+        <span className="cimg-strip">{ths.slice(0, 5).map((u, i) => <span key={i} className={'cimg-th' + (i === ix ? ' on' : '')} onMouseEnter={() => setIx(i)}><img src={u} alt="" loading="lazy" /></span>)}</span>
+      </>}
+    </span>
+  );
+}
+
+export function ProductSheet({ p, onClose, viewOnly = false }) {
   const { settings: S, cart, user, userPrices } = useStore();
   const [qty, setQ] = useState(cart[p.id] || 1);
   const st = stockInfo(p, S);
   const pr = priceFor(p, S, user, userPrices);
   const ask = async () => { onClose(); await askAbout(p, qty); };
   return (
-    <Sheet wide title="Ürün detayı" onClose={onClose} footer={<>
+    <Sheet wide title="Ürün detayı" onClose={onClose} footer={viewOnly ? null : <>
       {S.requests.allowQuote && user?.role !== 'public' && <button className="btn ghost" onClick={ask}><Icon n="chat" s={16} />Bu ürünü sor</button>}
       <button className="btn primary" onClick={() => { setQty(p.id, qty); toast('Sepete eklendi'); onClose(); }}><Icon n="cart" s={16} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>
     </>}>
@@ -350,11 +378,11 @@ export function ProductSheet({ p, onClose }) {
           <h3>{p.n}</h3>
           <div className="prow-meta"><code>{p.k}</code>{p.b && <span className="brand-tag">{p.b}</span>}<span>{catName(S, p.c)}</span>{st && <span className={'dot tone-' + st.tone}>{st.t}</span>}</div>
           <PriceBlock p={p} big />
-          <div className="qty-line">
+          {!viewOnly && <div className="qty-line">
             <span>Adet</span>
             <Stepper value={qty} min={1} onChange={setQ} />
             {pr.mine != null && <b className="num">{fmt(pr.mine * qty, p.cur)}</b>}
-          </div>
+          </div>}
         </div>
       </div>
       {S.catalog.showDescription && <Description id={p.id} />}

@@ -7,7 +7,7 @@ import { Icon, Sheet } from './ui.jsx';
 import { waLink } from './route.js';
 import { LOGO_MARK } from './config.js';
 
-export function ShopFooter() {
+export function ShopFooter({ compact = false }) {
   const S = useStore((s) => s.settings);
   const [page, setPage] = useState(null);
   const F = S.footer || {};
@@ -21,6 +21,16 @@ export function ShopFooter() {
     F.facebook && ['fb', 'Facebook', F.facebook],
     wa && ['wa', 'WhatsApp', waLink(wa, '')],
   ].filter(Boolean);
+  if (compact) return (
+    <footer className="sfoot compact">
+      <div className="sfoot-mini">
+        <span>© {new Date().getFullYear()} {F.company || S.brand.appName}</span>
+        {pages.map((p, i) => <button key={i} onClick={() => setPage(p)}>{p.title}</button>)}
+        {social.map(([ic, l, u]) => <a key={ic} href={u} target="_blank" rel="noopener" aria-label={l} title={l}><Icon n={ic} s={16} /></a>)}
+      </div>
+      {page && <Sheet title={page.title} onClose={() => setPage(null)}><RichText text={page.body} /></Sheet>}
+    </footer>
+  );
   return (
     <footer className="sfoot">
       <div className="sfoot-in">
