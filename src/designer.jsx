@@ -6,7 +6,7 @@ import { useContext, useEffect, useMemo, useRef, useState, useLayoutEffect } fro
 import { useStore, store, api, toast, go } from './store.js';
 import { Icon, Field, Toggle, Confirm } from './ui.jsx';
 import { withDefaults, norm } from './utils.js';
-import { ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, Rows, SlideFields, UspFields, PromoFields, RailFields, BrandFields, BlockFields, ScaleField, MQ_STYLES, ShopImg } from './shophome.jsx';
+import { ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, Rows, SlideFields, UspFields, PromoFields, RailFields, BrandFields, BlockFields, ScaleField, MQ_STYLES, ShopImg, GeoFields, geoOf } from './shophome.jsx';
 
 // raflara kalıcı kimlik ver, eski sıra kayıtlarını (rail:0) kimliğe çevir
 function prepare(S) {
@@ -341,6 +341,8 @@ function Panel({ sel, d, H, set, close, heroI, removeBlock, setSel }) {
     </>;
     else if (k.startsWith('rail:')) { const i = H.sections.findIndex((r) => 'rail:' + r.id === k); const x = H.sections[i]; if (!x) return null; body = <><RailFields x={x} up={(p) => S('sections', H.sections.map((r, j) => (j === i ? { ...r, ...p } : r)))} /><button className="btn sm ghost danger" onClick={() => removeBlock(k)}><Icon n="trash" s={15} />Rafı sil</button></>; }
     else if (k.startsWith('b:')) { const id = k.slice(2); const b = H.blocks[id]; if (!b) return null; body = <><BlockFields b={b} up={(p) => S('blocks', { ...H.blocks, [id]: { ...b, ...p } })} /><button className="btn sm ghost danger" onClick={() => removeBlock(k)}><Icon n="trash" s={15} />Bölümü sil</button></>; }
+    const geoOk = ['hero', 'usps', 'brands', 'promos', 'cta'].includes(k) || k.startsWith('rail:') || (k.startsWith('b:') && ['head', 'banner', undefined].includes(H.blocks?.[k.slice(2)]?.t));
+    if (geoOk) body = <>{body}<div className="dz-geo"><h4>Genişlik ve yer</h4><p className="fine">Seçiliyken bölümün kenarlarındaki tutamaçlarla da çekebilirsiniz.</p><GeoFields {...geoOf(H, k)} up={(p) => S('geo', { ...(H.geo || {}), [k]: p })} /></div></>;
   }
   return (
     <aside className="dz-panel" aria-label="Seçilen öğenin ayarları">

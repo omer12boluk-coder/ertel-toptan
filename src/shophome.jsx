@@ -8,7 +8,7 @@ import { waLink } from './route.js';
 import { ProductSheet, useTree, PlayVideo } from './catalog.jsx';
 import { currentRate } from './listsheet.jsx';
 
-export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı' };
+export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
 // ---- resim: 'si…' = mağaza resmi (Firestore), 'prod:<no>' = ürünün kendi resmi, http/data = doğrudan
 const imgCache = new Map();
@@ -215,11 +215,20 @@ export function ShopHome({ S: Sover }) {
     return null;
   };
 
+  // genişliği / yeri ayarlanabilen bölümler (video ve kur kutusunun kendi ayarı var)
+  const geoOk = (k) => ['hero', 'usps', 'brands', 'promos', 'cta'].includes(k) || k.startsWith('rail:') || (k.startsWith('b:') && ['head', 'banner', undefined].includes(H.blocks?.[k.slice(2)]?.t));
+  const wrap = (k) => {
+    const node = render(k);
+    if (!node || !geoOk(k)) return node;
+    const g = geoOf(H, k);
+    if (!E && g.W >= 100) return node;
+    return <WideBox W={g.W} pos={g.pos} selOnly className="geo" up={E && !E.mobile ? (p) => E.set('shopHome.geo', { ...(H.geo || {}), [k]: p }) : null}>{node}</WideBox>;
+  };
   return (
     <div className={'sh' + (E ? ' dz' : '')} ref={ref} style={H.gap ? { gap: H.gap + 'px' } : undefined}>
       {L.map((k, i) => {
-        if (!E) return hidden.has(k) ? null : <Frag key={k}>{render(k)}</Frag>;
-        return <E.Block key={k} k={k} i={i} L={L} hidden={hidden.has(k)}>{render(k)}</E.Block>;
+        if (!E) return hidden.has(k) ? null : <Frag key={k}>{wrap(k)}</Frag>;
+        return <E.Block key={k} k={k} i={i} L={L} hidden={hidden.has(k)}>{wrap(k)}</E.Block>;
       })}
       {product && <ProductSheet p={product} onClose={() => setProduct(null)} />}
     </div>
@@ -292,12 +301,33 @@ export function HeaderSearch() {
 }
 
 // yeni bölüm türleri: başlık ve tek görsel bant
+// ---- Başlık rengi: '' = varsayılan, '#hex' = düz renk, 'g:<ad>' = renk geçişli
+export const TITLE_SOLIDS = ['#0f172a', '#ffffff', '#2f5bd3', '#c2410c', '#e11d48', '#047857', '#7c3aed', '#b45309'];
+export const TITLE_GRADS = { sunset: 'Gün batımı', ocean: 'Okyanus', brand: 'ERTEL', fire: 'Ateş', aurora: 'Kutup ışığı', gold: 'Altın' };
+export const titleStyle = (c) => (!c ? {} : c.startsWith('g:') ? { className: 'tgrad g-' + c.slice(2) } : { style: { color: c } });
+function TitleText({ as: Tag = 'h2', b, k = 'title', onTitle, extra = {} }) {
+  const t = titleStyle(b.tc);
+  const ed = editable(onTitle);
+  const cls = [ed.className, t.className, extra.className].filter(Boolean).join(' ') || undefined;
+  return <Tag {...extra} {...ed} className={cls} style={{ ...(extra.style || {}), ...(t.style || {}) }}>{b[k] || (onTitle ? 'Başlık yazın' : '')}</Tag>;
+}
+export function ColorPick({ v = '', onChange, label = 'Başlık rengi', grads = true }) {
+  return <Field label={label}>
+    <span className="cpick">
+      <button type="button" className={'cp-sw def' + (!v ? ' on' : '')} onClick={() => onChange('')} title="Varsayılan">A</button>
+      {TITLE_SOLIDS.map((c) => <button key={c} type="button" className={'cp-sw' + (v === c ? ' on' : '')} style={{ '--c': c }} onClick={() => onChange(c)} title={c} />)}
+      <label className={'cp-sw custom' + (v && !v.startsWith('g:') && !TITLE_SOLIDS.includes(v) ? ' on' : '')} title="Özel renk" style={v && !v.startsWith('g:') ? { '--c': v } : undefined}><input type="color" value={v && !v.startsWith('g:') ? v : '#2f5bd3'} onChange={(e) => onChange(e.target.value)} /><Icon n="plus" s={13} /></label>
+    </span>
+    {grads && <span className="cpick grads">{Object.entries(TITLE_GRADS).map(([g, l]) => <button key={g} type="button" className={'cp-g g-' + g + (v === 'g:' + g ? ' on' : '')} onClick={() => onChange('g:' + g)}><span className={'tgrad g-' + g}>Aa</span>{l}</button>)}</span>}
+  </Field>;
+}
+
 function HeadBlock({ b, onTitle }) {
   return (
     <section className={'sh-headblk rv al-' + (b.align || 'left') + ' hs-' + (b.size || 'md')}>
       {b.tag && <span className="sh-tag">{b.tag}</span>}
-      <h2 {...editable(onTitle)}>{b.title || (onTitle ? 'Başlık yazın' : '')}</h2>
-      {b.sub && <p>{b.sub}</p>}
+      <TitleText as="h2" b={b} onTitle={onTitle} />
+      {b.sub && <p style={b.sc ? { color: b.sc } : undefined}>{b.sub}</p>}
     </section>
   );
 }
@@ -311,54 +341,76 @@ export function videoGeom(b) {
   const W = b.wp != null ? Number(b.wp) : b.w === 'sm' ? 36 : b.w === 'md' ? 60 : b.w === 'full' ? 100 : n > 1 ? 100 : rh > rw ? 36 : rh === rw ? 60 : 100;
   return { rw: rw || 16, rh: rh || 9, W: Math.min(100, Math.max(15, W)), pos: b.pos != null ? Number(b.pos) : 0.5 };
 }
-function VideoBlock({ b, edit, up }) {
-  const ref = useRef(null);
+// ---- Genişliği ve yeri ayarlanabilen kutu (video, reklam alanı, kutular, başlıklar…)
+// W: sayfa genişliğinin %'si (15-100), pos: 0 sol · .5 orta · 1 sağ. Tasarım modunda (bilgisayar) üstteki "Taşı" hapıyla
+// sağa-sola, iç kenar tutamaçlarıyla boyut; sol/orta/sağa ve %100'e yapışır. phone: telefonda en az bu genişlik (%).
+export function WideBox({ W = 100, pos = 0.5, up, children, phone = 100, selOnly, className = '' }) {
   const row = useRef(null);
-  const [vis, setVis] = useState(false);
-  const [live, setLive] = useState(null); // sürüklerken anlık genişlik / konum
-  useEffect(() => { const el = ref.current; if (!el || !('IntersectionObserver' in window)) { setVis(true); return; } const io = new IntersectionObserver(([e]) => setVis(e.isIntersecting && e.intersectionRatio > 0.4), { threshold: [0, 0.4, 0.8] }); io.observe(el); return () => io.disconnect(); }, []);
-  const list = videoList(b);
-  const g = videoGeom(b);
-  const W = live ? live.W : g.W, pos = live ? live.pos : g.pos;
-  // Tasarım modu (bilgisayar): ortadaki "Taşı" ile sağa-sola, kenar tutamaçlarıyla boyut; kenarlara ve ortaya yapışır
+  const [live, setLive] = useState(null);
+  const w = live ? live.W : W, p = live ? live.pos : pos;
   const drag = (mode) => (e) => {
     e.preventDefault(); e.stopPropagation();
-    const rw = row.current.getBoundingClientRect().width; const W0 = (g.W / 100) * rw; const x0 = (rw - W0) * g.pos; const sx = e.clientX;
-    let cur = { W: g.W, pos: g.pos };
+    const rw = row.current.getBoundingClientRect().width; const W0 = (W / 100) * rw; const x0 = (rw - W0) * pos; const sx = e.clientX;
+    let cur = { W, pos };
     document.body.classList.add('dz-dragging');
     const mv = (ev) => {
-      const dx = ev.clientX - sx; let w = W0, x = x0;
-      if (mode === 'move') x = Math.min(rw - w, Math.max(0, x0 + dx));
-      else if (mode === 'r') w = Math.min(rw - x0, Math.max(rw * 0.15, W0 + dx));
-      else { const x1 = x0 + W0; w = Math.min(x1, Math.max(rw * 0.15, W0 - dx)); x = x1 - w; }
-      let p = rw - w > 1 ? x / (rw - w) : 0.5;
-      for (const sn of [0, 0.5, 1]) if (Math.abs(p - sn) < 0.035) p = sn;
-      let ww = Math.round((w / rw) * 100); if (ww > 97) ww = 100;
-      cur = { W: ww, pos: Math.round(p * 1000) / 1000 }; setLive(cur);
+      const dx = ev.clientX - sx; let ww = W0, x = x0;
+      if (mode === 'move') x = Math.min(rw - ww, Math.max(0, x0 + dx));
+      else if (mode === 'r') ww = Math.min(rw - x0, Math.max(rw * 0.15, W0 + dx));
+      else { const x1 = x0 + W0; ww = Math.min(x1, Math.max(rw * 0.15, W0 - dx)); x = x1 - ww; }
+      let pp = rw - ww > 1 ? x / (rw - ww) : 0.5;
+      for (const sn of [0, 0.5, 1]) if (Math.abs(pp - sn) < 0.035) pp = sn;
+      let pc = Math.round((ww / rw) * 100); if (pc > 97) pc = 100;
+      cur = { W: pc, pos: Math.round(pp * 1000) / 1000 }; setLive(cur);
     };
     const end = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', end); document.body.classList.remove('dz-dragging'); setLive(null); up({ wp: cur.W, pos: cur.pos }); };
     addEventListener('pointermove', mv); addEventListener('pointerup', end);
   };
-  const al = pos < 0.25 ? 'left' : pos > 0.75 ? 'right' : 'center';
+  return (
+    <div className={'wbox-row ' + className} ref={row}>
+      <div className={'wbox-in' + (live ? ' dragging' : '') + (selOnly ? ' sel-only' : '')} style={{ '--vw': w + '%', '--vp': p, '--vmin': phone + '%' }}>
+        {children}
+        {up && <>
+          <button type="button" className="sh-vh sh-vh-move" onPointerDown={drag('move')} onClick={(e) => e.stopPropagation()} title="Tutup sağa-sola çekin"><Icon n="drag" s={14} />Taşı · %{w}</button>
+          <span className="sh-vh sh-vh-l" onPointerDown={drag('l')} onClick={(e) => e.stopPropagation()} title="Tutup çekin: genişlik" />
+          <span className="sh-vh sh-vh-r" onPointerDown={drag('r')} onClick={(e) => e.stopPropagation()} title="Tutup çekin: genişlik" />
+        </>}
+      </div>
+    </div>
+  );
+}
+// bölüm genişliği / yeri: shopHome.geo[k] = {wp, pos}
+export const geoOf = (H, k) => { const g = H.geo?.[k] || {}; return { W: Math.min(100, Math.max(15, Number(g.wp) || 100)), pos: g.pos != null ? Number(g.pos) : 0.5 }; };
+export function GeoFields({ W, pos, up, note }) {
+  return <>
+    <Field label="Genişlik" hint={note || 'Sayfa genişliğine göre. Telefonda her zaman tam genişlik.'}><span className="she-scale"><input type="range" min="15" max="100" step="1" value={W} onChange={(e) => up({ wp: Number(e.target.value), pos })} /><code>%{W}</code>{W < 100 && <button type="button" className="linkish" onClick={() => up({ wp: 100, pos: 0.5 })}>tam</button>}</span></Field>
+    {W < 100 && <>
+      <Field label="Yerleşim"><span className="seg">{[[0, 'Sola'], [0.5, 'Ortaya'], [1, 'Sağa']].map(([x, l]) => <button key={x} type="button" className={pos === x ? 'on' : ''} onClick={() => up({ wp: W, pos: x })}>{l}</button>)}</span></Field>
+      <Field label="İnce ayar"><span className="she-scale"><input type="range" min="0" max="1" step="0.01" value={pos} onChange={(e) => up({ wp: W, pos: Number(e.target.value) })} /><code>{Math.round(pos * 100)}</code></span></Field>
+    </>}
+  </>;
+}
+
+function VideoBlock({ b, edit, up }) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => { const el = ref.current; if (!el || !('IntersectionObserver' in window)) { setVis(true); return; } const io = new IntersectionObserver(([e]) => setVis(e.isIntersecting && e.intersectionRatio > 0.4), { threshold: [0, 0.4, 0.8] }); io.observe(el); return () => io.disconnect(); }, []);
+  const list = videoList(b);
+  const g = videoGeom(b);
+  const al = g.pos < 0.25 ? 'left' : g.pos > 0.75 ? 'right' : 'center';
+  // başlık videoyla birlikte kayar (kutunun içinde)
   return (
     <section ref={ref} className={'sh-video rv al-' + al}>
-      {(b.title || b.sub) && <div className="sh-video-h">{b.title && <h2>{b.title}</h2>}{b.sub && <p>{b.sub}</p>}</div>}
-      <div className="sh-video-row" ref={row}>
-        <div className={'sh-video-in' + (live ? ' dragging' : '')} style={{ '--vw': W + '%', '--vp': pos }}>
-          <div className="sh-video-grid" style={{ '--n': list.length }}>
-            {list.map((x, i) => (
-              <div key={i} className="sh-video-box" style={{ aspectRatio: `${g.rw} / ${g.rh}` }}>
-                {x.src ? <PlayVideo src={x.src} poster={x.poster && !String(x.poster).startsWith('si:') ? x.poster : undefined} active={vis && !edit} auto={b.play === 'auto'} /> : edit ? <span className="sh-video-empty"><Icon n="play" s={28} />Video linki girin</span> : null}
-              </div>
-            ))}
-          </div>
-          {up && <>
-            <button type="button" className="sh-vh sh-vh-move" onPointerDown={drag('move')} onClick={(e) => e.stopPropagation()} title="Tutup sağa-sola çekin"><Icon n="drag" s={14} />Taşı · %{W}</button>
-            <span className="sh-vh sh-vh-l" onPointerDown={drag('l')} onClick={(e) => e.stopPropagation()} title="Tutup çekin: boyut" />
-            <span className="sh-vh sh-vh-r" onPointerDown={drag('r')} onClick={(e) => e.stopPropagation()} title="Tutup çekin: boyut" />
-          </>}
+      <WideBox W={g.W} pos={g.pos} up={up} phone={64} className="vid">
+        {(b.title || b.sub) && <div className="sh-video-h"><TitleText as="h2" b={b} k="title" />{b.sub && <p style={b.sc ? { color: b.sc } : undefined}>{b.sub}</p>}</div>}
+        <div className="sh-video-grid" style={{ '--n': list.length }}>
+          {list.map((x, i) => (
+            <div key={i} className="sh-video-box" style={{ aspectRatio: `${g.rw} / ${g.rh}` }}>
+              {x.src ? <PlayVideo src={x.src} poster={x.poster && !String(x.poster).startsWith('si:') ? x.poster : undefined} active={vis && !edit} auto={b.play === 'auto'} /> : edit ? <span className="sh-video-empty"><Icon n="play" s={28} />Video linki girin</span> : null}
+            </div>
+          ))}
         </div>
-      </div>
+      </WideBox>
     </section>
   );
 }
@@ -558,6 +610,7 @@ function Hero({ slides, open, brands, heroH }) {
 // reklam bir markaya gidiyorsa (ya da etiketinde marka adı varsa) o markanın logosu reklamda görünür
 function slideLogo(s, brands) {
   if (s.logo === 'none') return null;
+  if (s.logoBrand) { const b = brands.find((x) => x.logo && norm(x.name) === norm(s.logoBrand)); if (b) return b.logo; }
   if (s.logo) return s.logo;
   const name = (s.link || '').startsWith('brand:') ? s.link.slice(6) : s.tag;
   return brands.find((b) => b.logo && norm(b.name) === norm(name || ''))?.logo || null;
@@ -566,28 +619,33 @@ function slideLogo(s, brands) {
 export const FX_NAMES = { logo: 'Logo / etiket', title: 'Başlık', text: 'Açıklama', cta: 'Buton', art: 'Görsel' };
 // konum telefonda orantılı küçülür (--fxk)
 export const fxTransform = (f) => f ? `translate(calc(${f.x || 0}px * var(--fxk, 1)), calc(${f.y || 0}px * var(--fxk, 1))) perspective(900px) rotateX(${f.rx || 0}deg) rotateY(${f.ry || 0}deg) rotate(${f.r || 0}deg) scale(${f.s || 1})` : undefined;
+// Reklam düzenleri: split yazı+görsel · reverse görsel+yazı · center ortalı · plain sade (süssüz) · cover tam resim · glass resim + yazı kutusu
+export const SLIDE_LAYOUTS = { split: 'Yazı + görsel', reverse: 'Görsel + yazı', center: 'Ortalı', plain: 'Sade (süssüz)', cover: 'Tam resim (banner)', glass: 'Resim + yazı kutusu' };
+const COVER_LY = ['cover', 'glass'];
 function Slide({ s, on, open, logo, k }) {
   const E = useContext(DesignCtx);
-  const cover = s.layout === 'cover' && s.img;
+  const ly = SLIDE_LAYOUTS[s.layout] ? s.layout : 'split';
+  const cover = COVER_LY.includes(ly) && s.img;
   const fx = (el, cls = '') => {
     const f = s.fx?.[el]; const style = f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
     if (!E || E.mobile) return { className: cls || undefined, style };
     const selOn = E.sel?.kind === 'fx' && E.sel.slide === k && E.sel.el === el;
     return { className: (cls ? cls + ' ' : '') + 'dz-fx' + (selOn ? ' on' : ''), style, 'data-fx-name': FX_NAMES[el], onClick: (e) => e.stopPropagation(), onPointerDown: (e) => E.fxDrag(e, k, el) };
   };
+  const tt = titleStyle(s.tc); const tf = fx('title', tt.className || '');
   return (
-    <article className={'sh-slide th-' + (s.theme || 'night') + (cover ? ' cover' : '') + (on ? ' on' : '')} onClick={cover && s.link && !s.cta ? open(s.link) : undefined}>
-      {cover ? <ShopImg v={s.img} className="sh-slide-bg" /> : <>
+    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover' : '') + (on ? ' on' : '')} onClick={cover && s.link && !s.cta ? open(s.link) : undefined}>
+      {cover ? <ShopImg v={s.img} className="sh-slide-bg" /> : ly !== 'plain' && <>
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}
       <div className="sh-slide-t">
         {logo ? <span {...fx('logo', 'sh-slide-logo')}><ShopImg v={logo} alt={s.tag || ''} /></span> : s.tag && <span {...fx('logo', 'sh-tag glow')}>{s.tag}</span>}
-        {s.title && <h1 {...fx('title')}>{s.title}</h1>}
+        {s.title && <h1 {...tf} style={{ ...(tf.style || {}), ...(tt.style || {}) }}>{s.title}</h1>}
         {s.text && <p {...fx('text')}>{s.text}</p>}
         {s.cta && s.link && <span {...fx('cta', 'sh-cta-wrap')}><button className="sh-cta-btn" onClick={(e) => { e.stopPropagation(); open(s.link)(); }}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button></span>}
       </div>
       {!cover && s.img && <div {...fx('art', 'sh-slide-art')}><span className="sh-halo" aria-hidden="true" />{isProdImg(s.img) ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</div>}
-      {!cover && !s.img && <div className="sh-slide-art word" aria-hidden="true"><b>{(s.tag || s.title || '').split(' ')[0]}</b></div>}
+      {!cover && !s.img && ly !== 'center' && <div className="sh-slide-art word" aria-hidden="true"><b>{(s.tag || s.title || '').split(' ')[0]}</b></div>}
     </article>
   );
 }
@@ -751,21 +809,48 @@ export const NEW = {
   rail: () => ({ id: rid(), title: 'Yeni raf', mode: 'new', limit: 10 }),
   brand: (name = '') => ({ name, color: '#1f2937', link: name ? 'brand:' + name : '' }),
 };
+// Etiketteki marka logosu: otomatik (reklamın linki / etiketi) ya da elle seçilen marka
+function LogoPick({ s, up }) {
+  const BL = useStore((st) => st.designDraft?.brandLogos || st.settings.brandLogos || {});
+  const H = useStore((st) => (st.designDraft || st.settings).shopHome || {});
+  const [q, setQ] = useState('');
+  const list = useMemo(() => {
+    const m = new Map();
+    for (const [n, v] of Object.entries(BL)) if (v?.logo) m.set(norm(n), [n, v.logo]);
+    for (const b of H.brands || []) if (b.logo && !m.has(norm(b.name || ''))) m.set(norm(b.name || ''), [b.name, b.logo]);
+    return [...m.values()].sort((a, b) => a[0].localeCompare(b[0], 'tr'));
+  }, [BL, H.brands]);
+  const mode = s.logo === 'none' ? 'none' : s.logoBrand ? 'pick' : 'auto';
+  const t = norm(q);
+  return <Field label="Etiketteki marka logosu" hint={mode === 'auto' ? 'Otomatik: reklam bir markaya gidiyorsa ya da etiket marka adıysa o markanın logosu' : mode === 'none' ? 'Logo yok; yazdığınız küçük etiket görünür' : 'Seçtiğiniz markanın logosu görünür'}>
+    <span className="seg">{[['auto', 'Otomatik'], ['pick', 'Elle seç'], ['none', 'Logo yok']].map(([x, l]) => <button key={x} type="button" className={mode === x ? 'on' : ''} onClick={() => up(x === 'none' ? { logo: 'none', logoBrand: '' } : x === 'auto' ? { logo: '', logoBrand: '' } : { logo: '', logoBrand: s.logoBrand || list[0]?.[0] || '' })}>{l}</button>)}</span>
+    {mode === 'pick' && <div className="logo-pick">
+      {list.length > 8 && <div className="search sm"><Icon n="search" s={16} /><input type="search" placeholder="Marka ara…" value={q} onChange={(e) => setQ(e.target.value)} /></div>}
+      <div className="logo-pick-grid">
+        {list.filter(([n]) => !t || norm(n).includes(t)).map(([n, logo]) => (
+          <button key={n} type="button" className={norm(s.logoBrand || '') === norm(n) ? 'on' : ''} onClick={() => up({ logoBrand: n, logo: '' })} title={n}><ShopImg v={logo} alt={n} /><small>{n}</small></button>
+        ))}
+      </div>
+    </div>}
+  </Field>;
+}
 export function SlideFields({ s, up }) {
+  const ly = SLIDE_LAYOUTS[s.layout] ? s.layout : 'split';
   return <>
-    <div className="row3">
-      <Field label="Görünüm"><select value={s.layout || 'split'} onChange={(e) => up({ layout: e.target.value })}><option value="split">Yazı + ürün görseli</option><option value="cover">Tam resim (banner)</option></select></Field>
+    <Field label="Düzen"><span className="ly-pick">{Object.entries(SLIDE_LAYOUTS).map(([k, l]) => <button key={k} type="button" className={'ly-' + k + (ly === k ? ' on' : '')} onClick={() => up({ layout: k })}><i aria-hidden="true"><b /><em /></i>{l}</button>)}</span></Field>
+    <div className="row2">
       <Field label="Renk teması"><select value={s.theme || 'night'} onChange={(e) => up({ theme: e.target.value })}>{Object.entries(THEMES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       <Field label="Küçük etiket" opt><input value={s.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. Yeni · Stokta" /></Field>
     </div>
     <Field label="Başlık"><input value={s.title || ''} onChange={(e) => up({ title: e.target.value })} placeholder="ör. Aixun T3A ile tanışın" /></Field>
+    <ColorPick v={s.tc || ''} onChange={(tc) => up({ tc })} />
     <Field label="Açıklama" opt><input value={s.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
-    <Field label="Marka logosu" hint="Otomatik: reklam bir markaya gidiyorsa ya da etiket marka adıysa o markanın logosu görünür"><select value={s.logo === 'none' ? 'none' : ''} onChange={(e) => up({ logo: e.target.value === 'none' ? 'none' : '' })}><option value="">Otomatik</option><option value="none">Logo gösterme</option></select></Field>
+    <LogoPick s={s} up={up} />
     <div className="row2">
       <Field label="Buton yazısı" opt><input value={s.cta || ''} onChange={(e) => up({ cta: e.target.value })} placeholder="ör. Hemen incele" /></Field>
       <LinkPick v={s.link} onChange={(link) => up({ link })} />
     </div>
-    <ImgPick v={s.img} onChange={(img) => up({ img })} alpha={s.layout !== 'cover'} max={s.layout === 'cover' ? 1800 : 1000} hint={s.layout === 'cover' ? 'Yatay banner (ör. 1600×640)' : 'Saydam arka planlı ürün resmi en iyisi; ürünün kendi resmi beyaz kart içinde görünür'} prodOk />
+    <ImgPick v={s.img} onChange={(img) => up({ img })} alpha={!COVER_LY.includes(ly)} max={COVER_LY.includes(ly) ? 1800 : 1000} hint={COVER_LY.includes(ly) ? 'Yatay banner resmi (ör. 1600×640)' : 'Saydam arka planlı ürün resmi en iyisi; ürünün kendi resmi beyaz kart içinde görünür'} prodOk />
   </>;
 }
 export function UspFields({ u, up }) {
@@ -839,7 +924,7 @@ export function ScaleField({ v, onChange, label = 'Boyut', min = 0.4, max = 1.6 
 }
 export function BlockFields({ b, up }) {
   if (b.t === 'rate') return <>
-    <p className="fine">Müşteri kuru buradan görür: Harem Altın dolar satış (Ayarlar > Fiyatlandırma’da elle kur yazdıysanız o). Bilgisayarda kutuyu tutup sağa-sola çekin, sağ alt köşesinden büyütüp küçültün.</p>
+    <p className="fine">Müşteri kuru buradan görür: Harem Altın dolar satış (Ayarlar &gt; Fiyatlandırma’da elle kur yazdıysanız o). Bilgisayarda kutuyu tutup sağa-sola çekin, sağ alt köşesinden büyütüp küçültün.</p>
     <Field label="Yazı" opt hint="Boşsa “Harem Altın · dolar satış”"><input value={b.label || ''} placeholder="Harem Altın · dolar satış" onChange={(e) => up({ label: e.target.value })} /></Field>
     <Field label="Görünüm"><span className="seg">{[['soft', 'Sade'], ['line', 'Çerçeveli'], ['dark', 'Koyu']].map(([x, l]) => <button key={x} type="button" className={(b.style || 'soft') === x ? 'on' : ''} onClick={() => up({ style: x })}>{l}</button>)}</span></Field>
     <Field label="Yerleşim"><span className="seg">{[[0, 'Sola'], [0.5, 'Ortaya'], [1, 'Sağa']].map(([x, l]) => <button key={x} type="button" className={(b.pos ?? 0.5) === x ? 'on' : ''} onClick={() => up({ pos: x })}>{l}</button>)}</span></Field>
@@ -863,15 +948,12 @@ export function BlockFields({ b, up }) {
       {list.length < 3 && <button type="button" className="btn sm outline" onClick={() => setList([...list, { src: '', poster: '' }])}><Icon n="plus" s={15} />Yanına video ekle (aynı sırada)</button>}
       <Field label="Oynatma" hint={b.play === 'auto' ? 'Ekrana gelince sessiz ve döngülü kendiliğinden oynar' : 'Kapak (ya da videodan bir kare) görünür; dokununca sesli oynar'}><span className="seg">{[['tap', 'Dokununca'], ['auto', 'Otomatik']].map(([x, l]) => <button key={x} type="button" className={(b.play || 'tap') === x ? 'on' : ''} onClick={() => up({ play: x })}>{l}</button>)}</span></Field>
       <Field label="Ebat"><span className="seg seg-wrap">{VIDEO_RATIOS.map(([x, l]) => <button key={x} type="button" className={(b.ratio || '16:9') === x ? 'on' : ''} onClick={() => up({ ratio: x })}>{l}</button>)}</span></Field>
-      <Field label="Genişlik" hint="Sayfa genişliğine göre; telefonda en az %64"><span className="she-scale"><input type="range" min="15" max="100" step="1" value={g.W} onChange={(e) => up({ wp: Number(e.target.value) })} /><code>%{g.W}</code></span></Field>
-      {g.W < 100 && <>
-        <Field label="Yerleşim"><span className="seg">{[[0, 'Sola'], [0.5, 'Ortaya'], [1, 'Sağa']].map(([x, l]) => <button key={x} type="button" className={g.pos === x ? 'on' : ''} onClick={() => up({ pos: x })}>{l}</button>)}</span></Field>
-        <Field label="İnce ayar"><span className="she-scale"><input type="range" min="0" max="1" step="0.01" value={g.pos} onChange={(e) => up({ pos: Number(e.target.value) })} /><code>{Math.round(g.pos * 100)}</code></span></Field>
-      </>}
+      <GeoFields W={g.W} pos={g.pos} up={up} note="Sayfa genişliğine göre; telefonda en az %64. Başlık videoyla birlikte kayar." />
       <div className="row2">
         <Field label="Başlık" opt><input value={b.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
         <Field label="Alt yazı" opt><input value={b.sub || ''} onChange={(e) => up({ sub: e.target.value })} /></Field>
       </div>
+      {b.title && <ColorPick v={b.tc || ''} onChange={(tc) => up({ tc })} />}
     </>;
   }
   if (b.t === 'banner') return <>
@@ -884,9 +966,11 @@ export function BlockFields({ b, up }) {
     <Field label="Alt yazı" opt><input value={b.sub || ''} onChange={(e) => up({ sub: e.target.value })} /></Field>
     <div className="row3">
       <Field label="Küçük etiket" opt><input value={b.tag || ''} onChange={(e) => up({ tag: e.target.value })} /></Field>
-      <Field label="Hizalama"><select value={b.align || 'left'} onChange={(e) => up({ align: e.target.value })}><option value="left">Sola</option><option value="center">Ortaya</option></select></Field>
-      <Field label="Büyüklük"><select value={b.size || 'md'} onChange={(e) => up({ size: e.target.value })}><option value="sm">Küçük</option><option value="md">Orta</option><option value="lg">Büyük</option></select></Field>
+      <Field label="Hizalama"><select value={b.align || 'left'} onChange={(e) => up({ align: e.target.value })}><option value="left">Sola</option><option value="center">Ortaya</option><option value="right">Sağa</option></select></Field>
+      <Field label="Büyüklük"><select value={b.size || 'md'} onChange={(e) => up({ size: e.target.value })}><option value="sm">Küçük</option><option value="md">Orta</option><option value="lg">Büyük</option><option value="xl">Dev</option></select></Field>
     </div>
+    <ColorPick v={b.tc || ''} onChange={(tc) => up({ tc })} />
+    {b.sub && <ColorPick v={b.sc || ''} onChange={(sc) => up({ sc })} label="Alt yazı rengi" grads={false} />}
   </>;
 }
 export function FxFields({ f = {}, up, reset }) {
