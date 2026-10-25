@@ -433,21 +433,27 @@ export function useVideoFrame(src, given) {
     if (given) { setU(given); return; }
     if (!src) { setU(''); return; }
     if (frameCache.has(src)) { setU(frameCache.get(src)); return; }
-    let dead = false;
-    const v = document.createElement('video');
-    const done = (x) => { clearTimeout(to); if (x) frameCache.set(src, x); if (!dead) setU(x || ''); v.removeAttribute('src'); try { v.load(); } catch {} };
-    const to = setTimeout(() => done(''), 9000);
-    v.crossOrigin = 'anonymous'; v.muted = true; v.playsInline = true; v.preload = 'auto';
-    v.addEventListener('loadedmetadata', () => { v.currentTime = Math.min(1.2, (v.duration || 4) * 0.12); }, { once: true });
-    v.addEventListener('seeked', () => {
-      try {
-        const k = Math.min(1, 720 / (v.videoWidth || 720)); const c = document.createElement('canvas');
-        c.width = Math.round((v.videoWidth || 720) * k); c.height = Math.round((v.videoHeight || 720) * k);
-        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); done(c.toDataURL('image/jpeg', 0.82));
-      } catch { done(''); }
-    }, { once: true });
-    v.addEventListener('error', () => done(''), { once: true });
-    v.src = src;
+    let dead = false, v = null, to = 0;
+    const done = (x) => { clearTimeout(to); if (x != null) frameCache.set(src, x); if (!dead) setU(x || ''); if (v) { v.removeAttribute('src'); try { v.load(); } catch {} } };
+    // Önce video sitesi kare almaya (CORS) izin veriyor mu, ayrı ve zararsız bir istekle sorulur. İzin yoksa videoya
+    // "izinli modda" hiç dokunulmaz: başarısız izinli deneme tarayıcının video önbelleğini bozup asıl videoyu açtırmıyordu.
+    fetch(src, { mode: 'cors', headers: { Range: 'bytes=0-0' } }).then((r) => {
+      if (dead) return;
+      if (!r.ok && r.status !== 206) return done('');
+      v = document.createElement('video');
+      to = setTimeout(() => done(''), 9000);
+      v.crossOrigin = 'anonymous'; v.muted = true; v.playsInline = true; v.preload = 'auto';
+      v.addEventListener('loadedmetadata', () => { v.currentTime = Math.min(1.2, (v.duration || 4) * 0.12); }, { once: true });
+      v.addEventListener('seeked', () => {
+        try {
+          const k = Math.min(1, 720 / (v.videoWidth || 720)); const c = document.createElement('canvas');
+          c.width = Math.round((v.videoWidth || 720) * k); c.height = Math.round((v.videoHeight || 720) * k);
+          c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); done(c.toDataURL('image/jpeg', 0.82));
+        } catch { done(''); }
+      }, { once: true });
+      v.addEventListener('error', () => done(''), { once: true });
+      v.src = src + (src.includes('?') ? '&' : '?') + 'kare=1'; // asıl videodan ayrı önbellek kaydı
+    }).catch(() => done(''));
     return () => { dead = true; clearTimeout(to); };
   }, [src, given]);
   return u; // null: hazırlanıyor · '': alınamadı · adres: resim
@@ -487,6 +493,23 @@ export function PlayVideo({ src, poster, active = true, fit = 'cover', auto = tr
   );
 }
 
+// Sarma çubuğu: parmakla / fareyle çubuğun herhangi bir yerinden tutup sürüklenir (iPhone'un kendi sürgüsü tutmuyordu)
+function Scrub({ t, dur, onSeek }) {
+  const ref = useRef(null);
+  const [drag, setDrag] = useState(null);
+  const at = (e) => { const r = ref.current.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); };
+  const p = drag != null ? drag : dur ? t / dur : 0;
+  return (
+    <div ref={ref} className={'vv-seek' + (drag != null ? ' on' : '')} role="slider" aria-label="Sar" aria-valuemin={0} aria-valuemax={Math.round(dur)} aria-valuenow={Math.round(t)}
+      onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); const x = at(e); setDrag(x); onSeek(x); }}
+      onPointerMove={(e) => { if (drag == null) return; const x = at(e); setDrag(x); onSeek(x); }}
+      onPointerUp={() => setDrag(null)} onPointerCancel={() => setDrag(null)}>
+      <span className="vv-seek-t"><i style={{ width: p * 100 + '%' }} /></span>
+      <b style={{ left: p * 100 + '%' }} />
+    </div>
+  );
+}
+
 // Tam ekran video izleme: karanlık zemin, video ekrana sığar (kesilmez), sesli başlar. Dokununca düğmeler görünür /
 // gizlenir; ortada oynat-durdur, altta ileri-geri sarma çubuğu, süre ve ses. Kapat (×), Esc ya da aşağı kaydırma.
 export function VideoViewer({ src, poster, start = 0, onClose }) {
@@ -508,13 +531,13 @@ export function VideoViewer({ src, poster, start = 0, onClose }) {
   }, []);
   const toggle = () => { const el = v.current; if (!el) return; el.paused ? el.play().catch(() => {}) : el.pause(); poke(); };
   const fmtT = (x) => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
-  const seek = (e) => { const el = v.current; if (!el || !dur) return; el.currentTime = (Number(e.target.value) / 1000) * dur; setT(el.currentTime); poke(); };
   // telefonda aşağı kaydırınca kapanır
   const sw = useRef(null);
   return createPortal(
     <div className={'vv' + (ui ? ' ui' : '') + (out ? ' out' : '')} role="dialog" aria-modal="true" aria-label="Video"
-      onTouchStart={(e) => { sw.current = { y: e.touches[0].clientY, x: e.touches[0].clientX }; }}
-      onTouchEnd={(e) => { const s0 = sw.current; sw.current = null; const p = e.changedTouches[0]; if (s0 && p.clientY - s0.y > 110 && Math.abs(p.clientX - s0.x) < 80) close(); }}>
+      onTouchStart={(e) => { e.stopPropagation(); sw.current = e.target.closest('.vv-bar') ? null : { y: e.touches[0].clientY, x: e.touches[0].clientX }; }}
+      onTouchMove={(e) => e.stopPropagation()} onTouchCancel={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      onTouchEnd={(e) => { e.stopPropagation(); const s0 = sw.current; sw.current = null; const p = e.changedTouches[0]; if (s0 && p.clientY - s0.y > 110 && Math.abs(p.clientX - s0.x) < 80) close(); }}>
       <video ref={v} className="vv-v" src={src} poster={poster || undefined} playsInline loop muted={muted} preload="auto" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
         onPlay={() => { setPlaying(true); poke(); }} onPause={() => { setPlaying(false); setUi(true); }} onLoadedMetadata={(e) => setDur(e.currentTarget.duration || 0)}
         onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onClick={() => (ui ? (playing ? setUi(false) : toggle()) : poke())} />
@@ -522,7 +545,7 @@ export function VideoViewer({ src, poster, start = 0, onClose }) {
       <button className="vv-pp" onClick={toggle} aria-label={playing ? 'Durdur' : 'Oynat'}><Icon n={playing ? 'pause' : 'play'} s={30} /></button>
       <div className="vv-bar" onClick={(e) => e.stopPropagation()}>
         <span className="num">{fmtT(t)}</span>
-        <input type="range" min="0" max="1000" step="1" value={dur ? Math.round((t / dur) * 1000) : 0} onChange={seek} aria-label="Sar" style={{ '--p': (dur ? (t / dur) * 100 : 0) + '%' }} />
+        <Scrub t={t} dur={dur} onSeek={(x) => { const el = v.current; if (!el || !dur) return; el.currentTime = x * dur; setT(el.currentTime); poke(); }} />
         <span className="num">{fmtT(dur)}</span>
         <button onClick={() => { setMuted((m) => !m); poke(); }} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={19} /></button>
       </div>

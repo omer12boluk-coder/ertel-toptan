@@ -2251,3 +2251,11 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .rtext ul { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 6px; }
 .rtext li::marker { color: var(--accent); }
 .f-phone .input-btn input { min-width: 0; }
+
+/* tam ekran video: kendi sarma çubuğu */
+.vv-seek { position: relative; flex: 1; min-width: 0; height: 34px; display: flex; align-items: center; cursor: pointer; touch-action: none; }
+.vv-seek-t { position: relative; width: 100%; height: 4px; border-radius: 2px; background: rgb(255 255 255 / .28); overflow: hidden; transition: height .15s; }
+.vv-seek-t i { position: absolute; left: 0; top: 0; bottom: 0; background: #fff; }
+.vv-seek b { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .45); transition: transform .15s; }
+.vv-seek.on .vv-seek-t { height: 6px; }
+.vv-seek.on b { transform: scale(1.35); }
