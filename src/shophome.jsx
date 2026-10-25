@@ -241,13 +241,14 @@ export function HeaderSearch() {
     return { list: all.slice(0, 6), n: all.length };
   }, [q, catalog]);
   const close = () => { setOpen(false); setMob(false); };
-  const goAll = () => { if (!q.trim()) return; store.set({ catalogGo: { q: q.trim() } }); go('katalog'); close(); inp.current?.blur(); };
-  const pick = (p) => { close(); setProd(p); };
+  const hideList = () => setOpen(false); // sadece sonuç listesi kapanır; kutu ve yazı yerinde kalır
+  const goAll = () => { if (!q.trim()) return; store.set({ catalogGo: { q: q.trim() } }); go('katalog'); hideList(); inp.current?.blur(); };
+  const pick = (p) => { hideList(); inp.current?.blur(); setProd(p); };
   const key = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, res.list.length)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
     else if (e.key === 'Enter') { e.preventDefault(); if (hi < res.list.length && res.list[hi]) pick(res.list[hi]); else goAll(); }
-    else if (e.key === 'Escape') { close(); inp.current?.blur(); }
+    else if (e.key === 'Escape') { if (q) hideList(); else close(); inp.current?.blur(); }
   };
   return (
     <div className={'hsearch' + (mob ? ' mob-open' : '')}>
