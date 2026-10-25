@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS = {
   brand: {
     appName: 'ERTEL GSM',
     tagline: 'Bayilere özel katalog',
+    nameColor: '', // telefonda üst menüdeki mağaza adının rengi (boş = yazı rengi)
     accent: '#2f55b0', // ana renk (logodaki lacivert)
     priceAccent: '#c2410c', // toptan fiyat rengi
     theme: 'light', // auto | light | dark  (her cihaz üst menüden kendine göre değiştirebilir)

@@ -428,7 +428,7 @@ function ShellFull() {
         <div className="topbar-in">
           <Brand small onClick={home} />
           {admin && <span className="admin-badge" title="Yönetim paneli"><Icon n="shield" s={14} /><span className="badge-t">Yönetim paneli</span></span>}
-          {pub && <span className="pub-badge">Online mağaza</span>}
+          {pub && <span className="pub-id"><b className="pub-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b><span className="pub-badge">Online mağaza</span></span>}
           <nav className="topnav" aria-label="Ana menü">
             {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet') && k !== 'tasarim').map(([k, l, i]) => (
               <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)} title={l}>
@@ -443,7 +443,7 @@ function ShellFull() {
           <ThemeButton />
           {pub && (member
             ? <button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button>
-            : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')}><Icon n="user" s={16} />Giriş yap</button>)}
+            : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Giriş yap"><Icon n="user" s={16} /><span className="me-login-l">Giriş yap</span></button>)}
           {!pub && (
             <button className="me" onClick={() => go(admin ? 'ayarlar' : 'profil')} aria-label="Profil">
               <span className="me-t"><b>{user.name || user.username}</b><small>{admin ? 'Yönetici' : user.shop}</small></span>

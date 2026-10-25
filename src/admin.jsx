@@ -499,6 +499,7 @@ export function Settings() {
           <div className="row3">
             <Field label="Ana renk"><div className="color-in"><input id="s-accent" type="color" value={d.brand.accent} onChange={(e) => set('brand.accent', e.target.value)} /><code>{d.brand.accent}</code></div></Field>
             <Field label="Toptan fiyat rengi"><div className="color-in"><input id="s-price" type="color" value={d.brand.priceAccent} onChange={(e) => set('brand.priceAccent', e.target.value)} /><code>{d.brand.priceAccent}</code></div></Field>
+            <Field label="Mağaza adı rengi" hint="Telefonda üst menüde logonun yanında"><div className="color-in"><input id="s-namec" type="color" value={d.brand.nameColor || '#1b2340'} onChange={(e) => set('brand.nameColor', e.target.value)} /><code>{d.brand.nameColor || 'yazı rengi'}</code>{d.brand.nameColor && <button type="button" className="linkish" onClick={() => set('brand.nameColor', '')}>sıfırla</button>}</div></Field>
             <Field label="Tema"><select id="s-theme" value={d.brand.theme} onChange={(e) => set('brand.theme', e.target.value)}><option value="auto">Cihaza göre</option><option value="light">Açık</option><option value="dark">Koyu</option></select></Field>
           </div>
           <Field label="Logo">
