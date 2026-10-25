@@ -412,7 +412,7 @@ function CardImg({ p, hov, ix, setIx }) {
       {seen && urls.length > 1 && <>
         <img className={'cimg-alt' + (hov && ix > 0 ? ' on' : '')} src={urls[ix] || urls[0]} alt="" />
         <span className="cimg-bar" aria-hidden="true">{urls.slice(0, 6).map((_, i) => <i key={i} className={i === ix ? 'on' : ''} />)}</span>
-        <span className="cimg-strip" aria-hidden={!hov}>{ths.slice(0, 5).map((u, i) => <span key={i} className={'cimg-th' + (i === ix ? ' on' : '')} style={{ '--k': i }} onMouseEnter={() => setIx(i)}><img src={u} alt="" loading="lazy" /></span>)}{ths.length > 5 && <span className="cimg-th more" style={{ '--k': 5 }}>+{ths.length - 5}</span>}</span>
+        <span className="cimg-strip" aria-hidden={!hov}>{ths.slice(0, 4).map((u, i) => <span key={i} className={'cimg-th' + (i === ix ? ' on' : '')} style={{ '--k': i }} onMouseEnter={() => setIx(i)}><img src={u} alt="" loading="lazy" /></span>)}{ths.length > 4 && <span className={'cimg-th more' + (ix >= 4 ? ' on' : '')} style={{ '--k': 4 }} onMouseEnter={() => setIx(4)}>+{ths.length - 4}</span>}</span>
       </>}
     </span>
   );

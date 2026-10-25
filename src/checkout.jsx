@@ -144,7 +144,7 @@ export function Checkout({ items, onBack }) {
         contact: { name: f.contact.name.trim(), phone: f.contact.phone, email },
         delivery: { method: f.method, addr: f.method === 'cargo' ? cleanA(delivAddr) : null },
         // teslimat adresiyle aynıysa adres faturaya da yazılır (fatura kendi başına eksiksiz okunsun)
-        invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' ? (f.billSame ? cleanA(delivAddr) : cleanA(f.bill, false)) : null },
+        invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' ? (f.billSame ? cleanA(delivAddr) : cleanA(f.bill, false)) : f.bill?.address ? cleanA(f.bill, false) : null },
         pay: f.pay, note: f.note.trim(),
       });
       try { await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
@@ -154,7 +154,9 @@ export function Checkout({ items, onBack }) {
       // üye: yeni adresi ve fatura bilgisini hesaba kaydet
       if (uid && !signedUp) {
         const m = store.s.member || { uid };
-        const patch = { uid, name: m.name || order.contact.name, phone: m.phone || order.contact.phone, invoice: inv };
+        // fatura adresi: siparişte ayrı adres yazıldıysa hesaba o kaydedilir, yoksa kayıtlı olan korunur
+        const iaddr = f.method === 'cargo' && !f.billSame ? cleanA(f.bill, false) : m.invoice?.addr;
+        const patch = { uid, name: m.name || order.contact.name, phone: m.phone || order.contact.phone, invoice: { ...inv, ...(iaddr?.address ? { addr: { city: iaddr.city, district: iaddr.district, address: iaddr.address } } : {}) } };
         let addrs = m.addresses || [];
         if (f.method === 'cargo' && (f.addrId === 'new' || !saved.length) && (f.saveAddr || f.signup)) addrs = [...addrs, { ...cleanA(delivAddr), id: rid(), title: delivAddr.title || (addrs.length ? 'Adres ' + (addrs.length + 1) : 'Adresim') }];
         patch.addresses = addrs;
@@ -308,7 +310,8 @@ function initForm(m, methods, guest) {
     addr: { ...blankAddr(), name: m?.name || g.contact?.name || '', phone: m?.phone || g.contact?.phone || '', ...(!m && g.addr ? g.addr : {}) },
     saveAddr: true,
     inv: { type: inv0.type || 'person', tc: inv0.tc || '', company: inv0.company || '', taxOffice: inv0.taxOffice || '', taxNo: inv0.taxNo || '' },
-    billSame: true, bill: blankAddr(), pay: 'havale', note: '', signup: false, pw: '', uname: '',
+    // hesapta kayıtlı fatura adresi varsa siparişte o gelir; "teslimat adresiyle aynı" sadece siparişte seçilir
+    billSame: !inv0.addr?.address, bill: inv0.addr?.address ? { ...blankAddr(), ...inv0.addr } : blankAddr(), pay: 'havale', note: '', signup: false, pw: '', uname: '',
   };
 }
 
@@ -795,7 +798,8 @@ function Addresses() {
 
 function MyInfo({ part = 'all' }) {
   const { member: m, api: A } = useStore();
-  const [f, setF] = useState(() => ({ name: m.name || '', phone: m.phone || '', inv: { type: 'person', tc: '', company: '', taxOffice: '', taxNo: '', ...(m.invoice || {}) } }));
+  const [f, setF] = useState(() => ({ name: m.name || '', phone: m.phone || '', inv: { type: 'person', tc: '', company: '', taxOffice: '', taxNo: '', ...(m.invoice || {}) }, iaddr: { ...blankAddr(), ...(m.invoice?.addr || {}) } }));
+  const [aerr, setAerr] = useState({});
   const [busy, setBusy] = useState(false);
   const setI = (k, v) => setF((x) => ({ ...x, inv: { ...x.inv, [k]: v } }));
   async function save() {
@@ -803,6 +807,10 @@ function MyInfo({ part = 'all' }) {
     setBusy(true);
     try {
       const inv = f.inv.type === 'company' ? { type: 'company', company: f.inv.company.trim(), taxOffice: f.inv.taxOffice.trim(), taxNo: digits(f.inv.taxNo) } : { type: 'person', ...(f.inv.tc ? { tc: digits(f.inv.tc) } : {}) };
+      // fatura adresi (isteğe bağlı): yazılmaya başlandıysa eksiksiz olmalı
+      const ia = f.iaddr || {}; const anyA = ia.city || String(ia.district || '').trim() || String(ia.address || '').trim();
+      if (part !== 'info' && anyA) { const e = addrErrors(ia, 'iaddr'); setAerr(e); if (Object.keys(e).length) { setBusy(false); return; } inv.addr = { city: ia.city, district: ia.district.trim(), address: ia.address.trim() }; }
+      else if (part === 'info' && m.invoice?.addr) inv.addr = m.invoice.addr;
       await A.saveMember({ ...m, name: f.name.trim(), phone: f.phone, invoice: inv }); toast('Bilgileriniz kaydedildi');
     } catch (x) { toast('Kaydedilemedi: ' + x.message, 'bad'); }
     setBusy(false);
@@ -827,7 +835,11 @@ function MyInfo({ part = 'all' }) {
             <Field label="Vergi dairesi"><input id="mi-taxoffice" value={f.inv.taxOffice || ''} onChange={(e) => setI('taxOffice', e.target.value)} /></Field>
             <Field label="Vergi no"><input id="mi-taxno" inputMode="numeric" maxLength={11} value={f.inv.taxNo || ''} onChange={(e) => setI('taxNo', digits(e.target.value).slice(0, 11))} /></Field>
           </div>
-        </>}</>}
+        </>}
+      <h4 className="mi-sub">Fatura adresi <small className="muted">(isteğe bağlı)</small></h4>
+      <p className="fine">Siparişte fatura adresi olarak bu gelir. Teslimat adresiyle aynıysa siparişte “teslimat adresiyle aynı”yı seçmeniz yeterli.</p>
+      <AddressFields a={f.iaddr} set={(iaddr) => setF((x) => ({ ...x, iaddr }))} err={aerr} p="iaddr" />
+      {f.iaddr?.address && <button type="button" className="linkish mi-clear" onClick={() => setF((x) => ({ ...x, iaddr: blankAddr() }))}>Fatura adresini temizle</button>}</>}
       <button className="btn primary" disabled={busy} onClick={save}><Icon n="check" s={16} />Kaydet</button>
     </div>
   );

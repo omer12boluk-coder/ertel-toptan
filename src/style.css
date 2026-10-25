@@ -1109,7 +1109,8 @@ a.btn { text-decoration: none; }
 .banner.bad { background: color-mix(in oklab, var(--bad) 10%, var(--surface)); color: color-mix(in oklab, var(--bad) 70%, var(--fg)); }
 .banner p { margin: 2px 0 0; }
 .o-info { display: grid; gap: 12px; }
-@media (min-width: 640px) { .o-info { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); } }
+@media (min-width: 640px) { .o-info { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); } .o-info:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.o-info .o-card { min-width: 0; overflow-wrap: anywhere; }
 .o-info.one { grid-template-columns: 1fr; }
 .o-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
 .o-card h3 { margin: 0 0 6px; font: 700 11px/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; }
@@ -2713,17 +2714,18 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .plist.pgrid .cimg-alt.on { opacity: 1; }
 .plist.pgrid .cimg-bar { position: absolute; left: 16px; right: 16px; top: auto; bottom: 10px; display: flex; gap: 4px; z-index: 2; animation: none; opacity: 0; transition: opacity .2s; }
 .plist.pgrid .cimg.on .cimg-bar { opacity: 1; }
-.plist.pgrid .cimg-strip { position: absolute; left: 0; right: 0; top: 100%; bottom: auto; z-index: 3; display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 8px; padding: 14px 12px 12px; background: none; animation: none; pointer-events: none; }
+.plist.pgrid .cimg-strip { position: absolute; left: 0; right: 0; top: 100%; bottom: auto; z-index: 3; display: flex; flex-wrap: nowrap; justify-content: flex-start; gap: 6px; padding: 12px 14px 0; background: none; animation: none; pointer-events: none; }
 .plist.pgrid .cimg.on .cimg-strip { pointer-events: auto; }
-.plist.pgrid .cimg-th { width: 52px; height: 52px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; display: grid; place-items: center; overflow: hidden; opacity: 0; transform: translateY(26px) scale(.82);
+.plist.pgrid .cimg-th { width: 36px; height: 36px; border-radius: 9px; flex: none; border: 1.5px solid var(--line); background: #fff; display: grid; place-items: center; overflow: hidden; opacity: 0; transform: translateY(26px) scale(.82);
   transition: opacity .16s ease, transform .2s ease, border-color .15s, box-shadow .15s; }
 .plist.pgrid .cimg-th img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
 .plist.pgrid .cimg.on .cimg-th { opacity: 1; transform: none; transition: opacity .3s ease calc(.09s + var(--k) * .045s), transform .42s cubic-bezier(.2, .9, .3, 1.2) calc(.09s + var(--k) * .045s), border-color .15s, box-shadow .15s; }
 .plist.pgrid .cimg.on .cimg-th.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); transform: translateY(-2px); }
 .plist.pgrid .cimg-th.more { font: 700 13px/1 var(--f-display); color: var(--accent); background: var(--accent-soft); border-style: dashed; }
-.plist.pgrid > li.prow .prow-info, .plist.pgrid > li.prow .prow-side { transition: transform .38s cubic-bezier(.3, .8, .3, 1) .04s, opacity .28s ease .06s; }
-.plist.pgrid > li.prow.hov .prow-info, .plist.pgrid > li.prow.hov .prow-side { transform: translateY(70px); opacity: 0; pointer-events: none; transition: transform .34s cubic-bezier(.5, 0, .7, .4), opacity .2s ease; }
-.plist.pgrid > li.prow.hov .prow-side { transition-delay: .03s; }
+/* fiyat ve Sepete ekle hep yerinde; sadece ad / marka satırı aşağı kayıp gizlenir, yerine tek sıra küçük resim gelir */
+.plist.pgrid > li.prow .prow-info { transition: transform .36s cubic-bezier(.3, .8, .3, 1) .05s, opacity .26s ease .08s; }
+.plist.pgrid > li.prow.hov .prow-info { transform: translateY(26px); opacity: 0; transition: transform .3s cubic-bezier(.5, 0, .7, .4), opacity .18s ease; }
+.plist.pgrid > li.prow .prow-side { position: relative; z-index: 4; background: var(--surface); }
 .plist.pgrid > li.prow.hov .thumb img { transform: none !important; }
 
 /* ---- Telefonda kartta resimleri kaydırma ---- */
@@ -2746,3 +2748,13 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .pv-cards { margin: 0; grid-template-columns: 1fr !important; }
 .pv-cards .prow-main { cursor: default; }
 @media (max-width: 560px) { .pv-wrap { grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; } }
+/* düzeltme: fiyat ve Sepete ekle hep görünür; küçük resimler sadece ad/marka satırının yerine tek sıra gelir */
+.plist.pgrid > li.prow.hov .prow-side { transform: none !important; opacity: 1 !important; pointer-events: auto !important; }
+.plist.pgrid > li.prow.hov .prow-info { transform: translateY(26px); }
+.plist.pgrid .cimg-strip { flex-wrap: nowrap; gap: 6px; padding: 12px 12px 0; overflow: hidden; }
+.plist.pgrid .cimg-th { width: 42px; height: 42px; border-radius: 10px; flex: none; }
+@media (min-width: 640px) { .order-page .o-info { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.plist.pgrid .cimg-th { width: min(44px, calc((100% - 24px) / 5)); height: auto; aspect-ratio: 1; }
+.mi-sub { margin: 10px 0 0; font: 700 16px/1.2 var(--f-display); }
+.mi-sub small { font: 400 13px var(--f-body); }
+.mi-clear { align-self: flex-start; font-size: 13px; }
