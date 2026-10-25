@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory } from './store.js';
 import { ROUTE, links } from './route.js';
@@ -553,30 +553,37 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
 createRoot(document.getElementById('root')).render(<App />);
 boot();
 
-// Telefon alt menüsü: iOS gibi parmağı basılı tutup sekmeler üstünde kaydırınca tema renginde parlak bir hap parmağı izler,
-// bırakılan sekmeye geçilir. Kısa dokunuş da aynı şekilde çalışır.
+// Telefon alt menüsü: seçili sekmenin küçük hapı iOS gibi parmağı izler. Basılı tutup kaydırınca hap hafifçe büyüyerek
+// parmakla birlikte kayar, bırakılan sekmeye yumuşakça oturup eski boyuna döner. Kısa dokunuşta da hap yeni sekmeye kayar.
 function BotNav({ items, tab, badge }) {
   const ref = useRef(null);
-  const [drag, setDrag] = useState(null); // { x, i, w }
-  const last = useRef(null); if (drag) last.current = drag;
-  const L = drag || last.current;
+  const [drag, setDrag] = useState(null); // { x, i }
+  const [geo, setGeo] = useState(null); // { cs: [sekme ortaları], top }
   const st = useRef(null);
+  const keys = items.map((x) => x[0]).join(',');
+  const measure = () => {
+    const el = ref.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const bs = [...el.querySelectorAll('.botnav-b')];
+    const ic = el.querySelector('.botnav-i');
+    if (!bs.length || !ic) return;
+    setGeo({ cs: bs.map((b) => { const q = b.getBoundingClientRect(); return q.left - r.left + q.width / 2; }), top: ic.getBoundingClientRect().top - r.top, ws: bs.map((b) => b.getBoundingClientRect()) });
+  };
+  useLayoutEffect(() => { measure(); const f = () => measure(); addEventListener('resize', f); return () => removeEventListener('resize', f); }, [keys]);
   const at = (x) => {
-    const el = ref.current; if (!el) return null;
-    const bs = [...el.querySelectorAll('.botnav-b')]; const r = el.getBoundingClientRect();
-    let i = bs.findIndex((b) => { const q = b.getBoundingClientRect(); return x >= q.left && x < q.right; });
-    if (i < 0) i = x < r.left + r.width / 2 ? 0 : bs.length - 1;
-    const w = bs[0] ? bs[0].getBoundingClientRect().width : 60;
-    return { x: Math.min(r.width - w / 2, Math.max(w / 2, x - r.left)), i, w };
+    const el = ref.current; if (!el || !geo) return null;
+    const r = el.getBoundingClientRect(); const lx = x - r.left;
+    let i = 0, best = 1e9; geo.cs.forEach((c, n) => { const d = Math.abs(c - lx); if (d < best) { best = d; i = n; } });
+    return { x: Math.min(geo.cs[geo.cs.length - 1], Math.max(geo.cs[0], lx)), i };
   };
   const move = (e) => {
     const t = e.touches[0]; if (!t) return;
     const d = at(t.clientX); if (!d) return;
-    if (st.current && st.current.i !== d.i) { st.current.moved = true; try { navigator.vibrate?.(6); } catch {} }
-    st.current = { ...(st.current || {}), i: d.i };
+    if (st.current && st.current.i != null && st.current.i !== d.i) { try { navigator.vibrate?.(6); } catch {} }
+    if (st.current) st.current.i = d.i;
     setDrag(d);
   };
-  const start = (e) => { const t = e.touches[0]; st.current = { i: null, y: t.clientY }; move(e); };
+  const start = (e) => { st.current = { i: null }; move(e); };
   const end = (e) => {
     const s = st.current; st.current = null; setDrag(null);
     if (!s || s.i == null) return;
@@ -586,9 +593,11 @@ function BotNav({ items, tab, badge }) {
     go(items[s.i][0]);
   };
   const cancel = () => { st.current = null; setDrag(null); };
+  const ai = items.findIndex((x) => x[0] === tab);
+  const px = drag ? drag.x : geo && ai >= 0 ? geo.cs[ai] : null;
   return (
     <nav ref={ref} className={'botnav' + (drag ? ' dragging' : '')} aria-label="Alt menü" onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={cancel}>
-      <span className="botnav-lens" style={L ? { width: L.w - 6, transform: `translateX(${L.x - (L.w - 6) / 2}px)` } : undefined} aria-hidden="true" />
+      {geo && px != null && <span className="botnav-pill" style={{ top: geo.top, transform: `translateX(${px - 26}px)` }} aria-hidden="true"><i /></span>}
       {items.map(([k, l, i, sh], n) => (
         <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (drag && drag.i === n ? ' hov' : '')} onClick={() => go(k)}>
           <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
