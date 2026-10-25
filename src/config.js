@@ -41,6 +41,12 @@ export const DEFAULT_SETTINGS = {
     showTL: false, // dolar fiyatların TL karşılığını bayilere / vitrine de göster (yönetici her zaman görür)
     manualRate: '', // doluysa Harem Altın kuru yerine bu kur kullanılır (1 USD = ? TL)
   },
+  look: { // Ayarlar > Renkler ve görünüm (önizlemeli). Boş = varsayılan
+    shopAccent: '', // online mağazanın ana rengi (boş = Ana renk)
+    shopPrice: '#c2410c', // mağaza fiyat rengi (bayi toptan fiyat renginden AYRI)
+    bg: '', // sayfa arka planı (açık temada)
+    cardR: 18, // ürün kartı köşe yuvarlaklığı (px)
+  },
   cards: { // ürün kartları (Ayarlar > Ürün kartları)
     add: 'auto', // mağaza "Sepete ekle": auto (bilgisayarda kutu görünümünde simge, telefonda yazı) | text | icon (sepet+) | plus
     addB2b: 'text', // bayi

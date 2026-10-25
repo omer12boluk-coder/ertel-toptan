@@ -160,6 +160,7 @@ function OrderDetail({ id }) {
       <div className="send-bar">
         <button className="btn sm ghost" onClick={back}><Icon n="back" s={16} />Siparişler</button>
         <div className="send-t"><b>Sipariş #{o.no}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {orderTotal(o)}</span></div>
+        <span className="pay-chip" title={o.pay === 'card' ? 'Onaylayınca müşteriye ödeme linki gönderin' : 'Ödeme yöntemi'}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{PAY[o.pay] || '—'}</span>
         <StatusPill status={o.status} map={ORDER_STATUS} />
       </div>
 
@@ -203,7 +204,6 @@ function OrderDetail({ id }) {
         {fullInvoice(o.invoice, o.delivery?.addr)
           ? <div className="o-card inv-full"><h3>Fatura bilgileri<span className="inv-ok" title="Fatura kesilecek"><Icon n="check" s={13} /></span><button className="oc-copy" onClick={() => copyText(invoiceCopy(o), 'Fatura bilgileri kopyalandı')} title="Kopyala" aria-label="Fatura bilgilerini kopyala"><Icon n="copy" s={15} /></button></h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>
           : <div className={'o-card' + (needsInvoice(o.invoice) ? ' inv-yes' : '')}><h3>Fatura{needsInvoice(o.invoice) && <span className="tag ok">Vergi no geçerli · adres eksik</span>}</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>}
-        <div className="o-card"><h3>Ödeme</h3><p><b>{PAY[o.pay] || '—'}</b></p>{o.pay === 'card' && <p className="muted">Onaylayınca müşteriye ödeme linki gönderin.</p>}</div>
       </div>
       {o.note && <p className="o-note"><b>Müşterinin notu:</b> {o.note}</p>}
 

@@ -3,7 +3,7 @@
 //           ya da "WhatsApp'tan liste gönder" → sadece liste linki gider (hiçbir yere kaydedilmez)
 //   Bayi:   Sepet → "Sepeti onayla" → talep türü / not → talep kaydedilir (sohbet Talepler'de devam eder)
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, setQty, clearCart, freshStart, api, openRequest, toast, go } from './store.js';
+import { useStore, store, setQty, clearCart, freshStart, api, openRequest, toast, go } from './store.js';
 import { Icon, Thumb, Stepper, Empty, VatLines, copyText, openMenu } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { fmt, priceFor, totals, fmtTotals, now, soon } from './utils.js';
@@ -18,8 +18,9 @@ export const newNo = (n = 4) => Array.from({ length: n }, () => CODE[Math.floor(
 const isPhone = () => matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 // Sepetteki ürünler, kullanıcının göreceği fiyatla (mağazada liste, bayide toptan / özel fiyat)
-export function useCartItems() {
-  const { cart, byId, settings: S, user, userPrices } = useStore();
+export function useCartItems(override) {
+  const { cart: cart0, byId, settings: S, user, userPrices } = useStore();
+  const cart = override || cart0;
   return useMemo(() => Object.entries(cart).map(([id, qty]) => byId.get(Number(id)) && { p: byId.get(Number(id)), qty }).filter(Boolean).map(({ p, qty }) => {
     const pr = priceFor(p, S, user, userPrices);
     const it = { id: p.id, k: p.k, n: p.n, cur: p.cur || 'USD', qty, list: p.r > 0 ? p.r : null, asked: pr.mine, offer: pr.mine };
@@ -31,10 +32,15 @@ export function useCartItems() {
 export function Cart() {
   const pub = useStore((s) => s.user?.role === 'public');
   const S = useStore((s) => s.settings);
+  const buyNow = useStore((s) => s.buyNow); // ürün penceresinde "Hemen satın al": sadece o ürünle sipariş, sepet bozulmaz
+  const single = useMemo(() => (buyNow ? { [buyNow.id]: buyNow.qty } : null), [buyNow]);
   const items = useCartItems();
+  const bnItems = useCartItems(single || {});
+  useEffect(() => () => { if (store.s.buyNow) store.set({ buyNow: null }); }, []);
   const [step, setStep] = useState('cart'); // cart | checkout | wa | send
   const to = (s) => { setStep(s); window.scrollTo(0, 0); };
   useEffect(() => { if (!items.length && step !== 'cart') setStep('cart'); }, [items.length]);
+  if (buyNow && pub && bnItems.length) return <Checkout single items={bnItems} onBack={() => { store.set({ buyNow: null }); history.length > 1 ? history.back() : go('katalog'); }} />;
   if (!items.length) return <EmptyCart />;
   if (step === 'checkout') return <Checkout items={items} onBack={() => to('cart')} />;
   if (step === 'send') return <BayiSend items={items} onBack={() => to('cart')} />;

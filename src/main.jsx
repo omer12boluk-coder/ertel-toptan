@@ -1,13 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath } from './store.js';
+import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS } from './config.js';
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
-import { Catalog } from './catalog.jsx';
+import { Catalog, ProductPage } from './catalog.jsx';
 import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
@@ -212,6 +212,7 @@ async function bootShop(A) {
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
   const firstTab = ROUTE.listCode ? 'liste' : tabFromPath() || shopFirst();
   if (firstTab === 'hesap') store.set({ acct: acctFromPath() });
+  if (firstTab === 'urun') store.set({ pid: pidFromPath() });
   if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
   if (cached) setCatalog(cached.items);
   const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId || ROUTE.authAction;
@@ -227,14 +228,19 @@ async function bootShop(A) {
 function useTheme() {
   const S = useStore((s) => s.settings);
   const dev = useStore((s) => s.deviceTheme);
+  const pub = useStore((s) => s.user?.role === 'public');
+  const L = S.look || {};
   useEffect(() => {
     const r = document.documentElement;
-    r.style.setProperty('--accent-user', S.brand.accent);
-    r.style.setProperty('--price-user', S.brand.priceAccent);
+    // mağaza ve bayi renkleri ayrı (Ayarlar > Renkler ve görünüm)
+    r.style.setProperty('--accent-user', (pub && L.shopAccent) || S.brand.accent);
+    r.style.setProperty('--price-user', (pub && L.shopPrice) || S.brand.priceAccent);
+    if (pub && L.bg) r.style.setProperty('--bg-user', L.bg); else r.style.removeProperty('--bg-user');
+    r.style.setProperty('--pcard-r', (Number(L.cardR) >= 0 && L.cardR !== '' ? Number(L.cardR) : 18) + 'px');
     const t = dev || S.brand.theme;
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
     document.title = S.brand.appName;
-  }, [S.brand, dev]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {
@@ -409,7 +415,7 @@ function Shell() {
   return <ShellFull />;
 }
 function ShellFull() {
-  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0 } = useStore();
+  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
   const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => k !== 'anasayfa' || S0.shopHome?.enabled !== false) : NAV_USER;
@@ -481,6 +487,7 @@ function ShellFull() {
         {tab === 'siparisler' && admin && <Orders />}
         {tab === 'siparis' && pub && <OrderPage id={openOrderId} />}
         {tab === 'hesap' && pub && <Account />}
+        {tab === 'urun' && pub && <ProductPage id={pid} />}
         {tab === 'islem' && pub && <AuthAction />}
         {tab === 'ayarlar' && admin && <Settings />}
         {tab === 'tasarim' && admin && <ShopDesigner />}

@@ -435,7 +435,8 @@ export function CustomerSheet({ c, onClose }) {
 // =========================================================================
 // Ayarlar
 const SECTIONS = [
-  ['genel', 'Genel', 'Uygulama adı, renkler, logo, özellikler', 'gear'],
+  ['genel', 'Genel', 'Uygulama adı, logo, özellikler', 'gear'],
+  ['gorunum', 'Renkler ve görünüm', 'Mağaza ve bayi renkleri, fiyat renkleri, tema · önizlemeli', 'brush'],
   ['magazaana', 'Mağaza ana sayfası', 'Reklamlar, marka kutuları, raflar (liste hâlinde)', 'store'],
   ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star'],
   ['magaza', 'Online mağaza', 'Sipariş, teslimat, ödeme, kargo firmaları, bildirimler', 'cart'],
@@ -452,7 +453,7 @@ const SECTIONS = [
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
 ];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
+const SEC_KEYS = { gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -521,12 +522,7 @@ export function Settings() {
             <Field label="Uygulama adı"><input id="s-name" value={d.brand.appName} onChange={(e) => set('brand.appName', e.target.value)} /></Field>
             <Field label="Alt başlık"><input id="s-tag" value={d.brand.tagline} onChange={(e) => set('brand.tagline', e.target.value)} /></Field>
           </div>
-          <div className="row3">
-            <Field label="Ana renk"><div className="color-in"><input id="s-accent" type="color" value={d.brand.accent} onChange={(e) => set('brand.accent', e.target.value)} /><code>{d.brand.accent}</code></div></Field>
-            <Field label="Toptan fiyat rengi"><div className="color-in"><input id="s-price" type="color" value={d.brand.priceAccent} onChange={(e) => set('brand.priceAccent', e.target.value)} /><code>{d.brand.priceAccent}</code></div></Field>
-            <Field label="Mağaza adı rengi" hint="Telefonda üst menüde logonun yanında"><div className="color-in"><input id="s-namec" type="color" value={d.brand.nameColor || '#1b2340'} onChange={(e) => set('brand.nameColor', e.target.value)} /><code>{d.brand.nameColor || 'yazı rengi'}</code>{d.brand.nameColor && <button type="button" className="linkish" onClick={() => set('brand.nameColor', '')}>sıfırla</button>}</div></Field>
-            <Field label="Tema"><select id="s-theme" value={d.brand.theme} onChange={(e) => set('brand.theme', e.target.value)}><option value="auto">Cihaza göre</option><option value="light">Açık</option><option value="dark">Koyu</option></select></Field>
-          </div>
+          <p className="fine">Renkler, fiyat renkleri ve kart görünümü: <button className="linkish" onClick={() => setSec('gorunum')}>Renkler ve görünüm</button>.</p>
           <Field label="Logo">
             <div className="logo-in">
               <img src={d.brand.logo || LOGO_MARK} alt="" />
@@ -571,6 +567,7 @@ export function Settings() {
         </>}
 
         {sec === 'kart' && <CardSettings d={d} set={set} />}
+        {sec === 'gorunum' && <LookSettings d={d} set={set} />}
 
         {sec === 'kademe' && <>
           <p className="fine">Her bayiye bir kademe atanır. Kademe, genel indirim tablosunu kullanır; isterseniz kademeye <b>kendi tablosunu</b> ve üstüne ek % indirim verebilirsiniz. Bayiye özel ürün fiyatları her şeyin önündedir.</p>
@@ -606,7 +603,9 @@ export function Settings() {
           <Toggle id="s-tags" label="Gizli etiketleri aramada kullan" hint="Bayiler etiketleri görmez ama “jbc uç” gibi aramalarda ürün bulunur" checked={d.catalog.searchTags} onChange={(v) => set('catalog.searchTags', v)} />
           <Toggle id="s-brand" label="Markayı göster" checked={d.catalog.showBrand} onChange={(v) => set('catalog.showBrand', v)} />
           <Toggle id="s-desc" label="Ürün açıklamasını göster" hint="Siteden gelen açıklama ürün detayında görünür" checked={d.catalog.showDescription} onChange={(v) => set('catalog.showDescription', v)} />
-          <h3>Ürün resimleri</h3>
+          <h3>Ürün açılışı</h3>
+    <Field label="Online mağazada ürüne basınca" hint="Pencere: sayfanın üstünde açılır (varsayılan). Sayfa: ayrı ürün sayfası, adres çubuğunda ürün linki olur."><span className="seg">{[['sheet', 'Pencere'], ['page', 'Sayfa']].map(([x, l]) => <button key={x} type="button" className={(C.productView || 'sheet') === x ? 'on' : ''} onClick={() => set('cards.productView', x)}>{l}</button>)}</span></Field>
+    <h3>Ürün resimleri</h3>
           <p className="fine">Resimler sitenizden (PlatinMarket) gösterilir, Firebase’de yer kaplamaz. Yeni eklenen ürünlerin resimlerini Ayarlar → Veri → “Resimleri siteden eşle” ile çekebilirsiniz. Elle yüklediğiniz resim her zaman önceliklidir.</p>
           <div className="row2">
             <Field label="Liste resmi adresi" hint="{pi} = siteden eşlenen dosya adı"><input id="s-imgt" value={d.catalog.imageThumb} onChange={(e) => set('catalog.imageThumb', e.target.value)} /></Field>
@@ -1058,6 +1057,64 @@ function PriceTester({ d }) {
 }
 // Fiyat gösterimi önizlemesi (seçilen anahtarlarla bir ürün kartının fiyat kısmı)
 function Frag({ children }) { return children; }
+// Renkler ve görünüm: hazır renkler + özel renk, mağaza ve bayi yan yana canlı önizleme
+const SWATCH = ['#2f55b0', '#1d4ed8', '#0e7490', '#0e9a83', '#15803d', '#7c3aed', '#be185d', '#c2410c', '#b45309', '#111827'];
+const BGS = [['', 'Açık gri'], ['#ffffff', 'Beyaz'], ['#f7f3ec', 'Krem'], ['#eef4fb', 'Buz mavisi'], ['#f2f5f2', 'Yeşilimsi']];
+function ColorRow({ label, hint, v, def, onChange, allowEmpty, emptyLabel = 'Ana renk' }) {
+  return <Field label={label} hint={hint}>
+    <span className="cpick">
+      {allowEmpty && <button type="button" className={'cp-sw def' + (!v ? ' on' : '')} onClick={() => onChange('')} title={emptyLabel}>=</button>}
+      {SWATCH.map((c) => <button key={c} type="button" className={'cp-sw' + (v === c ? ' on' : '')} style={{ '--c': c }} onClick={() => onChange(c)} title={c} />)}
+      <label className={'cp-sw custom' + (v && !SWATCH.includes(v) ? ' on' : '')} style={v && !SWATCH.includes(v) ? { '--c': v } : undefined} title="Özel renk"><input type="color" value={v || def} onChange={(e) => onChange(e.target.value)} /><Icon n="plus" s={13} /></label>
+      <code className="cp-code">{v || (allowEmpty ? emptyLabel : def)}</code>
+    </span>
+  </Field>;
+}
+function ThemePreview({ S, role, accent, price, bg, title }) {
+  const catalog = useStore((s) => s.catalog);
+  const sample = useMemo(() => catalog.find((p) => p.r >= 20 && p.r < 1000 && p.b) || catalog[0], [catalog]);
+  const st = { '--accent': accent, '--price': price, ...(bg ? { '--bg': bg } : {}), '--pcard-r': (Number(S.look?.cardR) >= 0 ? Number(S.look.cardR) : 18) + 'px' };
+  return (
+    <div className="pv-theme" style={st}>
+      <span className="eyebrow">{title}</span>
+      <div className="pv-bar">
+        <img src={S.brand.logo || LOGO_MARK} alt="" /><b style={S.brand.nameColor ? { color: S.brand.nameColor } : undefined}>{S.brand.appName}</b>
+        {role === 'public' ? <span className="pv-chip">Online mağaza</span> : <span className="pv-chip">Bayi</span>}
+        <span className="pv-tab on">Ürünler</span>
+      </div>
+      <div className="pv-body">
+        {sample && <CardPreview p={sample} S={S} role={role} />}
+        <div className="pv-side">
+          <div className="pv-total"><small>Toplam</small><b className="num">{fmt(sample?.r || 100, 'USD')}</b></div>
+          <span className="btn primary pv-btn"><Icon n="check" s={16} />Sepeti onayla</span>
+          <span className="pv-link">Tüm ürünler →</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+function LookSettings({ d, set }) {
+  const S = withDefaults(d);
+  const L = S.look || {};
+  return <>
+    <p className="fine">Seçtikçe aşağıdaki önizleme değişir. Mağaza ve bayi renkleri birbirini etkilemez.</p>
+    <div className="pv-themes">
+      <ThemePreview S={S} role="public" title="Online mağaza" accent={L.shopAccent || S.brand.accent} price={L.shopPrice || S.brand.priceAccent} bg={L.bg} />
+      <ThemePreview S={S} role="customer" title="Bayi uygulaması" accent={S.brand.accent} price={S.brand.priceAccent} />
+    </div>
+    <h3>Online mağaza</h3>
+    <ColorRow label="Mağaza ana rengi" hint="Düğmeler, seçili sekme, bağlantılar" v={L.shopAccent} def={S.brand.accent} allowEmpty emptyLabel="Ana renk ile aynı" onChange={(v) => set('look.shopAccent', v)} />
+    <ColorRow label="Mağaza fiyat rengi" v={L.shopPrice} def="#c2410c" onChange={(v) => set('look.shopPrice', v)} />
+    <Field label="Sayfa arka planı" hint="Açık temada"><span className="seg seg-wrap">{BGS.map(([c, l]) => <button key={l} type="button" className={(L.bg || '') === c ? 'on' : ''} onClick={() => set('look.bg', c)}><i className="bg-dot" style={{ background: c || '#f1f4f9' }} />{l}</button>)}</span></Field>
+    <h3>Bayi uygulaması ve yönetim</h3>
+    <ColorRow label="Ana renk" v={S.brand.accent} def="#2f55b0" onChange={(v) => set('brand.accent', v)} />
+    <ColorRow label="Toptan fiyat rengi" v={S.brand.priceAccent} def="#c2410c" onChange={(v) => set('brand.priceAccent', v)} />
+    <h3>Ortak</h3>
+    <ColorRow label="Mağaza adı rengi" hint="Üst menüde logonun yanında" v={S.brand.nameColor} def="#1b2340" allowEmpty emptyLabel="Yazı rengi" onChange={(v) => set('brand.nameColor', v)} />
+    <Field label="Kart köşeleri"><span className="seg">{[[6, 'Keskin'], [12, 'Hafif'], [18, 'Yuvarlak'], [26, 'Çok yuvarlak']].map(([x, l]) => <button key={x} type="button" className={Number(L.cardR ?? 18) === x ? 'on' : ''} onClick={() => set('look.cardR', x)}>{l}</button>)}</span></Field>
+    <Field label="Tema" hint="Müşteri kendi cihazında üstteki ay simgesiyle değiştirebilir"><span className="seg">{[['auto', 'Cihaza göre'], ['light', 'Açık'], ['dark', 'Koyu']].map(([x, l]) => <button key={x} type="button" className={d.brand.theme === x ? 'on' : ''} onClick={() => set('brand.theme', x)}>{l}</button>)}</span></Field>
+  </>;
+}
 // Ürün kartları: mağaza ve bayi kartı yan yana önizleme + ayarlar
 const ADD_STYLES = [['auto', 'Otomatik'], ['text', 'Sepete ekle'], ['icon', 'Sepet +'], ['plus', 'Sadece +']];
 function CardSettings({ d, set }) {
@@ -1084,6 +1141,8 @@ function CardSettings({ d, set }) {
     <h3>“Sepete ekle” düğmesi</h3>
     <Field label="Online mağaza" hint="Otomatik: bilgisayarda kutu görünümünde Sepet + simgesi, telefonda yazılı düğme">{addSeg('add')}</Field>
     <Field label="Bayiler">{addSeg('addB2b')}</Field>
+    <h3>Ürün açılışı</h3>
+    <Field label="Online mağazada ürüne basınca" hint="Pencere: sayfanın üstünde açılır (varsayılan). Sayfa: ayrı ürün sayfası, adres çubuğunda ürün linki olur."><span className="seg">{[['sheet', 'Pencere'], ['page', 'Sayfa']].map(([x, l]) => <button key={x} type="button" className={(C.productView || 'sheet') === x ? 'on' : ''} onClick={() => set('cards.productView', x)}>{l}</button>)}</span></Field>
     <h3>Ürün resimleri</h3>
     <Toggle id="s-chov" label="Bilgisayarda küçük resimler" hint="Birden çok resmi olan ürünün üstüne gelince yazılar aşağı kayar, küçük resimler çıkar; üstlerinde gezince büyük resim değişir" checked={C.hoverImgs !== false} onChange={(v) => set('cards.hoverImgs', v)} />
     <Toggle id="s-cswipe" label="Telefonda kaydırarak resimler" hint="Kartı açmadan resimler yana kaydırılır, altta hangi resimde olduğunu gösteren çizgiler" checked={C.swipeImgs !== false} onChange={(v) => set('cards.swipeImgs', v)} />

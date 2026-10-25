@@ -76,7 +76,7 @@ export function freshStart() {
 // Sekmeler adres çubuğuna da yazılır (/magaza/urunler, /magaza/sepet…): telefonda geri kaydırınca bir önceki ekrana döner,
 // sayfa yeniden yüklenmez (pushState). Geri dönünce kaldığınız yere kaydırılır.
 const SLUGS = {
-  magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap' },
+  magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap', urun: 'urun' },
   b2b: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', talepler: 'talepler', profil: 'profil' },
   admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
 };
@@ -100,11 +100,20 @@ export function openAcct(v) {
   } catch {}
   store.set({ tab: 'hesap', acct: v || null, openOrder: null }); window.scrollTo(0, 0);
 }
+// Ürün sayfası (Ayarlar > Ürün kartları > Ürün açılışı: sayfa): /magaza/urun/<no>
+export function pidFromPath() { const m = /^\/magaza\/urun\/(\d+)/.exec(location.pathname); return m ? Number(m[1]) : null; }
+export function openProduct(id) {
+  try {
+    history.replaceState({ ...(history.state || {}), tab: store.s.tab, acct: store.s.acct || null, pid: store.s.pid || null, y: scrollY }, '');
+    history.pushState({ tab: 'urun', pid: id }, '', '/magaza/urun/' + id);
+  } catch {}
+  store.set({ tab: 'urun', pid: id, acct: null, openOrder: null }); window.scrollTo(0, 0);
+}
 export function startHistory(defTab) {
   addEventListener('popstate', (e) => {
     const st = e.state || {};
     const tab = st.tab || tabFromPath() || defTab();
-    store.set({ tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
+    store.set({ tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
     requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, st.y || 0)));
   });
 }
@@ -112,3 +121,8 @@ export function go(tab) { if (tab !== store.s.tab || store.s.openOrder || store.
 export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: just || false }); window.scrollTo(0, 0); }
 export const home = () => go(store.s.user?.role === 'admin' ? 'anasayfa' : store.s.user?.role === 'public' ? (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa') : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }
+
+// Müşterinin siparişlerinde görülmemiş güncellemeler (durum değişti, henüz açmadı): cihazda {siparişId: son görülen updatedAt}
+export function orderSeen(o) { if (!o?.id) return; const m = ls0('order-seen', {}); const t = o.updatedAt || o.createdAt || 0; if ((m[o.id] || 0) >= t) return; m[o.id] = t; try { localStorage.setItem('order-seen', JSON.stringify(m)); } catch {} store.set({ seenTick: (store.s.seenTick || 0) + 1 }); }
+export function unseenOrders(list) { const m = ls0('order-seen', {}); return (list || []).filter((o) => o.status !== 'new' && (o.updatedAt || o.createdAt || 0) > (m[o.id] || 0)); }
+function ls0(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }

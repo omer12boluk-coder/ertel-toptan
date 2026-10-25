@@ -1,8 +1,8 @@
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useStore, setQty, go, api, toast, store, openRequest, setCatalog } from './store.js';
+import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
-import { norm, fmt, priceFor, catName, now, ls } from './utils.js';
+import { norm, fmt, priceFor, catName, now, ls, soon } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -436,32 +436,64 @@ function SwipeImgs({ p }) {
   );
 }
 
-export function ProductSheet({ p, onClose, viewOnly = false }) {
+// Ürün içeriği (pencere ve sayfa ortak): resimler, bilgiler, fiyat, adet + Sepete ekle / Hemen satın al, açıklama
+function ProductBody({ p, viewOnly, onDone }) {
   const { settings: S, cart, user, userPrices } = useStore();
   const [qty, setQ] = useState(cart[p.id] || 1);
   const st = stockInfo(p, S);
   const pr = priceFor(p, S, user, userPrices);
-  const ask = async () => { onClose(); await askAbout(p, qty); };
-  return (
-    <Sheet wide title="Ürün detayı" onClose={onClose} footer={viewOnly ? null : <>
-      {S.requests.allowQuote && user?.role !== 'public' && <button className="btn ghost" onClick={ask}><Icon n="chat" s={16} />Bu ürünü sor</button>}
-      <button className="btn primary" onClick={() => { setQty(p.id, qty); toast('Sepete eklendi'); onClose(); }}><Icon n="cart" s={16} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>
-    </>}>
-      <div className="pdetail">
-        <Gallery p={p} />
-        <div className="pdetail-info">
-          <h3>{p.n}</h3>
-          <div className="prow-meta"><code>{p.k}</code>{p.b && <span className="brand-tag">{p.b}</span>}<span>{catName(S, p.c)}</span>{st && <span className={'dot tone-' + st.tone}>{st.t}</span>}</div>
-          <PriceBlock p={p} big />
-          {!viewOnly && <div className="qty-line">
+  const pub = user?.role === 'public';
+  const canBuy = pub && S.orders?.enabled !== false && !soon(S, 'checkoutSoon') && pr.mine != null;
+  const add = () => { setQty(p.id, qty); toast(cart[p.id] ? 'Sepet güncellendi' : 'Sepete eklendi'); onDone?.(); };
+  const buy = () => { onDone?.(); store.set({ buyNow: { id: p.id, qty } }); go('sepet'); };
+  const ask = async () => { onDone?.(); await askAbout(p, qty); };
+  return <>
+    <div className="pdetail">
+      <Gallery p={p} />
+      <div className="pdetail-info">
+        <h3>{p.n}</h3>
+        <div className="prow-meta"><code>{p.k}</code>{p.b && <span className="brand-tag">{p.b}</span>}<span>{catName(S, p.c)}</span>{st && <span className={'dot tone-' + st.tone}>{st.t}</span>}</div>
+        <PriceBlock p={p} big />
+        {!viewOnly && <div className="pbuy">
+          <div className="qty-line">
             <span>Adet</span>
             <Stepper value={qty} min={1} onChange={setQ} />
             {pr.mine != null && <b className="num">{fmt(pr.mine * qty, p.cur)}</b>}
-          </div>}
-        </div>
+          </div>
+          <div className="pbuy-btns">
+            <button className={'btn big ' + (canBuy ? 'outline' : 'primary')} onClick={add}><Icon n="cart" s={18} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>
+            {canBuy && <button className="btn big primary" onClick={buy}><Icon n="check" s={18} />Hemen satın al</button>}
+            {S.requests.allowQuote && !pub && <button className="btn big ghost" onClick={ask}><Icon n="chat" s={17} />Bu ürünü sor</button>}
+          </div>
+        </div>}
       </div>
-      {S.catalog.showDescription && <Description id={p.id} />}
+    </div>
+    {S.catalog.showDescription && <Description id={p.id} />}
+  </>;
+}
+export function ProductSheet({ p, onClose, viewOnly = false }) {
+  const S = useStore((s) => s.settings);
+  const pub = useStore((s) => s.user?.role === 'public');
+  // Ayarlar > Ürün kartları > "Ürün açılışı: sayfa" → pencere yerine ürün sayfası
+  const asPage = pub && !viewOnly && S.cards?.productView === 'page';
+  useEffect(() => { if (asPage) { onClose(); openProduct(p.id); } }, [asPage]);
+  if (asPage) return null;
+  return (
+    <Sheet wide title="Ürün detayı" onClose={onClose}>
+      <ProductBody p={p} viewOnly={viewOnly} onDone={onClose} />
     </Sheet>
+  );
+}
+// Ürün sayfası (/magaza/urun/<no>)
+export function ProductPage({ id }) {
+  const byId = useStore((s) => s.byId);
+  const p = byId.get(Number(id));
+  if (!p) return <div className="page narrow"><Empty icon="search" title="Ürün bulunamadı"><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty></div>;
+  return (
+    <div className="page pdetail-page">
+      <button className="btn sm ghost pp-back" onClick={() => (history.state?.pid ? history.back() : go('katalog'))}><Icon n="back" s={16} />Geri</button>
+      <div className="pp-card"><ProductBody p={p} /></div>
+    </div>
   );
 }
 
@@ -769,7 +801,7 @@ export function Lightbox({ urls, thumbs, start = 0, title, onClose }) {
     <div className={'lb' + (many ? ' many' : '')} role="dialog" aria-modal="true" aria-label={title}>
       <div className={'lb-track' + (zoomed ? ' locked' : '')} ref={track} onScroll={(e) => { if (!zoomed) { const el = e.currentTarget; const n = Math.round(el.scrollLeft / el.clientWidth); if (n !== iRef.current) setI(n); } }}>
         {urls.map((u, k) => (
-          <div key={k} className={'lb-slide' + (zoomed && k === i ? ' zoomed' : '')} onClick={(e) => { if (e.target === e.currentTarget && !zoomed) onClose(); }}>
+          <div key={k} className={'lb-slide' + (zoomed && k === i ? ' zoomed' : '')}>
             <img ref={(el) => (imgs.current[k] = el)} src={u} alt={`${title} – resim ${k + 1}`} draggable="false" loading={Math.abs(k - start) > 1 ? 'lazy' : 'eager'}
               onDoubleClick={(e) => k === i && toggleZoom(e)} onClick={(e) => zoomed && k === i && toggleZoom(e)} />
           </div>

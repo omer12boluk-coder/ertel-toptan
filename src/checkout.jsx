@@ -4,7 +4,7 @@
 //   Account    Hesabım: giriş, üye ol, şifre sıfırlama, siparişlerim, adreslerim, bilgilerim
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, store, api, toast, go, clearCart, openOrder, openAcct } from './store.js';
+import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders } from './store.js';
 import { Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER } from './config.js';
@@ -67,7 +67,7 @@ function Choice({ on, onClick, title, sub, icon }) {
 }
 
 // =============================================================================================
-export function Checkout({ items, onBack }) {
+export function Checkout({ items, onBack, single }) { // single: "Hemen satın al" — sadece o ürün; sepete dokunulmaz
   const { settings: S, member, api: A } = useStore();
   const O = S.orders || {};
   const rate = useRate();
@@ -166,7 +166,7 @@ export function Checkout({ items, onBack }) {
         ls.set('my-orders', [{ id, no, at: t }, ...myLocalOrders()].slice(0, 20));
         ls.set('guest-checkout', { contact: order.contact, addr: f.method === 'cargo' ? { ...cleanA(delivAddr), id: 'g' } : null, inv: f.inv }); // bu cihazda bir dahakine hazır gelsin
       }
-      clearCart();
+      if (single) store.set({ buyNow: null }); else clearCart();
       openOrder(id, signedUp ? 'verify' : true);
     } catch (x) { toast('Sipariş gönderilemedi: ' + x.message, 'bad'); }
     setBusy(false);
@@ -175,7 +175,7 @@ export function Checkout({ items, onBack }) {
   return (
     <div className="page checkout" ref={formRef}>
       <div className="send-bar">
-        <button className="btn co-back-btn" onClick={onBack}><Icon n="back" s={17} /><Icon n="cart" s={17} />Sepete dön</button>
+        <button className="btn co-back-btn" onClick={onBack}><Icon n="back" s={17} />{single ? 'Vazgeç' : <><Icon n="cart" s={17} />Sepete dön</>}</button>
         <div className="send-t"><b>Siparişi tamamla</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
       </div>
       <div className="co-grid">
@@ -311,7 +311,7 @@ function initForm(m, methods, guest) {
     saveAddr: true,
     inv: { type: inv0.type || 'person', tc: inv0.tc || '', company: inv0.company || '', taxOffice: inv0.taxOffice || '', taxNo: inv0.taxNo || '' },
     // hesapta kayıtlı fatura adresi varsa siparişte o gelir; "teslimat adresiyle aynı" sadece siparişte seçilir
-    billSame: !inv0.addr?.address, bill: inv0.addr?.address ? { ...blankAddr(), ...inv0.addr } : blankAddr(), pay: 'havale', note: '', signup: false, pw: '', uname: '',
+    billSame: false, bill: inv0.addr?.address ? { ...blankAddr(), ...inv0.addr } : blankAddr(), pay: 'havale', note: '', signup: false, pw: '', uname: '',
   };
 }
 
@@ -323,6 +323,7 @@ export function OrderPage({ id }) {
   const [slow, setSlow] = useState(false);
   const [confirm, setConfirm] = useState(null);
   useEffect(() => { setO(undefined); const t = setTimeout(() => setSlow(true), 12000); const un = api().watchOrder(id, setO); return () => { clearTimeout(t); un && un(); }; }, [id]);
+  useEffect(() => { if (o) orderSeen(o); }, [o?.id, o?.updatedAt]); // açılan sipariş artık "yeni güncelleme" sayılmaz
   if (o === null) return <div className="page narrow"><Empty icon="search" title="Sipariş bulunamadı"><p>Link eksik kopyalanmış olabilir.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty></div>;
   if (!o) return <div className="page narrow list-wait"><div className="spinner" aria-label="Yükleniyor" />{slow && <><p>Bağlantı yavaş görünüyor.</p><button className="btn primary" onClick={() => location.reload()}><Icon n="refresh" s={16} />Tekrar dene</button></>}</div>;
   const link = links.order(o.id);
@@ -337,7 +338,7 @@ export function OrderPage({ id }) {
     <div className="page order-page">
       <div className="list-top">
         <button className="btn sm ghost" onClick={() => (member ? openAcct('orders') : go('katalog'))}><Icon n="back" s={16} />{member ? 'Siparişlerim' : 'Ürünler'}</button>
-        <StatusPill status={o.status} map={ORDER_STATUS} />
+        <span className="list-top-r"><PayChip o={o} /><StatusPill status={o.status} map={ORDER_STATUS} /></span>
       </div>
       {orderJust && (
         <div className="done-card">
@@ -364,8 +365,7 @@ export function OrderPage({ id }) {
       )}
       {o.status === 'shipped' && o.cargo?.code && <div className="banner ok"><Icon n="box" /><div><b>Kargo takip:</b> {o.cargo.company} · <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')}>Kopyala</button></div></div>}
 
-      {o.status !== 'cancelled' && o.status !== 'done' && <PushCard ids={[o.id]} />}
-      {o.status !== 'cancelled' && <PayInfo o={o} />}
+      {o.status !== 'cancelled' && o.status !== 'done' && <PushCard ids={[o.id]} hideOn />}
 
       <div className="o-info">
         <div className="o-card"><h3>İletişim</h3><p><b>{o.contact?.name}</b></p><p className="num">{o.contact?.phone}</p>{o.contact?.email && <p>{o.contact.email}</p>}</div>
@@ -385,12 +385,13 @@ export function OrderPage({ id }) {
 }
 
 // Sipariş durumu bildirimi (web push): telefona "onaylandı / kargoda…" bildirimi
-export function PushCard({ ids, compact }) {
+export function PushCard({ ids, compact, hideOn }) {
   const S = useStore((st) => st.settings);
   const [st, setSt] = useState(() => pushState());
   const [busy, setBusy] = useState(false);
   if (S.orders?.push === false || st === 'unsupported' || !ids.length) return null;
   const on = async () => { setBusy(true); try { await enablePush(ids); setSt('on'); toast('Bildirimler açıldı'); } catch (e) { setSt(pushState()); toast(e.message, 'bad'); } setBusy(false); };
+  if (st === 'on' && hideOn) return null;
   if (st === 'on') return (
     <div className={'push-card on' + (compact ? ' compact' : '')}>
       <span className="push-ic"><Icon n="bell" s={20} /></span>
@@ -435,16 +436,16 @@ export function InvoiceText({ inv, name, deliv, phone }) {
   </div>;
 }
 
-function PayInfo({ o }) {
+// Ödeme yöntemi: küçük çip; havalede banka bilgisi varsa dokununca açılır
+function PayChip({ o }) {
   const S = useStore((s) => s.settings);
-  if (o.pay === 'havale') return (
-    <div className="banner ok pay-info"><Icon n="tag" /><div>
-      <b>Havale / EFT</b>
-      {S.shop.payInfo ? <><pre>{S.shop.payInfo}</pre><span className="fine">Açıklamaya sipariş numarasını yazın: <b>#{o.no}</b>. Siparişiniz onaylanınca ödeme yapmanız yeterli.</span></> : <p>Banka bilgilerini sipariş onayıyla birlikte göndereceğiz.</p>}
-    </div></div>
-  );
-  if (o.pay === 'card') return <div className="banner info"><Icon n="tag" /><div><b>Kredi kartı</b><p>Siparişiniz onaylanınca güvenli ödeme linkini telefonunuza / e-postanıza göndereceğiz.</p></div></div>;
-  return <div className="banner info"><Icon n="store" /><div><b>Dükkanda ödeme</b><p>Teslim alırken ödeyebilirsiniz.</p></div></div>;
+  const [open, setOpen] = useState(false);
+  if (!o.pay) return null;
+  const bank = o.pay === 'havale' && S.shop.payInfo;
+  return <>
+    <button type="button" className={'pay-chip' + (bank ? ' link' : '')} onClick={bank ? () => setOpen(true) : undefined} disabled={!bank}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{PAY[o.pay]}{bank && <Icon n="chev" s={12} />}</button>
+    {open && <Sheet title="Havale / EFT bilgileri" onClose={() => setOpen(false)}><div className="pay-info sel-ok"><pre>{S.shop.payInfo}</pre><p className="fine">Açıklamaya sipariş numarasını yazın: <b>#{o.no}</b></p></div></Sheet>}
+  </>;
 }
 
 // =============================================================================================
@@ -665,6 +666,8 @@ function MemberHome() {
   }
   const removePhoto = () => A.saveMember({ ...m, photo: null }).then(() => toast('Fotoğraf kaldırıldı'));
   const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
+  useStore((st) => st.seenTick);
+  const unseen = unseenOrders(myOrders).length;
   const pushOk = S.orders?.push !== false && pushState() !== 'unsupported';
   const rows = [
     ['orders', 'box', 'Siparişlerim', myOrders.length ? `${myOrders.length} sipariş${active ? ` · ${active} devam ediyor` : ''}` : 'Henüz sipariş yok'],
@@ -702,7 +705,7 @@ function MemberHome() {
             <button key={k} className={'acct-nav-i' + (view === k ? ' on' : '')} onClick={() => openAcct(k)}>
               <span className="hub-ic"><Icon n={ic} s={18} /></span>
               <span className="hub-t"><b>{t}{isSoon && <span className="soon-tag sm">Yakında</span>}</b><small>{sub}</small></span>
-              {k === 'orders' && active > 0 && <span className="badge">{active}</span>}
+              {k === 'orders' && unseen > 0 && <span className="badge" title="Yeni güncelleme">{unseen}</span>}
               <Icon n="back" s={16} className="flip hub-chev" />
             </button>
           ))}
@@ -737,6 +740,8 @@ function AcctOverview({ m, myOrders, active }) {
 // sipariş kartı: içindeki ürünlerin küçük resimleri (en çok 5, fazlası "+3")
 function MyOrders({ limit }) {
   const myOrders = useStore((s) => s.myOrders);
+  useStore((s) => s.seenTick);
+  const fresh = new Set(unseenOrders(myOrders).map((o) => o.id));
   if (!myOrders.length) return <Empty icon="cart" title="Henüz siparişiniz yok"><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty>;
   const list = limit ? myOrders.slice(0, limit) : myOrders;
   return (
@@ -746,8 +751,8 @@ function MyOrders({ limit }) {
         const show = its.slice(0, 5); const more = its.length - show.length;
         return (
           <li key={o.id}>
-            <button className="mo-card" onClick={() => openOrder(o.id)}>
-              <span className="mo-top"><b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /><span className="muted mo-date">{when(o.createdAt)}</span><b className="num mo-sum">{fmtTotals(o.total || totals(orderItems(o), 'offer'))}</b></span>
+            <button className={'mo-card' + (fresh.has(o.id) ? ' fresh' : '')} onClick={() => openOrder(o.id)}>
+              <span className="mo-top">{fresh.has(o.id) && <span className="dot-new" title="Yeni güncelleme" />}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /><span className="muted mo-date">{when(o.createdAt)}</span><b className="num mo-sum">{fmtTotals(o.total || totals(orderItems(o), 'offer'))}</b></span>
               <span className="mo-thumbs">
                 {show.map((it, i) => <span key={i} className="mo-th" title={it.n}><Thumb p={it} size="sm" />{it.qty > 1 && <i className="num">×{it.qty}</i>}</span>)}
                 {more > 0 && <span className="mo-more num">+{more}</span>}

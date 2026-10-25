@@ -6,7 +6,7 @@
   --accent-soft: color-mix(in oklab, var(--accent) 12%, var(--surface));
   --price: var(--price-user, #c2410c);
   --price-soft: color-mix(in oklab, var(--price) 13%, var(--surface));
-  --bg: #f1f4f9;
+  --bg: var(--bg-user, #f1f4f9);
   --surface: #ffffff;
   --surface-2: #f5f7fb;
   --fg: #131a2b;
@@ -2758,3 +2758,58 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .mi-sub { margin: 10px 0 0; font: 700 16px/1.2 var(--f-display); }
 .mi-sub small { font: 400 13px var(--f-body); }
 .mi-clear { align-self: flex-start; font-size: 13px; }
+
+/* ödeme yöntemi çipi (sipariş sayfası üst satırı, yönetici sipariş başlığı) */
+.pay-chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 13px; font: 600 12.5px/1 var(--f-body); color: var(--muted); background: var(--surface); border: 1px solid var(--line); white-space: nowrap; }
+.pay-chip:disabled { opacity: 1; cursor: default; }
+.pay-chip.link { color: var(--accent); cursor: pointer; }
+.pay-chip.link:hover { background: var(--accent-soft); }
+.list-top-r { display: inline-flex; align-items: center; gap: 8px; }
+.send-bar .pay-chip { margin-left: auto; }
+.pay-info pre { margin: 0 0 10px; white-space: pre-wrap; font: 500 15px/1.6 var(--f-body); }
+/* ödeme adımı özeti: iç içe yapışkan kutu titremesin; özet ekrana sığsın, ürün listesi kendi içinde kaysın */
+.co-side .cart-sum { position: static; animation: none; }
+@media (min-width: 960px) {
+  .co-side { max-height: calc(100vh - var(--top-h) - 104px); display: flex; flex-direction: column; }
+  .co-side .cart-sum { min-height: 0; max-height: 100%; overflow: hidden; }
+  .co-side .co-items { flex: 1 1 auto; min-height: 60px; max-height: none; overscroll-behavior: contain; }
+}
+.plist.pgrid .cimg-strip { align-items: center; }
+.plist.pgrid .cimg-th.more { display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; letter-spacing: 0; text-align: center; font-size: 12.5px; box-sizing: border-box; }
+.mo-card.fresh { border-color: color-mix(in oklab, var(--accent) 45%, var(--line)); } .mo-top .dot-new { flex: none; }
+
+/* kart köşe yuvarlaklığı ayarı */
+.plist.pgrid > li.prow, .sh-card { border-radius: var(--pcard-r, 18px); }
+
+/* ---- Renkler ve görünüm: canlı önizleme ---- */
+.pv-themes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.pv-theme { --accent-soft: color-mix(in oklab, var(--accent) 12%, var(--surface)); --price-soft: color-mix(in oklab, var(--price) 13%, var(--surface));
+  display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 16px; background: var(--bg); border: 1px solid var(--line); min-width: 0; }
+.pv-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line-2); font-size: 13px; min-width: 0; }
+.pv-bar img { width: 26px; height: 26px; border-radius: 50%; }
+.pv-bar b { font: 700 15px/1 var(--f-display); text-transform: uppercase; white-space: nowrap; }
+.pv-chip { padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 700 11px/1 var(--f-body); white-space: nowrap; }
+.pv-tab { margin-left: auto; padding: 5px 10px; border-radius: 9px; font-weight: 600; color: var(--muted); }
+.pv-tab.on { background: var(--accent-soft); color: var(--accent); }
+.pv-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+.pv-body .pv-cards { margin: 0; }
+.pv-side { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line-2); }
+.pv-total { display: flex; justify-content: space-between; align-items: baseline; }
+.pv-total small { color: var(--muted); font-weight: 600; }
+.pv-total b { font: 700 22px/1 var(--f-display); color: var(--price); }
+.pv-btn { justify-content: center; pointer-events: none; font-size: 14px; }
+.pv-link { color: var(--accent); font-weight: 600; font-size: 13px; }
+.cp-code { font-size: 12px; color: var(--muted); margin-left: 4px; }
+.bg-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; vertical-align: -2px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+@media (max-width: 900px) { .pv-themes { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .pv-body { grid-template-columns: 1fr; } }
+
+/* ürün penceresi / sayfası: adet + Sepete ekle / Hemen satın al */
+.pbuy { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line-2); }
+.pbuy .qty-line { border-top: 0; padding-top: 0; margin: 0; }
+.pbuy-btns { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.pbuy-btns .btn { justify-content: center; height: 50px; font-size: 16px; }
+.pdetail-page { max-width: 1120px; margin-inline: auto; display: flex; flex-direction: column; gap: 12px; }
+.pp-back { align-self: flex-start; }
+.pp-card { padding: 22px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); }
+@media (max-width: 700px) { .pp-card { padding: 12px; border-radius: 18px; } }
