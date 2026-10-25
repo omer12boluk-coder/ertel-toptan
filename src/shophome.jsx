@@ -246,7 +246,10 @@ export function HeaderSearch() {
     const all = catalog.filter((p) => p.a !== 0 && !p.so && t.every((x) => p._s?.includes(x)));
     return { list: all.slice(0, 6), n: all.length };
   }, [q, catalog]);
-  const close = () => { setOpen(false); setMob(false); };
+  const [closing, setClosing] = useState(false);
+  const closeT = useRef(0);
+  // kapanış da animasyonlu: önce küçülerek kaybolur, sonra simgeye döner
+  const close = () => { setOpen(false); clearTimeout(closeT.current); setClosing(true); closeT.current = setTimeout(() => { setMob(false); setClosing(false); }, 200); };
   const hideList = () => setOpen(false); // sadece sonuç listesi kapanır; kutu ve yazı yerinde kalır
   const goAll = () => { if (!q.trim()) return; store.set({ catalogGo: { q: q.trim() } }); go('katalog'); hideList(); inp.current?.blur(); };
   const pick = (p) => { setQ(''); close(); inp.current?.blur(); setProd(p); }; // ürüne bakınca arama temizlenir
@@ -257,12 +260,12 @@ export function HeaderSearch() {
     else if (e.key === 'Escape') { if (q) hideList(); else close(); inp.current?.blur(); }
   };
   return (
-    <div ref={wrap} className={'hsearch' + (mob ? ' mob-open' : '')}>
-      <button type="button" className="icon-btn hsearch-btn" onClick={() => { setMob(true); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
+    <div ref={wrap} className={'hsearch' + (mob ? ' mob-open' : '') + (closing ? ' closing' : '')}>
+      <button type="button" className="icon-btn hsearch-btn" onClick={() => { clearTimeout(closeT.current); setClosing(false); setMob(true); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
       <div className="hsearch-box">
         <Icon n="search" s={17} />
         <input ref={inp} type="search" value={q} placeholder="Ürün ara…" aria-label="Ürün ara"
-          onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => { setOpen(false); if (!q) setMob(false); }, 180)} onKeyDown={key} />
+          onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => { setOpen(false); if (!inp.current?.value) close(); }, 180)} onKeyDown={key} />
         {(q || mob) && <button type="button" className="hsearch-x" onMouseDown={(e) => e.preventDefault()} onClick={() => { if (q) setQ(''); else close(); }} aria-label="Temizle"><Icon n="x" s={14} /></button>}
         {open && q.trim() && (
           <div className="hsearch-res" role="listbox">

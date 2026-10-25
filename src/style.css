@@ -2026,3 +2026,10 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 @keyframes intro-zoom { from { transform: scale(1.06); } }
 @keyframes intro-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
 @media (prefers-reduced-motion: reduce) { .intro-img, .intro-bar i { animation: none; } }
+/* arama kutusu kapanırken: açılışın tersi */
+@keyframes hs-close { from { width: 320px; opacity: 1; } to { width: 40px; opacity: 0; } }
+@keyframes hs-close-m { to { opacity: 0; transform: translateY(-8px) scale(.98); } }
+@media (min-width: 900px) { .hsearch.mob-open.closing .hsearch-box { animation: hs-close .2s var(--ease) both; } }
+@media (max-width: 899px) { .hsearch.mob-open.closing .hsearch-box { animation: hs-close-m .2s var(--ease) both; } }
+@keyframes hs-open-m { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
+@media (max-width: 899px) { .hsearch.mob-open:not(.closing) .hsearch-box { animation: hs-open-m .2s var(--ease) both; } }
