@@ -96,7 +96,7 @@ export function OrderForm() {
 
       <div className="oform-grid">
         <section className="oform-pick">
-          <div className="search"><Icon n="search" s={18} /><input id="of-search" type="search" placeholder="Ürün adı veya stok kodu ile ara…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus /></div>
+          <div className="search"><Icon n="search" s={18} /><input id="of-search" type="search" placeholder="Ürün adı veya stok kodu ile ara…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus={!matchMedia('(hover: none) and (pointer: coarse)').matches} /></div>
           {q && results.length === 0 && <p className="fine">Eşleşen ürün yok.</p>}
           {!q && <p className="fine oform-hint">Ürün adı ya da stok kodu yazın; sonuçlar burada, kendi kutusunda listelenir.</p>}
           {q && results.length > 0 && <span className="oform-count">{results.length} sonuç</span>}

@@ -2115,3 +2115,13 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 @keyframes ctxbg-out { to { opacity: 0; } }
 @keyframes ctxs-in { from { transform: translateY(105%); } }
 @keyframes ctxs-out { to { transform: translateY(105%); } }
+
+/* Telefonda dokunma hissi (setupPress): tok içe göçme + yaylanarak dönüş */
+@media (hover: none) and (pointer: coarse) {
+  .btn:active:not(:disabled), .icon-btn:active, .chip:active, .ocard:active, .seg-card:active, .addr-card:not(.static):active, .tile:active, .stepper button:active { transform: none; }
+  .tp { transform: scale(.975) !important; box-shadow: inset 0 0 0 100vmax color-mix(in oklab, var(--fg) 4%, transparent) !important;
+    transition: transform .18s cubic-bezier(.25, .8, .35, 1), box-shadow .18s ease !important; }
+  :is(.btn, .chip, .icon-btn, .stepper button, .dash-q).tp { transform: scale(.94) !important; }
+  .tp-rel { transition: transform .5s cubic-bezier(.22, 1.5, .4, 1), box-shadow .3s ease !important; }
+  .lp-press { transform: scale(.955) !important; }
+}

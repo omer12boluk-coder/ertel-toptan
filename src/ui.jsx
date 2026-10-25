@@ -297,8 +297,9 @@ function SheetMenu({ ctx }) {
   // Menüyü açan parmak kalkınca iPhone bir "tıklama" daha üretiyor; menü açıldıktan sonra yeni bir dokunuş gelmeden
   // (ya da fareyle) hiçbir tıklama kabul edilmez, yoksa menü bırakır bırakmaz kapanıyordu.
   const armed = useRef(false);
-  const t0 = useRef(Date.now());
-  const ok = (e) => armed.current || (e && e.pointerType === 'mouse') || Date.now() - t0.current > 1500;
+  // iPhone bu tıklamayı "fare" diye işaretleyebiliyor ve parmak ne kadar uzun tutulursa tutulsun gönderiyor; bu yüzden
+  // tek ölçü: menünün üstünde YENİ bir dokunuş başlamış olmalı.
+  const ok = () => armed.current;
   const close = (fn) => { if (out) return; setOut(true); setTimeout(() => { closeMenu(); fn?.(); }, 190); };
   useEffect(() => { const k = (e) => e.key === 'Escape' && close(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
   return (

@@ -521,7 +521,7 @@ function IntroSplash() {
   const want = S.brand.splashOn !== false && !!S.brand.splash && !ADMIN_ROUTE && (() => { try { return !sessionStorage.getItem('intro-seen'); } catch { return true; } })();
   const [phase, setPhase] = useState(want ? 'in' : 'off');
   const [minDone, setMinDone] = useState(false);
-  useEffect(() => { if (!want) return; try { sessionStorage.setItem('intro-seen', '1'); } catch {} const t = setTimeout(() => setMinDone(true), 1400); const max = setTimeout(() => setPhase('out'), 4500); return () => { clearTimeout(t); clearTimeout(max); }; }, []);
+  useEffect(() => { if (!want) return; try { sessionStorage.setItem('intro-seen', '1'); } catch {} const sec = Math.min(8, Math.max(0.5, Number(S.brand.splashSec) || 1.4)); const t = setTimeout(() => setMinDone(true), sec * 1000); const max = setTimeout(() => setPhase('out'), Math.max(sec + 3, 4.5) * 1000); return () => { clearTimeout(t); clearTimeout(max); }; }, []);
   useEffect(() => { if (phase === 'in' && minDone && ready) setPhase('out'); }, [minDone, ready, phase]);
   useEffect(() => { if (phase === 'out') { const t = setTimeout(() => setPhase('off'), 500); return () => clearTimeout(t); } }, [phase]);
   if (phase === 'off') return null;
@@ -559,6 +559,29 @@ function App() {
 if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => { if (!e.target.closest?.('.lb')) e.preventDefault(); }, { passive: false });
   setupLongPress();
+  setupPress();
+}
+
+// Telefonda dokunma hissi: kart/düğmeye basınca yumuşakça içe göçer, çok kısa dokunuşta bile en az ~120 ms basılı görünür,
+// bırakınca hafif yaylanarak geri gelir (CSS :active iPhone'da bir an yanıp sönüyordu, "çiğ" duruyordu).
+function setupPress() {
+  const SEL = '.ocard, .rcard, .ucard, .seg-card, .addr-card:not(.static), .tile, .dash-kpi, .dash-q, .door, .cat-link, .pcard, .btn, .chip, .icon-btn, .stepper button';
+  let el = null, t0 = 0, sx = 0, sy = 0;
+  const release = () => {
+    const e = el; el = null; if (!e) return;
+    setTimeout(() => { e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); }, Math.max(0, 120 - (Date.now() - t0)));
+  };
+  addEventListener('touchstart', (ev) => {
+    if (ev.touches.length !== 1) return;
+    const t = ev.target; const e = t instanceof Element && t.closest(SEL);
+    if (!e || e.disabled || e.closest('.botnav, .ctx-sheet-bg, .dz')) return;
+    release(); el = e; t0 = Date.now(); sx = ev.touches[0].clientX; sy = ev.touches[0].clientY;
+    e.classList.remove('tp-rel'); e.classList.add('tp');
+  }, { passive: true });
+  addEventListener('touchmove', (ev) => { const p = ev.touches[0]; if (el && p && Math.hypot(p.clientX - sx, p.clientY - sy) > 8) { const e = el; el = null; e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); } }, { passive: true });
+  addEventListener('touchend', release, { passive: true });
+  addEventListener('touchcancel', release, { passive: true });
+  addEventListener('scroll', () => { if (el) { el.classList.remove('tp'); el = null; } }, true);
 }
 
 // Telefonda uzun basınca, masaüstündeki sağ tık menüsü açılır (iPhone Safari'de sağ tık olayı hiç gelmez, Android'de
@@ -582,7 +605,7 @@ function setupLongPress() {
       if (store.s.ctx) { fired = Date.now(); try { navigator.vibrate?.(10); } catch {} }
       el?.classList.remove('lp-press'); el = null;
     }, 460);
-    if (el) setTimeout(() => tm && el?.classList.add('lp-press'), 120);
+    if (el) setTimeout(() => tm && el?.classList.add('lp-press'), 260);
   }, { passive: true });
   addEventListener('touchmove', (e) => { if (!tm) return; const p = e.touches[0]; if (!p || Math.hypot(p.clientX - sx, p.clientY - sy) > 14) clear(); }, { passive: true });
   addEventListener('touchend', (e) => { clear(); if (fired && Date.now() - fired < 2000) { e.preventDefault(); fired = 0; } }, { passive: false });
