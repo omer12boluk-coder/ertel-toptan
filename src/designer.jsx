@@ -6,7 +6,7 @@ import { useContext, useEffect, useMemo, useRef, useState, useLayoutEffect } fro
 import { useStore, store, api, toast, go } from './store.js';
 import { Icon, Field, Toggle, Confirm } from './ui.jsx';
 import { withDefaults, norm } from './utils.js';
-import { ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, Rows, SlideFields, UspFields, PromoFields, RailFields, BrandFields, BlockFields, ScaleField, MQ_STYLES, ShopImg, GeoFields, geoOf } from './shophome.jsx';
+import { ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, Rows, SlideFields, UspFields, PromoFields, RailFields, BrandFields, BlockFields, ScaleField, MQ_STYLES, ShopImg, GeoFields, geoOf, withProdFallback } from './shophome.jsx';
 
 // raflara kalıcı kimlik ver, eski sıra kayıtlarını (rail:0) kimliğe çevir
 function prepare(S) {
@@ -69,7 +69,7 @@ export function ShopDesigner() {
 
   async function save() {
     setBusy(true);
-    try { const clean = withDefaults(store.s.designDraft); await A.saveSettings(clean); store.set({ settings: clean, designDraft: null }); hist.current.list = []; toast('Mağaza tasarımı kaydedildi'); }
+    try { const clean = withProdFallback(withDefaults(store.s.designDraft)); await A.saveSettings(clean); store.set({ settings: clean, designDraft: null }); hist.current.list = []; toast('Mağaza tasarımı kaydedildi'); }
     catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }

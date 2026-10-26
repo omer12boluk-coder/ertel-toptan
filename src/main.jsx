@@ -16,7 +16,7 @@ import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
-import { ShopHome, HeaderSearch } from './shophome.jsx';
+import { ShopHome, HeaderSearch, withProdFallback } from './shophome.jsx';
 import { ShopDesigner } from './designer.jsx';
 import { AdminHome } from './dashboard.jsx';
 import { ShopFooter } from './footer.jsx';
@@ -116,6 +116,8 @@ function startSession(u, A) {
   if (admin && A.watchOrders) { unsubs.push(A.watchOrders((orders) => store.set({ orders }))); unsubs.push(A.watchMembers((members) => store.set({ members }))); }
   loadCart();
   if (admin) syncNow(false).catch(() => {});
+  // mağaza resimlerindeki ürün bağlantılarına yedek adres yoksa bir kez ekle (ürün kapanınca kutu boş kalmasın)
+  if (admin && A.mode === 'firebase') { const S = store.s.settings; const S2 = withProdFallback(S); if (S2 !== S) A.saveSettings(S2).then(() => store.set({ settings: S2 })).catch((e) => console.warn(e)); }
   // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
   store.set({ boot: 'ready', tab: tabFromPath() || 'anasayfa', openReq: null });
   if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }

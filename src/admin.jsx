@@ -1,4 +1,4 @@
-import { ShopHomeEditor, BrandLogosEditor, ImgPick, Rows } from './shophome.jsx';
+import { ShopHomeEditor, BrandLogosEditor, ImgPick, Rows, withProdFallback } from './shophome.jsx';
 import { RichText as PageText } from './footer.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
@@ -475,7 +475,7 @@ export function Settings() {
 
   async function save() {
     setBusy(true);
-    try { const clean = withDefaults(d); await A.saveSettings(clean); store.set({ settings: clean }); toast('Ayarlar kaydedildi'); }
+    try { const clean = withProdFallback(withDefaults(d)); await A.saveSettings(clean); store.set({ settings: clean }); toast('Ayarlar kaydedildi'); }
     catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }

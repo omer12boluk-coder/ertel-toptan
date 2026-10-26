@@ -151,20 +151,24 @@ if (pending.length) {
 // Silinmiş: sayfa 404/410 ya da başka sayfaya yönleniyor ya da sayfada bu ürün yok → katalogdan tamamen kaldırılır.
 // Pasif: sayfa duruyor → uygulamada gizli (soluk) kalır. Çalışma başına en çok 6 kontrol, 3 sn arayla; elle eklenen ürünlere bakılmaz.
 st.deleted = 0; st.passive = 0;
-const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || (p.sg == null && (p.nw || p.id === TEST)))).slice(0, 6);
+const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || (p.sg == null && p.id === TEST))).slice(0, 6);
 for (const [i, p] of gone.entries()) {
   if (i || pending.length) await new Promise((r) => setTimeout(r, 3000));
-  let verdict = null;
+  let verdict = null, why = '';
   try {
     const u0 = new URL(p.u);
     const r = await fetch(p.u, { redirect: 'manual', headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0' } });
-    if (r.status === 404 || r.status === 410) verdict = 'deleted';
-    else if (r.status >= 300 && r.status < 400) { const to = new URL(r.headers.get('location') || '/', p.u); verdict = to.pathname.replace(/\/$/, '') === u0.pathname.replace(/\/$/, '') ? 'passive' : 'deleted'; }
-    else if (r.ok) { const h = await r.text(); verdict = new RegExp(`id="urun_id"\\s+value="${p.id}"`).test(h) ? 'passive' : 'deleted'; }
+    if (r.status === 404 || r.status === 410) { verdict = 'deleted'; why = 'HTTP ' + r.status; }
+    else if (r.status >= 300 && r.status < 400) { const to = new URL(r.headers.get('location') || '/', p.u); why = 'yönlendirme → ' + to.pathname; verdict = to.pathname.replace(/\/$/, '') === u0.pathname.replace(/\/$/, '') ? 'passive' : 'deleted'; }
+    else if (r.ok) { const h = await r.text(); const has = new RegExp(`id="urun_id"\\s+value="${p.id}"`).test(h); why = 'sayfa açıldı, ürün ' + (has ? 'var' : 'yok'); verdict = has ? 'passive' : 'deleted'; }
     else throw new Error('HTTP ' + r.status);
   } catch (e) { note('Ürün sayfası kontrol edilemedi', `${p.k}: ${e.message}`); }
-  note('Siteden kalkan ürün', `${p.k} → ${verdict || 'bilinmiyor'}`);
+  note('Siteden kalkan ürün', `${p.k} → ${verdict || 'bilinmiyor'} (${why})`);
   if (DRY && p.id === TEST) continue;
+  // DOĞRULANANA KADAR KAPALI: pasif ürün sayfası da "silinmiş" gibi görünüyorsa yanlışlıkla kaldırmamak için silme yapılmaz,
+  // sonuç sadece not olarak yazılır. Pasif bir ürünle denenip ayrım doğrulanınca DELETE_OK = true yapılacak.
+  const DELETE_OK = process.env.DELETE_OK === '1';
+  if (verdict === 'deleted' && !DELETE_OK) { p.sg = -2; E('hidden', p); continue; }
   if (verdict === 'deleted') { cat.splice(cat.indexOf(p), 1); st.deleted++; E('deleted', p); }
   else if (verdict === 'passive') { p.sg = 1; st.passive++; E('hidden', p); }
   else if (p.sg === -1 || p.sg == null) { p.sg = -2; E('hidden', p); } // iki kez anlaşılamadı: genel "satıştan kalktı"

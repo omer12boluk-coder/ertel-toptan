@@ -11,12 +11,36 @@ import { currentRate } from './listsheet.jsx';
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
 // ---- resim: 'si…' = mağaza resmi (Firestore), 'prod:<no>' = ürünün kendi resmi, http/data = doğrudan
+// Ürün resmi yedekli saklanır: 'prod:<no>|<resim adresi>|<kategori>' — ürün sitede kapanıp mağazadan kalkarsa yedek adres,
+// o da açılmazsa aynı kategoriden açık bir ürünün resmi gösterilir (kutu boş kalmasın).
 const imgCache = new Map();
 export const isProdImg = (v) => typeof v === 'string' && v.startsWith('prod:');
+const prodParts = (v) => { const [id, url, c] = v.slice(5).split('|'); return { id: Number(id), url: url || '', c: Number(c) || 0 }; };
+const prodUrl = (p, S) => (!p ? null : p.img && p.img !== 'fs' ? p.img : p.pi ? (S.catalog.imageLarge || S.catalog.imageThumb).replaceAll('{pi}', p.pi).replaceAll('{kod}', p.k).replaceAll('{id}', p.id) : null);
+function catAlt(c, not) { // aynı kategoriden resimli açık bir ürün
+  if (!c) return null; const S = store.s.settings;
+  for (const p of store.s.byId.values()) if ((p.c === c || p.c2 === c) && p.id !== not && p.a !== 0 && (p.pi || (p.img && p.img !== 'fs'))) return prodUrl(p, S);
+  return null;
+}
 function prodImg(v) {
-  const p = store.s.byId.get(Number(v.slice(5))); const S = store.s.settings;
-  if (!p) return null; if (p.img && p.img !== 'fs') return p.img;
-  return p.pi ? (S.catalog.imageLarge || S.catalog.imageThumb).replaceAll('{pi}', p.pi).replaceAll('{kod}', p.k).replaceAll('{id}', p.id) : null;
+  const { id, url, c } = prodParts(v); const p = store.s.byId.get(id);
+  return (p && p.a !== 0 && prodUrl(p, store.s.settings)) || url || catAlt(c || p?.c, id);
+}
+// kaydetmeden önce (yönetici, tam katalog elde): ürün resmi bağlantılarına yedek adres + kategori eklenir
+export function withProdFallback(S) {
+  const byId = store.s.byId; let n = 0;
+  const walk = (x) => {
+    if (typeof x === 'string') {
+      if (!isProdImg(x)) return x;
+      const { id, url, c } = prodParts(x); const p = byId.get(id); const u = prodUrl(p, S) || url;
+      const out = `prod:${id}|${u || ''}|${p?.c || c || ''}`; if (out !== x) n++; return out;
+    }
+    if (Array.isArray(x)) return x.map(walk);
+    if (x && typeof x === 'object') { const o = {}; for (const k in x) o[k] = walk(x[k]); return o; }
+    return x;
+  };
+  const shopHome = walk(S.shopHome); const home = walk(S.home);
+  return n ? { ...S, shopHome, home } : S;
 }
 export function useShopImg(v) {
   const byId = useStore((s) => s.byId);
@@ -52,7 +76,11 @@ export function ShopImg({ v, className, alt = '' }) {
     // koyu yazılı logo mu? (gece modunda yalnız koyu kısımları açılır; renkler korunur)
     if (/logo/.test(className || '') && isInk(i)) i.classList.add('ink');
   };
-  return src ? <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onLoad={onLoad} /> : null;
+  const onError = (e) => { // yedek adres de açılmadıysa aynı kategoriden bir ürünün resmi
+    if (!isProdImg(v)) return; const { id, c } = prodParts(v); const alt2 = catAlt(c || store.s.byId.get(id)?.c, id);
+    if (alt2 && e.currentTarget.src !== alt2) e.currentTarget.src = alt2;
+  };
+  return src ? <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onLoad={onLoad} onError={onError} /> : null;
 }
 
 // ---- link: marka / kategori / arama / ürün / dış adres
@@ -722,7 +750,7 @@ export function ImgPick({ v, onChange, alpha, max = 1600, label = 'Görsel', hin
       <div className="she-img">
         <label className={'she-img-box' + (alpha ? ' alpha' : '')}>{busy ? <span className="spinner" /> : src ? <img src={src} alt="" /> : <span><Icon n="upload" s={18} />Resim seç</span>}<input type="file" accept="image/*" hidden onChange={pick} /></label>
         <div className="she-img-r">
-          {isProdImg(v) ? <span className="she-chip">Ürün resmi: {store.s.byId.get(Number(v.slice(5)))?.n || 'ürün'}</span>
+          {isProdImg(v) ? <span className="she-chip">Ürün resmi: {store.s.byId.get(prodParts(v).id)?.n || 'ürün'}</span>
             : <input aria-label={label + ' linki'} placeholder="ya da resim linki yapıştırın (https://…)" value={/^(https?:|\/)/.test(v || '') ? v : ''} onChange={(e) => onChange(e.target.value.trim())} />}
           {!alpha || prodOk ? <ProductSearch onPick={(p) => onChange('prod:' + p.id)} placeholder="ya da bir ürünün kendi resmini kullanın: ürün arayın…" /> : null}
           {v && <button type="button" className="btn sm ghost danger" onClick={() => onChange('')}>Görseli kaldır</button>}
