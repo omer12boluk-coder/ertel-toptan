@@ -385,8 +385,8 @@ function SheetMenu({ ctx }) {
         <div className="ctx-sheet-list">
           {ctx.title && <div className="ctx-sheet-t">{ctx.title}</div>}
           {ctx.items.filter((it, i, a) => it !== '-' || (i > 0 && i < a.length - 1 && a[i - 1] !== '-')).map((it, i) => it === '-' ? <div key={i} className="ctx-sheet-sep" /> : (
-            <button key={i} role="menuitem" className={'ctx-sheet-item' + (it.danger ? ' danger' : '')} disabled={it.disabled} onClick={(e) => ok(e.nativeEvent) && close(it.onClick)}>
-              <span className="ctx-l">{it.label}</span>
+            <button key={i} role="menuitem" className={'ctx-sheet-item' + (it.danger ? ' danger' : '') + (it.on ? ' on' : '')} style={it.color ? { '--mc': it.color } : undefined} disabled={it.disabled} onClick={(e) => ok(e.nativeEvent) && close(it.onClick)}>
+              {it.color && <i className="ctx-dot" />}<span className="ctx-l">{it.label}</span>
               {it.hint && <span className="ctx-hint">{it.hint}</span>}
               {it.icon && <Icon n={it.icon} s={19} />}
             </button>
@@ -419,9 +419,9 @@ function DeskMenu({ ctx }) {
     <div ref={ref} className="ctx" role="menu" style={pos || { left: ctx.x, top: ctx.y, visibility: 'hidden' }} onKeyDown={move} onContextMenu={(e) => e.preventDefault()}>
       {ctx.title && <div className="ctx-title">{ctx.title}</div>}
       {ctx.items.map((it, i) => it === '-' ? <div key={i} className="ctx-sep" role="separator" /> : (
-        <button key={i} role="menuitem" className={'ctx-item' + (it.danger ? ' danger' : '')} disabled={it.disabled}
+        <button key={i} role="menuitem" className={'ctx-item' + (it.danger ? ' danger' : '') + (it.on ? ' on' : '')} style={it.color ? { '--mc': it.color } : undefined} disabled={it.disabled}
           onClick={() => { closeMenu(); it.onClick?.(); }}>
-          <span className="ctx-ic">{it.icon && <Icon n={it.icon} s={16} />}</span>
+          <span className="ctx-ic">{it.color ? <i className="ctx-dot" /> : it.icon && <Icon n={it.icon} s={16} />}</span>
           <span className="ctx-l">{it.label}</span>
           {it.hint && <span className="ctx-hint">{it.hint}</span>}
         </button>

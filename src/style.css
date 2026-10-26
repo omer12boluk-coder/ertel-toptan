@@ -3174,3 +3174,34 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 /* sipariş açıkken alt menü aşağı kayıp gizlenir, listeye dönünce yaylanarak geri gelir */
 .botnav { transition: transform .38s cubic-bezier(.2, .9, .3, 1.1); }
 html.od-open .botnav { transform: translateY(115%); transition: transform .26s ease-in; }
+
+/* ---- 27.10.2026 (5) ---- */
+/* menüde renkli durum noktası; seçili durum o renkte yazı */
+.ctx-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mc); display: inline-block; flex: none; }
+.ctx-sheet-item .ctx-dot { margin-right: 12px; }
+.ctx-item[style], .ctx-sheet-item[style] { color: color-mix(in oklab, var(--mc) 70%, var(--fg)); }
+.ctx-item.on, .ctx-sheet-item.on { color: var(--mc); font-weight: 700; background: color-mix(in oklab, var(--mc) 9%, transparent); }
+.ctx-sheet-item.on .ctx-hint, .ctx-item.on .ctx-hint { color: var(--mc); font-weight: 700; }
+/* dokunmatikte bağlantı/ad altı çizili mavi kalmasın */
+@media (hover: none) {
+  .pt-t:hover > span, .pt-name a:hover .pt-t > span, .gline-p:hover .prow-name { color: inherit; text-decoration: none; }
+  .oa-who-b:hover { text-decoration: none; }
+}
+/* liste: durum seçicisi küçük hap; müşteri adı belirgin; göreli zaman */
+.or-ago { font-size: 12px; color: var(--muted); }
+.or-mob-n { font: 700 15.5px/1.2 var(--f-body); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.or-mob-n small { font-weight: 500; color: var(--muted); font-size: 12.5px; }
+.or-mob-s { font: 700 15px/1.2 var(--f-display); color: var(--fg); } .or-mob-s small { font: 500 12.5px var(--f-body); color: var(--muted); }
+@media (max-width: 960px) {
+  .or-st { justify-self: start; }
+  .ost { width: auto; min-width: 0; padding: 4px 9px 4px 11px; font-size: 12.5px; border-radius: 999px; gap: 4px; }
+  .or-date .or-ago { display: none; }
+  .orow { row-gap: 8px; }
+  .or-dots { width: 30px; height: 30px; border-radius: 50%; background: transparent; color: var(--muted); }
+  .or-dots:hover { background: var(--surface-2); }
+}
+/* sayfalama */
+.opager { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 8px 6px; flex-wrap: wrap; }
+.opager-n { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.opager-n .chip { min-width: 38px; justify-content: center; }
+@media (max-width: 960px) { .opager { padding-top: 10px; } }

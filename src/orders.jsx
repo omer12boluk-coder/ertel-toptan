@@ -14,6 +14,8 @@ import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 // Durum filtreleri: üstte renkli sayaç kutuları (bir bakışta ne kadar iş bekliyor), yanında Tümü / Tamamlanan / İptal
 const FILTERS = [['open', 'Açık'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
 // yönetici listesindeki açıklama (müşteri metninden farklı)
+// durum renkleri (liste, menü, seçici ortak; style.css --c-* ile aynı)
+export const ST_COLOR = { new: '#8a919e', confirmed: '#c9772b', preparing: '#3f9a6b', shipped: '#3567c4', ready: '#7a62b8', done: '#1f6b47', cancelled: '#a3a7ae' };
 export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı', preparing: 'Hazırlanıyor', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
 const ago = (ts) => { const h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + ' dk' : h < 48 ? Math.round(h) + ' sa' : Math.round(h / 24) + ' gün'; };
 const isPhone = () => matchMedia('(max-width: 700px)').matches;
@@ -37,7 +39,7 @@ export function Orders() {
   useDhlSync(orders); // şube okuttuysa takip no'yu çek
   // listeden hızlı durum değiştirme
   const quick = (e, o) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
-    [...['new', 'confirmed', 'preparing', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'].map((k) => ({ label: (o.status === k ? '✓ ' : '') + ADMIN_ST[k] + (k === 'shipped' && o.status === 'shipped' ? ' · takip no düzenle' : ''), icon: { new: 'bell', confirmed: 'check', preparing: 'box', shipped: 'send', ready: 'store', done: 'check' }[k], onClick: () => flow.ask(o, k) })),
+    [...['new', 'confirmed', 'preparing', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'].map((k) => ({ label: ADMIN_ST[k] + (k === 'shipped' && o.status === 'shipped' ? ' · takip no düzenle' : ''), color: ST_COLOR[k], on: o.status === k, hint: o.status === k ? '✓' : undefined, onClick: () => flow.ask(o, k) })),
       '-', { label: 'İptal et', icon: 'x', danger: true, onClick: () => flow.ask(o, 'cancelled') }], '#' + o.no + ' · durum');
   const list = useMemo(() => {
     let r = orders;
@@ -48,6 +50,12 @@ export function Orders() {
     return [...r].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // geliş sırası: en yeni üstte
   }, [orders, filter, q]);
 
+  const [page, setPage] = useState(0);
+  useEffect(() => setPage(0), [filter, q]);
+  const pages = Math.max(1, Math.ceil(list.length / PAGE));
+  const pg = Math.min(page, pages - 1);
+  const shown = list.slice(pg * PAGE, pg * PAGE + PAGE);
+  const goPage = (n) => { setPage(n); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   if (openId) return <OrderDetail id={openId} />;
   const toggle = (id) => setSel((x) => { const n = new Set(x || []); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const delMany = () => { const ids = [...sel]; setConfirm({ title: `${ids.length} siparişi sil`, text: 'Seçilen siparişler tamamen silinecek. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteOrders(ids).then(() => { toast(ids.length + ' sipariş silindi'); setSel(null); }, (e) => toast('Silinemedi: ' + e.message, 'bad')) }); };
@@ -95,7 +103,7 @@ export function Orders() {
               <span>Sipariş no</span><span>Müşteri</span><span>Ödeme / kargo</span><span>Tutar</span><span>Tarih</span><span>Durum</span><span />
             </div>
             <ul className="olist orows">
-              {list.map((o) => {
+              {shown.map((o) => {
                 const noCode = o.status === 'shipped' && o.delivery?.method !== 'pickup' && !o.cargo?.code;
                 const car = carrierOf(o);
                 return (
@@ -110,18 +118,25 @@ export function Orders() {
                         {needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
                       </span>
                       <span className="or-sum"><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></span>
-                      <span className="or-date"><span>{fullDate(o.createdAt)}</span></span>
+                      <span className="or-date"><span>{fullDate(o.createdAt)}</span><small className="or-ago">{ago2(o.createdAt)}</small></span>
                       <span className="or-st">
                         <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); quick(e, o); }} title="Durumu değiştir"><span>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={14} /></button>
                         {noCode && <small className="warn-t">Takip no yok</small>}
                       </span>
-                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="num">{orderTotal(o)}</b><small>{o.contact?.name}{o.member ? '' : ' · misafir'}</small></span></span>
+                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{o.contact?.name}{!o.member && <small> · misafir</small>}</b><span className="num or-mob-s">{orderTotal(o)} <small>· {ago2(o.createdAt)}</small></span></span></span>
                       <span className="or-act"><button type="button" className="or-dots" aria-label="İşlemler" onClick={(e) => { e.stopPropagation(); menu(e, o); }}><Icon n="more" s={18} /></button></span>
                     </div>
                   </li>
                 );
               })}
             </ul>
+            {pages > 1 && (
+              <nav className="opager" aria-label="Sayfalar">
+                <button className="btn sm ghost" disabled={pg === 0} onClick={() => goPage(pg - 1)}><Icon n="back" s={15} />Önceki</button>
+                <span className="opager-n">{Array.from({ length: pages }, (_, i) => <button key={i} className={'chip' + (i === pg ? ' on' : '')} onClick={() => goPage(i)}>{i + 1}</button>)}</span>
+                <button className="btn sm ghost" disabled={pg >= pages - 1} onClick={() => goPage(pg + 1)}>Sonraki<Icon n="back" s={15} className="flip" /></button>
+              </nav>
+            )}
           </div>
         )}
       </>}
@@ -138,6 +153,9 @@ function OrderThumbs({ o }) {
   const byId = useStore((st) => st.byId); const its = o.items || []; const show = its.slice(0, 3);
   return <span className="or-th">{show.map((it, i) => <span key={i} className="or-th-i"><Thumb p={{ ...(byId.get(it.id) || {}), ...it }} size="sm" /></span>)}{its.length > 3 && <span className="or-th-i more num">+{its.length - 3}</span>}</span>;
 }
+// "3 saat önce" (75 saat önce gibi; 1 saatten azsa dakika)
+const ago2 = (ts) => { if (!ts) return ''; const m = Math.max(0, Math.round((Date.now() - ts) / 6e4)); return m < 1 ? 'az önce' : m < 60 ? m + ' dk önce' : Math.round(m / 60) + ' saat önce'; };
+const PAGE = 25; // listede sayfa başına sipariş
 // tarih: 26.10.2026 17:32
 const fullDate = (ts) => { if (!ts) return ''; const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
@@ -282,7 +300,7 @@ function OrderDetail({ id }) {
 
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
       <button type="button" className={'ost oa-st-m ost-' + o.status} onClick={(e) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
-        [...['new', 'confirmed', 'preparing', pickup ? 'ready' : 'shipped', 'done'].map((k) => ({ label: (o.status === k ? '✓ ' : '') + ADMIN_ST[k], onClick: () => flow.ask(o, k) })), '-', { label: 'İptal et', icon: 'x', danger: true, onClick: () => flow.ask(o, 'cancelled') }], '#' + o.no + ' · durum')}>
+        [...['new', 'confirmed', 'preparing', pickup ? 'ready' : 'shipped', 'done'].map((k) => ({ label: ADMIN_ST[k], color: ST_COLOR[k], on: o.status === k, hint: o.status === k ? '✓' : undefined, onClick: () => flow.ask(o, k) })), '-', { label: 'İptal et', icon: 'x', danger: true, onClick: () => flow.ask(o, 'cancelled') }], '#' + o.no + ' · durum')}>
         <span><small>Durum</small>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={15} />
       </button>
 
