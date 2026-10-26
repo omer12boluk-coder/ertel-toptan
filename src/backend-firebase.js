@@ -375,6 +375,7 @@ export class FirebaseBackend {
   async placeOrder(o, id) { const ref = this.F.doc(this.c('orders'), id || this.newOrderId()); await timeout(this.F.setDoc(ref, o)); return ref.id; }
   watchOrder(id, cb) { return this.F.onSnapshot(this.d('orders', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null)); }
   watchMyOrders(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
+  watchFeed(cb) { return this.F.onSnapshot(this.d('meta', 'feed'), (s) => cb(s.exists() ? s.data().items || [] : []), () => cb([])); }
   watchOrders(cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.orderBy('createdAt', 'desc'), this.F.limit(300)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
   async updateOrder(id, patch) { await timeout(this.F.updateDoc(this.d('orders', id), patch)); }
   async deleteOrders(ids) { const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('orders', id))); await b.commit(); }

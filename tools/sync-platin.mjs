@@ -54,24 +54,27 @@ const rate = ratios[Math.floor(ratios.length / 2)];
 if (!rate) throw new Error('Kur hesaplanamadı');
 
 const st = { price: [], hidden: 0, shown: 0, img: 0, name: 0, added: [] };
+// yönetim panelindeki bildirim merkezi için olay günlüğü (meta/feed): t price|name|new|hidden|shown
+const ev = [];
+const E = (t, p, extra) => ev.push({ t, at: now, id: p.id, k: p.k || '', n: String(p.n || '').slice(0, 90), ...extra });
 const round2 = (v) => Math.round(v * 100) / 100;
 for (const p of cat) {
   const f = feed.get(p.id);
   if (!f) {
     if (p.man) continue; // yönetimden elle eklenen ürün: sitede olmaması normal, gizlenmez
-    if (p.a && !p.so) { p.a = 0; p.so = 1; st.hidden++; } // sitede satışta değil
+    if (p.a && !p.so) { p.a = 0; p.so = 1; st.hidden++; E('hidden', p); } // sitede satışta değil
     continue;
   }
-  if (p.so) { p.a = 1; delete p.so; st.shown++; }
+  if (p.so) { p.a = 1; delete p.so; st.shown++; E('shown', p); }
   if (f.stock && !(p.s > 0)) p.s = 1;
   if (f.pi && f.pi !== p.pi && !p.img) { p.pi = f.pi; st.img++; }
-  if (f.n && f.n !== p.n) { p.n = f.n; st.name++; }
+  if (f.n && f.n !== p.n) { E('name', p, { from: String(p.n || '').slice(0, 90), n: f.n.slice(0, 90) }); p.n = f.n; st.name++; }
   if (f.b && f.b !== '-' && f.b !== p.b) p.b = f.b;
   if (p.cur === 'USD' && f.tl > 0) {
     const usd = round2(f.tl / rate);
     if (Math.abs(usd - p.r) > Math.max(0.05, p.r * 0.005)) {
       const r0 = p.pc ? p.pc.r0 : p.r;
-      st.price.push(`${p.k}: ${p.r} → ${usd}`);
+      st.price.push(`${p.k}: ${p.r} → ${usd}`); E('price', p, { from: p.r, to: usd });
       p.r = usd;
       if (Math.abs(usd - r0) < 0.01) delete p.pc; else p.pc = { r0, at: now };
     }
@@ -82,7 +85,7 @@ for (const f of feed.values()) {
   const p = { id: f.id, k: f.k, n: f.n, c: 0, r: round2(f.tl / rate), w: null, cur: 'USD', s: 1, a: 1, nw: 1 };
   if (f.pi) p.pi = f.pi;
   if (f.b && f.b !== '-') p.b = f.b;
-  cat.push(p); st.added.push(`${f.k} ${f.n.slice(0, 40)}`);
+  cat.push(p); st.added.push(`${f.k} ${f.n.slice(0, 40)}`); E('new', p, { to: p.r });
 }
 cat.sort((a, b) => b.id - a.id);
 
@@ -112,6 +115,19 @@ if (!DRY) {
   if (changed) {
     await writeChunked('catalog', cat, 'items');
     await writeChunked('pubcatalog', cat.filter((p) => p.a).map(pubItem), 'items');
+  }
+  if (ev.length) {
+    const ref = db.doc('meta/feed');
+    const old = (await ref.get()).data()?.items || [];
+    await ref.set({ at: now, items: [...ev.slice(0, 300), ...old].slice(0, 400) });
+    // yöneticiye anlık bildirim + Telegram özeti (bekçi üzerinden)
+    const W = process.env.WATCH_URL, T = process.env.TELEGRAM_TOKEN;
+    if (W && T) {
+      const { createHash } = await import('node:crypto');
+      const key = createHash('sha256').update('sync:' + T).digest('hex');
+      await fetch(W.replace(/\/$/, '') + '/notify-sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Key': key }, body: JSON.stringify({ items: ev.slice(0, 40), count: ev.length }) })
+        .then((r) => r.text()).then((t) => note('Bildirim', t.slice(0, 200))).catch((e) => note('Bildirim hatası', e));
+    }
   }
   await db.doc('meta/sync').set({ at: now, rate: round2(rate), feed: feed.size, changed, summary, prices: st.price.slice(0, 100), added: st.added.slice(0, 100) });
 }

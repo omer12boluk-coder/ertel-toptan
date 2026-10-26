@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { waLink, links } from './route.js';
+import SETIDX from './setindex.json';
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
@@ -461,6 +462,8 @@ export function Settings() {
   const [d, setD] = useState(() => structuredClone(settings));
   const [sec, setSec] = useState(() => { const i = store.s.intent; if (typeof i === 'string' && i.startsWith('sec:')) { store.set({ intent: null }); return i.slice(4); } return null; }); // hepsi kapalı başlar
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState('');
+  const [search, setSearch] = useState(false);
   const [imp, setImp] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const dirty = JSON.stringify(d) !== JSON.stringify(settings);
@@ -733,14 +736,41 @@ export function Settings() {
         {sec === 'magazaana' && <ShopHomeEditor d={d} set={set} />}
         {sec === 'markalar' && <BrandLogosEditor d={d} set={set} />}
   </>;
+  // ---- ayar arama: bölüm adı/açıklaması + bölümdeki alan adları (setindex.json, derlemede üretilir)
+  const toks = norm(q.trim()).split(/\s+/).filter(Boolean);
+  const hitOf = (txt) => toks.length > 0 && toks.every((t) => norm(txt).includes(t));
+  const results = toks.length ? SECTIONS.flatMap(([k, l, hint]) => {
+    const items = (SETIDX[k] || []).filter((x) => hitOf(x + ' ' + l)).map((x) => ({ k, l, x }));
+    return items.length ? items : hitOf(l + ' ' + hint) ? [{ k, l, x: null }] : [];
+  }) : [];
+  const jump = (k, label) => {
+    setQ(''); setSearch(false); setSec(k);
+    setTimeout(() => {
+      const box = document.getElementById('acc-' + k); if (!box) return;
+      let el = null;
+      if (label) { const want = norm(label); el = [...box.querySelectorAll('.acc-b label, .acc-b .field-l, .acc-b b, .acc-b h3, .acc-b summary, .acc-b .fold-h, .acc-b span, .acc-b button')].find((e) => norm(e.textContent.trim()).startsWith(want)); }
+      const tgt = el?.closest('.field, .toggle, label, .fold, .row2, h3') || el || box;
+      tgt.scrollIntoView({ block: el ? 'center' : 'start', behavior: 'smooth' });
+      if (el) { tgt.classList.add('set-hit'); setTimeout(() => tgt.classList.remove('set-hit'), 1800); }
+    }, 160);
+  };
   const openSec = (k) => { const n = sec === k ? null : k; setSec(n); if (n) requestAnimationFrame(() => document.getElementById('acc-' + k)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); };
 
   return (
     <div className="page settings">
       <div className="page-h">
         <h1 className="page-t">Ayarlar</h1>
-        <span className="muted">{A.mode === 'demo' ? 'Demo modu · veriler bu tarayıcıda' : 'Firebase’e bağlı'}</span>
+        <span className="muted set-mode">{A.mode === 'demo' ? 'Demo modu · veriler bu tarayıcıda' : 'Firebase’e bağlı'}</span>
+        <button className={'icon-btn set-find-btn' + (search ? ' on' : '')} onClick={() => { setSearch(!search); setQ(''); }} aria-label="Ayar ara" title="Ayar ara"><Icon n={search ? 'x' : 'search'} s={19} /></button>
       </div>
+      {search && (
+        <div className="set-find">
+          <div className="search"><Icon n="search" s={18} /><input id="set-q" type="search" autoFocus placeholder="Ayar ara… (ör. kargo, KDV, logo, bildirim)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) jump(results[0].k, results[0].x); if (e.key === 'Escape') { setSearch(false); setQ(''); } }} /></div>
+          {toks.length > 0 && (results.length
+            ? <ul className="set-res">{results.slice(0, 40).map((r, i) => <li key={i}><button onClick={() => jump(r.k, r.x)}><span className="set-res-ic"><Icon n={SECTIONS.find((x) => x[0] === r.k)[3]} s={16} /></span><span><b>{r.x || r.l}</b>{r.x && <small>{r.l}</small>}</span><Icon n="chev" s={16} className="set-res-go" /></button></li>)}</ul>
+            : <p className="fine set-none">“{q}” ile eşleşen ayar yok.</p>)}
+        </div>
+      )}
       <p className="fine set-intro">Bir başlığa basınca açılır, tekrar basınca kapanır. Mağazanın görünüşünü sürükle-bırak ile düzenlemek için <button type="button" className="linkish" onClick={() => go('tasarim')}>Tasarım modu</button>.</p>
       <div className="acc">
         {SECTIONS.map(([k, l, hint, ic]) => (

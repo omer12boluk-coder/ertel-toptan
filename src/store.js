@@ -14,6 +14,7 @@ export const store = {
     byId: new Map(),
     userPrices: {},
     requests: [],
+    feed: [], // PlatinMarket eşitleme olayları (bildirim merkezi)
     customers: [],
     tab: null,
     openReq: null,

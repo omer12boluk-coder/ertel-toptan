@@ -180,6 +180,7 @@ export class DemoBackend {
   async placeOrder(o, id) { id = id || this.newOrderId(); this.ord()[id] = { ...o, id }; this.persist(); return id; }
   watchOrder(id, cb) { return this.sub(() => cb(this.ord()[id] ? { ...this.ord()[id] } : null)); }
   watchMyOrders(uid, cb) { return this.sub(() => cb(Object.values(this.ord()).filter((o) => o.uid === uid).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
+  watchFeed(cb) { return this.sub(() => cb(this.db.feed || [])); }
   watchOrders(cb) { return this.sub(() => cb(Object.values(this.ord()).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
   async updateOrder(id, patch) { Object.assign(this.ord()[id], patch); this.persist(); }
   async deleteOrders(ids) { for (const id of ids) delete this.ord()[id]; this.persist(); }

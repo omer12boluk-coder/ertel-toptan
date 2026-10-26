@@ -10,6 +10,7 @@ import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, open
 import { Catalog, ProductPage } from './catalog.jsx';
 import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
+import { NotifBell } from './notif.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
@@ -111,6 +112,7 @@ function startSession(u, A) {
   unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
   if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
   if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
+  if (admin && A.watchFeed) unsubs.push(A.watchFeed((feed) => store.set({ feed })));
   if (admin && A.watchOrders) { unsubs.push(A.watchOrders((orders) => store.set({ orders }))); unsubs.push(A.watchMembers((members) => store.set({ members }))); }
   loadCart();
   if (admin) syncNow(false).catch(() => {});
@@ -454,6 +456,7 @@ function ShellFull() {
           {pub && <HeaderSearch />}
           {!admin && <HeaderCart on={tab === 'sepet'} />}
           {!admin && <a className="icon-btn to-landing" href="/" title="Giriş sayfasına dön (Mağaza / Bayi girişi)" aria-label="Giriş sayfasına dön"><Icon n="home" s={19} /></a>}
+          {admin && <NotifBell />}
           <ThemeButton />
           {pub && (member
             ? <button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button>

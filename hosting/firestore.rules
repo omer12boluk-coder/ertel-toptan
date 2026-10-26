@@ -11,6 +11,7 @@ service cloud.firestore {
     // İlk kurulum: yönetici sahibi bir kez yazılır
     // otomatik eşitlemenin son çalışma bilgisi (sunucu yazar, yönetici okur)
     match /meta/sync { allow read: if isAdmin(); }
+    match /meta/feed { allow read: if isAdmin(); }
     match /meta/owner {
       allow read: if true;
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;

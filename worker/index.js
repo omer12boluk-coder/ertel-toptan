@@ -43,6 +43,7 @@ export default {
       if (url.pathname === '/push/admin' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminSub(env, b)); }
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/notify-sync' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifySync(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/push/status' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushStatus(env, String(b.id || ''))); }
       // Ürün videosu: iPhone Safari videoyu parça parça (Range) ister; dosya bekçinin kendi dosyalarından okunup dilimlenir
       if (url.pathname.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD') && env.ASSETS) return await serveVideo(req, env, url, cors);
@@ -236,7 +237,7 @@ async function tgLink(env, code) {
   await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: m.chat.id, text: '✅ Bağlandı. Yeni mağaza siparişleri buraya bildirilecek.' }) }).catch(() => {});
   return { ok: true, name };
 }
-async function notifySend(env, { subject, text, short, replyTo, link }) {
+async function notifySend(env, { subject, text, short, replyTo, link, noEmail }) {
   const out = {};
   if (env.TELEGRAM_TOKEN) {
     const chat = JSON.parse((await env.KV.get('tg-chat')) || 'null');
@@ -246,7 +247,8 @@ async function notifySend(env, { subject, text, short, replyTo, link }) {
       const j = await r.json().catch(() => ({})); out.telegram = j.ok ? 'gönderildi' : 'hata: ' + (j.description || r.status);
     } catch (e) { out.telegram = 'hata: ' + e; }
   } else out.telegram = 'TELEGRAM_TOKEN eklenmemiş';
-  if (env.NOTIFY_EMAIL && env.RESEND_KEY) {
+  if (noEmail) out.email = 'yok';
+  else if (env.NOTIFY_EMAIL && env.RESEND_KEY) {
     try {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
@@ -451,4 +453,20 @@ async function notifyReq(env, b) {
   await adminPush(env, { title: `📨 Yeni talep #${r.no || ''} · ${who}`, body: (head + (r.note ? ' · ' + r.note : '')).slice(0, 160), url: '/admin/t/' + id, tag: 'ar-' + id }).catch(() => {});
   const text = `📨 Yeni bayi talebi #${r.no || ''}\n${who}\n${head}${r.pickup ? '\nGeliş: ' + r.pickup : ''}${r.note ? '\nNot: ' + r.note : ''}${lines ? '\n\n' + lines : ''}\n\nPanelde aç: ${link}`;
   return notifySend(env, { subject: `Yeni talep #${r.no || ''} · ${who}`, text, link });
+}
+
+// PlatinMarket eşitlemesinde değişen ürünler (GitHub Actions'taki eşitleme bildirir; anahtar: sha256('sync:' + TELEGRAM_TOKEN))
+async function notifySync(env, key, b) {
+  if (!env.TELEGRAM_TOKEN) return { ok: false, error: 'anahtar yok' };
+  const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('sync:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if (key !== want) return { ok: false, error: 'yetki' };
+  const items = Array.isArray(b.items) ? b.items : []; const n = Number(b.count) || items.length;
+  if (!n) return { ok: true, sent: 0 };
+  const c = (t) => items.filter((x) => x.t === t).length;
+  const parts = [[c('price'), 'fiyat değişti'], [c('new'), 'yeni ürün'], [c('name'), 'adı değişti'], [c('hidden'), 'sitede satıştan kalktı'], [c('shown'), 'geri satışta']].filter(([x]) => x).map(([x, l]) => `${x} ${l}`).join(' · ');
+  const line = (x) => x.t === 'price' ? `💲 ${x.k} ${x.n}: $${x.from} → $${x.to}` : x.t === 'new' ? `🆕 ${x.k} ${x.n}` : x.t === 'name' ? `✏️ ${x.k}: ${x.from} → ${x.n}` : x.t === 'hidden' ? `🚫 ${x.k} ${x.n}` : `✅ ${x.k} ${x.n}`;
+  const link = 'https://erteltoptan.web.app/admin';
+  await adminPush(env, { title: `🔄 Siteden ${n} değişiklik`, body: parts || 'Ürün bilgileri güncellendi', url: '/admin', tag: 'sync' }).catch(() => {});
+  const text = `${parts}\n\n${items.map(line).join('\n')}${n > items.length ? `\n… ve ${n - items.length} değişiklik daha` : ''}\n\nPanelde aç: ${link}`;
+  return notifySend(env, { subject: `🔄 PlatinMarket: ${n} ürün değişikliği`, text, link, noEmail: true });
 }

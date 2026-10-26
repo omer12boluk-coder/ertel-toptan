@@ -24,4 +24,6 @@ jobs:
       - name: Eşitle
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
         run: node tools/sync-platin.mjs ${{ inputs.dry && '--dry' || '' }}

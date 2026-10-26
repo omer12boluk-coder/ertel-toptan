@@ -9,6 +9,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC, DIST, PUB = ROOT / 'src', ROOT / 'dist', ROOT / 'hosting' / 'public'
 DIST.mkdir(exist_ok=True); PUB.mkdir(parents=True, exist_ok=True)
 
+subprocess.run(['python3', str(ROOT / 'tools/setindex.py')], check=True)  # Ayarlar araması dizini
 subprocess.run([str(ROOT / 'node_modules/.bin/esbuild'), str(SRC / 'main.jsx'), '--bundle', '--format=esm', '--minify',
                 '--jsx=automatic', '--define:process.env.NODE_ENV="production"', '--target=es2020',
                 '--loader:.png=dataurl', '--outfile=' + str(DIST / 'app.js'), '--log-level=warning'], check=True, cwd=ROOT)

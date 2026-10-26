@@ -193,6 +193,10 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - **Durum akışı ortak:** `useStatusFlow(S)` (orders.jsx) liste ve detay için onay + kargo penceresi. **Kargoda iken takip no sonradan eklenir/düzeltilir** (durum değişmez; detayda "Takip numarası girilmedi · Takip no ekle" bandı, listede "Takip no yok"). Takip no eklenince müşteriye tek bildirim: Worker `pl:` işareti kargoda `shipped:<kod>`.
 - **Bayi kartı (telefon):** `add-icon`/`add-plus` + `.price.dual` kartta sepetteki ürünün adet seçicisi fiyatın altına tam genişlik iner (mağaza kartı değişmedi).
 
+- **Bildirim merkezi** (`src/notif.jsx` `NotifBell`, yönetim üst menüsünde zil): son 30 gün — yeni sipariş, müşteri iptali (`history` by customer), bayi talebi ve mesajı, bayi başvurusu, yeni mağaza üyesi, PlatinMarket değişiklikleri (`meta/feed`, `A.watchFeed`, store `feed`). Okundu bilgisi cihazda (`notif-seen`, panel kapanınca). Sekmeler: Tümü/Siparişler/Talepler/Ürünler/Üyeler; ürün olayına basınca Ürünler'de stok koduyla arama. Zil için admin sekmeleri sıkıldı (padding 7px); ≤430px'te kalkan rozeti gizli.
+- **PlatinMarket olay günlüğü:** `sync-platin.mjs` her değişikliği `meta/feed.items` başına yazar (t price|name|new|hidden|shown, at, id, k, n, from, to; en çok 400; kural: sadece yönetici okur) ve bekçiye `POST /notify-sync` (başlık `X-Key` = sha256('sync:' + TELEGRAM_TOKEN); sync.yml'e TELEGRAM_TOKEN + WATCH_URL eklendi) → yönetici push + Telegram özeti (e-posta YOK, `noEmail`).
+- **Ayarlar araması:** başlıktaki büyüteç; dizin `src/setindex.json` derlemede `tools/setindex.py` ile üretilir (her bölümün label/title/field-l/h3/b metinleri; bileşen bölümleri fonksiyon gövdesinden). Sonuca basınca bölüm açılır, alan ortalanıp `.set-hit` ile yanıp söner.
+
 ## 7. Site eşitleme, Worker, bildirimler
 
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler. Beslemede stok adedi yok. **Siteye toplu istek atma (IP engeli yemiştik).**
