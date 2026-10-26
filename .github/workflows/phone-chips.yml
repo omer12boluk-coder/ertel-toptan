@@ -1,0 +1,27 @@
+# Kalıp bulucu için telefon → işlemci verisini toplar ve kalip-data dalına yazar (elle çalıştırılır).
+name: Kalıp verisi
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'probe | crawl'
+        default: probe
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/phone-chips.mjs ${{ inputs.mode }}
+      - name: Dala yaz
+        if: always()
+        run: |
+          cd out
+          git init -q -b kalip-data && git add -A
+          git -c user.name=bot -c user.email=bot@x commit -qm veri
+          git push -qf https://x-access-token:${{ github.token }}@github.com/${{ github.repository }} kalip-data
