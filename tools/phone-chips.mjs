@@ -65,7 +65,7 @@ if (MODE === 'brands') {
   // [GSMArena'daki marka adı, kaç sayfa (sayfa başı ~50 model, en yeniler önce)]
   const WANT = [['Samsung', 9], ['Apple', 4], ['Xiaomi', 10], ['Huawei', 6], ['Honor', 5], ['Oppo', 6], ['Realme', 5], ['vivo', 6], ['OnePlus', 2], ['Google', 1], ['Tecno', 4], ['Infinix', 3], ['Motorola', 5], ['Nokia', 3], ['Nothing', 1], ['Sony', 2], ['TCL', 2], ['ZTE', 3], ['Asus', 2], ['Lenovo', 2], ['Meizu', 1], ['LG', 2], ['HTC', 1], ['Alcatel', 1], ['Blackview', 1], ['Ulefone', 1], ['Oukitel', 1], ['Cat', 1]];
   const FALLBACK = { Samsung: 'samsung-phones-9', Apple: 'apple-phones-48', Xiaomi: 'xiaomi-phones-80', Huawei: 'huawei-phones-58', Honor: 'honor-phones-121', Oppo: 'oppo-phones-82', Realme: 'realme-phones-118', vivo: 'vivo-phones-98', OnePlus: 'oneplus-phones-95', Google: 'google-phones-107', Motorola: 'motorola-phones-4', Nokia: 'nokia-phones-1', Sony: 'sony-phones-7', LG: 'lg-phones-20', Asus: 'asus-phones-46', ZTE: 'zte-phones-62', Lenovo: 'lenovo-phones-73', HTC: 'htc-phones-45', Alcatel: 'alcatel-phones-5' };
-  const SKIP = /\b(watch|band|buds|gear|fit|ring|tag|vr|earbuds|freebuds|fitness)\b/i;
+  const SKIP = /\b(watch|band|buds|gear|fit|ring|tag|vr|earbuds|freebuds|fitness)/i;
   const prev = fs.existsSync('out/phones.json') ? JSON.parse(fs.readFileSync('out/phones.json', 'utf8')) : [];
   const phones = {}; for (const p of prev) if (p.c && p.c[0] && p.c[0] !== '?') phones[p.u] = { n: p.n, c: p.c };
   const log = fs.existsSync('out/log.txt') ? fs.readFileSync('out/log.txt', 'utf8').split('\n').slice(-3000) : [];

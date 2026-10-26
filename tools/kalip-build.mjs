@@ -12,11 +12,12 @@ const vend = (c) => (/^Snapdragon/.test(c) ? 'Qualcomm ' : /^(Dimensity|Helio)/.
 const split = (c) => String(c).split(/\s*;\s*|\s+(?:or|\/)\s+(?=[A-Z])/).map((x) => x.trim()).filter(Boolean);
 const pretty = (c) => {
   let s = c.replace(/\s*\([^)]*\)/g, '').replace(/\s+-\s+.*$/, '').replace(/\s+/g, ' ').trim();
-  if (/snapdragon|dimensity|helio|kirin|tiger|tensor/i.test(s)) s = s.replace(/\b(?:SM|SDM|MSM|MT|Hi)\d{3,4}[A-Z0-9]*(?:-[A-Z0-9]+)?\s+/g, '');
+  if (/snapdragon|dimensity|helio|kirin|tiger|tensor/i.test(s)) s = s.replace(/\b(?:SM|SDM|MSM|MT|Hi)\d{3,4}[A-Z0-9]*(?:-[A-Z0-9]+)*\s+/g, '');
   return s.replace(/^MediaTek/i, 'Mediatek');
 };
 const out = []; const seen = new Set();
 for (const ph of phones) {
+  if (/\b(watch|band|buds|gear|fit)|watch\d/i.test(ph.n)) continue; // saat/bileklik/kulaklık değil
   const n = ph.n.replace(/\s+/g, ' ').trim(); if (!n || seen.has(n)) continue; seen.add(n);
   const raw = [...new Set(ph.c.flatMap(split))].filter((c) => c && c !== '?');
   const cs = raw;
