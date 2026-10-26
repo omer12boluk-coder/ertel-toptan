@@ -1,0 +1,24 @@
+# DHL eCommerce (MNG web servisi) bağlantı testi: hiçbir gönderi OLUŞTURMAZ, sadece var olmayan bir referansla takip sorgular.
+# Cevaptaki hata metni giriş bilgilerinin doğru olup olmadığını gösterir. Gizli ayarlar: DHL_USER (müşteri no), DHL_PASS.
+name: DHL bağlantı testi
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          U: ${{ secrets.DHL_USER }}
+          P: ${{ secrets.DHL_PASS }}
+        run: |
+          esc() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+          B=https://service.mngkargo.com.tr/musterikargosiparis/musterikargosiparis.asmx
+          { echo "kullanıcı adı var: $([ -n "$U" ] && echo evet || echo HAYIR) · şifre var: $([ -n "$P" ] && echo evet || echo HAYIR)"
+            echo "=== Baglanti_Test"
+            curl -s -m 30 $B -H 'Content-Type: text/xml; charset=utf-8' -H 'SOAPAction: "http://tempuri.org/Baglanti_Test"' --data '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><Baglanti_Test xmlns="http://tempuri.org/" /></soap:Body></soap:Envelope>' | head -c 1500; echo
+            echo "=== KargoTakipByReferans (olmayan referans)"
+            curl -s -m 30 $B -H 'Content-Type: text/xml; charset=utf-8' -H 'SOAPAction: "http://tempuri.org/KargoTakipByReferans"' --data "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"><soap:Body><KargoTakipByReferans xmlns=\"http://tempuri.org/\"><pKullanici>$(esc "$U")</pKullanici><pSifre>$(esc "$P")</pSifre><pReferansId>ERTEL-TEST-0000</pReferansId></KargoTakipByReferans></soap:Body></soap:Envelope>" | head -c 3000; echo
+            echo "=== IP"; curl -s -m 10 https://api.ipify.org; echo; } > /tmp/out.txt 2>&1
+          [ -n "$P" ] && sed -i "s/$(printf '%s' "$P" | sed 's/[][\.*^$/]/\\&/g')/***/g" /tmp/out.txt || true
+          mkdir r && cd r && git init -q && git config user.name bot && git config user.email bot@users.noreply.github.com && cp /tmp/out.txt peek.txt && git add . && git commit -qm dhl && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:peek-out
