@@ -396,12 +396,11 @@ function ShipStrip({ o }) {
   );
 }
 function ShipCard({ o }) {
-  const c = carrierOf(o);
   return (
     <div className="ship-card">
-      <span className="sc-ic">{c && c.k !== 'none' ? <CarrierMark k={c.k} size="sm" /> : <Icon n="box" s={20} />}</span>
-      <span className="ss-t"><small>Kargo takip numarası</small><b><span className="num">{o.cargo.code}</span>{o.cargo.company && <span className="muted"> · {o.cargo.company}</span>}</b></span>
-      <span className="sc-act"><button className="btn sm ghost" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')}><Icon n="copy" s={14} />Kopyala</button>{o.cargo.url && <a className="btn sm outline" href={o.cargo.url} target="_blank" rel="noopener">Kargom nerede?</a>}</span>
+      <span className="sc-ic"><Icon n="box" s={19} /></span>
+      <span className="ss-t"><small>Kargo takip no{o.cargo.company ? ' · ' + o.cargo.company : ''}</small><b className="num">{o.cargo.code}</b></span>
+      <span className="sc-act"><button className="icon-btn" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')} title="Kopyala" aria-label="Takip no kopyala"><Icon n="copy" s={16} /></button>{o.cargo.url && <a className="btn sm outline" href={o.cargo.url} target="_blank" rel="noopener">Kargom nerede?</a>}</span>
     </div>
   );
 }
@@ -462,7 +461,6 @@ export function OrderPage({ id }) {
       {/* elle girilen takip no */}
       {!autoCargo(o) && ['shipped', 'done'].includes(o.status) && o.cargo?.code && <ShipCard o={o} />}
 
-      {o.status !== 'cancelled' && o.status !== 'done' && <PushCard ids={[o.id]} hideOn />}
 
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 

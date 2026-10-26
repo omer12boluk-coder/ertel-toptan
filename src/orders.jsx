@@ -2,8 +2,8 @@
 // Sipariş: durum adımları (Onayla → Kargoya ver / Teslime hazır → Tamamlandı), müşteriye WhatsApp, kargo takip no, iç not.
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, openOrder, go } from './store.js';
-import { CarrierMark, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
-import { fmt, totals, fmtTotals, when, now, norm } from './utils.js';
+import { CarrierMark, Thumb, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
+import { fmt, totals, fmtTotals, when, now, norm, ls } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper } from './listsheet.jsx';
@@ -115,6 +115,7 @@ export function Orders() {
                         <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); quick(e, o); }} title="Durumu değiştir"><span>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={14} /></button>
                         {noCode && <small className="warn-t">Takip no yok</small>}
                       </span>
+                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="num">{orderTotal(o)}</b><small>{o.contact?.name}{o.member ? '' : ' · misafir'}</small></span></span>
                       <span className="or-act"><button type="button" className="or-dots" aria-label="İşlemler" onClick={(e) => { e.stopPropagation(); menu(e, o); }}><Icon n="more" s={18} /></button></span>
                     </div>
                   </li>
@@ -130,6 +131,13 @@ export function Orders() {
   );
 }
 const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda' };
+// sipariş başlığındaki üye adı → Müşteriler > Mağaza müşterileri, o üyenin penceresi açık
+const openMember = (uid) => { ls.set('cust-kind', 'magaza'); store.set({ openMember: uid, openOrder: null }); go('musteriler'); };
+// sipariş içeriğinden ilk 3 ürünün resmi + "+N" (telefon listesi)
+function OrderThumbs({ o }) {
+  const byId = useStore((st) => st.byId); const its = o.items || []; const show = its.slice(0, 3);
+  return <span className="or-th">{show.map((it, i) => <span key={i} className="or-th-i"><Thumb p={{ ...(byId.get(it.id) || {}), ...it }} size="sm" /></span>)}{its.length > 3 && <span className="or-th-i more num">+{its.length - 3}</span>}</span>;
+}
 // tarih: 26.10.2026 17:32
 const fullDate = (ts) => { if (!ts) return ''; const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
@@ -238,9 +246,11 @@ function OrderDetail({ id }) {
     <div className="page order-page admin-order">
       <div className="send-bar">
         <button className="btn sm ghost" onClick={back}><Icon n="back" s={16} />Siparişler</button>
-        <div className="send-t"><b>Sipariş #{o.no}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {orderTotal(o)}</span></div>
+        <div className="send-t"><b>Sipariş #{o.no}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {orderTotal(o)}</span>
+          <span className="oa-who">{o.uid ? <button type="button" className="oa-who-b" onClick={() => openMember(o.uid)} title="Üye profilini aç"><Icon n="user" s={14} />{o.contact?.name}<Icon n="back" s={13} className="flip" /></button> : <span className="oa-who-g"><Icon n="user" s={14} />Misafir · {o.contact?.name}</span>}</span></div>
         <span className="pay-chip" title={o.pay === 'card' ? 'Onaylayınca müşteriye ödeme linki gönderin' : 'Ödeme yöntemi'}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{PAY[o.pay] || '—'}</span>
         <StatusPill status={o.status} map={ORDER_STATUS} />
+        <button className="icon-btn oa-del" onClick={del} aria-label="Siparişi sil" title="Siparişi sil"><Icon n="trash" s={17} /></button>
       </div>
 
       <button type="button" className={'ost oa-st-m ost-' + o.status} onClick={(e) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
@@ -256,12 +266,6 @@ function OrderDetail({ id }) {
           </button>
         ))}
       </div>
-      <div className="oa-actions">
-        {wa && <a className="btn wa" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />Müşteriye yaz</a>}
-        <button className="btn outline" onClick={() => copyText(links.order(o.id), 'Müşterinin takip linki kopyalandı')}><Icon n="copy" s={15} />Takip linki</button>
-        <span className="oa-sp" />
-        <button className="icon-btn" onClick={del} aria-label="Siparişi sil" title="Siparişi sil"><Icon n="trash" s={17} /></button>
-      </div>
 
       <ol className="track admin" aria-label="Sipariş durumu">
         {['new', 'confirmed', 'preparing', pickup ? 'ready' : 'shipped', 'done'].map((k, i, arr) => {
@@ -271,18 +275,12 @@ function OrderDetail({ id }) {
         })}
       </ol>
       {o.status === 'shipped' && (o.cargo?.code
-        ? <div className="ship-card adm"><span className="sc-ic">{carrierOf(o)?.k && carrierOf(o).k !== 'none' ? <CarrierMark k={carrierOf(o).k} size="sm" /> : <Icon n="box" s={20} />}</span><span className="ss-t"><small>Kargo takip numarası{o.dhl?.ref && !o.dhl.cancelled ? ' · otomatik' : ''}</small><b><span className="num">{o.cargo.code}</span><span className="muted"> · {o.cargo.company}</span></b></span><span className="sc-act">{o.cargo.url && <a className="btn sm ghost" href={o.cargo.url} target="_blank" rel="noopener">Takip sayfası</a>}<button className="btn sm outline" onClick={() => flow.openShip(o)}>Değiştir</button></span></div>
+        ? <div className="ship-card adm"><span className="sc-ic"><Icon n="box" s={19} /></span><span className="ss-t"><small>Takip no · {o.cargo.company}{o.dhl?.ref && !o.dhl.cancelled ? ' · otomatik' : ''}</small><b className="num">{o.cargo.code}</b></span><span className="sc-act">{o.cargo.url && <a className="icon-btn" href={o.cargo.url} target="_blank" rel="noopener" title="Takip sayfası" aria-label="Takip sayfası"><Icon n="ext" s={16} /></a>}<button className="btn sm outline" onClick={() => flow.openShip(o)}>Değiştir</button></span></div>
         : <div className="banner warn"><Icon n="box" /><div><b>Takip numarası girilmedi.</b> {o.cargo?.company || ''} <button className="btn sm primary" onClick={() => flow.openShip(o)}>Takip no ekle</button></div></div>)}
 
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 
       <div className="o-info">
-        <div className="o-card">
-          <h3>Müşteri {o.member && <span className="tag">Üye</span>}<button className="oc-copy" onClick={() => copyText([o.contact?.name, o.contact?.phone, o.contact?.email].filter(Boolean).join('\n'), 'Müşteri bilgisi kopyalandı')} title="Müşteri bilgisini kopyala" aria-label="Müşteri bilgisini kopyala"><Icon n="copy" s={15} /></button></h3>
-          <p><b>{o.contact?.name}</b></p>
-          {o.contact?.phone && <p><a className="num" href={'tel:' + o.contact.phone.replace(/\D/g, '')}>{o.contact.phone}</a></p>}
-          {o.contact?.email && <p><a href={'mailto:' + o.contact.email}>{o.contact.email}</a></p>}
-        </div>
         <div className="o-card">
           <h3>Teslimat{o.delivery?.addr && <button className="oc-copy" onClick={() => copyText(`${o.delivery.addr.name || o.contact?.name}\n${o.delivery.addr.phone || o.contact?.phone}\n${addrLine(o.delivery.addr)}`, 'Kargo için adres kopyalandı')} title="Adresi kopyala (kargo için)" aria-label="Adresi kopyala"><Icon n="copy" s={15} /></button>}</h3>
           <p><b>{DELIVERY[o.delivery?.method] || ''}</b>{o.delivery?.method !== 'pickup' && o.delivery?.carrier && CARRIERS[o.delivery.carrier] && <span className="muted"> · müşteri seçimi: {CARRIERS[o.delivery.carrier].name}</span>}</p>
@@ -314,6 +312,8 @@ export function Members() {
   const [open, setOpen] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [newOpen, setNewOpen] = useState(false);
+  const want = useStore((st) => st.openMember);
+  useEffect(() => { if (!want) return; const m = members.find((x) => x.uid === want); if (m) { setOpen(m); store.set({ openMember: null }); } }, [want, members.length]);
   const count = useMemo(() => { const m = {}; for (const o of orders) if (o.uid) m[o.uid] = (m[o.uid] || 0) + 1; return m; }, [orders]);
   const t = norm(q.trim());
   const list = [...members].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).filter((m) => !t || norm([m.name, m.email, m.phone, m.invoice?.company].join(' ')).includes(t));
