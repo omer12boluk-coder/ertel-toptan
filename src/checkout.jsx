@@ -20,7 +20,7 @@ const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(e || '').trim
 const digits = (v) => String(v || '').replace(/\D/g, '');
 const unameOk = (u) => /^[a-z0-9._-]{3,20}$/.test(u);
 const suggestUser = (email) => cleanUsername(String(email || '').split('@')[0]).slice(0, 20);
-const blankAddr = () => ({ id: rid(), title: '', city: '', district: '', hood: '', address: '' });
+const blankAddr = () => ({ id: rid(), title: '', city: '', district: '', hood: '', street: '', no: '', door: '', note: '', address: '' });
 export const addrLine = (a) => (!a ? '' : [[a.hood, a.address].filter(Boolean).join(' '), [a.district, a.city].filter(Boolean).join(' / ')].filter(Boolean).join(', '));
 // Firestore "undefined" kabul etmez: boş alanları temizle
 const strip = (o) => JSON.parse(JSON.stringify(o, (k, v) => (v === undefined ? undefined : v)));
@@ -46,9 +46,11 @@ function useHoods(city) {
 }
 const districtsOf = (city) => TR[city]?.d || [];
 // adres DHL/Yurtiçi için eksiksiz mi: il ve ilçe listede, mahalle seçili, açık adres var
-export const addrOk = (a) => !!(a && TR[a.city] && districtsOf(a.city).includes(a.district) && String(a.hood || '').trim() && String(a.address || '').trim().length >= 5);
+export const addrOk = (a) => !!(a && TR[a.city] && districtsOf(a.city).includes(a.district) && String(a.hood || '').trim() && String(a.street || '').trim().length >= 3 && String(a.no || '').trim());
+export const joinAddr = (x) => [String(x.street ?? '').trim(), x.no && 'No:' + String(x.no).trim(), x.door && 'D:' + String(x.door).trim(), String(x.note || '').trim()].filter(Boolean).join(' ');
 function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
   const up = (k) => (e) => set({ ...a, [k]: e.target.value });
+  const setA = (patch) => { const x = { ...a, street: a.street ?? (a.no ? '' : a.address || ''), ...patch }; set({ ...x, address: joinAddr(x) }); };
   const ds = districtsOf(a.city);
   const dOk = ds.includes(a.district);
   const { data: hoods, fail } = useHoods(a.city);
@@ -73,7 +75,12 @@ function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
             : <select id={p + '-hood'} value={hs.includes(a.hood) ? a.hood : ''} disabled={!hs.length} onChange={up('hood')}><option value="">{!dOk ? 'Önce ilçe seçin' : hoods ? 'Mahalle seçin' : 'Yükleniyor…'}</option>{hs.map((h) => <option key={h}>{h}</option>)}</select>}
         </Field>
       </div>
-      <Field label="Açık adres" error={err[p + '.address']} hint="Mahalle yukarıda seçildi; buraya cadde / sokak, bina no, daire"><textarea id={p + '-address'} rows="2" placeholder="ör. Bağdat Cad. Uğur Apt. No 72 Daire 3" value={a.address} onChange={up('address')} autoComplete="street-address" /></Field>
+      <div className="row-st">
+        <Field label="Cadde / sokak" error={err[p + '.street']}><input id={p + '-street'} placeholder="ör. Bağdat Cad. ya da Uğur Sk." value={a.street ?? (a.no ? '' : a.address || '')} onChange={(e) => setA({ street: e.target.value })} autoComplete="address-line1" /></Field>
+        <Field label="Bina no" error={err[p + '.no']}><input id={p + '-no'} placeholder="ör. 72" value={a.no || ''} onChange={(e) => setA({ no: e.target.value.slice(0, 12) })} /></Field>
+        <Field label="Daire"><input id={p + '-door'} placeholder="ör. 3" value={a.door || ''} onChange={(e) => setA({ door: e.target.value.slice(0, 12) })} /></Field>
+      </div>
+      <Field label="Adres tarifi" opt hint="ör. apartman adı, kat, yakınındaki bilinen yer"><input id={p + '-note'} value={a.note || ''} onChange={(e) => setA({ note: e.target.value.slice(0, 120) })} /></Field>
     </div>
   );
 }
@@ -86,10 +93,12 @@ function addrErrors(a, p, recip) {
   if (!TR[a?.city]) e[p + '.city'] = 'İl seçin';
   else if (!districtsOf(a.city).includes(a?.district)) e[p + '.district'] = 'İlçeyi listeden seçin';
   else if (!String(a?.hood || '').trim()) e[p + '.hood'] = 'Mahalleyi seçin';
-  if (String(a?.address || '').trim().length < 5) e[p + '.address'] = 'Cadde / sokak ve bina no yazın';
+  const street = String(a?.street ?? (a?.no ? '' : a?.address) ?? '').trim();
+  if (street.length < 3) e[p + '.street'] = 'Cadde / sokak yazın';
+  if (!String(a?.no || '').trim()) e[p + '.no'] = 'Bina no yazın';
   return e;
 }
-const cleanAddr = (a) => ({ city: a.city, district: a.district, hood: String(a.hood || '').trim(), address: String(a.address || '').trim() });
+const cleanAddr = (a) => { const x = { city: a.city, district: a.district, hood: String(a.hood || '').trim(), street: String(a.street ?? '').trim(), no: String(a.no || '').trim(), door: String(a.door || '').trim(), note: String(a.note || '').trim() }; return { ...x, address: joinAddr(x) }; };
 
 // Seçenek kartı (radyo)
 function Choice({ on, onClick, title, sub, icon }) {

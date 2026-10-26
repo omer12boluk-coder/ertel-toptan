@@ -3045,3 +3045,6 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .gl-sw > .mo-sw > .mo-card { width: 100%; }
 .gl-sw.mo-li > .gl-del { border-radius: 18px; }
 @media (hover: none) and (pointer: coarse) { .gl-sw > .mo-sw { touch-action: pan-y; } }
+
+.row-st { display: grid; grid-template-columns: minmax(0, 1fr) 110px 90px; gap: 12px; }
+@media (max-width: 520px) { .row-st { grid-template-columns: 1fr 1fr; } .row-st > :first-child { grid-column: 1 / -1; } }
