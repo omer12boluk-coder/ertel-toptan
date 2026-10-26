@@ -3,12 +3,13 @@ import fs from 'node:fs';
 const MODE = process.argv[2] || 'probe';
 fs.mkdirSync('out', { recursive: true });
 const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' };
-const T0 = Date.now(); const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let LASTERR = ''; const T0 = Date.now(); const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function get(u, tries = 4) {
   for (let i = 0; i < tries; i++) {
     const r = await fetch(u, { headers: UA }).catch((e) => ({ ok: false, status: 'ERR ' + e.message }));
     if (r.ok) return await r.text();
-    console.log('  ', r.status, u); if (r.status === 404) return null;
+    console.log('  ', r.status, u); LASTERR = `${r.status} ${u}`; if (r.status === 404) return null;
+    if (r.text && !fs.existsSync('out/err.html')) { try { fs.writeFileSync('out/err.html', await r.text()); } catch {} }
     await sleep(r.status === 429 ? 30000 : 5000);
   }
   return null;
@@ -89,8 +90,8 @@ if (MODE === 'brands') {
         if (Date.now() - t0 > BUDGET) { log.push('# süre doldu'); break outer; }
         await sleep(1800);
         const ph = await get('https://www.gsmarena.com/' + p.u, 3);
-        if (!ph) { log.push(`${p.n}: sayfa açılmadı`); continue; }
-        if (!ph.includes('specs-list') && !ph.includes('data-spec')) { log.push(`${p.n}: engel`); if (++blocked > 5) break outer; continue; }
+        if (!ph) { log.push(`${p.n}: sayfa açılmadı (${LASTERR})`); if (++blocked > 5) break outer; continue; }
+        if (!ph.includes('specs-list') && !ph.includes('data-spec')) { log.push(`${p.n}: engel`); if (!fs.existsSync('out/block.html')) fs.writeFileSync('out/block.html', ph); if (++blocked > 5) break outer; continue; }
         blocked = 0;
         const m = /data-spec="chipset"[^>]*>([\s\S]*?)<\/td>/.exec(ph);
         const chip = m ? m[1].replace(/<br\s*\/?>/gi, '; ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() : '';
