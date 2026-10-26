@@ -3290,9 +3290,6 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 .kf-it.on { background: color-mix(in oklab, var(--accent) 9%, var(--surface)); }
 .kf-it.on > svg { color: var(--accent); }
 .kf-none { margin: 0; padding: 14px; color: var(--muted); font-size: 14px; }
-.kf-try { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; color: var(--muted); }
-.kf-try button { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 99px; padding: 5px 11px; font-size: 13px; cursor: pointer; transition: border-color .15s, color .15s; }
-.kf-try button:hover { border-color: var(--accent); color: var(--accent); }
 
 .kf-phone { display: flex; align-items: center; gap: 18px; padding: 20px 22px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); animation: kfIn .3s var(--ease); }
 .kf-chipic { flex: none; width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; color: #fff; background: linear-gradient(140deg, #5b6474, #2c3340); box-shadow: 0 10px 22px -12px rgb(0 0 0 / .5); }

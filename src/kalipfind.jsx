@@ -57,17 +57,19 @@ export function useStencils() {
     return { p, k, t: norm(txt), m: keys.filter((x) => x.startsWith('m:')).map((x) => x.slice(2)) };
   }), [catalog, descs]);
 }
+const isSetName = (n) => /\bset/i.test(n) || /\d+\s*adet\s*kal[ıi]p/i.test(n);
 export function matchStencils(stencils, sel) {
   const codes = new Set(sel.k);
   // etiketteki model adı tam tutmalı: "redminote10" / "xiaomiredminote10" (sadece "note10" Samsung Note 10 ile karışır)
   const w = sel.n ? norm(sel.n).split(/\s+/) : []; const zs = new Set([w.join(''), w.slice(1).join('')].filter((x) => x.length >= 6));
   // işlemci kodu tutan ya da etiketinde bu telefon modeli yazan (ör. "Note10pro")
   const exact = stencils.filter((s) => [...s.k].some((c) => codes.has(c)) || s.m.some((t) => zs.has(t))).sort((a, b) => a.k.size - b.k.size);
-  const single = exact.filter((s) => s.k.size <= 2 && !/set/i.test(s.p.n));
+  // set mi tek kalıp mı ürün adına göre: "Kalıp Seti", "(19 Adet Kalıp)", "10lu Set"; birçok işlemciyi taşıyan tek plaka (U-QSU4 Kalıp) yine tek kalıptır
+  const single = exact.filter((s) => !isSetName(s.p.n));
   const sets = exact.filter((s) => !single.includes(s));
   const v = vendorOf(sel.c); const brand = sel.n ? norm(sel.n).split(' ')[0] : '';
   const ids = new Set(exact.map((s) => s.p.id));
-  const more = stencils.filter((s) => !ids.has(s.p.id) && /set/i.test(s.p.n) && s.k.size === 0 && (
+  const more = stencils.filter((s) => !ids.has(s.p.id) && isSetName(s.p.n) && s.k.size === 0 && (
     (v && VENDOR_RX[v]?.test(s.t) && !/emmc|birlestirme|airpods|mac|face/.test(s.t)) ||
     (brand && brand !== 'apple' && new RegExp('\\b' + brand + '\\b').test(s.t) && /entegre/.test(s.t))
   ));
@@ -134,7 +136,6 @@ export function KalipFinder() {
             </div>
           )}
         </div>
-        {!sel && <div className="kf-try">Denemek için: {['Redmi Note 10 Pro 5G', 'iPhone 13', 'Galaxy A52', 'Redmi Note 8'].map((x) => <button type="button" key={x} onClick={() => { setQ(x); setOpen(true); setHi(0); inp.current?.focus(); }}>{x}</button>)}</div>}
       </section>
 
       {sel && result && (
