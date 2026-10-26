@@ -3254,3 +3254,12 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
   .admin-order .oa-st-m > span::after { width: 12px; height: 12px; }
   .admin-order .oa-st-m svg { color: color-mix(in oklab, var(--stc) 70%, var(--fg)); }
 }
+/* masaüstünde de durum tek seçici (düğme dizisi yerine) */
+@media (min-width: 701px) {
+  .admin-order .oa-status { display: none; }
+  .admin-order .oa-st-m { display: inline-flex; align-self: flex-start; min-width: 280px; justify-content: space-between; gap: 14px; padding: 12px 14px 12px 16px; border-radius: 12px; font-size: 15px; border: 2px solid color-mix(in oklab, var(--stc) 50%, var(--line)); background: color-mix(in oklab, var(--stc) 6%, var(--surface)); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .admin-order .oa-st-m:hover { box-shadow: 0 6px 16px -10px color-mix(in oklab, var(--stc) 70%, transparent); }
+  .admin-order .oa-st-m > span { display: flex; gap: 10px !important; font-weight: 700; }
+  .admin-order .oa-st-m small { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .admin-order .oa-st-m::after { display: none; }
+}
