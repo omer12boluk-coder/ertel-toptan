@@ -47,3 +47,27 @@ export function pushStatus(id) {
   if (!W()) return;
   fetch(W() + '/push/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }), keepalive: true }).catch(() => {});
 }
+
+// ---- Yönetici bildirimleri (yeni sipariş, müşteri iptali, bayi talebi) — bu cihaz için ----
+export function adminPushState() {
+  const st = pushState(); if (st === 'on' || st === 'off') return Notification.permission === 'granted' && ls.get('apush-on', false) ? 'on' : 'off';
+  return st;
+}
+const adminSend = async (body) => { const r = await fetch(W() + '/push/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (!j.ok) throw new Error(j.error || 'Açılamadı'); return j; };
+export async function enableAdminPush(token) {
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error(perm === 'denied' ? 'Bildirim izni verilmedi (tarayıcı ayarlarından açın)' : 'İzin verilmedi');
+  const sub = await subscription(true);
+  await adminSend({ token, sub: sub.toJSON(), hello: true });
+  ls.set('apush-on', true);
+}
+export async function disableAdminPush(token) {
+  ls.set('apush-on', false);
+  const sub = await subscription(false).catch(() => null);
+  if (sub) await adminSend({ token, sub: { endpoint: sub.endpoint }, off: true }).catch(() => {});
+}
+// bayi yeni talep açınca / mesaj yazınca, müşteri siparişi iptal edince yöneticiye haber
+export function pingWatch(path, body) {
+  if (!W()) return;
+  fetch(W() + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
+}

@@ -2,6 +2,7 @@
 //  - Auth: kullanıcı adı + şifre (arka planda kullaniciadi@EMAIL_DOMAIN e-postasına çevrilir)
 //  - Firestore: katalog 1500'lük parçalar halinde birkaç dokümanda tutulur → her açılışta ~2-3 okuma
 //  - Resimler: küçültülüp Firestore'da (img/{id}) saklanır; Storage (ücretli plan) gerekmez
+import { pingWatch } from './push.js';
 import { EMAIL_DOMAIN } from './config.js';
 import { now, ls } from './utils.js';
 import { chunkBySize } from './cats.js';
@@ -243,8 +244,12 @@ export class FirebaseBackend {
     b.set(ref, { ...req, no: req.no || ref.id.slice(0, 4).toUpperCase() });
     for (const m of msgs) b.set(this.F.doc(this.c('requests', ref.id, 'messages')), m);
     await b.commit();
+    this._pingReq(ref.id, false);
     return ref.id;
   }
+  // oturum anahtarı (bekçi bununla kim olduğunu doğrular)
+  async idToken() { try { return await this.auth.currentUser?.getIdToken(); } catch { return null; } }
+  async _pingReq(id, msg) { const token = await this.idToken(); if (token) pingWatch('/notify-req', { id, token, msg }); }
   watchRequest(id, cb) {
     return this.F.onSnapshot(this.d('requests', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null));
   }
@@ -385,6 +390,7 @@ export class FirebaseBackend {
     const unread = to === 'admin' ? { unreadAdmin: this.F.increment(1) } : to === 'user' ? { unreadUser: this.F.increment(1) } : {};
     b.update(this.d('requests', id), { updatedAt: msg.at, ...(msg.from !== 'system' ? { lastMsg: msg.text, lastFrom: msg.from } : {}), ...unread, ...patch });
     await b.commit();
+    if (msg.from === 'user') this._pingReq(id, true);
   }
 }
 

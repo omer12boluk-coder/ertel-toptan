@@ -23,7 +23,7 @@ self.addEventListener('fetch', (e) => {
 // Sipariş durumu bildirimi (bekçiden şifreli gelir): başlık, metin, tıklanınca açılacak sayfa
 self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data && e.data.text() }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'ERTEL GSM', { body: d.body || '', icon: '/icon-192.png', badge: '/icon-192.png', tag: d.tag, renotify: true, data: { url: d.url || '/magaza' } }));
+  e.waitUntil(self.registration.showNotification(d.title || 'ERTEL GSM', { body: d.body || '', icon: d.icon || '/icon-192.png', badge: '/icon-192.png', tag: d.tag, renotify: true, data: { url: d.url || '/magaza' } }));
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();

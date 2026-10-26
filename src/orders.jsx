@@ -10,7 +10,13 @@ import { ListPaper } from './listsheet.jsx';
 import { pushStatus } from './push.js';
 import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 
-const FILTERS = [['open', 'Açık'], ['new', 'Yeni'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
+// Durum filtreleri: üstte renkli sayaç kutuları (bir bakışta ne kadar iş bekliyor), yanında Tümü / Tamamlanan / İptal
+const FILTERS = [['open', 'Açık'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
+const WORK = [['new', 'Onay bekliyor', 'bell'], ['confirmed', 'Hazırlanacak', 'box'], ['shipped', 'Kargoda', 'send'], ['ready', 'Teslime hazır', 'store']];
+// yönetici listesindeki açıklama (müşteri metninden farklı)
+export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı · hazırlanıyor', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
+const ago = (ts) => { const h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + ' dk' : h < 48 ? Math.round(h) + ' sa' : Math.round(h / 24) + ' gün'; };
+const isPhone = () => matchMedia('(max-width: 700px)').matches;
 const orderTotal = (o) => fmtTotals(o.total || totals(orderItems(o), 'offer'));
 const custMsg = (o, S) => {
   const st = ORDER_STATUS[o.status]?.cust || '';
@@ -26,6 +32,12 @@ export function Orders() {
   const [confirm, setConfirm] = useState(null);
   const [sel, setSel] = useState(null); // çoklu seçim (Set) ya da kapalı
   const newN = orders.filter((o) => o.status === 'new').length;
+  const cnt = useMemo(() => { const c = { open: 0 }; for (const o of orders) { c[o.status] = (c[o.status] || 0) + 1; if (ORDER_OPEN.includes(o.status)) c.open++; } return c; }, [orders]);
+  const flow = useStatusFlow(S);
+  // listeden hızlı durum değiştirme
+  const quick = (e, o) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
+    [...['new', 'confirmed', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'].map((k) => ({ label: (o.status === k ? '✓ ' : '') + ADMIN_ST[k] + (k === 'shipped' && o.status === 'shipped' ? ' · takip no düzenle' : ''), icon: { new: 'bell', confirmed: 'check', shipped: 'send', ready: 'store', done: 'check' }[k], onClick: () => flow.ask(o, k) })),
+      '-', { label: 'İptal et', icon: 'x', danger: true, onClick: () => flow.ask(o, 'cancelled') }], '#' + o.no + ' · durum');
   const list = useMemo(() => {
     let r = orders;
     if (filter === 'open') r = r.filter((o) => ORDER_OPEN.includes(o.status));
@@ -61,8 +73,15 @@ export function Orders() {
         <div className="toolbar">
           <div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <div className="chips">
-            {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'new' && newN > 0 ? ` (${newN})` : ''}</button>)}
+            {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'open' ? ` (${cnt.open})` : ''}</button>)}
           </div>
+        </div>
+        <div className={'ost-tiles' + (cnt.ready > 0 ? ' n4' : '')}>
+          {WORK.filter(([k]) => k !== 'ready' || cnt.ready > 0).map(([k, l, ic]) => (
+            <button key={k} className={'ost-tile ost-' + k + (filter === k ? ' on' : '') + (cnt[k] ? '' : ' zero')} onClick={() => setFilter(filter === k ? 'open' : k)}>
+              <Icon n={ic} s={18} /><b className="num">{cnt[k] || 0}</b><span>{l}</span>
+            </button>
+          ))}
         </div>
         {sel && (
           <div className="sel-bar">
@@ -76,27 +95,95 @@ export function Orders() {
             {!orders.length && <p>Müşteriler <b>/magaza</b>’da sepeti onaylayıp siparişi tamamlayınca burada görünür.</p>}
           </Empty>
         ) : (
-          <ul className="olist">
-            {list.map((o) => (
-              <li key={o.id} onContextMenu={(e) => menu(e, o)}>
-                <button className={'ocard' + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))}>
-                  {sel && <span className={'ocheck' + (sel.has(o.id) ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}
-                  <span className="ocard-b">
-                    <span className="ocard-top">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} />{o.member && <span className="tag">Üye</span>}{needsInvoice(o.invoice) && <span className="tag ok">Fatura</span>}</span>
-                    <span className="ocard-who"><b>{o.contact?.name}</b>{o.invoice?.type === 'company' && o.invoice.company ? ` · ${o.invoice.company}` : ''}</span>
-                    <span className="muted">{when(o.createdAt)} · {(o.items || []).length} ürün · {DELIVERY[o.delivery?.method] || ''}{o.delivery?.addr?.city ? ` (${o.delivery.addr.city})` : ''} · {PAY[o.pay] || ''}</span>
-                  </span>
-                  <b className="num ocard-sum">{orderTotal(o)}</b>
-                  <Icon n="back" s={16} className="flip" />
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="otable">
+            <div className="otable-h" aria-hidden="true"><span>Sipariş</span><span>Müşteri</span><span>Ödeme / teslimat</span><span>Tutar</span><span>Tarih</span><span>Durum</span></div>
+            <ul className="olist orows">
+              {list.map((o) => {
+                const noCode = o.status === 'shipped' && o.delivery?.method !== 'pickup' && !o.cargo?.code;
+                const late = o.status === 'new' && Date.now() - o.createdAt > 2 * 36e5;
+                return (
+                  <li key={o.id} onContextMenu={(e) => menu(e, o)}>
+                    <div role="button" tabIndex={0} className={'orow st-' + o.status + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))} onKeyDown={(e) => e.key === 'Enter' && (sel ? toggle(o.id) : openOrder(o.id))}>
+                      {sel && <span className={'ocheck' + (sel.has(o.id) ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}
+                      <span className="or-no">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b></span>
+                      <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
+                      <span className="or-tags">
+                        <span className={'otag pay-' + o.pay}>{PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
+                        <span className={'otag ' + (o.delivery?.method === 'pickup' ? 'dl-pick' : 'dl-cargo')}>{o.delivery?.method === 'pickup' ? 'Dükkândan' : (o.cargo?.company || 'Kargo') + (o.delivery?.addr?.city ? ' · ' + o.delivery.addr.city : '')}</span>
+                        {o.member && <span className="otag">Üye</span>}{needsInvoice(o.invoice) && <span className="otag inv">Fatura</span>}
+                      </span>
+                      <span className="or-sum"><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></span>
+                      <span className="or-date"><span>{when(o.createdAt)}</span>{late && <small className="late">{ago(o.createdAt)} bekliyor</small>}</span>
+                      <span className="or-st">
+                        <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); if (!sel) quick(e, o); }} title="Durumu değiştir">{ADMIN_ST[o.status] || o.status}<Icon n="chev" s={14} /></button>
+                        {noCode && <small className="warn-t">Takip no yok</small>}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
       </>}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+      {flow.sheets}
     </div>
   );
+}
+const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda' };
+
+// ---- Durum değiştirme (liste ve detay ortak): onay penceresi, kargo bilgisi penceresi ----
+// Kargoda iken takip no sonradan eklenebilir/düzeltilebilir: durum değişmez, müşteriye sadece takip no ile tek bildirim gider.
+function useStatusFlow(S) {
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(null);
+  const [ship, setShip] = useState(null); // { o, company, code }
+  async function setStatus(o, s, extra = {}) {
+    setBusy(true);
+    try {
+      const t = now();
+      await api().updateOrder(o.id, { status: s, updatedAt: t, history: [...(o.history || []), { s, at: t, by: 'admin' }], ...extra });
+      toast('Durum: ' + ORDER_STATUS[s].label);
+      if (api().mode === 'firebase') pushStatus(o.id); // müşteriye bildirim (açtıysa)
+    } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+    setBusy(false);
+  }
+  const openShip = (o) => setShip({ o, company: o.cargo?.company || S.orders?.cargoCompany || (S.orders?.cargoCompanies || [])[0] || '', code: o.cargo?.code || '' });
+  function ask(o, k) {
+    if (k === 'shipped') return openShip(o);
+    if (o.status === k) return;
+    if (k === 'cancelled') return setConfirm({ title: 'Siparişi iptal et', text: `#${o.no} iptal edilecek. Müşteri takip sayfasında “İptal edildi” görür.`, okLabel: 'İptal et', tone: 'danger', onOk: () => setStatus(o, 'cancelled') });
+    setConfirm({ title: ADMIN_ST[k], text: `#${o.no} “${ORDER_STATUS[k].label}” olarak işaretlensin mi? Müşteri takip sayfasında görür${S.orders?.push !== false && k !== 'new' ? ', bildirimleri açtıysa telefonuna bildirim gider' : ''}.`, okLabel: 'Evet, değiştir', onOk: () => setStatus(o, k) });
+  }
+  async function saveShip() {
+    const { o } = ship; const c = { company: ship.company.trim(), code: ship.code.trim() };
+    setShip(null);
+    if (o.status !== 'shipped') return setStatus(o, 'shipped', { cargo: c });
+    if (c.company === (o.cargo?.company || '') && c.code === (o.cargo?.code || '')) return;
+    try {
+      await api().updateOrder(o.id, { cargo: c, updatedAt: now() });
+      toast('Kargo bilgisi kaydedildi');
+      if (c.code && api().mode === 'firebase') pushStatus(o.id); // takip no eklendi/değişti: tek bildirim
+    } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+  }
+  const sheets = <>
+    {ship && (
+      <Sheet title={ship.o.status === 'shipped' ? 'Kargo bilgisi' : 'Kargoya verildi'} sub={ship.o.status === 'shipped' ? `#${ship.o.no} · durum değişmez, sadece kargo bilgisi güncellenir` : 'Takip numarası müşterinin sipariş sayfasında görünür'} onClose={() => setShip(null)}
+        footer={<><button className="btn ghost" onClick={() => setShip(null)}>Vazgeç</button><button className="btn primary" disabled={busy} onClick={saveShip}><Icon n="check" s={16} />{ship.o.status === 'shipped' ? 'Kaydet' : 'Kargoya verildi'}</button></>}>
+        <div className="form-col">
+          <div className="field"><span className="field-l">Kargo firması</span>
+            <div className="cargo-pick">{(S.orders?.cargoCompanies || []).map((c) => <button key={c} type="button" className={'chip' + (ship.company === c ? ' on' : '')} onClick={() => setShip({ ...ship, company: c })}>{c}</button>)}</div>
+            <input id="ship-co" value={ship.company} onChange={(e) => setShip({ ...ship, company: e.target.value })} placeholder="Listede yoksa yazın" />
+            <span className="field-h">Listeyi Ayarlar &gt; Online mağaza &gt; Kargo firmaları’ndan düzenleyebilirsiniz.</span>
+          </div>
+          <Field label="Takip numarası" opt hint={ship.code.trim() ? undefined : 'Şimdi bilmiyorsanız boş bırakın; sonra listede “Takip no yok” yazar, oradan ekleyebilirsiniz.'}><input id="ship-code" inputMode="text" value={ship.code} onChange={(e) => setShip({ ...ship, code: e.target.value })} /></Field>
+        </div>
+      </Sheet>
+    )}
+    {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+  </>;
+  return { busy, ask, setStatus, openShip, sheets };
 }
 
 // Geçerli vergi no (10 hane, VKN algoritması) ya da TC kimlik no (11 hane, algoritma) girilmişse fatura kesilmesi gerekir
@@ -123,9 +210,9 @@ function OrderDetail({ id }) {
   const fromList = orders.find((o) => o.id === id);
   const [one, setOne] = useState(undefined);
   const o = fromList || one;
-  const [busy, setBusy] = useState(false);
+  const flow = useStatusFlow(S);
+  const busy = flow.busy;
   const [confirm, setConfirm] = useState(null);
-  const [ship, setShip] = useState(null); // kargo bilgisi penceresi
   const [note, setNote] = useState(null);
   // listede yoksa (eski sipariş / linkten gelindi) tek başına getir
   useEffect(() => { if (fromList) return; const un = api().watchOrder(id, setOne); return () => un && un(); }, [id, !!fromList]);
@@ -140,18 +227,7 @@ function OrderDetail({ id }) {
   const nextMap = { new: ['confirmed', 'Siparişi onayla', 'check'], confirmed: pickup ? ['ready', 'Teslime hazır', 'store'] : ['shipped', 'Kargoya verildi', 'box'], shipped: ['done', 'Teslim edildi', 'check'], ready: ['done', 'Teslim edildi', 'check'] };
   const next = nextMap[o.status];
   const wa = o.contact?.phone ? waLink(o.contact.phone, custMsg(o, S)) : null;
-  async function setStatus(s, extra = {}) {
-    setBusy(true);
-    try {
-      const t = now();
-      await api().updateOrder(o.id, { status: s, updatedAt: t, history: [...(o.history || []), { s, at: t, by: 'admin' }], ...extra });
-      toast('Durum: ' + ORDER_STATUS[s].label);
-      if (api().mode === 'firebase') pushStatus(o.id); // müşteriye bildirim (açtıysa)
-    } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
-    setBusy(false);
-  }
-  const goNext = () => (next[0] === 'shipped' ? setShip({ company: o.cargo?.company || S.orders?.cargoCompany || '', code: o.cargo?.code || '' }) : setStatus(next[0]));
-  const cancel = () => setConfirm({ title: 'Siparişi iptal et', text: `#${o.no} iptal edilecek. Müşteri takip sayfasında “İptal edildi” görür.`, okLabel: 'İptal et', tone: 'danger', onOk: () => setStatus('cancelled') });
+  const goNext = () => flow.ask(o, next[0]);
   const del = () => setConfirm({ title: 'Siparişi sil', text: `#${o.no} tamamen silinecek. Geri alınamaz.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteOrders([o.id]).then(() => { toast('Sipariş silindi'); back(); }) });
   const saveNote = () => api().updateOrder(o.id, { adminNote: note.trim() }).then(() => toast('Not kaydedildi'), (e) => toast('Kaydedilemedi: ' + e.message, 'bad'));
 
@@ -168,7 +244,7 @@ function OrderDetail({ id }) {
         <span className="oa-status-l">Durum:</span>
         {['new', 'confirmed', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
           <button key={k} role="radio" aria-checked={o.status === k} disabled={busy} className={'oa-st tone-' + ORDER_STATUS[k].tone + (o.status === k ? ' on' : '')}
-            onClick={() => { if (o.status === k) return; if (k === 'shipped') setShip({ company: o.cargo?.company || '', code: o.cargo?.code || '' }); else if (k === 'cancelled') cancel(); else setConfirm({ title: ORDER_STATUS[k].label, text: `#${o.no} “${ORDER_STATUS[k].label}” olarak işaretlensin mi? Müşteri takip sayfasında görür${S.orders?.push !== false ? ', bildirimleri açtıysa telefonuna bildirim gider' : ''}.`, okLabel: 'Evet, değiştir', onOk: () => setStatus(k) }); }}>
+            onClick={() => flow.ask(o, k)}>
             {o.status === k && <Icon n="check" s={14} />}{ORDER_STATUS[k].label}
           </button>
         ))}
@@ -187,7 +263,9 @@ function OrderDetail({ id }) {
           return <li key={k} className={o.status === 'cancelled' ? '' : i < cur ? 'done' : i === cur ? 'on' : ''}><span className="track-dot">{i < cur && o.status !== 'cancelled' ? <Icon n="check" s={14} /> : i + 1}</span><span>{ORDER_STATUS[k].label}{h && <small>{when(h.at)}</small>}</span></li>;
         })}
       </ol>
-      {o.status === 'shipped' && o.cargo?.code && <div className="banner ok"><Icon n="box" /><div><b>Kargo:</b> {o.cargo.company} · <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => setShip({ ...o.cargo })}>Değiştir</button></div></div>}
+      {o.status === 'shipped' && (o.cargo?.code
+        ? <div className="banner ok"><Icon n="box" /><div><b>Kargo:</b> {o.cargo.company} · <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => flow.openShip(o)}>Değiştir</button></div></div>
+        : <div className="banner warn"><Icon n="box" /><div><b>Takip numarası girilmedi.</b> {o.cargo?.company || ''} <button className="btn sm primary" onClick={() => flow.openShip(o)}>Takip no ekle</button></div></div>)}
 
       <div className="o-info">
         <div className="o-card">
@@ -214,19 +292,7 @@ function OrderDetail({ id }) {
         {(note ?? '') !== (o.adminNote || '') && <button className="btn sm primary" onClick={saveNote}><Icon n="check" s={15} />Notu kaydet</button>}
       </div>
 
-      {ship && (
-        <Sheet title="Kargoya verildi" sub="Takip numarası müşterinin sipariş sayfasında görünür" onClose={() => setShip(null)}
-          footer={<><button className="btn ghost" onClick={() => setShip(null)}>Vazgeç</button><button className="btn primary" disabled={busy} onClick={() => { const c = { company: ship.company.trim(), code: ship.code.trim() }; setShip(null); o.status === 'shipped' ? api().updateOrder(o.id, { cargo: c }).then(() => toast('Kargo bilgisi kaydedildi')) : setStatus('shipped', { cargo: c }); }}><Icon n="check" s={16} />Kaydet</button></>}>
-          <div className="form-col">
-            <div className="field"><span className="field-l">Kargo firması</span>
-              <div className="cargo-pick">{(S.orders?.cargoCompanies || []).map((c) => <button key={c} type="button" className={'chip' + (ship.company === c ? ' on' : '')} onClick={() => setShip({ ...ship, company: c })}>{c}</button>)}</div>
-              <input id="ship-co" value={ship.company} onChange={(e) => setShip({ ...ship, company: e.target.value })} placeholder="Listede yoksa yazın" />
-              <span className="field-h">Listeyi Ayarlar &gt; Online mağaza &gt; Kargo firmaları’ndan düzenleyebilirsiniz.</span>
-            </div>
-            <Field label="Takip numarası" opt><input id="ship-code" value={ship.code} onChange={(e) => setShip({ ...ship, code: e.target.value })} /></Field>
-          </div>
-        </Sheet>
-      )}
+      {flow.sheets}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );

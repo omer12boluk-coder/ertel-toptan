@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { waLink, links } from './route.js';
+import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
@@ -1288,7 +1289,34 @@ function ShopInvite() {
   );
 }
 
-// Yeni sipariş bildirimi (bekçi üzerinden e-posta + WhatsApp)
+// Yönetici bildirimleri bu cihaza (web push): yeni sipariş, müşteri iptali, bayi talebi / mesajı
+export function AdminPush({ compact }) {
+  const [st, setSt] = useState(adminPushState);
+  const [busy, setBusy] = useState(false);
+  const [hide, setHide] = useState(() => ls.get('apush-hide', false));
+  if (compact && (st === 'on' || st === 'unsupported' || st === 'denied' || hide)) return null;
+  const tok = () => api().idToken?.();
+  const on = async () => { setBusy(true); try { await enableAdminPush(await tok()); setSt('on'); toast('Bildirimler açık; deneme bildirimi gönderildi', 'ok'); } catch (e) { toast(e.message, 'bad'); } setBusy(false); };
+  const off = async () => { setBusy(true); await disableAdminPush(await tok()); setSt('off'); setBusy(false); toast('Bu cihazda bildirimler kapatıldı'); };
+  const txt = { on: 'Bu cihaza bildirim geliyor.', off: 'Bu cihazda bildirim kapalı.', 'ios-home': 'iPhone’da önce Safari’de Paylaş › Ana Ekrana Ekle ile “ERTEL Yönetim”i ekleyin, paneli oradan açıp buradan bildirimleri açın.', denied: 'Bildirim izni engellenmiş; tarayıcı/telefon ayarlarından bu siteye izin verin.', unsupported: 'Bu tarayıcı bildirimleri desteklemiyor.' }[st];
+  if (compact) return (
+    <div className="apush-band">
+      <Icon n="bell" s={18} />
+      <span><b>Bildirimleri açın:</b> yeni sipariş, iptal ve bayi talepleri telefonunuza gelsin.{st === 'ios-home' && <small> {txt}</small>}</span>
+      {st === 'off' && <button className="btn sm primary" disabled={busy} onClick={on}>{busy ? '…' : 'Aç'}</button>}
+      <button className="apush-x" aria-label="Gizle" onClick={() => { ls.set('apush-hide', true); setHide(true); }}><Icon n="x" s={15} /></button>
+    </div>
+  );
+  return (
+    <div className="apush-row">
+      <p className="fine"><b>Bu cihaza anlık bildirim</b> (yeni sipariş, müşteri iptali, bayi talebi ve mesajı): {st === 'on' ? <b className="tone-ok-t">açık</b> : txt}</p>
+      {st === 'off' && <button className="btn sm primary" disabled={busy} onClick={on}><Icon n="bell" s={15} />{busy ? 'Açılıyor…' : 'Bu cihazda aç'}</button>}
+      {st === 'on' && <button className="btn sm ghost" disabled={busy} onClick={off}>Bu cihazda kapat</button>}
+    </div>
+  );
+}
+
+// Yeni sipariş bildirimi (bekçi üzerinden Telegram + e-posta)
 function NotifyCard() {
   const [st, setSt] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -1316,8 +1344,9 @@ function NotifyCard() {
   const on = (x) => <b className="tone-ok-t">{x}</b>;
   return (
     <div className="invite notify-card">
-      <b>Yeni sipariş bildirimi</b>
-      <p className="fine">Mağazadan sipariş gelince Telegram’ınıza ve e-postanıza sipariş özeti + panelde açma linki gelir.</p>
+      <b>Yönetici bildirimleri</b>
+      <p className="fine">Yeni sipariş, müşterinin iptal ettiği sipariş ve yeni bayi talebi Telegram’ınıza ve e-postanıza özet + panelde açma linkiyle gelir.</p>
+      <AdminPush />
       <p className="fine">Telegram: {!st ? '…' : st.telegramLinked ? on('bağlı (' + st.telegramLinked + ')') : st.telegram ? <b>bağlanmayı bekliyor</b> : 'kurulmadı'} · E-posta: {!st ? '…' : st.email ? on('açık') : 'kurulmadı'}</p>
       {st && !st.telegram && (
         <ol className="fine notify-steps">

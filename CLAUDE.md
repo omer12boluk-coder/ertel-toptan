@@ -184,6 +184,15 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - **Ürün penceresi:** adet satırının altında küçük düğmeler: "Sepete ekle" (ana renk) + **"Hemen satın al"** (açık, hafif `.pbuy-now`) (mağaza, sipariş açıksa): `store.buyNow {id, qty}` → sepet sekmesi doğrudan o tek ürünle ödeme adımı (`Checkout single`), sepete dokunulmaz; Vazgeç = geri; sipariş verilince sepet temizlenmez. Bayide "Bu ürünü sor". İçerik `ProductBody` (pencere ve sayfa ortak).
 - **Ürün açılışı** (Ayarlar > Ürün kartları, `cards.productView` sheet | page): page → `/magaza/urun/<no>` (`ProductPage`, store `openProduct`/`pidFromPath`, tab 'urun'); `ProductSheet` mağazada sayfa modunda kendini sayfaya yönlendirir (her yerden açılış aynı).
 
+### 26.10.2026 düzenlemeleri (grup 2)
+- **Video bölümü:** "Yanına video ekle" her videonun boyunu korur (kutu genişliği video sayısıyla büyür: `wp = tek video % × adet`); sığmıyorsa %100 olur ve videolar küçülür (editörde yazıyla söylenir). Silince kutu daralır.
+- **Yönetici bildirimleri (web push):** `AdminPush` (admin.jsx; Ayarlar > Online mağaza > Yönetici bildirimleri kartında + Genel bakış'ta kapatılabilir bant `compact`). push.js `adminPushState/enableAdminPush/disableAdminPush` (cihazda `apush-on`). Worker `POST /push/admin {token, sub, hello|off}` → Firebase ID token ile `users/{uid}` Firestore REST'ten okunur, role admin değilse red; KV `ps-admin` (en çok 10 cihaz). `adminPush()` yeni siparişte (`notifyOrder`), müşteri iptalinde, bayi talebinde gönderilir. Bildirim simgesi `icon-admin-192.png` (sw.js `d.icon`).
+- **Müşteri iptali bildirimi:** checkout.jsx iptal → `pingWatch('/notify-cancel', {id})` → Worker durum `cancelled` ve son geçmiş `by: 'customer'` ise bir kez (KV `nc:`) Telegram + e-posta + push. Yönetici iptali bildirilmez.
+- **Bayi talebi bildirimi:** backend-firebase `createRequest` / `sendMessage` (from 'user') → `/notify-req {id, token, msg}`; Worker talebi bayinin anahtarıyla okur, `uid` eşleşmezse red. Yeni talep: Telegram + e-posta + push (KV `nr:` bir kez); mesaj: sadece push, 2 dakikada en çok bir (KV `nm:`).
+- **Sipariş listesi (yönetim):** tablo düzeni (`.otable`/`.orow`, bilgisayarda sütunlar: Sipariş, Müşteri, Ödeme/teslimat etiketleri, Tutar, Tarih, Durum; ≤860px kart). Durum renkleri: Onay bekliyor kırmızı, Onaylandı·hazırlanıyor turuncu, Kargoda mavi, Teslime hazır mor, Tamamlandı yeşil (soluk), İptal gri (üstü çizili). Bekleyen/hazırlanacak satırlar renkli zeminli, 2 saatten eski onay bekleyende "N sa bekliyor". Üstte renkli sayaç kutuları (`.ost-tile`, filtre). Durum hapı (`.ost`) listeden hızlı değiştirme menüsü açar. Yönetici metinleri `ADMIN_ST`.
+- **Durum akışı ortak:** `useStatusFlow(S)` (orders.jsx) liste ve detay için onay + kargo penceresi. **Kargoda iken takip no sonradan eklenir/düzeltilir** (durum değişmez; detayda "Takip numarası girilmedi · Takip no ekle" bandı, listede "Takip no yok"). Takip no eklenince müşteriye tek bildirim: Worker `pl:` işareti kargoda `shipped:<kod>`.
+- **Bayi kartı (telefon):** `add-icon`/`add-plus` + `.price.dual` kartta sepetteki ürünün adet seçicisi fiyatın altına tam genişlik iner (mağaza kartı değişmedi).
+
 ## 7. Site eşitleme, Worker, bildirimler
 
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler. Beslemede stok adedi yok. **Siteye toplu istek atma (IP engeli yemiştik).**
@@ -226,6 +235,8 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - Web push gerçek telefonda uçtan uca denenmedi; kullanıcı deneyecek (Android/bilgisayar hemen, iPhone ana ekrana ekleyince).
 
 ## 11. Yarım kalan işler / açık konular
+
+- [ ] **DHL eCommerce entegrasyonu** (konuşuldu, kod yok): müşteri teslimat bilgisini girer → yönetici "DHL'e gönder" → gönderi oluşturulur, barkod (etiket) yazdırılır → takip no siparişe ve müşteriye otomatik. API erişimi için DHL eCommerce Türkiye müşteri temsilcisi / şubeden entegrasyon bilgileri istenecek. Adres: il/ilçe/mahalle listeden seçilmeli (DHL'in kendi il-ilçe-mahalle kodları), açık adres serbest metin.
 
 - [ ] **E-postalar spam'e düşüyor** (üyelik doğrulama, şifre sıfırlama, sipariş bildirimi). Spam'deki e-postada Gmail linkleri de kapatıyor. Kullanıcı "sonra dönücem" dedi. Seçenekler:
   - Kendi alan adı (ertelgsm.com DNS kayıtları → Firebase Auth özel alan adı + Resend alan doğrulama) — DNS'i kimin yönettiği soruldu, cevap bekleniyor.

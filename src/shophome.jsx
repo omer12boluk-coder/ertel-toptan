@@ -934,18 +934,23 @@ export function BlockFields({ b, up }) {
   if (b.t === 'video') {
     const list = videoList(b); const g = videoGeom(b);
     const setList = (l) => up({ vids: l, src: null, poster: null });
+    // her video kendi boyunu korur: kutu genişliği video sayısıyla büyür/küçülür
+    const per = g.W / list.length; const fits = per * (list.length + 1) <= 101;
+    const addVid = () => up({ vids: [...list, { src: '', poster: '' }], src: null, poster: null, wp: fits ? Math.min(100, Math.round(per * (list.length + 1))) : 100 });
+    const delVid = (i) => up({ vids: list.filter((_, j) => j !== i), src: null, poster: null, wp: Math.max(15, Math.round(per * (list.length - 1))) });
     return <>
       <p className="fine">Bilgisayarda videoyu ortadaki <b>Taşı</b> ile sağa-sola çekin, kenarlarından tutup büyütüp küçültün.</p>
       {list.map((x, i) => (
         <div key={i} className="vid-item">
           <Field label={list.length > 1 ? `${i + 1}. video linki` : 'Video linki'} hint={i === 0 ? 'Doğrudan video dosyası (.mp4); R2 linkleri de olur.' : undefined}>
             <span className="input-btn"><input inputMode="url" placeholder="https://…/video.mp4" value={x.src || ''} onChange={(e) => setList(list.map((y, j) => (j === i ? { ...y, src: e.target.value.trim() } : y)))} />
-              {list.length > 1 && <button type="button" className="btn sm ghost" aria-label="Videoyu kaldır" onClick={() => setList(list.filter((_, j) => j !== i))}><Icon n="trash" s={15} /></button>}</span>
+              {list.length > 1 && <button type="button" className="btn sm ghost" aria-label="Videoyu kaldır" onClick={() => delVid(i)}><Icon n="trash" s={15} /></button>}</span>
           </Field>
           <Field label="Kapak resmi linki" opt hint="Dokununca oynatmada video başlamadan bu görünür"><input inputMode="url" placeholder="Boşsa videodan bir kare" value={x.poster || ''} onChange={(e) => setList(list.map((y, j) => (j === i ? { ...y, poster: e.target.value.trim() } : y)))} /></Field>
         </div>
       ))}
-      {list.length < 3 && <button type="button" className="btn sm outline" onClick={() => setList([...list, { src: '', poster: '' }])}><Icon n="plus" s={15} />Yanına video ekle (aynı sırada)</button>}
+      {list.length < 3 && <><button type="button" className="btn sm outline" onClick={addVid}><Icon n="plus" s={15} />Yanına video ekle (aynı sırada)</button>
+        <p className="fine">{fits ? 'Yeni video aynı boyda, yanındaki boşluğa eklenir.' : 'Yanında yer yok: eklenirse videolar satıra sığacak kadar küçülür.'}</p></>}
       <Field label="Oynatma" hint={b.play === 'auto' ? 'Ekrana gelince sessiz ve döngülü kendiliğinden oynar' : 'Kapak (ya da videodan bir kare) görünür; dokununca sesli oynar'}><span className="seg">{[['tap', 'Dokununca'], ['auto', 'Otomatik']].map(([x, l]) => <button key={x} type="button" className={(b.play || 'tap') === x ? 'on' : ''} onClick={() => up({ play: x })}>{l}</button>)}</span></Field>
       <Field label="Ebat"><span className="seg seg-wrap">{VIDEO_RATIOS.map(([x, l]) => <button key={x} type="button" className={(b.ratio || '16:9') === x ? 'on' : ''} onClick={() => up({ ratio: x })}>{l}</button>)}</span></Field>
       <GeoFields W={g.W} pos={g.pos} up={up} note="Sayfa genişliğine göre; telefonda en az %64. Başlık videoyla birlikte kayar." />

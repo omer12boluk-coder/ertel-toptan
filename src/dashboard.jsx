@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useStore, go, openOrder, openRequest, store } from './store.js';
 import { Icon, Thumb, StatusPill, copyText } from './ui.jsx';
 import { fmt } from './utils.js';
+import { AdminPush } from './admin.jsx';
 import { ORDER_STATUS } from './config.js';
 import { links } from './route.js';
 
@@ -68,6 +69,7 @@ export function AdminHome() {
         </div>
         <div className="seg dash-seg" role="group" aria-label="Dönem">{PERIODS.map(([k, l]) => <button key={k} className={per === k ? 'on' : ''} onClick={() => setP(k)}>{l}</button>)}</div>
       </section>
+      <AdminPush compact />
 
       <section className="dash-kpis">
         <Kpi ic="cart" tone="blue" label="Mağaza siparişi" value={st.count} sub={st.count !== st.sold ? `${st.count - st.sold} iptal` : perName} onClick={() => go('siparisler')} />

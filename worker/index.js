@@ -40,6 +40,9 @@ export default {
       // müşteriye sipariş durumu bildirimi (web push)
       if (url.pathname === '/push/key') return json({ key: (await vapidKeys(env)).pub });
       if (url.pathname === '/push/sub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); const r = await pushSub(env, b); if (r.ok && b.hello && !(await env.KV.get('ph:' + b.id))) { await env.KV.put('ph:' + b.id, '1', { expirationTtl: 60 }); ctx.waitUntil(pushStatus(env, String(b.id), true)); } return json(r); }
+      if (url.pathname === '/push/admin' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminSub(env, b)); }
+      if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
+      if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
       if (url.pathname === '/push/status' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushStatus(env, String(b.id || ''))); }
       // Ürün videosu: iPhone Safari videoyu parça parça (Range) ister; dosya bekçinin kendi dosyalarından okunup dilimlenir
       if (url.pathname.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD') && env.ASSETS) return await serveVideo(req, env, url, cors);
@@ -193,6 +196,7 @@ async function notifyOrder(env, id) {
   const pay = { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[o.pay] || o.pay;
   const link = `https://erteltoptan.web.app/admin/s/${id}`;
   const text = `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n${deliv} · ${pay}${o.note ? '\nNot: ' + o.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
+  await adminPush(env, { title: `🛒 Yeni sipariş #${o.no} · ${tot}`, body: `${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${deliv}`, url: '/admin/s/' + id, tag: 'ao-' + id }).catch(() => {});
   return notifySend(env, { subject: `Yeni sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, link, short: `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${tot}\n${deliv}\nPanelde aç: ${link}`, replyTo: o.contact?.email });
 }
 // E-posta gövdesi: düz metin + belirgin "Panelde aç" düğmesi
@@ -366,8 +370,10 @@ async function pushStatus(env, id, test) {
   const o = await fsDoc('orders/' + id); if (!o) return { ok: false, error: 'sipariş yok' };
   const st = o.status || 'new';
   if (!test) {
-    if (st === 'new' || (await env.KV.get('pl:' + id)) === st) return { ok: true, sent: 0, same: true };
-    await env.KV.put('pl:' + id, st, { expirationTtl: 60 * 60 * 24 * 120 });
+    // kargoda: takip no sonradan eklenince / düzeltilince bir kez daha bildirilir (durum aynı kalsa da)
+    const mark = st === 'shipped' ? 'shipped:' + (o.cargo?.code || '') : st;
+    if (st === 'new' || (await env.KV.get('pl:' + id)) === mark) return { ok: true, sent: 0, same: true };
+    await env.KV.put('pl:' + id, mark, { expirationTtl: 60 * 60 * 24 * 120 });
   }
   const pub = (await fsDoc('settings/public')) || {};
   const O = pub.orders || {};
@@ -380,4 +386,69 @@ async function pushStatus(env, id, test) {
   for (const s of list) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
   if (keep.length !== list.length) await env.KV.put('ps:' + id, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 120 });
   return { ok: true, sent, subs: list.length };
+}
+
+// ---- Yönetici bildirimleri (web push): yeni sipariş, müşteri iptali, yeni bayi talebi / mesajı ----------------
+// Abonelik: yönetici panelden açar; kimliği Firebase oturum anahtarıyla (ID token) Firestore'dan users/{uid}.role okunarak doğrulanır.
+const tokUid = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).user_id || ''; } catch { return ''; } };
+async function fsAuth(path, tok) {
+  const r = await fetch(FS + path, { headers: { Authorization: 'Bearer ' + tok } }); if (!r.ok) return null; // Firestore anahtarı kendisi doğrular
+  const doc = await r.json(); return Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
+}
+async function adminSub(env, b) {
+  const tok = String(b.token || ''); const uid = tokUid(tok); const s = b.sub || {};
+  if (!uid || !/^https:\/\//.test(s.endpoint || '')) return { ok: false, error: 'eksik' };
+  const u = await fsAuth('users/' + uid, tok);
+  if (u?.role !== 'admin') return { ok: false, error: 'Yönetici oturumu doğrulanamadı' };
+  const list = (await env.KV.get('ps-admin', 'json')) || [];
+  const rest = list.filter((x) => x.endpoint !== s.endpoint);
+  if (b.off) { await env.KV.put('ps-admin', JSON.stringify(rest)); return { ok: true, off: true }; }
+  if (!s.keys?.p256dh || !s.keys?.auth) return { ok: false, error: 'eksik' };
+  const sub = { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } };
+  await env.KV.put('ps-admin', JSON.stringify([sub, ...rest].slice(0, 10)));
+  if (b.hello) await pushOne(env, sub, { title: 'ERTEL Yönetim', body: 'Bildirimler açık. Yeni sipariş, iptal ve bayi talepleri buraya gelecek.', url: '/admin', tag: 'a-hello', icon: '/icon-admin-192.png' }).catch(() => 0);
+  return { ok: true };
+}
+async function adminPush(env, data) {
+  const list = (await env.KV.get('ps-admin', 'json')) || [];
+  if (!list.length) return 0;
+  const keep = []; let sent = 0;
+  for (const s of list) { const code = await pushOne(env, s, { icon: '/icon-admin-192.png', ...data }).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
+  if (keep.length !== list.length) await env.KV.put('ps-admin', JSON.stringify(keep));
+  return sent;
+}
+// Müşteri siparişini iptal edince (sipariş herkese açık okunur, durum gerçekten 'cancelled' mı bakılır)
+async function notifyCancel(env, id) {
+  if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
+  if (await env.KV.get('nc:' + id)) return { ok: true, already: true };
+  const o = await fsDoc('orders/' + id);
+  if (!o || o.status !== 'cancelled') return { ok: false, error: 'iptal değil' };
+  const last = (o.history || []).slice(-1)[0] || {};
+  if (last.by !== 'customer') return { ok: true, skip: 'yönetici iptali' };
+  await env.KV.put('nc:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
+  const tot = Object.entries(o.total || {}).map(([c, v]) => money(v, c)).join(' + ');
+  const link = `https://erteltoptan.web.app/admin/s/${id}`;
+  const text = `❌ Müşteri siparişi iptal etti #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n\nPanelde aç: ${link}`;
+  await adminPush(env, { title: `❌ Sipariş iptal edildi #${o.no}`, body: `${o.contact?.name || ''} · ${tot} · müşteri iptal etti`, url: '/admin/s/' + id, tag: 'ao-' + id }).catch(() => {});
+  return notifySend(env, { subject: `İptal: sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, link, replyTo: o.contact?.email });
+}
+// Bayi yeni talep açınca / mesaj yazınca. Talep, bayinin kendi oturum anahtarıyla okunur (başkası adına bildirim yollanamaz).
+const REQ_TYPE = { reserve: 'Hazırlayın, geliyorum', quote: 'Fiyat sor', message: 'Mesaj' };
+async function notifyReq(env, b) {
+  const id = String(b.id || ''); const tok = String(b.token || ''); const uid = tokUid(tok);
+  if (!/^[\w-]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
+  const msg = !!b.msg; const key = (msg ? 'nm:' : 'nr:') + id;
+  if (await env.KV.get(key)) return { ok: true, already: true };
+  const r = await fsAuth('requests/' + id, tok);
+  if (!r || r.uid !== uid) return { ok: false, error: 'talep yok' };
+  await env.KV.put(key, '1', { expirationTtl: msg ? 120 : 60 * 60 * 24 * 30 }); // mesajlar 2 dakikada en çok bir bildirim
+  const who = (r.userName || '') + (r.shop ? ` (${r.shop})` : '');
+  const link = `https://erteltoptan.web.app/admin/t/${id}`;
+  if (msg) { await adminPush(env, { title: `💬 ${who}`, body: String(r.lastMsg || 'Yeni mesaj').slice(0, 140), url: '/admin/t/' + id, tag: 'ar-' + id }); return { ok: true }; }
+  const n = (r.items || []).length;
+  const lines = (r.items || []).slice(0, 30).map((i) => `• ${i.qty || 1} × ${i.n || ''}${i.k ? ` (${i.k})` : ''}`).join('\n');
+  const head = `${REQ_TYPE[r.type] || 'Talep'}${n ? ` · ${n} ürün` : ''}`;
+  await adminPush(env, { title: `📨 Yeni talep #${r.no || ''} · ${who}`, body: (head + (r.note ? ' · ' + r.note : '')).slice(0, 160), url: '/admin/t/' + id, tag: 'ar-' + id }).catch(() => {});
+  const text = `📨 Yeni bayi talebi #${r.no || ''}\n${who}\n${head}${r.pickup ? '\nGeliş: ' + r.pickup : ''}${r.note ? '\nNot: ' + r.note : ''}${lines ? '\n\n' + lines : ''}\n\nPanelde aç: ${link}`;
+  return notifySend(env, { subject: `Yeni talep #${r.no || ''} · ${who}`, text, link });
 }
