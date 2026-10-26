@@ -3232,7 +3232,7 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 .or-thd { display: none; }
 @media (min-width: 961px) {
   .otable-h, .orow, .otable:not(.selecting) .otable-h, .otable:not(.selecting) .orow {
-    grid-template-columns: 96px minmax(150px, 1.3fr) 130px minmax(170px, 1fr) 120px 150px 168px 36px; column-gap: 20px; }
+    grid-template-columns: 96px minmax(150px, 1.3fr) 130px minmax(170px, 1fr) 120px 150px 184px 36px; column-gap: 20px; }
   .otable.selecting .otable-h, .otable.selecting .orow {
     grid-template-columns: 34px 96px minmax(150px, 1.3fr) 130px minmax(170px, 1fr) 120px 150px 168px 36px; column-gap: 20px; }
   .or-thd { display: flex; align-items: center; }
@@ -3246,7 +3246,7 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 }
 @media (min-width: 961px) and (max-width: 1250px) {
   .otable-h, .orow, .otable:not(.selecting) .otable-h, .otable:not(.selecting) .orow {
-    grid-template-columns: 84px minmax(130px, 1.2fr) 110px minmax(140px, 1fr) 112px 132px 150px 34px; column-gap: 14px; }
+    grid-template-columns: 84px minmax(130px, 1.2fr) 110px minmax(140px, 1fr) 112px 132px 170px 34px; column-gap: 14px; }
   .otable.selecting .otable-h, .otable.selecting .orow {
     grid-template-columns: 30px 84px minmax(130px, 1.2fr) 110px minmax(140px, 1fr) 112px 132px 150px 34px; column-gap: 14px; }
 }
@@ -3389,9 +3389,18 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
   .otable .ost:hover { filter: none; border-color: color-mix(in oklab, var(--stc) 45%, var(--line)); box-shadow: 0 3px 10px -6px color-mix(in oklab, var(--stc) 60%, transparent); }
   .otable .ost-cancelled > span { color: var(--muted); }
 }
+@media (min-width: 861px) {
+  .otable .ost { min-height: 44px; padding: 9px 13px 15px 14px; border-radius: 10px; font-size: 14px; gap: 10px; }
+  .otable .ost > span { gap: 9px; }
+  .otable .ost > span::before { width: 9px; height: 9px; }
+  .otable .ost::before, .otable .ost::after { left: 14px; bottom: 7px; height: 3.5px; }
+  .otable .ost::before { right: 14px; }
+  .otable .ost::after { width: calc((100% - 28px) * var(--stp)); }
+}
+@media (min-width: 861px) { .otable .ost { padding: 10px 13px 16px 14px; } }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '6ffdd8c974';</script>
+<script>window.__BUILD = 'f9436f342f';</script>
 </head>
 <body>
 <div id="root"></div>
