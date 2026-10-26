@@ -3382,3 +3382,10 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
   .otable .ost::after { width: calc((100% - 28px) * var(--stp)); }
 }
 @media (min-width: 861px) { .otable .ost { padding: 10px 13px 16px 14px; } }
+/* mağaza üst menüsü: üye düğmesi — seçili zemini ferah */
+.shell.public .me { padding: 4px; border-radius: 999px; transition: background .2s; }
+@media (min-width: 561px) {
+  .shell.public .me { padding: 5px 5px 5px 16px; gap: 11px; }
+  .shell.public .me:hover { background: color-mix(in oklab, var(--accent) 7%, transparent); }
+  .shell.public .me.on { background: var(--accent-soft); }
+}
