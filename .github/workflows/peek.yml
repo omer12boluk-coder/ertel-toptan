@@ -8,7 +8,5 @@ jobs:
     steps:
       - run: |
           B=https://service.mngkargo.com.tr/musterikargosiparis/musterikargosiparis.asmx
-          { for op in KargoBilgileriByReferans SiparisGirisiDetayliV3 MNGGonderiBarkod; do echo "=== $op"; curl -s -m 30 "$B?op=$op" | sed 's/<[^>]*>/ /g' | tr -s ' \n' | grep -o 'POST.*' | head -c 3500; echo; done
-            echo "=== METOTLAR"; curl -s -m 30 "$B" | grep -o 'op=[A-Za-z0-9_]*' | sort -u | tr '\n' ' '; echo
-            echo "=== IP"; curl -s -m 10 https://api.ipify.org; echo; } > /tmp/peek.txt 2>&1
+          { for op in Baglanti_Test SiparisGirisiDetayliV3 MNGGonderiBarkod KargoTakipByReferans MusteriSiparisIptal; do echo "=== $op"; curl -s -m 30 "$B?op=$op" | python3 -c "import sys,html,re; t=sys.stdin.read(); m=re.findall(r'<pre>(.*?)</pre>', t, re.S); print(html.unescape(m[0]) if m else t[:500])" | head -c 6000; echo; done; } > /tmp/peek.txt 2>&1
           mkdir r && cd r && git init -q && git config user.name bot && git config user.email bot@users.noreply.github.com && cp /tmp/peek.txt . && git add . && git commit -qm peek && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:peek-out
