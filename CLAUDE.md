@@ -197,6 +197,11 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - **PlatinMarket olay günlüğü:** `sync-platin.mjs` her değişikliği `meta/feed.items` başına yazar (t price|name|new|hidden|shown, at, id, k, n, from, to; en çok 400; kural: sadece yönetici okur) ve bekçiye `POST /notify-sync` (başlık `X-Key` = sha256('sync:' + TELEGRAM_TOKEN); sync.yml'e TELEGRAM_TOKEN + WATCH_URL eklendi) → yönetici push + Telegram özeti (e-posta YOK, `noEmail`).
 - **Ayarlar araması:** başlıktaki büyüteç; dizin `src/setindex.json` derlemede `tools/setindex.py` ile üretilir (her bölümün label/title/field-l/h3/b metinleri; bileşen bölümleri fonksiyon gövdesinden). Sonuca basınca bölüm açılır, alan ortalanıp `.set-hit` ile yanıp söner.
 
+- **Bayi kartı adet hapı** (`QtyPill`, catalog.jsx; bayi + kart düğmesi `icon`/`plus`): sepetteki ürünün + düğmesi yerinde aynı boyda adet hapı (adet + sepet simgesi); fiyatlar oynamaz. Hapa basınca − adet + şeridi fiyatların üstüne sola doğru yaylanarak açılır, 2,5 sn dokunulmazsa / dışarı basınca kapanır; ilk eklemede kısa süre açık. Önceki "adet seçici fiyatın altına" çözümü kaldırıldı (kullanıcı beğenmedi).
+- **Ödeme adımı:** Bireysel faturada "Fatura adresi teslimat adresiyle aynı" işaretli gelir, Kurumsal'a geçince işaret kalkar (geri Bireysel'e geçince yine işaretlenir).
+- **Hesabım > Siparişlerim:** iki sekme `.mo-tabs` — "Siparişlerim" (devam eden: ORDER_OPEN) / "Geçmiş siparişler" (tamamlanan + iptal). Özet (limit) sekmesiz.
+- **Ürün penceresi:** ürün sepetteyse ve adet değişmediyse düğme yeşil "✓ Sepette · N adet" (`.pbuy-in`, basınca sepete gider); adet değişince "Sepeti güncelle".
+
 ## 7. Site eşitleme, Worker, bildirimler
 
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler. Beslemede stok adedi yok. **Siteye toplu istek atma (IP engeli yemiştik).**

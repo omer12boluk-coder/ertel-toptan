@@ -234,8 +234,8 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
           <section className="co-sec">
             <h2><span className="co-n">3</span>Fatura</h2>
             <div className="seg-cards two" role="radiogroup" aria-label="Fatura tipi">
-              <Choice on={f.inv.type === 'person'} onClick={() => set({ inv: { ...f.inv, type: 'person' } })} title="Bireysel" sub="Adınıza fatura" />
-              <Choice on={f.inv.type === 'company'} onClick={() => set({ inv: { ...f.inv, type: 'company' } })} title="Kurumsal" sub="Firma adına fatura" />
+              <Choice on={f.inv.type === 'person'} onClick={() => set({ inv: { ...f.inv, type: 'person' }, billSame: true })} title="Bireysel" sub="Adınıza fatura" />
+              <Choice on={f.inv.type === 'company'} onClick={() => set({ inv: { ...f.inv, type: 'company' }, billSame: false })} title="Kurumsal" sub="Firma adına fatura" />
             </div>
             {f.inv.type === 'person'
               ? <Field label="TC kimlik no" opt error={err['inv.tc']} hint="Fatura için; boş bırakabilirsiniz"><input id="co-tc" inputMode="numeric" maxLength={11} value={f.inv.tc} onChange={(e) => set({ inv: { ...f.inv, tc: digits(e.target.value).slice(0, 11) } })} /></Field>
@@ -310,8 +310,8 @@ function initForm(m, methods, guest) {
     addr: { ...blankAddr(), name: m?.name || g.contact?.name || '', phone: m?.phone || g.contact?.phone || '', ...(!m && g.addr ? g.addr : {}) },
     saveAddr: true,
     inv: { type: inv0.type || 'person', tc: inv0.tc || '', company: inv0.company || '', taxOffice: inv0.taxOffice || '', taxNo: inv0.taxNo || '' },
-    // hesapta kayıtlı fatura adresi varsa siparişte o gelir; "teslimat adresiyle aynı" sadece siparişte seçilir
-    billSame: false, bill: inv0.addr?.address ? { ...blankAddr(), ...inv0.addr } : blankAddr(), pay: 'havale', note: '', signup: false, pw: '', uname: '',
+    // bireyselde "fatura adresi teslimat adresiyle aynı" işaretli, kurumsalda işaretsiz başlar (kayıtlı fatura adresi varsa o gelir)
+    billSame: (inv0.type || 'person') === 'person', bill: inv0.addr?.address ? { ...blankAddr(), ...inv0.addr } : blankAddr(), pay: 'havale', note: '', signup: false, pw: '', uname: '',
   };
 }
 
@@ -742,10 +742,20 @@ function MyOrders({ limit }) {
   const myOrders = useStore((s) => s.myOrders);
   useStore((s) => s.seenTick);
   const fresh = new Set(unseenOrders(myOrders).map((o) => o.id));
+  // tam listede iki sekme: devam eden siparişler / geçmiş (tamamlanan + iptal)
+  const act = myOrders.filter((o) => ORDER_OPEN.includes(o.status)); const past = myOrders.filter((o) => !ORDER_OPEN.includes(o.status));
+  const [tab, setTab] = useState(() => (act.length || !past.length ? 'act' : 'past'));
   if (!myOrders.length) return <Empty icon="cart" title="Henüz siparişiniz yok"><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty>;
-  const list = limit ? myOrders.slice(0, limit) : myOrders;
-  return (
-    <ul className="mo-list">
+  const list = limit ? myOrders.slice(0, limit) : tab === 'act' ? act : past;
+  return (<>
+    {!limit && (
+      <div className="seg mo-tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'act'} className={tab === 'act' ? 'on' : ''} onClick={() => setTab('act')}>Siparişlerim{act.length > 0 && <i className="num">{act.length}</i>}</button>
+        <button role="tab" aria-selected={tab === 'past'} className={tab === 'past' ? 'on' : ''} onClick={() => setTab('past')}>Geçmiş siparişler{past.length > 0 && <i className="num">{past.length}</i>}</button>
+      </div>
+    )}
+    {!limit && !list.length && <p className="muted mo-none">{tab === 'act' ? 'Devam eden siparişiniz yok. Tamamlanan ve iptal edilenler “Geçmiş siparişler”de.' : 'Henüz tamamlanmış ya da iptal edilmiş siparişiniz yok.'}</p>}
+    <ul className="mo-list" key={tab}>
       {list.map((o) => {
         const its = o.items || []; const qty = its.reduce((t, i) => t + (Number(i.qty) || 0), 0);
         const show = its.slice(0, 5); const more = its.length - show.length;
@@ -763,7 +773,7 @@ function MyOrders({ limit }) {
         );
       })}
     </ul>
-  );
+  </>);
 }
 
 function Addresses() {

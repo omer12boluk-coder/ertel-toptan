@@ -335,6 +335,36 @@ function CatTree({ nodes, counts, cat, open, onPick, all: expandAll, admin, dept
   });
 }
 
+// Bayi kartı (+ / sepet simgesi düğmesi): sepetteki ürün için düğmenin yerinde adet hapı. Fiyatlar yerinden oynamaz;
+// hapa basınca − adet + şeridi fiyatların üstüne doğru yaylanarak açılır, 2,5 sn dokunulmazsa kendiliğinden kapanır.
+function QtyPill({ qty, onChange }) {
+  const box = useRef(null);
+  const [open, setOpen] = useState(true); // ilk eklemede kısa süre açık (geri bildirim)
+  const [w, setW] = useState(null);
+  const t = useRef(0);
+  const arm = () => { clearTimeout(t.current); t.current = setTimeout(() => setOpen(false), 2500); };
+  useLayoutEffect(() => {
+    if (!open) return;
+    const side = box.current?.closest('.prow-side'); if (!side) return;
+    const cs = getComputedStyle(side);
+    setW(side.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)); arm();
+  }, [open]);
+  useEffect(() => () => clearTimeout(t.current), []);
+  useEffect(() => { if (!open) return; const out = (e) => { if (!box.current?.contains(e.target)) setOpen(false); }; addEventListener('pointerdown', out); return () => removeEventListener('pointerdown', out); }, [open]);
+  const step = (d) => (e) => { e.stopPropagation(); onChange(Math.max(0, qty + d)); arm(); };
+  return (
+    <span className="qp-slot" ref={box}>
+      <span className={'qp' + (open ? ' open' : '')} style={open && w ? { width: w } : undefined}>
+        {open ? <>
+          <button type="button" className="qp-b" onClick={step(-1)} aria-label={qty > 1 ? 'Azalt' : 'Sepetten çıkar'}><Icon n={qty > 1 ? 'minus' : 'trash'} s={16} /></button>
+          <b className="qp-n num">{qty}</b>
+          <button type="button" className="qp-b" onClick={step(1)} aria-label="Arttır"><Icon n="plus" s={16} /></button>
+        </> : <button type="button" className="qp-c" onClick={(e) => { e.stopPropagation(); setOpen(true); }} aria-label={`Sepette ${qty} adet · değiştir`}><b className="num">{qty}</b><Icon n="cart" s={13} /></button>}
+      </span>
+    </span>
+  );
+}
+
 function ProductRow({ p, admin, onOpen }) {
   const { settings: S, cart, user } = useStore();
   const qty = cart[p.id] || 0;
@@ -384,6 +414,8 @@ function ProductRow({ p, admin, onOpen }) {
         <PriceBlock p={p} />
         {admin ? (
           <button className="btn sm ghost" onClick={onOpen}><Icon n="edit" s={15} />Düzenle</button>
+        ) : qty > 0 && user?.role !== 'public' && ['icon', 'plus'].includes(cardAdd(S, user?.role)) ? (
+          <QtyPill qty={qty} onChange={(v) => setQty(p.id, v)} />
         ) : qty > 0 ? (
           <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
         ) : (
@@ -461,7 +493,9 @@ function ProductBody({ p, viewOnly, onDone }) {
             {pr.mine != null && <span className="pbuy-tot"><small>Toplam</small><b className="num">{fmt(pr.mine * qty, p.cur)}</b></span>}
           </div>
           <div className="pbuy-btns">
-            <button className="btn primary" onClick={add}><Icon n="cart" s={18} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>
+            {cart[p.id] && cart[p.id] === qty
+              ? <button className="btn pbuy-in" onClick={() => { onDone?.(); go('sepet'); }} title="Sepete git"><Icon n="check" s={18} />Sepette · {qty} adet</button>
+              : <button className="btn primary" onClick={add}><Icon n="cart" s={18} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>}
             {canBuy && <button className="btn pbuy-now" onClick={buy}><Icon n="back" s={16} className="flip" />Hemen satın al</button>}
             {S.requests.allowQuote && !pub && <button className="btn ghost" onClick={ask}><Icon n="chat" s={17} />Bu ürünü sor</button>}
           </div>
