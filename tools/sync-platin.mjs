@@ -35,6 +35,7 @@ for (const e of xml.split('<entry>').slice(1)) {
     id, n: cleanText(unesc(tag(e, 'title'))), k: tag(e, 'mpn'), b: cleanText(unesc(tag(e, 'brand'))),
     tl: price, stock: tag(e, 'availability') === 'in_stock',
     pi: img.includes('/pictures/') ? img.split('/pictures/').pop().replace(/^thumb\/\d+X-/, '') : '',
+    d: unesc(tag(e, 'description')).trim(), u: unesc(tag(e, 'link')).trim(), // yeni ürünü tamamlamak için
   });
 }
 if (feed.size < 100) throw new Error(`Beslemede çok az ürün var (${feed.size}); güvenlik için eşitleme yapılmadı`);
@@ -85,13 +86,54 @@ for (const f of feed.values()) {
   const p = { id: f.id, k: f.k, n: f.n, c: 0, r: round2(f.tl / rate), w: null, cur: 'USD', s: 1, a: 1, nw: 1 };
   if (f.pi) p.pi = f.pi;
   if (f.b && f.b !== '-') p.b = f.b;
+  if (f.u) p.u = f.u;
+  p.pf = 0; // ürün sayfasından tamamlanacak (resimler, kategori)
   cat.push(p); st.added.push(`${f.k} ${f.n.slice(0, 40)}`); E('new', p, { to: p.r });
 }
 cat.sort((a, b) => b.id - a.id);
 
-const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length;
+// ---- Yeni ürünleri tamamla (tam otomatik ekleme)
+// Sadece eşitlemenin eklediği yeni ürünler (pf 0 / -1): ürün sayfasına BİR kez bakılır → tüm resimler + kategori.
+// Siteyi yormamak için çalışma başına en çok 10 ürün, istekler arası 3 sn. Açıklama beslemeden gelir (ek istek yok).
+// Başarısız olursa bir kez daha denenir (pf -1), sonra bırakılır (pf -2). Sonradan Excel yüklenirse onun bilgileri geçerli olur.
+st.filled = 0;
+const TEST = DRY && Number(process.env.TEST_ID); // deneme: bir ürünü yeniymiş gibi tamamla (kaydetmeden), sonucu yaz
+if (TEST) { const t = cat.find((p) => p.id === TEST); if (t) { note('Deneme öncesi', JSON.stringify({ k: t.k, c: t.c, c2: t.c2, pi: t.pi, im: t.im })); t.pf = 0; delete t.img; t.c = 0; delete t.c2; delete t.im; } }
+const pending = cat.filter((p) => (p.pf === 0 || p.pf === -1) && feed.has(p.id)).slice(0, DRY ? 2 : 10);
+let descMap = null; const newDescs = {};
+if (pending.length) {
+  const used = new Map(); for (const p of cat) if (p.c) used.set(p.c, (used.get(p.c) || 0) + 1);
+  const dm = await db.doc('desc/_meta').get();
+  if (dm.exists) { const dp = await Promise.all(Array.from({ length: dm.data().chunks }, (_, i) => db.doc(`desc/c${i}`).get())); descMap = Object.assign({}, ...dp.map((x) => (x.exists ? x.data().d : {}))); } else descMap = {};
+  for (const [i, p] of pending.entries()) {
+    const f = feed.get(p.id);
+    if (f.d && !descMap[p.id]) newDescs[p.id] = f.d.replace(/\n/g, '<br />');
+    if (!f.u) { p.pf = -2; continue; }
+    if (i) await new Promise((r) => setTimeout(r, 3000));
+    try {
+      const r = await fetch(f.u, { headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const h = await r.text();
+      // resimler: ürün şemasındaki (ld+json Product) image listesi, tam boy
+      let imgs = [];
+      for (const m of h.matchAll(/<script[^>]*ld\+json[^>]*>([\s\S]*?)<\/script>/g)) {
+        try { const j = JSON.parse(m[1]); if (j['@type'] === 'Product') imgs = [].concat(j.image || []); } catch {}
+      }
+      const files = [...new Set(imgs.map((u) => String(u).split('?')[0]).filter((u) => u.includes('/pictures/')).map((u) => u.split('/pictures/').pop().replace(/^thumb\/\d+X-/, '')))];
+      if (files.length && !p.img) { p.pi = files[0]; if (files.length > 1) p.im = files.slice(1, 10); }
+      // kategori: sayfadaki reyon numaraları; katalogda kullanılanlardan en özel olanı (en az ürünlü) seçilir
+      const ids = ((h.match(/kategori_urunleri_reyon_id"\s+value="([^"]*)"/) || [])[1] || '').match(/\d+/g)?.map(Number) || [];
+      const cand = ids.filter((x) => used.has(x)).sort((a, b) => used.get(a) - used.get(b));
+      if (!p.c && cand.length) { p.c = cand[0]; if (cand[1]) p.c2 = cand[1]; }
+      delete p.pf; st.filled++;
+      note('Yeni ürün tamamlandı', `${p.k} · ${files.length} resim · kategori ${p.c || '—'}${newDescs[p.id] ? ' · açıklama' : ''}`);
+      if (TEST) note('Deneme sonucu', JSON.stringify({ c: p.c, c2: p.c2, pi: p.pi, im: p.im, desc: (f.d || '').slice(0, 200) }));
+    } catch (e) { p.pf = (p.pf || 0) - 1; note('Ürün sayfası alınamadı', `${p.k}: ${e.message}`); }
+  }
+}
+const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length;
 const has = (id) => (feed.has(id) ? 'var' : 'yok');
-const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length}`;
+const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length} · tamamlanan ${st.filled}`;
 note(DRY ? 'Deneme (kaydedilmedi)' : 'Eşitleme', summary);
 if (st.price.length) note('Fiyatı değişenler', st.price.slice(0, 40).join('\n'));
 if (st.added.length) note('Yeni ürünler', st.added.slice(0, 40).join('\n'));
@@ -128,6 +170,11 @@ if (!DRY) {
       await fetch(W.replace(/\/$/, '') + '/notify-sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Key': key }, body: JSON.stringify({ items: ev.slice(0, 40), count: ev.length }) })
         .then((r) => r.text()).then((t) => note('Bildirim', t.slice(0, 200))).catch((e) => note('Bildirim hatası', e));
     }
+  }
+  if (Object.keys(newDescs).length) { // açıklamalar (sadece hiç açıklaması olmayan yeni ürünler)
+    const all = Object.entries({ ...descMap, ...newDescs }); const dp = chunks(all);
+    const b = db.batch(); dp.forEach((part, i) => b.set(db.doc(`desc/c${i}`), { d: Object.fromEntries(part) }));
+    b.set(db.doc('desc/_meta'), { version: now, chunks: dp.length, count: all.length }); await b.commit();
   }
   await db.doc('meta/sync').set({ at: now, rate: round2(rate), feed: feed.size, changed, summary, prices: st.price.slice(0, 100), added: st.added.slice(0, 100) });
 }

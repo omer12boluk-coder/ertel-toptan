@@ -9,6 +9,10 @@ on:
         description: 'Deneme (kaydetme)'
         type: boolean
         default: false
+      test_id:
+        description: 'Deneme: bu ürün no yeniymiş gibi tamamlansın (sadece deneme modunda)'
+        type: string
+        default: ''
 concurrency:
   group: sync
   cancel-in-progress: false
@@ -26,4 +30,5 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+          TEST_ID: ${{ inputs.test_id }}
         run: node tools/sync-platin.mjs ${{ inputs.dry && '--dry' || '' }}

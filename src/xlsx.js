@@ -194,6 +194,7 @@ export function mergeCatalog(current, incomingIn) {
     const o = byId.get(n.id);
     if (!o) { const p = { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n, nw: 1 }; byId.set(n.id, p); if (ck) byCode.set(ck, n.id); added++; continue; }
     const m = { ...o, ...n };
+    if (n.pi || n.c) delete m.pf; // Excel'den gelen bilgi geçerli: ürün sayfasından tamamlamaya gerek yok
     if (n.w == null) m.w = o.w ?? null;
     // Liste fiyatı değiştiyse işaretle: yönetici toptan fiyatı kontrol edene kadar uyarı görünür
     if (n.r != null && o.r != null && Number(n.r) !== Number(o.r)) {
