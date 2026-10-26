@@ -1,7 +1,13 @@
 # DHL eCommerce (MNG web servisi) bağlantı testi: hiçbir gönderi OLUŞTURMAZ, sadece var olmayan bir referansla takip sorgular.
 # Cevaptaki hata metni giriş bilgilerinin doğru olup olmadığını gösterir. Gizli ayarlar: DHL_USER (müşteri no), DHL_PASS.
 name: DHL bağlantı testi
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      test:
+        description: 'DHL test servisi (tservis)'
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
@@ -12,6 +18,7 @@ jobs:
       - env:
           U: ${{ secrets.DHL_USER }}
           P: ${{ secrets.DHL_PASS }}
+          DHL_TEST: ${{ inputs.test && '1' || '' }}
         run: |
           python3 tools/dhl-probe.py > /tmp/out.txt 2>&1 || true
           [ -n "$P" ] && python3 -c "import os;p=os.environ['P'];t=open('/tmp/out.txt').read().replace(p,'***');open('/tmp/out.txt','w').write(t)" || true

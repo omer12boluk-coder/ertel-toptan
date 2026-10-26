@@ -1,6 +1,8 @@
 # DHL (MNG) servis denemesi — SADECE sorgu metotları; doğru ve bilerek yanlış şifreyle cevapları karşılaştırır. Şifre çıktıya yazılmaz.
 import os, re, html, urllib.request, datetime
-B = 'https://service.mngkargo.com.tr/musterikargosiparis/musterikargosiparis.asmx'
+import sys
+B = 'https://service.mngkargo.com.tr/tservis/musterikargosiparis.asmx' if os.environ.get('DHL_TEST') else 'https://service.mngkargo.com.tr/musterikargosiparis/musterikargosiparis.asmx'
+print('servis:', B)
 U, P = os.environ.get('U', ''), os.environ.get('P', '')
 today = datetime.date.today(); week = today - datetime.timedelta(days=7)
 def get(url, data=None, act=None):
