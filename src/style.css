@@ -2961,4 +2961,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .mo-none { padding: 18px 4px; text-align: center; }
 .mo-list { animation: rise .25s var(--ease); }
 /* ürün penceresi: ürün sepette ve adet değişmediyse "Sepette · N adet" (basınca sepete gider); adet değişince "Sepeti güncelle" */
-.btn.pbuy-in { background: color-mix(in oklab, var(--ok) 12%, var(--surface)); color: color-mix(in oklab, var(--ok) 75%, var(--fg)); border: 1.5px solid color-mix(in oklab, var(--ok) 40%, var(--line)); animation: pop .3s var(--spring); }
+.btn.pbuy-in { gap: 8px; background: color-mix(in oklab, var(--fg) 5%, var(--surface)); color: var(--fg); border: 1px solid var(--line-2); box-shadow: none; font-weight: 600; animation: rise .25s var(--ease); }
+.btn.pbuy-in:hover { background: color-mix(in oklab, var(--fg) 8%, var(--surface)); }
+.pbuy-ok { width: 20px; height: 20px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--ok); color: #fff; animation: pop .35s var(--spring); }
+.btn.pbuy-in small { font-size: .82em; font-weight: 500; color: var(--muted); padding-left: 8px; border-left: 1px solid var(--line); }

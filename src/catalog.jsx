@@ -494,7 +494,7 @@ function ProductBody({ p, viewOnly, onDone }) {
           </div>
           <div className="pbuy-btns">
             {cart[p.id] && cart[p.id] === qty
-              ? <button className="btn pbuy-in" onClick={() => { onDone?.(); go('sepet'); }} title="Sepete git"><Icon n="check" s={18} />Sepette · {qty} adet</button>
+              ? <button className="btn pbuy-in" onClick={() => { onDone?.(); go('sepet'); }} title="Sepete git"><span className="pbuy-ok"><Icon n="check" s={13} /></span>Sepette<small>{qty} adet</small></button>
               : <button className="btn primary" onClick={add}><Icon n="cart" s={18} />{cart[p.id] ? 'Sepeti güncelle' : 'Sepete ekle'}</button>}
             {canBuy && <button className="btn pbuy-now" onClick={buy}><Icon n="back" s={16} className="flip" />Hemen satın al</button>}
             {S.requests.allowQuote && !pub && <button className="btn ghost" onClick={ask}><Icon n="chat" s={17} />Bu ürünü sor</button>}

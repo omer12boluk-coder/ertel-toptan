@@ -200,7 +200,7 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - **Bayi kartı adet hapı** (`QtyPill`, catalog.jsx; bayi + kart düğmesi `icon`/`plus`): sepetteki ürünün + düğmesi yerinde aynı boyda adet hapı (adet + sepet simgesi); fiyatlar oynamaz. Hapa basınca − adet + şeridi fiyatların üstüne sola doğru yaylanarak açılır, 2,5 sn dokunulmazsa / dışarı basınca kapanır; ilk eklemede kısa süre açık. Önceki "adet seçici fiyatın altına" çözümü kaldırıldı (kullanıcı beğenmedi).
 - **Ödeme adımı:** Bireysel faturada "Fatura adresi teslimat adresiyle aynı" işaretli gelir, Kurumsal'a geçince işaret kalkar (geri Bireysel'e geçince yine işaretlenir).
 - **Hesabım > Siparişlerim:** iki sekme `.mo-tabs` — "Siparişlerim" (devam eden: ORDER_OPEN) / "Geçmiş siparişler" (tamamlanan + iptal). Özet (limit) sekmesiz.
-- **Ürün penceresi:** ürün sepetteyse ve adet değişmediyse düğme yeşil "✓ Sepette · N adet" (`.pbuy-in`, basınca sepete gider); adet değişince "Sepeti güncelle".
+- **Ürün penceresi:** ürün sepetteyse ve adet değişmediyse sade gri düğme "(yeşil ✓ yuvarlak) Sepette | N adet" (`.pbuy-in`, basınca sepete gider); adet değişince "Sepeti güncelle".
 
 - **Elle toptan fiyatı (`w`) korunur:** Excel içe aktarma (`mergeCatalog`, dosyada `toptan` sütunu yoksa `w` aynen kalır) ve site eşitlemesi `w`'ye dokunmaz; kural sadece `w` boşsa uygulanır. Liste fiyatı değişen ve `w`'si olan ürün: eşitleme olayında `w` alanı → bildirim merkezinde kırmızı "elle toptanlı · kontrol edin", Telegram'da ⚠️; içe aktarma penceresi kaç tanesinin elle fiyatlı olduğunu söyler. `w` liste fiyatı değişse de otomatik silinmez (kullanıcı kendisi yeniden girer).
 
