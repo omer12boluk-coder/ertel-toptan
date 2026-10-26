@@ -3237,3 +3237,13 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 .or-th-i > .thumb { width: 100% !important; height: 100% !important; min-width: 0 !important; border: 0 !important; border-radius: 50% !important; }
 .or-th-i, .or-th-i.more { box-sizing: border-box; padding: 0; } /* genel .more kuralı 18px iç boşluk veriyordu */
 .or-thd .or-th-i.more { width: 36px; height: 36px; font-size: 12px; }
+
+/* "Seç" filtre çiplerinin yanında ama ayrı dursun: kesikli çerçeve, sağa yaslı */
+.chips .chip-sel { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; border-style: dashed; color: var(--muted); background: transparent; }
+.chips .chip-sel.on { border-style: solid; color: var(--accent); border-color: var(--accent); background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+@media (max-width: 600px) {
+  .orders-page .toolbar .chips { gap: 6px; }
+  .orders-page .toolbar .chips .chip { padding: 6px 10px; font-size: 13.5px; }
+  .orders-page .toolbar .chips { margin-inline: 0; padding-inline: 0; }
+  .orders-page .chips .chip-sel { padding: 6px 9px; } .orders-page .chips .chip-sel:not(.on) .chip-sel-t { display: none; }
+}

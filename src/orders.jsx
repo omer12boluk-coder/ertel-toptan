@@ -76,16 +76,13 @@ export function Orders() {
     <div className="page orders-page">
       <div className="page-h">
         <h1 className="page-t">Mağaza siparişleri{newN > 0 && <span className="muted"> · {newN} yeni</span>}</h1>
-        <span className="row-btns">
-          {view === 'orders' && orders.length > 0 && <button className={'btn sm ' + (sel ? 'primary' : 'outline')} onClick={() => setSel(sel ? null : new Set())}><Icon n="check" s={15} />{sel ? 'Seçimi kapat' : 'Seç'}</button>}
-          <button className="btn sm outline" onClick={() => copyText(links.shop(), 'Mağaza linki kopyalandı')}><Icon n="copy" s={15} />Mağaza linki</button>
-        </span>
       </div>
       {view === 'members' ? <Members /> : <>
         <div className="toolbar">
           <div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <div className="chips">
             {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'open' ? ` (${cnt.open})` : ''}</button>)}
+            {orders.length > 0 && <button className={'chip chip-sel' + (sel ? ' on' : '')} onClick={() => setSel(sel ? null : new Set())}><Icon n={sel ? 'x' : 'check'} s={14} /><span className="chip-sel-t">{sel ? 'Seçimi kapat' : 'Seç'}</span></button>}
           </div>
         </div>
         {sel && (
