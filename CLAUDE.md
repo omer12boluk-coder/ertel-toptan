@@ -202,6 +202,8 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - **Hesabım > Siparişlerim:** iki sekme `.mo-tabs` — "Siparişlerim" (devam eden: ORDER_OPEN) / "Geçmiş siparişler" (tamamlanan + iptal). Özet (limit) sekmesiz.
 - **Ürün penceresi:** ürün sepetteyse ve adet değişmediyse düğme yeşil "✓ Sepette · N adet" (`.pbuy-in`, basınca sepete gider); adet değişince "Sepeti güncelle".
 
+- **Elle toptan fiyatı (`w`) korunur:** Excel içe aktarma (`mergeCatalog`, dosyada `toptan` sütunu yoksa `w` aynen kalır) ve site eşitlemesi `w`'ye dokunmaz; kural sadece `w` boşsa uygulanır. Liste fiyatı değişen ve `w`'si olan ürün: eşitleme olayında `w` alanı → bildirim merkezinde kırmızı "elle toptanlı · kontrol edin", Telegram'da ⚠️; içe aktarma penceresi kaç tanesinin elle fiyatlı olduğunu söyler. `w` liste fiyatı değişse de otomatik silinmez (kullanıcı kendisi yeniden girer).
+
 ## 7. Site eşitleme, Worker, bildirimler
 
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler. Beslemede stok adedi yok. **Siteye toplu istek atma (IP engeli yemiştik).**

@@ -801,7 +801,8 @@ export function Settings() {
             <div><b className="num">{imp.updated}</b><span>değişen</span></div>
             <div><b className="num">{imp.missing}</b><span>dosyada yok</span></div>
           </div>
-          {imp.priceChanged > 0 && <p className="banner warn" style={{ margin: 0 }}><b>{imp.priceChanged} ürünün liste fiyatı değişiyor.</b>&nbsp;Uygulayınca bunlar Ürünler'de “Liste fiyatı değişenler” olarak işaretlenir; toptan fiyatlarını kontrol edersiniz.</p>}
+          {imp.priceChanged > 0 && <p className="banner warn" style={{ margin: 0 }}><b>{imp.priceChanged} ürünün liste fiyatı değişiyor.</b>&nbsp;Uygulayınca bunlar Ürünler'de “Liste fiyatı değişenler” olarak işaretlenir; toptan fiyatlarını kontrol edersiniz.{imp.manualKept > 0 && <> <b>{imp.manualKept} tanesinde elle girdiğiniz toptan fiyatı var; o fiyatlar korunur, kural uygulanmaz.</b></>}</p>}
+          <p className="fine" style={{ margin: 0 }}>Elle girdiğiniz toptan fiyatlar ({imp.list.filter((p) => p.w != null).length} ürün) dosya yüklemede ve site eşitlemesinde silinmez; dosyada “toptan” sütunu yoksa hiç dokunulmaz.</p>
           {(imp.matchedByCode > 0 || imp.dupSkipped > 0) && <p className="fine">{imp.matchedByCode > 0 && <><b>{imp.matchedByCode}</b> ürün, ürün numarası farklı olduğu halde stok kodu tuttuğu için mevcut ürünün üzerine güncellendi (kopya oluşmadı). </>}{imp.dupSkipped > 0 && <><b>{imp.dupSkipped}</b> satır dosyada aynı stok koduyla ikinci kez geçtiği için atlandı.</>}</p>}
           <p className="fine">Aynı stok kodlu ürün asla ikinci kez eklenmez. Dosyada olmayan ürünler silinmez, olduğu gibi kalır. Okunan bilgiler: {[imp.fields.includes('pi') && 'resimler', imp.fields.includes('t') && 'etiketler', imp.fields.includes('b') && 'marka', imp.fields.includes('s') && 'stok', imp.fields.includes('r') && 'fiyat', Object.keys(imp.descs).length && `${Object.keys(imp.descs).length} açıklama`].filter(Boolean).join(', ')}.</p>
         </Sheet>

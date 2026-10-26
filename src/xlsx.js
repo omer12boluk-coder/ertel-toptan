@@ -205,6 +205,7 @@ export function mergeCatalog(current, incomingIn) {
   }
   const missing = current.filter((p) => !seen.has(p.id)).length;
   const list = [...byId.values()].sort((a, b) => b.id - a.id);
-  const priceChanged = list.filter((p) => p.pc && !byIdOld(current, p.id)?.pc).length;
-  return { list, added, updated, missing, priceChanged, dupSkipped, matchedByCode, idMap };
+  const pcList = list.filter((p) => p.pc && !byIdOld(current, p.id)?.pc);
+  const priceChanged = pcList.length; const manualKept = pcList.filter((p) => p.w != null).length; // elle toptan fiyatı korunanlar
+  return { list, added, updated, missing, priceChanged, manualKept, dupSkipped, matchedByCode, idMap };
 }

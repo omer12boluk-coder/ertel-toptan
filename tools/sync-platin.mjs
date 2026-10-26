@@ -74,7 +74,7 @@ for (const p of cat) {
     const usd = round2(f.tl / rate);
     if (Math.abs(usd - p.r) > Math.max(0.05, p.r * 0.005)) {
       const r0 = p.pc ? p.pc.r0 : p.r;
-      st.price.push(`${p.k}: ${p.r} → ${usd}`); E('price', p, { from: p.r, to: usd });
+      st.price.push(`${p.k}: ${p.r} → ${usd}`); E('price', p, { from: p.r, to: usd, ...(p.w != null ? { w: p.w } : {}) }); // elle toptan fiyatı korunur, bildirimde ayrıca belirtilir
       p.r = usd;
       if (Math.abs(usd - r0) < 0.01) delete p.pc; else p.pc = { r0, at: now };
     }
