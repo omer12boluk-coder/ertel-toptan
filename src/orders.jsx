@@ -14,7 +14,7 @@ import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 const FILTERS = [['open', 'Açık'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
 const WORK = [['new', 'Onay bekliyor', 'bell'], ['confirmed', 'Hazırlanacak', 'box'], ['shipped', 'Kargoda', 'send'], ['ready', 'Teslime hazır', 'store']];
 // yönetici listesindeki açıklama (müşteri metninden farklı)
-export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı · hazırlanıyor', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
+export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
 const ago = (ts) => { const h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + ' dk' : h < 48 ? Math.round(h) + ' sa' : Math.round(h / 24) + ' gün'; };
 const isPhone = () => matchMedia('(max-width: 700px)').matches;
 const orderTotal = (o) => fmtTotals(o.total || totals(orderItems(o), 'offer'));
@@ -76,10 +76,10 @@ export function Orders() {
             {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'open' ? ` (${cnt.open})` : ''}</button>)}
           </div>
         </div>
-        <div className={'ost-tiles' + (cnt.ready > 0 ? ' n4' : '')}>
-          {WORK.filter(([k]) => k !== 'ready' || cnt.ready > 0).map(([k, l, ic]) => (
-            <button key={k} className={'ost-tile ost-' + k + (filter === k ? ' on' : '') + (cnt[k] ? '' : ' zero')} onClick={() => setFilter(filter === k ? 'open' : k)}>
-              <Icon n={ic} s={18} /><b className="num">{cnt[k] || 0}</b><span>{l}</span>
+        <div className="osum" role="tablist" aria-label="Duruma göre">
+          {WORK.filter(([k]) => k !== 'ready' || cnt.ready > 0).map(([k, l]) => (
+            <button key={k} role="tab" aria-selected={filter === k} className={'osum-i ost-' + k + (filter === k ? ' on' : '') + (cnt[k] ? '' : ' zero')} onClick={() => setFilter(filter === k ? 'open' : k)}>
+              <b className="num">{cnt[k] || 0}</b><span><i className="sdot" />{l}</span>
             </button>
           ))}
         </div>
@@ -96,33 +96,40 @@ export function Orders() {
           </Empty>
         ) : (
           <div className="otable">
-            <div className="otable-h" aria-hidden="true"><span>Sipariş</span><span>Müşteri</span><span>Ödeme / teslimat</span><span>Tutar</span><span>Tarih</span><span>Durum</span></div>
-            <ul className="olist orows">
-              {list.map((o) => {
-                const noCode = o.status === 'shipped' && o.delivery?.method !== 'pickup' && !o.cargo?.code;
-                const late = o.status === 'new' && Date.now() - o.createdAt > 2 * 36e5;
-                return (
-                  <li key={o.id} onContextMenu={(e) => menu(e, o)}>
-                    <div role="button" tabIndex={0} className={'orow st-' + o.status + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))} onKeyDown={(e) => e.key === 'Enter' && (sel ? toggle(o.id) : openOrder(o.id))}>
-                      {sel && <span className={'ocheck' + (sel.has(o.id) ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}
-                      <span className="or-no">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b></span>
-                      <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
-                      <span className="or-tags">
-                        <span className={'otag pay-' + o.pay}>{PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
-                        <span className={'otag ' + (o.delivery?.method === 'pickup' ? 'dl-pick' : 'dl-cargo')}>{o.delivery?.method === 'pickup' ? 'Dükkândan' : (o.cargo?.company || 'Kargo') + (o.delivery?.addr?.city ? ' · ' + o.delivery.addr.city : '')}</span>
-                        {o.member && <span className="otag">Üye</span>}{needsInvoice(o.invoice) && <span className="otag inv">Fatura</span>}
-                      </span>
-                      <span className="or-sum"><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></span>
-                      <span className="or-date"><span>{when(o.createdAt)}</span>{late && <small className="late">{ago(o.createdAt)} bekliyor</small>}</span>
-                      <span className="or-st">
-                        <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); if (!sel) quick(e, o); }} title="Durumu değiştir">{ADMIN_ST[o.status] || o.status}<Icon n="chev" s={14} /></button>
-                        {noCode && <small className="warn-t">Takip no yok</small>}
-                      </span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="otable-h" aria-hidden="true"><span>Sipariş</span><span>Müşteri</span><span>Ödeme / teslimat</span><span>Tutar</span><span>Tarih</span><span>Durum</span><span /></div>
+            {groups(list, filter).map(([g, rows]) => (
+              <section key={g || 'x'} className="ogroup">
+                {g && <h3 className={'ogroup-h ost-' + g}><i className="sdot" />{GROUP_T[g]}<span className="num">{rows.length}</span></h3>}
+                <ul className="olist orows">
+                  {rows.map((o) => {
+                    const noCode = o.status === 'shipped' && o.delivery?.method !== 'pickup' && !o.cargo?.code;
+                    const late = o.status === 'new' && Date.now() - o.createdAt > 2 * 36e5;
+                    const act = nextAct(o, noCode);
+                    return (
+                      <li key={o.id} onContextMenu={(e) => menu(e, o)}>
+                        <div role="button" tabIndex={0} className={'orow st-' + o.status + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))} onKeyDown={(e) => e.key === 'Enter' && (sel ? toggle(o.id) : openOrder(o.id))}>
+                          {sel && <span className={'ocheck' + (sel.has(o.id) ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}
+                          <span className="or-no">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b></span>
+                          <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
+                          <span className="or-tags">
+                            <span className="otag">{PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
+                            <span className="otag">{o.delivery?.method === 'pickup' ? 'Dükkândan' : (o.cargo?.company || 'Kargo') + (o.delivery?.addr?.city ? ' · ' + o.delivery.addr.city : '')}</span>
+                            {o.member && <span className="otag">Üye</span>}{needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
+                          </span>
+                          <span className="or-sum"><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></span>
+                          <span className="or-date"><span>{when(o.createdAt)}</span>{late && <small className="late">{ago(o.createdAt)} bekliyor</small>}</span>
+                          <span className="or-st">
+                            <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); if (!sel) quick(e, o); }} title="Durumu değiştir"><i className="sdot" />{ADMIN_ST[o.status] || o.status}<Icon n="chev" s={13} /></button>
+                            {noCode && <small className="warn-t">Takip no yok</small>}
+                          </span>
+                          <span className="or-act">{act && !sel && <button type="button" className={'btn sm ' + act[3]} onClick={(e) => { e.stopPropagation(); flow.ask(o, act[0]); }}><Icon n={act[2]} s={14} />{act[1]}</button>}</span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
           </div>
         )}
       </>}
@@ -132,6 +139,18 @@ export function Orders() {
   );
 }
 const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda' };
+// satırdaki tek tıkla sıradaki adım (en çok iş gerektiren belirgin: Onayla)
+const nextAct = (o, noCode) => ({
+  new: ['confirmed', 'Onayla', 'check', 'primary'],
+  confirmed: o.delivery?.method === 'pickup' ? ['ready', 'Teslime hazır', 'store', 'outline'] : ['shipped', 'Kargoya ver', 'send', 'outline'],
+  shipped: noCode ? ['shipped', 'Takip no ekle', 'box', 'outline warn'] : ['done', 'Teslim edildi', 'check', 'ghost'],
+  ready: ['done', 'Teslim edildi', 'check', 'ghost'],
+}[o.status] || null);
+// Açık / Tümü görünümünde duruma göre gruplar (iş sırası); tek durum seçiliyse grup başlığı yok
+const GROUP_T = { new: 'Onay bekleyen', confirmed: 'Hazırlanacak', ready: 'Teslime hazır', shipped: 'Kargoda', done: 'Tamamlanan', cancelled: 'İptal' };
+const groups = (list, filter) => (filter === 'open' || filter === 'all')
+  ? ['new', 'confirmed', 'ready', 'shipped', 'done', 'cancelled'].map((g) => [g, list.filter((o) => o.status === g)]).filter(([, r]) => r.length)
+  : [[null, list]];
 
 // ---- Durum değiştirme (liste ve detay ortak): onay penceresi, kargo bilgisi penceresi ----
 // Kargoda iken takip no sonradan eklenebilir/düzeltilebilir: durum değişmez, müşteriye sadece takip no ile tek bildirim gider.

@@ -63,10 +63,10 @@ for (const p of cat) {
   const f = feed.get(p.id);
   if (!f) {
     if (p.man) continue; // yönetimden elle eklenen ürün: sitede olmaması normal, gizlenmez
-    if (p.a && !p.so) { p.a = 0; p.so = 1; st.hidden++; E('hidden', p); } // sitede satışta değil
+    if (p.a && !p.so) { p.a = 0; p.so = 1; p.sg = 0; st.hidden++; } // beslemeden çıktı: gizlenir; silindi mi pasif mi aşağıda ürün sayfasına bakılarak anlaşılır
     continue;
   }
-  if (p.so) { p.a = 1; delete p.so; st.shown++; E('shown', p); }
+  if (p.so) { p.a = 1; delete p.so; delete p.sg; st.shown++; E('shown', p); }
   if (f.stock && !(p.s > 0)) p.s = 1;
   if (f.pi && f.pi !== p.pi && !p.img) { p.pi = f.pi; st.img++; }
   if (f.n && f.n !== p.n) { E('name', p, { from: String(p.n || '').slice(0, 90), n: f.n.slice(0, 90) }); p.n = f.n; st.name++; }
@@ -147,9 +147,32 @@ if (pending.length) {
     } catch (e) { p.pf = (p.pf || 0) - 1; note('Ürün sayfası alınamadı', `${p.k}: ${e.message}`); }
   }
 }
-const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length;
+// ---- Beslemeden çıkan ürün: siteden SİLİNDİ mi, PASİFE mi alındı? (ürün sayfasına bir kez bakılır)
+// Silinmiş: sayfa 404/410 ya da başka sayfaya yönleniyor ya da sayfada bu ürün yok → katalogdan tamamen kaldırılır.
+// Pasif: sayfa duruyor → uygulamada gizli (soluk) kalır. Çalışma başına en çok 6 kontrol, 3 sn arayla; elle eklenen ürünlere bakılmaz.
+st.deleted = 0; st.passive = 0;
+const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || (p.sg == null && (p.nw || p.id === TEST)))).slice(0, 6);
+for (const [i, p] of gone.entries()) {
+  if (i || pending.length) await new Promise((r) => setTimeout(r, 3000));
+  let verdict = null;
+  try {
+    const u0 = new URL(p.u);
+    const r = await fetch(p.u, { redirect: 'manual', headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0' } });
+    if (r.status === 404 || r.status === 410) verdict = 'deleted';
+    else if (r.status >= 300 && r.status < 400) { const to = new URL(r.headers.get('location') || '/', p.u); verdict = to.pathname.replace(/\/$/, '') === u0.pathname.replace(/\/$/, '') ? 'passive' : 'deleted'; }
+    else if (r.ok) { const h = await r.text(); verdict = new RegExp(`id="urun_id"\\s+value="${p.id}"`).test(h) ? 'passive' : 'deleted'; }
+    else throw new Error('HTTP ' + r.status);
+  } catch (e) { note('Ürün sayfası kontrol edilemedi', `${p.k}: ${e.message}`); }
+  note('Siteden kalkan ürün', `${p.k} → ${verdict || 'bilinmiyor'}`);
+  if (DRY && p.id === TEST) continue;
+  if (verdict === 'deleted') { cat.splice(cat.indexOf(p), 1); st.deleted++; E('deleted', p); }
+  else if (verdict === 'passive') { p.sg = 1; st.passive++; E('hidden', p); }
+  else if (p.sg === -1 || p.sg == null) { p.sg = -2; E('hidden', p); } // iki kez anlaşılamadı: genel "satıştan kalktı"
+  else p.sg = -1;
+}
+const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length;
 const has = (id) => (feed.has(id) ? 'var' : 'yok');
-const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length} · tamamlanan ${st.filled}`;
+const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length} · tamamlanan ${st.filled} · silinen ${st.deleted} · pasif ${st.passive}`;
 note(DRY ? 'Deneme (kaydedilmedi)' : 'Eşitleme', summary);
 if (st.price.length) note('Fiyatı değişenler', st.price.slice(0, 40).join('\n'));
 if (st.added.length) note('Yeni ürünler', st.added.slice(0, 40).join('\n'));

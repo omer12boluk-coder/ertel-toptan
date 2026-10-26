@@ -464,8 +464,8 @@ async function notifySync(env, key, b) {
   if (!n) return { ok: true, sent: 0 };
   const c = (t) => items.filter((x) => x.t === t).length;
   const mw = items.filter((x) => x.t === 'price' && x.w != null).length;
-  const parts = [[c('price'), 'fiyat değişti'], [mw, 'elle toptanlı ürün kontrol bekliyor'], [c('new'), 'yeni ürün'], [c('name'), 'adı değişti'], [c('hidden'), 'sitede satıştan kalktı'], [c('shown'), 'geri satışta']].filter(([x]) => x).map(([x, l]) => `${x} ${l}`).join(' · ');
-  const line = (x) => x.t === 'price' ? `💲 ${x.k} ${x.n}: $${x.from} → $${x.to}${x.w != null ? ` · ⚠️ elle toptan $${x.w}, kontrol edin` : ''}` : x.t === 'new' ? `🆕 ${x.k} ${x.n}` : x.t === 'name' ? `✏️ ${x.k}: ${x.from} → ${x.n}` : x.t === 'hidden' ? `🚫 ${x.k} ${x.n}` : `✅ ${x.k} ${x.n}`;
+  const parts = [[c('price'), 'fiyat değişti'], [mw, 'elle toptanlı ürün kontrol bekliyor'], [c('new'), 'yeni ürün'], [c('name'), 'adı değişti'], [c('hidden'), 'sitede pasife alındı'], [c('deleted'), 'siteden silindi'], [c('shown'), 'geri satışta']].filter(([x]) => x).map(([x, l]) => `${x} ${l}`).join(' · ');
+  const line = (x) => x.t === 'price' ? `💲 ${x.k} ${x.n}: $${x.from} → $${x.to}${x.w != null ? ` · ⚠️ elle toptan $${x.w}, kontrol edin` : ''}` : x.t === 'new' ? `🆕 ${x.k} ${x.n}` : x.t === 'name' ? `✏️ ${x.k}: ${x.from} → ${x.n}` : x.t === 'hidden' ? `⏸️ pasif: ${x.k} ${x.n}` : x.t === 'deleted' ? `🗑️ silindi: ${x.k} ${x.n}` : `✅ ${x.k} ${x.n}`;
   const link = 'https://erteltoptan.web.app/admin';
   await adminPush(env, { title: `🔄 Siteden ${n} değişiklik`, body: parts || 'Ürün bilgileri güncellendi', url: '/admin', tag: 'sync' }).catch(() => {});
   const text = `${parts}\n\n${items.map(line).join('\n')}${n > items.length ? `\n… ve ${n - items.length} değişiklik daha` : ''}\n\nPanelde aç: ${link}`;
