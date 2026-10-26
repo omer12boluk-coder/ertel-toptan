@@ -97,6 +97,8 @@ cat.sort((a, b) => b.id - a.id);
 // Siteyi yormamak için çalışma başına en çok 10 ürün, istekler arası 3 sn. Açıklama beslemeden gelir (ek istek yok).
 // Başarısız olursa bir kez daha denenir (pf -1), sonra bırakılır (pf -2). Sonradan Excel yüklenirse onun bilgileri geçerli olur.
 st.filled = 0;
+const { readFileSync } = await import('node:fs');
+const PARENT = new Map(JSON.parse(readFileSync(new URL('../src/categories.json', import.meta.url))).map(([id, , par]) => [id, par]));
 const TEST = DRY && Number(process.env.TEST_ID); // deneme: bir ürünü yeniymiş gibi tamamla (kaydetmeden), sonucu yaz
 if (TEST) { const t = cat.find((p) => p.id === TEST); if (t) { note('Deneme öncesi', JSON.stringify({ k: t.k, c: t.c, c2: t.c2, pi: t.pi, im: t.im })); t.pf = 0; delete t.img; t.c = 0; delete t.c2; delete t.im; } }
 const pending = cat.filter((p) => (p.pf === 0 || p.pf === -1) && feed.has(p.id)).slice(0, DRY ? 2 : 10);
@@ -123,8 +125,11 @@ if (pending.length) {
       if (files.length && !p.img) { p.pi = files[0]; if (files.length > 1) p.im = files.slice(1, 10); }
       // kategori: sayfadaki reyon numaraları; katalogda kullanılanlardan en özel olanı (en az ürünlü) seçilir
       const ids = ((h.match(/kategori_urunleri_reyon_id"\s+value="([^"]*)"/) || [])[1] || '').match(/\d+/g)?.map(Number) || [];
-      const cand = ids.filter((x) => used.has(x)).sort((a, b) => used.get(a) - used.get(b));
-      if (!p.c && cand.length) { p.c = cand[0]; if (cand[1]) p.c2 = cand[1]; }
+      // en derin kategori ana kategori; ikinci kategori sadece başka bir daldaysa (üst kategorisi değilse)
+      const known = ids.filter((x) => used.has(x) || PARENT.has(x));
+      const anc = (x) => { const a = []; while (PARENT.get(x)) { x = PARENT.get(x); a.push(x); } return a; };
+      const cand = known.sort((a, b) => anc(b).length - anc(a).length || (used.get(a) || 0) - (used.get(b) || 0));
+      if (!p.c && cand.length) { p.c = cand[0]; const o = cand.find((x) => x !== p.c && !anc(p.c).includes(x) && !anc(x).includes(p.c)); if (o) p.c2 = o; }
       delete p.pf; st.filled++;
       note('Yeni ürün tamamlandı', `${p.k} · ${files.length} resim · kategori ${p.c || '—'}${newDescs[p.id] ? ' · açıklama' : ''}`);
       if (TEST) note('Deneme sonucu', JSON.stringify({ c: p.c, c2: p.c2, pi: p.pi, im: p.im, desc: (f.d || '').slice(0, 200) }));
