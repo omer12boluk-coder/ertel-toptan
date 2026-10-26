@@ -468,7 +468,7 @@ export function dhlLabelHtml(o, S) {
   <div class="bx rcv"><table>
     <tr><td class="k">Alıcı:</td><td class="nm">${e(a.name || o.contact?.name)}</td></tr>
     <tr><td class="k">Telefon:</td><td>${e(a.phone || o.contact?.phone)}</td></tr>
-    <tr><td class="k">Adres:</td><td>${e(a.address)}</td></tr>
+    <tr><td class="k">Adres:</td><td>${e([a.hood, a.address].filter(Boolean).join(' '))}</td></tr>
     <tr><td class="k">İlçe / İl:</td><td class="cty">${e(up(a.district))} / ${e(up(a.city))}</td></tr></table></div>
   <div class="bx"><h4><span>Gönderi Bilgileri</span><span>Referans No: ${e(d.ref)}</span></h4><table>
     <tr><td class="k">Referans Barkod:</td><td class="rb">${small}</td><td class="k">Parça No:</td><td>1</td></tr>
