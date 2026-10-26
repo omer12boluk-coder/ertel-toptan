@@ -134,7 +134,8 @@ export const DEFAULT_SETTINGS = {
     doneNote: 'Siparişiniz bize ulaştı. En kısa sürede kontrol edip size dönüş yapacağız.',
     push: true, // müşteri sipariş sayfasından bildirimleri açabilir; durum değişince telefonuna bildirim gider (web push, bekçi gönderir)
     pushTexts: { // boşsa varsayılan metin
-      confirmed: 'Siparişiniz onaylandı, hazırlanıyor.',
+      confirmed: 'Siparişiniz onaylandı.',
+      preparing: 'Siparişiniz hazırlanıyor.',
       shipped: 'Siparişiniz kargoya verildi.',
       ready: 'Siparişiniz hazır, dükkândan teslim alabilirsiniz.',
       done: 'Siparişiniz teslim edildi. Teşekkür ederiz!',
@@ -319,13 +320,14 @@ export const OPEN_STATUSES = ['new', 'offered', 'accepted', 'ready'];
 // Online mağaza siparişleri
 export const ORDER_STATUS = {
   new: { label: 'Yeni', tone: 'info', cust: 'Siparişiniz alındı' },
-  confirmed: { label: 'Onaylandı', tone: 'ok', cust: 'Onaylandı, hazırlanıyor' },
+  confirmed: { label: 'Onaylandı', tone: 'ok', cust: 'Onaylandı' },
+  preparing: { label: 'Hazırlanıyor', tone: 'ok', cust: 'Hazırlanıyor' },
   shipped: { label: 'Kargoda', tone: 'ok', cust: 'Kargoya verildi' },
   ready: { label: 'Teslime hazır', tone: 'ok', cust: 'Dükkandan teslim alabilirsiniz' },
   done: { label: 'Tamamlandı', tone: 'muted', cust: 'Teslim edildi' },
   cancelled: { label: 'İptal', tone: 'bad', cust: 'İptal edildi' },
 };
-export const ORDER_OPEN = ['new', 'confirmed', 'shipped', 'ready'];
+export const ORDER_OPEN = ['new', 'confirmed', 'preparing', 'shipped', 'ready'];
 export const PAY = { havale: 'Havale / EFT', card: 'Kredi kartı (ödeme linki)', shop: 'Dükkanda ödeme' };
 export const DELIVERY = { cargo: 'Kargo ile gönderim', pickup: 'Dükkandan teslim al' };
 export const ILLER = ['Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Aksaray', 'Amasya', 'Ankara', 'Antalya', 'Ardahan', 'Artvin', 'Aydın', 'Balıkesir', 'Bartın', 'Batman', 'Bayburt', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Düzce', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Iğdır', 'Isparta', 'İstanbul', 'İzmir', 'Kahramanmaraş', 'Karabük', 'Karaman', 'Kars', 'Kastamonu', 'Kayseri', 'Kilis', 'Kırıkkale', 'Kırklareli', 'Kırşehir', 'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Mardin', 'Mersin', 'Muğla', 'Muş', 'Nevşehir', 'Niğde', 'Ordu', 'Osmaniye', 'Rize', 'Sakarya', 'Samsun', 'Şanlıurfa', 'Siirt', 'Sinop', 'Sivas', 'Şırnak', 'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Uşak', 'Van', 'Yalova', 'Yozgat', 'Zonguldak'];

@@ -330,7 +330,7 @@ export function OrderPage({ id }) {
   const items = orderItems(o);
   const st = ORDER_STATUS[o.status] || ORDER_STATUS.new;
   const mine = member && o.uid === member.uid;
-  const steps = ['new', 'confirmed', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'];
+  const steps = ['new', 'confirmed', 'preparing', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'];
   const cur = steps.indexOf(o.status);
   const wa = S.shop.whatsapp ? waLink(S.shop.whatsapp, `Merhaba, #${o.no} numaralı siparişim:\n${link}`) : null;
   const cancel = () => setConfirm({ title: 'Siparişi iptal et', text: 'Siparişiniz iptal edilecek. Emin misiniz?', okLabel: 'İptal et', tone: 'danger', onOk: () => api().updateOrder(o.id, { status: 'cancelled', updatedAt: now(), history: [...(o.history || []), { s: 'cancelled', at: now(), by: 'customer' }] }).then(() => { toast('Sipariş iptal edildi'); if (api().mode === 'firebase') pingWatch('/notify-cancel', { id: o.id }); }, (e) => toast('İptal edilemedi: ' + e.message, 'bad')) });

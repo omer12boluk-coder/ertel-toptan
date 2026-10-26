@@ -213,6 +213,8 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - **Mağaza resminde ürün bağlantısı yedekli:** `prod:<no>|<resim adresi>|<kategori>` (`withProdFallback`, Ayarlar/Tasarım kaydında + yönetici açılışında bir kez otomatik). Ürün mağazadan kalkarsa (pasif/silindi) yedek adres, o da açılmazsa (`onError`) aynı kategoriden açık bir ürünün resmi (`catAlt`). Eski `prod:<no>` biçimi de okunur.
 - **Silinen / pasif ürün ayrımı (sync, DOĞRULANMADI → silme KAPALI):** beslemeden çıkan ürün `sg: 0` → ürün sayfasına bir kez bakılır (404/410, başka sayfaya yönlenme ya da sayfada `urun_id` yok → silinmiş; sayfa duruyor → pasif). Silinmiş ürünü katalogdan kaldırma `DELETE_OK=1` ortam değişkeniyle açılır; kullanıcı pasif bir ürünle deneyip (Actions dry + test_id) ayrım doğrulanınca açılacak. Silinen ürün ert04000 (id 3114) denemesi: "deleted" doğru çıktı. Bildirim türleri: `hidden` = "Sitede pasife alındı", `deleted` = "Siteden silindi".
 
+- **Sipariş durumu "Hazırlanıyor" (`preparing`, 26.10.2026):** Onaylandı ile Kargoda/Teslime hazır arasında. ORDER_STATUS, ORDER_OPEN, müşteri takip adımları (5 adım, `.track` auto-fit), yönetici listesi (grup "Hazırlanıyor", pembe nokta, Onaylandı'da düğme "Hazırlamaya başla"), detay, hızlı menü, bildirim metni (`pushTexts.preparing`; worker eski "onaylandı, hazırlanıyor" metnini yok sayar). Telefonda 4+ sayaç 2×2.
+
 ## 7. Site eşitleme, Worker, bildirimler
 
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler. Beslemede stok adedi yok. **Siteye toplu istek atma (IP engeli yemiştik).**

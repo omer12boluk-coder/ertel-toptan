@@ -1094,7 +1094,7 @@ a.btn { text-decoration: none; }
 .done-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 26px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
 .done-card p { margin: 0; max-width: 56ch; }
 .done-no { font-size: 16px; } .done-no b { font: 700 24px/1 var(--f-display); color: var(--accent); }
-.track { list-style: none; margin: 0; padding: 14px 12px; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); counter-reset: none; }
+.track { list-style: none; margin: 0; padding: 14px 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); counter-reset: none; }
 .track li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 13px; color: var(--muted); padding: 0 4px; }
 .track li small { display: block; font-size: 11px; opacity: .8; }
 .track li::before { content: ""; position: absolute; top: 14px; right: 50%; width: 100%; height: 2px; background: var(--line); z-index: 0; }
@@ -2839,8 +2839,8 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 
 /* ---- Yönetim > Siparişler (26.10.2026, 2. sürüm): sade beyaz satırlar, iş sırasına göre gruplar, nokta + yazı durum etiketi,
    satırda tek tıkla sıradaki adım. Renk sadece küçük noktada ve etikette; dikkat "Onayla" düğmesiyle çekilir. ---- */
-.otable, .osum { --c-new: #f59e0b; --c-confirmed: #8b5cf6; --c-shipped: #3b82f6; --c-ready: #14b8a6; --c-done: #22c55e; --c-cancelled: #9ca3af; }
-.st-new, .ost-new { --stc: var(--c-new); } .st-confirmed, .ost-confirmed { --stc: var(--c-confirmed); } .st-shipped, .ost-shipped { --stc: var(--c-shipped); }
+.otable, .osum { --c-new: #f59e0b; --c-confirmed: #8b5cf6; --c-preparing: #ec4899; --c-shipped: #3b82f6; --c-ready: #14b8a6; --c-done: #22c55e; --c-cancelled: #9ca3af; }
+.st-new, .ost-new { --stc: var(--c-new); } .st-confirmed, .ost-confirmed { --stc: var(--c-confirmed); } .st-preparing, .ost-preparing { --stc: var(--c-preparing); } .st-shipped, .ost-shipped { --stc: var(--c-shipped); }
 .st-ready, .ost-ready { --stc: var(--c-ready); } .st-done, .ost-done { --stc: var(--c-done); } .st-cancelled, .ost-cancelled { --stc: var(--c-cancelled); }
 .sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--stc); flex: none; }
 .osum { display: flex; margin: 2px 0 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
@@ -2979,3 +2979,11 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 /* durumu az önce değişen sipariş satırı kısa süre parlar (yeni grubuna geçtiği görülsün) */
 .orow.flash { animation: oflash 1.6s var(--ease); }
 @keyframes oflash { 0%, 50% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--stc) 55%, transparent); border-color: var(--stc); } 100% { box-shadow: none; } }
+/* telefonda 4+ sayaç: 2×2 */
+@media (max-width: 600px) {
+  .osum:has(> :nth-child(4)) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .osum:has(> :nth-child(4)) > .osum-i { border-left: 0; }
+  .osum:has(> :nth-child(4)) > .osum-i:nth-child(even) { border-left: 1px solid var(--line-2); }
+  .osum:has(> :nth-child(4)) > .osum-i:nth-child(n+3) { border-top: 1px solid var(--line-2); }
+}
+@media (max-width: 420px) { .track { padding: 14px 6px; } .track li { font-size: 11.5px; padding: 0 2px; } .track-dot { width: 26px; height: 26px; font-size: 12px; } .track li::before { top: 12px; } }

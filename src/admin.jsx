@@ -658,7 +658,7 @@ export function Settings() {
           <h3>Müşteriye bildirim</h3>
           <Toggle id="s-push" label="Sipariş durumu bildirimi" hint="Müşteri sipariş sayfasında “Bildirimleri aç” der; siz durumu değiştirince (Onaylandı, Kargoda…) telefonuna bildirim gider. Android ve bilgisayarda hemen, iPhone’da site ana ekrana eklenince (iOS 16.4+) çalışır." checked={d.orders.push !== false} onChange={(v) => set('orders.push', v)} />
           {d.orders.push !== false && <div className="push-texts">
-            {[['confirmed', 'Onaylandı'], ['shipped', 'Kargoda'], ['ready', 'Teslime hazır'], ['done', 'Tamamlandı'], ['cancelled', 'İptal']].map(([k, l]) => (
+            {[['confirmed', 'Onaylandı'], ['preparing', 'Hazırlanıyor'], ['shipped', 'Kargoda'], ['ready', 'Teslime hazır'], ['done', 'Tamamlandı'], ['cancelled', 'İptal']].map(([k, l]) => (
               <Field key={k} label={l} hint={k === 'shipped' ? 'Sonuna kargo firması ve takip no kendiliğinden eklenir' : undefined}><input id={'s-pt-' + k} value={d.orders.pushTexts?.[k] ?? ''} onChange={(e) => set('orders.pushTexts', { ...(d.orders.pushTexts || {}), [k]: e.target.value })} /></Field>
             ))}
           </div>}

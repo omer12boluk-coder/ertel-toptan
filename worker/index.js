@@ -351,7 +351,7 @@ async function pushOne(env, sub, data) {
   const r = await fetch(sub.endpoint, { method: 'POST', body, headers: { Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' } });
   return r.status;
 }
-const PUSH_TEXTS = { confirmed: 'Siparişiniz onaylandı, hazırlanıyor.', shipped: 'Siparişiniz kargoya verildi.', ready: 'Siparişiniz hazır, dükkândan teslim alabilirsiniz.', done: 'Siparişiniz teslim edildi. Teşekkür ederiz!', cancelled: 'Siparişiniz iptal edildi.' };
+const PUSH_TEXTS = { confirmed: 'Siparişiniz onaylandı.', preparing: 'Siparişiniz hazırlanıyor.', shipped: 'Siparişiniz kargoya verildi.', ready: 'Siparişiniz hazır, dükkândan teslim alabilirsiniz.', done: 'Siparişiniz teslim edildi. Teşekkür ederiz!', cancelled: 'Siparişiniz iptal edildi.' };
 async function fsDoc(path) {
   const r = await fetch(FS + path); if (!r.ok) return null;
   const doc = await r.json(); return Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
@@ -381,7 +381,8 @@ async function pushStatus(env, id, test) {
   const O = pub.orders || {};
   if (O.push === false && !test) return { ok: true, sent: 0, off: true };
   const shop = pub.brand?.appName || 'ERTEL GSM';
-  let body = test ? 'Bildirimler açık. Siparişinizin durumu değişince buradan haber vereceğiz.' : (O.pushTexts?.[st] || PUSH_TEXTS[st] || 'Siparişinizin durumu güncellendi.');
+  const custom = O.pushTexts?.[st] === 'Siparişiniz onaylandı, hazırlanıyor.' ? '' : O.pushTexts?.[st]; // eski varsayılan metin ("hazırlanıyor" artık ayrı adım)
+  let body = test ? 'Bildirimler açık. Siparişinizin durumu değişince buradan haber vereceğiz.' : (custom || PUSH_TEXTS[st] || 'Siparişinizin durumu güncellendi.');
   if (!test && st === 'shipped' && o.cargo?.code) body += ` ${o.cargo.company || 'Kargo'} takip no: ${o.cargo.code}`;
   const data = { title: `${shop} · Sipariş #${o.no}`, body, url: '/magaza/s/' + id, tag: 'o-' + id };
   const keep = []; let sent = 0;

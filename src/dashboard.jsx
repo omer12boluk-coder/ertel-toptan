@@ -31,7 +31,7 @@ export function AdminHome() {
     return {
       count: po.length, sold: sold.length, rev, avg: sold.length ? rev / sold.length : 0, prevRev,
       open: orders.filter((o) => o.status === 'new').length,
-      ship: orders.filter((o) => o.status === 'confirmed').length,
+      ship: orders.filter((o) => o.status === 'confirmed' || o.status === 'preparing').length,
       newMembers: members.filter((m) => (m.createdAt || 0) >= from).length,
       reqs: requests.filter((r) => (r.createdAt || 0) >= from).length,
       unread: requests.filter((r) => r.unreadAdmin > 0).length,

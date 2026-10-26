@@ -12,9 +12,9 @@ import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 
 // Durum filtreleri: üstte renkli sayaç kutuları (bir bakışta ne kadar iş bekliyor), yanında Tümü / Tamamlanan / İptal
 const FILTERS = [['open', 'Açık'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
-const WORK = [['new', 'Onay bekliyor', 'bell'], ['confirmed', 'Hazırlanacak', 'box'], ['shipped', 'Kargoda', 'send'], ['ready', 'Teslime hazır', 'store']];
+const WORK = [['new', 'Onay bekliyor', 'bell'], ['confirmed', 'Hazırlanacak', 'check'], ['preparing', 'Hazırlanıyor', 'box'], ['shipped', 'Kargoda', 'send'], ['ready', 'Teslime hazır', 'store']];
 // yönetici listesindeki açıklama (müşteri metninden farklı)
-export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
+export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı', preparing: 'Hazırlanıyor', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
 const ago = (ts) => { const h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + ' dk' : h < 48 ? Math.round(h) + ' sa' : Math.round(h / 24) + ' gün'; };
 const isPhone = () => matchMedia('(max-width: 700px)').matches;
 const orderTotal = (o) => fmtTotals(o.total || totals(orderItems(o), 'offer'));
@@ -36,7 +36,7 @@ export function Orders() {
   const flow = useStatusFlow(S);
   // listeden hızlı durum değiştirme
   const quick = (e, o) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
-    [...['new', 'confirmed', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'].map((k) => ({ label: (o.status === k ? '✓ ' : '') + ADMIN_ST[k] + (k === 'shipped' && o.status === 'shipped' ? ' · takip no düzenle' : ''), icon: { new: 'bell', confirmed: 'check', shipped: 'send', ready: 'store', done: 'check' }[k], onClick: () => flow.ask(o, k) })),
+    [...['new', 'confirmed', 'preparing', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'].map((k) => ({ label: (o.status === k ? '✓ ' : '') + ADMIN_ST[k] + (k === 'shipped' && o.status === 'shipped' ? ' · takip no düzenle' : ''), icon: { new: 'bell', confirmed: 'check', preparing: 'box', shipped: 'send', ready: 'store', done: 'check' }[k], onClick: () => flow.ask(o, k) })),
       '-', { label: 'İptal et', icon: 'x', danger: true, onClick: () => flow.ask(o, 'cancelled') }], '#' + o.no + ' · durum');
   const list = useMemo(() => {
     let r = orders;
@@ -142,14 +142,15 @@ const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda
 // satırdaki tek tıkla sıradaki adım (en çok iş gerektiren belirgin: Onayla)
 const nextAct = (o, noCode) => ({
   new: ['confirmed', 'Onayla', 'check', 'primary'],
-  confirmed: o.delivery?.method === 'pickup' ? ['ready', 'Teslime hazır', 'store', 'outline'] : ['shipped', 'Kargoya ver', 'send', 'outline'],
+  confirmed: ['preparing', 'Hazırlamaya başla', 'box', 'outline'],
+  preparing: o.delivery?.method === 'pickup' ? ['ready', 'Teslime hazır', 'store', 'outline'] : ['shipped', 'Kargoya ver', 'send', 'outline'],
   shipped: noCode ? ['shipped', 'Takip no ekle', 'box', 'outline warn'] : ['done', 'Teslim edildi', 'check', 'ghost'],
   ready: ['done', 'Teslim edildi', 'check', 'ghost'],
 }[o.status] || null);
 // Açık / Tümü görünümünde duruma göre gruplar (iş sırası); tek durum seçiliyse grup başlığı yok
-const GROUP_T = { new: 'Onay bekleyen', confirmed: 'Hazırlanacak', ready: 'Teslime hazır', shipped: 'Kargoda', done: 'Tamamlanan', cancelled: 'İptal' };
+const GROUP_T = { new: 'Onay bekleyen', confirmed: 'Hazırlanacak', preparing: 'Hazırlanıyor', ready: 'Teslime hazır', shipped: 'Kargoda', done: 'Tamamlanan', cancelled: 'İptal' };
 const groups = (list, filter) => (filter === 'open' || filter === 'all')
-  ? ['new', 'confirmed', 'ready', 'shipped', 'done', 'cancelled'].map((g) => [g, list.filter((o) => o.status === g)]).filter(([, r]) => r.length)
+  ? ['new', 'confirmed', 'preparing', 'ready', 'shipped', 'done', 'cancelled'].map((g) => [g, list.filter((o) => o.status === g)]).filter(([, r]) => r.length)
   : [[null, list]];
 
 // ---- Durum değiştirme (liste ve detay ortak): onay penceresi, kargo bilgisi penceresi ----
@@ -244,7 +245,7 @@ function OrderDetail({ id }) {
 
   const items = orderItems(o);
   const pickup = o.delivery?.method === 'pickup';
-  const nextMap = { new: ['confirmed', 'Siparişi onayla', 'check'], confirmed: pickup ? ['ready', 'Teslime hazır', 'store'] : ['shipped', 'Kargoya verildi', 'box'], shipped: ['done', 'Teslim edildi', 'check'], ready: ['done', 'Teslim edildi', 'check'] };
+  const nextMap = { new: ['confirmed', 'Siparişi onayla', 'check'], confirmed: ['preparing', 'Hazırlamaya başla', 'box'], preparing: pickup ? ['ready', 'Teslime hazır', 'store'] : ['shipped', 'Kargoya verildi', 'box'], shipped: ['done', 'Teslim edildi', 'check'], ready: ['done', 'Teslim edildi', 'check'] };
   const next = nextMap[o.status];
   const wa = o.contact?.phone ? waLink(o.contact.phone, custMsg(o, S)) : null;
   const goNext = () => flow.ask(o, next[0]);
@@ -262,7 +263,7 @@ function OrderDetail({ id }) {
 
       <div className="oa-status" role="radiogroup" aria-label="Sipariş durumu">
         <span className="oa-status-l">Durum:</span>
-        {['new', 'confirmed', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
+        {['new', 'confirmed', 'preparing', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
           <button key={k} role="radio" aria-checked={o.status === k} disabled={busy} className={'oa-st tone-' + ORDER_STATUS[k].tone + (o.status === k ? ' on' : '')}
             onClick={() => flow.ask(o, k)}>
             {o.status === k && <Icon n="check" s={14} />}{ORDER_STATUS[k].label}
@@ -277,7 +278,7 @@ function OrderDetail({ id }) {
       </div>
 
       <ol className="track admin" aria-label="Sipariş durumu">
-        {['new', 'confirmed', pickup ? 'ready' : 'shipped', 'done'].map((k, i, arr) => {
+        {['new', 'confirmed', 'preparing', pickup ? 'ready' : 'shipped', 'done'].map((k, i, arr) => {
           const cur = arr.indexOf(o.status);
           const h = (o.history || []).filter((x) => x.s === k).pop();
           return <li key={k} className={o.status === 'cancelled' ? '' : i < cur ? 'done' : i === cur ? 'on' : ''}><span className="track-dot">{i < cur && o.status !== 'cancelled' ? <Icon n="check" s={14} /> : i + 1}</span><span>{ORDER_STATUS[k].label}{h && <small>{when(h.at)}</small>}</span></li>;
