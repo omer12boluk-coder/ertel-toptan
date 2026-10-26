@@ -100,7 +100,8 @@ st.filled = 0;
 const { readFileSync } = await import('node:fs');
 const PARENT = new Map(JSON.parse(readFileSync(new URL('../src/categories.json', import.meta.url))).map(([id, , par]) => [id, par]));
 // TEST_ID: deneme modunda ürünü yeniymiş gibi tamamlar (kaydetmez, sonucu yazar); gerçek modda eksiklerini (açıklama vb.) bir kez daha tamamlar
-const TEST = Number(process.env.TEST_ID) || 0;
+const TEST0 = String(process.env.TEST_ID || '').trim(); // ürün no ya da stok kodu
+const TEST = Number(TEST0) || (TEST0 ? cat.find((p) => String(p.k || '').toLowerCase() === TEST0.toLowerCase())?.id || 0 : 0);
 if (TEST) { const t = cat.find((p) => p.id === TEST); if (t) { note('Öncesi', JSON.stringify({ k: t.k, c: t.c, c2: t.c2, pi: t.pi, im: t.im })); t.pf = 0; if (DRY) { delete t.img; t.c = 0; delete t.c2; delete t.im; } } }
 const pending = cat.filter((p) => (p.pf === 0 || p.pf === -1) && feed.has(p.id)).slice(0, 10);
 let descMap = null; const newDescs = {};
@@ -156,7 +157,7 @@ for (const code of String(process.env.REMOVE_CODES || '').split(',').map((x) => 
 // Silinmiş: sayfa 404/410 ya da başka sayfaya yönleniyor ya da sayfada bu ürün yok → katalogdan tamamen kaldırılır.
 // Pasif: sayfa duruyor → uygulamada gizli (soluk) kalır. Çalışma başına en çok 6 kontrol, 3 sn arayla; elle eklenen ürünlere bakılmaz.
 st.deleted = 0; st.passive = 0;
-const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || (p.sg == null && p.id === TEST))).slice(0, 6);
+const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || p.id === TEST)).slice(0, 6);
 for (const [i, p] of gone.entries()) {
   if (i || pending.length) await new Promise((r) => setTimeout(r, 3000));
   let verdict = null, why = '';
