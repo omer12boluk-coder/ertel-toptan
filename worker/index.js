@@ -506,7 +506,7 @@ async function dhl(env, act, b) {
     const list = parcels.map((x) => fmt.replace('{kg}', Math.max(1, Math.round(x.kg || 1))).replace('{desi}', Math.max(1, Math.round(x.desi || 1))).replace('{adet}', Math.max(1, Math.round(x.adet || 1))).replace('{icerik}', icerik.replace(/[:;]/g, ' '))).join('');
     const phone = String(a.phone || o.contact?.phone || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
     const fields = {
-      pChIrsaliyeNo: '', pPrKiymet: '', pChBarkod: '', pChIcerik: icerik, pGonderiHizmetSekli: 'NORMAL', pTeslimSekli: 1, pFlAlSms: 1, pFlGnSms: 0,
+      pChIrsaliyeNo: '', pPrKiymet: '', pChBarkod: ref, pChIcerik: icerik, // barkod = referans: kendi etiketimizdeki barkod okutulunca kayıt eşleşir pGonderiHizmetSekli: 'NORMAL', pTeslimSekli: 1, pFlAlSms: 1, pFlGnSms: 0,
       pKargoParcaList: list, pAliciMusteriMngNo: '', pAliciMusteriBayiNo: '', pAliciMusteriAdi: String(a.name || o.contact?.name || '').slice(0, 60), pChSiparisNo: ref,
       pLuOdemeSekli: String(b.pay || 'U'), pFlAdresFarkli: '1', pChIl: String(a.city || '').toLocaleUpperCase('tr-TR'), pChIlce: String(a.district || '').toLocaleUpperCase('tr-TR'),
       pChAdres: String(a.address || '').slice(0, 250), pChSemt: '', pChMahalle: String(b.mahalle || ''), pChMeydanBulvar: '', pChCadde: '', pChSokak: '',

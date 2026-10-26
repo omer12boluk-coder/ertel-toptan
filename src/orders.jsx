@@ -8,6 +8,7 @@ import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper } from './listsheet.jsx';
 import { pushStatus } from './push.js';
+import { code128svg } from './barcode.js';
 import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 
 // Durum filtreleri: üstte renkli sayaç kutuları (bir bakışta ne kadar iş bekliyor), yanında Tümü / Tamamlanan / İptal
@@ -437,18 +438,35 @@ function DhlCard({ o }) {
     if (j?.ok) { await api().updateOrder(o.id, { dhl: { ref: j.ref, at: now(), pay, parcels, icerik } }); toast('DHL’e gönderildi: ' + j.ref); }
     else if (j) toast('DHL kabul etmedi: ' + (j.fault || j.error || j.result || 'bilinmeyen cevap'), 'bad');
   }
-  async function label() {
-    const j = await call('label'); if (!j) return;
-    const raw = j.raw || '';
-    const b64 = (raw.match(/(JVBERi0[A-Za-z0-9+/=\s]{200,})/) || [])[1]; // PDF
-    const png = (raw.match(/(iVBORw0[A-Za-z0-9+/=\s]{200,})/) || [])[1]; // PNG
-    if (b64 || png) {
-      const bin = atob((b64 || png).replace(/\s/g, '')); const u8 = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-      const url = URL.createObjectURL(new Blob([u8], { type: b64 ? 'application/pdf' : 'image/png' }));
-      if (b64) window.open(url, '_blank');
-      else { const w = window.open('', '_blank'); w?.document.write(`<title>Etiket ${o.no}</title><style>@page{size:4in 6in;margin:0}body{margin:0}img{width:4in;height:6in;object-fit:contain}</style><img src="${url}" onload="setTimeout(()=>print(),300)">`); }
-      toast('Etiket açıldı');
-    } else toast(j.fault || 'Etiket cevabı aşağıda (deneme)', j.ok ? 'ok' : 'bad');
+  // Etiket bizim sistemden: A6 (4×6 inç), sipariş (referans) numarası Code128 barkod. Kurye okutunca DHL kaydı eşleşir, gönderi oluşur.
+  function label() {
+    const d = o.dhl || {}; const a = o.delivery?.addr || {}; const ps = d.parcels || parcels;
+    const total = ps.reduce((t, x) => t + (Number(x.adet) || 1), 0); const kg = ps.reduce((t, x) => t + (Number(x.kg) || 0) * (Number(x.adet) || 1), 0); const desi = ps.reduce((t, x) => t + (Number(x.desi) || 0) * (Number(x.adet) || 1), 0);
+    const e = (x) => String(x ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const S = store.s.settings; const from = S.footer?.company || S.shop?.name || S.brand?.appName || 'ERTEL GSM';
+    const fromAddr = [S.footer?.address || S.shop?.address, S.shop?.phone].filter(Boolean).join(' · ');
+    const bc = code128svg(d.ref, { h: 110, mod: 3 });
+    const one = (i) => `<section class="lb">
+      <div class="top"><b class="dhl">DHL</b><span>eCommerce</span><b class="pay">${d.pay === 'P' ? 'GÖNDERİCİ ÖDEMELİ' : 'ALICI ÖDEMELİ'}</b></div>
+      <div class="box"><small>GÖNDERİCİ</small><b>${e(from)}</b><span>${e(fromAddr)}</span></div>
+      <div class="box to"><small>ALICI</small><b class="nm">${e(a.name || o.contact?.name)}</b><span class="tel">${e(a.phone || o.contact?.phone)}</span>
+        <span class="ad">${e(a.address)}</span><b class="city">${e(String(a.district || '').toLocaleUpperCase('tr-TR'))} / ${e(String(a.city || '').toLocaleUpperCase('tr-TR'))}</b></div>
+      <div class="row"><span>Koli <b>${i}/${total}</b></span><span>${kg ? kg + ' kg' : ''}${desi ? ' · ' + desi + ' desi' : ''}</span><span>${e(d.icerik || icerik)}</span></div>
+      <div class="bc">${bc}<b>${e(d.ref)}</b></div>
+      <div class="ft"><span>Sipariş #${e(o.no)}</span><span>${new Date().toLocaleDateString('tr-TR')}</span></div></section>`;
+    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Etiket ${e(d.ref)}</title><style>
+      @page{size:4in 6in;margin:0} *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}
+      .lb{width:4in;height:6in;padding:.14in;display:flex;flex-direction:column;gap:.07in;page-break-after:always;overflow:hidden}
+      .top{display:flex;align-items:center;gap:6px;border-bottom:3px solid #000;padding-bottom:5px} .dhl{background:#ffcc00;color:#d40511;font:900 italic 22px Arial;padding:2px 8px;border-radius:3px} .top span{font-weight:700;font-size:13px} .pay{margin-left:auto;font-size:15px;border:2px solid #000;padding:3px 6px}
+      .box{border:1.5px solid #000;border-radius:4px;padding:5px 7px;display:flex;flex-direction:column;gap:2px} .box small{font-size:9px;font-weight:700;letter-spacing:.08em} .box b{font-size:12px} .box span{font-size:11px}
+      .to{flex:1} .to .nm{font-size:19px} .to .tel{font-size:14px;font-weight:700} .to .ad{font-size:13px;line-height:1.25} .to .city{font-size:22px;margin-top:auto}
+      .row{display:flex;justify-content:space-between;gap:6px;font-size:12px;border-top:1px solid #000;border-bottom:1px solid #000;padding:4px 0}
+      .bc{display:flex;flex-direction:column;align-items:center;gap:2px} .bc svg{width:3.6in;height:.95in} .bc b{font-size:16px;letter-spacing:.12em}
+      .ft{display:flex;justify-content:space-between;font-size:10px}
+      @media screen{body{background:#888;padding:12px} .lb{background:#fff;margin:0 auto 12px}}
+    </style></head><body>${Array.from({ length: total }, (_, i) => one(i + 1)).join('')}<script>setTimeout(()=>print(),400)</script></body></html>`;
+    const w = window.open('', '_blank'); if (!w) { toast('Açılır pencere engellendi; tarayıcıda izin verin', 'bad'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
   }
   const cancel = () => setConfirm({ title: 'DHL kaydını iptal et', text: `DHL’deki ${o.dhl?.ref} gönderi kaydı iptal edilecek.`, okLabel: 'İptal et', tone: 'danger', onOk: async () => { const j = await call('cancel'); if (j?.ok) { await api().updateOrder(o.id, { dhl: { ...o.dhl, cancelled: now() } }); toast('DHL kaydı iptal edildi'); } } });
   const setP = (i, k, v) => setParcels(parcels.map((x, j) => (j === i ? { ...x, [k]: Number(v) || 0 } : x)));
@@ -474,7 +492,7 @@ function DhlCard({ o }) {
       </>}
       <div className="row-btns">
         {!live && <button className="btn primary" disabled={!!busy} onClick={create}><Icon n="send" s={16} />{busy === 'create' ? 'Gönderiliyor…' : 'DHL’e gönder'}</button>}
-        {live && <button className="btn primary" disabled={!!busy} onClick={label}><Icon n="ext" s={16} />{busy === 'label' ? 'Alınıyor…' : 'Etiketi al / yazdır'}</button>}
+        {live && <button className="btn primary" disabled={!!busy} onClick={label}><Icon n="ext" s={16} />Etiketi yazdır (A6)</button>}
         {live && <button className="btn outline" disabled={!!busy} onClick={() => call('track')}>{busy === 'track' ? 'Bakılıyor…' : 'Takip no / durum'}</button>}
         {live && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL’den iptal</button>}
       </div>
