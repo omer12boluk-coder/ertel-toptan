@@ -18,15 +18,8 @@ const a = o.delivery?.addr || {};
 console.log('::notice::adres alanları: ' + JSON.stringify(Object.keys(a)) + ' il=' + a.city + ' ilçe=' + a.district + ' adres uzunluk=' + String(a.address || '').length + ' ad var=' + !!a.name + ' email var=' + !!o.contact?.email);
 const phone = String(a.phone || o.contact?.phone || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
 const base = (ref) => ({ pChIrsaliyeNo: '', pPrKiymet: '', pChBarkod: ref, pChIcerik: 'Elektronik malzeme', pKargoParcaList: '1:1:1:Elektronik malzeme:1:;', pAliciMusteriMngNo: '', pAliciMusteriBayiNo: '', pAliciMusteriAdi: String(a.name || o.contact?.name || ''), pChSiparisNo: ref, pLuOdemeSekli: 'U', pFlAdresFarkli: '1', pChIl: String(a.city || '').toLocaleUpperCase('tr-TR'), pChIlce: String(a.district || '').toLocaleUpperCase('tr-TR'), pChAdres: String(a.address || ''), pChSemt: '', pChMahalle: '', pChMeydanBulvar: '', pChCadde: '', pChSokak: '', pChTelEv: '', pChTelCep: phone, pChTelIs: '', pChFax: '', pChEmail: String(o.contact?.email || ''), pChVergiDairesi: '', pChVergiNumarasi: '', pFlKapidaOdeme: 0, pMalBedeliOdemeSekli: '', pPlatformKisaAdi: '', pPlatformSatisKodu: '', pKullaniciAdi: U, pSifre: P });
-const vars = {
-  aynen: {},
-  ilce_kucuk: { pChIlce: String(a.district || '') },
-  il_kucuk: { pChIl: String(a.city || ''), pChIlce: String(a.district || '') },
-  ascii: { pChIl: 'ISTANBUL', pChIlce: 'KADIKOY' },
-  adres_temiz: { pChAdres: 'Fenerbahce Mah. Bagdat Cad. No 72/3' },
-  mahalle: { pChMahalle: 'FENERBAHÇE' },
-  eski_test_adresi: { pChIl: 'İSTANBUL', pChIlce: 'ÜMRANİYE', pChAdres: 'Finanskent mh. Parlayan sk NO2' },
-};
+const H = { pGonderiHizmetSekli: 'NORMAL', pTeslimSekli: 1, pFlAlSms: 1, pFlGnSms: 0 };
+const vars = { hizmet_alanlari: H, hizmet_sms_yok: { ...H, pFlAlSms: 0 } };
 let i = 0;
 for (const [k, v] of Object.entries(vars)) {
   const ref = 'ERTELDG' + (++i) + Date.now().toString(36).slice(-3).toUpperCase();
