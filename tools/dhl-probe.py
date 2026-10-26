@@ -19,7 +19,7 @@ def fill(xml, u, p):
         if re.search(r'kullanici|username', low): v = u
         elif re.search(r'sifre|password', low): v = p
         elif 'tarih' in low and ('bit' in low or 'son' in low): v = today.strftime('%d.%m.%Y')
-        elif 'tarih' in low: v = week.strftime('%d.%m.%Y')
+        elif 'tarih' in low: v = today.strftime('%d.%m.%Y')
         elif m.group(2) == 'int': v = '0'
         else: v = 'ERTEL-TEST-0000'
         return f'<{tag}>{html.escape(v)}</{tag}>'
@@ -28,7 +28,10 @@ for op in ['FaturaSiparisListesiByTarih']:  # sadece okuyan metot (MusteriBayiBi
     s = sample(op)
     if not s: print('===', op, 'örnek alınamadı'); continue
     print('===', op, 'alanlar:', re.findall(r'<(\w+)>\{', s))
-    for label, pw in [('DOĞRU şifre', P), ('YANLIŞ şifre', P + 'x9')]:
+    for label, pw in [('DOĞRU şifre', P)]:
         r = get(B, fill(s, U, pw), op)
         body = re.sub(r'^.*?<soap:Body>|</soap:Body>.*$', '', r, flags=re.S)
-        print('  --', label, ':', body.replace(P, '***')[:900])
+        b2 = body.replace(P, '***'); rows = re.findall(r'<FaturaSiparisListesi[^>]*>(.*?)</FaturaSiparisListesi>', b2, re.S)
+        print('  --', label, ': kayıt sayısı', len(rows))
+        for r in rows[:15]: print('   *', re.sub(r'<(\w+)>([^<]*)</\1>', lambda m: f'{m.group(1)}={m.group(2)} ', r)[:600])
+        if not rows: print(b2[-1500:])
