@@ -1,0 +1,13 @@
+name: MNG portal erisim denemesi
+on:
+  push:
+    branches: [mng-probe]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in https://sandbox.mngkargo.com.tr/ https://apizone.mngkargo.com.tr/tr/start https://apizone.mngkargo.com.tr/tr/user/register https://api.mngkargo.com.tr/ https://testapi.mngkargo.com.tr/; do
+            r=$(curl -s -o /tmp/b -w '%{http_code} %{time_total}s' -m 30 -L "$u" -A 'Mozilla/5.0'); t=$(grep -o '<title>[^<]*' /tmp/b | head -1)
+            echo "::notice::$u -> $r $t"
+          done
