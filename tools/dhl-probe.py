@@ -22,7 +22,7 @@ def fill(xml, u, p):
         else: v = 'ERTEL-TEST-0000'
         return f'<{tag}>{html.escape(v)}</{tag}>'
     return re.sub(r'<(\w+)>\{(\w+)\}</\1>', f, xml)
-for op in ['KargoBilgileriByReferans', 'FaturaSiparisListesiByTarih', 'MusteriBayiBilgileri', 'KargoTakipByReferans']:
+for op in ['FaturaSiparisListesiByTarih']:  # sadece okuyan metot (MusteriBayiBilgileri KAYIT yapabiliyor, kullanma)
     s = sample(op)
     if not s: print('===', op, 'örnek alınamadı'); continue
     print('===', op, 'alanlar:', re.findall(r'<(\w+)>\{', s))
