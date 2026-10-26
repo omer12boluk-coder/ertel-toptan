@@ -24,6 +24,13 @@ def fill(xml, u, p):
         else: v = 'ERTEL-TEST-0000'
         return f'<{tag}>{html.escape(v)}</{tag}>'
     return re.sub(r'<(\w+)>\{(\w+)\}</\1>', f, xml)
+# SADECE OKUYAN sorgu: referansa göre kargo bilgisi (teslim şubesi atanmış mı?)
+for ref in ['RF100896235', 'ERTELKPT6JN', 'ERTELNU2T49', 'RF100867510']:
+    x = f'<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><KargoBilgileriByReferans xmlns="http://tempuri.org/"><pMusteriNo>{html.escape(U)}</pMusteriNo><pSifre>{html.escape(P)}</pSifre><pSiparisNo>{ref}</pSiparisNo><pGonderiNo></pGonderiNo><pFaturaSeri></pFaturaSeri><pFaturaNo></pFaturaNo><pIrsaliyeNo></pIrsaliyeNo><pEFaturaNo></pEFaturaNo><pRaporType></pRaporType></KargoBilgileriByReferans></soap:Body></soap:Envelope>'
+    r = get(B, x, 'KargoBilgileriByReferans')
+    row = re.search(r'<Table1 [^>]*>(.*?)</Table1>', r, re.S)
+    print('===', ref, ':', re.sub(r'<(\w+)[^>]*>([^<]*)</\1>', lambda m: f'{m.group(1)}={m.group(2).strip()} | ', row.group(1)) if row else r[-400:])
+raise SystemExit
 for op in ['FaturaSiparisListesiByTarih']:  # sadece okuyan metot (MusteriBayiBilgileri KAYIT yapabiliyor, kullanma)
     s = sample(op)
     if not s: print('===', op, 'örnek alınamadı'); continue
