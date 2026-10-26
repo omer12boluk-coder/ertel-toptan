@@ -2848,7 +2848,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .otable { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .otable-h, .orow { display: grid; grid-template-columns: 34px 92px minmax(140px, 1.2fr) minmax(170px, 1.3fr) 104px 128px 168px 40px; gap: 12px; align-items: center; }
 .otable-h { padding: 11px 14px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--line); }
-.otable-h span:nth-child(5) { text-align: right; }
+.otable-h .oh-sum { text-align: right; }
 .orows { gap: 0; }
 .orows > li { animation: none; }
 .orows > li + li { border-top: 1px solid var(--line-2, var(--line)); }
@@ -3052,7 +3052,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 #print-root { display: none; } /* yazdırma kutusu (printHtml): ekranda hiç görünmez */
 
 /* ---- 27.10.2026 (2): sipariş sayfaları sadeleşme, kargo takibi görünümü ---- */
-.pt-mob { display: none; }
+.ptable .pt-name .pt-mob { display: none; } /* sadece telefonda (aşağıda); .pt-name span display:block'u ezmesin */
 @media (max-width: 640px) {
   /* ürün tablosu telefonda kaydırmasız: resim + ad, altında "adet × fiyat", sağda tutar */
   .paper-scroll { overflow: visible; }
@@ -3066,7 +3066,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .ptable .pt-img { grid-row: span 2; }
   .ptable .pt-img .thumb { width: 46px; height: 46px; }
   .pt-name span { font-size: 14px; } .pt-name code { display: none; }
-  .pt-mob { display: block; grid-column: 2; font-size: 13px !important; font-weight: 500 !important; color: #4b5563; margin-top: 2px; }
+  .ptable .pt-name .pt-mob { display: block; grid-column: 2; font-size: 13px !important; font-weight: 500 !important; color: #4b5563; margin-top: 2px; }
   .pt-mob b { color: #111827; }
   .ptable .pt-sum { font: 700 16px/1 var(--f-display); color: #111827; padding-left: 0; }
   .paper-h { padding: 14px 14px 8px; gap: 10px; } .paper-h img { width: 40px; height: 40px; }
@@ -3205,3 +3205,9 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 .opager-n { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .opager-n .chip { min-width: 38px; justify-content: center; }
 @media (max-width: 960px) { .opager { padding-top: 10px; } }
+
+/* ---- 27.10.2026 (6): tutar sütunu (TL büyük, $ ve ürün sayısı altında) ---- */
+.or-sum b { font-size: 17px; }
+.or-sum small { font-size: 13px; color: color-mix(in oklab, var(--fg) 65%, var(--muted)); }
+.otable-h > span, .orow > span { min-width: 0; }
+.admin-order .oa-status { margin-top: 0; }

@@ -6,7 +6,7 @@ import { CarrierMark, Thumb, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Fi
 import { fmt, totals, fmtTotals, when, now, norm, ls } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf } from './config.js';
 import { links, waLink } from './route.js';
-import { ListPaper } from './listsheet.jsx';
+import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushStatus } from './push.js';
 import { code128svg } from './barcode.js';
 import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
@@ -20,6 +20,8 @@ export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı', prepari
 const ago = (ts) => { const h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + ' dk' : h < 48 ? Math.round(h) + ' sa' : Math.round(h / 24) + ' gün'; };
 const isPhone = () => matchMedia('(max-width: 700px)').matches;
 const orderTotal = (o) => fmtTotals(o.total || totals(orderItems(o), 'offer'));
+// TL karşılığı: sipariş anındaki kur (o.rate), yoksa güncel kur
+const orderTL = (o, live) => toTL(o.total || totals(orderItems(o), 'offer'), o.rate ? { usd: o.rate } : live);
 const custMsg = (o, S) => {
   const st = ORDER_STATUS[o.status]?.cust || '';
   const cargo = o.status === 'shipped' && o.cargo?.code ? `\nKargo: ${o.cargo.company || ''} ${o.cargo.code}` : '';
@@ -36,6 +38,7 @@ export function Orders() {
   const newN = orders.filter((o) => o.status === 'new').length;
   const cnt = useMemo(() => { const c = { open: 0 }; for (const o of orders) { c[o.status] = (c[o.status] || 0) + 1; if (ORDER_OPEN.includes(o.status)) c.open++; } return c; }, [orders]);
   const flow = useStatusFlow(S);
+  const live = useRate();
   useDhlSync(orders); // şube okuttuysa takip no'yu çek
   // listeden hızlı durum değiştirme
   const quick = (e, o) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
@@ -100,7 +103,7 @@ export function Orders() {
           <div className={'otable' + (sel ? ' selecting' : '')}>
             <div className="otable-h" aria-hidden="true">
               {sel && <label className="oc-box" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={!!sel.size && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : new Set())} /></label>}
-              <span>Sipariş no</span><span>Müşteri</span><span>Ödeme / kargo</span><span>Tutar</span><span>Tarih</span><span>Durum</span><span />
+              <span>Sipariş no</span><span>Müşteri</span><span>Ödeme / kargo</span><span className="oh-sum">Tutar</span><span>Tarih</span><span>Durum</span><span />
             </div>
             <ul className="olist orows">
               {shown.map((o) => {
@@ -117,13 +120,13 @@ export function Orders() {
                         {o.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (car?.k || 'none')}>{car ? car.short : 'Kargo'}</span>}
                         {needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
                       </span>
-                      <span className="or-sum"><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></span>
+                      <span className="or-sum">{orderTL(o, live) != null ? <><b className="num">{fmtTL(orderTL(o, live))}</b><small className="num">{orderTotal(o)} · {(o.items || []).length} ürün</small></> : <><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></>}</span>
                       <span className="or-date"><span>{fullDate(o.createdAt)}</span><small className="or-ago">{ago2(o.createdAt)}</small></span>
                       <span className="or-st">
                         <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); quick(e, o); }} title="Durumu değiştir"><span>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={14} /></button>
                         {noCode && <small className="warn-t">Takip no yok</small>}
                       </span>
-                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{o.contact?.name}{!o.member && <small> · misafir</small>}</b><span className="num or-mob-s">{orderTotal(o)} <small>· {ago2(o.createdAt)}</small></span></span></span>
+                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{o.contact?.name}{!o.member && <small> · misafir</small>}</b><span className="num or-mob-s">{orderTL(o, live) != null ? fmtTL(orderTL(o, live)) : orderTotal(o)} <small>· {ago2(o.createdAt)}</small></span></span></span>
                       <span className="or-act"><button type="button" className="or-dots" aria-label="İşlemler" onClick={(e) => { e.stopPropagation(); menu(e, o); }}><Icon n="more" s={18} /></button></span>
                     </div>
                   </li>
@@ -277,15 +280,6 @@ function OrderDetail({ id }) {
         <button className="icon-btn oa-del" onClick={del} aria-label="Siparişi sil" title="Siparişi sil"><Icon n="trash" s={17} /></button>
       </div>
 
-      <div className="oa-status" role="radiogroup" aria-label="Sipariş durumu">
-        <span className="oa-status-l">Durum:</span>
-        {['new', 'confirmed', 'preparing', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
-          <button key={k} role="radio" aria-checked={o.status === k} disabled={busy} className={'oa-st tone-' + ORDER_STATUS[k].tone + (o.status === k ? ' on' : '')}
-            onClick={() => flow.ask(o, k)}>
-            {o.status === k && <Icon n="check" s={14} />}{ORDER_STATUS[k].label}
-          </button>
-        ))}
-      </div>
 
       <ol className="track admin" aria-label="Sipariş durumu">
         {['new', 'confirmed', 'preparing', pickup ? 'ready' : 'shipped', 'done'].map((k, i, arr) => {
@@ -299,6 +293,15 @@ function OrderDetail({ id }) {
         : <div className="banner warn"><Icon n="box" /><div><b>Takip numarası girilmedi.</b> {o.cargo?.company || ''} <button className="btn sm primary" onClick={() => flow.openShip(o)}>Takip no ekle</button></div></div>)}
 
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
+      <div className="oa-status" role="radiogroup" aria-label="Sipariş durumu">
+        <span className="oa-status-l">Durum:</span>
+        {['new', 'confirmed', 'preparing', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
+          <button key={k} role="radio" aria-checked={o.status === k} disabled={busy} className={'oa-st tone-' + ORDER_STATUS[k].tone + (o.status === k ? ' on' : '')}
+            onClick={() => flow.ask(o, k)}>
+            {o.status === k && <Icon n="check" s={14} />}{ORDER_STATUS[k].label}
+          </button>
+        ))}
+      </div>
       <button type="button" className={'ost oa-st-m ost-' + o.status} onClick={(e) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
         [...['new', 'confirmed', 'preparing', pickup ? 'ready' : 'shipped', 'done'].map((k) => ({ label: ADMIN_ST[k], color: ST_COLOR[k], on: o.status === k, hint: o.status === k ? '✓' : undefined, onClick: () => flow.ask(o, k) })), '-', { label: 'İptal et', icon: 'x', danger: true, onClick: () => flow.ask(o, 'cancelled') }], '#' + o.no + ' · durum')}>
         <span><small>Durum</small>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={15} />
