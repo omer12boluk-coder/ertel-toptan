@@ -3389,3 +3389,7 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
   .shell.public .me:hover { background: color-mix(in oklab, var(--accent) 7%, transparent); }
   .shell.public .me.on { background: var(--accent-soft); }
 }
+@media (min-width: 561px) {
+  .shell.public .me { padding: 6px 6px 6px 22px; gap: 13px; }
+  .shell.public .me .me-t { gap: 1px; }
+}
