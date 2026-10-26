@@ -10,8 +10,10 @@ async function soap(op, inner) {
   const t = await (await fetch('https://service.mngkargo.com.tr/musterikargosiparis/musterikargosiparis.asmx', { method: 'POST', headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: `"http://tempuri.org/${op}"` }, body })).text();
   return t.split(P).join('***');
 }
-const q = await db.collection('orders').where('no', '==', process.env.NO).get();
-const o = q.docs[0]?.data(); if (!o) { console.log('::notice::sipariş yok'); process.exit(0); }
+const all = await db.collection('orders').orderBy('createdAt', 'desc').limit(40).get();
+const want = String(process.env.NO).replace('#', '').toUpperCase();
+const o = all.docs.map((d) => d.data()).find((x) => String(x.no).toUpperCase() === want);
+if (!o) console.log('::notice::son siparişler: ' + all.docs.map((d) => d.data().no).join(',')); if (!o) { console.log('::notice::sipariş yok'); process.exit(0); }
 const a = o.delivery?.addr || {};
 console.log('::notice::adres alanları: ' + JSON.stringify(Object.keys(a)) + ' il=' + a.city + ' ilçe=' + a.district + ' adres uzunluk=' + String(a.address || '').length + ' ad var=' + !!a.name + ' email var=' + !!o.contact?.email);
 const phone = String(a.phone || o.contact?.phone || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
