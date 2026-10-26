@@ -131,6 +131,8 @@ export const DEFAULT_SETTINGS = {
     accountsSoon: false, // Hesabım / üyelik çok yakında
     cargoNote: 'Kargo ücreti ve teslim süresi sipariş onayında bildirilir.',
     cargoCompanies: ['Yurtiçi Kargo', 'Aras Kargo', 'MNG Kargo', 'PTT Kargo', 'Sürat Kargo', 'HepsiJet', 'Kolay Gelsin', 'UPS', 'DHL'],
+    // kargo kartındaki paket tipleri (ilki varsayılan); yönetici karttan ekleyip silebilir
+    packages: [{ n: 'Poşet', kg: 1, desi: 1 }, { n: 'Küçük koli', kg: 2, desi: 3 }, { n: 'Orta koli', kg: 5, desi: 8 }],
     doneNote: 'Siparişiniz bize ulaştı. En kısa sürede kontrol edip size dönüş yapacağız.',
     push: true, // müşteri sipariş sayfasından bildirimleri açabilir; durum değişince telefonuna bildirim gider (web push, bekçi gönderir)
     pushTexts: { // boşsa varsayılan metin
@@ -330,5 +332,19 @@ export const ORDER_STATUS = {
 export const ORDER_OPEN = ['new', 'confirmed', 'preparing', 'shipped', 'ready'];
 export const PAY = { havale: 'Havale / EFT', card: 'Kredi kartı (ödeme linki)', shop: 'Dükkanda ödeme' };
 export const DELIVERY = { cargo: 'Kargo ile gönderim', pickup: 'Dükkandan teslim al' };
+// Müşterinin seçebildiği kargo firmaları (ödeme adımı) ve yönetimdeki kargo kartı. Yurtiçi entegrasyonu henüz yok (live: false).
+export const CARRIERS = {
+  dhl: { k: 'dhl', name: 'DHL eCommerce', short: 'DHL Kargo', company: 'DHL', live: true },
+  yurtici: { k: 'yurtici', name: 'Yurtiçi Kargo', short: 'Yurtiçi Kargo', company: 'Yurtiçi Kargo', live: false },
+};
+// siparişin kargo firması: yöneticinin atadığı (cargo.carrier) > müşterinin seçtiği (delivery.carrier) > elle yazılan firma adı
+export const carrierOf = (o) => {
+  const k = o?.cargo?.carrier || o?.delivery?.carrier;
+  if (CARRIERS[k]) return CARRIERS[k];
+  const c = String(o?.cargo?.company || '').toLocaleLowerCase('tr-TR');
+  if (/dhl|mng/.test(c)) return CARRIERS.dhl;
+  if (/yurt/.test(c)) return CARRIERS.yurtici;
+  return c ? { k: 'none', name: o.cargo.company, short: o.cargo.company } : null;
+};
 export const ILLER = ['Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Aksaray', 'Amasya', 'Ankara', 'Antalya', 'Ardahan', 'Artvin', 'Aydın', 'Balıkesir', 'Bartın', 'Batman', 'Bayburt', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Düzce', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Iğdır', 'Isparta', 'İstanbul', 'İzmir', 'Kahramanmaraş', 'Karabük', 'Karaman', 'Kars', 'Kastamonu', 'Kayseri', 'Kilis', 'Kırıkkale', 'Kırklareli', 'Kırşehir', 'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Mardin', 'Mersin', 'Muğla', 'Muş', 'Nevşehir', 'Niğde', 'Ordu', 'Osmaniye', 'Rize', 'Sakarya', 'Samsun', 'Şanlıurfa', 'Siirt', 'Sinop', 'Sivas', 'Şırnak', 'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Uşak', 'Van', 'Yalova', 'Yozgat', 'Zonguldak'];
 export const EMAIL_DOMAIN = 'toptan.ertelgsm.app';

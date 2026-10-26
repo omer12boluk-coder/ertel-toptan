@@ -26,25 +26,28 @@ async function info(ref) {
 
 const OPEN = ['new', 'confirmed', 'preparing', 'shipped'];
 const snap = await db.collection('orders').where('status', 'in', OPEN).get();
-const todo = snap.docs.filter((d) => { const o = d.data(); return o.dhl?.ref && !o.dhl.cancelled && !o.cargo?.code; });
-console.log(`açık sipariş ${snap.size}, DHL'de takip no bekleyen ${todo.length}`);
+const todo = snap.docs.filter((d) => { const o = d.data(); return o.dhl?.ref && !o.dhl.cancelled; });
+console.log(`açık sipariş ${snap.size}, DHL'de takibi süren ${todo.length}`);
 let n = 0;
 for (const d of todo) {
   const o = d.data(); const ref = o.dhl.ref;
   const x = await info(ref).catch((e) => { console.log(`${ref}: hata ${e.message}`); return null; });
   if (!x) { console.log(`${ref}: DHL'de bulunamadı`); continue; }
   const code = x.MNG_GONDERI_NO || '';
-  console.log(`${ref}: ${x.KARGO_STATU_ACIKLAMA || '-'}${code ? ' · takip no geldi' : ''}`);
+  const delivered = !!(x.TESLIM_TARIHI || /teslim edildi/i.test(x.KARGO_STATU_ACIKLAMA || ''));
+  console.log(`${ref}: ${x.KARGO_STATU_ACIKLAMA || '-'}${code ? ' · takip no var' : ''}${delivered ? ' · teslim edildi' : ''}`);
   const dhl = { ...o.dhl, statu: x.KARGO_STATU || '', text: x.KARGO_STATU_ACIKLAMA || '', checked: Date.now() };
   if (!code) { if (!DRY && dhl.text !== o.dhl.text) await d.ref.update({ dhl }); continue; }
-  const t = Date.now();
-  const cargo = { company: 'DHL', code, url: x.KARGO_TAKIP_URL || `https://kargotakip.dhlecommerce.com.tr/?takipNo=${code}` };
-  const upd = { cargo, dhl, updatedAt: t };
-  if (o.status !== 'shipped') { upd.status = 'shipped'; upd.history = [...(o.history || []), { s: 'shipped', at: t, by: 'dhl' }]; }
-  if (DRY) { console.log(`  (deneme) yazılmadı`); continue; }
+  const t = Date.now(); const hist = [...(o.history || [])]; let st = o.status;
+  if (st !== 'shipped') { st = 'shipped'; hist.push({ s: 'shipped', at: t, by: 'dhl' }); }
+  if (delivered) { st = 'done'; hist.push({ s: 'done', at: t, by: 'dhl' }); }
+  if (st === o.status && o.cargo?.code === code) { if (!DRY && dhl.text !== o.dhl.text) await d.ref.update({ dhl }); continue; }
+  const cargo = { ...(o.cargo || {}), carrier: 'dhl', company: 'DHL', code, url: x.KARGO_TAKIP_URL || `https://kargotakip.dhlecommerce.com.tr/?takipNo=${code}` };
+  const upd = { cargo, dhl, updatedAt: t, ...(st !== o.status ? { status: st, history: hist } : {}) };
+  if (DRY) { console.log(`  (deneme) yazılmadı → ${st}`); continue; }
   await d.ref.update(upd); n++;
   if (W) await fetch(W + '/push/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: d.id }) }).catch(() => {});
-  console.log(`::notice::#${o.no} kargoda, takip no ${code}`);
+  console.log(`::notice::#${o.no} → ${st === 'done' ? 'teslim edildi' : 'kargoda'}, takip no ${code}`);
 }
 console.log(`güncellenen: ${n}`);
 process.exit(0);

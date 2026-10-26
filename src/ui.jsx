@@ -62,7 +62,14 @@ const P = {
   refresh: 'M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7',
   eyeoff: 'M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.8M6.6 7.6C3.6 9.4 2 12 2 12s3.6 6 10 6a10 10 0 0 0 4.4-1',
   home: 'M3 11l9-7 9 7v9h-6v-6H9v6H3z',
+  more: 'M12 5h.01M12 12h.01M12 19h.01',
 };
+// Kargo firması işareti (logo yerine sade yazı-işaret; ödeme adımı ve yönetim kargo kartı)
+export function CarrierMark({ k, size = 'md' }) {
+  if (k === 'dhl') return <span className={'cmark dhl ' + size} aria-label="DHL eCommerce"><b>DHL</b><small>eCommerce</small></span>;
+  if (k === 'yurtici') return <span className={'cmark yurtici ' + size} aria-label="Yurtiçi Kargo"><b>Yurtiçi</b><small>Kargo</small></span>;
+  return null;
+}
 export function Icon({ n, s = 20, className = '' }) {
   return (
     <svg className={'ic ' + className} width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

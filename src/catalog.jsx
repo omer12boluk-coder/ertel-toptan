@@ -144,7 +144,8 @@ export function Catalog({ admin }) {
   useEffect(() => { if (admin && intent === 'newProduct') { store.set({ intent: null }); setEdit({}); } }, [intent]);
   // başka ekrandan (mağaza ana sayfası) gelen filtre: marka / kategori / arama
   const browse = useStore((s) => s.catalogGo);
-  useEffect(() => { if (!browse) return; setQ(browse.q || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); store.set({ catalogGo: null }); }, [browse]);
+  // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
+  useEffect(() => { if (!browse) return; setQ(browse.q || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   const changedN = useMemo(() => (admin ? all.filter((p) => p.pc).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);

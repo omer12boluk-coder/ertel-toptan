@@ -502,7 +502,7 @@ async function dhlInfo(env, ref) {
   const r = await soap(env, 'KargoBilgileriByReferans', kv({ pMusteriNo: env.DHL_USER, pSifre: env.DHL_PASS, pSiparisNo: ref, pGonderiNo: '', pFaturaSeri: '', pFaturaNo: '', pIrsaliyeNo: '', pEFaturaNo: '', pRaporType: '' }));
   const x = dhlRow(r.raw);
   if (!x) return { ok: !r.fault, found: false, ref, fault: r.fault };
-  return { ok: true, found: true, ref, code: x.MNG_GONDERI_NO || '', url: x.KARGO_TAKIP_URL || '', statu: x.KARGO_STATU || '', text: x.KARGO_STATU_ACIKLAMA || '', from: x.CIKIS_SUBESI || '', to: x.TESLIM_SUBESI || '', eta: x.TAHMINI_TESLIM_TARIHI || '', at: x.KARGO_STATU_TARIHI || '' };
+  return { ok: true, found: true, ref, code: x.MNG_GONDERI_NO || '', url: x.KARGO_TAKIP_URL || '', statu: x.KARGO_STATU || '', text: x.KARGO_STATU_ACIKLAMA || '', delivered: !!(x.TESLIM_TARIHI || /teslim edildi/i.test(x.KARGO_STATU_ACIKLAMA || '')), from: x.CIKIS_SUBESI || '', to: x.TESLIM_SUBESI || '', eta: x.TAHMINI_TESLIM_TARIHI || '', at: x.KARGO_STATU_TARIHI || '' };
 }
 async function dhl(env, act, b) {
   if (!env.DHL_USER || !env.DHL_PASS) return { ok: false, error: 'DHL giriş bilgileri bekçiye eklenmemiş (DHL_USER / DHL_PASS)' };
@@ -528,7 +528,7 @@ async function dhl(env, act, b) {
       pGonderiHizmetSekli: 'NORMAL', pTeslimSekli: 1, pFlAlSms: 1, pFlGnSms: 0, // ZORUNLU: yoksa DHL 'Object reference not set' verir (26.10.2026)
       pKargoParcaList: `${kg}:${desi}:1:${icerik}:1:;`, pAliciMusteriMngNo: '', pAliciMusteriBayiNo: '', pAliciMusteriAdi: String(a.name || o.contact?.name || '').slice(0, 60), pChSiparisNo: ref,
       pLuOdemeSekli: b.pay === 'P' ? 'P' : 'U', pFlAdresFarkli: '1', pChIl: String(a.city || '').toLocaleUpperCase('tr-TR'), pChIlce: String(a.district || '').toLocaleUpperCase('tr-TR'),
-      pChAdres: String(a.address || '').slice(0, 250), pChSemt: '', pChMahalle: '', pChMeydanBulvar: '', pChCadde: '', pChSokak: '',
+      pChAdres: [a.hood, a.address].filter(Boolean).join(' ').slice(0, 250), pChSemt: '', pChMahalle: '', pChMeydanBulvar: '', pChCadde: '', pChSokak: '',
       pChTelEv: '', pChTelCep: phone, pChTelIs: '', pChFax: '', pChEmail: String(o.contact?.email || ''), pChVergiDairesi: '', pChVergiNumarasi: '',
       pFlKapidaOdeme: 0, pMalBedeliOdemeSekli: '', pPlatformKisaAdi: '', pPlatformSatisKodu: '', pKullaniciAdi: U, pSifre: P,
     };

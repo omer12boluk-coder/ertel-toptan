@@ -63,7 +63,7 @@ function EmptyCart() {
 
 // Telefonda satırı sola çekince arkadan kırmızı "Sil" çıkar; sonuna kadar çekilirse hemen silinir.
 const COARSE = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
-function SwipeLine({ id, open, setOpen, onDelete, children, onContextMenu }) {
+export function SwipeLine({ id, open, setOpen, onDelete, children, onContextMenu, inner = 'gline', delLabel = 'Sepetten çıkar', className = '' }) {
   const row = useRef(null);
   const st = useRef(null);
   const [dx, setDx] = useState(0);
@@ -96,9 +96,9 @@ function SwipeLine({ id, open, setOpen, onDelete, children, onContextMenu }) {
     return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); };
   }, [open, id]);
   return (
-    <li className={'gl-sw' + (gone ? ' gone' : '')} ref={row} onContextMenu={onContextMenu}>
-      {COARSE && <button type="button" className="gl-del" style={{ opacity: dx < -4 ? 1 : 0 }} onClick={() => { setGone(true); setTimeout(onDelete, 200); }} aria-label="Sepetten çıkar"><Icon n="trash" s={20} /><span>Sil</span></button>}
-      <div className={'gline' + (drag ? ' dragging' : '')} style={dx ? { transform: `translate3d(${dx}px,0,0)` } : undefined}
+    <li className={'gl-sw' + (gone ? ' gone' : '') + (className ? ' ' + className : '')} ref={row} onContextMenu={onContextMenu}>
+      {COARSE && <button type="button" className="gl-del" style={{ opacity: dx < -4 ? 1 : 0 }} onClick={() => { setGone(true); setTimeout(onDelete, 200); }} aria-label={delLabel}><Icon n="trash" s={20} /><span>Sil</span></button>}
+      <div className={inner + (drag ? ' dragging' : '')} style={dx ? { transform: `translate3d(${dx}px,0,0)` } : undefined}
         onClickCapture={(e) => { if (open === id) { e.stopPropagation(); e.preventDefault(); setOpen(null); } }}>{children}</div>
     </li>
   );

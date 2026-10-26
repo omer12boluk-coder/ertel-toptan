@@ -2,9 +2,9 @@
 // Sipariş: durum adımları (Onayla → Kargoya ver / Teslime hazır → Tamamlandı), müşteriye WhatsApp, kargo takip no, iç not.
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, openOrder, go } from './store.js';
-import { Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
+import { CarrierMark, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, now, norm } from './utils.js';
-import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY } from './config.js';
+import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper } from './listsheet.jsx';
 import { pushStatus } from './push.js';
@@ -13,7 +13,6 @@ import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 
 // Durum filtreleri: üstte renkli sayaç kutuları (bir bakışta ne kadar iş bekliyor), yanında Tümü / Tamamlanan / İptal
 const FILTERS = [['open', 'Açık'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
-const WORK = [['new', 'Onay bekliyor', 'bell'], ['confirmed', 'Hazırlanacak', 'check'], ['preparing', 'Hazırlanıyor', 'box'], ['shipped', 'Kargoda', 'send'], ['ready', 'Teslime hazır', 'store']];
 // yönetici listesindeki açıklama (müşteri metninden farklı)
 export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı', preparing: 'Hazırlanıyor', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
 const ago = (ts) => { const h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + ' dk' : h < 48 ? Math.round(h) + ' sa' : Math.round(h / 24) + ' gün'; };
@@ -46,11 +45,11 @@ export function Orders() {
     else if (filter !== 'all') r = r.filter((o) => o.status === filter);
     const t = norm(q.trim());
     if (t) r = r.filter((o) => norm([o.no, o.contact?.name, o.contact?.phone, o.contact?.email, o.invoice?.company].join(' ')).includes(t) || String(o.contact?.phone || '').replace(/\D/g, '').includes(t.replace(/\D/g, '') || '#'));
-    return r;
+    return [...r].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // geliş sırası: en yeni üstte
   }, [orders, filter, q]);
 
   if (openId) return <OrderDetail id={openId} />;
-  const toggle = (id) => setSel((x) => { const n = new Set(x); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggle = (id) => setSel((x) => { const n = new Set(x || []); n.has(id) ? n.delete(id) : n.add(id); return n.size ? n : null; });
   const delMany = () => { const ids = [...sel]; setConfirm({ title: `${ids.length} siparişi sil`, text: 'Seçilen siparişler tamamen silinecek. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteOrders(ids).then(() => { toast(ids.length + ' sipariş silindi'); setSel(null); }, (e) => toast('Silinemedi: ' + e.message, 'bad')) }); };
   const del = (o) => setConfirm({ title: 'Siparişi sil', text: `#${o.no} numaralı sipariş tamamen silinecek. Geri alınamaz.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteOrders([o.id]).then(() => toast('Sipariş silindi'), (e) => toast('Silinemedi: ' + e.message, 'bad')) });
   const menu = (e, o) => openMenu(e, [
@@ -58,7 +57,7 @@ export function Orders() {
     o.contact?.phone && { label: 'Müşteriye WhatsApp’tan yaz', icon: 'wa', onClick: () => window.open(waLink(o.contact.phone, custMsg(o, S)), '_blank', 'noopener') },
     { label: 'Müşterinin takip linkini kopyala', icon: 'copy', onClick: () => copyText(links.order(o.id), 'Takip linki kopyalandı') },
     '-',
-    { label: 'Seç', icon: 'check', onClick: () => setSel(new Set([o.id])) },
+    { label: 'Seç', icon: 'check', onClick: () => toggle(o.id) },
     { label: 'Siparişi sil', icon: 'trash', danger: true, onClick: () => del(o) },
   ], '#' + o.no);
 
@@ -67,7 +66,6 @@ export function Orders() {
       <div className="page-h">
         <h1 className="page-t">Mağaza siparişleri{newN > 0 && <span className="muted"> · {newN} yeni</span>}</h1>
         <span className="row-btns">
-          {view === 'orders' && orders.length > 0 && <button className={'btn sm ' + (sel ? 'primary' : 'outline')} onClick={() => setSel(sel ? null : new Set())}><Icon n="check" s={15} />{sel ? 'Seçimi kapat' : 'Seç'}</button>}
           <button className="btn sm outline" onClick={() => copyText(links.shop(), 'Mağaza linki kopyalandı')}><Icon n="copy" s={15} />Mağaza linki</button>
         </span>
       </div>
@@ -78,18 +76,12 @@ export function Orders() {
             {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'open' ? ` (${cnt.open})` : ''}</button>)}
           </div>
         </div>
-        <div className="osum" role="tablist" aria-label="Duruma göre">
-          {WORK.filter(([k]) => k !== 'ready' || cnt.ready > 0).map(([k, l]) => (
-            <button key={k} role="tab" aria-selected={filter === k} className={'osum-i ost-' + k + (filter === k ? ' on' : '') + (cnt[k] ? '' : ' zero')} onClick={() => setFilter(filter === k ? 'open' : k)}>
-              <b className="num">{cnt[k] || 0}</b><span><i className="sdot" />{l}</span>
-            </button>
-          ))}
-        </div>
-        {sel && (
+        {sel?.size > 0 && (
           <div className="sel-bar">
-            <label className="mini-check"><input type="checkbox" checked={list.length > 0 && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : new Set())} />Tümü ({list.length})</label>
+            <label className="mini-check"><input type="checkbox" checked={list.length > 0 && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : null)} />Tümü ({list.length})</label>
             <span className="muted">{sel.size} seçili</span>
-            <button className="btn sm danger" disabled={!sel.size} onClick={delMany}><Icon n="trash" s={15} />Seçilenleri sil</button>
+            <button className="btn sm danger" onClick={delMany}><Icon n="trash" s={15} />Seçilenleri sil</button>
+            <button className="btn sm ghost" onClick={() => setSel(null)}>Vazgeç</button>
           </div>
         )}
         {list.length === 0 ? (
@@ -98,40 +90,37 @@ export function Orders() {
           </Empty>
         ) : (
           <div className="otable">
-            <div className="otable-h" aria-hidden="true"><span>Sipariş</span><span>Müşteri</span><span>Ödeme / teslimat</span><span>Tutar</span><span>Tarih</span><span>Durum</span><span /></div>
-            {groups(list, filter).map(([g, rows]) => (
-              <section key={g || 'x'} className="ogroup">
-                {g && <h3 className={'ogroup-h ost-' + g}><i className="sdot" />{GROUP_T[g]}<span className="num">{rows.length}</span></h3>}
-                <ul className="olist orows">
-                  {rows.map((o) => {
-                    const noCode = o.status === 'shipped' && o.delivery?.method !== 'pickup' && !o.cargo?.code;
-                    const late = o.status === 'new' && Date.now() - o.createdAt > 2 * 36e5;
-                    const act = nextAct(o, noCode);
-                    return (
-                      <li key={o.id} onContextMenu={(e) => menu(e, o)}>
-                        <div role="button" tabIndex={0} className={'orow st-' + o.status + (flow.flash === o.id ? ' flash' : '') + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))} onKeyDown={(e) => e.key === 'Enter' && (sel ? toggle(o.id) : openOrder(o.id))}>
-                          {sel && <span className={'ocheck' + (sel.has(o.id) ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}
-                          <span className="or-no">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b></span>
-                          <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
-                          <span className="or-tags">
-                            <span className="otag">{PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
-                            <span className="otag">{o.delivery?.method === 'pickup' ? 'Dükkândan' : (o.cargo?.company || 'Kargo') + (o.delivery?.addr?.city ? ' · ' + o.delivery.addr.city : '')}</span>
-                            {o.member && <span className="otag">Üye</span>}{needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
-                          </span>
-                          <span className="or-sum"><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></span>
-                          <span className="or-date"><span>{when(o.createdAt)}</span>{late && <small className="late">{ago(o.createdAt)} bekliyor</small>}</span>
-                          <span className="or-st">
-                            <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); if (!sel) quick(e, o); }} title="Durumu değiştir"><i className="sdot" />{ADMIN_ST[o.status] || o.status}<Icon n="chev" s={13} /></button>
-                            {noCode && <small className="warn-t">Takip no yok</small>}
-                          </span>
-                          <span className="or-act">{act && !sel && <button type="button" className={'btn sm ' + act[3]} onClick={(e) => { e.stopPropagation(); flow.ask(o, act[0]); }}><Icon n={act[2]} s={14} />{act[1]}</button>}</span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ))}
+            <div className="otable-h" aria-hidden="true">
+              <label className="oc-box" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={!!sel?.size && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : null)} /></label>
+              <span>Sipariş no</span><span>Müşteri</span><span>Ödeme / kargo</span><span>Tutar</span><span>Tarih</span><span>Durum</span><span />
+            </div>
+            <ul className="olist orows">
+              {list.map((o) => {
+                const noCode = o.status === 'shipped' && o.delivery?.method !== 'pickup' && !o.cargo?.code;
+                const car = carrierOf(o);
+                return (
+                  <li key={o.id} onContextMenu={(e) => menu(e, o)}>
+                    <div role="button" tabIndex={0} className={'orow st-' + o.status + (flow.flash === o.id ? ' flash' : '') + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => openOrder(o.id)} onKeyDown={(e) => e.key === 'Enter' && openOrder(o.id)}>
+                      <label className="oc-box" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={'#' + o.no + ' seç'} checked={!!sel?.has(o.id)} onChange={() => toggle(o.id)} /></label>
+                      <span className="or-no">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b></span>
+                      <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
+                      <span className="or-tags">
+                        <span className="or-pay">{PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
+                        {o.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (car?.k || 'none')}>{car ? car.short : 'Kargo'}</span>}
+                        {needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
+                      </span>
+                      <span className="or-sum"><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></span>
+                      <span className="or-date"><span>{fullDate(o.createdAt)}</span></span>
+                      <span className="or-st">
+                        <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); quick(e, o); }} title="Durumu değiştir"><span>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={14} /></button>
+                        {noCode && <small className="warn-t">Takip no yok</small>}
+                      </span>
+                      <span className="or-act"><button type="button" className="or-dots" aria-label="İşlemler" onClick={(e) => { e.stopPropagation(); menu(e, o); }}><Icon n="more" s={18} /></button></span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         )}
       </>}
@@ -141,19 +130,8 @@ export function Orders() {
   );
 }
 const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda' };
-// satırdaki tek tıkla sıradaki adım (en çok iş gerektiren belirgin: Onayla)
-const nextAct = (o, noCode) => ({
-  new: ['confirmed', 'Onayla', 'check', 'primary'],
-  confirmed: ['preparing', 'Hazırlamaya başla', 'box', 'outline'],
-  preparing: o.delivery?.method === 'pickup' ? ['ready', 'Teslime hazır', 'store', 'outline'] : ['shipped', 'Kargoya ver', 'send', 'outline'],
-  shipped: noCode ? ['shipped', 'Takip no ekle', 'box', 'outline warn'] : ['done', 'Teslim edildi', 'check', 'ghost'],
-  ready: ['done', 'Teslim edildi', 'check', 'ghost'],
-}[o.status] || null);
-// Açık / Tümü görünümünde duruma göre gruplar (iş sırası); tek durum seçiliyse grup başlığı yok
-const GROUP_T = { new: 'Onay bekleyen', confirmed: 'Hazırlanacak', preparing: 'Hazırlanıyor', ready: 'Teslime hazır', shipped: 'Kargoda', done: 'Tamamlanan', cancelled: 'İptal' };
-const groups = (list, filter) => (filter === 'open' || filter === 'all')
-  ? ['new', 'confirmed', 'preparing', 'ready', 'shipped', 'done', 'cancelled'].map((g) => [g, list.filter((o) => o.status === g)]).filter(([, r]) => r.length)
-  : [[null, list]];
+// tarih: 26.10.2026 17:32
+const fullDate = (ts) => { if (!ts) return ''; const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
 // ---- Durum değiştirme (liste ve detay ortak): onay penceresi, kargo bilgisi penceresi ----
 // Kargoda iken takip no sonradan eklenebilir/düzeltilebilir: durum değişmez, müşteriye sadece takip no ile tek bildirim gider.
@@ -180,7 +158,9 @@ function useStatusFlow(S) {
     setConfirm({ title: ADMIN_ST[k], text: `#${o.no} “${ORDER_STATUS[k].label}” olarak işaretlensin mi? Müşteri takip sayfasında görür${S.orders?.push !== false && k !== 'new' ? ', bildirimleri açtıysa telefonuna bildirim gider' : ''}.`, okLabel: 'Evet, değiştir', onOk: () => setStatus(o, k) });
   }
   async function saveShip() {
-    const { o } = ship; const c = { company: ship.company.trim(), code: ship.code.trim() };
+    const { o } = ship; const company = ship.company.trim(); const low = company.toLocaleLowerCase('tr-TR');
+    const c = { ...(o.cargo || {}), company, code: ship.code.trim() };
+    if (/dhl|mng/.test(low)) c.carrier = 'dhl'; else if (/yurt/.test(low)) c.carrier = 'yurtici'; else delete c.carrier;
     setShip(null);
     if (o.status !== 'shipped') return setStatus(o, 'shipped', { cargo: c });
     if (c.company === (o.cargo?.company || '') && c.code === (o.cargo?.code || '')) return;
@@ -299,7 +279,7 @@ function OrderDetail({ id }) {
         </div>
         <div className="o-card">
           <h3>Teslimat{o.delivery?.addr && <button className="oc-copy" onClick={() => copyText(`${o.delivery.addr.name || o.contact?.name}\n${o.delivery.addr.phone || o.contact?.phone}\n${addrLine(o.delivery.addr)}`, 'Kargo için adres kopyalandı')} title="Adresi kopyala (kargo için)" aria-label="Adresi kopyala"><Icon n="copy" s={15} /></button>}</h3>
-          <p><b>{DELIVERY[o.delivery?.method] || ''}</b></p>
+          <p><b>{DELIVERY[o.delivery?.method] || ''}</b>{o.delivery?.method !== 'pickup' && o.delivery?.carrier && CARRIERS[o.delivery.carrier] && <span className="muted"> · müşteri seçimi: {CARRIERS[o.delivery.carrier].name}</span>}</p>
           {o.delivery?.addr && <>{(o.delivery.addr.name || o.delivery.addr.phone) && <p><b>{o.delivery.addr.name}</b>{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></>}
         </div>
         {fullInvoice(o.invoice, o.delivery?.addr)
@@ -307,7 +287,7 @@ function OrderDetail({ id }) {
           : <div className={'o-card' + (needsInvoice(o.invoice) ? ' inv-yes' : '')}><h3>Fatura{needsInvoice(o.invoice) && <span className="tag ok">Vergi no geçerli · adres eksik</span>}</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>}
       </div>
       {o.note && <p className="o-note"><b>Müşterinin notu:</b> {o.note}</p>}
-      {o.delivery?.method !== 'pickup' && o.status !== 'cancelled' && <DhlCard o={o} />}
+      {o.delivery?.method !== 'pickup' && o.status !== 'cancelled' && (['preparing', 'shipped', 'done'].includes(o.status) || (o.dhl?.ref && !o.dhl.cancelled)) && <CargoCard o={o} flow={flow} />}
 
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 
@@ -425,27 +405,35 @@ async function dhlCall(act, body) {
   return r.json();
 }
 // takip no geldiyse siparişe yaz (durum Kargoda) ve müşteriye bildir
+// takip no geldiyse: kargo bilgisi + "Kargoda"; teslim edildiyse "Tamamlandı" (müşteriye bildirim gider). Döner: 'shipped' | 'done' | false
 async function dhlApply(o, x) {
   if (!x?.found) return false;
   const dhl = { ...o.dhl, statu: x.statu, text: x.text, checked: now() };
   if (!x.code) { if (x.text !== o.dhl?.text) await api().updateOrder(o.id, { dhl }).catch(() => {}); return false; }
-  const t = now(); const cargo = { company: 'DHL', code: x.code, url: x.url || `https://kargotakip.dhlecommerce.com.tr/?takipNo=${x.code}` };
+  const t = now(); const hist = [...(o.history || [])];
+  const cargo = { ...(o.cargo || {}), carrier: 'dhl', company: 'DHL', code: x.code, url: x.url || `https://kargotakip.dhlecommerce.com.tr/?takipNo=${x.code}` };
   const upd = { cargo, dhl, updatedAt: t };
-  if (o.status !== 'shipped' && o.status !== 'done') { upd.status = 'shipped'; upd.history = [...(o.history || []), { s: 'shipped', at: t, by: 'dhl' }]; }
+  let res = false;
+  if (!['shipped', 'done'].includes(o.status)) { upd.status = 'shipped'; hist.push({ s: 'shipped', at: t, by: 'dhl' }); res = 'shipped'; }
+  if (x.delivered && o.status !== 'done') { upd.status = 'done'; hist.push({ s: 'done', at: t, by: 'dhl' }); res = 'done'; }
+  if (!res && o.cargo?.code === x.code) { if (x.text !== o.dhl?.text) await api().updateOrder(o.id, { dhl }).catch(() => {}); return false; }
+  if (res) upd.history = hist;
   await api().updateOrder(o.id, upd);
   if (api().mode === 'firebase') pushStatus(o.id);
-  return true;
+  return res || 'shipped';
 }
+// DHL'de takibi süren sipariş: kayıt var, iptal değil, henüz tamamlanmadı
+const dhlOpen = (o) => o.dhl?.ref && !o.dhl.cancelled && ['new', 'confirmed', 'preparing', 'shipped'].includes(o.status);
 // yönetim paneli açılınca: takip no bekleyen DHL siparişlerini topluca sor (cihazda 5 dakikada bir)
 export function useDhlSync(orders) {
   useEffect(() => {
     if (!dhlW() || api().mode !== 'firebase') return;
-    const wait = (orders || []).filter((o) => o.dhl?.ref && !o.dhl.cancelled && !o.cargo?.code && ORDER_OPEN.includes(o.status));
+    const wait = (orders || []).filter(dhlOpen);
     if (!wait.length) return;
     try { if (Date.now() - Number(sessionStorage.getItem('dhl-sync') || 0) < 5 * 60e3) return; sessionStorage.setItem('dhl-sync', String(Date.now())); } catch {}
     dhlCall('sync', { refs: wait.map((o) => o.dhl.ref) }).then(async (j) => {
-      let n = 0; for (const o of wait) if (await dhlApply(o, j?.items?.[o.dhl.ref]).catch(() => false)) n++;
-      if (n) toast(`DHL: ${n} siparişin takip numarası geldi, “Kargoda” yapıldı`);
+      let n = 0, d = 0; for (const o of wait) { const r = await dhlApply(o, j?.items?.[o.dhl.ref]).catch(() => false); if (r === 'done') d++; else if (r) n++; }
+      if (n || d) toast(['DHL:', n && `${n} sipariş kargoya verildi (takip no geldi)`, d && `${d} sipariş teslim edildi`].filter(Boolean).join(' '));
     }).catch(() => {});
   }, [orders?.length]);
 }
@@ -485,83 +473,125 @@ export function dhlLabelHtml(o, S) {
   <div class="bx"><h4><span>Gönderi Bilgileri</span><span>Referans No: ${e(d.ref)}</span></h4><table>
     <tr><td class="k">Referans Barkod:</td><td class="rb">${small}</td><td class="k">Parça No:</td><td>1</td></tr>
     <tr><td class="k">Toplam Adet:</td><td>1</td><td class="k">Toplam Kg/Desi:</td><td>${e(d.kg || 1)} / ${e(d.desi || 1)}</td></tr>
-    <tr><td class="k">Gönderi İçerik:</td><td>${e(d.icerik || '')}</td><td class="k">Sipariş:</td><td>#${e(o.no)}</td></tr></table></div>
+    <tr><td class="k">Gönderi İçerik:</td><td>${e([d.pkg, d.icerik].filter(Boolean).join(' · '))}</td><td class="k">Sipariş:</td><td>#${e(o.no)}</td></tr></table></div>
   <div class="pay">${d.pay === 'P' ? 'GÖNDERİCİ ÖDEMELİ' : 'ALICI ÖDEMELİ'}</div>
   <div class="bx"><h4>Koşullar</h4><div class="note">1. Hazırlanan gönderiler teslim tutanağı ile DHL eCommerce yetkilisine teslim edilmelidir.<br>2. Kg/Desi ve adet bilgileri şubedeki ölçüm ve tartıma göre şube tarafından düzeltilebilir.<br>3. Mevzuat gereği taşınması yasak ürünler taşıyıcıya teslim edilemez.</div></div>
   </section><script>setTimeout(()=>print(),450)</script></body></html>`;
 }
-function DhlCard({ o }) {
+// Kargo kartı (sipariş "Hazırlanıyor" olunca görünür): firma seç (DHL / Yurtiçi) → "aktar" → barkod yazdır.
+// Firma seçmek sadece siparişe firmayı atar; durum değişmez. "Kargoda" ancak şube okutup takip no gelince (ya da elle) olur.
+function CargoCard({ o, flow }) {
   const S = store.s.settings;
-  const [kg, setKg] = useState(o.dhl?.kg || 1);
-  const [desi, setDesi] = useState(o.dhl?.desi || 1);
+  const pk = (S.orders?.packages?.length ? S.orders.packages : [{ n: 'Poşet', kg: 1, desi: 1 }]);
+  const car = o.cargo?.carrier || o.delivery?.carrier || 'dhl';
+  const live = !!(o.dhl?.ref && !o.dhl.cancelled);
+  const [pkg, setPkg] = useState(() => o.dhl?.pkg ? pk.findIndex((x) => x.n === o.dhl.pkg) : 0); // -1 = özel
+  const [kg, setKg] = useState(o.dhl?.kg || pk[0].kg);
+  const [desi, setDesi] = useState(o.dhl?.desi || pk[0].desi);
   const [icerik, setIcerik] = useState(o.dhl?.icerik || 'Elektronik malzeme');
   const [pay, setPay] = useState(o.dhl?.pay || 'U');
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [confirm, setConfirm] = useState(null);
-  const live = !!(o.dhl?.ref && !o.dhl.cancelled);
+  const [addPk, setAddPk] = useState(null); // { n, kg, desi }
   const demo = !dhlW() || api().mode !== 'firebase';
-  // kart açılınca takip no gelmiş mi bak (sipariş başına 3 dakikada bir)
+  // kart açılınca takip no / teslim durumu (sipariş başına 3 dakikada bir)
   useEffect(() => {
-    if (demo || !live || o.cargo?.code) return;
+    if (demo || !dhlOpen(o)) return;
     const k = 'dhl-chk-' + o.id;
     try { if (Date.now() - Number(sessionStorage.getItem(k) || 0) < 3 * 60e3) return; sessionStorage.setItem(k, String(Date.now())); } catch {}
-    dhlCall('track', { id: o.id }).then((x) => dhlApply(o, x).then((ok) => ok && toast('DHL takip no geldi: ' + x.code))).catch(() => {});
+    dhlCall('track', { id: o.id }).then((x) => dhlApply(o, x).then((r) => r && toast(r === 'done' ? 'DHL: teslim edildi' : 'DHL takip no geldi: ' + x.code))).catch(() => {});
   }, [o.id, live]);
-  function printLabel(ord, w) {
-    w = w || window.open('', '_blank'); if (!w) { toast('Açılır pencere engellendi; tarayıcıda bu siteye izin verin', 'bad'); return; }
-    w.document.open(); w.document.write(dhlLabelHtml(ord, S)); w.document.close();
+  const pickPkg = (i) => { setPkg(i); if (i >= 0) { setKg(pk[i].kg); setDesi(pk[i].desi); } };
+  async function savePk(list) {
+    const S2 = { ...S, orders: { ...S.orders, packages: list } };
+    try { await api().saveSettings(S2); store.set({ settings: S2 }); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
   }
-  async function make() {
+  const addPkg = async () => { const n = String(addPk?.n || '').trim(); if (!n) return; await savePk([...pk, { n, kg: Math.max(1, Number(addPk.kg) || 1), desi: Math.max(1, Number(addPk.desi) || 1) }]); setAddPk(null); toast('Paket tipi eklendi'); };
+  const delPkg = (i) => setConfirm({ title: 'Paket tipini sil', text: `“${pk[i].n}” listeden kalkacak.`, okLabel: 'Sil', tone: 'danger', onOk: async () => { await savePk(pk.filter((_, j) => j !== i)); pickPkg(0); } });
+  async function pickCarrier(k) { // firmayı siparişe ata (durum değişmez)
+    if (live && k !== 'dhl') { toast('Önce DHL kaydını iptal edin', 'bad'); return; }
+    if (o.cargo?.carrier === k) return;
+    try { await api().updateOrder(o.id, { cargo: { ...(o.cargo || {}), carrier: k, company: CARRIERS[k].company } }); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+  }
+  async function transfer() {
     if (demo) { toast('DHL sadece canlı sitede çalışır', 'bad'); return; }
-    if (live) { printLabel(o); return; }
     const a = o.delivery?.addr || {};
     if (!a.city || !a.district || !a.address) { setErr('Teslimat adresinde il, ilçe ya da açık adres eksik.'); return; }
-    const w = window.open('', '_blank'); // açılır pencere engeline takılmasın diye hemen aç, sonra doldur
-    if (w) w.document.write('<p style="font:16px Arial;padding:24px">DHL’e kaydediliyor…</p>');
-    setBusy('make'); setErr('');
+    setBusy('send'); setErr('');
     try {
       const j = await dhlCall('create', { id: o.id, kg, desi, icerik, pay });
-      if (!j?.ok) { w?.close(); setErr('DHL kabul etmedi: ' + (j?.error || 'bilinmeyen cevap')); return; }
-      const dhl = { ref: j.ref, at: now(), kg: j.kg, desi: j.desi, icerik: j.icerik, pay };
-      await api().updateOrder(o.id, { dhl });
-      printLabel({ ...o, dhl }, w);
-      toast('DHL’e kaydedildi: ' + j.ref);
-    } catch (e) { w?.close(); setErr('Bağlantı hatası: ' + e.message); } finally { setBusy(''); }
+      if (!j?.ok) { setErr('DHL kabul etmedi: ' + (j?.error || 'bilinmeyen cevap')); return; }
+      const dhl = { ref: j.ref, at: now(), kg: j.kg, desi: j.desi, icerik: j.icerik, pay, pkg: pkg >= 0 ? pk[pkg]?.n || '' : 'Özel' };
+      await api().updateOrder(o.id, { dhl, cargo: { ...(o.cargo || {}), carrier: 'dhl', company: 'DHL' } });
+      toast('DHL’e aktarıldı: ' + j.ref);
+    } catch (e) { setErr('Bağlantı hatası: ' + e.message); } finally { setBusy(''); }
   }
+  function printLabel() { const w = window.open('', '_blank'); if (!w) { toast('Açılır pencere engellendi; tarayıcıda bu siteye izin verin', 'bad'); return; } w.document.open(); w.document.write(dhlLabelHtml(o, S)); w.document.close(); }
   async function check() {
     setBusy('check');
-    try { const x = await dhlCall('track', { id: o.id }); if (await dhlApply(o, x)) toast('Takip no geldi: ' + x.code); else toast(x?.found ? (x.text || 'Henüz şubede okutulmadı') : 'DHL’de kayıt bulunamadı', x?.found ? undefined : 'bad'); }
+    try { const x = await dhlCall('track', { id: o.id }); const r = await dhlApply(o, x); if (r) toast(r === 'done' ? 'Teslim edildi' : 'Takip no geldi: ' + x.code); else toast(x?.found ? (x.text || 'Henüz şubede okutulmadı') : 'DHL’de kayıt bulunamadı', x?.found ? undefined : 'bad'); }
     catch (e) { toast('Bakılamadı: ' + e.message, 'bad'); } finally { setBusy(''); }
   }
-  const cancel = () => setConfirm({ title: 'DHL kaydını iptal et', text: `DHL’deki ${o.dhl?.ref} kaydı silinecek (online şubede Toplu Gönderi Listesi’nden kalkar). Basılmış etiket geçersiz olur.`, okLabel: 'İptal et', tone: 'danger',
+  const cancel = () => setConfirm({ title: 'DHL kaydını iptal et', text: `DHL’deki ${o.dhl?.ref} kaydı silinecek (online şubede Toplu Gönderi Listesi’nden kalkar). Basılmış barkod geçersiz olur.`, okLabel: 'İptal et', tone: 'danger',
     onOk: async () => { setBusy('cancel'); try { const j = await dhlCall('cancel', { id: o.id }); if (j?.ok) { await api().updateOrder(o.id, { dhl: { ...o.dhl, cancelled: now() } }); toast('DHL kaydı iptal edildi'); } else toast('İptal edilemedi: ' + (j?.fault || j?.error || ''), 'bad'); } finally { setBusy(''); } } });
-  const st = o.cargo?.code ? 'Şubede okutuldu · ' + (o.dhl?.text || 'yolda') : o.dhl?.text && o.dhl.statu !== '0' ? o.dhl.text : 'Şubede okutulmayı bekliyor';
+  const st = o.status === 'done' ? 'Teslim edildi' : o.cargo?.code ? 'Kargoda · ' + (o.dhl?.text || 'yolda') : o.dhl?.text && o.dhl.statu !== '0' ? o.dhl.text : 'DHL’e aktarıldı · şubede okutulmayı bekliyor';
   return (
-    <div className="set-card dhl-card">
-      <h3 className="dhl-h"><span className="dhl-logo">DHL</span>eCommerce</h3>
-      {live ? <>
-        <p className="dhl-st"><span className={'dot' + (o.cargo?.code ? ' ok' : '')} />{st}</p>
-        <p className="fine">Referans <b className="num">{o.dhl.ref}</b> · {when(o.dhl.at)} · {o.dhl.kg || 1} kg / {o.dhl.desi || 1} desi · {o.dhl.pay === 'P' ? 'gönderici ödemeli' : 'alıcı ödemeli'}
-          {o.cargo?.code && <> · takip no {o.cargo.url ? <a className="num" href={o.cargo.url} target="_blank" rel="noopener">{o.cargo.code}</a> : <b className="num">{o.cargo.code}</b>}</>}</p>
-      </> : <>
-        <p className="fine">Barkodu basınca sipariş DHL’e kaydedilir. Şube okutunca takip numarası siparişe kendiliğinden gelir, müşteriye bildirilir.</p>
-        <div className="dhl-row">
-          <Field label="Kg"><input inputMode="numeric" value={kg} onChange={(e) => setKg(e.target.value.replace(/\D/g, ''))} /></Field>
-          <Field label="Desi"><input inputMode="numeric" value={desi} onChange={(e) => setDesi(e.target.value.replace(/\D/g, ''))} /></Field>
-        </div>
-        <Field label="İçerik"><input value={icerik} onChange={(e) => setIcerik(e.target.value)} /></Field>
-        <div className="seg dhl-pay" role="radiogroup" aria-label="Kargo ücreti">
-          <button type="button" role="radio" aria-checked={pay === 'U'} className={pay === 'U' ? 'on' : ''} onClick={() => setPay('U')}>Alıcı ödemeli</button>
-          <button type="button" role="radio" aria-checked={pay === 'P'} className={pay === 'P' ? 'on' : ''} onClick={() => setPay('P')}>Gönderici ödemeli</button>
-        </div>
-      </>}
-      {err && <p className="err">{err}</p>}
-      <div className="row-btns">
-        <button className="btn primary" disabled={!!busy} onClick={make}><Icon n="box" s={16} />{busy === 'make' ? 'DHL’e kaydediliyor…' : live ? 'Barkodu tekrar bas (A6)' : 'A6 barkod bas'}</button>
-        {live && !o.cargo?.code && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : 'Takip no geldi mi?'}</button>}
-        {live && !o.cargo?.code && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL kaydını iptal et</button>}
+    <div className="set-card o-cargo">
+      <div className="ocg-h"><h3>Kargo</h3>{o.cargo?.code && <span className="ocg-code">Takip no {o.cargo.url ? <a className="num" href={o.cargo.url} target="_blank" rel="noopener">{o.cargo.code}</a> : <b className="num">{o.cargo.code}</b>}</span>}</div>
+      <div className="ocg-car" role="radiogroup" aria-label="Kargo firması">
+        {Object.values(CARRIERS).map((c) => (
+          <button key={c.k} type="button" role="radio" aria-checked={car === c.k} className={'ocg-opt' + (car === c.k ? ' on' : '')} onClick={() => pickCarrier(c.k)}>
+            <CarrierMark k={c.k} size="lg" /><span><b>{c.name}</b><small>{!c.live ? 'Entegrasyon yakında' : o.delivery?.carrier === c.k ? 'Müşterinin seçimi' : 'Otomatik barkod'}</small></span>
+          </button>
+        ))}
       </div>
+      {car === 'yurtici' ? (
+        <p className="fine ocg-soon"><Icon n="clock" s={16} />Yurtiçi Kargo entegrasyonu henüz hazır değil. Şimdilik barkodu Yurtiçi’nin kendi sisteminden alın; takip numarasını <button className="link" onClick={() => flow.openShip(o)}>elle girebilirsiniz</button></p>
+      ) : live ? (<>
+        <p className="dhl-st"><span className={'dot' + (o.cargo?.code ? ' ok' : '')} />{st}</p>
+        <p className="fine">Referans <b className="num">{o.dhl.ref}</b> · {when(o.dhl.at)} · {o.dhl.pkg ? o.dhl.pkg + ' · ' : ''}{o.dhl.kg || 1} kg / {o.dhl.desi || 1} desi · {o.dhl.pay === 'P' ? 'gönderici ödemeli' : 'alıcı ödemeli'}</p>
+        <div className="row-btns">
+          <button className="btn primary" disabled={!!busy} onClick={printLabel}><Icon n="box" s={16} />Barkod yazdır (A6)</button>
+          {dhlOpen(o) && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : o.cargo?.code ? 'Teslim edildi mi?' : 'Takip no geldi mi?'}</button>}
+          {!o.cargo?.code && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL kaydını iptal et</button>}
+          {!o.cargo?.code && <button className="link ocg-manual" onClick={() => flow.openShip(o)}>Takip no’yu elle gir</button>}
+        </div>
+      </>) : (<>
+        <div className="ocg-grid">
+          <div className="field"><span className="field-l">Kargo ücreti</span>
+            <div className="seg" role="radiogroup" aria-label="Kargo ücreti">
+              <button type="button" role="radio" aria-checked={pay === 'U'} className={pay === 'U' ? 'on' : ''} onClick={() => setPay('U')}>Alıcı ödemeli</button>
+              <button type="button" role="radio" aria-checked={pay === 'P'} className={pay === 'P' ? 'on' : ''} onClick={() => setPay('P')}>Gönderici ödemeli</button>
+            </div>
+          </div>
+          <div className="field"><span className="field-l">Paket</span>
+            <div className="ocg-pk">
+              {pk.map((x, i) => <span key={x.n + i} className={'chip ocg-chip' + (pkg === i ? ' on' : '')}><button type="button" onClick={() => pickPkg(i)}>{x.n}<small>{x.desi} desi</small></button>{pk.length > 1 && <button type="button" className="ocg-x" aria-label={x.n + ' sil'} onClick={() => delPkg(i)}><Icon n="x" s={12} /></button>}</span>)}
+              <span className={'chip ocg-chip' + (pkg === -1 ? ' on' : '')}><button type="button" onClick={() => setPkg(-1)}>Özel</button></span>
+              <button type="button" className="chip ocg-add" onClick={() => setAddPk({ n: '', kg: kg, desi: desi })}><Icon n="plus" s={13} />Paket tipi ekle</button>
+            </div>
+          </div>
+        </div>
+        {addPk && (
+          <div className="ocg-new">
+            <Field label="Paket adı"><input autoFocus value={addPk.n} placeholder="ör. Büyük koli" onChange={(e) => setAddPk({ ...addPk, n: e.target.value })} /></Field>
+            <Field label="Kg"><input inputMode="numeric" value={addPk.kg} onChange={(e) => setAddPk({ ...addPk, kg: e.target.value.replace(/\D/g, '') })} /></Field>
+            <Field label="Desi"><input inputMode="numeric" value={addPk.desi} onChange={(e) => setAddPk({ ...addPk, desi: e.target.value.replace(/\D/g, '') })} /></Field>
+            <span className="row-btns"><button className="btn sm primary" onClick={addPkg}><Icon n="check" s={14} />Ekle</button><button className="btn sm ghost" onClick={() => setAddPk(null)}>Vazgeç</button></span>
+          </div>
+        )}
+        <div className="ocg-row">
+          <Field label="Kg"><input inputMode="numeric" value={kg} onChange={(e) => { setKg(e.target.value.replace(/\D/g, '')); setPkg(-1); }} /></Field>
+          <Field label="Desi"><input inputMode="numeric" value={desi} onChange={(e) => { setDesi(e.target.value.replace(/\D/g, '')); setPkg(-1); }} /></Field>
+          <Field label="İçerik"><input value={icerik} onChange={(e) => setIcerik(e.target.value)} /></Field>
+        </div>
+        {err && <p className="err">{err}</p>}
+        <div className="row-btns">
+          <button className="btn primary" disabled={!!busy} onClick={transfer}><Icon n="send" s={16} />{busy === 'send' ? 'Aktarılıyor…' : 'DHL’e aktar'}</button>
+          <span className="fine">Aktarınca barkod yazdırma açılır. Şube okutunca takip no siparişe kendiliğinden gelir.</span>
+        </div>
+      </>)}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );

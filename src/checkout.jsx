@@ -5,9 +5,11 @@
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders } from './store.js';
-import { Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
+import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
-import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER } from './config.js';
+import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS } from './config.js';
+import TR from './tr-ilce.json';
+import { SwipeLine } from './cart.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch } from './push.js';
@@ -18,16 +20,39 @@ const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(e || '').trim
 const digits = (v) => String(v || '').replace(/\D/g, '');
 const unameOk = (u) => /^[a-z0-9._-]{3,20}$/.test(u);
 const suggestUser = (email) => cleanUsername(String(email || '').split('@')[0]).slice(0, 20);
-const blankAddr = () => ({ id: rid(), title: '', city: '', district: '', address: '' });
-export const addrLine = (a) => (!a ? '' : [a.address, [a.district, a.city].filter(Boolean).join(' / ')].filter(Boolean).join(', '));
+const blankAddr = () => ({ id: rid(), title: '', city: '', district: '', hood: '', address: '' });
+export const addrLine = (a) => (!a ? '' : [[a.hood, a.address].filter(Boolean).join(' '), [a.district, a.city].filter(Boolean).join(' / ')].filter(Boolean).join(', '));
 // Firestore "undefined" kabul etmez: boş alanları temizle
 const strip = (o) => JSON.parse(JSON.stringify(o, (k, v) => (v === undefined ? undefined : v)));
 const myLocalOrders = () => ls.get('my-orders', []);
 export const orderItems = (o) => (o.items || []).map((i) => ({ ...i, offer: i.price }));
 
-// ---- Adres alanları -------------------------------------------------------------------------
+// ---- Adres alanları: il → ilçe → mahalle listeden seçilir (kargo firması yanlış şubeye yönlendirmesin) ----
+// İlçeler sitenin içinde (tr-ilce.json); mahalleler il seçilince /tr/<il kodu>.json'dan yüklenir (açık veri, MIT: turkey-neighbourhoods).
+const trSort = (x, y) => x.localeCompare(y, 'tr');
+const hoodCache = {};
+function useHoods(city) {
+  const k = TR[city]?.k;
+  const [data, setData] = useState(() => (k && hoodCache[k]) || null);
+  const [fail, setFail] = useState(false);
+  useEffect(() => {
+    setFail(false); if (!k) { setData(null); return; }
+    if (hoodCache[k]) { setData(hoodCache[k]); return; }
+    setData(null); let on = true;
+    fetch('/tr/' + k + '.json').then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then((j) => { hoodCache[k] = j; on && setData(j); }).catch(() => on && setFail(true));
+    return () => { on = false; };
+  }, [k]);
+  return { data, fail };
+}
+const districtsOf = (city) => TR[city]?.d || [];
+// adres DHL/Yurtiçi için eksiksiz mi: il ve ilçe listede, mahalle seçili, açık adres var
+export const addrOk = (a) => !!(a && TR[a.city] && districtsOf(a.city).includes(a.district) && String(a.hood || '').trim() && String(a.address || '').trim().length >= 5);
 function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
   const up = (k) => (e) => set({ ...a, [k]: e.target.value });
+  const ds = districtsOf(a.city);
+  const dOk = ds.includes(a.district);
+  const { data: hoods, fail } = useHoods(a.city);
+  const hs = useMemo(() => (dOk && hoods?.[a.district] ? [...hoods[a.district]].sort(trSort) : []), [hoods, a.district, dOk]);
   return (
     <div className="form-col addr-fields">
       {title && <Field label="Adres adı" opt><input id={p + '-title'} placeholder="ör. Ev, İş, Dükkan" value={a.title || ''} onChange={up('title')} /></Field>}
@@ -35,13 +60,20 @@ function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
         <Field label="Alıcının adı soyadı" error={err[p + '.name']}><input id={p + '-name' } value={a.name || ''} onChange={up('name')} autoComplete="name" /></Field>
         <Field label="Alıcının telefonu" error={err[p + '.phone']}><PhoneInput id={p + '-phone'} value={a.phone || ''} onChange={(v) => set({ ...a, phone: v })} /></Field>
       </div>}
-      <div className="row2">
+      <div className="row3">
         <Field label="İl" error={err[p + '.city']}>
-          <select id={p + '-city'} value={a.city} onChange={up('city')}><option value="">Seçin</option>{ILLER.map((c) => <option key={c}>{c}</option>)}</select>
+          <select id={p + '-city'} value={TR[a.city] ? a.city : ''} onChange={(e) => set({ ...a, city: e.target.value, district: '', hood: '' })}><option value="">İl seçin</option>{ILLER.map((c) => <option key={c}>{c}</option>)}</select>
         </Field>
-        <Field label="İlçe" error={err[p + '.district']}><input id={p + '-district'} value={a.district} onChange={up('district')} autoComplete="address-level2" /></Field>
+        <Field label="İlçe" error={err[p + '.district']} hint={a.district && !dOk ? `“${a.district}” listede yok, seçin` : undefined}>
+          <select id={p + '-district'} value={dOk ? a.district : ''} disabled={!ds.length} onChange={(e) => set({ ...a, district: e.target.value, hood: '' })}><option value="">{ds.length ? 'İlçe seçin' : 'Önce il seçin'}</option>{ds.map((d) => <option key={d}>{d}</option>)}</select>
+        </Field>
+        <Field label="Mahalle" error={err[p + '.hood']}>
+          {fail
+            ? <input id={p + '-hood'} value={a.hood || ''} placeholder="Mahalle adı" onChange={up('hood')} />
+            : <select id={p + '-hood'} value={hs.includes(a.hood) ? a.hood : ''} disabled={!hs.length} onChange={up('hood')}><option value="">{!dOk ? 'Önce ilçe seçin' : hoods ? 'Mahalle seçin' : 'Yükleniyor…'}</option>{hs.map((h) => <option key={h}>{h}</option>)}</select>}
+        </Field>
       </div>
-      <Field label="Açık adres" error={err[p + '.address']}><textarea id={p + '-address'} rows="2" placeholder="Mahalle, cadde / sokak, bina no, daire" value={a.address} onChange={up('address')} autoComplete="street-address" /></Field>
+      <Field label="Açık adres" error={err[p + '.address']} hint="Mahalle yukarıda seçildi; buraya cadde / sokak, bina no, daire"><textarea id={p + '-address'} rows="2" placeholder="ör. Bağdat Cad. Uğur Apt. No 72 Daire 3" value={a.address} onChange={up('address')} autoComplete="street-address" /></Field>
     </div>
   );
 }
@@ -51,11 +83,13 @@ function addrErrors(a, p, recip) {
     if (String(a?.name || '').trim().length < 3) e[p + '.name'] = 'Alıcının adını soyadını yazın';
     if (phoneDigits(a?.phone).length !== 11) e[p + '.phone'] = 'Telefonu yazın (0 5xx xxx xx xx)';
   }
-  if (!a?.city) e[p + '.city'] = 'İl seçin';
-  if (!String(a?.district || '').trim()) e[p + '.district'] = 'İlçeyi yazın';
-  if (String(a?.address || '').trim().length < 8) e[p + '.address'] = 'Açık adresi yazın';
+  if (!TR[a?.city]) e[p + '.city'] = 'İl seçin';
+  else if (!districtsOf(a.city).includes(a?.district)) e[p + '.district'] = 'İlçeyi listeden seçin';
+  else if (!String(a?.hood || '').trim()) e[p + '.hood'] = 'Mahalleyi seçin';
+  if (String(a?.address || '').trim().length < 5) e[p + '.address'] = 'Cadde / sokak ve bina no yazın';
   return e;
 }
+const cleanAddr = (a) => ({ city: a.city, district: a.district, hood: String(a.hood || '').trim(), address: String(a.address || '').trim() });
 
 // Seçenek kartı (radyo)
 function Choice({ on, onClick, title, sub, icon }) {
@@ -96,7 +130,10 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   const tried = useRef(false);
   useEffect(() => { if (tried.current) setErr(validate()); }, [f]);
   const tTL = S.pricing.showTL && rate ? toTL(tot, rate) : null;
-  const delivAddr = f.method !== 'cargo' ? null : f.addrId !== 'new' && saved.find((a) => a.id === f.addrId) || f.addr;
+  const selSaved = f.method === 'cargo' && f.addrId !== 'new' ? saved.find((a) => a.id === f.addrId) : null;
+  const savedBad = !!selSaved && !addrOk(selSaved); // eski kayıtlı adres: ilçe/mahalle listeden seçilmemiş → burada düzeltilir
+  const fixA = savedBad ? (f.fix?.id === selSaved.id ? f.fix : { ...selSaved, name: selSaved.name || f.contact.name, phone: selSaved.phone || f.contact.phone }) : null;
+  const delivAddr = f.method !== 'cargo' ? null : savedBad ? fixA : selSaved || f.addr;
 
   function validate() {
     const e = {};
@@ -104,7 +141,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
     if (digits(f.contact.phone).length !== 11) e.phone = 'Telefonu 0(5xx) xxx xx xx şeklinde yazın';
     if (f.contact.email.trim() && !emailOk(f.contact.email)) e.email = 'E-posta adresi geçersiz';
     if (!member && f.signup) { if (!emailOk(f.contact.email)) e.email = 'Üyelik için e-posta gerekli'; if (f.pw.length < 6) e.pw = 'Şifre en az 6 karakter olmalı'; if (f.uname && !unameOk(f.uname)) e.uname = '3-20 karakter: harf, rakam, nokta, tire'; }
-    if (f.method === 'cargo') Object.assign(e, addrErrors(delivAddr, 'addr', f.addrId === 'new' || !saved.length));
+    if (f.method === 'cargo') Object.assign(e, addrErrors(delivAddr, 'addr', f.addrId === 'new' || !saved.length || savedBad));
     if (f.inv.type === 'company') {
       if (f.inv.company.trim().length < 2) e['inv.company'] = 'Firma ünvanını yazın';
       if (f.inv.taxOffice.trim().length < 2) e['inv.taxOffice'] = 'Vergi dairesini yazın';
@@ -125,7 +162,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
     try {
       let uid = member?.uid || null;
       const email = f.contact.email.trim().toLowerCase();
-      const cleanA = (a, who) => a && { city: a.city, district: a.district.trim(), address: a.address.trim(), ...(a.title ? { title: a.title } : {}), ...(who !== false ? { name: String(a.name || f.contact.name).trim(), phone: a.phone || f.contact.phone } : {}) };
+      const cleanA = (a, who) => a && { ...cleanAddr(a), ...(a.title ? { title: a.title } : {}), ...(who !== false ? { name: String(a.name || f.contact.name).trim(), phone: a.phone || f.contact.phone } : {}) };
       const inv = f.inv.type === 'company'
         ? { type: 'company', company: f.inv.company.trim(), taxOffice: f.inv.taxOffice.trim(), taxNo: digits(f.inv.taxNo) }
         : { type: 'person', ...(f.inv.tc ? { tc: digits(f.inv.tc) } : {}) };
@@ -142,7 +179,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         items: items.map(({ id: pid, k, n, cur, qty, offer, pi, u }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u })),
         total: tot, rate: rate?.usd || null,
         contact: { name: f.contact.name.trim(), phone: f.contact.phone, email },
-        delivery: { method: f.method, addr: f.method === 'cargo' ? cleanA(delivAddr) : null },
+        delivery: { method: f.method, addr: f.method === 'cargo' ? cleanA(delivAddr) : null, ...(f.method === 'cargo' ? { carrier: f.carrier || 'dhl' } : {}) },
         // teslimat adresiyle aynıysa adres faturaya da yazılır (fatura kendi başına eksiksiz okunsun)
         invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' ? (f.billSame ? cleanA(delivAddr) : cleanA(f.bill, false)) : f.bill?.address ? cleanA(f.bill, false) : null },
         pay: f.pay, note: f.note.trim(),
@@ -156,8 +193,9 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         const m = store.s.member || { uid };
         // fatura adresi: siparişte ayrı adres yazıldıysa hesaba o kaydedilir, yoksa kayıtlı olan korunur
         const iaddr = f.method === 'cargo' && !f.billSame ? cleanA(f.bill, false) : m.invoice?.addr;
-        const patch = { uid, name: m.name || order.contact.name, phone: m.phone || order.contact.phone, invoice: { ...inv, ...(iaddr?.address ? { addr: { city: iaddr.city, district: iaddr.district, address: iaddr.address } } : {}) } };
+        const patch = { uid, name: m.name || order.contact.name, phone: m.phone || order.contact.phone, invoice: { ...inv, ...(iaddr?.address ? { addr: cleanAddr(iaddr) } : {}) } };
         let addrs = m.addresses || [];
+        if (savedBad) addrs = addrs.map((x) => (x.id === selSaved.id ? { ...x, ...cleanA(delivAddr) } : x)); // düzeltilen kayıtlı adres güncellenir
         if (f.method === 'cargo' && (f.addrId === 'new' || !saved.length) && (f.saveAddr || f.signup)) addrs = [...addrs, { ...cleanA(delivAddr), id: rid(), title: delivAddr.title || (addrs.length ? 'Adres ' + (addrs.length + 1) : 'Adresim') }];
         patch.addresses = addrs;
         try { await A.saveMember({ ...m, ...patch }); } catch (x) { console.warn(x); }
@@ -211,11 +249,18 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
               </div>
             )}
             {f.method === 'cargo' && <>
+              <div className="carrier-pick" role="radiogroup" aria-label="Kargo firması">
+                {Object.values(CARRIERS).map((c) => (
+                  <button key={c.k} type="button" role="radio" aria-checked={(f.carrier || 'dhl') === c.k} className={'carrier-opt' + ((f.carrier || 'dhl') === c.k ? ' on' : '')} onClick={() => set({ carrier: c.k })}>
+                    <span className="radio" aria-hidden="true" /><CarrierMark k={c.k} /><span className="co-car-t"><b>{c.name}</b><small>{c.k === 'dhl' ? 'Anlaşmalı kargomuz' : 'İsterseniz'}</small></span>
+                  </button>
+                ))}
+              </div>
               {saved.length > 0 && (
                 <div className="addr-cards" role="radiogroup" aria-label="Teslimat adresi">
                   {saved.map((a) => (
                     <button key={a.id} type="button" role="radio" aria-checked={f.addrId === a.id} className={'addr-card' + (f.addrId === a.id ? ' on' : '')} onClick={() => set({ addrId: a.id })}>
-                      <span className="radio" aria-hidden="true" /><span><b>{a.title || 'Adres'}</b><small>{[a.name, addrLine(a)].filter(Boolean).join(' · ')}</small></span>
+                      <span className="radio" aria-hidden="true" /><span><b>{a.title || 'Adres'}{!addrOk(a) && <span className="tag warn">Güncellenmeli</span>}</b><small>{[a.name, addrLine(a)].filter(Boolean).join(' · ')}</small></span>
                     </button>
                   ))}
                   <button type="button" role="radio" aria-checked={f.addrId === 'new'} className={'addr-card add' + (f.addrId === 'new' ? ' on' : '')} onClick={() => set({ addrId: 'new' })}>
@@ -223,6 +268,10 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
                   </button>
                 </div>
               )}
+              {savedBad && <>
+                <p className="banner warn co-fix"><Icon n="pin" s={17} /><span>Bu kayıtlı adreste il / ilçe / mahalle listeden seçilmemiş. Kargonuz doğru şubeye gitsin diye lütfen tamamlayın; adresiniz hesabınızda da güncellenir.</span></p>
+                <AddressFields a={fixA} set={(addr) => set({ fix: { ...addr, id: selSaved.id } })} err={err} p="addr" recip />
+              </>}
               {(f.addrId === 'new' || !saved.length) && <>
                 <AddressFields a={f.addr} set={(addr) => set({ addr })} err={err} p="addr" title={!!member} recip />
                 {member && <label className="mini-check"><input type="checkbox" checked={f.saveAddr} onChange={(e) => set({ saveAddr: e.target.checked })} />Bu adresi hesabıma kaydet</label>}
@@ -305,7 +354,7 @@ function initForm(m, methods, guest) {
   const inv0 = m?.invoice || g.inv || {};
   return {
     contact: { name: m?.name || g.contact?.name || '', phone: m?.phone || g.contact?.phone || '', email: m?.email || g.contact?.email || '' },
-    method: methods[0] || 'cargo',
+    method: methods[0] || 'cargo', carrier: 'dhl',
     addrId: addrs[0]?.id || 'new',
     addr: { ...blankAddr(), name: m?.name || g.contact?.name || '', phone: m?.phone || g.contact?.phone || '', ...(!m && g.addr ? g.addr : {}) },
     saveAddr: true,
@@ -369,7 +418,7 @@ export function OrderPage({ id }) {
 
       <div className="o-info">
         <div className="o-card"><h3>İletişim</h3><p><b>{o.contact?.name}</b></p><p className="num">{o.contact?.phone}</p>{o.contact?.email && <p>{o.contact.email}</p>}</div>
-        <div className="o-card"><h3>Teslimat</h3><p><b>{DELIVERY[o.delivery?.method] || ''}</b></p>{o.delivery?.addr ? <>{o.delivery.addr.name && <p>{o.delivery.addr.name}{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></> : <p>{[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}</p>}</div>
+        <div className="o-card"><h3>Teslimat</h3><p><b>{DELIVERY[o.delivery?.method] || ''}</b>{o.delivery?.method !== 'pickup' && CARRIERS[o.delivery?.carrier] && <span className="muted"> · {CARRIERS[o.delivery.carrier].name}</span>}</p>{o.delivery?.addr ? <>{o.delivery.addr.name && <p>{o.delivery.addr.name}{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></> : <p>{[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}</p>}</div>
         <div className="o-card"><h3>Fatura</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>
       </div>
       {o.note && <p className="o-note"><b>Notunuz:</b> {o.note}</p>}
@@ -378,7 +427,6 @@ export function OrderPage({ id }) {
       {o.status === 'new' && (mine
         ? <button className="btn ghost danger gclear" onClick={cancel}><Icon n="x" s={15} />Siparişi iptal et</button>
         : !o.uid && <p className="fine center">Siparişte değişiklik ya da iptal için {wa ? <a className="link" href={wa} target="_blank" rel="noopener">WhatsApp’tan yazın</a> : 'bizi arayın'}.</p>)}
-      <p className="fine center admin-hint">Dükkan sahibi misiniz? <a href={links.adminOrder(o.id)}>Yönetim panelinde aç</a></p>
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
@@ -430,7 +478,7 @@ export function InvoiceText({ inv, name, deliv, phone }) {
     {inv.type === 'company'
       ? <p><b>{inv.company}</b>{inv.taxOffice && <> / {inv.taxOffice}</>}{inv.taxNo && <> / <span className="num">{inv.taxNo}</span></>}</p>
       : <p><b>{name}</b>{inv.tc ? <> / TC <span className="num">{inv.tc}</span></> : <span className="muted"> · Bireysel</span>}</p>}
-    {addr?.address && <p>{addr.address}</p>}
+    {addr?.address && <p>{[addr.hood, addr.address].filter(Boolean).join(' ')}</p>}
     {where && <p>{where}</p>}
     {tels.length > 0 && <p className="num">{tels.join('    ')}</p>}
   </div>;
@@ -739,40 +787,74 @@ function AcctOverview({ m, myOrders, active }) {
 }
 // sipariş kartı: içindeki ürünlerin küçük resimleri (en çok 5, fazlası "+3")
 function MyOrders({ limit }) {
-  const myOrders = useStore((s) => s.myOrders);
+  const all = useStore((s) => s.myOrders);
+  const m = useStore((s) => s.member);
   useStore((s) => s.seenTick);
+  // müşteri geçmiş siparişini listesinden silebilir (sipariş dükkânın kayıtlarında kalır; sadece hesabında görünmez)
+  const hidden = new Set(m?.hiddenOrders || []);
+  const myOrders = all.filter((o) => !hidden.has(o.id));
   const fresh = new Set(unseenOrders(myOrders).map((o) => o.id));
   // tam listede iki sekme: devam eden siparişler / geçmiş (tamamlanan + iptal)
   const act = myOrders.filter((o) => ORDER_OPEN.includes(o.status)); const past = myOrders.filter((o) => !ORDER_OPEN.includes(o.status));
   const [tab, setTab] = useState(() => (act.length || !past.length ? 'act' : 'past'));
+  const [sel, setSel] = useState(null); // Set | null
+  const [open, setOpen] = useState(null); // sola çekilip açık kalan satır
+  const [confirm, setConfirm] = useState(null);
+  useEffect(() => { setSel(null); setOpen(null); }, [tab]);
   if (!myOrders.length) return <Empty icon="cart" title="Henüz siparişiniz yok"><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty>;
   const list = limit ? myOrders.slice(0, limit) : tab === 'act' ? act : past;
+  const canDel = !limit && tab === 'past';
+  async function hide(ids) {
+    const cur = store.s.member; if (!cur) return;
+    try { await api().saveMember({ ...cur, hiddenOrders: [...new Set([...(cur.hiddenOrders || []), ...ids])].slice(-500) }); toast(ids.length > 1 ? ids.length + ' sipariş silindi' : 'Sipariş silindi'); setSel(null); }
+    catch (x) { toast('Silinemedi: ' + x.message, 'bad'); }
+  }
+  const ask = (ids) => setConfirm({ title: ids.length > 1 ? `${ids.length} siparişi sil` : 'Siparişi sil', text: 'Seçilen sipariş(ler) hesabınızdaki listeden kaldırılacak.', okLabel: 'Sil', tone: 'danger', onOk: () => hide(ids) });
+  const toggle = (id) => setSel((x) => { const n = new Set(x || []); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const menu = (e, o) => openMenu(e, [
+    { label: 'Siparişi aç', icon: 'eye', onClick: () => openOrder(o.id) },
+    '-',
+    { label: 'Seç', icon: 'check', onClick: () => setSel(new Set([o.id])) },
+    { label: 'Siparişi sil', icon: 'trash', danger: true, onClick: () => ask([o.id]) },
+  ], '#' + o.no);
+  const card = (o) => {
+    const its = o.items || []; const qty = its.reduce((t, i) => t + (Number(i.qty) || 0), 0);
+    const show = its.slice(0, 5); const more = its.length - show.length; const on = sel?.has(o.id);
+    return (
+      <button className={'mo-card' + (fresh.has(o.id) ? ' fresh' : '') + (on ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))}>
+        <span className="mo-top">{sel && <span className={'ocheck' + (on ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}{fresh.has(o.id) && <span className="dot-new" title="Yeni güncelleme" />}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /><span className="muted mo-date">{when(o.createdAt)}</span><b className="num mo-sum">{fmtTotals(o.total || totals(orderItems(o), 'offer'))}</b></span>
+        <span className="mo-thumbs">
+          {show.map((it, i) => <span key={i} className="mo-th" title={it.n}><Thumb p={it} size="sm" />{it.qty > 1 && <i className="num">×{it.qty}</i>}</span>)}
+          {more > 0 && <span className="mo-more num">+{more}</span>}
+        </span>
+        <span className="mo-foot muted">{its.length === 1 ? its[0].n : `${show[0]?.n || ''}${its.length > 1 ? ` ve ${its.length - 1} ürün daha` : ''}`} · {qty} adet · {DELIVERY[o.delivery?.method] || ''}<Icon n="back" s={15} className="flip" /></span>
+      </button>
+    );
+  };
   return (<>
     {!limit && (
-      <div className="seg mo-tabs" role="tablist">
-        <button role="tab" aria-selected={tab === 'act'} className={tab === 'act' ? 'on' : ''} onClick={() => setTab('act')}>Siparişlerim{act.length > 0 && <i className="num">{act.length}</i>}</button>
-        <button role="tab" aria-selected={tab === 'past'} className={tab === 'past' ? 'on' : ''} onClick={() => setTab('past')}>Geçmiş siparişler{past.length > 0 && <i className="num">{past.length}</i>}</button>
+      <div className="mo-bar">
+        <div className="seg mo-tabs" role="tablist">
+          <button role="tab" aria-selected={tab === 'act'} className={tab === 'act' ? 'on' : ''} onClick={() => setTab('act')}>Siparişlerim{act.length > 0 && <i className="num">{act.length}</i>}</button>
+          <button role="tab" aria-selected={tab === 'past'} className={tab === 'past' ? 'on' : ''} onClick={() => setTab('past')}>Geçmiş siparişler{past.length > 0 && <i className="num">{past.length}</i>}</button>
+        </div>
+        {canDel && past.length > 0 && <button className={'btn sm ' + (sel ? 'primary' : 'ghost')} onClick={() => setSel(sel ? null : new Set())}><Icon n="check" s={15} />{sel ? 'Vazgeç' : 'Seç'}</button>}
+      </div>
+    )}
+    {sel && (
+      <div className="sel-bar mo-sel">
+        <label className="mini-check"><input type="checkbox" checked={list.length > 0 && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : new Set())} />Tümü ({list.length})</label>
+        <span className="muted">{sel.size} seçili</span>
+        <button className="btn sm danger" disabled={!sel.size} onClick={() => ask([...sel])}><Icon n="trash" s={15} />Seçilenleri sil</button>
       </div>
     )}
     {!limit && !list.length && <p className="muted mo-none">{tab === 'act' ? 'Devam eden siparişiniz yok. Tamamlanan ve iptal edilenler “Geçmiş siparişler”de.' : 'Henüz tamamlanmış ya da iptal edilmiş siparişiniz yok.'}</p>}
     <ul className="mo-list" key={tab}>
-      {list.map((o) => {
-        const its = o.items || []; const qty = its.reduce((t, i) => t + (Number(i.qty) || 0), 0);
-        const show = its.slice(0, 5); const more = its.length - show.length;
-        return (
-          <li key={o.id}>
-            <button className={'mo-card' + (fresh.has(o.id) ? ' fresh' : '')} onClick={() => openOrder(o.id)}>
-              <span className="mo-top">{fresh.has(o.id) && <span className="dot-new" title="Yeni güncelleme" />}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /><span className="muted mo-date">{when(o.createdAt)}</span><b className="num mo-sum">{fmtTotals(o.total || totals(orderItems(o), 'offer'))}</b></span>
-              <span className="mo-thumbs">
-                {show.map((it, i) => <span key={i} className="mo-th" title={it.n}><Thumb p={it} size="sm" />{it.qty > 1 && <i className="num">×{it.qty}</i>}</span>)}
-                {more > 0 && <span className="mo-more num">+{more}</span>}
-              </span>
-              <span className="mo-foot muted">{its.length === 1 ? its[0].n : `${show[0]?.n || ''}${its.length > 1 ? ` ve ${its.length - 1} ürün daha` : ''}`} · {qty} adet · {DELIVERY[o.delivery?.method] || ''}<Icon n="back" s={15} className="flip" /></span>
-            </button>
-          </li>
-        );
-      })}
+      {list.map((o) => canDel && !sel
+        ? <SwipeLine key={o.id} id={o.id} open={open} setOpen={setOpen} onDelete={() => hide([o.id])} onContextMenu={(e) => menu(e, o)} inner="mo-sw" delLabel="Siparişi sil" className="mo-li">{card(o)}</SwipeLine>
+        : <li key={o.id} onContextMenu={canDel ? (e) => menu(e, o) : undefined}>{card(o)}</li>)}
     </ul>
+    {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
   </>);
 }
 
@@ -783,7 +865,7 @@ function Addresses() {
   const list = m.addresses || [];
   async function save() {
     const e = addrErrors(edit, 'addr', true); setErr(e); if (Object.keys(e).length) return;
-    const a = { ...edit, name: (edit.name || '').trim(), district: edit.district.trim(), address: edit.address.trim() };
+    const a = { ...edit, name: (edit.name || '').trim(), ...cleanAddr(edit) };
     const addresses = list.some((x) => x.id === a.id) ? list.map((x) => (x.id === a.id ? a : x)) : [...list, a];
     try { await A.saveMember({ ...m, addresses }); toast('Adres kaydedildi'); setEdit(null); } catch (x) { toast('Kaydedilemedi: ' + x.message, 'bad'); }
   }
@@ -793,7 +875,7 @@ function Addresses() {
     <div className="addr-list">
       {list.map((a, i) => (
         <div key={a.id} className="addr-card static">
-          <span><b>{a.title || 'Adres'}{i === 0 && <span className="tag">Varsayılan</span>}</b><small>{[a.name, a.phone].filter(Boolean).join(' · ')}</small><small>{addrLine(a)}</small></span>
+          <span><b>{a.title || 'Adres'}{i === 0 && <span className="tag">Varsayılan</span>}{!addrOk(a) && <span className="tag warn">Güncellenmeli</span>}</b><small>{[a.name, a.phone].filter(Boolean).join(' · ')}</small><small>{addrLine(a)}</small></span>
           <span className="row-btns">
             {i > 0 && <button className="btn sm ghost" onClick={() => first(a)}>Varsayılan yap</button>}
             <button className="btn sm ghost" onClick={() => { setErr({}); setEdit({ ...a }); }}><Icon n="edit" s={15} />Düzenle</button>
@@ -824,7 +906,7 @@ function MyInfo({ part = 'all' }) {
       const inv = f.inv.type === 'company' ? { type: 'company', company: f.inv.company.trim(), taxOffice: f.inv.taxOffice.trim(), taxNo: digits(f.inv.taxNo) } : { type: 'person', ...(f.inv.tc ? { tc: digits(f.inv.tc) } : {}) };
       // fatura adresi (isteğe bağlı): yazılmaya başlandıysa eksiksiz olmalı
       const ia = f.iaddr || {}; const anyA = ia.city || String(ia.district || '').trim() || String(ia.address || '').trim();
-      if (part !== 'info' && anyA) { const e = addrErrors(ia, 'iaddr'); setAerr(e); if (Object.keys(e).length) { setBusy(false); return; } inv.addr = { city: ia.city, district: ia.district.trim(), address: ia.address.trim() }; }
+      if (part !== 'info' && anyA) { const e = addrErrors(ia, 'iaddr'); setAerr(e); if (Object.keys(e).length) { setBusy(false); return; } inv.addr = cleanAddr(ia); }
       else if (part === 'info' && m.invoice?.addr) inv.addr = m.invoice.addr;
       await A.saveMember({ ...m, name: f.name.trim(), phone: f.phone, invoice: inv }); toast('Bilgileriniz kaydedildi');
     } catch (x) { toast('Kaydedilemedi: ' + x.message, 'bad'); }
