@@ -3279,9 +3279,21 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
   .admin-order .oa-st-m small { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
   .admin-order .oa-st-m::after { display: none; }
 }
+/* bilgisayar sipariş listesi: durum seçici — beyaz kutu, renkli nokta + altta ilerleme çizgisi (dolgu yok) */
+@media (min-width: 861px) {
+  .otable .ost { --stp: .12; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px 12px; font-weight: 600; box-shadow: 0 1px 2px rgb(15 23 42 / .05); }
+  .otable .ost-confirmed { --stp: .32; } .otable .ost-preparing { --stp: .56; } .otable .ost-shipped, .otable .ost-ready { --stp: .8; } .otable .ost-done, .otable .ost-cancelled { --stp: 1; }
+  .otable .ost > span { display: inline-flex; align-items: center; gap: 8px; }
+  .otable .ost > span::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--stc); flex: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--stc) 16%, transparent); }
+  .otable .ost::before { content: ''; position: absolute; left: 11px; right: 11px; bottom: 5px; height: 3px; border-radius: 3px; background: var(--line-2, #edf0f4); }
+  .otable .ost::after { display: block; left: 11px; right: auto; bottom: 5px; height: 3px; width: calc((100% - 22px) * var(--stp)); background: var(--stc); transition: width .35s var(--ease); }
+  .otable .ost svg { color: var(--muted); opacity: .8; }
+  .otable .ost:hover { filter: none; border-color: color-mix(in oklab, var(--stc) 45%, var(--line)); box-shadow: 0 3px 10px -6px color-mix(in oklab, var(--stc) 60%, transparent); }
+  .otable .ost-cancelled > span { color: var(--muted); }
+}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '94fc359a2b';</script>
+<script>window.__BUILD = '85da10ffca';</script>
 </head>
 <body>
 <div id="root"></div>
