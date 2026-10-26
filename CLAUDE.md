@@ -44,6 +44,7 @@ src/
   listsheet.jsx / listcode.js   vitrin listesi (ürünler linkin içinde kodlu), liste kâğıdı / PNG
   home.jsx          giriş sayfası (/) ve bayi ana sayfası
   footer.jsx        mağaza alt bilgisi (ShopFooter) + bilgi sayfaları (RichText)
+  push.js           müşteriye sipariş durumu bildirimi (web push) — abonelik, izin, durum değişince bekçiye haber
   guestcart.jsx     HeaderCart (üst menü sepeti), CartBar (sağ alt küçük sepet)
   watch.js          kur (Harem Altın) ve sürüm kontrolü, "Şimdi eşitle"
   idb.js            IndexedDB önbellek (zaman aşımlı)
@@ -160,13 +161,13 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 - **Fatura kontrolü** (`orders.jsx` `vknOk` 10 hane, `tcOk` 11 hane, `needsInvoice`): geçerli vergi/TC no varsa listede "Fatura" etiketi, detayda yeşil çerçeveli `.o-card.inv-yes` + "Fatura kesilecek".
 - Sipariş detayında kopyalama küçük simge (`.oc-copy`, Müşteri / Teslimat başlığında). Durum değişikliği `Confirm` ile onaylanır.
 - **Adreste alıcı** adı + telefonu (`AddressFields recip`, yeni adreste zorunlu; üyelik bilgisinden bağımsız; eskiler iletişimden doldurulur).
-- **Hesabım = hub** (`MemberHome`): profil fotoğrafı (`members.photo`, 160px webp data URL, kural <60000), satırlar Siparişlerim / Adreslerim / Profil / Fatura / Ödeme bilgilerim (Çok yakında) / Bu cihazdan verilenler; her biri pencerede açılır. Dükkân bilgisi kartı kaldırıldı. Misafirde `LocalOrders` açılır-kapanır, seç + kaldır.
+- **Hesabım** (`MemberHome`): profil fotoğrafı (`members.photo`, 160px webp data URL, kural <60000). 26.10.2026'da yeniden tasarlandı → aşağıda "26.10.2026 düzenlemeleri" (bölümler ayrı sayfa, pencere değil). Misafirde `LocalOrders` açılır-kapanır, seç + kaldır.
 - `PhoneInput` (ui.jsx): odaklanınca "0" kendiliğinden gelir.
 - Ürün kartı: stok kodu sadece yöneticiye; masaüstünde (hover) birden fazla resimde altta küçük resimler, üstünde gezince büyük resim değişir (`CardImg`). Açıklama masaüstünde de tam açık.
 - B2B kart fiyatı `.price.dual`: Liste ve Toptan aynı boyda yan yana.
 - Marka kutusunda "Ürünleri gör →" (`shopHome.brandCta`, Tasarım > Marka kutuları anahtarı).
 - **Müşteriye sipariş durumu bildirimi (web push, 25.10.2026):** `src/push.js` (`pushState` on/off/denied/ios-home/unsupported, `enablePush(ids)`, `autoPush(id)` yeni siparişte sessizce, `pushStatus(id)` yönetici durum değiştirince). Sipariş sayfasında `PushCard` (checkout.jsx), Hesabım'da "Bildirimler" satırı. Worker: `GET /push/key` (VAPID anahtar çifti ilk istekte üretilir, KV `vapid`), `POST /push/sub {id, sub, hello}` (KV `ps:<id>`, en çok 5 cihaz; hello = "bildirimler açık" deneme bildirimi, dakikada bir), `POST /push/status {id}` (durumu Firestore'dan okur, aynı durum bir kez: KV `pl:<id>`; metinler `settings/public.orders.pushTexts`, kargoda takip no eklenir; 404/410 abonelikler silinir). Şifreleme RFC 8291 aes128gcm (Node ile çözülerek doğrulandı). `sw.js` push + notificationclick (sayfayı açar). SW artık `/sw.js` scope `/` (eskiden göreli yoldu). iPhone: `/magaza/s/<id>` sayfasında manifest eklenmez → ana ekrana eklenince doğrudan o sipariş açılır. Ayarlar > Online mağaza > Müşteriye bildirim (`orders.push`, metinler).
-- Sepet/hesap gibi sekmelerde alt bilgi küçük tek satır (`ShopFooter compact`), büyük hali sadece ana sayfada.
+- Alt bilgi: ana sayfada büyük hâli; sipariş/ürün/liste sayfalarında küçük tek satır (`ShopFooter compact`); **katalog, sepet ve Hesabım'da hiç yok**.
 
 ### 26.10.2026 düzenlemeleri
 - **Sepet:** alt bilgi yok (sepet ve hesap sekmelerinde `ShopFooter` gösterilmez). Telefonda (<900px) altta sabit `.cart-bar` (Toplam + Sepeti onayla), kutudaki büyük onay düğmesi gizli (sadece `.cart-page` içinde; ödeme adımındaki `.cart-sum` etkilenmez!). Adet en az 1 (`Stepper min={1}`), silmek için çöp ya da telefonda sola çekme (`SwipeLine`, cart.jsx: kırmızı "Sil", sonuna kadar çekince hemen siler). Sepetten açılan ürün penceresi `viewOnly`.
@@ -215,7 +216,16 @@ Katalog, sepet, talep gönderme ("hazırlayın geliyorum" / fiyat sorma), sohbet
 
 `FIREBASE_SERVICE_ACCOUNT`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `GH_DISPATCH_TOKEN`, `TELEGRAM_TOKEN`, `RESEND_KEY`. Kullanıcı kendisi GitHub'a ekler; anahtarları sohbete yazmasını isteme.
 
-## 10. Yarım kalan işler / açık konular
+## 10. Yeni sohbete devir notları (26.10.2026 gece)
+
+- **Kullanıcının çalışma biçimi:** çok sayıda isteği tek mesajda (bazen .txt eki) gönderir; hepsini görev listesine bölüp sırayla yap, her grup bitince yayınla ve Türkçe, kısa, madde madde anlat. Tasarıma çok önem verir; bir isteği yanlış anlarsan sert tepki verir ("böyle sepete ekleye nasıl basıcam") — kullanılabilirliği bozan bir yorumda (ör. düğmeyi gizlemek) önce mantığını tart, gerekirse sor. Kullanım hakkı azalınca "en son deploy et, sorunlu kalmasın" der: **her değişiklikten sonra derle + yayınla**, yarım iş bırakma.
+- **Bir string'i `replace` ile eklerken o metin dosyada birden fazla yerde olabilir** (26.10'da "Ürün resimleri" başlığı Katalog bölümünde de vardı → Ayarlar > Katalog beyaz sayfaya düştü). Eklemeden sonra ilgili ayar bölümünü açıp test et.
+- **Test ipuçları:** deneme sunucusu kendiliğinden kapanabiliyor → `python3 /tmp/claude-0/web/serve.py`'yi Bash `run_in_background` ile başlat. Demoda ürün resimleri açılmaz (platincdn erişilemez) → Playwright'ta `page.route('**/platincdn.com/**', …)` ile renkli deneme PNG'si ver. Masaüstünde gizli (`display:none`) kopya düğmeler olabilir (ör. telefondaki `.cart-bar` "Sepeti onayla") → `locator('button:visible', has_text=…)` kullan. `get_by_role(name=…)` alt dize eşleşir (dikkat). Demo üyelikte e-posta doğrulaması yok; üye ol → Giriş yap sekmesi.
+- **Canlı Worker'a konteynerden erişilemez**; kullanıcının bilgisayarındaki dahili tarayıcı (Claude_Browser araçları) ile GET denenebilir (ör. `/push/key` çalışıyor, VAPID anahtarı üretildi).
+- Ana sayfa raf kartlarında (`PCard`, shophome.jsx) kart küçük resim efekti yok (sadece Tüm ürünler); kullanıcı isterse eklenecek.
+- Web push gerçek telefonda uçtan uca denenmedi; kullanıcı deneyecek (Android/bilgisayar hemen, iPhone ana ekrana ekleyince).
+
+## 11. Yarım kalan işler / açık konular
 
 - [ ] **E-postalar spam'e düşüyor** (üyelik doğrulama, şifre sıfırlama, sipariş bildirimi). Spam'deki e-postada Gmail linkleri de kapatıyor. Kullanıcı "sonra dönücem" dedi. Seçenekler:
   - Kendi alan adı (ertelgsm.com DNS kayıtları → Firebase Auth özel alan adı + Resend alan doğrulama) — DNS'i kimin yönettiği soruldu, cevap bekleniyor.
