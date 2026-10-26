@@ -525,6 +525,7 @@ async function dhl(env, act, b) {
     const phone = String(a.phone || o.contact?.phone || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
     const fields = {
       pChIrsaliyeNo: '', pPrKiymet: '', pChBarkod: ref, pChIcerik: icerik,
+      pGonderiHizmetSekli: 'NORMAL', pTeslimSekli: 1, pFlAlSms: 1, pFlGnSms: 0, // ZORUNLU: yoksa DHL 'Object reference not set' verir (26.10.2026)
       pKargoParcaList: `${kg}:${desi}:1:${icerik}:1:;`, pAliciMusteriMngNo: '', pAliciMusteriBayiNo: '', pAliciMusteriAdi: String(a.name || o.contact?.name || '').slice(0, 60), pChSiparisNo: ref,
       pLuOdemeSekli: b.pay === 'P' ? 'P' : 'U', pFlAdresFarkli: '1', pChIl: String(a.city || '').toLocaleUpperCase('tr-TR'), pChIlce: String(a.district || '').toLocaleUpperCase('tr-TR'),
       pChAdres: String(a.address || '').slice(0, 250), pChSemt: '', pChMahalle: '', pChMeydanBulvar: '', pChCadde: '', pChSokak: '',
