@@ -161,10 +161,10 @@ for (const [i, p] of gone.entries()) {
   if (i || pending.length) await new Promise((r) => setTimeout(r, 3000));
   let verdict = null, why = '';
   try {
-    const u0 = new URL(p.u);
-    const r = await fetch(p.u, { redirect: 'manual', headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0' } });
+    const u0 = new URL(p.u, 'https://www.ertelgsm.com/'); // eski kayıtlarda adres sitesiz (/urun-adi-pmu123) olabilir
+    const r = await fetch(u0.href, { redirect: 'manual', headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0' } });
     if (r.status === 404 || r.status === 410) { verdict = 'deleted'; why = 'HTTP ' + r.status; }
-    else if (r.status >= 300 && r.status < 400) { const to = new URL(r.headers.get('location') || '/', p.u); why = 'yönlendirme → ' + to.pathname; verdict = to.pathname.replace(/\/$/, '') === u0.pathname.replace(/\/$/, '') ? 'passive' : 'deleted'; }
+    else if (r.status >= 300 && r.status < 400) { const to = new URL(r.headers.get('location') || '/', u0.href); why = 'yönlendirme → ' + to.pathname; verdict = to.pathname.replace(/\/$/, '') === u0.pathname.replace(/\/$/, '') ? 'passive' : 'deleted'; }
     else if (r.ok) { const h = await r.text(); const has = new RegExp(`id="urun_id"\\s+value="${p.id}"`).test(h); why = 'sayfa açıldı, ürün ' + (has ? 'var' : 'yok'); verdict = has ? 'passive' : 'deleted'; }
     else throw new Error('HTTP ' + r.status);
   } catch (e) { note('Ürün sayfası kontrol edilemedi', `${p.k}: ${e.message}`); }
