@@ -1,0 +1,31 @@
+# DHL'e kaydı gönderilen siparişlerin takip numarasını çeker: şube barkodu okutunca sipariş kendiliğinden "Kargoda" olur,
+# takip no yazılır, müşteriye bildirim gider. Gün içinde 20 dakikada bir (Türkiye saatiyle 09:00-22:00, Pazar hariç).
+name: DHL takip
+on:
+  schedule:
+    - cron: '*/20 6-19 * * 1-6'
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Deneme (kaydetme)'
+        type: boolean
+        default: false
+concurrency:
+  group: dhl-track
+  cancel-in-progress: false
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - name: Takip numaralarını çek
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DHL_USER: ${{ secrets.DHL_USER }}
+          DHL_PASS: ${{ secrets.DHL_PASS }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+        run: node tools/dhl-track.mjs ${{ inputs.dry && '--dry' || '' }}

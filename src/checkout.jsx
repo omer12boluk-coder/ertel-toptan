@@ -363,7 +363,7 @@ export function OrderPage({ id }) {
           ))}
         </ol>
       )}
-      {o.status === 'shipped' && o.cargo?.code && <div className="banner ok"><Icon n="box" /><div><b>Kargo takip:</b> {o.cargo.company} · <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')}>Kopyala</button></div></div>}
+      {o.status === 'shipped' && o.cargo?.code && <div className="banner ok"><Icon n="box" /><div><b>Kargo takip:</b> {o.cargo.company} · <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')}>Kopyala</button>{o.cargo.url && <> · <a className="link" href={o.cargo.url} target="_blank" rel="noopener">Kargom nerede?</a></>}</div></div>}
 
       {o.status !== 'cancelled' && o.status !== 'done' && <PushCard ids={[o.id]} hideOn />}
 

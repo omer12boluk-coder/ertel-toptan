@@ -476,8 +476,10 @@ async function notifySync(env, key, b) {
 
 // ---- DHL eCommerce (eski MNG Kargo SOAP servisi) ----------------------------------------------------------------
 // Sadece yönetici (Firebase oturum anahtarı → users/{uid}.role admin). Giriş: Worker gizli ayarları DHL_USER / DHL_PASS.
-// create: siparişten gönderi kaydı (SiparisGirisiDetayliV3), label: barkod/etiket (MNGGonderiBarkod), track: takip, cancel: iptal.
-// DENEME AŞAMASI: DHL'in ham cevabı (şifre çıkarılmış) da döndürülür; bilinmeyen kodlar buradan öğrenilip düzeltilir.
+// create: siparişi DHL'e "sipariş" olarak kaydeder (SiparisGirisiDetayliV3) → online şubede Gönder > Toplu Gönderi Listesi'ne düşer.
+//   Müşteri barkodu (pChBarkod) = referans. DHL'in kendi "Siparişten Gönderi Hazırlama Barkodu" kâğıdındaki büyük barkod da
+//   tam bu değer (26.10.2026'da DHL çıktısı okutularak doğrulandı) → etiketi sitede biz basıyoruz, şube okutunca gönderi oluşur.
+// track: KargoBilgileriByReferans → takip no (MNG_GONDERI_NO, şube okutunca dolar), durum, şube. cancel: MusteriSiparisIptal.
 const DHL_URL = 'https://service.mngkargo.com.tr/musterikargosiparis/musterikargosiparis.asmx';
 const xesc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
 async function soap(env, op, inner) {
@@ -490,49 +492,59 @@ async function soap(env, op, inner) {
 }
 const tagv = (x, t) => { const m = new RegExp(`<${t}>([\\s\\S]*?)</${t}>`).exec(x || ''); return m ? m[1] : ''; };
 const kv = (o) => Object.entries(o).map(([k, v]) => `<${k}>${xesc(v)}</${k}>`).join('');
+// KargoBilgileriByReferans cevabının ilk satırı → düz nesne
+function dhlRow(raw) {
+  const row = /<Table1\b[^>]*>([\s\S]*?)<\/Table1>/.exec(raw || ''); if (!row) return null;
+  const o = {}; for (const m of row[1].matchAll(/<(\w+)[^>]*>([^<]*)<\/\1>/g)) o[m[1]] = m[2].trim();
+  return o;
+}
+async function dhlInfo(env, ref) {
+  const r = await soap(env, 'KargoBilgileriByReferans', kv({ pMusteriNo: env.DHL_USER, pSifre: env.DHL_PASS, pSiparisNo: ref, pGonderiNo: '', pFaturaSeri: '', pFaturaNo: '', pIrsaliyeNo: '', pEFaturaNo: '', pRaporType: '' }));
+  const x = dhlRow(r.raw);
+  if (!x) return { ok: !r.fault, found: false, ref, fault: r.fault };
+  return { ok: true, found: true, ref, code: x.MNG_GONDERI_NO || '', url: x.KARGO_TAKIP_URL || '', statu: x.KARGO_STATU || '', text: x.KARGO_STATU_ACIKLAMA || '', from: x.CIKIS_SUBESI || '', to: x.TESLIM_SUBESI || '', eta: x.TAHMINI_TESLIM_TARIHI || '', at: x.KARGO_STATU_TARIHI || '' };
+}
 async function dhl(env, act, b) {
   if (!env.DHL_USER || !env.DHL_PASS) return { ok: false, error: 'DHL giriş bilgileri bekçiye eklenmemiş (DHL_USER / DHL_PASS)' };
   const tok = String(b.token || ''); const uid = tokUid(tok);
   const u = uid && (await fsAuth('users/' + uid, tok));
   if (u?.role !== 'admin') return { ok: false, error: 'Yönetici oturumu doğrulanamadı' };
+  if (act === 'sync') { // birkaç siparişin takip bilgisini birden sor (yönetim paneli açılınca)
+    const refs = (Array.isArray(b.refs) ? b.refs : []).map(String).filter((r) => /^[\w-]{3,30}$/.test(r)).slice(0, 25);
+    const out = {}; for (const r of refs) out[r] = await dhlInfo(env, r).catch((e) => ({ ok: false, error: e.message }));
+    return { ok: true, items: out };
+  }
   const id = String(b.id || ''); if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
   const o = await fsDoc('orders/' + id); if (!o) return { ok: false, error: 'sipariş yok' };
-  const ref = String(b.ref || ('ERTEL' + o.no)).slice(0, 30); // DHL'deki sipariş (referans) no
+  const ref = String(o.dhl?.ref || b.ref || ('ERTEL' + o.no)).replace(/[^\w-]/g, '').slice(0, 30); // DHL'deki sipariş (referans) no = müşteri barkodu
   const U = env.DHL_USER, P = env.DHL_PASS;
   if (act === 'create') {
-    const a = o.delivery?.addr || {}; const parcels = (Array.isArray(b.parcels) && b.parcels.length ? b.parcels : [{ kg: 1, desi: 1, adet: 1 }]).slice(0, 20);
-    const icerik = String(b.icerik || 'Elektronik malzeme').slice(0, 60);
-    const fmt = String(b.parcelFmt || '{kg}:{desi}:{adet}:{icerik}:1:;'); // deneme: biçim panelden değiştirilebilir
-    const list = parcels.map((x) => fmt.replace('{kg}', Math.max(1, Math.round(x.kg || 1))).replace('{desi}', Math.max(1, Math.round(x.desi || 1))).replace('{adet}', Math.max(1, Math.round(x.adet || 1))).replace('{icerik}', icerik.replace(/[:;]/g, ' '))).join('');
+    const a = o.delivery?.addr || {};
+    const kg = Math.max(1, Math.round(Number(b.kg) || 1)), desi = Math.max(1, Math.round(Number(b.desi) || 1));
+    const icerik = String(b.icerik || 'Elektronik malzeme').replace(/[:;]/g, ' ').slice(0, 60);
     const phone = String(a.phone || o.contact?.phone || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
     const fields = {
-      pChIrsaliyeNo: '', pPrKiymet: '', pChBarkod: ref, pChIcerik: icerik, // barkod = referans: kendi etiketimizdeki barkod okutulunca kayıt eşleşir pGonderiHizmetSekli: 'NORMAL', pTeslimSekli: 1, pFlAlSms: 1, pFlGnSms: 0,
-      pKargoParcaList: list, pAliciMusteriMngNo: '', pAliciMusteriBayiNo: '', pAliciMusteriAdi: String(a.name || o.contact?.name || '').slice(0, 60), pChSiparisNo: ref,
-      pLuOdemeSekli: String(b.pay || 'U'), pFlAdresFarkli: '1', pChIl: String(a.city || '').toLocaleUpperCase('tr-TR'), pChIlce: String(a.district || '').toLocaleUpperCase('tr-TR'),
-      pChAdres: String(a.address || '').slice(0, 250), pChSemt: '', pChMahalle: String(b.mahalle || ''), pChMeydanBulvar: '', pChCadde: '', pChSokak: '',
+      pChIrsaliyeNo: '', pPrKiymet: '', pChBarkod: ref, pChIcerik: icerik,
+      pKargoParcaList: `${kg}:${desi}:1:${icerik}:1:;`, pAliciMusteriMngNo: '', pAliciMusteriBayiNo: '', pAliciMusteriAdi: String(a.name || o.contact?.name || '').slice(0, 60), pChSiparisNo: ref,
+      pLuOdemeSekli: b.pay === 'P' ? 'P' : 'U', pFlAdresFarkli: '1', pChIl: String(a.city || '').toLocaleUpperCase('tr-TR'), pChIlce: String(a.district || '').toLocaleUpperCase('tr-TR'),
+      pChAdres: String(a.address || '').slice(0, 250), pChSemt: '', pChMahalle: '', pChMeydanBulvar: '', pChCadde: '', pChSokak: '',
       pChTelEv: '', pChTelCep: phone, pChTelIs: '', pChFax: '', pChEmail: String(o.contact?.email || ''), pChVergiDairesi: '', pChVergiNumarasi: '',
       pFlKapidaOdeme: 0, pMalBedeliOdemeSekli: '', pPlatformKisaAdi: '', pPlatformSatisKodu: '', pKullaniciAdi: U, pSifre: P,
     };
     const r = await soap(env, 'SiparisGirisiDetayliV3', kv(fields));
-    const res = tagv(r.raw, 'SiparisGirisiDetayliV3Result');
-    return { ok: !r.fault && /^1$|^0*1$/.test(res.trim()), ref, result: res, fault: r.fault, raw: r.raw, sent: { ...fields, pKullaniciAdi: '***', pSifre: '***' } };
+    const res = tagv(r.raw, 'SiparisGirisiDetayliV3Result').trim();
+    if (!r.fault && /^0*1$/.test(res)) return { ok: true, ref, kg, desi, icerik };
+    // aynı referans daha önce kaydedilmişse (ör. yarıda kalan deneme) DHL'de var mı bak
+    const ex = await dhlInfo(env, ref).catch(() => null);
+    if (ex?.found) return { ok: true, ref, kg, desi, icerik, existed: true };
+    return { ok: false, ref, error: r.fault || res || 'DHL kaydı kabul etmedi', raw: r.raw.slice(0, 1500) };
   }
-  if (act === 'label') {
-    const parcels = (Array.isArray(b.parcels) && b.parcels.length ? b.parcels : [{ kg: 1, desi: 1, adet: 1 }]).slice(0, 20);
-    const parca = parcels.map((x) => `<GonderiParca><Kg>${Math.max(1, Math.round(x.kg || 1))}</Kg><Desi>${Math.max(1, Math.round(x.desi || 1))}</Desi><Adet>${Math.max(1, Math.round(x.adet || 1))}</Adet><Icerik>${xesc(b.icerik || 'Elektronik malzeme')}</Icerik><ParcaBarkod></ParcaBarkod></GonderiParca>`).join('');
-    const inner = `<req>${kv({ WsUserName: U, WsPassword: P, ReferansNo: ref, IrsaliyeNo: '', OutBarkodType: String(b.type || 'PDF'), FlKapidaTahsilat: '0', UrunBedeli: '0', ChMesaj: '', EkString1: '', EkString2: '', EkString3: '', EkString4: '', HatadaReferansBarkoduBas: 0 })}<ParcaBilgi>${parca}</ParcaBilgi></req>`;
-    const r = await soap(env, 'MNGGonderiBarkod', inner);
-    return { ok: !r.fault, ref, fault: r.fault, raw: r.raw };
-  }
-  if (act === 'track') {
-    const r1 = await soap(env, 'KargoTakipByReferans', kv({ pKullanici: U, pSifre: P, pReferansId: ref }));
-    const r2 = await soap(env, 'KargoBilgileriByReferans', kv({ pMusteriNo: U, pSifre: P, pSiparisNo: ref, pGonderiNo: '', pFaturaSeri: '', pFaturaNo: '', pIrsaliyeNo: '', pEFaturaNo: '', pRaporType: '' }));
-    return { ok: true, ref, takip: r1.raw, bilgi: r2.raw, fault: r1.fault || r2.fault };
-  }
+  if (act === 'track') return dhlInfo(env, ref);
   if (act === 'cancel') {
     const d = new Date(o.dhl?.at || Date.now()); const tarih = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
     const r = await soap(env, 'MusteriSiparisIptal', kv({ pKullaniciAdi: U, pSifre: P, pMusteriSiparisNo: ref, pSiparisTarihi: tarih }));
-    return { ok: !r.fault, ref, fault: r.fault, raw: r.raw };
+    const res = tagv(r.raw, `MusteriSiparisIptalResult`).trim();
+    return { ok: !r.fault, ref, result: res, fault: r.fault };
   }
   return { ok: false, error: 'işlem' };
 }

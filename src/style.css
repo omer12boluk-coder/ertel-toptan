@@ -2992,5 +2992,6 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .dhl-h { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 16px; }
 .dhl-logo { font: 900 italic 15px/1 var(--f-display); letter-spacing: .02em; color: #d40511; background: #ffcc00; padding: 4px 7px; border-radius: 5px; }
 .dhl-row { display: flex; gap: 8px; align-items: flex-end; } .dhl-row .field { flex: 1; min-width: 0; margin: 0; }
-.dhl-adv summary, .dhl-res summary { cursor: pointer; font-size: 13px; color: var(--muted); font-weight: 600; }
-.dhl-res pre { max-height: 320px; overflow: auto; font: 12px/1.45 var(--f-mono); white-space: pre-wrap; word-break: break-all; background: var(--surface-2); border-radius: 10px; padding: 10px; margin: 6px 0 0; }
+.dhl-st { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 600; font-size: 14.5px; }
+.dhl-st .dot { width: 9px; height: 9px; border-radius: 50%; background: #e7a600; flex: none; } .dhl-st .dot.ok { background: var(--ok, #1f9d55); }
+.dhl-pay { align-self: flex-start; }

@@ -35,6 +35,7 @@ export function Orders() {
   const newN = orders.filter((o) => o.status === 'new').length;
   const cnt = useMemo(() => { const c = { open: 0 }; for (const o of orders) { c[o.status] = (c[o.status] || 0) + 1; if (ORDER_OPEN.includes(o.status)) c.open++; } return c; }, [orders]);
   const flow = useStatusFlow(S);
+  useDhlSync(orders); // şube okuttuysa takip no'yu çek
   // listeden hızlı durum değiştirme
   const quick = (e, o) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
     [...['new', 'confirmed', 'preparing', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'].map((k) => ({ label: (o.status === k ? '✓ ' : '') + ADMIN_ST[k] + (k === 'shipped' && o.status === 'shipped' ? ' · takip no düzenle' : ''), icon: { new: 'bell', confirmed: 'check', preparing: 'box', shipped: 'send', ready: 'store', done: 'check' }[k], onClick: () => flow.ask(o, k) })),
@@ -414,90 +415,153 @@ function NewMember({ onClose }) {
   );
 }
 
-// ---- DHL eCommerce kartı (DENEME AŞAMASI): gönderi kaydı, etiket, takip, iptal — bekçi üzerinden; DHL'in ham cevabı da görünür ----
+// ---- DHL eCommerce kartı: "A6 barkod bas" → sipariş DHL'e kaydedilir (online şube > Toplu Gönderi Listesi'ne düşer) ve
+// DHL'in "Siparişten Gönderi Hazırlama Barkodu" kâğıdının aynısı basılır. Büyük barkod = referans (ERTEL<no>); şube okutunca
+// gönderi oluşur, takip no (DHL takip görevi / bu kart açılınca) kendiliğinden siparişe yazılır → "Kargoda" + müşteriye bildirim.
+const dhlW = () => (window.WATCH_URL || '').replace(/\/$/, '');
+async function dhlCall(act, body) {
+  const token = await api().idToken?.();
+  const r = await fetch(dhlW() + '/dhl/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }) });
+  return r.json();
+}
+// takip no geldiyse siparişe yaz (durum Kargoda) ve müşteriye bildir
+async function dhlApply(o, x) {
+  if (!x?.found) return false;
+  const dhl = { ...o.dhl, statu: x.statu, text: x.text, checked: now() };
+  if (!x.code) { if (x.text !== o.dhl?.text) await api().updateOrder(o.id, { dhl }).catch(() => {}); return false; }
+  const t = now(); const cargo = { company: 'DHL', code: x.code, url: x.url || `https://kargotakip.dhlecommerce.com.tr/?takipNo=${x.code}` };
+  const upd = { cargo, dhl, updatedAt: t };
+  if (o.status !== 'shipped' && o.status !== 'done') { upd.status = 'shipped'; upd.history = [...(o.history || []), { s: 'shipped', at: t, by: 'dhl' }]; }
+  await api().updateOrder(o.id, upd);
+  if (api().mode === 'firebase') pushStatus(o.id);
+  return true;
+}
+// yönetim paneli açılınca: takip no bekleyen DHL siparişlerini topluca sor (cihazda 5 dakikada bir)
+export function useDhlSync(orders) {
+  useEffect(() => {
+    if (!dhlW() || api().mode !== 'firebase') return;
+    const wait = (orders || []).filter((o) => o.dhl?.ref && !o.dhl.cancelled && !o.cargo?.code && ORDER_OPEN.includes(o.status));
+    if (!wait.length) return;
+    try { if (Date.now() - Number(sessionStorage.getItem('dhl-sync') || 0) < 5 * 60e3) return; sessionStorage.setItem('dhl-sync', String(Date.now())); } catch {}
+    dhlCall('sync', { refs: wait.map((o) => o.dhl.ref) }).then(async (j) => {
+      let n = 0; for (const o of wait) if (await dhlApply(o, j?.items?.[o.dhl.ref]).catch(() => false)) n++;
+      if (n) toast(`DHL: ${n} siparişin takip numarası geldi, “Kargoda” yapıldı`);
+    }).catch(() => {});
+  }, [orders?.length]);
+}
+// Etiket: DHL'in kendi çıktısıyla aynı düzen, 4×6 inç (A6). Barkod içeriği = referans.
+export function dhlLabelHtml(o, S) {
+  const d = o.dhl || {}; const a = o.delivery?.addr || {};
+  const e = (x) => String(x ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const up = (x) => String(x || '').toLocaleUpperCase('tr-TR');
+  const from = S.footer?.company || S.shop?.name || S.brand?.appName || 'ERTEL GSM';
+  const date = new Date(d.at || Date.now()).toLocaleDateString('tr-TR');
+  const big = code128svg(d.ref, { h: 80, mod: 2, quiet: 8 }); const small = code128svg(d.ref, { h: 34, mod: 1, quiet: 4 });
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>DHL ${e(d.ref)}</title><style>
+  @page{size:4in 6in;margin:0} *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}
+  .lb{width:4in;height:6in;padding:.16in .14in;display:flex;flex-direction:column;gap:.06in;overflow:hidden}
+  .t1{text-align:center;font-weight:700;font-size:8.2px} .t2{text-align:center;font-size:6.6px;line-height:1.3;margin-top:-2px}
+  .hd{display:grid;grid-template-columns:.62in 1fr .9in;align-items:center;gap:4px}
+  .logo{background:#ffcc00;width:.5in;height:.34in;display:grid;place-items:center;color:#d40511;font:900 italic 12px/1 Arial;letter-spacing:-.02em}
+  .bc{display:flex;flex-direction:column;align-items:center} .bc svg{width:2.1in;height:.5in} .bc code{font:700 9px/1.2 'Courier New',monospace;letter-spacing:.06em}
+  .dt{text-align:right;font-size:9px;font-weight:700;display:flex;flex-direction:column;gap:10px} .dt b{font-size:10px}
+  .bx{border:1.2px solid #000} .bx h4{margin:0;padding:3px 6px;font-size:9.5px;border-bottom:1.2px solid #000;display:flex;justify-content:space-between}
+  table{width:100%;border-collapse:collapse;font-size:7.6px} td{padding:2px 6px;vertical-align:top} td.k{font-weight:700;white-space:nowrap;width:.95in}
+  .rcv td{font-size:9px} .rcv .nm{font-size:12px;font-weight:700} .rcv .cty{font-size:12px;font-weight:700}
+  .rb svg{width:1.25in;height:.2in;display:block} .note{font-size:6.6px;line-height:1.35;padding:4px 6px}
+  .pay{font-size:10px;font-weight:700;border:1.5px solid #000;padding:2px 6px;align-self:flex-start}
+  @media screen{body{background:#777;padding:14px} .lb{background:#fff;margin:0 auto}}
+  </style></head><body><section class="lb">
+  <div class="t1">Online Şube Müşteri Portalı Siparişten Gönderi Hazırlama Barkodu</div>
+  <div class="t2">Bu barkodu Şube.net → Fatura İşlemleri → Siparişten Gönderi Hazırlama bölümünde <b>"Müşteri Barkod"</b> alanına okutarak gönderi hazırlayınız</div>
+  <div class="hd"><div class="logo">DHL</div><div class="bc">${big}<code>${e(d.ref)}</code></div><div class="dt"><b>Gönderi Tarihi</b><b>${e(date)}</b></div></div>
+  <div class="bx"><h4>Gönderici Bilgileri</h4><table><tr><td class="k">Gönderen:</td><td>${e(up(from))}</td></tr></table></div>
+  <div class="bx"><h4>Gön. Notu: ${e(d.note || '')}</h4></div>
+  <div class="bx rcv"><table>
+    <tr><td class="k">Alıcı:</td><td class="nm">${e(a.name || o.contact?.name)}</td></tr>
+    <tr><td class="k">Telefon:</td><td>${e(a.phone || o.contact?.phone)}</td></tr>
+    <tr><td class="k">Adres:</td><td>${e(a.address)}</td></tr>
+    <tr><td class="k">İlçe / İl:</td><td class="cty">${e(up(a.district))} / ${e(up(a.city))}</td></tr></table></div>
+  <div class="bx"><h4><span>Gönderi Bilgileri</span><span>Referans No: ${e(d.ref)}</span></h4><table>
+    <tr><td class="k">Referans Barkod:</td><td class="rb">${small}</td><td class="k">Parça No:</td><td>1</td></tr>
+    <tr><td class="k">Toplam Adet:</td><td>1</td><td class="k">Toplam Kg/Desi:</td><td>${e(d.kg || 1)} / ${e(d.desi || 1)}</td></tr>
+    <tr><td class="k">Gönderi İçerik:</td><td>${e(d.icerik || '')}</td><td class="k">Sipariş:</td><td>#${e(o.no)}</td></tr></table></div>
+  <div class="pay">${d.pay === 'P' ? 'GÖNDERİCİ ÖDEMELİ' : 'ALICI ÖDEMELİ'}</div>
+  <div class="bx"><h4>Koşullar</h4><div class="note">1. Hazırlanan gönderiler teslim tutanağı ile DHL eCommerce yetkilisine teslim edilmelidir.<br>2. Kg/Desi ve adet bilgileri şubedeki ölçüm ve tartıma göre şube tarafından düzeltilebilir.<br>3. Mevzuat gereği taşınması yasak ürünler taşıyıcıya teslim edilemez.</div></div>
+  </section><script>setTimeout(()=>print(),450)</script></body></html>`;
+}
 function DhlCard({ o }) {
-  const [parcels, setParcels] = useState(() => o.dhl?.parcels || [{ kg: 1, desi: 1, adet: 1 }]);
+  const S = store.s.settings;
+  const [kg, setKg] = useState(o.dhl?.kg || 1);
+  const [desi, setDesi] = useState(o.dhl?.desi || 1);
   const [icerik, setIcerik] = useState(o.dhl?.icerik || 'Elektronik malzeme');
   const [pay, setPay] = useState(o.dhl?.pay || 'U');
-  const [fmtP, setFmtP] = useState('{kg}:{desi}:{adet}:{icerik}:1:;');
   const [busy, setBusy] = useState('');
-  const [res, setRes] = useState(null);
+  const [err, setErr] = useState('');
   const [confirm, setConfirm] = useState(null);
-  const W = (window.WATCH_URL || '').replace(/\/$/, '');
-  async function call(act, extra = {}) {
-    if (!W || api().mode !== 'firebase') { toast('DHL sadece canlı sitede çalışır', 'bad'); return null; }
-    setBusy(act); setRes(null);
+  const live = !!(o.dhl?.ref && !o.dhl.cancelled);
+  const demo = !dhlW() || api().mode !== 'firebase';
+  // kart açılınca takip no gelmiş mi bak (sipariş başına 3 dakikada bir)
+  useEffect(() => {
+    if (demo || !live || o.cargo?.code) return;
+    const k = 'dhl-chk-' + o.id;
+    try { if (Date.now() - Number(sessionStorage.getItem(k) || 0) < 3 * 60e3) return; sessionStorage.setItem(k, String(Date.now())); } catch {}
+    dhlCall('track', { id: o.id }).then((x) => dhlApply(o, x).then((ok) => ok && toast('DHL takip no geldi: ' + x.code))).catch(() => {});
+  }, [o.id, live]);
+  function printLabel(ord, w) {
+    w = w || window.open('', '_blank'); if (!w) { toast('Açılır pencere engellendi; tarayıcıda bu siteye izin verin', 'bad'); return; }
+    w.document.open(); w.document.write(dhlLabelHtml(ord, S)); w.document.close();
+  }
+  async function make() {
+    if (demo) { toast('DHL sadece canlı sitede çalışır', 'bad'); return; }
+    if (live) { printLabel(o); return; }
+    const a = o.delivery?.addr || {};
+    if (!a.city || !a.district || !a.address) { setErr('Teslimat adresinde il, ilçe ya da açık adres eksik.'); return; }
+    const w = window.open('', '_blank'); // açılır pencere engeline takılmasın diye hemen aç, sonra doldur
+    if (w) w.document.write('<p style="font:16px Arial;padding:24px">DHL’e kaydediliyor…</p>');
+    setBusy('make'); setErr('');
     try {
-      const token = await api().idToken?.();
-      const r = await fetch(W + '/dhl/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: o.id, token, ref: o.dhl?.ref, parcels, icerik, pay, parcelFmt: fmtP, ...extra }) });
-      const j = await r.json(); setRes({ act, ...j }); return j;
-    } catch (e) { setRes({ act, ok: false, error: e.message }); return null; } finally { setBusy(''); }
+      const j = await dhlCall('create', { id: o.id, kg, desi, icerik, pay });
+      if (!j?.ok) { w?.close(); setErr('DHL kabul etmedi: ' + (j?.error || 'bilinmeyen cevap')); return; }
+      const dhl = { ref: j.ref, at: now(), kg: j.kg, desi: j.desi, icerik: j.icerik, pay };
+      await api().updateOrder(o.id, { dhl });
+      printLabel({ ...o, dhl }, w);
+      toast('DHL’e kaydedildi: ' + j.ref);
+    } catch (e) { w?.close(); setErr('Bağlantı hatası: ' + e.message); } finally { setBusy(''); }
   }
-  async function create() {
-    const j = await call('create');
-    if (j?.ok) { await api().updateOrder(o.id, { dhl: { ref: j.ref, at: now(), pay, parcels, icerik } }); toast('DHL’e gönderildi: ' + j.ref); }
-    else if (j) toast('DHL kabul etmedi: ' + (j.fault || j.error || j.result || 'bilinmeyen cevap'), 'bad');
+  async function check() {
+    setBusy('check');
+    try { const x = await dhlCall('track', { id: o.id }); if (await dhlApply(o, x)) toast('Takip no geldi: ' + x.code); else toast(x?.found ? (x.text || 'Henüz şubede okutulmadı') : 'DHL’de kayıt bulunamadı', x?.found ? undefined : 'bad'); }
+    catch (e) { toast('Bakılamadı: ' + e.message, 'bad'); } finally { setBusy(''); }
   }
-  // Etiket bizim sistemden: A6 (4×6 inç), sipariş (referans) numarası Code128 barkod. Kurye okutunca DHL kaydı eşleşir, gönderi oluşur.
-  function label() {
-    const d = o.dhl || {}; const a = o.delivery?.addr || {}; const ps = d.parcels || parcels;
-    const total = ps.reduce((t, x) => t + (Number(x.adet) || 1), 0); const kg = ps.reduce((t, x) => t + (Number(x.kg) || 0) * (Number(x.adet) || 1), 0); const desi = ps.reduce((t, x) => t + (Number(x.desi) || 0) * (Number(x.adet) || 1), 0);
-    const e = (x) => String(x ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const S = store.s.settings; const from = S.footer?.company || S.shop?.name || S.brand?.appName || 'ERTEL GSM';
-    const fromAddr = [S.footer?.address || S.shop?.address, S.shop?.phone].filter(Boolean).join(' · ');
-    const bc = code128svg(d.ref, { h: 110, mod: 3 });
-    const one = (i) => `<section class="lb">
-      <div class="top"><b class="dhl">DHL</b><span>eCommerce</span><b class="pay">${d.pay === 'P' ? 'GÖNDERİCİ ÖDEMELİ' : 'ALICI ÖDEMELİ'}</b></div>
-      <div class="hint">Siparişten Gönderi Hazırlama Barkodu · Şube.net → Siparişten Gönderi Hazırlama → <b>Müşteri Barkod</b> alanına okutunuz.</div>
-      <div class="box"><small>GÖNDERİCİ</small><b>${e(from)}</b><span>${e(fromAddr)}</span></div>
-      <div class="box to"><small>ALICI</small><b class="nm">${e(a.name || o.contact?.name)}</b><span class="tel">${e(a.phone || o.contact?.phone)}</span>
-        <span class="ad">${e(a.address)}</span><b class="city">${e(String(a.district || '').toLocaleUpperCase('tr-TR'))} / ${e(String(a.city || '').toLocaleUpperCase('tr-TR'))}</b></div>
-      <div class="row"><span>Koli <b>${i}/${total}</b></span><span>${kg ? kg + ' kg' : ''}${desi ? ' · ' + desi + ' desi' : ''}</span><span>${e(d.icerik || icerik)}</span></div>
-      <div class="bc"><small>REFERANS BARKOD</small>${bc}<b>${e(d.ref)}</b></div>
-      <div class="ft"><span>Sipariş #${e(o.no)}</span><span>${new Date().toLocaleDateString('tr-TR')}</span></div></section>`;
-    const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Etiket ${e(d.ref)}</title><style>
-      @page{size:4in 6in;margin:0} *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}
-      .lb{width:4in;height:6in;padding:.14in;display:flex;flex-direction:column;gap:.07in;page-break-after:always;overflow:hidden}
-      .top{display:flex;align-items:center;gap:6px;border-bottom:3px solid #000;padding-bottom:5px} .dhl{background:#ffcc00;color:#d40511;font:900 italic 22px Arial;padding:2px 8px;border-radius:3px} .top span{font-weight:700;font-size:13px} .pay{margin-left:auto;font-size:15px;border:2px solid #000;padding:3px 6px}
-      .box{border:1.5px solid #000;border-radius:4px;padding:5px 7px;display:flex;flex-direction:column;gap:2px} .box small{font-size:9px;font-weight:700;letter-spacing:.08em} .box b{font-size:12px} .box span{font-size:11px}
-      .to{flex:1} .to .nm{font-size:19px} .to .tel{font-size:14px;font-weight:700} .to .ad{font-size:13px;line-height:1.25} .to .city{font-size:22px;margin-top:auto}
-      .row{display:flex;justify-content:space-between;gap:6px;font-size:12px;border-top:1px solid #000;border-bottom:1px solid #000;padding:4px 0}
-      .bc{display:flex;flex-direction:column;align-items:center;gap:2px} .bc svg{width:3.6in;height:.95in} .bc b{font-size:16px;letter-spacing:.12em}
-      .ft{display:flex;justify-content:space-between;font-size:10px} .hint{font-size:8.5px;line-height:1.25} .bc small{font-size:9px;font-weight:700;letter-spacing:.08em}
-      @media screen{body{background:#888;padding:12px} .lb{background:#fff;margin:0 auto 12px}}
-    </style></head><body>${Array.from({ length: total }, (_, i) => one(i + 1)).join('')}<script>setTimeout(()=>print(),400)</script></body></html>`;
-    const w = window.open('', '_blank'); if (!w) { toast('Açılır pencere engellendi; tarayıcıda izin verin', 'bad'); return; }
-    w.document.open(); w.document.write(html); w.document.close();
-  }
-  const cancel = () => setConfirm({ title: 'DHL kaydını iptal et', text: `DHL’deki ${o.dhl?.ref} gönderi kaydı iptal edilecek.`, okLabel: 'İptal et', tone: 'danger', onOk: async () => { const j = await call('cancel'); if (j?.ok) { await api().updateOrder(o.id, { dhl: { ...o.dhl, cancelled: now() } }); toast('DHL kaydı iptal edildi'); } } });
-  const setP = (i, k, v) => setParcels(parcels.map((x, j) => (j === i ? { ...x, [k]: Number(v) || 0 } : x)));
-  const live = o.dhl && !o.dhl.cancelled;
+  const cancel = () => setConfirm({ title: 'DHL kaydını iptal et', text: `DHL’deki ${o.dhl?.ref} kaydı silinecek (online şubede Toplu Gönderi Listesi’nden kalkar). Basılmış etiket geçersiz olur.`, okLabel: 'İptal et', tone: 'danger',
+    onOk: async () => { setBusy('cancel'); try { const j = await dhlCall('cancel', { id: o.id }); if (j?.ok) { await api().updateOrder(o.id, { dhl: { ...o.dhl, cancelled: now() } }); toast('DHL kaydı iptal edildi'); } else toast('İptal edilemedi: ' + (j?.fault || j?.error || ''), 'bad'); } finally { setBusy(''); } } });
+  const st = o.cargo?.code ? 'Şubede okutuldu · ' + (o.dhl?.text || 'yolda') : o.dhl?.text && o.dhl.statu !== '0' ? o.dhl.text : 'Şubede okutulmayı bekliyor';
   return (
     <div className="set-card dhl-card">
-      <h3 className="dhl-h"><span className="dhl-logo">DHL</span>eCommerce gönderisi <span className="tag">deneme</span></h3>
-      {live ? <p className="fine">DHL’e gönderildi · referans <b className="num">{o.dhl.ref}</b> · {when(o.dhl.at)}</p> : <>
-        {parcels.map((x, i) => (
-          <div key={i} className="dhl-row">
-            <Field label={`${i + 1}. koli · kg`}><input inputMode="numeric" value={x.kg} onChange={(e) => setP(i, 'kg', e.target.value)} /></Field>
-            <Field label="Desi"><input inputMode="numeric" value={x.desi} onChange={(e) => setP(i, 'desi', e.target.value)} /></Field>
-            <Field label="Adet"><input inputMode="numeric" value={x.adet} onChange={(e) => setP(i, 'adet', e.target.value)} /></Field>
-            {parcels.length > 1 && <button className="icon-btn" onClick={() => setParcels(parcels.filter((_, j) => j !== i))} aria-label="Koliyi kaldır"><Icon n="trash" s={16} /></button>}
-          </div>
-        ))}
-        <button className="btn sm ghost" onClick={() => setParcels([...parcels, { kg: 1, desi: 1, adet: 1 }])}><Icon n="plus" s={15} />Koli ekle</button>
+      <h3 className="dhl-h"><span className="dhl-logo">DHL</span>eCommerce</h3>
+      {live ? <>
+        <p className="dhl-st"><span className={'dot' + (o.cargo?.code ? ' ok' : '')} />{st}</p>
+        <p className="fine">Referans <b className="num">{o.dhl.ref}</b> · {when(o.dhl.at)} · {o.dhl.kg || 1} kg / {o.dhl.desi || 1} desi · {o.dhl.pay === 'P' ? 'gönderici ödemeli' : 'alıcı ödemeli'}
+          {o.cargo?.code && <> · takip no {o.cargo.url ? <a className="num" href={o.cargo.url} target="_blank" rel="noopener">{o.cargo.code}</a> : <b className="num">{o.cargo.code}</b>}</>}</p>
+      </> : <>
+        <p className="fine">Barkodu basınca sipariş DHL’e kaydedilir. Şube okutunca takip numarası siparişe kendiliğinden gelir, müşteriye bildirilir.</p>
+        <div className="dhl-row">
+          <Field label="Kg"><input inputMode="numeric" value={kg} onChange={(e) => setKg(e.target.value.replace(/\D/g, ''))} /></Field>
+          <Field label="Desi"><input inputMode="numeric" value={desi} onChange={(e) => setDesi(e.target.value.replace(/\D/g, ''))} /></Field>
+        </div>
         <Field label="İçerik"><input value={icerik} onChange={(e) => setIcerik(e.target.value)} /></Field>
-        <details className="dhl-adv"><summary>Gelişmiş (deneme)</summary>
-          <Field label="Ödeme şekli kodu" hint="Alıcı ödemeli için deneme: U · gönderici ödemeli: P"><input value={pay} onChange={(e) => setPay(e.target.value.trim())} /></Field>
-          <Field label="Koli listesi biçimi" hint="{kg} {desi} {adet} {icerik}"><input value={fmtP} onChange={(e) => setFmtP(e.target.value)} /></Field>
-        </details>
+        <div className="seg dhl-pay" role="radiogroup" aria-label="Kargo ücreti">
+          <button type="button" role="radio" aria-checked={pay === 'U'} className={pay === 'U' ? 'on' : ''} onClick={() => setPay('U')}>Alıcı ödemeli</button>
+          <button type="button" role="radio" aria-checked={pay === 'P'} className={pay === 'P' ? 'on' : ''} onClick={() => setPay('P')}>Gönderici ödemeli</button>
+        </div>
       </>}
+      {err && <p className="err">{err}</p>}
       <div className="row-btns">
-        {!live && <button className="btn primary" disabled={!!busy} onClick={create}><Icon n="send" s={16} />{busy === 'create' ? 'Gönderiliyor…' : 'DHL’e gönder'}</button>}
-        {live && <button className="btn primary" disabled={!!busy} onClick={label}><Icon n="ext" s={16} />Etiketi yazdır (A6)</button>}
-        {live && <button className="btn outline" disabled={!!busy} onClick={() => call('track')}>{busy === 'track' ? 'Bakılıyor…' : 'Takip no / durum'}</button>}
-        {live && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL’den iptal</button>}
+        <button className="btn primary" disabled={!!busy} onClick={make}><Icon n="box" s={16} />{busy === 'make' ? 'DHL’e kaydediliyor…' : live ? 'Barkodu tekrar bas (A6)' : 'A6 barkod bas'}</button>
+        {live && !o.cargo?.code && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : 'Takip no geldi mi?'}</button>}
+        {live && !o.cargo?.code && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL kaydını iptal et</button>}
       </div>
-      {res && <details className="dhl-res" open={!res.ok}><summary>{res.ok ? '✓ DHL cevabı' : '✗ DHL cevabı'} ({res.act})</summary><pre>{JSON.stringify(res, null, 2)}</pre></details>}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
