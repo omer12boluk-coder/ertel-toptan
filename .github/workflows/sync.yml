@@ -9,6 +9,10 @@ on:
         description: 'Deneme (kaydetme)'
         type: boolean
         default: false
+      remove_codes:
+        description: 'Sitede olmayan şu stok kodlarını katalogdan kaldır (virgülle)'
+        type: string
+        default: ''
       test_id:
         description: 'Ürün no: deneme modunda yeniymiş gibi dener; normalde eksiklerini (açıklama vb.) siteden tamamlar'
         type: string
@@ -31,4 +35,5 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
           TEST_ID: ${{ inputs.test_id }}
+          REMOVE_CODES: ${{ inputs.remove_codes }}
         run: node tools/sync-platin.mjs ${{ inputs.dry && '--dry' || '' }}

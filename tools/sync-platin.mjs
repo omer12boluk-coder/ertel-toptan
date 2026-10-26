@@ -147,6 +147,11 @@ if (pending.length) {
     } catch (e) { p.pf = (p.pf || 0) - 1; note('Ürün sayfası alınamadı', `${p.k}: ${e.message}`); }
   }
 }
+// Elle temizlik: REMOVE_CODES (virgüllü stok kodları) — sadece beslemede OLMAYAN (sitede yok) ürünler kataloğdan kaldırılır
+st.removed = 0;
+for (const code of String(process.env.REMOVE_CODES || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)) {
+  for (const p of cat.filter((x) => String(x.k || '').toLowerCase() === code && !feed.has(x.id) && !x.man)) { cat.splice(cat.indexOf(p), 1); st.removed++; note('Kaldırıldı', `${p.k} (${p.id})`); }
+}
 // ---- Beslemeden çıkan ürün: siteden SİLİNDİ mi, PASİFE mi alındı? (ürün sayfasına bir kez bakılır)
 // Silinmiş: sayfa 404/410 ya da başka sayfaya yönleniyor ya da sayfada bu ürün yok → katalogdan tamamen kaldırılır.
 // Pasif: sayfa duruyor → uygulamada gizli (soluk) kalır. Çalışma başına en çok 6 kontrol, 3 sn arayla; elle eklenen ürünlere bakılmaz.
@@ -174,7 +179,7 @@ for (const [i, p] of gone.entries()) {
   else if (p.sg === -1 || p.sg == null) { p.sg = -2; E('hidden', p); } // iki kez anlaşılamadı: genel "satıştan kalktı"
   else p.sg = -1;
 }
-const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length;
+const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length + st.removed;
 const has = (id) => (feed.has(id) ? 'var' : 'yok');
 const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length} · tamamlanan ${st.filled} · silinen ${st.deleted} · pasif ${st.passive}`;
 note(DRY ? 'Deneme (kaydedilmedi)' : 'Eşitleme', summary);
