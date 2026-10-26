@@ -8,6 +8,7 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { cleanText } from '../src/clean.js';
+import { stencilKeys } from '../src/kalip.js';
 
 const FEED = process.env.FEED_URL || 'https://www.ertelgsm.com/xml-cikti/gm';
 const DRY = process.argv.includes('--dry');
@@ -194,12 +195,12 @@ function chunks(arr, max = 650000) {
   if (cur.length) out.push(cur); return out;
 }
 const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man'];
-const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; return o; };
+const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; return o; };
 async function writeChunked(col, items, key) {
   const ps = chunks(items);
   const b = db.batch();
   ps.forEach((part, i) => b.set(db.doc(`${col}/c${i}`), { [key]: part }));
-  b.set(db.doc(`${col}/_meta`), { version: now, chunks: Math.max(1, ps.length), count: items.length });
+  b.set(db.doc(`${col}/_meta`), { version: now, chunks: Math.max(1, ps.length), count: items.length, ...(col === 'pubcatalog' ? { kc: 1 } : {}) });
   await b.commit();
 }
 if (!DRY) {

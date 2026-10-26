@@ -7,6 +7,7 @@ import { EMAIL_DOMAIN } from './config.js';
 import { now, ls } from './utils.js';
 import { chunkBySize } from './cats.js';
 import { idbGet, idbSet } from './idb.js';
+import { stencilKeys } from './kalip.js';
 // eski localStorage önbelleklerini temizle (artık IndexedDB'de)
 try { localStorage.removeItem('cat-cache'); localStorage.removeItem('pubcat-cache'); } catch {}
 
@@ -148,10 +149,10 @@ export class FirebaseBackend {
     const parts = chunkBySize(pub);
     const b = this.F.writeBatch(this.db);
     parts.forEach((part, i) => b.set(this.d('pubcatalog', 'c' + i), { items: part }));
-    b.set(this.d('pubcatalog', '_meta'), { version: now(), chunks: parts.length, count: pub.length });
+    b.set(this.d('pubcatalog', '_meta'), { version: now(), chunks: parts.length, count: pub.length, kc: 1 });
     await b.commit();
   }
-  async hasPublicCatalog() { return (await timeout(this.F.getDoc(this.d('pubcatalog', '_meta')))).exists(); }
+  async hasPublicCatalog() { const m = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta'))); return m.exists() && m.data().kc >= 1; } // kc: kalıp anahtarları eklenmiş sürüm
   async loadPublicCatalog() {
     const meta = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta')));
     if (!meta.exists()) return [];
@@ -409,6 +410,6 @@ function authMsg(e) {
 }
 
 const PUB_FIELDS = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man'];
-export function publicItem(p) { const o = {}; for (const k of PUB_FIELDS) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; return o; }
+export function publicItem(p) { const o = {}; for (const k of PUB_FIELDS) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; return o; }
 
 function clean(p) { const o = {}; for (const k in p) if (p[k] !== undefined && !k.startsWith('_')) o[k] = p[k]; return o; }

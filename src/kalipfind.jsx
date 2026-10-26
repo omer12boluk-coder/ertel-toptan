@@ -7,7 +7,7 @@ import { norm } from './utils.js';
 import { waLink } from './route.js';
 import { ProductSheet } from './catalog.jsx';
 import { PCard } from './shophome.jsx';
-import { chipCodes, phoneCodes, vendorOf } from './kalip.js';
+import { chipCodes, phoneCodes, vendorOf, isStencil, stencilKeys } from './kalip.js';
 
 let phonesP = null;
 const mk = (n, c, k) => { const s = norm(n); return { n, c, k, s, z: s.replace(/[\s-]+/g, '') }; };
@@ -50,14 +50,19 @@ export function useStencils() {
   const { catalog } = useStore();
   const [descs, setDescs] = useState(null);
   useEffect(() => { let live = true; const A = api(); (A.loadDescMap ? A.loadDescMap() : Promise.resolve({})).then((d) => live && setDescs(d || {})).catch(() => live && setDescs({})); return () => { live = false; }; }, []);
-  return useMemo(() => catalog.filter((p) => p.a !== 0 && !p.so && /kalip/.test(norm(p.n))).map((p) => {
+  return useMemo(() => catalog.filter((p) => p.a !== 0 && !p.so && (p.kc || isStencil(p))).map((p) => {
+    const keys = (p.kc || stencilKeys(p) || '').split(' ');
     const txt = p.n + ' ' + (descs?.[p.id] || '');
-    return { p, k: chipCodes(txt), t: norm(txt) };
+    const k = chipCodes(txt); keys.forEach((x) => x && x !== '-' && !x.startsWith('m:') && k.add(x));
+    return { p, k, t: norm(txt), m: keys.filter((x) => x.startsWith('m:')).map((x) => x.slice(2)) };
   }), [catalog, descs]);
 }
 export function matchStencils(stencils, sel) {
   const codes = new Set(sel.k);
-  const exact = stencils.filter((s) => [...s.k].some((c) => codes.has(c))).sort((a, b) => a.k.size - b.k.size);
+  // etiketteki model adı tam tutmalı: "redminote10" / "xiaomiredminote10" (sadece "note10" Samsung Note 10 ile karışır)
+  const w = sel.n ? norm(sel.n).split(/\s+/) : []; const zs = new Set([w.join(''), w.slice(1).join('')].filter((x) => x.length >= 6));
+  // işlemci kodu tutan ya da etiketinde bu telefon modeli yazan (ör. "Note10pro")
+  const exact = stencils.filter((s) => [...s.k].some((c) => codes.has(c)) || s.m.some((t) => zs.has(t))).sort((a, b) => a.k.size - b.k.size);
   const single = exact.filter((s) => s.k.size <= 2 && !/set/i.test(s.p.n));
   const sets = exact.filter((s) => !single.includes(s));
   const v = vendorOf(sel.c); const brand = sel.n ? norm(sel.n).split(' ')[0] : '';

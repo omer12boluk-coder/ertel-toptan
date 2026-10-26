@@ -39,7 +39,7 @@ export function chipCodes(text) {
   for (const m of t.matchAll(/\bE(8\d{3}|9\d{3})P?\b/g)) out.add('E' + m[1]);
   for (const m of t.matchAll(/\bHI\s?(3[0-9][0-9A-F][0-9A-F]|6[0-9]{3})\b/g)) out.add('HI' + m[1]);
   // Apple A serisi: "A15", "A18 Pro", "A8 - A19Pro" (aralık)
-  const appleOk = /IPHONE|APPLE/.test(t) || !/SAMSUNG|GALAXY/.test(t); // Samsung'un A15 gibi model adları iPhone işlemcisi sanılmasın
+  const appleOk = /IPHONE|APPLE/.test(t) || !/SAMSUNG|GALAXY|\bSAM\s?\d/.test(t); // Samsung'un A15 gibi model adları iPhone işlemcisi sanılmasın
   const apple = (n, pro) => appleOk && out.add('A' + n + (pro ? 'P' : ''));
   for (const m of t.matchAll(/\bA(\d{1,2})\s?(PRO)?\s?[-–]\s?A?(\d{1,2})\s?(PRO)?\b/g)) {
     const a = +m[1], b = +m[3]; if (a < 4 || b > 30 || b <= a) continue;
@@ -62,3 +62,17 @@ export function phoneCodes(chip) {
 }
 
 export const vendorOf = (chip) => { const s = String(chip || '').toLowerCase(); return /apple|\ba\d{1,2}\b/.test(s) ? 'apple' : /snapdragon|qualcomm/.test(s) ? 'qualcomm' : /mediatek|dimensity|helio/.test(s) ? 'mediatek' : /exynos/.test(s) ? 'exynos' : /kirin|hisilicon/.test(s) ? 'kirin' : /tensor/.test(s) ? 'tensor' : /unisoc|tiger|spreadtrum/.test(s) ? 'unisoc' : ''; };
+
+// --- kalıp ürünleri ---
+const nrm = (s) => String(s ?? '').replace(/[ıİşŞğĞüÜöÖçÇ]/g, (c) => ({ ı: 'i', İ: 'i', ş: 's', Ş: 's', ğ: 'g', Ğ: 'g', ü: 'u', Ü: 'u', ö: 'o', Ö: 'o', ç: 'c', Ç: 'c' }[c])).toLowerCase();
+export const tagList = (p) => (Array.isArray(p.t) ? p.t : String(p.t || '').split(',')).map((x) => String(x).trim()).filter(Boolean);
+// kalıp mı: adında / etiketinde "kalıp / kalıbı" geçen ya da Amaoe CPU / entegre ürünü (işlemcinin kendisi değil)
+export const isStencil = (p) => /kalip|kalib|stencil/.test(nrm(p.n + ' ' + tagList(p).join(' '))) || (/amaoe/.test(nrm(p.n + ' ' + (p.b || ''))) && /cpu|islemci|entegre/.test(nrm(p.n)));
+// herkese açık katalog için kalıbın işlemci kodları + etiketteki telefon modelleri ("m:note10pro"); etiketler gizli kalır
+export function stencilKeys(p) {
+  if (!isStencil(p)) return null;
+  const tags = tagList(p);
+  const k = [...chipCodes(p.n + ' ' + tags.join(' / '))];
+  const m = tags.map((x) => nrm(x).replace(/[\s-]+/g, '')).filter((x) => x.length >= 5 && /\d/.test(x) && /[a-z]/.test(x) && !k.includes(x.toUpperCase())).map((x) => 'm:' + x);
+  return [...k, ...m].join(' ') || '-';
+}

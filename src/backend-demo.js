@@ -1,4 +1,5 @@
 // DEMO veri katmanı: her şey bu tarayıcıda (localStorage) tutulur.
+import { stencilKeys } from './kalip.js';
 // Firebase ayarı girilmediğinde otomatik kullanılır. Gerçek kullanımda backend-firebase.js devreye girer.
 import { now, rid, ls } from './utils.js';
 
@@ -186,7 +187,7 @@ export class DemoBackend {
   async deleteOrders(ids) { for (const id of ids) delete this.ord()[id]; this.persist(); }
 
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
-  async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => p); }
+  async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => { const kc = stencilKeys({ ...p, t }); return kc ? { ...p, kc } : p; }); }
   async hasPublicCatalog() { return true; }
   async savePublicCatalog() {}
   async getRequest(id) { return this.db.requests[id] ? { ...this.db.requests[id] } : null; }
