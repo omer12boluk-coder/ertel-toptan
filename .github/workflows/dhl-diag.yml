@@ -1,0 +1,19 @@
+name: DHL teşhis (geçici)
+on:
+  workflow_dispatch:
+    inputs:
+      no: { description: 'Sipariş no', type: string, required: true }
+jobs:
+  d:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DHL_USER: ${{ secrets.DHL_USER }}
+          DHL_PASS: ${{ secrets.DHL_PASS }}
+          NO: ${{ inputs.no }}
+        run: node tools/dhl-diag.mjs
