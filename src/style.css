@@ -2840,7 +2840,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 
 /* ---- Yönetim > Siparişler (26.10.2026, 2. sürüm): sade beyaz satırlar, iş sırasına göre gruplar, nokta + yazı durum etiketi,
    satırda tek tıkla sıradaki adım. Renk sadece küçük noktada ve etikette; dikkat "Onayla" düğmesiyle çekilir. ---- */
-.otable, .o-cargo { --c-new: #f59e0b; --c-confirmed: #8b5cf6; --c-preparing: #ec4899; --c-shipped: #3b82f6; --c-ready: #14b8a6; --c-done: #22c55e; --c-cancelled: #9ca3af; }
+.otable, .o-cargo, .admin-order { --c-new: #f59e0b; --c-confirmed: #8b5cf6; --c-preparing: #ec4899; --c-shipped: #3b82f6; --c-ready: #14b8a6; --c-done: #22c55e; --c-cancelled: #9ca3af; }
 .st-new, .ost-new { --stc: var(--c-new); } .st-confirmed, .ost-confirmed { --stc: var(--c-confirmed); } .st-preparing, .ost-preparing { --stc: var(--c-preparing); } .st-shipped, .ost-shipped { --stc: var(--c-shipped); }
 .st-ready, .ost-ready { --stc: var(--c-ready); } .st-done, .ost-done { --stc: var(--c-done); } .st-cancelled, .ost-cancelled { --stc: var(--c-cancelled); }
 .sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--stc); flex: none; }
@@ -3048,3 +3048,59 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 
 .row-st { display: grid; grid-template-columns: minmax(0, 1fr) 110px 90px; gap: 12px; }
 @media (max-width: 520px) { .row-st { grid-template-columns: 1fr 1fr; } .row-st > :first-child { grid-column: 1 / -1; } }
+
+#print-root { display: none; } /* yazdırma kutusu (printHtml): ekranda hiç görünmez */
+
+/* ---- 27.10.2026 (2): sipariş sayfaları sadeleşme, kargo takibi görünümü ---- */
+.pt-mob { display: none; }
+@media (max-width: 640px) {
+  /* ürün tablosu telefonda kaydırmasız: resim + ad, altında "adet × fiyat", sağda tutar */
+  .paper-scroll { overflow: visible; }
+  .ptable { min-width: 0; font-size: 14px; }
+  .ptable thead, .ptable td.c, .ptable td.pt-qty, .ptable td.pt-unit { display: none; }
+  .ptable tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-bottom: 1px solid #e5e7eb; }
+  .ptable tbody tr:nth-child(even) { background: #f8f9fb; }
+  .ptable td { border-bottom: 0; padding: 10px 12px; }
+  .ptable tbody tr:nth-child(even) td { background: transparent; }
+  .ptable .pt-row { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; }
+  .ptable .pt-img { grid-row: span 2; }
+  .ptable .pt-img .thumb { width: 46px; height: 46px; }
+  .pt-name span { font-size: 14px; } .pt-name code { display: none; }
+  .pt-mob { display: block; grid-column: 2; font-size: 13px !important; font-weight: 500 !important; color: #4b5563; margin-top: 2px; }
+  .pt-mob b { color: #111827; }
+  .ptable .pt-sum { font: 700 16px/1 var(--f-display); color: #111827; padding-left: 0; }
+  .paper-h { padding: 14px 14px 8px; gap: 10px; } .paper-h img { width: 40px; height: 40px; }
+  .paper-shop b { font-size: 19px; } .paper-shop span { font-size: 12px; } .paper-no b { font-size: 19px; }
+  .paper-who { padding: 0 14px 10px; } .paper-f { padding: 12px 14px 14px; } .paper-tot b { font-size: 26px; }
+  .paper-tot { flex-direction: column; align-items: stretch; gap: 6px; } .paper-cnt { order: 2; font-size: 13px !important; } .paper-sum { align-items: flex-end; } .paper-tl { white-space: nowrap; }
+}
+/* ilerleme çubuğu + otomatik kargo şeridi aynı kartta */
+.track-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.track-wrap > .track { border: 0; border-radius: 0; background: none; }
+.ship-strip { --ar: 70%; position: relative; display: flex; align-items: center; gap: 12px; margin: 2px 12px 12px; padding: 11px 12px; border-radius: 12px;
+  background: color-mix(in oklab, var(--accent) 7%, var(--surface)); border: 1px solid color-mix(in oklab, var(--accent) 22%, var(--line)); }
+.ship-strip.done { --ar: 90%; }
+.ship-strip::before { content: ''; position: absolute; top: -7px; left: calc(var(--ar) - 7px); width: 12px; height: 12px; rotate: 45deg; background: inherit; border-left: inherit; border-top: inherit; }
+.ss-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.ss-t b { font-size: 15px; } .ss-t small { font-size: 12.5px; color: var(--muted); }
+.ss-t .link { font-size: inherit; }
+.ss-go { flex: none; }
+/* elle girilen takip no: sade, dolgun kart (eski parlak yeşil bant yerine) */
+.ship-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); box-shadow: 0 8px 22px -18px rgb(10 20 40 / .45); }
+.ship-card .sc-ic { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border-radius: 12px; background: color-mix(in oklab, var(--accent) 10%, var(--surface)); color: var(--accent); }
+.ship-card .sc-ic .cmark { width: 46px; height: 46px; border-radius: 12px; }
+.ship-card .ss-t b { font: 700 19px/1.15 var(--f-display); letter-spacing: .01em; } .ship-card .ss-t b .muted { font: 500 14px var(--f-body); }
+.ship-card .sc-act { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 560px) {
+  .ship-strip { flex-wrap: wrap; } .ss-go { width: 100%; justify-content: center; }
+  .ship-card { flex-wrap: wrap; } .ship-card .sc-act { width: 100%; justify-content: stretch; } .ship-card .sc-act > * { flex: 1; justify-content: center; }
+}
+/* yönetici sipariş detayı: telefonda durum tek seçici, ekran sade */
+.oa-st-m { display: none; }
+@media (max-width: 700px) {
+  .admin-order .oa-status { display: none; }
+  .admin-order .oa-st-m { display: flex; width: 100%; padding: 10px 14px 12px; border-radius: 12px; font-size: 15px; font-weight: 600; }
+  .admin-order .oa-st-m > span { display: flex; flex-direction: column; gap: 2px; } .admin-order .oa-st-m small { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .admin-order .oa-st-m::after { left: 14px; right: 14px; bottom: 5px; }
+  .admin-order { gap: 12px; }
+}

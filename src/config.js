@@ -339,12 +339,12 @@ export const CARRIERS = {
 };
 // siparişin kargo firması: yöneticinin atadığı (cargo.carrier) > müşterinin seçtiği (delivery.carrier) > elle yazılan firma adı
 export const carrierOf = (o) => {
-  const k = o?.cargo?.carrier || o?.delivery?.carrier;
-  if (CARRIERS[k]) return CARRIERS[k];
+  if (CARRIERS[o?.cargo?.carrier]) return CARRIERS[o.cargo.carrier];
   const c = String(o?.cargo?.company || '').toLocaleLowerCase('tr-TR');
   if (/dhl|mng/.test(c)) return CARRIERS.dhl;
   if (/yurt/.test(c)) return CARRIERS.yurtici;
-  return c ? { k: 'none', name: o.cargo.company, short: o.cargo.company } : null;
+  if (c) return { k: 'none', name: o.cargo.company, short: o.cargo.company }; // elle yazılan başka firma
+  return CARRIERS[o?.delivery?.carrier] || null;
 };
 export const ILLER = ['Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Aksaray', 'Amasya', 'Ankara', 'Antalya', 'Ardahan', 'Artvin', 'Aydın', 'Balıkesir', 'Bartın', 'Batman', 'Bayburt', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Düzce', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Iğdır', 'Isparta', 'İstanbul', 'İzmir', 'Kahramanmaraş', 'Karabük', 'Karaman', 'Kars', 'Kastamonu', 'Kayseri', 'Kilis', 'Kırıkkale', 'Kırklareli', 'Kırşehir', 'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Mardin', 'Mersin', 'Muğla', 'Muş', 'Nevşehir', 'Niğde', 'Ordu', 'Osmaniye', 'Rize', 'Sakarya', 'Samsun', 'Şanlıurfa', 'Siirt', 'Sinop', 'Sivas', 'Şırnak', 'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Uşak', 'Van', 'Yalova', 'Yozgat', 'Zonguldak'];
 export const EMAIL_DOMAIN = 'toptan.ertelgsm.app';

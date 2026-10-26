@@ -71,6 +71,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
                     <div className="pt-row">
                       <button className="pt-img" onClick={() => big.length && setZoom({ urls: big, title: it.n })} aria-label="Resmi büyüt" disabled={!big.length}><Thumb p={p} size="sm" /></button>
                       {byId.get(it.id) ? <button type="button" className="pt-t" onClick={() => setSheet(byId.get(it.id))} title="Ürünü aç"><span>{it.n}</span><code>{it.k}</code></button> : <span className="pt-t"><span>{it.n}</span><code>{it.k}</code></span>}
+                      <span className="pt-mob num"><b>{it.qty} adet</b> × {it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}</span>
                     </div>
                   </td>
                   <td className="r num pt-qty">{it.qty}</td>

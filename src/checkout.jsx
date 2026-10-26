@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders } from './store.js';
 import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
-import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS } from './config.js';
+import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf } from './config.js';
 import TR from './tr-ilce.json';
 import { SwipeLine } from './cart.jsx';
 import { links, waLink } from './route.js';
@@ -373,15 +373,49 @@ function initForm(m, methods, guest) {
   };
 }
 
+// ---- Kargo takibi görünümü (müşteri sipariş sayfası) ----
+// otomatik: kargo firmasının sisteminden geldi (DHL kaydı / takip görevi) → ilerleme çubuğunun içinde şerit; elle girilen → ayrı kart
+const autoCargo = (o) => !!(o?.cargo?.code && o.dhl?.ref && !o.dhl.cancelled && ['shipped', 'done'].includes(o.status));
+// önizleme: sipariş linkine ?onizleme=dhl (otomatik) ya da ?onizleme=elle eklenince örnek kargo bilgisiyle gösterilir (kayda dokunmaz)
+function previewCargo(o) {
+  if (!o) return o; const k = new URLSearchParams(location.search).get('onizleme'); if (k !== 'dhl' && k !== 'elle') return o;
+  const t = Date.now(); const h = (o.history || []).filter((x) => !['shipped', 'done'].includes(x.s));
+  const base = { ...o, status: 'shipped', history: [...h, { s: 'shipped', at: t }] };
+  return k === 'dhl'
+    ? { ...base, cargo: { carrier: 'dhl', company: 'DHL', code: '386338312613', url: 'https://kargotakip.dhlecommerce.com.tr/?takipNo=386338312613' }, dhl: { ref: 'ERTEL' + o.no, text: 'Transfer Aşamasında', statu: '2' } }
+    : { ...base, dhl: null, cargo: { company: 'Aras Kargo', code: '1234567890' } };
+}
+function ShipStrip({ o }) {
+  const c = carrierOf(o); const done = o.status === 'done';
+  return (
+    <div className={'ship-strip' + (done ? ' done' : '')}>
+      <CarrierMark k={c?.k} size="sm" />
+      <span className="ss-t"><b>{done ? 'Teslim edildi' : o.dhl?.text && o.dhl.statu !== '0' ? o.dhl.text : 'Kargoya verildi'}</b><small>{c?.name || o.cargo.company} · takip no <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')}>Kopyala</button></small></span>
+      {o.cargo.url && <a className="btn sm primary ss-go" href={o.cargo.url} target="_blank" rel="noopener"><Icon n="box" s={15} />Kargom nerede?</a>}
+    </div>
+  );
+}
+function ShipCard({ o }) {
+  const c = carrierOf(o);
+  return (
+    <div className="ship-card">
+      <span className="sc-ic">{c && c.k !== 'none' ? <CarrierMark k={c.k} size="sm" /> : <Icon n="box" s={20} />}</span>
+      <span className="ss-t"><small>Kargo takip numarası</small><b><span className="num">{o.cargo.code}</span>{o.cargo.company && <span className="muted"> · {o.cargo.company}</span>}</b></span>
+      <span className="sc-act"><button className="btn sm ghost" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')}><Icon n="copy" s={14} />Kopyala</button>{o.cargo.url && <a className="btn sm outline" href={o.cargo.url} target="_blank" rel="noopener">Kargom nerede?</a>}</span>
+    </div>
+  );
+}
+
 // =============================================================================================
 // Sipariş sayfası: az önce verildiyse teşekkür kutusu; her zaman durum, ödeme, teslimat ve ürünler
 export function OrderPage({ id }) {
   const { settings: S, orderJust, member } = useStore();
-  const [o, setO] = useState(undefined);
+  const [o0, setO] = useState(undefined);
   const [slow, setSlow] = useState(false);
   const [confirm, setConfirm] = useState(null);
   useEffect(() => { setO(undefined); const t = setTimeout(() => setSlow(true), 12000); const un = api().watchOrder(id, setO); return () => { clearTimeout(t); un && un(); }; }, [id]);
-  useEffect(() => { if (o) orderSeen(o); }, [o?.id, o?.updatedAt]); // açılan sipariş artık "yeni güncelleme" sayılmaz
+  useEffect(() => { if (o0) orderSeen(o0); }, [o0?.id, o0?.updatedAt]); // açılan sipariş artık "yeni güncelleme" sayılmaz
+  const o = previewCargo(o0);
   if (o === null) return <div className="page narrow"><Empty icon="search" title="Sipariş bulunamadı"><p>Link eksik kopyalanmış olabilir.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty></div>;
   if (!o) return <div className="page narrow list-wait"><div className="spinner" aria-label="Yükleniyor" />{slow && <><p>Bağlantı yavaş görünüyor.</p><button className="btn primary" onClick={() => location.reload()}><Icon n="refresh" s={16} />Tekrar dene</button></>}</div>;
   const link = links.order(o.id);
@@ -415,15 +449,22 @@ export function OrderPage({ id }) {
       )}
 
       {o.status === 'cancelled' ? <div className="banner bad"><Icon n="x" /><div><b>Bu sipariş iptal edildi.</b></div></div> : (
-        <ol className="track" aria-label="Sipariş durumu">
-          {steps.map((k, i) => (
-            <li key={k} className={i < cur ? 'done' : i === cur ? 'on' : ''}><span className="track-dot">{i < cur ? <Icon n="check" s={14} /> : i + 1}</span><span>{ORDER_STATUS[k].cust}</span></li>
-          ))}
-        </ol>
+        <div className="track-wrap">
+          <ol className="track" aria-label="Sipariş durumu">
+            {steps.map((k, i) => (
+              <li key={k} className={i < cur ? 'done' : i === cur ? 'on' : ''}><span className="track-dot">{i < cur ? <Icon n="check" s={14} /> : i + 1}</span><span>{ORDER_STATUS[k].cust}</span></li>
+            ))}
+          </ol>
+          {/* kargo firmasından otomatik gelen takip: ilerleme çubuğunda "Kargoya verildi"nin altında */}
+          {autoCargo(o) && <ShipStrip o={o} />}
+        </div>
       )}
-      {o.status === 'shipped' && o.cargo?.code && <div className="banner ok"><Icon n="box" /><div><b>Kargo takip:</b> {o.cargo.company} · <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => copyText(o.cargo.code, 'Takip no kopyalandı')}>Kopyala</button>{o.cargo.url && <> · <a className="link" href={o.cargo.url} target="_blank" rel="noopener">Kargom nerede?</a></>}</div></div>}
+      {/* elle girilen takip no */}
+      {!autoCargo(o) && ['shipped', 'done'].includes(o.status) && o.cargo?.code && <ShipCard o={o} />}
 
       {o.status !== 'cancelled' && o.status !== 'done' && <PushCard ids={[o.id]} hideOn />}
+
+      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 
       <div className="o-info">
         <div className="o-card"><h3>İletişim</h3><p><b>{o.contact?.name}</b></p><p className="num">{o.contact?.phone}</p>{o.contact?.email && <p>{o.contact.email}</p>}</div>
@@ -432,7 +473,6 @@ export function OrderPage({ id }) {
       </div>
       {o.note && <p className="o-note"><b>Notunuz:</b> {o.note}</p>}
 
-      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
       {o.status === 'new' && (mine
         ? <button className="btn ghost danger gclear" onClick={cancel}><Icon n="x" s={15} />Siparişi iptal et</button>
         : !o.uid && <p className="fine center">Siparişte değişiklik ya da iptal için {wa ? <a className="link" href={wa} target="_blank" rel="noopener">WhatsApp’tan yazın</a> : 'bizi arayın'}.</p>)}
@@ -836,7 +876,7 @@ function MyOrders({ limit }) {
           {show.map((it, i) => <span key={i} className="mo-th" title={it.n}><Thumb p={it} size="sm" />{it.qty > 1 && <i className="num">×{it.qty}</i>}</span>)}
           {more > 0 && <span className="mo-more num">+{more}</span>}
         </span>
-        <span className="mo-foot muted">{its.length === 1 ? its[0].n : `${show[0]?.n || ''}${its.length > 1 ? ` ve ${its.length - 1} ürün daha` : ''}`} · {qty} adet · {DELIVERY[o.delivery?.method] || ''}<Icon n="back" s={15} className="flip" /></span>
+        <span className="mo-foot muted">{its.length === 1 ? its[0].n : `${show[0]?.n || ''}${its.length > 1 ? ` ve ${its.length - 1} ürün daha` : ''}`} · {qty} adet · {o.delivery?.method === 'cargo' && carrierOf(o) ? carrierOf(o).name : DELIVERY[o.delivery?.method] || ''}{o.cargo?.code ? ' · takip no ' + o.cargo.code : ''}<Icon n="back" s={15} className="flip" /></span>
       </button>
     );
   };

@@ -243,6 +243,10 @@ function OrderDetail({ id }) {
         <StatusPill status={o.status} map={ORDER_STATUS} />
       </div>
 
+      <button type="button" className={'ost oa-st-m ost-' + o.status} onClick={(e) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
+        [...['new', 'confirmed', 'preparing', pickup ? 'ready' : 'shipped', 'done'].map((k) => ({ label: (o.status === k ? '✓ ' : '') + ADMIN_ST[k], onClick: () => flow.ask(o, k) })), '-', { label: 'İptal et', icon: 'x', danger: true, onClick: () => flow.ask(o, 'cancelled') }], '#' + o.no + ' · durum')}>
+        <span><small>Durum</small>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={15} />
+      </button>
       <div className="oa-status" role="radiogroup" aria-label="Sipariş durumu">
         <span className="oa-status-l">Durum:</span>
         {['new', 'confirmed', 'preparing', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
@@ -267,8 +271,10 @@ function OrderDetail({ id }) {
         })}
       </ol>
       {o.status === 'shipped' && (o.cargo?.code
-        ? <div className="banner ok"><Icon n="box" /><div><b>Kargo:</b> {o.cargo.company} · <span className="num">{o.cargo.code}</span> <button className="link" onClick={() => flow.openShip(o)}>Değiştir</button></div></div>
+        ? <div className="ship-card adm"><span className="sc-ic">{carrierOf(o)?.k && carrierOf(o).k !== 'none' ? <CarrierMark k={carrierOf(o).k} size="sm" /> : <Icon n="box" s={20} />}</span><span className="ss-t"><small>Kargo takip numarası{o.dhl?.ref && !o.dhl.cancelled ? ' · otomatik' : ''}</small><b><span className="num">{o.cargo.code}</span><span className="muted"> · {o.cargo.company}</span></b></span><span className="sc-act">{o.cargo.url && <a className="btn sm ghost" href={o.cargo.url} target="_blank" rel="noopener">Takip sayfası</a>}<button className="btn sm outline" onClick={() => flow.openShip(o)}>Değiştir</button></span></div>
         : <div className="banner warn"><Icon n="box" /><div><b>Takip numarası girilmedi.</b> {o.cargo?.company || ''} <button className="btn sm primary" onClick={() => flow.openShip(o)}>Takip no ekle</button></div></div>)}
+
+      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 
       <div className="o-info">
         <div className="o-card">
@@ -289,7 +295,6 @@ function OrderDetail({ id }) {
       {o.note && <p className="o-note"><b>Müşterinin notu:</b> {o.note}</p>}
       {o.delivery?.method !== 'pickup' && o.status !== 'cancelled' && (['preparing', 'shipped', 'done'].includes(o.status) || (o.dhl?.ref && !o.dhl.cancelled)) && <CargoCard o={o} flow={flow} />}
 
-      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 
       <div className="set-card">
         <Field label="İç not" hint="Sadece siz görürsünüz"><textarea id="oa-note" rows="2" value={note ?? ''} onChange={(e) => setNote(e.target.value)} placeholder="ör. Kargo ücreti 150 TL, ödeme bekleniyor" /></Field>
@@ -438,6 +443,22 @@ export function useDhlSync(orders) {
   }, [orders?.length]);
 }
 // Etiket: DHL'in kendi çıktısıyla aynı düzen, 4×6 inç (A6). Barkod içeriği = referans.
+// Yeni pencere açmadan yazdır: etiket sayfanın içinde gizli bir kutuya (shadow DOM; sitenin stilleri karışmaz) konur,
+// yazdırırken sadece o kutu basılır. iPhone'da yazdırma bitince doğrudan siteye dönülür (eskiden boş sekmede kalınıyordu).
+export function printHtml(html) {
+  const css = (html.match(/<style>([\s\S]*?)<\/style>/) || [, ''])[1].replace(/@page\{[^}]*\}/, '').replace(/@media screen\{[\s\S]*?\}\}/, '').replace(/\bbody\{/, ':host{');
+  const body = (html.match(/<body>([\s\S]*?)<\/body>/) || [, ''])[1].replace(/<script>[\s\S]*?<\/script>/g, '');
+  const page = (html.match(/@page\{[^}]*\}/) || ['@page{size:4in 6in;margin:0}'])[0];
+  let root = document.getElementById('print-root');
+  if (!root) { root = document.createElement('div'); root.id = 'print-root'; root.attachShadow({ mode: 'open' }); document.body.appendChild(root); }
+  root.shadowRoot.innerHTML = `<style>${css}</style>${body}`;
+  let ps = document.getElementById('print-page'); if (!ps) { ps = document.createElement('style'); ps.id = 'print-page'; document.head.appendChild(ps); }
+  ps.textContent = `@media print{${page} html.printing body > *:not(#print-root){display:none !important} html.printing #print-root{display:block !important} html.printing, html.printing body{background:#fff !important;padding:0 !important;margin:0 !important;min-height:0 !important;height:auto !important;overflow:visible !important}}`;
+  document.documentElement.classList.add('printing');
+  const done = () => { document.documentElement.classList.remove('printing'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  setTimeout(() => window.print(), 60);
+}
 export function dhlLabelHtml(o, S) {
   const d = o.dhl || {}; const a = o.delivery?.addr || {};
   const e = (x) => String(x ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -527,7 +548,7 @@ function CargoCard({ o, flow }) {
       toast('DHL’e aktarıldı: ' + j.ref);
     } catch (e) { setErr('Bağlantı hatası: ' + e.message); } finally { setBusy(''); }
   }
-  function printLabel() { const w = window.open('', '_blank'); if (!w) { toast('Açılır pencere engellendi; tarayıcıda bu siteye izin verin', 'bad'); return; } w.document.open(); w.document.write(dhlLabelHtml(o, S)); w.document.close(); }
+  const printLabel = () => printHtml(dhlLabelHtml(o, S));
   async function check() {
     setBusy('check');
     try { const x = await dhlCall('track', { id: o.id }); const r = await dhlApply(o, x); if (r) toast(r === 'done' ? 'Teslim edildi' : 'Takip no geldi: ' + x.code); else toast(x?.found ? (x.text || 'Henüz şubede okutulmadı') : 'DHL’de kayıt bulunamadı', x?.found ? undefined : 'bad'); }
