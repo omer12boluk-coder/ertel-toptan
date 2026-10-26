@@ -2840,7 +2840,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 
 /* ---- Yönetim > Siparişler (26.10.2026, 2. sürüm): sade beyaz satırlar, iş sırasına göre gruplar, nokta + yazı durum etiketi,
    satırda tek tıkla sıradaki adım. Renk sadece küçük noktada ve etikette; dikkat "Onayla" düğmesiyle çekilir. ---- */
-.otable, .o-cargo, .admin-order { --c-new: #8a919e; --c-confirmed: #c9772b; --c-preparing: #3f9a6b; --c-shipped: #3567c4; --c-ready: #7a62b8; --c-done: #1f6b47; --c-cancelled: #a3a7ae; }
+.otable, .o-cargo, .admin-order { --c-new: #8a919e; --c-confirmed: #b08d2e; --c-preparing: #3f9a6b; --c-shipped: #3567c4; --c-ready: #7a62b8; --c-done: #1f6b47; --c-cancelled: #a3a7ae; }
 .st-new, .ost-new { --stc: var(--c-new); } .st-confirmed, .ost-confirmed { --stc: var(--c-confirmed); } .st-preparing, .ost-preparing { --stc: var(--c-preparing); } .st-shipped, .ost-shipped { --stc: var(--c-shipped); }
 .st-ready, .ost-ready { --stc: var(--c-ready); } .st-done, .ost-done { --stc: var(--c-done); } .st-cancelled, .ost-cancelled { --stc: var(--c-cancelled); }
 .sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--stc); flex: none; }

@@ -15,7 +15,7 @@ import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 const FILTERS = [['open', 'Açık'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
 // yönetici listesindeki açıklama (müşteri metninden farklı)
 // durum renkleri (liste, menü, seçici ortak; style.css --c-* ile aynı)
-export const ST_COLOR = { new: '#8a919e', confirmed: '#c9772b', preparing: '#3f9a6b', shipped: '#3567c4', ready: '#7a62b8', done: '#1f6b47', cancelled: '#a3a7ae' };
+export const ST_COLOR = { new: '#8a919e', confirmed: '#b08d2e', preparing: '#3f9a6b', shipped: '#3567c4', ready: '#7a62b8', done: '#1f6b47', cancelled: '#a3a7ae' };
 export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı', preparing: 'Hazırlanıyor', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
 const ago = (ts) => { const h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + ' dk' : h < 48 ? Math.round(h) + ' sa' : Math.round(h / 24) + ' gün'; };
 const isPhone = () => matchMedia('(max-width: 700px)').matches;
