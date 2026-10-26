@@ -702,7 +702,7 @@ function Rail({ sec, open, onProduct, onTitle, edit }) {
     </section>
   );
 }
-function PCard({ p, i, isNew, onOpen }) {
+export function PCard({ p, i, isNew, onOpen }) {
   const { settings: S, user, userPrices, cart } = useStore();
   const E = useContext(DesignCtx);
   const qty = cart[p.id] || 0;
