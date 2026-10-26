@@ -14,6 +14,7 @@ import { imageList, CardPreview } from './catalog.jsx';
 import { rateLabel } from './listsheet.jsx';
 import { syncNow } from './watch.js';
 import { Members } from './orders.jsx';
+import { KalipSettings } from './kalipfind.jsx';
 
 const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')));
 
@@ -448,6 +449,7 @@ const SECTIONS = [
   ['kademe', 'Kademeler', 'Bayi indirim kademeleri', 'users'],
   ['kart', 'Ürün kartları', 'Fiyat gösterimi, sepete ekle düğmesi, resimler · önizlemeli', 'grid'],
   ['katalog', 'Katalog', 'Stok gösterimi, sayfa, arama', 'grid'],
+  ['kalip', 'Kalıp bulucu', 'Telefon modelleri ve işlemcileri · uyan kalıplar', 'chip'],
   ['talep', 'Talepler', 'Bayi talepleri ve mesajlar', 'chat'],
   ['dukkan', 'Dükkan', 'Adres, telefon, WhatsApp, erişim', 'phone'],
   ['kategori', 'Kategoriler', 'Kategori adları ve sırası', 'list'],
@@ -455,7 +457,7 @@ const SECTIONS = [
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
 ];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'] };
+const SEC_KEYS = { gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -641,6 +643,7 @@ export function Settings() {
         </>}
 
         {sec === 'altbilgi' && <FooterSettings d={d} set={set} />}
+        {sec === 'kalip' && <KalipSettings d={d} set={set} />}
 
         {sec === 'magaza' && <>
           <p className="fine">Herkese açık mağaza: <b>{location.host}/magaza</b>. Müşteri ürünleri sepete ekler, <b>Sepeti onayla</b> ile teslimat, fatura ve ödeme bilgilerini girip siparişi tamamlar; sipariş <b>Siparişler</b>’e düşer. İsterse üye olur (bilgileri bir dahakine hazır gelir), isterse misafir devam eder. Ayrıca sepeti sadece link olarak WhatsApp’tan da gönderebilir (o liste hiçbir yere kaydedilmez).</p>

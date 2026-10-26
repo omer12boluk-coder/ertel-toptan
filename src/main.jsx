@@ -423,7 +423,7 @@ function ShellFull() {
   const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
-  const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => k !== 'anasayfa' || S0.shopHome?.enabled !== false) : NAV_USER;
+  const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
   const prev = useRef(unread);

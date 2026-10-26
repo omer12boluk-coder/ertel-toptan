@@ -2,7 +2,7 @@
 // Telefon → işlemci verisi /kalip/phones.json (GSMArena'dan toplanır, tools/kalip-build.mjs).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api } from './store.js';
-import { Icon } from './ui.jsx';
+import { Icon, Toggle } from './ui.jsx';
 import { norm } from './utils.js';
 import { waLink } from './route.js';
 import { ProductSheet } from './catalog.jsx';
@@ -10,9 +10,17 @@ import { PCard } from './shophome.jsx';
 import { chipCodes, phoneCodes, vendorOf } from './kalip.js';
 
 let phonesP = null;
-function loadPhones() {
+const mk = (n, c, k) => { const s = norm(n); return { n, c, k, s, z: s.replace(/[\s-]+/g, '') }; };
+// GSMArena listesi + yöneticinin eklediği / düzelttiği modeller (settings.kalip.phones {ad: işlemci}; boş işlemci = gizle)
+export function mergePhones(base, over) {
+  if (!over || !Object.keys(over).length) return base;
+  const m = new Map(base.map((p) => [p.n.toLowerCase(), p]));
+  for (const [n, c] of Object.entries(over)) { const key = n.toLowerCase(); if (!c) { m.delete(key); continue; } if (c === '?') continue; /* '?' = işlemci henüz seçilmedi */ m.set(key, { ...mk(n, c, [...phoneCodes(c)]), own: 1 }); }
+  return [...m.values()];
+}
+export function loadPhones() {
   phonesP = phonesP || fetch('/kalip/phones.json').then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
-    .then((d) => d.p.map(([n, c, k]) => { const s = norm(n); return { n, c, k: k ? k.split(' ') : [], s, z: s.replace(/[\s-]+/g, '') }; }))
+    .then((d) => d.p.map(([n, c, k]) => mk(n, c, k ? k.split(' ') : [])))
     .catch((e) => { phonesP = null; throw e; });
   return phonesP;
 }
@@ -21,7 +29,7 @@ const VENDOR = { qualcomm: 'Qualcomm', mediatek: 'MediaTek', exynos: 'Samsung Ex
 const VENDOR_RX = { qualcomm: /qualcomm|snapdragon|\bmsm|\bsdm|\bsm\d/, mediatek: /mediatek|\bmtk\b|\bmt\d/, exynos: /exynos|samsung islemci|\bsam\b/, kirin: /kirin|hisilicon|huawei/, apple: /iphone|apple|\ba\d{1,2}\b/ };
 
 // "redmi note 10 pro 5g" gibi aramayı telefon adlarında arar; boşluksuz yazılanı da bulur (note10)
-function searchPhones(list, q) {
+export function searchPhones(list, q, max = 8) {
   const nq = norm(q).trim(); if (nq.length < 2) return [];
   const toks = nq.split(/\s+/).filter(Boolean); const zq = nq.replace(/[\s-]+/g, '');
   const res = [];
@@ -33,29 +41,47 @@ function searchPhones(list, q) {
     if (new RegExp('(^| )' + toks[toks.length - 1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$').test(p.s)) sc += 6;
     res.push([sc, p]);
   }
-  return res.sort((a, b) => b[0] - a[0]).slice(0, 8).map((x) => x[1]);
+  return res.sort((a, b) => b[0] - a[0]).slice(0, max).map((x) => x[1]);
 }
-const short = (c) => String(c || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/^(Qualcomm|Mediatek|MediaTek|Apple|Samsung|HiSilicon|Google|Unisoc)\s+/i, '').replace(/\b(SM|SDM|MSM|MT)\d{3,4}[A-Z0-9-]*\s*/g, '').trim();
+export const short = (c) => String(c || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/^(Qualcomm|Mediatek|MediaTek|Apple|Samsung|HiSilicon|Google|Unisoc)\s+/i, '').replace(/\b(SM|SDM|MSM|MT)\d{3,4}[A-Z0-9-]*\s*/g, '').trim();
+
+// kalıp ürünleri ve içerdikleri işlemci kodları
+export function useStencils() {
+  const { catalog } = useStore();
+  const [descs, setDescs] = useState(null);
+  useEffect(() => { let live = true; const A = api(); (A.loadDescMap ? A.loadDescMap() : Promise.resolve({})).then((d) => live && setDescs(d || {})).catch(() => live && setDescs({})); return () => { live = false; }; }, []);
+  return useMemo(() => catalog.filter((p) => p.a !== 0 && !p.so && /kalip/.test(norm(p.n))).map((p) => {
+    const txt = p.n + ' ' + (descs?.[p.id] || '');
+    return { p, k: chipCodes(txt), t: norm(txt) };
+  }), [catalog, descs]);
+}
+export function matchStencils(stencils, sel) {
+  const codes = new Set(sel.k);
+  const exact = stencils.filter((s) => [...s.k].some((c) => codes.has(c))).sort((a, b) => a.k.size - b.k.size);
+  const single = exact.filter((s) => s.k.size <= 2 && !/set/i.test(s.p.n));
+  const sets = exact.filter((s) => !single.includes(s));
+  const v = vendorOf(sel.c); const brand = sel.n ? norm(sel.n).split(' ')[0] : '';
+  const ids = new Set(exact.map((s) => s.p.id));
+  const more = stencils.filter((s) => !ids.has(s.p.id) && /set/i.test(s.p.n) && s.k.size === 0 && (
+    (v && VENDOR_RX[v]?.test(s.t) && !/emmc|birlestirme|airpods|mac|face/.test(s.t)) ||
+    (brand && brand !== 'apple' && new RegExp('\\b' + brand + '\\b').test(s.t) && /entegre/.test(s.t))
+  ));
+  return { single, sets, more, v };
+}
 
 export function KalipFinder() {
-  const { catalog, settings: S } = useStore();
-  const [phones, setPhones] = useState(null);
+  const { settings: S } = useStore();
+  const [base, setPhones] = useState(null);
+  const phones = useMemo(() => base && mergePhones(base, S.kalip?.phones), [base, S.kalip?.phones]);
   const [err, setErr] = useState(false);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
   const [sel, setSel] = useState(null); // {n, c, k} ya da {code}
-  const [descs, setDescs] = useState(null);
   const [prod, setProd] = useState(null);
   const inp = useRef(null);
   useEffect(() => { document.title = 'Kalıp bulucu'; loadPhones().then(setPhones).catch(() => setErr(true)); }, []);
-  useEffect(() => { let live = true; const A = api(); (A.loadDescMap ? A.loadDescMap() : Promise.resolve({})).then((d) => live && setDescs(d || {})).catch(() => live && setDescs({})); return () => { live = false; }; }, []);
-
-  // kalıp ürünleri ve içerdikleri işlemci kodları
-  const stencils = useMemo(() => catalog.filter((p) => p.a !== 0 && !p.so && /kalip/.test(norm(p.n))).map((p) => {
-    const txt = p.n + ' ' + (descs?.[p.id] || '');
-    return { p, k: chipCodes(txt), t: norm(txt) };
-  }), [catalog, descs]);
+  const stencils = useStencils();
 
   const sugg = useMemo(() => (phones && q && open ? searchPhones(phones, q) : []), [phones, q, open]);
   const qCodes = useMemo(() => [...chipCodes(q)], [q]);
@@ -72,21 +98,7 @@ export function KalipFinder() {
     else if (e.key === 'Escape') { setOpen(false); }
   };
 
-  const result = useMemo(() => {
-    if (!sel) return null;
-    const codes = new Set(sel.k);
-    const exact = stencils.filter((s) => [...s.k].some((c) => codes.has(c)))
-      .sort((a, b) => a.k.size - b.k.size);
-    const single = exact.filter((s) => s.k.size <= 2 && !/set/i.test(s.p.n));
-    const sets = exact.filter((s) => !single.includes(s));
-    const v = vendorOf(sel.c); const brand = sel.n ? norm(sel.n).split(' ')[0] : '';
-    const ids = new Set(exact.map((s) => s.p.id));
-    const more = stencils.filter((s) => !ids.has(s.p.id) && /set/i.test(s.p.n) && s.k.size === 0 && (
-      (v && VENDOR_RX[v]?.test(s.t) && !/emmc|birlestirme|airpods|mac|face/.test(s.t)) ||
-      (brand && brand !== 'apple' && new RegExp('\\b' + brand + '\\b').test(s.t) && /entegre/.test(s.t))
-    ));
-    return { single, sets, more, v };
-  }, [sel, stencils]);
+  const result = useMemo(() => (sel ? matchStencils(stencils, sel) : null), [sel, stencils]);
 
   const wa = S.shop?.whatsapp ? waLink(S.shop.whatsapp, `Merhaba, ${sel?.n || ''} (${sel?.c || ''}) için uygun kalıp var mı?`) : null;
   const total = result ? result.single.length + result.sets.length : 0;
@@ -159,5 +171,65 @@ function KfGroup({ title, sub, list, onOpen, muted }) {
       <div className="kf-gh"><h3>{title}<span className="num">{list.length}</span></h3><small>{sub}</small></div>
       <div className="kf-grid">{list.map((s, i) => <PCard key={s.p.id} p={s.p} i={i} onOpen={() => onOpen(s.p)} />)}</div>
     </section>
+  );
+}
+
+// Yönetim > Ayarlar > Kalıp bulucu: model ekle / işlemci ata, uyan kalıpları anında gör
+export function KalipSettings({ d, set }) {
+  const [base, setBase] = useState(null);
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(null);
+  const stencils = useStencils();
+  useEffect(() => { loadPhones().then(setBase).catch(() => setBase([])); }, []);
+  const over = d.kalip?.phones || {};
+  const all = useMemo(() => base && mergePhones(base, over), [base, over]);
+  const chipList = useMemo(() => [...new Set((base || []).map((p) => p.c).flatMap((c) => c.split(' / ')))].sort(), [base]);
+  const setChip = (n, c) => set('kalip.phones', { ...over, [n]: c });
+  const unset = (n) => { const o = { ...over }; delete o[n]; set('kalip.phones', o); };
+  const rows = useMemo(() => {
+    if (!all) return [];
+    if (!q.trim()) return Object.keys(over).reverse().map((n) => all.find((p) => p.n === n) || { n, c: over[n], k: [...phoneCodes(over[n] || '')], hidden: !over[n] });
+    return searchPhones(all, q, 25);
+  }, [all, q, over]);
+  const exists = all && q.trim() && all.some((p) => p.n.toLowerCase() === q.trim().toLowerCase());
+  return (
+    <div className="kfs">
+      <Toggle id="s-kalip" label="Mağazada Kalıp bulucu görünsün" checked={d.kalip?.on !== false} onChange={(v) => set('kalip.on', v)} />
+      <p className="fine">Listede {base ? <b>{base.length.toLocaleString('tr-TR')}</b> : '…'} telefon modeli var. Model arayın ya da yeni model yazın; işlemcisini seçin (ör. <i>Snapdragon 732G</i>, <i>Helio G85</i>, <i>Apple A15</i> ya da kod: <i>SM7150</i>, <i>MT6769</i>). Uyan kalıplar hemen altta görünür. Kaydet’e basınca mağazada geçerli olur.</p>
+      <div className="kfs-q"><Icon n="search" s={17} /><input id="s-kalip-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Model ara ya da yeni model yaz…" />{q && <button type="button" className="kf-x" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={13} /></button>}</div>
+      {q.trim().length >= 2 && all && !exists && (
+        <button type="button" className="btn sm outline kfs-add" onClick={() => { setChip(q.trim(), over[q.trim()] || '?'); setOpen(q.trim()); setQ(''); }}><Icon n="plus" s={15} />“{q.trim()}” modelini ekle</button>
+      )}
+      {!q.trim() && <h4 className="kfs-h">Eklediğim / düzelttiğim modeller {Object.keys(over).length ? `(${Object.keys(over).length})` : ''}</h4>}
+      {!q.trim() && !Object.keys(over).length && <p className="fine">Henüz yok. Yukarıdan bir model arayın.</p>}
+      <datalist id="kf-chips">{chipList.map((c) => <option key={c} value={c} />)}</datalist>
+      <div className="kfs-list">
+        {rows.map((p) => {
+          const c = over[p.n] ?? p.c; const chip = c === '?' ? '' : c;
+          const codes = [...phoneCodes(chip)];
+          const m = chip ? matchStencils(stencils, { n: p.n, c: chip, k: codes }) : null;
+          const n = m ? m.single.length + m.sets.length : 0;
+          const isOpen = open === p.n;
+          return (
+            <div key={p.n} className={'kfs-row' + (p.n in over ? ' own' : '') + (isOpen ? ' open' : '')}>
+              <div className="kfs-top">
+                <button type="button" className="kfs-n" onClick={() => setOpen(isOpen ? null : p.n)}><b>{p.n}</b>{p.n in over && <small>{base?.some((x) => x.n === p.n) ? 'düzeltildi' : 'elle eklendi'}</small>}</button>
+                <input list="kf-chips" value={chip} placeholder="İşlemci seçin / yazın" onChange={(e) => setChip(p.n, e.target.value || '?')} aria-label={p.n + ' işlemcisi'} />
+                <button type="button" className={'kfs-cnt' + (n ? ' ok' : '')} onClick={() => setOpen(isOpen ? null : p.n)} title="Uyan kalıplar">{chip ? n + ' kalıp' : '—'}</button>
+                {p.n in over ? <button type="button" className="icon-btn" title="Değişikliği geri al" aria-label="Geri al" onClick={() => unset(p.n)}><Icon n="undo" s={15} /></button> : <span />}
+              </div>
+              {chip && <div className="kf-codes">{codes.length ? codes.map((x) => <span key={x} className="kf-code">{x}</span>) : <span className="kfs-warn">Bu işlemcinin kodu tanınmadı — kodu yazın (ör. SM7150)</span>}</div>}
+              {isOpen && m && (
+                <ul className="kfs-st">
+                  {[...m.single, ...m.sets].map((s) => <li key={s.p.id}><Icon n="check" s={13} />{s.p.n}</li>)}
+                  {m.more.map((s) => <li key={s.p.id} className="more"><Icon n="box" s={13} />{s.p.n} <small>(genel set)</small></li>)}
+                  {!n && !m.more.length && <li className="none">Uyan kalıp yok</li>}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
