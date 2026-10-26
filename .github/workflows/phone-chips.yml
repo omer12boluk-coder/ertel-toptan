@@ -11,13 +11,14 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 340
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: node tools/phone-chips.mjs ${{ inputs.mode }}
+        timeout-minutes: 40
       - name: Dala yaz
         if: always()
         run: |
