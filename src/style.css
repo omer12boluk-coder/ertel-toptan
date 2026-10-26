@@ -3247,3 +3247,10 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
   .orders-page .toolbar .chips { margin-inline: 0; padding-inline: 0; }
   .orders-page .chips .chip-sel { padding: 6px 9px; } .orders-page .chips .chip-sel:not(.on) .chip-sel-t { display: none; }
 }
+/* telefon sipariş detayı: durum seçicisi biraz daha büyük ve belirgin (durum renginde kalın çerçeve, hafif zemin) */
+@media (max-width: 700px) {
+  .admin-order .oa-st-m { padding: 14px 16px; font-size: 17px; border: 2px solid color-mix(in oklab, var(--stc) 55%, var(--line)); background: color-mix(in oklab, var(--stc) 7%, var(--surface)); box-shadow: 0 6px 16px -12px color-mix(in oklab, var(--stc) 70%, transparent); }
+  .admin-order .oa-st-m > span { font-weight: 700; gap: 12px !important; }
+  .admin-order .oa-st-m > span::after { width: 12px; height: 12px; }
+  .admin-order .oa-st-m svg { color: color-mix(in oklab, var(--stc) 70%, var(--fg)); }
+}
