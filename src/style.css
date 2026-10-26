@@ -3124,19 +3124,25 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .or-dots { width: 32px; height: 32px; }
   .orows { gap: 6px; }
 }
-/* sipariş detayı başlığı: üye adı (profile gider) ya da misafir; sil başlıkta */
-.oa-who { display: block; margin-top: 4px; }
-.oa-who-b, .oa-who-g { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
-.oa-who-b { border: 0; cursor: pointer; background: color-mix(in oklab, var(--accent) 10%, var(--surface)); color: var(--accent); }
-.oa-who-b:hover { background: color-mix(in oklab, var(--accent) 16%, var(--surface)); }
-.oa-who-g { background: var(--surface-2); color: var(--muted); }
+/* sipariş detayı başlığı: üye adı (yazı bağlantı, çerçevesiz) ya da misafir; sil başlıkta */
+.oa-who { display: block; margin-top: 3px; font-size: 14px; }
+.oa-who-b { display: inline-flex; align-items: center; gap: 2px; border: 0; padding: 0; background: none; cursor: pointer; color: var(--accent); font: inherit; font-weight: 600; }
+.oa-who-b:hover { text-decoration: underline; }
+.oa-who-b .rot-l { rotate: -90deg; }
+.oa-who-g { color: var(--muted); }
+.oa-pay-m { display: none; }
 .oa-del { flex: none; }
 .ship-card { padding: 11px 14px; gap: 12px; }
 .ship-card .sc-ic { width: 38px; height: 38px; border-radius: 10px; }
 .ship-card .ss-t b { font-size: 17px; }
 .ship-card .sc-act { flex-wrap: nowrap; align-items: center; }
 @media (max-width: 700px) {
-  .admin-order .send-bar { flex-wrap: wrap; row-gap: 6px; }
-  .admin-order .send-bar .send-t { flex: 1 1 auto; }
-  .admin-order .send-bar > .pill { display: none; } /* durum zaten altta seçicide */
+  /* ince başlık: ‹ | Sipariş #no / saat · ürün · tutar · ödeme / müşteri | çöp */
+  .admin-order .send-bar { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 8px 8px 8px 4px; }
+  .admin-order .send-bar .send-t { flex: 1 1 auto; min-width: 0; }
+  .admin-order .send-bar .send-t > b { font-size: 16px; }
+  .admin-order .send-bar .send-t > .muted { font-size: 13px; }
+  .admin-order .send-bar > .pill, .admin-order .send-bar > .pay-chip { display: none; } /* durum altta seçicide, ödeme satırda */
+  .admin-order .oa-pay-m { display: inline; }
+  .admin-order .oa-back { padding: 6px; } .admin-order .oa-back > span { display: none; }
 }

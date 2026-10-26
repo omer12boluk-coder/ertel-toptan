@@ -225,6 +225,10 @@ function OrderDetail({ id }) {
   const busy = flow.busy;
   const [confirm, setConfirm] = useState(null);
   const [note, setNote] = useState(null);
+  const [mem, setMem] = useState(null); // başlıktaki üye adına basınca: üye bilgileri penceresi (sayfadan çıkmadan)
+  const members = useStore((st) => st.members);
+  const memObj = mem ? members.find((m) => m.uid === mem) : null;
+  useEffect(() => { if (mem && !memObj) { toast('Üye kaydı bulunamadı', 'bad'); setMem(null); } }, [mem]);
   // listede yoksa (eski sipariş / linkten gelindi) tek başına getir
   useEffect(() => { if (fromList) return; const un = api().watchOrder(id, setOne); return () => un && un(); }, [id, !!fromList]);
   useEffect(() => { if (o?.unread) api().updateOrder(o.id, { unread: 0 }).catch(() => {}); }, [o?.id, o?.unread]);
@@ -245,9 +249,9 @@ function OrderDetail({ id }) {
   return (
     <div className="page order-page admin-order">
       <div className="send-bar">
-        <button className="btn sm ghost" onClick={back}><Icon n="back" s={16} />Siparişler</button>
-        <div className="send-t"><b>Sipariş #{o.no}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {orderTotal(o)}</span>
-          <span className="oa-who">{o.uid ? <button type="button" className="oa-who-b" onClick={() => openMember(o.uid)} title="Üye profilini aç"><Icon n="user" s={14} />{o.contact?.name}<Icon n="back" s={13} className="flip" /></button> : <span className="oa-who-g"><Icon n="user" s={14} />Misafir · {o.contact?.name}</span>}</span></div>
+        <button className="btn sm ghost oa-back" onClick={back} aria-label="Siparişler"><Icon n="back" s={16} /><span>Siparişler</span></button>
+        <div className="send-t"><b>Sipariş #{o.no}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {orderTotal(o)}<span className="oa-pay-m"> · {PAY[o.pay] || ''}</span></span>
+          <span className="oa-who">{o.uid ? <button type="button" className="oa-who-b" onClick={() => setMem(o.uid)} title="Üye bilgileri">{o.contact?.name}<Icon n="chev" s={13} className="rot-l" /></button> : <span className="oa-who-g">{o.contact?.name} · misafir</span>}</span></div>
         <span className="pay-chip" title={o.pay === 'card' ? 'Onaylayınca müşteriye ödeme linki gönderin' : 'Ödeme yöntemi'}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{PAY[o.pay] || '—'}</span>
         <StatusPill status={o.status} map={ORDER_STATUS} />
         <button className="icon-btn oa-del" onClick={del} aria-label="Siparişi sil" title="Siparişi sil"><Icon n="trash" s={17} /></button>
@@ -300,12 +304,35 @@ function OrderDetail({ id }) {
       </div>
 
       {flow.sheets}
+      {memObj && <MemberSheet m={memObj} onClose={() => setMem(null)} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 }
 
 // ---- Mağaza üyeleri -----------------------------------------------------------------------------
+// Üye bilgileri penceresi (Müşteriler > Mağaza müşterileri ve sipariş başlığındaki üye adı)
+function MemberSheet({ m: open, onClose, onDelete }) {
+  const orders = useStore((st) => st.orders);
+  const mine = orders.filter((o) => o.uid === open.uid);
+  return (
+    <Sheet title={open.name || open.email} sub={`Üye · ${when(open.createdAt)}`} onClose={onClose} footer={<>{onDelete && <button className="btn ghost danger" onClick={onDelete}><Icon n="trash" s={15} />Üyeyi sil</button>}{open.phone && <a className="btn wa" href={waLink(open.phone, `Merhaba ${open.name || ''},`)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp</a>}</>}>
+      <div className="o-info one">
+        <div className="o-card"><h3>İletişim</h3>{open.username && <p>Kullanıcı adı: <b>{open.username}</b></p>}<p>{open.email}</p>{open.phone && <p className="num">{open.phone}</p>}</div>
+        <div className="o-card"><h3>Fatura</h3><InvoiceText inv={open.invoice} name={open.name} /></div>
+        <div className="o-card"><h3>Adresler</h3>{(open.addresses || []).length ? open.addresses.map((a) => <p key={a.id}><b>{a.title || 'Adres'}:</b> {addrLine(a)}</p>) : <p className="muted">Kayıtlı adres yok</p>}</div>
+      </div>
+      <h3 className="sheet-h3">Siparişleri</h3>
+      <ul className="olist">
+        {mine.map((o) => (
+          <li key={o.id}><button className="ocard" onClick={() => { onClose(); openOrder(o.id); }}><span className="ocard-b"><span className="ocard-top"><b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /></span><span className="muted">{when(o.createdAt)}</span></span><b className="num ocard-sum">{orderTotal(o)}</b></button></li>
+        ))}
+        {!mine.length && <li className="muted">Henüz sipariş yok</li>}
+      </ul>
+    </Sheet>
+  );
+}
+
 export function Members() {
   const { members, orders } = useStore();
   const [q, setQ] = useState('');
@@ -341,22 +368,7 @@ export function Members() {
           ))}
         </ul>
       )}
-      {open && (
-        <Sheet title={open.name || open.email} sub={`Üye · ${when(open.createdAt)}`} onClose={() => setOpen(null)} footer={<><button className="btn ghost danger" onClick={() => del(open)}><Icon n="trash" s={15} />Üyeyi sil</button>{open.phone && <a className="btn wa" href={waLink(open.phone, `Merhaba ${open.name || ''},`)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp</a>}</>}>
-          <div className="o-info one">
-            <div className="o-card"><h3>İletişim</h3>{open.username && <p>Kullanıcı adı: <b>{open.username}</b></p>}<p>{open.email}</p>{open.phone && <p className="num">{open.phone}</p>}</div>
-            <div className="o-card"><h3>Fatura</h3><InvoiceText inv={open.invoice} name={open.name} /></div>
-            <div className="o-card"><h3>Adresler</h3>{(open.addresses || []).length ? open.addresses.map((a) => <p key={a.id}><b>{a.title || 'Adres'}:</b> {addrLine(a)}</p>) : <p className="muted">Kayıtlı adres yok</p>}</div>
-          </div>
-          <h3 className="sheet-h3">Siparişleri</h3>
-          <ul className="olist">
-            {orders.filter((o) => o.uid === open.uid).map((o) => (
-              <li key={o.id}><button className="ocard" onClick={() => { setOpen(null); openOrder(o.id); }}><span className="ocard-b"><span className="ocard-top"><b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /></span><span className="muted">{when(o.createdAt)}</span></span><b className="num ocard-sum">{orderTotal(o)}</b></button></li>
-            ))}
-            {!count[open.uid] && <li className="muted">Henüz sipariş yok</li>}
-          </ul>
-        </Sheet>
-      )}
+      {open && <MemberSheet m={open} onClose={() => setOpen(null)} onDelete={() => del(open)} />}
       {newOpen && <NewMember onClose={() => setNewOpen(false)} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </>
