@@ -2987,3 +2987,10 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
   .osum:has(> :nth-child(4)) > .osum-i:nth-child(n+3) { border-top: 1px solid var(--line-2); }
 }
 @media (max-width: 420px) { .track { padding: 14px 6px; } .track li { font-size: 11.5px; padding: 0 2px; } .track-dot { width: 26px; height: 26px; font-size: 12px; } .track li::before { top: 12px; } }
+/* DHL eCommerce kartı (sipariş detayı) */
+.dhl-card { display: flex; flex-direction: column; gap: 10px; }
+.dhl-h { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 16px; }
+.dhl-logo { font: 900 italic 15px/1 var(--f-display); letter-spacing: .02em; color: #d40511; background: #ffcc00; padding: 4px 7px; border-radius: 5px; }
+.dhl-row { display: flex; gap: 8px; align-items: flex-end; } .dhl-row .field { flex: 1; min-width: 0; margin: 0; }
+.dhl-adv summary, .dhl-res summary { cursor: pointer; font-size: 13px; color: var(--muted); font-weight: 600; }
+.dhl-res pre { max-height: 320px; overflow: auto; font: 12px/1.45 var(--f-mono); white-space: pre-wrap; word-break: break-all; background: var(--surface-2); border-radius: 10px; padding: 10px; margin: 6px 0 0; }

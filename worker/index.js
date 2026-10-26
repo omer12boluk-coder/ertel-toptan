@@ -44,6 +44,7 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
       if (url.pathname === '/notify-sync' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifySync(env, req.headers.get('X-Key') || '', b)); }
+      if (url.pathname.startsWith('/dhl/') && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await dhl(env, url.pathname.slice(5), b)); }
       if (url.pathname === '/push/status' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushStatus(env, String(b.id || ''))); }
       // Ürün videosu: iPhone Safari videoyu parça parça (Range) ister; dosya bekçinin kendi dosyalarından okunup dilimlenir
       if (url.pathname.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD') && env.ASSETS) return await serveVideo(req, env, url, cors);
@@ -471,4 +472,67 @@ async function notifySync(env, key, b) {
   await adminPush(env, { title: `🔄 Siteden ${n} değişiklik`, body: parts || 'Ürün bilgileri güncellendi', url: '/admin', tag: 'sync' }).catch(() => {});
   const text = `${parts}\n\n${items.map(line).join('\n')}${n > items.length ? `\n… ve ${n - items.length} değişiklik daha` : ''}\n\nPanelde aç: ${link}`;
   return notifySend(env, { subject: `🔄 PlatinMarket: ${n} ürün değişikliği`, text, link, noEmail: true });
+}
+
+// ---- DHL eCommerce (eski MNG Kargo SOAP servisi) ----------------------------------------------------------------
+// Sadece yönetici (Firebase oturum anahtarı → users/{uid}.role admin). Giriş: Worker gizli ayarları DHL_USER / DHL_PASS.
+// create: siparişten gönderi kaydı (SiparisGirisiDetayliV3), label: barkod/etiket (MNGGonderiBarkod), track: takip, cancel: iptal.
+// DENEME AŞAMASI: DHL'in ham cevabı (şifre çıkarılmış) da döndürülür; bilinmeyen kodlar buradan öğrenilip düzeltilir.
+const DHL_URL = 'https://service.mngkargo.com.tr/musterikargosiparis/musterikargosiparis.asmx';
+const xesc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
+async function soap(env, op, inner) {
+  const body = `<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><${op} xmlns="http://tempuri.org/">${inner}</${op}></soap:Body></soap:Envelope>`;
+  const r = await fetch(DHL_URL, { method: 'POST', headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: `"http://tempuri.org/${op}"` }, body });
+  let t = await r.text(); if (env.DHL_PASS) t = t.split(env.DHL_PASS).join('***');
+  const inside = (t.match(/<soap:Body>([\s\S]*)<\/soap:Body>/) || [, t])[1];
+  const fault = (t.match(/<faultstring>([\s\S]*?)<\/faultstring>/) || [])[1];
+  return { http: r.status, raw: inside.slice(0, 6000), fault };
+}
+const tagv = (x, t) => { const m = new RegExp(`<${t}>([\\s\\S]*?)</${t}>`).exec(x || ''); return m ? m[1] : ''; };
+const kv = (o) => Object.entries(o).map(([k, v]) => `<${k}>${xesc(v)}</${k}>`).join('');
+async function dhl(env, act, b) {
+  if (!env.DHL_USER || !env.DHL_PASS) return { ok: false, error: 'DHL giriş bilgileri bekçiye eklenmemiş (DHL_USER / DHL_PASS)' };
+  const tok = String(b.token || ''); const uid = tokUid(tok);
+  const u = uid && (await fsAuth('users/' + uid, tok));
+  if (u?.role !== 'admin') return { ok: false, error: 'Yönetici oturumu doğrulanamadı' };
+  const id = String(b.id || ''); if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
+  const o = await fsDoc('orders/' + id); if (!o) return { ok: false, error: 'sipariş yok' };
+  const ref = String(b.ref || ('ERTEL' + o.no)).slice(0, 30); // DHL'deki sipariş (referans) no
+  const U = env.DHL_USER, P = env.DHL_PASS;
+  if (act === 'create') {
+    const a = o.delivery?.addr || {}; const parcels = (Array.isArray(b.parcels) && b.parcels.length ? b.parcels : [{ kg: 1, desi: 1, adet: 1 }]).slice(0, 20);
+    const icerik = String(b.icerik || 'Elektronik malzeme').slice(0, 60);
+    const fmt = String(b.parcelFmt || '{kg}:{desi}:{adet}:{icerik}:1:;'); // deneme: biçim panelden değiştirilebilir
+    const list = parcels.map((x) => fmt.replace('{kg}', Math.max(1, Math.round(x.kg || 1))).replace('{desi}', Math.max(1, Math.round(x.desi || 1))).replace('{adet}', Math.max(1, Math.round(x.adet || 1))).replace('{icerik}', icerik.replace(/[:;]/g, ' '))).join('');
+    const phone = String(a.phone || o.contact?.phone || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
+    const fields = {
+      pChIrsaliyeNo: '', pPrKiymet: '', pChBarkod: '', pChIcerik: icerik, pGonderiHizmetSekli: 'NORMAL', pTeslimSekli: 1, pFlAlSms: 1, pFlGnSms: 0,
+      pKargoParcaList: list, pAliciMusteriMngNo: '', pAliciMusteriBayiNo: '', pAliciMusteriAdi: String(a.name || o.contact?.name || '').slice(0, 60), pChSiparisNo: ref,
+      pLuOdemeSekli: String(b.pay || 'U'), pFlAdresFarkli: '1', pChIl: String(a.city || '').toLocaleUpperCase('tr-TR'), pChIlce: String(a.district || '').toLocaleUpperCase('tr-TR'),
+      pChAdres: String(a.address || '').slice(0, 250), pChSemt: '', pChMahalle: String(b.mahalle || ''), pChMeydanBulvar: '', pChCadde: '', pChSokak: '',
+      pChTelEv: '', pChTelCep: phone, pChTelIs: '', pChFax: '', pChEmail: String(o.contact?.email || ''), pChVergiDairesi: '', pChVergiNumarasi: '',
+      pFlKapidaOdeme: 0, pMalBedeliOdemeSekli: '', pPlatformKisaAdi: '', pPlatformSatisKodu: '', pKullaniciAdi: U, pSifre: P,
+    };
+    const r = await soap(env, 'SiparisGirisiDetayliV3', kv(fields));
+    const res = tagv(r.raw, 'SiparisGirisiDetayliV3Result');
+    return { ok: !r.fault && /^1$|^0*1$/.test(res.trim()), ref, result: res, fault: r.fault, raw: r.raw, sent: { ...fields, pKullaniciAdi: '***', pSifre: '***' } };
+  }
+  if (act === 'label') {
+    const parcels = (Array.isArray(b.parcels) && b.parcels.length ? b.parcels : [{ kg: 1, desi: 1, adet: 1 }]).slice(0, 20);
+    const parca = parcels.map((x) => `<GonderiParca><Kg>${Math.max(1, Math.round(x.kg || 1))}</Kg><Desi>${Math.max(1, Math.round(x.desi || 1))}</Desi><Adet>${Math.max(1, Math.round(x.adet || 1))}</Adet><Icerik>${xesc(b.icerik || 'Elektronik malzeme')}</Icerik><ParcaBarkod></ParcaBarkod></GonderiParca>`).join('');
+    const inner = `<req>${kv({ WsUserName: U, WsPassword: P, ReferansNo: ref, IrsaliyeNo: '', OutBarkodType: String(b.type || 'PDF'), FlKapidaTahsilat: '0', UrunBedeli: '0', ChMesaj: '', EkString1: '', EkString2: '', EkString3: '', EkString4: '', HatadaReferansBarkoduBas: 0 })}<ParcaBilgi>${parca}</ParcaBilgi></req>`;
+    const r = await soap(env, 'MNGGonderiBarkod', inner);
+    return { ok: !r.fault, ref, fault: r.fault, raw: r.raw };
+  }
+  if (act === 'track') {
+    const r1 = await soap(env, 'KargoTakipByReferans', kv({ pKullanici: U, pSifre: P, pReferansId: ref }));
+    const r2 = await soap(env, 'KargoBilgileriByReferans', kv({ pMusteriNo: U, pSifre: P, pSiparisNo: ref, pGonderiNo: '', pFaturaSeri: '', pFaturaNo: '', pIrsaliyeNo: '', pEFaturaNo: '', pRaporType: '' }));
+    return { ok: true, ref, takip: r1.raw, bilgi: r2.raw, fault: r1.fault || r2.fault };
+  }
+  if (act === 'cancel') {
+    const d = new Date(o.dhl?.at || Date.now()); const tarih = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    const r = await soap(env, 'MusteriSiparisIptal', kv({ pKullaniciAdi: U, pSifre: P, pMusteriSiparisNo: ref, pSiparisTarihi: tarih }));
+    return { ok: !r.fault, ref, fault: r.fault, raw: r.raw };
+  }
+  return { ok: false, error: 'işlem' };
 }

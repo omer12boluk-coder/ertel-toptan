@@ -305,6 +305,7 @@ function OrderDetail({ id }) {
           : <div className={'o-card' + (needsInvoice(o.invoice) ? ' inv-yes' : '')}><h3>Fatura{needsInvoice(o.invoice) && <span className="tag ok">Vergi no geçerli · adres eksik</span>}</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>}
       </div>
       {o.note && <p className="o-note"><b>Müşterinin notu:</b> {o.note}</p>}
+      {o.delivery?.method !== 'pickup' && o.status !== 'cancelled' && <DhlCard o={o} />}
 
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 
@@ -409,5 +410,76 @@ function NewMember({ onClose }) {
         {err && <p className="err">{err}</p>}
       </div>
     </Sheet>
+  );
+}
+
+// ---- DHL eCommerce kartı (DENEME AŞAMASI): gönderi kaydı, etiket, takip, iptal — bekçi üzerinden; DHL'in ham cevabı da görünür ----
+function DhlCard({ o }) {
+  const [parcels, setParcels] = useState(() => o.dhl?.parcels || [{ kg: 1, desi: 1, adet: 1 }]);
+  const [icerik, setIcerik] = useState(o.dhl?.icerik || 'Elektronik malzeme');
+  const [pay, setPay] = useState(o.dhl?.pay || 'U');
+  const [fmtP, setFmtP] = useState('{kg}:{desi}:{adet}:{icerik}:1:;');
+  const [busy, setBusy] = useState('');
+  const [res, setRes] = useState(null);
+  const [confirm, setConfirm] = useState(null);
+  const W = (window.WATCH_URL || '').replace(/\/$/, '');
+  async function call(act, extra = {}) {
+    if (!W || api().mode !== 'firebase') { toast('DHL sadece canlı sitede çalışır', 'bad'); return null; }
+    setBusy(act); setRes(null);
+    try {
+      const token = await api().idToken?.();
+      const r = await fetch(W + '/dhl/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: o.id, token, ref: o.dhl?.ref, parcels, icerik, pay, parcelFmt: fmtP, ...extra }) });
+      const j = await r.json(); setRes({ act, ...j }); return j;
+    } catch (e) { setRes({ act, ok: false, error: e.message }); return null; } finally { setBusy(''); }
+  }
+  async function create() {
+    const j = await call('create');
+    if (j?.ok) { await api().updateOrder(o.id, { dhl: { ref: j.ref, at: now(), pay, parcels, icerik } }); toast('DHL’e gönderildi: ' + j.ref); }
+    else if (j) toast('DHL kabul etmedi: ' + (j.fault || j.error || j.result || 'bilinmeyen cevap'), 'bad');
+  }
+  async function label() {
+    const j = await call('label'); if (!j) return;
+    const raw = j.raw || '';
+    const b64 = (raw.match(/(JVBERi0[A-Za-z0-9+/=\s]{200,})/) || [])[1]; // PDF
+    const png = (raw.match(/(iVBORw0[A-Za-z0-9+/=\s]{200,})/) || [])[1]; // PNG
+    if (b64 || png) {
+      const bin = atob((b64 || png).replace(/\s/g, '')); const u8 = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([u8], { type: b64 ? 'application/pdf' : 'image/png' }));
+      if (b64) window.open(url, '_blank');
+      else { const w = window.open('', '_blank'); w?.document.write(`<title>Etiket ${o.no}</title><style>@page{size:4in 6in;margin:0}body{margin:0}img{width:4in;height:6in;object-fit:contain}</style><img src="${url}" onload="setTimeout(()=>print(),300)">`); }
+      toast('Etiket açıldı');
+    } else toast(j.fault || 'Etiket cevabı aşağıda (deneme)', j.ok ? 'ok' : 'bad');
+  }
+  const cancel = () => setConfirm({ title: 'DHL kaydını iptal et', text: `DHL’deki ${o.dhl?.ref} gönderi kaydı iptal edilecek.`, okLabel: 'İptal et', tone: 'danger', onOk: async () => { const j = await call('cancel'); if (j?.ok) { await api().updateOrder(o.id, { dhl: { ...o.dhl, cancelled: now() } }); toast('DHL kaydı iptal edildi'); } } });
+  const setP = (i, k, v) => setParcels(parcels.map((x, j) => (j === i ? { ...x, [k]: Number(v) || 0 } : x)));
+  const live = o.dhl && !o.dhl.cancelled;
+  return (
+    <div className="set-card dhl-card">
+      <h3 className="dhl-h"><span className="dhl-logo">DHL</span>eCommerce gönderisi <span className="tag">deneme</span></h3>
+      {live ? <p className="fine">DHL’e gönderildi · referans <b className="num">{o.dhl.ref}</b> · {when(o.dhl.at)}</p> : <>
+        {parcels.map((x, i) => (
+          <div key={i} className="dhl-row">
+            <Field label={`${i + 1}. koli · kg`}><input inputMode="numeric" value={x.kg} onChange={(e) => setP(i, 'kg', e.target.value)} /></Field>
+            <Field label="Desi"><input inputMode="numeric" value={x.desi} onChange={(e) => setP(i, 'desi', e.target.value)} /></Field>
+            <Field label="Adet"><input inputMode="numeric" value={x.adet} onChange={(e) => setP(i, 'adet', e.target.value)} /></Field>
+            {parcels.length > 1 && <button className="icon-btn" onClick={() => setParcels(parcels.filter((_, j) => j !== i))} aria-label="Koliyi kaldır"><Icon n="trash" s={16} /></button>}
+          </div>
+        ))}
+        <button className="btn sm ghost" onClick={() => setParcels([...parcels, { kg: 1, desi: 1, adet: 1 }])}><Icon n="plus" s={15} />Koli ekle</button>
+        <Field label="İçerik"><input value={icerik} onChange={(e) => setIcerik(e.target.value)} /></Field>
+        <details className="dhl-adv"><summary>Gelişmiş (deneme)</summary>
+          <Field label="Ödeme şekli kodu" hint="Alıcı ödemeli için deneme: U · gönderici ödemeli: P"><input value={pay} onChange={(e) => setPay(e.target.value.trim())} /></Field>
+          <Field label="Koli listesi biçimi" hint="{kg} {desi} {adet} {icerik}"><input value={fmtP} onChange={(e) => setFmtP(e.target.value)} /></Field>
+        </details>
+      </>}
+      <div className="row-btns">
+        {!live && <button className="btn primary" disabled={!!busy} onClick={create}><Icon n="send" s={16} />{busy === 'create' ? 'Gönderiliyor…' : 'DHL’e gönder'}</button>}
+        {live && <button className="btn primary" disabled={!!busy} onClick={label}><Icon n="ext" s={16} />{busy === 'label' ? 'Alınıyor…' : 'Etiketi al / yazdır'}</button>}
+        {live && <button className="btn outline" disabled={!!busy} onClick={() => call('track')}>{busy === 'track' ? 'Bakılıyor…' : 'Takip no / durum'}</button>}
+        {live && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL’den iptal</button>}
+      </div>
+      {res && <details className="dhl-res" open={!res.ok}><summary>{res.ok ? '✓ DHL cevabı' : '✗ DHL cevabı'} ({res.act})</summary><pre>{JSON.stringify(res, null, 2)}</pre></details>}
+      {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </div>
   );
 }
