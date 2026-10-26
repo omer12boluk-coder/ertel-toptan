@@ -120,7 +120,7 @@ if (pending.length) {
       const h = new TextDecoder(/utf-?8/i.test(cs) ? 'utf-8' : 'windows-1254').decode(new Uint8Array(await r.arrayBuffer()));
       // açıklama: <div class="urun_aciklama"> … </div> (iç içe div'ler sayılarak), biçimiyle
       const ai = h.indexOf('<div class="urun_aciklama">');
-      if (ai >= 0 && !descMap[p.id]) {
+      if (ai >= 0 && (!descMap[p.id] || (DRY && TEST === p.id))) {
         let k = ai + 27, depth = 1; const re = /<\/?div\b/gi; re.lastIndex = k; let m;
         while (depth && (m = re.exec(h))) { depth += m[0][1] === '/' ? -1 : 1; if (!depth) k = m.index; }
         const html = h.slice(ai + 27, k).replace(/<script[\s\S]*?<\/script>/gi, '').trim();
