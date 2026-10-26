@@ -448,11 +448,12 @@ function DhlCard({ o }) {
     const bc = code128svg(d.ref, { h: 110, mod: 3 });
     const one = (i) => `<section class="lb">
       <div class="top"><b class="dhl">DHL</b><span>eCommerce</span><b class="pay">${d.pay === 'P' ? 'GÖNDERİCİ ÖDEMELİ' : 'ALICI ÖDEMELİ'}</b></div>
+      <div class="hint">Siparişten Gönderi Hazırlama Barkodu · Şube.net → Siparişten Gönderi Hazırlama → <b>Müşteri Barkod</b> alanına okutunuz.</div>
       <div class="box"><small>GÖNDERİCİ</small><b>${e(from)}</b><span>${e(fromAddr)}</span></div>
       <div class="box to"><small>ALICI</small><b class="nm">${e(a.name || o.contact?.name)}</b><span class="tel">${e(a.phone || o.contact?.phone)}</span>
         <span class="ad">${e(a.address)}</span><b class="city">${e(String(a.district || '').toLocaleUpperCase('tr-TR'))} / ${e(String(a.city || '').toLocaleUpperCase('tr-TR'))}</b></div>
       <div class="row"><span>Koli <b>${i}/${total}</b></span><span>${kg ? kg + ' kg' : ''}${desi ? ' · ' + desi + ' desi' : ''}</span><span>${e(d.icerik || icerik)}</span></div>
-      <div class="bc">${bc}<b>${e(d.ref)}</b></div>
+      <div class="bc"><small>REFERANS BARKOD</small>${bc}<b>${e(d.ref)}</b></div>
       <div class="ft"><span>Sipariş #${e(o.no)}</span><span>${new Date().toLocaleDateString('tr-TR')}</span></div></section>`;
     const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Etiket ${e(d.ref)}</title><style>
       @page{size:4in 6in;margin:0} *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}
@@ -462,7 +463,7 @@ function DhlCard({ o }) {
       .to{flex:1} .to .nm{font-size:19px} .to .tel{font-size:14px;font-weight:700} .to .ad{font-size:13px;line-height:1.25} .to .city{font-size:22px;margin-top:auto}
       .row{display:flex;justify-content:space-between;gap:6px;font-size:12px;border-top:1px solid #000;border-bottom:1px solid #000;padding:4px 0}
       .bc{display:flex;flex-direction:column;align-items:center;gap:2px} .bc svg{width:3.6in;height:.95in} .bc b{font-size:16px;letter-spacing:.12em}
-      .ft{display:flex;justify-content:space-between;font-size:10px}
+      .ft{display:flex;justify-content:space-between;font-size:10px} .hint{font-size:8.5px;line-height:1.25} .bc small{font-size:9px;font-weight:700;letter-spacing:.08em}
       @media screen{body{background:#888;padding:12px} .lb{background:#fff;margin:0 auto 12px}}
     </style></head><body>${Array.from({ length: total }, (_, i) => one(i + 1)).join('')}<script>setTimeout(()=>print(),400)</script></body></html>`;
     const w = window.open('', '_blank'); if (!w) { toast('Açılır pencere engellendi; tarayıcıda izin verin', 'bad'); return; }
