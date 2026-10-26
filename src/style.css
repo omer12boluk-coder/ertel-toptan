@@ -3211,3 +3211,29 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 .or-sum small { font-size: 13px; color: color-mix(in oklab, var(--fg) 65%, var(--muted)); }
 .otable-h > span, .orow > span { min-width: 0; }
 .admin-order .oa-status { margin-top: 0; }
+
+/* ---- 27.10.2026 (7): bilgisayar tablosu — ürün resimleri sütunu, ferah tutar, hizalı durum ---- */
+.or-thd { display: none; }
+@media (min-width: 961px) {
+  .otable-h, .orow, .otable:not(.selecting) .otable-h, .otable:not(.selecting) .orow {
+    grid-template-columns: 96px minmax(150px, 1.3fr) 130px minmax(170px, 1fr) 120px 150px 168px 36px; column-gap: 20px; }
+  .otable.selecting .otable-h, .otable.selecting .orow {
+    grid-template-columns: 34px 96px minmax(150px, 1.3fr) 130px minmax(170px, 1fr) 120px 150px 168px 36px; column-gap: 20px; }
+  .or-thd { display: flex; align-items: center; }
+  .or-thd .or-th-i { width: 36px; height: 36px; }
+  .or-sum { padding-right: 18px; border-right: 1px solid var(--line-2, var(--line)); }
+  .otable-h .oh-sum { padding-right: 18px; }
+  .or-st { align-self: center; justify-content: center; }
+  .or-st .ost { width: 100%; }
+  .or-act { align-self: center; }
+  .orow { align-items: center; min-height: 72px; }
+}
+@media (min-width: 961px) and (max-width: 1250px) {
+  .otable-h, .orow, .otable:not(.selecting) .otable-h, .otable:not(.selecting) .orow {
+    grid-template-columns: 84px minmax(130px, 1.2fr) 110px minmax(140px, 1fr) 112px 132px 150px 34px; column-gap: 14px; }
+  .otable.selecting .otable-h, .otable.selecting .orow {
+    grid-template-columns: 30px 84px minmax(130px, 1.2fr) 110px minmax(140px, 1fr) 112px 132px 150px 34px; column-gap: 14px; }
+}
+.or-th-i > .thumb { width: 100% !important; height: 100% !important; min-width: 0 !important; border: 0 !important; border-radius: 50% !important; }
+.or-th-i, .or-th-i.more { box-sizing: border-box; padding: 0; } /* genel .more kuralı 18px iç boşluk veriyordu */
+.or-thd .or-th-i.more { width: 36px; height: 36px; font-size: 12px; }

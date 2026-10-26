@@ -103,7 +103,7 @@ export function Orders() {
           <div className={'otable' + (sel ? ' selecting' : '')}>
             <div className="otable-h" aria-hidden="true">
               {sel && <label className="oc-box" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={!!sel.size && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : new Set())} /></label>}
-              <span>Sipariş no</span><span>Müşteri</span><span>Ödeme / kargo</span><span className="oh-sum">Tutar</span><span>Tarih</span><span>Durum</span><span />
+              <span>Sipariş no</span><span>Müşteri</span><span className="oh-th">Ürünler</span><span>Ödeme / kargo</span><span className="oh-sum">Tutar</span><span>Tarih</span><span>Durum</span><span />
             </div>
             <ul className="olist orows">
               {shown.map((o) => {
@@ -115,6 +115,7 @@ export function Orders() {
                       {sel && <label className="oc-box" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={'#' + o.no + ' seç'} checked={sel.has(o.id)} onChange={() => toggle(o.id)} /></label>}
                       <span className="or-no">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b></span>
                       <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
+                      <span className="or-thd"><OrderThumbs o={o} /></span>
                       <span className="or-tags">
                         <span className="or-pay">{PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
                         {o.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (car?.k || 'none')}>{car ? car.short : 'Kargo'}</span>}
