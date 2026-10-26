@@ -104,6 +104,9 @@ if (typeof window !== 'undefined' && matchMedia('(hover: none) and (pointer: coa
 }
 export function Sheet({ title, onClose, children, footer, wide, sub }) {
   const ref = useRef(null);
+  // iPhone: menüden seçince parmak kalkarken aynı noktaya "hayalet" tıklama gelir; yeni açılan pencere bunu
+  // arka plana tıklama sanıp kendini kapatıyordu → açıldıktan sonraki 500 ms arka plan tıklaması yok sayılır
+  const born = useRef(Date.now());
   const bg = useRef(null);
   useEffect(() => {
     const k = (e) => e.key === 'Escape' && onClose();
@@ -150,7 +153,7 @@ export function Sheet({ title, onClose, children, footer, wide, sub }) {
   };
   // pencere sayfanın en üstüne (body) çizilir: içinde bulunduğu kutu ne olursa olsun ekrana göre konumlanır
   return createPortal(
-    <div ref={bg} className="sheet-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div ref={bg} className="sheet-bg" onMouseDown={(e) => e.target === e.currentTarget && Date.now() - born.current > 500 && onClose()}>
       <div ref={ref} className={'sheet' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={title} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
         <span className="sheet-grab" aria-hidden="true" />
         <header className="sheet-h">
@@ -272,10 +275,11 @@ export function useInfinite(cb) {
 }
 
 export function Confirm({ title, text, okLabel = 'Evet', tone = 'primary', onOk, onClose }) {
+  const born = useRef(Date.now()); const ok = () => Date.now() - born.current > 450; // hayalet tıklama düğmelere de düşmesin
   return (
     <Sheet title={title} onClose={onClose} footer={<>
-      <button className="btn ghost" onClick={onClose}>Vazgeç</button>
-      <button className={'btn ' + tone} onClick={() => { onOk(); onClose(); }}>{okLabel}</button>
+      <button className="btn ghost" onClick={() => ok() && onClose()}>Vazgeç</button>
+      <button className={'btn ' + tone} onClick={() => { if (!ok()) return; onOk(); onClose(); }}>{okLabel}</button>
     </>}>
       <p className="muted">{text}</p>
     </Sheet>

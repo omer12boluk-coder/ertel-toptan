@@ -107,7 +107,7 @@ export function Orders() {
                     const act = nextAct(o, noCode);
                     return (
                       <li key={o.id} onContextMenu={(e) => menu(e, o)}>
-                        <div role="button" tabIndex={0} className={'orow st-' + o.status + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))} onKeyDown={(e) => e.key === 'Enter' && (sel ? toggle(o.id) : openOrder(o.id))}>
+                        <div role="button" tabIndex={0} className={'orow st-' + o.status + (flow.flash === o.id ? ' flash' : '') + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))} onKeyDown={(e) => e.key === 'Enter' && (sel ? toggle(o.id) : openOrder(o.id))}>
                           {sel && <span className={'ocheck' + (sel.has(o.id) ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}
                           <span className="or-no">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b></span>
                           <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
@@ -158,12 +158,13 @@ function useStatusFlow(S) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [ship, setShip] = useState(null); // { o, company, code }
+  const [flash, setFlash] = useState(null); // durumu az önce değişen sipariş (listede kısa süre parlar)
   async function setStatus(o, s, extra = {}) {
     setBusy(true);
     try {
       const t = now();
       await api().updateOrder(o.id, { status: s, updatedAt: t, history: [...(o.history || []), { s, at: t, by: 'admin' }], ...extra });
-      toast('Durum: ' + ORDER_STATUS[s].label);
+      toast(`#${o.no} → ${ADMIN_ST[s] || ORDER_STATUS[s].label}`); setFlash(o.id); setTimeout(() => setFlash(null), 1600);
       if (api().mode === 'firebase') pushStatus(o.id); // müşteriye bildirim (açtıysa)
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
@@ -202,7 +203,7 @@ function useStatusFlow(S) {
     )}
     {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
   </>;
-  return { busy, ask, setStatus, openShip, sheets };
+  return { busy, ask, setStatus, openShip, sheets, flash };
 }
 
 // Geçerli vergi no (10 hane, VKN algoritması) ya da TC kimlik no (11 hane, algoritma) girilmişse fatura kesilmesi gerekir

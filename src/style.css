@@ -2975,3 +2975,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .btn.pbuy-in:hover { background: color-mix(in oklab, var(--fg) 8%, var(--surface)); }
 .pbuy-ok { width: 20px; height: 20px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--ok); color: #fff; animation: pop .35s var(--spring); }
 .btn.pbuy-in small { font-size: .82em; font-weight: 500; color: var(--muted); padding-left: 8px; border-left: 1px solid var(--line); }
+
+/* durumu az önce değişen sipariş satırı kısa süre parlar (yeni grubuna geçtiği görülsün) */
+.orow.flash { animation: oflash 1.6s var(--ease); }
+@keyframes oflash { 0%, 50% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--stc) 55%, transparent); border-color: var(--stc); } 100% { box-shadow: none; } }
