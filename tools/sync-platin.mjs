@@ -99,9 +99,10 @@ cat.sort((a, b) => b.id - a.id);
 st.filled = 0;
 const { readFileSync } = await import('node:fs');
 const PARENT = new Map(JSON.parse(readFileSync(new URL('../src/categories.json', import.meta.url))).map(([id, , par]) => [id, par]));
-const TEST = DRY && Number(process.env.TEST_ID); // deneme: bir ürünü yeniymiş gibi tamamla (kaydetmeden), sonucu yaz
-if (TEST) { const t = cat.find((p) => p.id === TEST); if (t) { note('Deneme öncesi', JSON.stringify({ k: t.k, c: t.c, c2: t.c2, pi: t.pi, im: t.im })); t.pf = 0; delete t.img; t.c = 0; delete t.c2; delete t.im; } }
-const pending = cat.filter((p) => (p.pf === 0 || p.pf === -1) && feed.has(p.id)).slice(0, DRY ? 2 : 10);
+// TEST_ID: deneme modunda ürünü yeniymiş gibi tamamlar (kaydetmez, sonucu yazar); gerçek modda eksiklerini (açıklama vb.) bir kez daha tamamlar
+const TEST = Number(process.env.TEST_ID) || 0;
+if (TEST) { const t = cat.find((p) => p.id === TEST); if (t) { note('Öncesi', JSON.stringify({ k: t.k, c: t.c, c2: t.c2, pi: t.pi, im: t.im })); t.pf = 0; if (DRY) { delete t.img; t.c = 0; delete t.c2; delete t.im; } } }
+const pending = cat.filter((p) => (p.pf === 0 || p.pf === -1) && feed.has(p.id)).slice(0, 10);
 let descMap = null; const newDescs = {};
 if (pending.length) {
   const used = new Map(); for (const p of cat) if (p.c) used.set(p.c, (used.get(p.c) || 0) + 1);
@@ -109,13 +110,22 @@ if (pending.length) {
   if (dm.exists) { const dp = await Promise.all(Array.from({ length: dm.data().chunks }, (_, i) => db.doc(`desc/c${i}`).get())); descMap = Object.assign({}, ...dp.map((x) => (x.exists ? x.data().d : {}))); } else descMap = {};
   for (const [i, p] of pending.entries()) {
     const f = feed.get(p.id);
-    if (f.d && !descMap[p.id]) newDescs[p.id] = f.d.replace(/\n/g, '<br />');
     if (!f.u) { p.pf = -2; continue; }
     if (i) await new Promise((r) => setTimeout(r, 3000));
     try {
       const r = await fetch(f.u, { headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0' } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      const h = await r.text();
+      // site Türkçe kodlamayla (ISO-8859-9) gönderiyor; başlıktaki charset'e göre çöz
+      const cs = (/charset=([\w-]+)/i.exec(r.headers.get('content-type') || '') || [])[1] || 'windows-1254';
+      const h = new TextDecoder(/utf-?8/i.test(cs) ? 'utf-8' : 'windows-1254').decode(new Uint8Array(await r.arrayBuffer()));
+      // açıklama: <div class="urun_aciklama"> … </div> (iç içe div'ler sayılarak), biçimiyle
+      const ai = h.indexOf('<div class="urun_aciklama">');
+      if (ai >= 0 && !descMap[p.id]) {
+        let k = ai + 27, depth = 1; const re = /<\/?div\b/gi; re.lastIndex = k; let m;
+        while (depth && (m = re.exec(h))) { depth += m[0][1] === '/' ? -1 : 1; if (!depth) k = m.index; }
+        const html = h.slice(ai + 27, k).replace(/<script[\s\S]*?<\/script>/gi, '').trim();
+        if (html.replace(/<[^>]+>|&nbsp;|\s/g, '').length > 3) newDescs[p.id] = html;
+      }
       // resimler: ürün şemasındaki (ld+json Product) image listesi, tam boy
       let imgs = [];
       for (const m of h.matchAll(/<script[^>]*ld\+json[^>]*>([\s\S]*?)<\/script>/g)) {
@@ -130,9 +140,10 @@ if (pending.length) {
       const anc = (x) => { const a = []; while (PARENT.get(x)) { x = PARENT.get(x); a.push(x); } return a; };
       const cand = known.sort((a, b) => anc(b).length - anc(a).length || (used.get(a) || 0) - (used.get(b) || 0));
       if (!p.c && cand.length) { p.c = cand[0]; const o = cand.find((x) => x !== p.c && !anc(p.c).includes(x) && !anc(x).includes(p.c)); if (o) p.c2 = o; }
+      if (!newDescs[p.id] && f.d && !descMap[p.id]) newDescs[p.id] = f.d.replace(/\n/g, '<br />'); // sayfada yoksa beslemedeki kısa açıklama
       delete p.pf; st.filled++;
       note('Yeni ürün tamamlandı', `${p.k} · ${files.length} resim · kategori ${p.c || '—'}${newDescs[p.id] ? ' · açıklama' : ''}`);
-      if (TEST) note('Deneme sonucu', JSON.stringify({ c: p.c, c2: p.c2, pi: p.pi, im: p.im, desc: (f.d || '').slice(0, 200) }));
+      if (TEST) note('Sonuç', JSON.stringify({ c: p.c, c2: p.c2, pi: p.pi, im: (p.im || []).length, desc: (newDescs[p.id] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 220) }));
     } catch (e) { p.pf = (p.pf || 0) - 1; note('Ürün sayfası alınamadı', `${p.k}: ${e.message}`); }
   }
 }

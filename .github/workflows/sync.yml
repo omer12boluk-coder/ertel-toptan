@@ -10,7 +10,7 @@ on:
         type: boolean
         default: false
       test_id:
-        description: 'Deneme: bu ürün no yeniymiş gibi tamamlansın (sadece deneme modunda)'
+        description: 'Ürün no: deneme modunda yeniymiş gibi dener; normalde eksiklerini (açıklama vb.) siteden tamamlar'
         type: string
         default: ''
 concurrency:
