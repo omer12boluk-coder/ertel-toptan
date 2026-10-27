@@ -82,7 +82,19 @@ function lastOrderMap() {
 // Sütunlar: Stok kodu · Ürün · Stok · Satış · Toptan · Durum · Son işlem · ✎. Stok kodu / stok / satış / toptan hücreye
 // basınca yerinde düzenlenir (✓ ya da Enter kaydeder, Esc vazgeçer). Başlığa basınca sıralanır (3. basış kapatır).
 const UR = { price: 'fiyat · site', name: 'ad · site', hidden: 'pasif · site', shown: 'aktif · site', new: 'yeni · site', deleted: 'site', edit: 'düzenleme', a: 'durum', s: 'stok', r: 'satış fiyatı', w: 'toptan', k: 'stok kodu', excel: 'Excel', order: 'sipariş' };
-const shortDT = (t) => { const d = new Date(t); const today = d.toDateString() === new Date().toDateString(); return { d: today ? 'Bugün' : d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }), h: d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) }; };
+// Son işlem: 24 saat içindeyse sadece saat, sonra dün / N gün önce / N hafta önce / N ay önce / N yıl önce (tam tarih üstüne gelince)
+const shortDT = (t) => {
+  const d = new Date(t), ms = Date.now() - t, H = 3600e3, D = 24 * H;
+  const full = d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  let txt;
+  if (ms < D) txt = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  else if (ms < 2 * D) txt = 'Dün';
+  else if (ms < 7 * D) txt = Math.floor(ms / D) + ' gün önce';
+  else if (ms < 30 * D) txt = Math.floor(ms / (7 * D)) + ' hafta önce';
+  else if (ms < 365 * D) txt = Math.floor(ms / (30 * D)) + ' ay önce';
+  else txt = Math.floor(ms / (365 * D)) + ' yıl önce';
+  return { txt, full };
+};
 function EditCell({ value, show, onSave, kind = 'num', label, className = '' }) {
   const [ed, setEd] = useState(false);
   const [v, setV] = useState('');
@@ -213,7 +225,7 @@ function AdminRow({ p, onEdit, onCopy, onDel, grip, gripReset }) {
       <div className="tc tc-r r"><EditCell className="r ac-r" value={p.r} show={<b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b>} label="Satış fiyatı" onSave={(v) => quickSave(p, { r: v, pc: null, ur: 'r' }, 'Satış fiyatı kaydedildi')} /></div>
       <div className="tc tc-w r"><EditCell className="r ac-w" value={p.w ?? ''} kind="opt" show={<><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</>} label="Toptan fiyat (boş = otomatik)" onSave={(v) => quickSave(p, { w: v, pc: null, ur: 'w' }, v == null ? 'Toptan otomatik' : 'Toptan kaydedildi')} /></div>
       <div className="tc tc-a c"><StatusPick p={p} /></div>
-      <div className={'tc tc-ut' + (dt ? '' : ' none')}><span className="ac-ut">{dt ? <><b>{dt.d} {dt.h}</b>{why && <small>{why}</small>}</> : <small>—</small>}</span></div>
+      <div className={'tc tc-ut' + (dt ? '' : ' none')}><span className="ac-ut" title={dt ? dt.full : undefined}>{dt ? <><b>{dt.txt}</b>{why && <small>{why}</small>}</> : <small>—</small>}</span></div>
       <div className="tc tc-ed"><button type="button" className="icon-btn sm at-ed" onClick={menu} aria-label="İşlemler" title="Düzenle, kopyala, sil"><Icon n="more" s={18} /></button></div>
     </li>
   );
