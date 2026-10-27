@@ -1,0 +1,502 @@
+{
+ "tarih": "2026-10-27",
+ "not": "Katalogdaki kalıplarda geçen ama telefon listesinde hiçbir telefona bağlı olmayan işlemci kodları",
+ "kodlar": [
+  {
+   "kod": "SM8975",
+   "kaliplar": [
+    "Amaoe SM8975 Entegre Kalıbı"
+   ]
+  },
+  {
+   "kod": "SM8916",
+   "kaliplar": [
+    "Qianli 9 NOTE/2/2A"
+   ]
+  },
+  {
+   "kod": "SM8425",
+   "kaliplar": [
+    "Amaoe U-QSU5 Kalıp (SM8350 / SM8250-002 / SM8250-102 / SM7475 / 7+GEN 2 / SM8475 / SM8425 / 8+GEN1 / SM8450 / 8GEN 1 / RAM496 / RAM556 / SM8550 / 8GEN 2)",
+    "Amaoe Qualcomm QU 9 / SM8750/SM8635/SM8550/SM8450/SM8650/SM7475/SM8475/SM8425/SM7550/BGA496",
+    "Amaoe U-QSU5 Tablalı Kalıp Seti (SM8350 / SM8250-002 / SM8250-102 / SM7475 / 7+GEN 2 / SM8475 / SM8425 / 8+GEN1 / SM8450 / 8GEN 1 / RAM496 / RAM556 / SM8550 / 8GEN 2)",
+    "Amaoe U-QSD10 888 / 8GEN1 / 8+GEN1 / 8+4G / 7+GEN2 / SM8350 / 8450 / 8475 / 8425 / 7475"
+   ]
+  },
+  {
+   "kod": "SM7315",
+   "kaliplar": [
+    "Amaoe U-QSU4 Kalıp (SM7315 / SM7325 / SM6125 / SM7125 / SM7450 / SM4250 / SM6115 / SM7225 / SM6375 / SM6350 / SM4375 / SM4350 / SM6225 / SM7350)",
+    "Amaoe U-QSU4 Tablalı Kalıp Seti (SM7315 / SM7325 / SM6125 / SM7125 / SM7450 / 7GEN1 / SM4250 / SM6115 / SM7225 / SM6375 / SM6350 / SM4375 / SM4350 / SM6225 / SM7350)",
+    "Amaoe MQ 4 Quallcom / MTK CPU"
+   ]
+  },
+  {
+   "kod": "SM6850",
+   "kaliplar": [
+    "Amaoe SM6850 İşlemci Kalıbı"
+   ]
+  },
+  {
+   "kod": "SM6480",
+   "kaliplar": [
+    "Amaoe SM6850 İşlemci Kalıbı"
+   ]
+  },
+  {
+   "kod": "SM5714",
+   "kaliplar": [
+    "Amaoe SAM 18 Entegre Kalıbı (Exynos1330 / E8535P / 1380 / E8835P / MT6789V)",
+    "Amaoe U-SMG4 Entegre Kalıbı",
+    "Amaoe SAM 16 Exynos 1280 / E8825 CPU / A53 / A536"
+   ]
+  },
+  {
+   "kod": "SM5705",
+   "kaliplar": [
+    "Amaoe SAM 13 Kalıp"
+   ]
+  },
+  {
+   "kod": "MT9758",
+   "kaliplar": [
+    "Amaoe MQ 2 / MSM8909W RAM / MT6761V / MT6779V / MT9758V / MSM909W CPU / SDM439 / MT6765V / MT6768V"
+   ]
+  },
+  {
+   "kod": "MT8830",
+   "kaliplar": [
+    "Amaoe SU 1 / Spreadtrum SC CPU / SC7727S / 7730S / SC7731C / SC7715A / SC7731G / SC9832A / 9830A / SC7730A / 8830A / SC8825C / SC6825A / 8825A"
+   ]
+  },
+  {
+   "kod": "MT8825",
+   "kaliplar": [
+    "Amaoe SU 1 / Spreadtrum SC CPU / SC7727S / 7730S / SC7731C / SC7715A / SC7731G / SC9832A / 9830A / SC7730A / 8830A / SC8825C / SC6825A / 8825A"
+   ]
+  },
+  {
+   "kod": "MT8795",
+   "kaliplar": [
+    "Amaoe U-MTU4 Tablalı Kalıp Seti (MT6889Z / MT6885Z / MT6877V / MT6855V / MT6895Z / MT8795Z / MT6891Z / MT6893Z / RAM556 / RAM496 / MT6983Z)",
+    "Amaoe MQ 5 Quallcom / MTK CPU",
+    "Amaoe MU 5 / MT8795Z / 8100-MT6895Z / 900 / 1080-MT6877V / 930-MT6855V / MT6799W / RAM496 / 9000-MT6983Z / MT8176V / MT6799W RAM"
+   ]
+  },
+  {
+   "kod": "MT8781",
+   "kaliplar": [
+    "Amaoe SAM 22 Entegre Kalıbı",
+    "Amaoe SAM 18 Entegre Kalıbı (Exynos1330 / E8535P / 1380 / E8835P / MT6789V)",
+    "Amaoe Xiaomi MT8781(6789V) İşlemci Kalıbı",
+    "Amaoe MQ 6 / 6Gen1 SM6450 / 8Gen3 SM8650 / 9200 - MT6985W / MT6781V / 4Gen2 SM4450 / 1050 - MT6879V / BGA496 / MT8781V(6789)"
+   ]
+  },
+  {
+   "kod": "MT8768",
+   "kaliplar": [
+    "Amaoe U-MTU3 Entegre Kalıbı (MT6833V / MT6853V / MT6785V / MT6768V / MT6769V / MT6873V / MT6875V / MT6761V / MT6762V / MT6765V / MT8768V / MT6771V / MT8183V / MT6779V)"
+   ]
+  },
+  {
+   "kod": "MT8183",
+   "kaliplar": [
+    "Amaoe U-MTU3 Entegre Kalıbı (MT6833V / MT6853V / MT6785V / MT6768V / MT6769V / MT6873V / MT6875V / MT6761V / MT6762V / MT6765V / MT8768V / MT6771V / MT8183V / MT6779V)"
+   ]
+  },
+  {
+   "kod": "MT6879",
+   "kaliplar": [
+    "Amaoe MQ 6 / 6Gen1 SM6450 / 8Gen3 SM8650 / 9200 - MT6985W / MT6781V / 4Gen2 SM4450 / 1050 - MT6879V / BGA496 / MT8781V(6789)"
+   ]
+  },
+  {
+   "kod": "MT6871",
+   "kaliplar": [
+    "AMAOE U-MTK 8 MT6886V/MT6878V/MT6835V/MT6781V"
+   ]
+  },
+  {
+   "kod": "MT6866",
+   "kaliplar": [
+    "Amaoe SAM 18 Entegre Kalıbı (Exynos1330 / E8535P / 1380 / E8835P / MT6789V)"
+   ]
+  },
+  {
+   "kod": "MT6858",
+   "kaliplar": [
+    "Amaoe MT6858V Kalıp"
+   ]
+  },
+  {
+   "kod": "MT6799",
+   "kaliplar": [
+    "Amaoe U-MTU1 Kalıp (MT6795W / MT6582V / MT6592V / MT6589V / MT6595W / RAM256 / MT6797W / MT6799W / MT6799W RAM)",
+    "Amaoe U-MTU1 Tablalı Kalıp Seti (MT6795W / MT6582V / MT6592V / MT6589V / MT6595W / RAM256 / MT6797W / MT6799W / MT6799W RAM)",
+    "Amaoe MU 5 / MT8795Z / 8100-MT6895Z / 900 / 1080-MT6877V / 930-MT6855V / MT6799W / RAM496 / 9000-MT6983Z / MT8176V / MT6799W RAM",
+    "Amaoe MQ 4 Quallcom / MTK CPU"
+   ]
+  },
+  {
+   "kod": "MT6758",
+   "kaliplar": [
+    "Amaoe U-MTU2 Kalıp (MT6763V / MT6739V / MT6735V / MT6737V / MT6753V / MT6757V / MT6758V / MT6750V / MT6755V / MT6732V / MT6752V / MT6580A)",
+    "Amaoe U-MTU2 Tablalı Kalıp Seti (MT6763V / MT6739V / MT6735V / MT6737V / MT6753V / MT6757V / MT6758V / MT6750V / MT6755V / MT6732V / MT6752V / MT6580A)",
+    "MU 4 / MTK CPU / MT6885Z CPU / MT6853V / MT6769V / MT6779V / MT6885Z RAM / MT6891Z RAM / MT6891Z CPU / MT6758V / MT6768V"
+   ]
+  },
+  {
+   "kod": "MT6667",
+   "kaliplar": [
+    "Amaoe MT6993Z"
+   ]
+  },
+  {
+   "kod": "MT6661",
+   "kaliplar": [
+    "Amaoe MT6993Z"
+   ]
+  },
+  {
+   "kod": "MT6653",
+   "kaliplar": [
+    "Amaoe MT6993Z"
+   ]
+  },
+  {
+   "kod": "MT6639",
+   "kaliplar": [
+    "Amaoe OV 9 695 / MT6985W / Vivo X90 / 90Pro / 90S / OPPO Find X6 / iQQO Neo8Pro"
+   ]
+  },
+  {
+   "kod": "MT6637",
+   "kaliplar": [
+    "Amaoe U-MTK7"
+   ]
+  },
+  {
+   "kod": "MT6635",
+   "kaliplar": [
+    "Amaoe U-MTK6",
+    "Amaoe Mi 17 / 700 / 810 / 920 / 1080 / 1100 / 1200 / MT6833V / 6877V / 6891Z / 6893Z CPU / NOTE10 / 10PRO / 11 / 11PRO / 11PRO+ / 11E / 11SE / 11İ / 11T/ 11R / 12PRO / 12PRO+ / K40 / POCO M3PRO / M4PRO / X3GT",
+    "Amaoe OV 5 765G / SM7250 / MTK 1000L / MT6855Z / OPPO / RENO3 / 3Pro / 4 / 4Pro / VIVO / X50 / 50Pro / Z6 / IQ00-Z1X /"
+   ]
+  },
+  {
+   "kod": "MT6631",
+   "kaliplar": [
+    "Amaoe SAM 22 Entegre Kalıbı",
+    "Amaoe SAM 20 Entegre Kalıbı (MT6835V)"
+   ]
+  },
+  {
+   "kod": "MT6588",
+   "kaliplar": [
+    "MQ 3 Qualcomm / MTK / CPU / SM8250 RAM / MT65885Z RAM / 865 / SM7250 / SM8250 CPU / MT6885Z CPU / SM6125 / SM7150"
+   ]
+  },
+  {
+   "kod": "MT6379",
+   "kaliplar": [
+    "Amaoe MT6993Z"
+   ]
+  },
+  {
+   "kod": "MT6377",
+   "kaliplar": [
+    "Amaoe SAM 20 Entegre Kalıbı (MT6835V)"
+   ]
+  },
+  {
+   "kod": "MT6376",
+   "kaliplar": [
+    "Amaoe MT6993Z",
+    "Amaoe OV 9 695 / MT6985W / Vivo X90 / 90Pro / 90S / OPPO Find X6 / iQQO Neo8Pro"
+   ]
+  },
+  {
+   "kod": "MT6375",
+   "kaliplar": [
+    "Amaoe U-MTK7",
+    "Amaoe SAM 20 Entegre Kalıbı (MT6835V)"
+   ]
+  },
+  {
+   "kod": "MT6373",
+   "kaliplar": [
+    "Amaoe U-MTK7",
+    "Amaoe OV 9 695 / MT6985W / Vivo X90 / 90Pro / 90S / OPPO Find X6 / iQQO Neo8Pro"
+   ]
+  },
+  {
+   "kod": "MT6369",
+   "kaliplar": [
+    "Amaoe U-MTK6",
+    "Amaoe OV 8 695 / SM6375 / 930 / MT6855V / 700 / 810 / MT6833V CPU / OPPO A96 / 93S / 58 / 57 / 56 / 55 / A1PRO / K10X / VIVO Y77 / 77E / 76S / 75S / 73T / 55S / 33S / 31S /REALME 10 / 10PRO / V11 / V13 / V25 / Q3i / Q5 / iQOO U5 / U5e / Z6x"
+   ]
+  },
+  {
+   "kod": "MT6368",
+   "kaliplar": [
+    "Amaoe U-MTK7"
+   ]
+  },
+  {
+   "kod": "MT6366",
+   "kaliplar": [
+    "Amaoe SAM 22 Entegre Kalıbı"
+   ]
+  },
+  {
+   "kod": "MT6365",
+   "kaliplar": [
+    "Amaoe OV 8 695 / SM6375 / 930 / MT6855V / 700 / 810 / MT6833V CPU / OPPO A96 / 93S / 58 / 57 / 56 / 55 / A1PRO / K10X / VIVO Y77 / 77E / 76S / 75S / 73T / 55S / 33S / 31S /REALME 10 / 10PRO / V11 / V13 / V25 / Q3i / Q5 / iQOO U5 / U5e / Z6x"
+   ]
+  },
+  {
+   "kod": "MT6363",
+   "kaliplar": [
+    "Amaoe U-MTK7",
+    "Amaoe U-MTK6",
+    "Amaoe OV 9 695 / MT6985W / Vivo X90 / 90Pro / 90S / OPPO Find X6 / iQQO Neo8Pro",
+    "Amaoe OV 8 695 / SM6375 / 930 / MT6855V / 700 / 810 / MT6833V CPU / OPPO A96 / 93S / 58 / 57 / 56 / 55 / A1PRO / K10X / VIVO Y77 / 77E / 76S / 75S / 73T / 55S / 33S / 31S /REALME 10 / 10PRO / V11 / V13 / V25 / Q3i / Q5 / iQOO U5 / U5e / Z6x"
+   ]
+  },
+  {
+   "kod": "MT6360",
+   "kaliplar": [
+    "Amaoe U-MTK7",
+    "Amaoe U-MTK6",
+    "Amaoe OV 8 695 / SM6375 / 930 / MT6855V / 700 / 810 / MT6833V CPU / OPPO A96 / 93S / 58 / 57 / 56 / 55 / A1PRO / K10X / VIVO Y77 / 77E / 76S / 75S / 73T / 55S / 33S / 31S /REALME 10 / 10PRO / V11 / V13 / V25 / Q3i / Q5 / iQOO U5 / U5e / Z6x",
+    "Amaoe Mi 17 / 700 / 810 / 920 / 1080 / 1100 / 1200 / MT6833V / 6877V / 6891Z / 6893Z CPU / NOTE10 / 10PRO / 11 / 11PRO / 11PRO+ / 11E / 11SE / 11İ / 11T/ 11R / 12PRO / 12PRO+ / K40 / POCO M3PRO / M4PRO / X3GT",
+    "Amaoe OV 5 765G / SM7250 / MTK 1000L / MT6855Z / OPPO / RENO3 / 3Pro / 4 / 4Pro / VIVO / X50 / 50Pro / Z6 / IQ00-Z1X /"
+   ]
+  },
+  {
+   "kod": "MT6359",
+   "kaliplar": [
+    "Amaoe U-MTK7",
+    "Amaoe U-MTK6",
+    "Amaoe Mi 17 / 700 / 810 / 920 / 1080 / 1100 / 1200 / MT6833V / 6877V / 6891Z / 6893Z CPU / NOTE10 / 10PRO / 11 / 11PRO / 11PRO+ / 11E / 11SE / 11İ / 11T/ 11R / 12PRO / 12PRO+ / K40 / POCO M3PRO / M4PRO / X3GT",
+    "Amaoe OV 5 765G / SM7250 / MTK 1000L / MT6855Z / OPPO / RENO3 / 3Pro / 4 / 4Pro / VIVO / X50 / 50Pro / Z6 / IQ00-Z1X /"
+   ]
+  },
+  {
+   "kod": "MT6357",
+   "kaliplar": [
+    "Amaoe SAM 13 Kalıp"
+   ]
+  },
+  {
+   "kod": "MT6319",
+   "kaliplar": [
+    "Amaoe U-MTK7",
+    "Amaoe SAM 20 Entegre Kalıbı (MT6835V)"
+   ]
+  },
+  {
+   "kod": "MT6315",
+   "kaliplar": [
+    "Amaoe U-MTK6",
+    "Amaoe OV 8 695 / SM6375 / 930 / MT6855V / 700 / 810 / MT6833V CPU / OPPO A96 / 93S / 58 / 57 / 56 / 55 / A1PRO / K10X / VIVO Y77 / 77E / 76S / 75S / 73T / 55S / 33S / 31S /REALME 10 / 10PRO / V11 / V13 / V25 / Q3i / Q5 / iQOO U5 / U5e / Z6x",
+    "Amaoe Mi 17 / 700 / 810 / 920 / 1080 / 1100 / 1200 / MT6833V / 6877V / 6891Z / 6893Z CPU / NOTE10 / 10PRO / 11 / 11PRO / 11PRO+ / 11E / 11SE / 11İ / 11T/ 11R / 12PRO / 12PRO+ / K40 / POCO M3PRO / M4PRO / X3GT"
+   ]
+  },
+  {
+   "kod": "MT6199",
+   "kaliplar": [
+    "AMAOE U-MTK 9 MT6991Z/MT6989W/MT6985W"
+   ]
+  },
+  {
+   "kod": "MT6197",
+   "kaliplar": [
+    "Amaoe MT6993Z",
+    "Amaoe SAM 20 Entegre Kalıbı (MT6835V)"
+   ]
+  },
+  {
+   "kod": "MT6195",
+   "kaliplar": [
+    "Amaoe U-MTK7",
+    "Amaoe OV 9 695 / MT6985W / Vivo X90 / 90Pro / 90S / OPPO Find X6 / iQQO Neo8Pro"
+   ]
+  },
+  {
+   "kod": "MT6190",
+   "kaliplar": [
+    "Amaoe U-MTK7",
+    "Amaoe U-MTK6",
+    "Amaoe OV 8 695 / SM6375 / 930 / MT6855V / 700 / 810 / MT6833V CPU / OPPO A96 / 93S / 58 / 57 / 56 / 55 / A1PRO / K10X / VIVO Y77 / 77E / 76S / 75S / 73T / 55S / 33S / 31S /REALME 10 / 10PRO / V11 / V13 / V25 / Q3i / Q5 / iQOO U5 / U5e / Z6x",
+    "Amaoe Mi 17 / 700 / 810 / 920 / 1080 / 1100 / 1200 / MT6833V / 6877V / 6891Z / 6893Z CPU / NOTE10 / 10PRO / 11 / 11PRO / 11PRO+ / 11E / 11SE / 11İ / 11T/ 11R / 12PRO / 12PRO+ / K40 / POCO M3PRO / M4PRO / X3GT",
+    "Amaoe OV 5 765G / SM7250 / MTK 1000L / MT6855Z / OPPO / RENO3 / 3Pro / 4 / 4Pro / VIVO / X50 / 50Pro / Z6 / IQ00-Z1X /"
+   ]
+  },
+  {
+   "kod": "MT6186",
+   "kaliplar": [
+    "Amaoe SAM 22 Entegre Kalıbı",
+    "Amaoe U-MTK7",
+    "Amaoe SAM 18 Entegre Kalıbı (Exynos1330 / E8535P / 1380 / E8835P / MT6789V)"
+   ]
+  },
+  {
+   "kod": "MT6177",
+   "kaliplar": [
+    "Amaoe SAM 13 Kalıp"
+   ]
+  },
+  {
+   "kod": "MT2831",
+   "kaliplar": [
+    "Amaoe Pods 3 Entegre Kalıbı"
+   ]
+  },
+  {
+   "kod": "MSM8995",
+   "kaliplar": [
+    "RAM 1 / BGA366 / MSM8995 RAM / MSM8998 RAM / BGA556 / SDM845 RAM / BGA256 / MSM8956 RAM / BGA272 / Hİ3650 RAM / BGA320 / Hİ6260 RAM / BGA196 / 7885 RAM / BGA 376 / Hİ3670 / Hİ3680 /"
+   ]
+  },
+  {
+   "kod": "MSM8962",
+   "kaliplar": [
+    "Amaoe U-QSU2 Kalıp (MSM8953 1AB / MSM8909 / MSM8917 / MSM8962 / SDM450 / SDM632 / MSM8953 B01 / MSM8916 / MSM8939 / MSM8937 / MSM8940 / SDM636 / SDM660)",
+    "Amaoe U-QSU2 Tablalı Kalıp Seti (MSM8953 1AB / MSM8909 / MSM8917 / MSM8962 / SDM450 / SDM632 / MSM8953 B01 / MSM8916 / MSM8939 / MSM8937 / MSM8940 / SDM636 / SDM660)"
+   ]
+  },
+  {
+   "kod": "MSM8612",
+   "kaliplar": [
+    "Amaoe Qualcomm QU 3 / MSM7225A / MSM8928 B / MSM8940 / SDM660 / MSM8909 / MSM8928 A / MSM8952 / MSM8612"
+   ]
+  },
+  {
+   "kod": "MSM7521",
+   "kaliplar": [
+    "Amaoe Qualcomm QU 6 / QSC6270 / MDM9600 / MSM6250 / MSM7227 / QSC1110 / MDM6600 / MSM6246 / MSM8909W / QSC1105 / MDM8215 / MDM9215M / MSM7521"
+   ]
+  },
+  {
+   "kod": "MSM6250",
+   "kaliplar": [
+    "Amaoe Qualcomm QU 6 / QSC6270 / MDM9600 / MSM6250 / MSM7227 / QSC1110 / MDM6600 / MSM6246 / MSM8909W / QSC1105 / MDM8215 / MDM9215M / MSM7521"
+   ]
+  },
+  {
+   "kod": "HI6620",
+   "kaliplar": [
+    "Amaoe Hu 2 / CPU / Hi6520 / Hi3660 B / Hi6220 / Hi6250 / Hi3660 A / Hi6620",
+    "Amaoe HW 5 / Kirin910T / HI6620 CPU / P7"
+   ]
+  },
+  {
+   "kod": "HI6526",
+   "kaliplar": [
+    "Amaoe U-MTK6"
+   ]
+  },
+  {
+   "kod": "HI6520",
+   "kaliplar": [
+    "Amaoe Hu 2 / CPU / Hi6520 / Hi3660 B / Hi6220 / Hi6250 / Hi3660 A / Hi6620"
+   ]
+  },
+  {
+   "kod": "HI6423",
+   "kaliplar": [
+    "Amaoe HW 18 / MATE60 / 60PRO /60PRO+ /60RS /X5 9000S Hİ36A0 hi36a0"
+   ]
+  },
+  {
+   "kod": "HI6421",
+   "kaliplar": [
+    "Amaoe HW 18 / MATE60 / 60PRO /60PRO+ /60RS /X5 9000S Hİ36A0 hi36a0"
+   ]
+  },
+  {
+   "kod": "HI6290",
+   "kaliplar": [
+    "Amaoe U-MIXU2 / Kirin9020 / Hi36C0 / 8400-MT6899Z / kirin8000 hi6290 v110 / kirin9000s",
+    "Amaoe HW 13 / 985 / 820 / Hi6290 / Hi6290L CPU / Nova7 / 7Pro / 7SE / 30 / 30S / X10"
+   ]
+  },
+  {
+   "kod": "HI6280",
+   "kaliplar": [
+    "Amaoe HW 10 / 810 / Hi6280 CPU / 9X / 9XPRO / 20S / Nova5 / 5iPro / 5Z"
+   ]
+  },
+  {
+   "kod": "HI6260",
+   "kaliplar": [
+    "RAM 1 / BGA366 / MSM8995 RAM / MSM8998 RAM / BGA556 / SDM845 RAM / BGA256 / MSM8956 RAM / BGA272 / Hİ3650 RAM / BGA320 / Hİ6260 RAM / BGA196 / 7885 RAM / BGA 376 / Hİ3670 / Hİ3680 /",
+    "Amaoe Hu 3 / CPU / Hi6260 B / Hi3670 B / Hi3680 B / Hi6260 A / Hi3670 A / Hi3680 A",
+    "Amaoe HW 9 / 710 / PSmart2019 / Hi6260 CPU / 8X / 20i / 10 / 10P / 9P / 9S / Nova5i / 4E / 3i"
+   ]
+  },
+  {
+   "kod": "HI36C0",
+   "kaliplar": [
+    "Amaoe U-MIXU2 / Kirin9020 / Hi36C0 / 8400-MT6899Z / kirin8000 hi6290 v110 / kirin9000s",
+    "Amaoe HW 19"
+   ]
+  },
+  {
+   "kod": "HI36A0",
+   "kaliplar": [
+    "Amaoe U-MIXU2 / Kirin9020 / Hi36C0 / 8400-MT6899Z / kirin8000 hi6290 v110 / kirin9000s",
+    "Amaoe HW 18 / MATE60 / 60PRO /60PRO+ /60RS /X5 9000S Hİ36A0 hi36a0",
+    "Amaoe HW 15 / 9000 Hi36A0 CPU / Mate40 / 40Pro / 40Pro+ / 40RS"
+   ]
+  },
+  {
+   "kod": "HI3690",
+   "kaliplar": [
+    "Amaoe HW 12 / 990 / Hi3690 / Hi9500 CPU / Nova6 5G / V30 5G",
+    "Amaoe HW 11 / 990 Hi3690 CPU / Mate30 / 30Pro / 30RS / Nova6 / V30 / V30Pro BGA Stencil HI3690 6280"
+   ]
+  },
+  {
+   "kod": "HI3680",
+   "kaliplar": [
+    "RAM 1 / BGA366 / MSM8995 RAM / MSM8998 RAM / BGA556 / SDM845 RAM / BGA256 / MSM8956 RAM / BGA272 / Hİ3650 RAM / BGA320 / Hİ6260 RAM / BGA196 / 7885 RAM / BGA 376 / Hİ3670 / Hİ3680 /",
+    "Amaoe Hu 3 / CPU / Hi6260 B / Hi3670 B / Hi3680 B / Hi6260 A / Hi3670 A / Hi3680 A",
+    "Amaoe HW 8 / Kirin980 / Hi3680 CPU / P30 / 30Pro / Mate20 / 20Pro / 20X / 20RS / V20 / Magic2"
+   ]
+  },
+  {
+   "kod": "HI3670",
+   "kaliplar": [
+    "RAM 1 / BGA366 / MSM8995 RAM / MSM8998 RAM / BGA556 / SDM845 RAM / BGA256 / MSM8956 RAM / BGA272 / Hİ3650 RAM / BGA320 / Hİ6260 RAM / BGA196 / 7885 RAM / BGA 376 / Hİ3670 / Hİ3680 /",
+    "Amaoe Hu 3 / CPU / Hi6260 B / Hi3670 B / Hi3680 B / Hi6260 A / Hi3670 A / Hi3680 A",
+    "Amaoe HW 7 / Kirin970 / HI3670 CPU / P20 / 20Pro / Mate10 / 10Pro / RS / 10 / V10"
+   ]
+  },
+  {
+   "kod": "EX9815",
+   "kaliplar": [
+    "Amaoe EU 5 Exynos 1080 / Exynos 2100 / Exynos 9815 / Exynos 9609 / Exynos 1080 RAM / Exynos 2100 RAM / Samsung 3830 XGO / Exynos 8895-1703 A21s"
+   ]
+  },
+  {
+   "kod": "EX1350",
+   "kaliplar": [
+    "SAMSUNG E8535P Amaoe Kalıp"
+   ]
+  },
+  {
+   "kod": "E9965",
+   "kaliplar": [
+    "Amaoe SAM 23 Entegre Kalıbı"
+   ]
+  },
+  {
+   "kod": "E9955",
+   "kaliplar": [
+    "Amaoe U-SMU4 Entegre Kalıbı"
+   ]
+  }
+ ]
+}
