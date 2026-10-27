@@ -111,14 +111,15 @@ if (typeof window !== 'undefined' && matchMedia('(hover: none) and (pointer: coa
     e.preventDefault();
   }, { passive: false, capture: true });
 }
-export function Sheet({ title, onClose, children, footer, wide, sub }) {
+// sticky: boş yere basınca / aşağı çekince / Esc ile KAPANMAZ (düzenleme pencereleri: emek kaybolmasın), sadece × ve düğmeler
+export function Sheet({ title, onClose, children, footer, wide, sub, sticky }) {
   const ref = useRef(null);
   // iPhone: menüden seçince parmak kalkarken aynı noktaya "hayalet" tıklama gelir; yeni açılan pencere bunu
   // arka plana tıklama sanıp kendini kapatıyordu → açıldıktan sonraki 500 ms arka plan tıklaması yok sayılır
   const born = useRef(Date.now());
   const bg = useRef(null);
   useEffect(() => {
-    const k = (e) => e.key === 'Escape' && onClose();
+    const k = (e) => e.key === 'Escape' && !sticky && onClose();
     window.addEventListener('keydown', k);
     openSheets++; document.body.classList.add('noscroll');
     // aşağı çekerken içerik/sayfa da kaymasın (React'in dokunma dinleyicisi bunu engelleyemiyor)
@@ -139,7 +140,7 @@ export function Sheet({ title, onClose, children, footer, wide, sub }) {
   // Telefonda: pencereyi tutup aşağı çekince kapanır (üst kısımdan ya da içerik en üstteyken her yerden)
   const drag = useRef(null);
   const onTouchStart = (e) => {
-    if (!matchMedia('(max-width: 700px)').matches || e.touches.length !== 1) return;
+    if (sticky || !matchMedia('(max-width: 700px)').matches || e.touches.length !== 1) return;
     const body = ref.current.querySelector('.sheet-b');
     const fromTop = e.target.closest('.sheet-h, .sheet-grab');
     if (!fromTop && (!body || body.scrollTop > 0 || e.target.closest('input, textarea, select, .gal-track, .gal-thumbs'))) return;
@@ -162,7 +163,7 @@ export function Sheet({ title, onClose, children, footer, wide, sub }) {
   };
   // pencere sayfanın en üstüne (body) çizilir: içinde bulunduğu kutu ne olursa olsun ekrana göre konumlanır
   return createPortal(
-    <div ref={bg} className="sheet-bg" onMouseDown={(e) => e.target === e.currentTarget && Date.now() - born.current > 500 && onClose()}>
+    <div ref={bg} className="sheet-bg" onMouseDown={(e) => !sticky && e.target === e.currentTarget && Date.now() - born.current > 500 && onClose()}>
       <div ref={ref} className={'sheet' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={title} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
         <span className="sheet-grab" aria-hidden="true" />
         <header className="sheet-h">

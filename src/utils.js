@@ -120,6 +120,21 @@ export function picUrl(f, t, big) {
   if (isAbsImg(f)) return f;
   return t && t.includes('{pi}') ? t.replaceAll('{pi}', f) : null;
 }
+// Ürün medyası tek sırada: pi + im; 'v:<adres>' = video (adres 'r2:…' ya da https). pi her zaman resimdir (kapak).
+// Eski tek video alanı vd (+ vdp kapak): sırada video yoksa 2. sıraya konur.
+export const isVid = (f) => typeof f === 'string' && f.startsWith('v:');
+export function mediaOf(p) {
+  const arr = [p.pi, ...(p.im || [])].filter(Boolean);
+  if (p.vd && !arr.some(isVid)) arr.splice(Math.min(1, arr.length), 0, 'v:' + p.vd);
+  return arr;
+}
+export const imgFiles = (p) => [p.pi, ...(p.im || [])].filter((f) => f && !isVid(f));
+// Dosyanın parmak izi (aynı dosya ikinci kez yüklenmesin, depoda aynı yere düşer)
+export async function fileHash(file) {
+  const buf = await file.arrayBuffer();
+  const d = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(d)].slice(0, 12).map((x) => x.toString(16).padStart(2, '0')).join('');
+}
 // Yükleme için resmi küçült (webp; tarayıcı webp yazamıyorsa jpeg)
 export async function imageBlob(file, max = 1600, q = 0.85) {
   const url = URL.createObjectURL(file);

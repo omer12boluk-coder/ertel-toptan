@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } fr
 import { createPortal } from 'react-dom';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm } from './ui.jsx';
-import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl } from './utils.js';
+import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -29,7 +29,7 @@ export function useVisibleProducts(admin) {
 // Resim adresleri: elle yüklenen > siteden gelen (1. resim + ekler)
 export function imageList(p, S, size) {
   const t = size === 'lg' ? S.catalog.imageLarge || S.catalog.imageThumb : S.catalog.imageThumb;
-  const files = [p.pi, ...(p.im || [])].filter(Boolean);
+  const files = imgFiles(p);
   return files.map((f) => picUrl(f, t, size === 'lg')).filter(Boolean); // r2: depo, tam adres, ya da site dosya adı
 }
 
@@ -579,7 +579,7 @@ function ProductRow({ p, admin, onOpen }) {
   const qty = cart[p.id] || 0;
   const [hov, setHov] = useState(false); // bilgisayar: üstüne gelince (birden çok resim varsa) yazılar aşağı kayar, küçük resimler çıkar
   const [ix, setIx] = useState(0);
-  const multi = FINE && S.cards?.hoverImgs !== false && [p.pi, ...(p.im || [])].filter(Boolean).length > 1;
+  const multi = FINE && S.cards?.hoverImgs !== false && imgFiles(p).length > 1;
   const st = stockInfo(p, S);
   const site = links.product(p, S);
   const menu = (e) => openMenu(e, admin ? [
@@ -669,7 +669,7 @@ function CardImg({ p, hov, ix, setIx }) {
   const S = useStore((s) => s.settings);
   const [seen, setSeen] = useState(false); // küçük resimler bir kez yüklenince kapanırken de görünür kalsın (animasyon)
   useEffect(() => { if (hov) setSeen(true); }, [hov]);
-  const n = [p.pi, ...(p.im || [])].filter(Boolean).length;
+  const n = imgFiles(p).length;
   // telefon: birden çok resim varsa kartı açmadan parmakla kaydırılır, altta hangi resimde olduğunu gösteren çizgiler
   if (!FINE && n > 1 && S.cards?.swipeImgs !== false) return <SwipeImgs p={p} />;
   const urls = seen ? imageList(p, S, 'lg') : [];
@@ -775,8 +775,11 @@ export function Gallery({ p }) {
   const urls = imageList(p, S, 'lg');
   const thumbs = imageList(p, S, 'sm');
   // kaydırma sayfaları: elle yüklenen resim (fs), siteden resimler; video varsa ikinci sırada
-  const slides = (p.img ? [{ t: 'fs' }] : []).concat(urls.map((u, z) => ({ t: 'img', u, z, th: thumbs[z] || u })));
-  if (p.vd) slides.splice(Math.min(1, slides.length), 0, { t: 'vid', u: p.vd, poster: p.vdp ? picUrl(p.vdp, null, true) : '' });
+  // sıra: panelde dizildiği gibi (resimler + videolar 'v:'); eski tek video alanı vd 2. sırada
+  let z = 0;
+  const slides = (p.img ? [{ t: 'fs' }] : []).concat(mediaOf(p).map((f) => isVid(f)
+    ? { t: 'vid', u: f.slice(2), poster: f.slice(2) === p.vd && p.vdp ? picUrl(p.vdp, null, true) : '' }
+    : urls[z] ? { t: 'img', u: urls[z], z: z, th: thumbs[z++] || urls[z - 1] } : null).filter(Boolean));
   const [i, setI] = useState(0);
   const [bad, setBad] = useState({});
   const [zoom, setZoom] = useState(null);

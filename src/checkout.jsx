@@ -802,7 +802,7 @@ function MemberHome() {
     setBusy(false);
   }
   const removePhoto = () => A.saveMember({ ...m, photo: null }).then(() => toast('Fotoğraf kaldırıldı'));
-  // sol menü kendi kaydırıcısında (CSS .acct-side max-height + overflow): fare üstündeyken menü, değilken sayfa kayar
+  // bilgisayarda sol menü kaydırıcısız, ekrana sığacak kadar sıkı ve yapışkan (CSS ≥900px); sayfa normal kayar
   const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
   useStore((st) => st.seenTick);
   const unseen = unseenOrders(myOrders).length;

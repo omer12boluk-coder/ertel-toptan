@@ -8,7 +8,7 @@ import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
 import { ensureAllMembers } from './datawin.js';
-import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls, nextCode, picUrl, imageBlob } from './utils.js';
+import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls, nextCode, picUrl, imageBlob, imgFiles, mediaOf, isVid, fileHash } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
@@ -1262,7 +1262,7 @@ const ADD_STYLES = [['auto', 'Otomatik'], ['text', 'Sepete ekle'], ['icon', 'Sep
 function CardSettings({ d, set }) {
   const catalog = useStore((s) => s.catalog);
   const S = withDefaults(d);
-  const sample = useMemo(() => catalog.find((p) => p.r >= 100 && p.r < 1000 && p.b && [p.pi, ...(p.im || [])].filter(Boolean).length > 1) || catalog.find((p) => p.r >= 100) || catalog[0], [catalog]);
+  const sample = useMemo(() => catalog.find((p) => p.r >= 100 && p.r < 1000 && p.b && imgFiles(p).length > 1) || catalog.find((p) => p.r >= 100) || catalog[0], [catalog]);
   const C = S.cards || {};
   const addSeg = (k) => <span className="seg seg-wrap">{ADD_STYLES.map(([x, l]) => <button key={x} type="button" className={(C[k] || (k === 'add' ? 'auto' : 'text')) === x ? 'on' : ''} onClick={() => set('cards.' + k, x)}>{l}</button>)}</span>;
   return <>

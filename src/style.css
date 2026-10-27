@@ -3699,3 +3699,27 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
 .up-chip button { margin-left: auto; }
 .up-bar { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
 .up-bar i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+/* Hesabım (bilgisayar, 27.10.2026 son): sol menü KAYDIRICISIZ, ekrana tam sığacak kadar sıkı; sayfa kayarken yerinde
+   sabit durur (sticky, iç kaydırma yok → titreme yok). Çıkış yap menünün son satırı, hep görünür. */
+@media (min-width: 900px) {
+  .acct2 > .acct-side { position: sticky !important; top: calc(var(--top-h) + 16px) !important; align-self: start; max-height: none !important; overflow: visible !important; gap: 10px; padding-right: 0; }
+  .acct2 .acct-prof { padding: 12px 14px; gap: 12px; border-radius: 16px; }
+  .acct2 .acct-prof .hub-av .avatar, .acct2 .acct-prof .hub-av > span:first-child { width: 52px !important; height: 52px !important; font-size: 19px !important; }
+  .acct2 .acct-prof .hub-cam { width: 22px; height: 22px; right: -2px; bottom: -2px; }
+  .acct2 .acct-prof .hub-id h1 { font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acct2 .acct-prof .hub-id p { font-size: 12.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+  .acct2 .acct-prof .hub-id .linkish { margin-top: 2px; font-size: 12px; }
+  .acct2 .acct-nav { border-radius: 16px; }
+  .acct2 .acct-nav-i { padding: 8px 12px; gap: 11px; }
+  .acct2 .acct-nav-i .hub-ic { width: 34px; height: 34px; border-radius: 10px; }
+  .acct2 .acct-nav-i .hub-t b { font-size: 14.5px; }
+  .acct2 .acct-nav-i .hub-t small { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .acct2 .acct-nav-i .hub-t { min-width: 0; }
+  .acct2 > .acct-side > .hub-out { margin: 0; padding: 9px 14px; border: 1px solid var(--line); background: var(--surface); border-radius: 14px; }
+}
+@media (min-width: 900px) and (max-height: 820px) {
+  .acct2 .acct-nav-i .hub-t small { display: none; }
+  .acct2 .acct-nav-i { padding: 7px 12px; }
+  .acct2 .acct-nav-i .hub-ic { width: 30px; height: 30px; }
+}
+}

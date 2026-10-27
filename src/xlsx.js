@@ -201,6 +201,7 @@ export function mergeCatalog(current, incomingIn) {
     const o = byId.get(n.id);
     if (!o) { const p = { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n, nw: 1 }; byId.set(n.id, p); if (ck) byCode.set(ck, n.id); added++; continue; }
     const { _sale, ...nn } = n;
+    if (o.ie) { delete nn.pi; delete nn.im; } // resimleri panelden elle düzenlenmiş ürün: Excel resim listesine dokunmaz
     const m = { ...o, ...nn };
     if (n.a === 1) { delete m.so; delete m.sg; delete m.sgr; } // sitede aktif
     // eski "indirimli fiyat = toptan" kaydı (24.10.2026 kuralı): toptan indirimli fiyata eşitse elle toptan sayılmaz
