@@ -8,7 +8,7 @@ import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
 import { ensureAllMembers } from './datawin.js';
-import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls } from './utils.js';
+import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls, nextCode } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
@@ -22,10 +22,17 @@ const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',',
 
 // =========================================================================
 // Ürün düzenleme
-export function ProductEdit({ p, onClose }) {
+export function ProductEdit({ p, copy, onClose }) {
   const { catalog, settings: S } = useStore();
   const isNew = !p;
-  const [f, setF] = useState(() => p ? { ...p } : { id: Math.max(9000000, ...catalog.map((x) => x.id)) + 1, k: '', c: 0, r: 0, w: null, n: '', cur: 'USD', s: 0, a: 1, man: 1 });
+  const [f, setF] = useState(() => {
+    if (p) return { ...p };
+    const base = { id: Math.max(9000000, ...catalog.map((x) => x.id)) + 1, k: nextCode(catalog), c: 0, r: 0, w: null, n: '', cur: 'USD', s: 0, a: 1, man: 1 };
+    if (!copy) return base;
+    // kopya: kategori, marka, etiket, fiyat, para birimi, resimler, video gelir; kimlik, stok kodu, site bağlantısı ve geçmiş gelmez
+    const { id, k, u, ut, ur, pc, nw, so, sg, sgr, pf, man, _s, _t, img, ...rest } = copy;
+    return { ...rest, ...base, c: copy.c ?? 0, r: copy.r || 0, w: copy.w ?? null, cur: copy.cur || 'USD', s: copy.s || 0, n: copy.n, ...(img && img !== 'fs' ? { img } : {}) };
+  });
   const [busy, setBusy] = useState(false);
   const [imgUrl, setImgUrl] = useState(p?.img && p.img !== 'fs' ? p.img : '');
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
@@ -42,13 +49,14 @@ export function ProductEdit({ p, onClose }) {
   const [preview, setPreview] = useState(false);
   const [newImg, setNewImg] = useState('');
   const [pcOk, setPcOk] = useState(false);
-  useEffect(() => { if (!isNew) api().getDesc(f.id).then((h) => { setDesc(h || ''); setDesc0(h || ''); }); else setDesc(''); }, []);
+  useEffect(() => { if (!isNew) api().getDesc(f.id).then((h) => { setDesc(h || ''); setDesc0(h || ''); }); else if (copy) api().getDesc(copy.id).then((h) => setDesc(h || '')).catch(() => setDesc('')); else setDesc(''); }, []);
   const siteFiles = [f.pi, ...(f.im || [])].filter(Boolean);
   const setFiles = (arr) => setF((x) => ({ ...x, pi: arr[0] || '', im: arr.slice(1) }));
   const fileOf = (v) => v.trim().split('?')[0].split('/').pop().replace(/^\d+X-/, '');
 
   async function save() {
     if (!f.n.trim()) return toast('Ürün adı boş olamaz', 'bad');
+    if (f.k && catalog.some((x) => x.id !== f.id && String(x.k || '').toLowerCase() === String(f.k).trim().toLowerCase())) return toast('Bu stok kodu başka üründe var: ' + f.k, 'bad');
     setBusy(true);
     try {
       const rec = { ...f, n: f.n.trim(), r: num(f.r) || 0, w: num(f.w), s: Number(f.s) || 0, c: Number(f.c) || 0, ut: Date.now(), ur: 'edit' };
@@ -90,7 +98,7 @@ export function ProductEdit({ p, onClose }) {
   }
 
   return (
-    <Sheet wide title={isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={isNew ? '' : `#${f.id} · ${f.k}`} onClose={onClose} footer={<>
+    <Sheet wide title={copy ? 'Kopyadan yeni ürün' : isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={copy ? `“${copy.n}” kopyalandı · yeni stok kodu ${f.k}` : isNew ? '' : `#${f.id} · ${f.k}`} onClose={onClose} footer={<>
       <button className="btn ghost" onClick={onClose}>Vazgeç</button>
       <button className="btn primary" onClick={save} disabled={busy}><Icon n="check" s={16} />Kaydet</button>
     </>}>

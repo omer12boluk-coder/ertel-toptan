@@ -162,3 +162,15 @@ export async function resizeForWeb(file, max = 1600, q = 0.82, alpha = false) {
     return d;
   } finally { URL.revokeObjectURL(url); }
 }
+
+// Sıradaki stok kodu: en çok kullanılan "harf + rakam" kalıbında (ör. ert03805), aynı rakam uzunluğundaki en büyük sayı + 1
+// (DENEME-01 gibi tireli kodlar ve ert034000 gibi uzunluğu farklı yanlış kodlar sayılmaz)
+export function nextCode(catalog) {
+  const cnt = new Map();
+  for (const x of catalog) { const m = /^([a-z]+)(\d+)$/i.exec(String(x.k || '').trim()); if (m) { const key = m[1].toLowerCase() + ':' + m[2].length; cnt.set(key, (cnt.get(key) || 0) + 1); } }
+  if (!cnt.size) return '';
+  const [pre, len] = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0][0].split(':');
+  let max = 0;
+  for (const x of catalog) { const m = /^([a-z]+)(\d+)$/i.exec(String(x.k || '').trim()); if (m && m[1].toLowerCase() === pre && m[2].length === +len) max = Math.max(max, +m[2]); }
+  return pre + String(max + 1).padStart(+len, '0');
+}

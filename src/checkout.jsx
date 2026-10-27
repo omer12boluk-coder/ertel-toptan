@@ -5,7 +5,7 @@
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders } from './store.js';
-import { useStickySide, openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
+import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf } from './config.js';
 import TR from './tr-ilce.json';
@@ -802,8 +802,7 @@ function MemberHome() {
     setBusy(false);
   }
   const removePhoto = () => A.saveMember({ ...m, photo: null }).then(() => toast('Fotoğraf kaldırıldı'));
-  // sol menü iki yönlü yapışkan (ui.jsx useStickySide): uzunsa sayfayla kayar, yön değişince hemen döner
-  const sideRef = useStickySide();
+  // sol menü kendi kaydırıcısında (CSS .acct-side max-height + overflow): fare üstündeyken menü, değilken sayfa kayar
   const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
   useStore((st) => st.seenTick);
   const unseen = unseenOrders(myOrders).length;
@@ -832,7 +831,7 @@ function MemberHome() {
   };
   return (
     <div className={'page acct2' + (view ? ' has-view' : '')}>
-      <aside className="acct-side" ref={sideRef}>
+      <aside className="acct-side">
         <div className="acct-prof">
           <button className={'hub-av' + (busy ? ' busy' : '')} onClick={() => fileRef.current?.click()} aria-label="Profil fotoğrafını değiştir" title="Fotoğrafı değiştir">
             <Avatar u={m} size={72} /><span className="hub-cam"><Icon n="camera" s={14} /></span>

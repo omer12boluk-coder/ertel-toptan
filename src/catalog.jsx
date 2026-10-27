@@ -1,8 +1,8 @@
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
-import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, useStickySide } from './ui.jsx';
-import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck } from './utils.js';
+import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
+import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -103,16 +103,51 @@ function EditCell({ value, show, onSave, kind = 'num', label, className = '' }) 
     </span>
   );
 }
-function AdminTable({ list, asort, sortBy, onEdit }) {
-  const H = ({ k, children, cls = '' }) => <button type="button" className={'ath ' + cls + (asort.k === k ? ' on' : '')} onClick={() => sortBy(k)}>{children}<i className={'ath-ar ' + (asort.k === k ? asort.d : '')} aria-hidden="true" /></button>;
+// Sütun genişlikleri sürüklenerek değişir (Excel gibi), cihazda hatırlanır; ürün sütunu kalan yeri alır
+const COLS = [['code', 'STOK KODU', 106], ['name', 'ÜRÜN', 0], ['s', 'STOK', 70, 'r'], ['r', 'SATIŞ', 116, 'r'], ['w', 'TOPTAN', 100, 'r'], ['a', 'DURUM', 112, 'c'], ['ut', 'SON İŞLEM', 112]];
+const COLW_MIN = 56, COLW_MAX = 320;
+function colTpl(w) { return COLS.map(([k, , d]) => (d ? Math.max(COLW_MIN, Math.min(COLW_MAX, w[k] || d)) + 'px' : 'minmax(220px, 1fr)')).join(' ') + ' 44px'; }
+function AdminTable({ list, asort, sortBy, onEdit, onCopy }) {
+  const [cw, setCw0] = useState(() => ls.get('atw', {}));
+  const headRef = useRef(null);
+  useLayoutEffect(() => { const ul = headRef.current?.parentElement; if (ul) ul.style.setProperty('--atc', colTpl(cw)); }, [cw]);
+  useEffect(() => () => headRef.current?.parentElement?.style.removeProperty('--atc'), []);
+  const grip = (k, d) => (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const x0 = e.clientX, w0 = cw[k] || d, el = e.currentTarget; el.setPointerCapture?.(e.pointerId); el.classList.add('on');
+    let last = cw;
+    const mv = (ev) => { last = { ...cw, [k]: Math.max(COLW_MIN, Math.min(COLW_MAX, Math.round(w0 + ev.clientX - x0))) }; setCw0(last); };
+    const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.classList.remove('on'); ls.set('atw', last); };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up);
+  };
+  const reset = (k) => { const n = { ...cw }; delete n[k]; setCw0(n); ls.set('atw', n); };
+  // başlığa basınca sıralanır; basıştan sonra fare çekilene kadar "üstüne gelince" oku gösterilmez (3. basışta ok asılı kalmasın)
+  const [noHov, setNoHov] = useState(null);
+  const click = (k) => () => { setNoHov(k); sortBy(k); };
   return <>
-    <li className="atr ath-row">
-      <H k="code">Stok kodu</H><H k="name">Ürün</H><H k="s" cls="r">Stok</H><H k="r" cls="r">Satış</H><H k="w" cls="r">Toptan</H><H k="a" cls="c">Durum</H><H k="ut">Son işlem</H><span />
+    <li className="atr ath-row" ref={headRef}>
+      {COLS.map(([k, l, d, al]) => (
+        <div key={k} className={'tc tc-' + k + (al ? ' ' + al : '')}>
+          <button type="button" className={'ath' + (asort.k === k ? ' on ' + asort.d : '') + (noHov === k ? ' nohov' : '')} onClick={click(k)} onMouseLeave={() => noHov === k && setNoHov(null)}>
+            <span>{l}</span><svg className="ath-ar" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 8 1.5 3.5h7z" /></svg>
+          </button>
+          {d > 0 && <span className="col-grip" role="separator" aria-orientation="vertical" title="Sürükleyerek genişlet / daralt · çift tık: varsayılan" onPointerDown={grip(k, d)} onDoubleClick={() => reset(k)} />}
+        </div>
+      ))}
+      <div className="tc tc-ed" />
     </li>
-    {list.map((p) => <AdminRow key={p.id} p={p} onEdit={() => onEdit(p)} />)}
+    {list.map((p) => <AdminRow key={p.id} p={p} onEdit={() => onEdit(p)} onCopy={() => onCopy(p)} />)}
   </>;
 }
-function AdminRow({ p, onEdit }) {
+// Aktif / Pasif seçici (sipariş durum seçicisi gibi: renkli nokta + yazı + ok, altta renkli çizgi)
+const stMenu = (p) => (e) => openMenu(e, [
+  { label: 'Aktif', color: '#1f9d5b', on: !!p.a, hint: p.a ? '✓' : undefined, onClick: () => !p.a && quickSave(p, { a: 1, so: null, sg: null, ur: 'a' }, 'Ürün aktif yapıldı') },
+  { label: 'Pasif', color: '#8a919e', on: !p.a, hint: !p.a ? '✓' : undefined, onClick: () => p.a && quickSave(p, { a: 0, ur: 'a' }, 'Ürün pasif yapıldı') },
+], 'Durum');
+function StatusPick({ p }) {
+  return <button type="button" className={'pst2 ' + (p.a ? 'on' : 'off')} onClick={stMenu(p)} title="Durumu değiştir"><i /><span>{p.a ? 'Aktif' : 'Pasif'}</span><Icon n="chev" s={13} /></button>;
+}
+function AdminRow({ p, onEdit, onCopy }) {
   const { settings: S, user } = useStore();
   const pr = priceFor(p, S, user, null);
   const lo = lastOrderMap().get(p.id) || 0; const t = Math.max(p.ut || 0, lo);
@@ -121,6 +156,7 @@ function AdminRow({ p, onEdit }) {
   const saveCode = async (k) => { if (store.s.catalog.some((x) => x.id !== p.id && String(x.k).toLowerCase() === k.toLowerCase())) return toast('Bu stok kodu başka üründe var', 'bad'); await quickSave(p, { k, ur: 'k' }, 'Stok kodu kaydedildi'); };
   const menu = (e) => openMenu(e, [
     { label: 'Düzenle', icon: 'edit', onClick: onEdit },
+    { label: 'Kopyasını oluştur', icon: 'copy', hint: nextCode(store.s.catalog), onClick: onCopy },
     p.pc && { label: 'Fiyat uyarısını kaldır', icon: 'check', onClick: () => quickSave(p, { pc: null }, 'Uyarı kaldırıldı') },
     '-',
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
@@ -129,22 +165,34 @@ function AdminRow({ p, onEdit }) {
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
     <li className={'atr' + (p.a ? '' : ' off') + (needsCheck(p) ? ' changed' : '')} onContextMenu={menu}>
-      <EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} />
-      <button type="button" className="at-prod" onClick={onEdit} title="Ürünü düzenle">
-        <Thumb p={p} size="sm" />
-        <span className="at-n"><b>{p.n}</b><small>{[p.b, p.so ? 'sitede satışta değil' : '', needsCheck(p) ? `liste ${fmt(p.pc.r0, p.cur)} → ${fmt(p.r, p.cur)}, elle toptanı kontrol edin` : ''].filter(Boolean).join(' · ')}</small></span>
-      </button>
-      <EditCell className="r ac-s" value={p.s ?? 0} show={<b className={'num' + (p.s > 0 ? '' : ' zero')}>{p.s ?? 0}</b>} label="Stok" onSave={(v) => quickSave(p, { s: Math.round(v), ur: 's' }, 'Stok kaydedildi')} />
-      <EditCell className="r ac-r" value={p.r} show={<b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b>} label="Satış fiyatı" onSave={(v) => quickSave(p, { r: v, pc: null, ur: 'r' }, 'Satış fiyatı kaydedildi')} />
-      <EditCell className="r ac-w" value={p.w ?? ''} kind="opt" show={<><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</>} label="Toptan fiyat (boş = otomatik)" onSave={(v) => quickSave(p, { w: v, pc: null, ur: 'w' }, v == null ? 'Toptan otomatik' : 'Toptan kaydedildi')} />
-      <span className="c ac-st">
-        <button type="button" role="switch" aria-checked={!!p.a} className={'sw' + (p.a ? ' on' : '')} title={p.a ? 'Aktif — kapatmak için tıklayın' : 'Pasif — açmak için tıklayın'}
-          onClick={() => quickSave(p, p.a ? { a: 0, ur: 'a' } : { a: 1, so: null, sg: null, ur: 'a' }, p.a ? 'Ürün pasif yapıldı' : 'Ürün aktif yapıldı')}><i /></button>
-        <small>{p.a ? 'Açık' : 'Kapalı'}</small>
-      </span>
-      <span className={"ac-ut" + (dt ? "" : " none")}>{dt ? <><b>{dt.d} {dt.h}</b>{why && <small>{why}</small>}</> : <small>—</small>}</span>
-      <button type="button" className="icon-btn sm at-ed" onClick={onEdit} aria-label="Düzenle" title="Düzenle"><Icon n="edit" s={15} /></button>
+      <div className="tc tc-code"><EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} /></div>
+      <div className="tc tc-name">
+        <button type="button" className="at-prod" onClick={onEdit} title="Ürünü düzenle">
+          <Thumb p={p} size="sm" />
+          <span className="at-n"><b>{p.n}</b><small>{[p.b, p.so ? 'sitede satışta değil' : '', needsCheck(p) ? `liste ${fmt(p.pc.r0, p.cur)} → ${fmt(p.r, p.cur)}, elle toptanı kontrol edin` : ''].filter(Boolean).join(' · ')}</small></span>
+        </button>
+      </div>
+      <div className="tc tc-s r"><EditCell className="r ac-s" value={p.s ?? 0} show={<b className={'num' + (p.s > 0 ? '' : ' zero')}>{p.s ?? 0}</b>} label="Stok" onSave={(v) => quickSave(p, { s: Math.round(v), ur: 's' }, 'Stok kaydedildi')} /></div>
+      <div className="tc tc-r r"><EditCell className="r ac-r" value={p.r} show={<b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b>} label="Satış fiyatı" onSave={(v) => quickSave(p, { r: v, pc: null, ur: 'r' }, 'Satış fiyatı kaydedildi')} /></div>
+      <div className="tc tc-w r"><EditCell className="r ac-w" value={p.w ?? ''} kind="opt" show={<><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</>} label="Toptan fiyat (boş = otomatik)" onSave={(v) => quickSave(p, { w: v, pc: null, ur: 'w' }, v == null ? 'Toptan otomatik' : 'Toptan kaydedildi')} /></div>
+      <div className="tc tc-a c"><StatusPick p={p} /></div>
+      <div className={'tc tc-ut' + (dt ? '' : ' none')}><span className="ac-ut">{dt ? <><b>{dt.d} {dt.h}</b>{why && <small>{why}</small>}</> : <small>—</small>}</span></div>
+      <div className="tc tc-ed"><button type="button" className="icon-btn sm at-ed" onClick={onEdit} aria-label="Düzenle" title="Düzenle"><Icon n="edit" s={15} /></button></div>
     </li>
+  );
+}
+// Kopyalanacak ürünü seç (Yeni ürün > Bir ürünü kopyala)
+function CopyPick({ onPick, onClose }) {
+  const all = useStore((s) => s.catalog);
+  const [q, setQ] = useState('');
+  const list = useMemo(() => { const t = norm(q).split(/\s+/).filter(Boolean); return (t.length ? all.filter((p) => t.every((x) => p._s.includes(x))) : all).slice(0, 40); }, [q, all]);
+  return (
+    <Sheet title="Hangi ürünü kopyalayalım?" sub={'Kategori, marka, etiket, fiyat ve açıklama gelir; yeni stok kodu ' + nextCode(all)} onClose={onClose}>
+      <div className="search cp-search"><Icon n="search" s={18} /><input autoFocus type="search" placeholder="Ürün adı ya da stok kodu…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+      <ul className="cp-list">
+        {list.map((p) => <li key={p.id}><button type="button" onClick={() => onPick(p)}><Thumb p={p} size="sm" /><span><b>{p.n}</b><small>{[p.k, p.b].filter(Boolean).join(' · ')}</small></span><Icon n="copy" s={15} /></button></li>)}
+      </ul>
+    </Sheet>
   );
 }
 
@@ -152,15 +200,11 @@ function AdminRow({ p, onEdit }) {
 function AdminCols({ p }) {
   const { settings: S, user } = useStore();
   const pr = priceFor(p, S, user, null);
-  const stMenu = (e) => openMenu(e, [
-    { label: 'Aktif', color: '#1f6b47', on: !!p.a, hint: p.a ? '✓' : undefined, onClick: () => !p.a && quickSave(p, { a: 1, so: null, sg: null, ur: 'a' }, 'Ürün aktif yapıldı') },
-    { label: 'Pasif', color: '#8a919e', on: !p.a, hint: !p.a ? '✓' : undefined, onClick: () => p.a && quickSave(p, { a: 0, ur: 'a' }, 'Ürün pasif yapıldı') },
-  ], 'Durum');
   return <>
     <span className="ac ac-s" data-l="Stok"><b className={'num' + (p.s <= 0 ? ' zero' : '')}>{p.s ?? 0}</b></span>
     <span className="ac ac-r" data-l="Satış"><b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b></span>
     <span className="ac ac-w" data-l="Toptan" title={p.w != null ? 'Elle girilen toptan' : 'Kurala göre otomatik toptan'}><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</span>
-    <span className="ac ac-st"><button type="button" className={'pst ' + (p.a ? 'on' : 'off')} onClick={stMenu} title="Durumu değiştir"><span>{p.a ? 'Aktif' : 'Pasif'}</span><Icon n="chev" s={13} /></button></span>
+    <span className="ac ac-st"><StatusPick p={p} /></span>
   </>;
 }
 export function PriceBlock({ p, big, S: So, role: ro }) {
@@ -220,6 +264,8 @@ export function Catalog({ admin }) {
   const { settings: S, cart, user } = useStore();
   const all = useVisibleProducts(admin);
   const [q, setQ] = useState('');
+  const [qk, setQk] = useState(''); // yönetici: stok koduna göre arama (ayrı küçük kutu)
+  const [copyPick, setCopyPick] = useState(false);
   const [cat, setCat] = useState(null);
   const [sort, setSort] = useState('default');
   const [stockOnly, setStockOnly] = useState(false);
@@ -241,7 +287,6 @@ export function Catalog({ admin }) {
   const [view, setView0] = useState(() => (admin ? 'list' : ls.get('cat-view', 'grid')));
   const setView = (v) => { setView0(v); if (!admin) ls.set('cat-view', v); };
   const tree = useTree();
-  const sideRef = useStickySide();
   // yönetici: kategori paneli sürükleyerek daraltılır / genişletilir (tabloya yer), cihazda hatırlanır; çift tık = varsayılan
   const [catW, setCatW0] = useState(() => ls.get('cat-w', 240));
   const setCatW = (w) => { setCatW0(w); ls.set('cat-w', w); };
@@ -276,11 +321,12 @@ export function Catalog({ admin }) {
   // scoped: kategori + marka da uygulanır; false: sadece arama ve diğer filtreler (kategoride bulunamazsa tüm ürünlerden göstermek için)
   const filterList = (scoped) => {
     const toks = norm(q).split(/\s+/).filter(Boolean);
+    const kq = admin ? norm(qk).replace(/\s+/g, '') : '';
     const useTags = admin || S.catalog.searchTags;
     const [lo, hi] = PR[price] || [0, Infinity];
     let r = all.filter((p) => (!scoped || cat == null || pcats.get(p.id)?.has(cat)) && (!scoped || !brand || p.b === brand) && (!stockOnly || p.s > 0)
       && (!price || (p.r >= lo && p.r < hi)) && (!newOnly || newest.has(p.id)) && (!imgOnly || p.pi || p.img) && (!favOnly || favSet.has(p.id))
-      && toks.every((t) => p._s.includes(t) || (useTags && p._t.includes(t))));
+      && (!kq || norm(p.k || '').replace(/\s+/g, '').includes(kq)) && toks.every((t) => p._s.includes(t) || (useTags && p._t.includes(t))));
     if (toks.length) r = [...r].sort((a, b) => toks.filter((t) => b._s.includes(t)).length - toks.filter((t) => a._s.includes(t)).length);
     if (admin && adminFilter === 'inactive') r = r.filter((p) => !p.a);
     if (admin && adminFilter === 'active') r = r.filter((p) => p.a);
@@ -304,7 +350,7 @@ export function Catalog({ admin }) {
     }
     return r;
   };
-  const deps = [all, q, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet, asort];
+  const deps = [all, q, qk, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet, asort];
   const scopedList = useMemo(() => filterList(true), deps);
   const scoped = cat != null || !!brand;
   const globalList = useMemo(() => (q.trim() && scoped ? filterList(false) : null), deps);
@@ -313,9 +359,10 @@ export function Catalog({ admin }) {
   const list = widened ? globalList : scopedList;
   const moreOutside = globalList && !widened ? globalList.length - scopedList.length : 0;
   const scopeName = [cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : null, brand || null].filter(Boolean).join(' · ');
-  const clearAll = () => { setQ(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setFavOnly(false); };
+  const clearAll = () => { setQ(''); setQk(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setFavOnly(false); };
   const actives = [
     q.trim() && ['“' + q.trim() + '”', () => setQ('')],
+    qk.trim() && ['Stok kodu: ' + qk.trim(), () => setQk('')],
     cat != null && [tree.nodes.get(cat)?.name || catName(S, cat), () => setCat(null)],
     brand && [brand, () => setBrand('')],
     stockOnly && ['Stoktakiler', () => setStockOnly(false)],
@@ -325,7 +372,7 @@ export function Catalog({ admin }) {
     favOnly && ['Favorilerim', () => setFavOnly(false)],
   ].filter(Boolean);
 
-  useEffect(() => setLimit(S.catalog.pageSize), [q, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
+  useEffect(() => setLimit(S.catalog.pageSize), [q, qk, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
   const more = useCallback(() => setLimit((l) => l + S.catalog.pageSize), [S.catalog.pageSize]);
   const sentinel = useInfinite(more);
   const shown = list.slice(0, limit);
@@ -334,7 +381,7 @@ export function Catalog({ admin }) {
   return (
     <div className="catalog">
       <div className={'cat-layout' + (admin ? ' resizable' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
-        <aside className="cat-side" aria-label="Kategoriler" ref={sideRef}>
+        <aside className="cat-side" aria-label="Kategoriler">
           <h3 className="eyebrow">Kategoriler</h3>
           <button className={'cat-link' + (cat == null ? ' on' : '')} onClick={() => setCat(null)}><span>Tümü</span><b>{all.length}</b></button>
           <CatTree nodes={tree.roots} counts={counts} cat={cat} open={openPath} onPick={setCat} />
@@ -343,10 +390,21 @@ export function Catalog({ admin }) {
         {admin && <span className="cat-grip" role="separator" aria-orientation="vertical" aria-label="Kategoriler panelinin genişliği" title="Sürükleyerek daralt / genişlet" onPointerDown={gripDown} onDoubleClick={() => setCatW(240)} />}
         <section className="cat-main">
           <div className="toolbar">
-            <div className="search">
-              <Icon n="search" s={18} />
-              <input id="cat-search" type="search" placeholder={scopeName ? `${scopeName} içinde ara… (tüm ürünlerde de bakarız)` : 'Ürün adı veya stok kodu… (ör. jcid face id)'} value={q} onChange={(e) => setQ(e.target.value)} />
-              {q && <button className="icon-btn sm" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={16} /></button>}
+            <div className={admin ? 'tb-top' : undefined}>
+              <div className="search">
+                <Icon n="search" s={18} />
+                <input id="cat-search" type="search" placeholder={scopeName ? `${scopeName} içinde ara… (tüm ürünlerde de bakarız)` : admin ? 'Ürün adına göre ara… (ör. jcid face id)' : 'Ürün adı veya stok kodu… (ör. jcid face id)'} value={q} onChange={(e) => setQ(e.target.value)} />
+                {q && <button className="icon-btn sm" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={16} /></button>}
+              </div>
+              {admin && <div className="search code-search">
+                <Icon n="tag" s={15} />
+                <input id="cat-code" type="search" placeholder="Stok kodu" value={qk} onChange={(e) => setQk(e.target.value)} aria-label="Stok koduna göre ara" />
+                {qk && <button className="icon-btn sm" onClick={() => setQk('')} aria-label="Temizle"><Icon n="x" s={14} /></button>}
+              </div>}
+              {admin && <button className="btn primary new-prod" onClick={(e) => openMenu(e, [
+                { label: 'Boş ürün', icon: 'plus', hint: nextCode(store.s.catalog), onClick: () => setEdit({}) },
+                { label: 'Bir ürünü kopyala…', icon: 'copy', onClick: () => setCopyPick(true) },
+              ], 'Yeni ürün')}><Icon n="plus" s={17} /><span>Yeni ürün</span><Icon n="chev" s={14} /></button>}
             </div>
             <div className="chips" role="tablist" aria-label="Kategori">
               <button className="chip only-m" onClick={() => setCatSheet(true)}><Icon n="filter" s={15} />{cat == null ? 'Kategoriler' : tree.nodes.get(cat)?.name || catName(S, cat)}</button>
@@ -396,7 +454,6 @@ export function Catalog({ admin }) {
                   </select>
                 </label>
               )}
-              {admin && <button className="chip accent" onClick={() => setEdit({})}><Icon n="plus" s={15} />Yeni ürün</button>}
 
             </div>
           </div>
@@ -433,7 +490,7 @@ export function Catalog({ admin }) {
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
           ) : (
             <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + cardAdd(S, user?.role)}>
-              {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} />
+              {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
                 : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
             </ul>
           )}
@@ -450,7 +507,8 @@ export function Catalog({ admin }) {
         </Sheet>
       )}
       {open && <ProductSheet p={open} onClose={() => setOpen(null)} />}
-      {edit && <ProductEdit p={edit.id ? edit : null} onClose={() => setEdit(null)} />}
+      {edit && <ProductEdit p={edit.id ? edit : null} copy={edit.copy} onClose={() => setEdit(null)} />}
+      {copyPick && <CopyPick onClose={() => setCopyPick(false)} onPick={(p) => { setCopyPick(false); setEdit({ copy: p }); }} />}
     </div>
   );
 }
