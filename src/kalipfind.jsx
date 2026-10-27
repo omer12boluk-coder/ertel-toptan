@@ -2,7 +2,9 @@
 // Telefon → işlemci verisi /kalip/phones.json (GSMArena'dan toplanır, tools/kalip-build.mjs).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api } from './store.js';
-import { Icon, Toggle } from './ui.jsx';
+import { Icon, Toggle, Thumb, Stepper } from './ui.jsx';
+import { setQty, toast } from './store.js';
+import { fmt, priceFor } from './utils.js';
 import { norm } from './utils.js';
 import { waLink } from './route.js';
 import { ProductSheet } from './catalog.jsx';
@@ -140,33 +142,66 @@ export function KalipFinder() {
 
       {sel && result && (
         <>
-          <section className="kf-phone">
-            <span className={'kf-chipic v-' + (result.v || 'x')}><Icon n="chip" s={30} /></span>
-            <div className="kf-ph-t">
-              {sel.n && <small>{sel.n}</small>}
-              <h2>{sel.n ? short(sel.c) || sel.c : sel.c}</h2>
-              <div className="kf-codes">
-                {result.v && <span className="kf-vendor">{VENDOR[result.v]}</span>}
-                {sel.k.map((c) => <span key={c} className="kf-code">{c.replace(/^A(\d+)P$/, 'A$1 Pro').replace(/^EX(\d+)/, 'Exynos $1')}</span>)}
+          <section className="kf-res">
+            <div className="kf-phone">
+              <span className={'kf-chipic v-' + (result.v || 'x')}><Icon n="chip" s={30} /></span>
+              <div className="kf-ph-t">
+                {sel.n && <small>{sel.n}</small>}
+                <h2>{sel.n ? short(sel.c) || sel.c : sel.c}</h2>
+                <div className="kf-codes">
+                  {result.v && <span className="kf-vendor">{VENDOR[result.v]}</span>}
+                  {sel.k.map((c) => <span key={c} className="kf-code">{nice(c)}</span>)}
+                </div>
               </div>
             </div>
-            <div className="kf-count"><b className="num">{total}</b><span>uygun kalıp</span></div>
+            {total > 0 && (
+              <div className="kf-list">
+                {result.single.map((x) => <KfRow key={x.p.id} s={x} hit={sel.k} onOpen={() => setProd(x.p)} />)}
+                {result.sets.length > 0 && <div className="kf-sub"><Icon n="box" s={15} />Kalıp setleri<span className="num">{result.sets.length}</span></div>}
+                {result.sets.map((x) => <KfRow key={x.p.id} s={x} hit={sel.k} onOpen={() => setProd(x.p)} />)}
+              </div>
+            )}
+            {total === 0 && (
+              <div className="kf-empty">
+                <Icon n="box" s={26} />
+                <div><b>Bu işlemciye özel kalıp şu an katalogda yok.</b><p>Aşağıdaki genel setler işinizi görebilir ya da bize sorun, hemen bakalım.</p></div>
+                {wa && <a className="btn wa" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’tan sor</a>}
+              </div>
+            )}
           </section>
-
-          {total === 0 && (
-            <div className="kf-empty">
-              <Icon n="box" s={26} />
-              <div><b>Bu işlemciye özel kalıp şu an katalogda yok.</b><p>Aşağıdaki genel setler işinizi görebilir ya da bize sorun, hemen bakalım.</p></div>
-              {wa && <a className="btn wa" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’tan sor</a>}
-            </div>
-          )}
-          {result.single.length > 0 && <KfGroup title="Bu işlemcinin kalıbı" sub="Doğrudan bu işlemci için" list={result.single} onOpen={setProd} />}
-          {result.sets.length > 0 && <KfGroup title="Bu işlemciyi içeren kalıp setleri" sub="Setin içinde bu işlemcinin kalıbı da var" list={result.sets} onOpen={setProd} />}
           {result.more.length > 0 && <KfGroup title="Bunlara da bakın" sub="Genel setler · içeriğini ürün açıklamasından kontrol edin" list={result.more} onOpen={setProd} muted />}
           {total > 0 && wa && <p className="kf-ask">Emin olamadınız mı? <a href={wa} target="_blank" rel="noopener">WhatsApp’tan sorun</a>, uygun kalıbı birlikte seçelim.</p>}
         </>
       )}
       {prod && <ProductSheet p={prod} onClose={() => setProd(null)} />}
+    </div>
+  );
+}
+
+const nice = (c) => c.replace(/^A(\d+)P$/, 'A$1 Pro').replace(/^EX(\d+)/, 'Exynos $1');
+// Sonuç satırı: resim · ad · kalıbın işlemci kodları (aranan işlemciye uyan kod dolu renkte, başta) · fiyat · sepete ekle
+function KfRow({ s, hit, onOpen }) {
+  const { settings: S, user, userPrices, cart } = useStore();
+  const p = s.p; const qty = cart[p.id] || 0; const pr = priceFor(p, S, user, userPrices);
+  const h = new Set(hit); const apple = hit.some((c) => /^A\d/.test(c)); // Apple kodları yalnızca iPhone aranınca (Samsung A12/A13 model adları karışmasın)
+  const all = [...s.k].filter((c) => /^(MT|SM|SDM|MSM|HI|EX)/.test(c) || /^E\d{4}$/.test(c) || (apple && /^A\d/.test(c)));
+  // Samsung parça no (E3830) Exynos adının (Exynos 850) eşi: Exynos adı varken tekrar gösterme
+  const vis0 = all.some((c) => c.startsWith('EX')) ? all.filter((c) => !/^E\d{4}$/.test(c)) : all;
+  const vis = [...vis0.filter((c) => h.has(c)), ...vis0.filter((c) => !h.has(c))];
+  const show = vis.slice(0, 7); const more = vis.length - show.length;
+  return (
+    <div className="kf-row">
+      <button type="button" className="kf-row-img" onClick={onOpen} aria-label={p.n}><Thumb p={p} /></button>
+      <div className="kf-row-b">
+        <button type="button" className="kf-row-n" onClick={onOpen}>{p.n}</button>
+        {show.length > 0 && <div className="kf-row-c">{show.map((c) => <span key={c} className={h.has(c) ? 'hit' : ''}>{nice(c)}</span>)}{more > 0 && <span className="more">+{more}</span>}</div>}
+      </div>
+      <div className="kf-row-f">
+        <b className="kf-row-p">{pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur)}</b>
+        {qty > 0
+          ? <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
+          : <button type="button" className="sh-add" onClick={() => { setQty(p.id, 1); toast('Sepete eklendi'); }} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
+      </div>
     </div>
   );
 }

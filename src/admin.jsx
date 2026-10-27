@@ -3,6 +3,7 @@ import { RichText as PageText } from './footer.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
 import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
+import { stencilCodes } from './kalip.js';
 import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
@@ -145,6 +146,7 @@ export function ProductEdit({ p, onClose }) {
           <Field label="Gizli etiketler" hint="Sadece aramada kullanılır, bayiler görmez. Enter veya virgülle ekleyin.">
             <TagInput id="pe-tags" value={f.t || ''} onChange={(v) => set('t', v)} />
           </Field>
+          <KalipHint f={f} />
         </div>
       </div>
 
@@ -1405,6 +1407,21 @@ function NotifyCard() {
         </ol>
       )}
       {W && <button className="btn sm outline" disabled={busy} onClick={test}><Icon n="send" s={15} />{busy ? 'Gönderiliyor…' : 'Deneme bildirimi gönder'}</button>}
+    </div>
+  );
+}
+
+// Ürün formu: kalıpsa Kalıp bulucuda hangi işlemcilerle eşleşeceğini anında gösterir
+function KalipHint({ f }) {
+  const codes = stencilCodes({ ...f, c: +f.c || f.c });
+  if (!codes) return null;
+  const nice = (c) => c.replace(/^A(\d+)P$/, 'A$1 Pro').replace(/^EX(\d+)/, 'Exynos $1');
+  return (
+    <div className={'kal-hint' + (codes.length ? '' : ' warn')}>
+      <Icon n="chip" s={16} />
+      {codes.length
+        ? <span>Kalıp bulucuda bu işlemcilerle eşleşir: {codes.map((c) => <b key={c} className="kf-code">{nice(c)}</b>)}</span>
+        : <span>Kalıp bulucuda hiçbir işlemciyle eşleşmiyor. Gizli etiketlere işlemci kodu ya da adı yazın (ör. <i>MT6781</i>, <i>SM7150</i>, <i>Helio G96</i>, <i>Exynos 850</i>).</span>}
     </div>
   );
 }

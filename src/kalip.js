@@ -88,11 +88,13 @@ export const isStencil = (p) => {
   // sade kodlu Amaoe ürünü (MT6177MV) işlemcinin kendisi olabilir → kod tek başına yetmez.
   return /cpu|islemci|entegre|sablon/.test(n) || /\bU-?[A-Z]{2,4}\s?\d|\bM[UQS]\s?\d/.test(p.n) || (+p.c !== 6 && chipCodes(p.n).size > 0);
 };
+// yönetici formu: bu ürün kalıp mı ve hangi işlemci kodlarıyla eşleşir
+export const stencilCodes = (p) => (isStencil(p) ? (stencilKeys(p) || '').split(' ').filter((x) => x && x !== '-' && !x.startsWith('m:')) : null);
 // herkese açık katalog için kalıbın işlemci kodları + etiketteki telefon modelleri ("m:note10pro"); etiketler gizli kalır
 export function stencilKeys(p) {
   if (!isStencil(p)) return null;
   const tags = tagList(p);
-  const k = [...chipCodes(p.n + ' ' + tags.join(' / '))];
+  const k = [...new Set([...chipCodes(p.n + ' ' + tags.join(' / ')), ...tags.flatMap((x) => [...phoneCodes(x)])])];
   const m = tags.map((x) => nrm(x).replace(/[\s-]+/g, '')).filter((x) => x.length >= 5 && /\d/.test(x) && /[a-z]/.test(x) && !k.includes(x.toUpperCase())).map((x) => 'm:' + x);
   return [...k, ...m].join(' ') || '-';
 }
