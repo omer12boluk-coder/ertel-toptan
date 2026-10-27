@@ -19,7 +19,14 @@ const out = []; const seen = new Set();
 for (const ph of phones) {
   if (/\b(watch|band|buds|gear|fit)|watch\d/i.test(ph.n)) continue; // saat/bileklik/kulaklık değil
   const n = ph.n.replace(/\s+/g, ' ').trim(); if (!n || seen.has(n)) continue; seen.add(n);
-  const raw = [...new Set(ph.c.flatMap(split))].filter((c) => c && c !== '?');
+  let raw = [...new Set(ph.c.flatMap(split))].filter((c) => c && c !== '?');
+  // Bölgeye göre işlemci ("Exynos 9825 - EMEA/LATAM; Snapdragon 855 - USA/China"): Türkiye'de uluslararası sürüm satılır →
+  // uluslararası/Avrupa/global sürümü varsa yalnızca onu (ve bölgesi yazmayanları) al
+  // öncelik: Avrupa/EMEA > uluslararası/global > ROW (S22: "Exynos 2200 - Europe; Snapdragon - ROW" → Türkiye'de Exynos)
+  const REG = /\)?\s+-\s+(.+)$/; const reg = (c) => (REG.exec(c) || [])[1] || '';
+  const TIERS = [/europe|emea/i, /international|global/i, /\brow\b|world/i];
+  const tier = TIERS.find((rx) => raw.some((c) => rx.test(reg(c))));
+  if (tier) raw = raw.filter((c) => tier.test(reg(c)));
   const cs = raw;
   if (!cs.length) continue;
   const codes = new Set();

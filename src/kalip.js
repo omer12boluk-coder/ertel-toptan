@@ -67,7 +67,8 @@ export function phoneCodes(chip) {
   return out;
 }
 
-export const vendorOf = (chip) => { const s = String(chip || '').toLowerCase(); return /apple|\ba\d{1,2}\b/.test(s) ? 'apple' : /snapdragon|qualcomm/.test(s) ? 'qualcomm' : /mediatek|dimensity|helio/.test(s) ? 'mediatek' : /exynos/.test(s) ? 'exynos' : /kirin|hisilicon/.test(s) ? 'kirin' : /tensor/.test(s) ? 'tensor' : /unisoc|tiger|spreadtrum/.test(s) ? 'unisoc' : ''; };
+// birden çok işlemcide ilk (ana) işlemcinin üreticisi
+export const vendorOf = (chip) => { const s = String(chip || '').split(' / ')[0].toLowerCase(); return /apple|\ba\d{1,2}\b/.test(s) ? 'apple' : /snapdragon|qualcomm/.test(s) ? 'qualcomm' : /mediatek|dimensity|helio/.test(s) ? 'mediatek' : /exynos/.test(s) ? 'exynos' : /kirin|hisilicon/.test(s) ? 'kirin' : /tensor/.test(s) ? 'tensor' : /unisoc|tiger|spreadtrum/.test(s) ? 'unisoc' : ''; };
 
 // --- kalıp ürünleri ---
 const nrm = (s) => String(s ?? '').replace(/[ıİşŞğĞüÜöÖçÇ]/g, (c) => ({ ı: 'i', İ: 'i', ş: 's', Ş: 's', ğ: 'g', Ğ: 'g', ü: 'u', Ü: 'u', ö: 'o', Ö: 'o', ç: 'c', Ç: 'c' }[c])).toLowerCase();
