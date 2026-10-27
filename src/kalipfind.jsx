@@ -142,6 +142,29 @@ export function KalipFinder() {
 
       {sel && result && (
         <>
+          {S.kalip?.view === 'grid' ? (<>
+          <section className="kf-phone solo">
+            <span className={'kf-chipic v-' + (result.v || 'x')}><Icon n="chip" s={30} /></span>
+            <div className="kf-ph-t">
+              {sel.n && <small>{sel.n}</small>}
+              <h2>{sel.n ? short(sel.c) || sel.c : sel.c}</h2>
+              <div className="kf-codes">
+                {result.v && <span className="kf-vendor">{VENDOR[result.v]}</span>}
+                {sel.k.map((c) => <span key={c} className="kf-code">{nice(c)}</span>)}
+              </div>
+            </div>
+            <div className="kf-count"><b className="num">{total}</b><span>uygun kalıp</span></div>
+          </section>
+          {total === 0 && (
+            <div className="kf-empty">
+              <Icon n="box" s={26} />
+              <div><b>Bu işlemciye özel kalıp şu an katalogda yok.</b><p>Aşağıdaki genel setler işinizi görebilir ya da bize sorun, hemen bakalım.</p></div>
+              {wa && <a className="btn wa" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’tan sor</a>}
+            </div>
+          )}
+          {result.single.length > 0 && <KfGroup title="Bu işlemcinin kalıbı" sub="Doğrudan bu işlemci için" list={result.single} onOpen={setProd} />}
+          {result.sets.length > 0 && <KfGroup title="Bu işlemciyi içeren kalıp setleri" sub="Setin içinde bu işlemcinin kalıbı da var" list={result.sets} onOpen={setProd} />}
+          </>) : (
           <section className="kf-res">
             <div className="kf-phone">
               <span className={'kf-chipic v-' + (result.v || 'x')}><Icon n="chip" s={30} /></span>
@@ -169,6 +192,7 @@ export function KalipFinder() {
               </div>
             )}
           </section>
+          )}
           {result.more.length > 0 && <KfGroup title="Bunlara da bakın" sub="Genel setler · içeriğini ürün açıklamasından kontrol edin" list={result.more} onOpen={setProd} muted />}
           {total > 0 && wa && <p className="kf-ask">Emin olamadınız mı? <a href={wa} target="_blank" rel="noopener">WhatsApp’tan sorun</a>, uygun kalıbı birlikte seçelim.</p>}
         </>
@@ -236,6 +260,7 @@ export function KalipSettings({ d, set }) {
   return (
     <div className="kfs">
       <Toggle id="s-kalip" label="Mağazada Kalıp bulucu görünsün" checked={d.kalip?.on !== false} onChange={(v) => set('kalip.on', v)} />
+      <Toggle id="s-kalip-view" label="Sonuçlar liste görünümünde" hint="Kapalıysa eski görünüm: işlemci kartı + kalıp kartları ızgarası" checked={d.kalip?.view !== 'grid'} onChange={(v) => set('kalip.view', v ? 'list' : 'grid')} />
       <p className="fine">Listede {base ? <b>{base.length.toLocaleString('tr-TR')}</b> : '…'} telefon modeli var. Model arayın ya da yeni model yazın; işlemcisini seçin (ör. <i>Snapdragon 732G</i>, <i>Helio G85</i>, <i>Apple A15</i> ya da kod: <i>SM7150</i>, <i>MT6769</i>). Uyan kalıplar hemen altta görünür. Kaydet’e basınca mağazada geçerli olur.</p>
       <div className="kfs-q"><Icon n="search" s={17} /><input id="s-kalip-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Model ara ya da yeni model yaz…" />{q && <button type="button" className="kf-x" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={13} /></button>}</div>
       {q.trim().length >= 2 && all && !exists && (

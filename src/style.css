@@ -3293,6 +3293,7 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 
 .kf-res { border-radius: 20px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; animation: kfIn .3s var(--ease); box-shadow: 0 18px 40px -32px rgb(20 30 60 / .45); }
 .kf-phone { display: flex; align-items: center; gap: 18px; padding: 20px 22px; }
+.kf-phone.solo { border-radius: 20px; background: var(--surface); border: 1px solid var(--line); animation: kfIn .3s var(--ease); }
 .kf-res > .kf-empty { margin: 0 16px 16px; }
 .kf-list { border-top: 1px solid var(--line); background: color-mix(in oklab, var(--accent) 3%, var(--surface)); }
 .kf-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 12px 22px; border-top: 1px solid var(--line-2, var(--line)); animation: kfIn .35s var(--ease) both; }
