@@ -36,7 +36,7 @@ export function AdminHome() {
       reqs: requests.filter((r) => (r.createdAt || 0) >= from).length,
       unread: requests.filter((r) => r.unreadAdmin > 0).length,
       pending: customers.filter((c) => c.pending).length,
-      priceChanged: catalog.filter((p) => p.pc).length,
+      priceChanged: catalog.filter((p) => p.pc && p.w != null).length,
       top: [...top.values()].sort((a, b) => b.qty - a.qty).slice(0, 5),
     };
   }, [orders, requests, members, customers, catalog, from, per]);

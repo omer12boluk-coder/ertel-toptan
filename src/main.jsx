@@ -450,7 +450,7 @@ function ShellFull() {
     document.title = (unread ? `(${unread}) ` : '') + store.s.settings.brand.appName;
   }, [unread]);
   const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length);
-  const priceN = useStore((s) => (admin ? s.catalog.filter((p) => p.pc).length : 0));
+  const priceN = useStore((s) => (admin ? s.catalog.filter((p) => p.pc && p.w != null).length : 0));
   const newOrders = useStore((s) => (admin ? s.orders.filter((o) => o.unread).length : 0));
   const member = useStore((s) => s.member);
   const prevOrders = useRef(newOrders);

@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } fr
 import { createPortal } from 'react-dom';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
-import { norm, fmt, priceFor, catName, now, ls, soon } from './utils.js';
+import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -187,7 +187,7 @@ export function Catalog({ admin }) {
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
   useEffect(() => { if (!browse) return; setQ(browse.q || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
-  const changedN = useMemo(() => (admin ? all.filter((p) => p.pc).length : 0), [all, admin]);
+  const changedN = useMemo(() => (admin ? all.filter(needsCheck).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);
   const counts = useMemo(() => {
@@ -216,7 +216,7 @@ export function Catalog({ admin }) {
     if (admin && adminFilter === 'nowholesale') r = r.filter((p) => p.w == null);
     if (admin && adminFilter === 'noimg') r = r.filter((p) => !p.img && !p.pi);
     if (admin && adminFilter === 'notags') r = r.filter((p) => !p.t);
-    if (admin && adminFilter === 'pricechanged') r = r.filter((p) => p.pc);
+    if (admin && adminFilter === 'pricechanged') r = r.filter(needsCheck);
     if (admin && adminFilter === 'new') r = r.filter((p) => p.nw);
     if (admin && adminFilter === 'siteoff') r = r.filter((p) => p.so);
     if (sort === 'asc') r = [...r].sort((a, b) => a.r - b.r);
@@ -308,7 +308,7 @@ export function Catalog({ admin }) {
                     <option value="nowholesale">Toptan fiyatı girilmemiş</option>
                     <option value="noimg">Resmi olmayanlar</option>
                     <option value="notags">Etiketi olmayanlar</option>
-                    <option value="pricechanged">Liste fiyatı değişenler</option>
+                    <option value="pricechanged">Toptanı kontrol edilecekler</option>
                     <option value="new">Siteden yeni gelenler</option>
                     <option value="siteoff">Sitede satışta olmayanlar</option>
                   </select>
@@ -319,8 +319,12 @@ export function Catalog({ admin }) {
             </div>
           </div>
 
+          {admin && adminFilter === 'pricechanged' && (
+            <div className="banner info price-alert"><Icon n="tag" /><div>{changedN ? <>Bu ürünlerin liste fiyatı değişti; elle girdiğiniz toptan fiyat korunuyor. Uygunsa dokunmayın, değilse <b>Düzenle</b>'den yeni toptan fiyatı yazın. Hepsine baktıysanız uyarıyı kaldırın.</> : 'Kontrol edilecek ürün kalmadı.'}</div>
+              {changedN > 0 && <button className="btn sm outline" onClick={() => clearChecks()}><Icon n="check" s={15} />Hepsine baktım, uyarıyı kaldır</button>}</div>
+          )}
           {admin && changedN > 0 && adminFilter !== 'pricechanged' && (
-            <div className="banner warn price-alert"><Icon n="tag" /><div><b>{changedN} ürünün liste fiyatı değişti.</b> Toptan fiyatlarını kontrol edin; kontrol edene kadar toptan fiyat liste fiyatını geçemez.</div><button className="btn sm outline" onClick={() => setAdminFilter('pricechanged')}>Göster</button></div>
+            <div className="banner warn price-alert"><Icon n="tag" /><div><b>{changedN} ürünün liste fiyatı değişti ve elle girdiğiniz toptan fiyatı var.</b> Toptan fiyatı yeni liste fiyatına göre hâlâ uygun mu bakın (otomatik toptanlılar kendiliğinden güncellenir).</div><button className="btn sm outline" onClick={() => setAdminFilter('pricechanged')}>Göster</button></div>
           )}
           
           {actives.length > 0 && (
@@ -424,7 +428,7 @@ function ProductRow({ p, admin, onOpen }) {
     site && user?.role !== 'public' && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
-    <li className={'prow' + (admin ? ' adm' : '') + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '') + (hov && multi ? ' hov' : '')} onContextMenu={menu}
+    <li className={'prow' + (admin ? ' adm' : '') + (!p.a ? ' inactive' : '') + (needsCheck(p) && admin ? ' changed' : '') + (hov && multi ? ' hov' : '')} onContextMenu={menu}
       onMouseEnter={multi ? () => setHov(true) : undefined} onMouseLeave={multi ? () => { setHov(false); setIx(0); } : undefined}>
       {user?.role === 'public' && <FavBtn id={p.id} />}
       <button className="prow-main" onClick={onOpen}>
@@ -438,7 +442,7 @@ function ProductRow({ p, admin, onOpen }) {
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
             {admin && p.nw && <span className="dot tone-info">Siteden yeni</span>}
             {admin && p.so && <span className="dot tone-muted">Sitede satışta değil</span>}
-            {admin && p.pc && <span className="dot tone-bad">Liste {fmt(p.pc.r0, p.cur)} → {fmt(p.r, p.cur)}</span>}
+            {admin && needsCheck(p) && <span className="dot tone-bad">Liste {fmt(p.pc.r0, p.cur)} → {fmt(p.r, p.cur)} · elle toptan</span>}
             {admin && (() => { const lo = lastOrderMap().get(p.id) || 0; const t = Math.max(p.ut || 0, lo); return t ? <span className="prow-ut" title={lo >= (p.ut || 0) ? 'Son işlem: sipariş' : 'Son işlem: fiyat / ad / aktif-pasif / düzenleme'}>{upd(t)}{lo >= (p.ut || 0) ? ' · sipariş' : ''}</span> : null; })()}
           </span>
         </div>
@@ -950,6 +954,11 @@ async function askAbout(p, qty) {
 }
 
 // Sağ tık menüsünden hızlı değişiklik (aktif/pasif, uyarı kaldır)
+// "Toptanı kontrol edilecekler": tüm liste fiyatı uyarılarını kaldır (otomatik toptanlılardaki eski uyarılar da temizlenir)
+async function clearChecks() {
+  const list = store.s.catalog.map(({ _s, _t, ...x }) => { if (!x.pc) return x; const { pc, ...y } = x; return y; });
+  try { await api().saveCatalog(list); setCatalog(list); toast('Fiyat uyarıları kaldırıldı'); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+}
 async function quickSave(p, patch, msg) {
   const list = store.s.catalog.map(({ _s, _t, ...x }) => {
     if (x.id !== p.id) return x;

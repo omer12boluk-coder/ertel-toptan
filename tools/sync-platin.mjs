@@ -78,7 +78,8 @@ for (const p of cat) {
       const r0 = p.pc ? p.pc.r0 : p.r;
       st.price.push(`${p.k}: ${p.r} → ${usd}`); E('price', p, { from: p.r, to: usd, ...(p.w != null ? { w: p.w } : {}) }); // elle toptan fiyatı korunur, bildirimde ayrıca belirtilir
       p.r = usd;
-      if (Math.abs(usd - r0) < 0.01) delete p.pc; else p.pc = { r0, at: now };
+      // uyarı sadece elle toptanı olan üründe (otomatik toptan kurala göre kendiliğinden güncellenir, yapılacak bir şey yok)
+      if (Math.abs(usd - r0) < 0.01 || p.w == null) delete p.pc; else p.pc = { r0, at: now };
     }
   }
 }

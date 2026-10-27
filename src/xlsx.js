@@ -210,7 +210,7 @@ export function mergeCatalog(current, incomingIn) {
     // Liste fiyatı değiştiyse işaretle: yönetici toptan fiyatı kontrol edene kadar uyarı görünür
     if (n.r != null && o.r != null && Number(n.r) !== Number(o.r)) {
       const r0 = o.pc ? o.pc.r0 : o.r;
-      if (Number(n.r) === Number(r0)) delete m.pc; else m.pc = { r0, at: Date.now() };
+      if (Number(n.r) === Number(r0) || m.w == null) delete m.pc; else m.pc = { r0, at: Date.now() }; // sadece elle toptanlı üründe uyarı
     }
     if (!same(m, o)) updated++;
     byId.set(n.id, m);
@@ -218,7 +218,7 @@ export function mergeCatalog(current, incomingIn) {
   const missingList = current.filter((p) => !seen.has(p.id) && !p.man).map((p) => ({ id: p.id, k: p.k, n: p.n }));
   const missing = missingList.length;
   const list = [...byId.values()].map((p) => { if ('_sale' in p) { const { _sale, ...x } = p; return x; } return p; }).sort((a, b) => b.id - a.id);
-  const pcList = list.filter((p) => p.pc && !byIdOld(current, p.id)?.pc);
-  const priceChanged = pcList.length; const manualKept = pcList.filter((p) => p.w != null).length; // elle toptan fiyatı korunanlar
+  const pcList = list.filter((p) => p.pc && p.w != null && !byIdOld(current, p.id)?.pc);
+  const priceChanged = pcList.length; const manualKept = pcList.length; // elle toptan fiyatı korunanlar (kontrol gerekenler)
   return { list, added, updated, missing, missingList, priceChanged, manualKept, dupSkipped, matchedByCode, idMap };
 }

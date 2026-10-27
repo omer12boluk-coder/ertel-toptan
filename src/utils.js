@@ -97,6 +97,8 @@ export function totals(items, key) {
   return by;
 }
 // KDV: tutar başına (para birimi bazında) KDV ve KDV dahil toplam
+// liste fiyatı değişen ve ELLE toptanı olan ürün: toptanı kontrol edilmeli (otomatik toptan kendiliğinden güncellenir)
+export const needsCheck = (p) => !!p.pc && p.w != null;
 export function vatOf(by, pct) {
   const p = Number(pct) || 0; const vat = {}, inc = {};
   for (const [c, v] of Object.entries(by || {})) { vat[c] = v * p / 100; inc[c] = v + vat[c]; }
