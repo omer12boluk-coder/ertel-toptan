@@ -32,7 +32,7 @@ function useNotifs() {
     for (const [i, x] of (feed || []).entries()) {
       if (x.at <= from) continue;
       const P = { price: x.w != null ? ['tag', 'bad', `Fiyat değişti · elle toptanlı · ${x.k}`, `${x.n} · liste ${fmt(x.from)} → ${fmt(x.to)} · sizin toptan ${fmt(x.w)} korundu, kontrol edin`] : ['tag', 'warn', `Fiyat değişti · ${x.k}`, `${x.n} · ${fmt(x.from)} → ${fmt(x.to)}`], new: ['plus', 'ok', `Sitede yeni ürün · ${x.k}`, `${x.n}${x.to ? ' · ' + fmt(x.to) : ''}`], name: ['edit', 'info', `Ürün adı değişti · ${x.k}`, `${x.from} → ${x.n}`], hidden: ['eye', 'muted', `Sitede pasife alındı · ${x.k}`, `${x.n} · uygulamada da gizlendi`], deleted: ['trash', 'bad', `Siteden silindi · ${x.k}`, `${x.n} · uygulamadan da kaldırıldı`], shown: ['eye', 'ok', `Sitede yeniden satışta · ${x.k}`, x.n] }[x.t];
-      if (P) out.push({ id: 'f' + i + x.at + x.id, at: x.at, g: 'prod', ic: P[0], tone: P[1], t: P[2], s: P[3], go: () => { go('katalog'); store.set({ catalogGo: { q: x.k || String(x.id) } }); } });
+      if (P) out.push({ id: 'f' + i + x.at + x.id, at: x.at, g: 'prod', ic: P[0], tone: P[1], t: P[2], s: P[3], go: () => { go('katalog'); store.set({ catalogGo: x.k ? { code: x.k } : { q: x.n || String(x.id) } }); /* stok kodu kendi kutusuna (ad aramasına değil) */ } });
     }
     return out.sort((a, b) => b.at - a.at).slice(0, 300);
   }, [orders, requests, customers, members, feed]);
