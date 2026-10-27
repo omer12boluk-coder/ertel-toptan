@@ -168,10 +168,16 @@ export class FirebaseBackend {
   async loadDescMap() {
     if (this._descs) return this._descs;
     this._descsP = this._descsP || (async () => {
+      // açıklamalar ~1,5 MB: sürüm değişmediyse cihazdaki kopya (her ziyarette 1 okuma, veri inmez)
       const meta = await timeout(this.F.getDoc(this.d('desc', '_meta')));
       if (!meta.exists()) return {};
-      const parts = await Promise.all(Array.from({ length: meta.data().chunks }, (_, i) => this.F.getDoc(this.d('desc', 'c' + i))));
-      return Object.assign({}, ...parts.map((x) => (x.exists() ? x.data().d : {})));
+      const { version, chunks } = meta.data();
+      const cached = await idbGet('desc').catch(() => null);
+      if (cached && cached.version === version && cached.d) return cached.d;
+      const parts = await Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('desc', 'c' + i))));
+      const d = Object.assign({}, ...parts.map((x) => (x.exists() ? x.data().d : {})));
+      idbSet('desc', { version, d });
+      return d;
     })();
     try { this._descs = await this._descsP; } catch (e) { this._descsP = null; throw e; } // hata olursa bir dahakine yeniden dener
     return this._descs;
@@ -184,7 +190,7 @@ export class FirebaseBackend {
     parts.forEach((part, i) => b.set(this.d('desc', 'c' + i), { d: Object.fromEntries(part) }));
     b.set(this.d('desc', '_meta'), { version: now(), chunks: parts.length, count: Object.keys(map).length });
     await b.commit();
-    this._descs = map;
+    this._descs = map; idbSet('desc', null);
   }
   async setDesc(id, html) {
     const m = { ...(await this.loadDescMap()) };

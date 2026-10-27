@@ -140,7 +140,7 @@ export function KalipFinder() {
 
       {sel && result && (
         <>
-          <section className="kf-phone">
+          <section className={'kf-phone' + (total ? ' found' : '')}>
             <span className={'kf-chipic v-' + (result.v || 'x')}><Icon n="chip" s={30} /></span>
             <div className="kf-ph-t">
               {sel.n && <small>{sel.n}</small>}
@@ -150,7 +150,13 @@ export function KalipFinder() {
                 {sel.k.map((c) => <span key={c} className="kf-code">{c.replace(/^A(\d+)P$/, 'A$1 Pro').replace(/^EX(\d+)/, 'Exynos $1')}</span>)}
               </div>
             </div>
-            <div className="kf-count"><b className="num">{total}</b><span>uygun kalıp</span></div>
+            {total > 0
+              ? <button type="button" className="kf-found" onClick={() => document.getElementById('kf-res')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                  <span className="kf-found-ic"><Icon n="check" s={18} /></span>
+                  <span className="kf-found-t"><b className="num">{total}</b> uygun kalıp bulundu</span>
+                  <Icon n="chev" s={16} />
+                </button>
+              : <div className="kf-count"><b className="num">0</b><span>uygun kalıp</span></div>}
           </section>
 
           {total === 0 && (
@@ -160,8 +166,9 @@ export function KalipFinder() {
               {wa && <a className="btn wa" href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’tan sor</a>}
             </div>
           )}
-          {result.single.length > 0 && <KfGroup title="Bu işlemcinin kalıbı" sub="Doğrudan bu işlemci için" list={result.single} onOpen={setProd} />}
-          {result.sets.length > 0 && <KfGroup title="Bu işlemciyi içeren kalıp setleri" sub="Setin içinde bu işlemcinin kalıbı da var" list={result.sets} onOpen={setProd} />}
+          <div id="kf-res" />
+          {result.single.length > 0 && <KfGroup title="Bu işlemcinin kalıbı" sub="Doğrudan bu işlemci için" list={result.single} onOpen={setProd} badge="Uyumlu" />}
+          {result.sets.length > 0 && <KfGroup title="Bu işlemciyi içeren kalıp setleri" sub="Setin içinde bu işlemcinin kalıbı da var" list={result.sets} onOpen={setProd} badge="Sette var" set />}
           {result.more.length > 0 && <KfGroup title="Bunlara da bakın" sub="Genel setler · içeriğini ürün açıklamasından kontrol edin" list={result.more} onOpen={setProd} muted />}
           {total > 0 && wa && <p className="kf-ask">Emin olamadınız mı? <a href={wa} target="_blank" rel="noopener">WhatsApp’tan sorun</a>, uygun kalıbı birlikte seçelim.</p>}
         </>
@@ -171,11 +178,13 @@ export function KalipFinder() {
   );
 }
 
-function KfGroup({ title, sub, list, onOpen, muted }) {
+function KfGroup({ title, sub, list, onOpen, muted, badge, set }) {
   return (
     <section className={'kf-group' + (muted ? ' muted' : '')}>
       <div className="kf-gh"><h3>{title}<span className="num">{list.length}</span></h3><small>{sub}</small></div>
-      <div className="kf-grid">{list.map((s, i) => <PCard key={s.p.id} p={s.p} i={i} onOpen={() => onOpen(s.p)} />)}</div>
+      <div className="kf-grid">{list.map((s, i) => badge
+        ? <div className="kf-cw" key={s.p.id}><span className={'kf-ok' + (set ? ' set' : '')}><Icon n="check" s={12} />{badge}</span><PCard p={s.p} i={i} onOpen={() => onOpen(s.p)} /></div>
+        : <PCard key={s.p.id} p={s.p} i={i} onOpen={() => onOpen(s.p)} />)}</div>
     </section>
   );
 }
