@@ -543,7 +543,7 @@ function CargoCard({ o, flow }) {
   const [pkg, setPkg] = useState(() => o.dhl?.pkg ? pk.findIndex((x) => x.n === o.dhl.pkg) : 0); // -1 = özel
   const [kg, setKg] = useState(o.dhl?.kg || pk[0].kg);
   const [desi, setDesi] = useState(o.dhl?.desi || pk[0].desi);
-  const [icerik, setIcerik] = useState(o.dhl?.icerik || 'Elektronik malzeme');
+  const [icerik, setIcerik] = useState(o.dhl?.icerik || 'DOSYA / ZARF');
   const [pay, setPay] = useState(o.dhl?.pay || 'U');
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');

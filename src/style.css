@@ -2005,10 +2005,10 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .hsearch-box { display: none; }
 @media (min-width: 900px) {
   .hsearch.mob-open .hsearch-btn { display: none; }
-  .hsearch.mob-open .hsearch-box { display: flex; width: 320px; background: var(--surface); border-color: var(--accent); animation: hs-open .22s var(--ease) both; }
-  .hsearch.mob-open .hsearch-box:focus-within { width: 320px; }
+  .hsearch.mob-open .hsearch-box { display: flex; width: var(--hsw, 320px); background: var(--surface); border-color: var(--accent); animation: hs-open .22s var(--ease) both; }
+  .hsearch.mob-open .hsearch-box:focus-within { width: var(--hsw, 320px); }
 }
-@keyframes hs-open { from { width: 40px; opacity: .4; } to { width: 320px; opacity: 1; } }
+@keyframes hs-open { from { width: 40px; opacity: .4; } to { width: var(--hsw, 320px); opacity: 1; } }
 
 /* ===== Açılış ekranı (dükkân fotoğrafı; Ayarlar > Genel > Açılış ekranı ile kapatılır) ===== */
 .intro { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: #0b1226; overflow: hidden; cursor: pointer; animation: intro-in .35s ease both; transition: opacity .5s ease, transform .5s ease; }
@@ -2028,7 +2028,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 @keyframes intro-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
 @media (prefers-reduced-motion: reduce) { .intro-img, .intro-bar i { animation: none; } }
 /* arama kutusu kapanırken: açılışın tersi */
-@keyframes hs-close { from { width: 320px; opacity: 1; } to { width: 40px; opacity: 0; } }
+@keyframes hs-close { from { width: var(--hsw, 320px); opacity: 1; } to { width: 40px; opacity: 0; } }
 @keyframes hs-close-m { to { opacity: 0; transform: translateY(-8px) scale(.98); } }
 @media (min-width: 900px) { .hsearch.mob-open.closing .hsearch-box { animation: hs-close .2s var(--ease) both; } }
 @media (max-width: 899px) { .hsearch.mob-open.closing .hsearch-box { animation: hs-close-m .2s var(--ease) both; } }
@@ -2038,8 +2038,8 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 @media (min-width: 900px) {
   .hsearch-box { padding-left: 9.5px; gap: 8px; }
   .hsearch-box > .ic { flex: none; }
-  @keyframes hs-open { from { width: 40px; border-color: transparent; background: transparent; border-radius: 20px; } to { width: 320px; } }
-  @keyframes hs-close { from { width: 320px; } to { width: 40px; border-color: transparent; background: transparent; border-radius: 20px; } }
+  @keyframes hs-open { from { width: 40px; border-color: transparent; background: transparent; border-radius: 20px; } to { width: var(--hsw, 320px); } }
+  @keyframes hs-close { from { width: var(--hsw, 320px); } to { width: 40px; border-color: transparent; background: transparent; border-radius: 20px; } }
   .hsearch.mob-open .hsearch-box { animation-duration: .24s; }
   .hsearch.mob-open.closing .hsearch-box { animation: hs-close .24s var(--ease) both; }
   .hsearch.mob-open .hsearch-box input, .hsearch.mob-open .hsearch-x { animation: hs-fade .2s .06s ease both; }
@@ -3414,3 +3414,14 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
   .shell.public .me .me-t { gap: 1px; }
 }
 .ocg-tip { flex-basis: 100%; margin: 4px 0 0; order: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; } .ocg-tip > p { flex-basis: 100%; margin: 0; } .ocg-tip .seg button { font-size: 13px; padding: 6px 10px; }
+/* bilgisayarda açılan arama kutusu menüye (Kalıp bulucu) binmesin: daha dar; sonuç listesi kendi genişliğinde, sağa hizalı */
+:root { --hsw: 222px; }
+@media (max-width: 1300px) { :root { --hsw: 198px; } }
+/* dar bilgisayar ekranında menünün yanında yer yok: kutu aynı şekilde açılır ama menünün altına (sağa hizalı) iner */
+@media (min-width: 900px) and (max-width: 1150px) {
+  :root { --hsw: 300px; }
+  .hsearch.mob-open .hsearch-box { position: absolute; right: 0; top: calc(100% + 10px); z-index: 61; box-shadow: 0 16px 40px -18px rgb(15 23 42 / .4); }
+  .hsearch.mob-open { width: 40px; height: 40px; }
+}
+/* mağaza: dar bilgisayar ekranında (Kalıp bulucu eklenince sığmıyordu) seçili olmayan sekmeler sadece simge */
+@media (max-width: 1150px) and (min-width: 900px) { .shell.public .topnav-b:not(.on) .topnav-l { display: none; } .shell.public .topnav-b:not(.on) { padding: 0 11px; } }

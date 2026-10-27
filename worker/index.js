@@ -548,7 +548,7 @@ async function dhl(env, act, b) {
   if (act === 'create') {
     const a = o.delivery?.addr || {};
     const kg = Math.max(1, Math.round(Number(b.kg) || 1)), desi = Math.max(1, Math.round(Number(b.desi) || 1));
-    const icerik = String(b.icerik || 'Elektronik malzeme').replace(/[:;]/g, ' ').slice(0, 60);
+    const icerik = String(b.icerik || 'DOSYA / ZARF').replace(/[:;]/g, ' ').slice(0, 60);
     const phone = String(a.phone || o.contact?.phone || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
     const fields = {
       pChIrsaliyeNo: '', pPrKiymet: '', pChBarkod: ref, pChIcerik: icerik,
