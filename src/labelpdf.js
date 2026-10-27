@@ -76,12 +76,15 @@ export function drawLabel(o, S) {
 }
 
 // Tuval → 4×6 inç PDF (Blob)
-export async function canvasPdf(canvas) {
+export async function canvasPdf(canvas, paper = 'a6') {
   const jpg = new Uint8Array(await (await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.95))).arrayBuffer());
   const enc = new TextEncoder(); const parts = []; const offs = []; let len = 0;
   const push = (x) => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
   const obj = (n, body) => { offs[n] = len; push(`${n} 0 obj\n`); body(); push('\nendobj\n'); };
-  const pw = 288, ph = 432; const content = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
+  // A6 = etiketin kendisi (10×15 cm); A4 = normal yazıcı: etiket sayfaya orantılı büyütülüp ortalanır
+  const [pw, ph] = paper === 'a4' ? [595, 842] : [288, 432]; const m = paper === 'a4' ? 24 : 0;
+  const sc = Math.min((pw - 2 * m) / 288, (ph - 2 * m) / 432); const iw = Math.round(288 * sc), ih = Math.round(432 * sc);
+  const content = `q ${iw} 0 0 ${ih} ${Math.round((pw - iw) / 2)} ${Math.round((ph - ih) / 2)} cm /Im0 Do Q`;
   push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
   obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
   obj(2, () => push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'));
@@ -93,5 +96,5 @@ export async function canvasPdf(canvas) {
   return new Blob(parts, { type: 'application/pdf' });
 }
 
-export async function labelPdf(o, S) { return canvasPdf(drawLabel(o, S)); }
+export async function labelPdf(o, S, paper) { return canvasPdf(drawLabel(o, S), paper); }
 export const needsPdfPrint = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
