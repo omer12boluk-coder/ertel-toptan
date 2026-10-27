@@ -200,7 +200,7 @@ async function writeChunked(col, items, key) {
   const ps = chunks(items);
   const b = db.batch();
   ps.forEach((part, i) => b.set(db.doc(`${col}/c${i}`), { [key]: part }));
-  b.set(db.doc(`${col}/_meta`), { version: now, chunks: Math.max(1, ps.length), count: items.length, ...(col === 'pubcatalog' ? { kc: 1 } : {}) });
+  b.set(db.doc(`${col}/_meta`), { version: now, chunks: Math.max(1, ps.length), count: items.length, ...(col === 'pubcatalog' ? { kc: 2 } : {}) });
   await b.commit();
 }
 if (!DRY) {

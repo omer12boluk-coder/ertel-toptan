@@ -149,10 +149,10 @@ export class FirebaseBackend {
     const parts = chunkBySize(pub);
     const b = this.F.writeBatch(this.db);
     parts.forEach((part, i) => b.set(this.d('pubcatalog', 'c' + i), { items: part }));
-    b.set(this.d('pubcatalog', '_meta'), { version: now(), chunks: parts.length, count: pub.length, kc: 1 });
+    b.set(this.d('pubcatalog', '_meta'), { version: now(), chunks: parts.length, count: pub.length, kc: 2 });
     await b.commit();
   }
-  async hasPublicCatalog() { const m = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta'))); return m.exists() && m.data().kc >= 1; } // kc: kalıp anahtarları eklenmiş sürüm
+  async hasPublicCatalog() { const m = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta'))); return m.exists() && m.data().kc >= 2; } // kc: kalıp anahtarları eklenmiş sürüm
   async loadPublicCatalog() {
     const meta = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta')));
     if (!meta.exists()) return [];

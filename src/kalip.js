@@ -68,7 +68,20 @@ export const vendorOf = (chip) => { const s = String(chip || '').toLowerCase(); 
 const nrm = (s) => String(s ?? '').replace(/[ıİşŞğĞüÜöÖçÇ]/g, (c) => ({ ı: 'i', İ: 'i', ş: 's', Ş: 's', ğ: 'g', Ğ: 'g', ü: 'u', Ü: 'u', ö: 'o', Ö: 'o', ç: 'c', Ç: 'c' }[c])).toLowerCase();
 export const tagList = (p) => (Array.isArray(p.t) ? p.t : String(p.t || '').split(',')).map((x) => String(x).trim()).filter(Boolean);
 // kalıp mı: adında / etiketinde "kalıp / kalıbı" geçen ya da Amaoe CPU / entegre ürünü (işlemcinin kendisi değil)
-export const isStencil = (p) => /kalip|kalib|stencil/.test(nrm(p.n + ' ' + tagList(p).join(' '))) || (/amaoe/.test(nrm(p.n + ' ' + (p.b || ''))) && /cpu|islemci|entegre/.test(nrm(p.n)));
+// Kalıp kategorisi (44) ve alt kategorileri: 3D, normal saç, Samsung/Xiaomi/Huawei/iPhone/iPad, birleştirme
+const STENCIL_CATS = new Set([44, 68, 69, 87, 102, 103, 104, 105, 106]);
+// kalıp mı: Kalıp kategorisinde, adında / etiketinde "kalıp / kalıbı" geçen, ya da Amaoe ürünü olup adında işlemci kodu /
+// seri adı (U-MTK 8, MU 6, MQ 6, U-QSU4) / CPU-entegre geçen. Markasız "Mediatek MT6781V" (işlemcinin kendisi) kalıp değildir.
+export const isStencil = (p) => {
+  if (STENCIL_CATS.has(+p.c) || STENCIL_CATS.has(+p.c2)) return true;
+  const n = nrm(p.n);
+  if (/kalip|kalib|stencil/.test(n + ' ' + nrm(tagList(p).join(' ')))) return true;
+  if (!/amaoe/.test(n + ' ' + nrm(p.b || ''))) return false;
+  if (/flux|lehim|pasta|tel\b|ped|tutucu|cimbiz|bant|kablo|tabla(?!li)/.test(n) && !/kalip/.test(n)) return false;
+  // seri adı büyük harfle yazılır (U-MTK 8, U-QSD12, MU 6); "Neşter Ucu 4" gibi adlar eşleşmesin. Entegre kategorisindeki
+  // sade kodlu Amaoe ürünü (MT6177MV) işlemcinin kendisi olabilir → kod tek başına yetmez.
+  return /cpu|islemci|entegre|sablon/.test(n) || /\bU-?[A-Z]{2,4}\s?\d|\bM[UQS]\s?\d/.test(p.n) || (+p.c !== 6 && chipCodes(p.n).size > 0);
+};
 // herkese açık katalog için kalıbın işlemci kodları + etiketteki telefon modelleri ("m:note10pro"); etiketler gizli kalır
 export function stencilKeys(p) {
   if (!isStencil(p)) return null;
