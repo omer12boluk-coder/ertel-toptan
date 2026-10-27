@@ -802,7 +802,27 @@ function MemberHome() {
     setBusy(false);
   }
   const removePhoto = () => A.saveMember({ ...m, photo: null }).then(() => toast('Fotoğraf kaldırıldı'));
-  // bilgisayarda sol menü kaydırıcısız, ekrana sığacak kadar sıkı ve yapışkan (CSS ≥900px); sayfa normal kayar
+  // Bilgisayarda sol menü SABİT (position: fixed): sayfa ne kadar kayarsa kaysın hiç oynamaz. Izgarada yerini boş bir
+  // yer tutucu (.acct-ph) tutar; menünün sol / genişlik değeri ondan ölçülür. Ekran menüden kısaysa normal akışa döner.
+  const sideRef = useRef(null), phRef = useRef(null);
+  useEffect(() => {
+    const side = sideRef.current, ph = phRef.current; if (!side || !ph) return;
+    const root = side.parentElement;
+    const fit = () => {
+      if (!matchMedia('(min-width: 900px)').matches) { root.classList.remove('side-fixed'); return; }
+      const r = (root.classList.contains('side-fixed') ? ph : side).getBoundingClientRect();
+      const top = r.top + scrollY; // sayfa en üstteyken durduğu yer: menü hep orada kalır
+      const fits = side.offsetHeight + top + 16 <= innerHeight;
+      root.classList.toggle('side-fixed', fits);
+      if (!fits) return;
+      const q = ph.getBoundingClientRect();
+      side.style.setProperty('--sl', q.left + 'px'); side.style.setProperty('--sw', q.width + 'px'); side.style.setProperty('--st', (q.top + scrollY) + 'px');
+      ph.style.height = side.offsetHeight + 'px';
+    };
+    fit(); const ro = new ResizeObserver(fit); ro.observe(side); ro.observe(root);
+    addEventListener('resize', fit);
+    return () => { ro.disconnect(); removeEventListener('resize', fit); root.classList.remove('side-fixed'); };
+  }, []);
   const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
   useStore((st) => st.seenTick);
   const unseen = unseenOrders(myOrders).length;
@@ -831,7 +851,7 @@ function MemberHome() {
   };
   return (
     <div className={'page acct2' + (view ? ' has-view' : '')}>
-      <aside className="acct-side">
+      <aside className="acct-side" ref={sideRef}>
         <div className="acct-prof">
           <button className={'hub-av' + (busy ? ' busy' : '')} onClick={() => fileRef.current?.click()} aria-label="Profil fotoğrafını değiştir" title="Fotoğrafı değiştir">
             <Avatar u={m} size={72} /><span className="hub-cam"><Icon n="camera" s={14} /></span>
@@ -852,6 +872,7 @@ function MemberHome() {
         </nav>
         <button className="hub-out" onClick={() => A.memberLogout().then(() => { openAcct(null); toast('Çıkış yapıldı'); })}><Icon n="out" s={17} />Çıkış yap</button>
       </aside>
+      <div className="acct-ph" ref={phRef} aria-hidden="true" />
       <section className="acct-main">
         {view ? <>
           <div className="acct-main-h">

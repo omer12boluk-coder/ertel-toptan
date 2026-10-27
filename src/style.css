@@ -3734,3 +3734,11 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
 /* gizlenen sütunlar */
 .at-ul.hide-code .tc-code, .at-ul.hide-s .tc-s, .at-ul.hide-r .tc-r, .at-ul.hide-w .tc-w, .at-ul.hide-a .tc-a, .at-ul.hide-ut .tc-ut { display: none !important; }
 .ath-row .at-cols { color: var(--muted); } .ath-row .at-cols:hover { color: var(--accent); }
+/* Hesabım sol menüsü sabit (27.10.2026): sayfa kayarken hiç oynamaz (MemberHome .side-fixed) */
+.acct-ph { display: none; }
+@media (min-width: 900px) {
+  .acct2 > .acct-side { grid-column: 1; grid-row: 1; }
+  .acct2 > .acct-main { grid-column: 2; grid-row: 1; }
+  .acct2.side-fixed > .acct-ph { display: block; grid-column: 1; grid-row: 1; align-self: start; }
+  .acct2.side-fixed > .acct-side { position: fixed !important; top: var(--st, calc(var(--top-h) + 16px)) !important; left: var(--sl); width: var(--sw); z-index: 5; }
+}
