@@ -42,7 +42,6 @@ export function ProductEdit({ p, onClose }) {
   const [preview, setPreview] = useState(false);
   const [newImg, setNewImg] = useState('');
   const [pcOk, setPcOk] = useState(false);
-  const [apIn, setApIn] = useState(() => (p?.id != null ? store.s.costs?.[p.id] ?? '' : ''));
   useEffect(() => { if (!isNew) api().getDesc(f.id).then((h) => { setDesc(h || ''); setDesc0(h || ''); }); else setDesc(''); }, []);
   const siteFiles = [f.pi, ...(f.im || [])].filter(Boolean);
   const setFiles = (arr) => setF((x) => ({ ...x, pi: arr[0] || '', im: arr.slice(1) }));
@@ -52,8 +51,7 @@ export function ProductEdit({ p, onClose }) {
     if (!f.n.trim()) return toast('Ürün adı boş olamaz', 'bad');
     setBusy(true);
     try {
-      const rec = { ...f, n: f.n.trim(), r: num(f.r) || 0, w: num(f.w), s: Number(f.s) || 0, c: Number(f.c) || 0, ut: Date.now() };
-      const ap = num(apIn); delete rec.ap;
+      const rec = { ...f, n: f.n.trim(), r: num(f.r) || 0, w: num(f.w), s: Number(f.s) || 0, c: Number(f.c) || 0, ut: Date.now(), ur: 'edit' };
       if (imgUrl.trim() && rec.img !== 'fs') rec.img = imgUrl.trim();
       if (!imgUrl.trim() && rec.img && rec.img !== 'fs') delete rec.img;
       delete rec._s; delete rec._t;
@@ -69,8 +67,6 @@ export function ProductEdit({ p, onClose }) {
       const list = isNew ? [rec, ...catalog] : catalog.map((x) => (x.id === rec.id ? rec : x));
       await api().saveCatalog(list.map(({ _s, _t, ...x }) => x));
       if (desc != null && desc !== desc0) await api().setDesc(rec.id, desc);
-      const c0 = store.s.costs || {};
-      if ((ap ?? null) !== (c0[rec.id] ?? null) && api().saveCosts) { const c = { ...c0 }; if (ap > 0) c[rec.id] = ap; else delete c[rec.id]; await api().saveCosts(c); store.set({ costs: c }); }
       setCatalog(list); toast('Ürün kaydedildi'); onClose();
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
@@ -144,11 +140,8 @@ export function ProductEdit({ p, onClose }) {
               </select>
             </Field>
           </div>
-          <div className="row2">
-            <Field label="Liste (satış) fiyatı"><input id="pe-r" inputMode="decimal" value={f.r ?? ''} onChange={(e) => set('r', e.target.value)} /></Field>
-            <Field label="Alış fiyatı" opt hint="Sadece siz görürsünüz"><input id="pe-ap" inputMode="decimal" value={apIn} onChange={(e) => setApIn(e.target.value)} /></Field>
-          </div>
-          <div className="row2">
+          <div className="row3">
+            <Field label="Satış fiyatı"><input id="pe-r" inputMode="decimal" value={f.r ?? ''} onChange={(e) => set('r', e.target.value)} /></Field>
             <Field label="Toptan fiyat" hint={f.w == null || f.w === '' ? `Boş → otomatik ${fmt(auto, f.cur)}` : ''}><input id="pe-w" inputMode="decimal" placeholder="otomatik" value={f.w ?? ''} onChange={(e) => set('w', e.target.value === '' ? null : e.target.value)} /></Field>
             <Field label="Para birimi">
               <select id="pe-cur" value={f.cur} onChange={(e) => set('cur', e.target.value)}><option>USD</option><option>EUR</option><option value="TRY">TL</option></select>
@@ -506,16 +499,14 @@ export function Settings() {
     try {
       const rows = await readSheet(file);
       const { items: incoming0, descs, apBad, full } = rowsToProducts(rows);
-      // alış fiyatı katalogda tutulmaz (bayiler katalogu okuyabiliyor) → ayrı yönetici belgesi
-      const costs = {}; const incoming = incoming0.map(({ ap, ...x }) => { if (ap > 0) costs[x.id] = ap; return x; });
+      const incoming = incoming0.map(({ ap, ...x }) => x); // alış fiyatı kullanılmıyor (27.10.2026 kullanıcı: gereksiz)
       if (!incoming.length) throw new Error('Dosyada ürün satırı bulunamadı (urun_id veya “Ürün ID” sütunu gerekli)');
       const res = mergeCatalog(catalog.map(({ _s, _t, ...p }) => p), incoming);
       for (const [from, to] of Object.entries(res.idMap)) if (descs[from] != null) { descs[to] = descs[from]; delete descs[from]; }
       // "Kategoriler" sayfası varsa yeni kategori adlarını da al
       let catNames = {};
       try { for (const r of await readSheet(file, 'Kategoriler')) { const id = Number(r['Id']); const nm = String(r['Kategori Adı'] ?? '').replace(/^_+/, '').trim(); if (id && nm) catNames[id] = nm; } } catch {}
-      for (const [from, to] of Object.entries(res.idMap)) if (costs[from] != null) { costs[to] = costs[from]; delete costs[from]; }
-      setImp({ ...res, descs, costs, apBad, full, delMissing: full && res.missing > 0 && res.missing < res.list.length * 0.3, catNames, file: file.name, rows: incoming.length, fields: Object.keys(Object.assign({}, ...incoming.slice(0, 50))) });
+      setImp({ ...res, descs, full, delMissing: full && res.missing > 0 && res.missing < res.list.length * 0.3, catNames, file: file.name, rows: incoming.length, fields: Object.keys(Object.assign({}, ...incoming.slice(0, 50))) });
     } catch (err) { toast(err.message, 'bad'); }
   }
   async function applyImport() {
@@ -525,7 +516,6 @@ export function Settings() {
       const gone = imp.full && imp.delMissing ? new Set(imp.missingList.map((x) => x.id)) : null;
       const list = gone ? imp.list.filter((p) => !gone.has(p.id)) : imp.list;
       await A.saveCatalog(list); setCatalog(list);
-      if (Object.keys(imp.costs || {}).length && A.saveCosts) { const all = { ...(store.s.costs || {}), ...imp.costs }; await A.saveCosts(all); store.set({ costs: all }); }
       // bilinmeyen kategori numaralarına dosyadaki adı ver (elle verilmiş adlara dokunma)
       const used = new Set(imp.list.flatMap((p) => [p.c, p.c2]).filter(Boolean));
       const add = {}; for (const [id, nm] of Object.entries(imp.catNames || {})) if (used.has(Number(id)) && !settings.categories?.[id]?.name && !CATEGORY_NAMES[id]) add[id] = { ...(settings.categories?.[id] || {}), name: nm };
@@ -741,7 +731,7 @@ export function Settings() {
           <div className="data-box">
             <div>
               <b>Excel’den ürün ekle / güncelle</b>
-              <p className="fine">PlatinMarket’ten <b>“Ürünler Varyasyonlu”</b> dışa aktarımını seçin (ana format): fiyat, indirimli fiyat, alış fiyatı, stok (Miktar), aktif / pasif (Ürün Durumu), resimler, etiketler, marka, kategori, açıklama. Dosyada olmayan ürünler sitede silinmiş sayılır; kaldırmadan önce liste gösterilir. Aynı ürün no’lu ürünler güncellenir, yeniler eklenir; elle yüklediğiniz resimler ve elle girdiğiniz toptan fiyatlar korunur.</p>
+              <p className="fine">PlatinMarket’ten <b>“Ürünler Varyasyonlu”</b> dışa aktarımını seçin (ana format): fiyat, indirimli fiyat, stok (Miktar), aktif / pasif (Ürün Durumu), resimler, etiketler, marka, kategori, açıklama. Dosyada olmayan ürünler sitede silinmiş sayılır; kaldırmadan önce liste gösterilir. Aynı ürün no’lu ürünler güncellenir, yeniler eklenir; elle yüklediğiniz resimler ve elle girdiğiniz toptan fiyatlar korunur.</p>
             </div>
             <label className="btn outline"><Icon n="upload" s={16} />Dosya seç<input type="file" accept=".xlsx,.csv" hidden onChange={pickFile} /></label>
           </div>
@@ -841,8 +831,7 @@ export function Settings() {
               <ul className="imp-del-l">{imp.missingList.slice(0, 40).map((x) => <li key={x.id}><code>{x.k}</code> {x.n}</li>)}{imp.missing > 40 && <li className="muted">… ve {imp.missing - 40} ürün daha</li>}</ul>
             </div></div>
           )}
-          {imp.apBad > 0 && <p className="fine" style={{ margin: 0 }}><b>{imp.apBad}</b> üründe alış fiyatı satış fiyatından yüksek ya da eşit olduğu için (büyük ihtimalle TL girilmiş) alınmadı.</p>}
-          <p className="fine">Aynı stok kodlu ürün asla ikinci kez eklenmez.{!imp.full && ' Dosyada olmayan ürünler silinmez, olduğu gibi kalır.'} Okunan bilgiler: {[imp.fields.includes('pi') && 'resimler', imp.fields.includes('t') && 'etiketler', imp.fields.includes('b') && 'marka', imp.fields.includes('s') && 'stok', imp.fields.includes('a') && 'aktif / pasif', imp.fields.includes('r') && 'fiyat', Object.keys(imp.costs || {}).length && `${Object.keys(imp.costs).length} alış fiyatı`, Object.keys(imp.descs).length && `${Object.keys(imp.descs).length} açıklama`].filter(Boolean).join(', ')}.</p>
+          <p className="fine">Aynı stok kodlu ürün asla ikinci kez eklenmez.{!imp.full && ' Dosyada olmayan ürünler silinmez, olduğu gibi kalır.'} Okunan bilgiler: {[imp.fields.includes('pi') && 'resimler', imp.fields.includes('t') && 'etiketler', imp.fields.includes('b') && 'marka', imp.fields.includes('s') && 'stok', imp.fields.includes('a') && 'aktif / pasif', imp.fields.includes('r') && 'fiyat', Object.keys(imp.descs).length && `${Object.keys(imp.descs).length} açıklama`].filter(Boolean).join(', ')}.</p>
         </Sheet>
       )}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
@@ -1060,7 +1049,7 @@ function SyncInfo() {
 }
 
 // "Şimdi eşitle": siteyi hemen kontrol ettirir; değişiklikler ~1 dakikada uygulamaya düşer
-export function SyncButton({ small }) {
+export function SyncButton({ small, icon }) {
   const [busy, setBusy] = useState(false);
   async function go() {
     setBusy(true);
@@ -1070,6 +1059,7 @@ export function SyncButton({ small }) {
     } catch (e) { toast('Eşitleme başlatılamadı: ' + e.message, 'bad'); }
     setTimeout(() => setBusy(false), 4000);
   }
+  if (icon) return <button className="icon-btn sync-ic" onClick={go} disabled={busy} title="Siteyle şimdi eşitle (PlatinMarket değişikliklerini hemen al)" aria-label="Siteyle şimdi eşitle"><Icon n="refresh" s={17} className={busy ? 'spin' : ''} /></button>;
   return <button className={'btn ' + (small ? 'chip' : 'outline')} onClick={go} disabled={busy} title="Sitedeki değişiklikleri hemen al"><Icon n="refresh" s={15} className={busy ? 'spin' : ''} />{busy ? 'Eşitleniyor…' : 'Şimdi eşitle'}</button>;
 }
 

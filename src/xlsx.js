@@ -212,7 +212,7 @@ export function mergeCatalog(current, incomingIn) {
       const r0 = o.pc ? o.pc.r0 : o.r;
       if (Number(n.r) === Number(r0) || m.w == null) delete m.pc; else m.pc = { r0, at: Date.now() }; // sadece elle toptanlı üründe uyarı
     }
-    if (!same(m, o)) updated++;
+    if (!same(m, o)) { updated++; m.ut = Date.now(); m.ur = 'excel'; }
     byId.set(n.id, m);
   }
   const missingList = current.filter((p) => !seen.has(p.id) && !p.man).map((p) => ({ id: p.id, k: p.k, n: p.n }));

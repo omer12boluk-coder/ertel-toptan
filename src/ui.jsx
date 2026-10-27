@@ -446,3 +446,30 @@ export function VatLines({ by, rate, className = '' }) {
     </div>
   );
 }
+
+// İki yönlü yapışkan kenar menüsü (27.10.2026): menü ekrandan kısaysa normal yapışkan; uzunsa sayfayla birlikte kayar ama
+// yön değişince hemen o yöne gelir (aşağı inerken alt ucu, yukarı çıkarken üst ucu görünür) — "önce sağ taraf en üste gelsin" yok.
+// Kullanım: const ref = useStickySide(); <aside ref={ref}> (CSS: position: sticky; align-self: start)
+export function useStickySide(gap = 20) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const desk = () => matchMedia('(min-width: 900px)').matches;
+    const topH = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 64;
+    let lastY = scrollY, off = null;
+    const apply = () => {
+      if (!desk()) { el.style.top = ''; off = null; return; }
+      const t = topH() + gap, h = el.offsetHeight, vh = innerHeight;
+      if (h <= vh - t - 16) { off = t; el.style.top = t + 'px'; return; } // sığıyor: düz yapışkan
+      const min = vh - h - 16; // alt ucu ekranın altında
+      if (off == null) off = t;
+      off = Math.max(min, Math.min(t, off - (scrollY - lastY)));
+      el.style.top = Math.round(off) + 'px';
+    };
+    const onScroll = () => { apply(); lastY = scrollY; };
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => { apply(); }) : null; ro?.observe(el);
+    addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onScroll); apply();
+    return () => { removeEventListener('scroll', onScroll); removeEventListener('resize', onScroll); ro?.disconnect(); };
+  }, []);
+  return ref;
+}

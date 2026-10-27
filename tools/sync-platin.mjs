@@ -58,7 +58,7 @@ if (!rate) throw new Error('Kur hesaplanamadı');
 const st = { price: [], hidden: 0, shown: 0, img: 0, name: 0, added: [] };
 // yönetim panelindeki bildirim merkezi için olay günlüğü (meta/feed): t price|name|new|hidden|shown
 const ev = [];
-const E = (t, p, extra) => { p.ut = now; ev.push({ t, at: now, id: p.id, k: p.k || '', n: String(p.n || '').slice(0, 90), ...extra }); }; // ut: son güncelleme (yönetici listesinde)
+const E = (t, p, extra) => { p.ut = now; p.ur = t; ev.push({ t, at: now, id: p.id, k: p.k || '', n: String(p.n || '').slice(0, 90), ...extra }); }; // ut: son güncelleme (yönetici listesinde)
 const round2 = (v) => Math.round(v * 100) / 100;
 for (const p of cat) {
   const f = feed.get(p.id);

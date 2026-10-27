@@ -5,7 +5,7 @@
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders } from './store.js';
-import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
+import { useStickySide, openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf } from './config.js';
 import TR from './tr-ilce.json';
@@ -802,14 +802,8 @@ function MemberHome() {
     setBusy(false);
   }
   const removePhoto = () => A.saveMember({ ...m, photo: null }).then(() => toast('Fotoğraf kaldırıldı'));
-  // yapışkan sol menü ekrandan uzunsa alt kenarından yapışsın (menünün altı görünmüyordu, sağ taraf ayrı kayıyordu)
-  const sideRef = useRef(null);
-  useEffect(() => {
-    const el = sideRef.current; if (!el || typeof ResizeObserver === 'undefined') return;
-    const fit = () => { const topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 64; const t = Math.min(topH + 20, innerHeight - el.offsetHeight - 16); el.style.setProperty('--acct-top', t + 'px'); };
-    const ro = new ResizeObserver(fit); ro.observe(el); addEventListener('resize', fit); fit();
-    return () => { ro.disconnect(); removeEventListener('resize', fit); };
-  }, []);
+  // sol menü iki yönlü yapışkan (ui.jsx useStickySide): uzunsa sayfayla kayar, yön değişince hemen döner
+  const sideRef = useStickySide();
   const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
   useStore((st) => st.seenTick);
   const unseen = unseenOrders(myOrders).length;

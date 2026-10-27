@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
-import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
+import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, useStickySide } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton } from './admin.jsx';
@@ -79,18 +79,85 @@ function lastOrderMap() {
   for (const r of requests || []) for (const it of r.items || []) if ((m.get(it.id) || 0) < (r.createdAt || 0)) m.set(it.id, r.createdAt);
   lastOrdCache = { o: orders, r: requests, m }; return m;
 }
-// Yönetici ürün satırı (27.10.2026): Stok · Alış · Satış (büyük) · Toptan sütunları + Aktif/Pasif seçici; TL yok
-function AdminCols({ p }) {
-  const { settings: S, user, costs } = useStore();
+// ===== Yönetici ürün tablosu (27.10.2026 3) =====
+// Sütunlar: Stok kodu · Ürün · Stok · Satış · Toptan · Durum · Son işlem · ✎. Stok kodu / stok / satış / toptan hücreye
+// basınca yerinde düzenlenir (✓ ya da Enter kaydeder, Esc vazgeçer). Başlığa basınca sıralanır (3. basış kapatır).
+const UR = { price: 'fiyat · site', name: 'ad · site', hidden: 'pasif · site', shown: 'aktif · site', new: 'yeni · site', deleted: 'site', edit: 'düzenleme', a: 'durum', s: 'stok', r: 'satış fiyatı', w: 'toptan', k: 'stok kodu', excel: 'Excel', order: 'sipariş' };
+const shortDT = (t) => { const d = new Date(t); const today = d.toDateString() === new Date().toDateString(); return { d: today ? 'Bugün' : d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }), h: d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) }; };
+function EditCell({ value, show, onSave, kind = 'num', label, className = '' }) {
+  const [ed, setEd] = useState(false);
+  const [v, setV] = useState('');
+  const start = (e) => { e.stopPropagation(); setV(value ?? ''); setEd(true); };
+  const save = async () => {
+    let out = String(v).trim();
+    if (kind === 'num' || kind === 'opt') { if (out === '' && kind === 'opt') out = null; else { const n = Number(out.replace(',', '.')); if (!isFinite(n) || n < 0) return toast('Geçerli bir sayı yazın', 'bad'); out = n; } }
+    else if (!out) return toast(label + ' boş olamaz', 'bad');
+    setEd(false); if (out !== value) await onSave(out);
+  };
+  if (!ed) return <button type="button" className={'ec ' + className} onClick={start} title={label + ' — değiştirmek için tıklayın'}>{show}</button>;
+  return (
+    <span className={'ec on ' + className} onClick={(e) => e.stopPropagation()}>
+      <input autoFocus inputMode={kind === 'text' ? 'text' : 'decimal'} value={v} placeholder={kind === 'opt' ? 'oto' : ''} aria-label={label}
+        onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEd(false); }} onBlur={() => setTimeout(() => setEd(false), 150)} />
+      <button type="button" className="ec-ok" onMouseDown={(e) => e.preventDefault()} onClick={save} aria-label="Kaydet"><Icon n="check" s={14} /></button>
+    </span>
+  );
+}
+function AdminTable({ list, asort, sortBy, onEdit }) {
+  const H = ({ k, children, cls = '' }) => <button type="button" className={'ath ' + cls + (asort.k === k ? ' on' : '')} onClick={() => sortBy(k)}>{children}<i className={'ath-ar ' + (asort.k === k ? asort.d : '')} aria-hidden="true" /></button>;
+  return <>
+    <li className="atr ath-row">
+      <H k="code">Stok kodu</H><H k="name">Ürün</H><H k="s" cls="r">Stok</H><H k="r" cls="r">Satış</H><H k="w" cls="r">Toptan</H><H k="a" cls="c">Durum</H><H k="ut">Son işlem</H><span />
+    </li>
+    {list.map((p) => <AdminRow key={p.id} p={p} onEdit={() => onEdit(p)} />)}
+  </>;
+}
+function AdminRow({ p, onEdit }) {
+  const { settings: S, user } = useStore();
   const pr = priceFor(p, S, user, null);
-  const ap = costs?.[p.id];
+  const lo = lastOrderMap().get(p.id) || 0; const t = Math.max(p.ut || 0, lo);
+  const why = lo && lo >= (p.ut || 0) ? 'sipariş' : UR[p.ur] || (p.ut ? 'güncelleme' : '');
+  const dt = t ? shortDT(t) : null;
+  const saveCode = async (k) => { if (store.s.catalog.some((x) => x.id !== p.id && String(x.k).toLowerCase() === k.toLowerCase())) return toast('Bu stok kodu başka üründe var', 'bad'); await quickSave(p, { k, ur: 'k' }, 'Stok kodu kaydedildi'); };
+  const menu = (e) => openMenu(e, [
+    { label: 'Düzenle', icon: 'edit', onClick: onEdit },
+    p.pc && { label: 'Fiyat uyarısını kaldır', icon: 'check', onClick: () => quickSave(p, { pc: null }, 'Uyarı kaldırıldı') },
+    '-',
+    { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
+    { label: 'Ürün adını kopyala', icon: 'copy', onClick: () => copyText(p.n) },
+    links.product(p, S) && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(links.product(p, S), '_blank', 'noopener') },
+  ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
+  return (
+    <li className={'atr' + (p.a ? '' : ' off') + (needsCheck(p) ? ' changed' : '')} onContextMenu={menu}>
+      <EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} />
+      <button type="button" className="at-prod" onClick={onEdit} title="Ürünü düzenle">
+        <Thumb p={p} size="sm" />
+        <span className="at-n"><b>{p.n}</b><small>{[p.b, p.so ? 'sitede satışta değil' : '', needsCheck(p) ? `liste ${fmt(p.pc.r0, p.cur)} → ${fmt(p.r, p.cur)}, elle toptanı kontrol edin` : ''].filter(Boolean).join(' · ')}</small></span>
+      </button>
+      <EditCell className="r ac-s" value={p.s ?? 0} show={<b className={'num' + (p.s > 0 ? '' : ' zero')}>{p.s ?? 0}</b>} label="Stok" onSave={(v) => quickSave(p, { s: Math.round(v), ur: 's' }, 'Stok kaydedildi')} />
+      <EditCell className="r ac-r" value={p.r} show={<b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b>} label="Satış fiyatı" onSave={(v) => quickSave(p, { r: v, pc: null, ur: 'r' }, 'Satış fiyatı kaydedildi')} />
+      <EditCell className="r ac-w" value={p.w ?? ''} kind="opt" show={<><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</>} label="Toptan fiyat (boş = otomatik)" onSave={(v) => quickSave(p, { w: v, pc: null, ur: 'w' }, v == null ? 'Toptan otomatik' : 'Toptan kaydedildi')} />
+      <span className="c ac-st">
+        <button type="button" role="switch" aria-checked={!!p.a} className={'sw' + (p.a ? ' on' : '')} title={p.a ? 'Aktif — kapatmak için tıklayın' : 'Pasif — açmak için tıklayın'}
+          onClick={() => quickSave(p, p.a ? { a: 0, ur: 'a' } : { a: 1, so: null, sg: null, ur: 'a' }, p.a ? 'Ürün pasif yapıldı' : 'Ürün aktif yapıldı')}><i /></button>
+        <small>{p.a ? 'Açık' : 'Kapalı'}</small>
+      </span>
+      <span className={"ac-ut" + (dt ? "" : " none")}>{dt ? <><b>{dt.d} {dt.h}</b>{why && <small>{why}</small>}</> : <small>—</small>}</span>
+      <button type="button" className="icon-btn sm at-ed" onClick={onEdit} aria-label="Düzenle" title="Düzenle"><Icon n="edit" s={15} /></button>
+    </li>
+  );
+}
+
+// Yönetici ürün satırı (kutu görünümü): Stok · Satış (büyük) · Toptan sütunları + Aktif/Pasif seçici; TL yok
+function AdminCols({ p }) {
+  const { settings: S, user } = useStore();
+  const pr = priceFor(p, S, user, null);
   const stMenu = (e) => openMenu(e, [
-    { label: 'Aktif', color: '#1f6b47', on: !!p.a, hint: p.a ? '✓' : undefined, onClick: () => !p.a && quickSave(p, { a: 1, so: null, sg: null }, 'Ürün aktif yapıldı') },
-    { label: 'Pasif', color: '#8a919e', on: !p.a, hint: !p.a ? '✓' : undefined, onClick: () => p.a && quickSave(p, { a: 0 }, 'Ürün pasif yapıldı') },
+    { label: 'Aktif', color: '#1f6b47', on: !!p.a, hint: p.a ? '✓' : undefined, onClick: () => !p.a && quickSave(p, { a: 1, so: null, sg: null, ur: 'a' }, 'Ürün aktif yapıldı') },
+    { label: 'Pasif', color: '#8a919e', on: !p.a, hint: !p.a ? '✓' : undefined, onClick: () => p.a && quickSave(p, { a: 0, ur: 'a' }, 'Ürün pasif yapıldı') },
   ], 'Durum');
   return <>
     <span className="ac ac-s" data-l="Stok"><b className={'num' + (p.s <= 0 ? ' zero' : '')}>{p.s ?? 0}</b></span>
-    <span className="ac ac-a" data-l="Alış">{ap > 0 ? <b className="num">{fmt(ap, p.cur)}</b> : <i>—</i>}</span>
     <span className="ac ac-r" data-l="Satış"><b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b></span>
     <span className="ac ac-w" data-l="Toptan" title={p.w != null ? 'Elle girilen toptan' : 'Kurala göre otomatik toptan'}><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</span>
     <span className="ac ac-st"><button type="button" className={'pst ' + (p.a ? 'on' : 'off')} onClick={stMenu} title="Durumu değiştir"><span>{p.a ? 'Aktif' : 'Pasif'}</span><Icon n="chev" s={13} /></button></span>
@@ -166,12 +233,15 @@ export function Catalog({ admin }) {
   const [newOnly, setNewOnly] = useState(false);
   const [imgOnly, setImgOnly] = useState(false);
   const [favOnly, setFavOnly] = useState(false);
+  const [asort, setAsort] = useState({ k: null, d: null }); // yönetici tablosu başlık sıralaması
+  const sortBy = (k) => setAsort((s) => (s.k !== k ? { k, d: k === 'code' || k === 'name' ? 'asc' : 'desc' } : s.d === (k === 'code' || k === 'name' ? 'asc' : 'desc') ? { k, d: k === 'code' || k === 'name' ? 'desc' : 'asc' } : { k: null, d: null }));
   const favs = useStore((s) => s.favs);
   const favSet = useMemo(() => new Set(favs), [favs]);
   // görünüm: kutu kutu (varsayılan) ya da sıra sıra; cihazda hatırlanır
   const [view, setView0] = useState(() => (admin ? 'list' : ls.get('cat-view', 'grid')));
   const setView = (v) => { setView0(v); if (!admin) ls.set('cat-view', v); };
   const tree = useTree();
+  const sideRef = useStickySide();
   // yönetici: kategori paneli sürükleyerek daraltılır / genişletilir (tabloya yer), cihazda hatırlanır; çift tık = varsayılan
   const [catW, setCatW0] = useState(() => ls.get('cat-w', 240));
   const setCatW = (w) => { setCatW0(w); ls.set('cat-w', w); };
@@ -213,6 +283,9 @@ export function Catalog({ admin }) {
       && toks.every((t) => p._s.includes(t) || (useTags && p._t.includes(t))));
     if (toks.length) r = [...r].sort((a, b) => toks.filter((t) => b._s.includes(t)).length - toks.filter((t) => a._s.includes(t)).length);
     if (admin && adminFilter === 'inactive') r = r.filter((p) => !p.a);
+    if (admin && adminFilter === 'active') r = r.filter((p) => p.a);
+    if (admin && adminFilter === 'instock') r = r.filter((p) => p.s > 0);
+    if (admin && adminFilter === 'nostock') r = r.filter((p) => !(p.s > 0));
     if (admin && adminFilter === 'nowholesale') r = r.filter((p) => p.w == null);
     if (admin && adminFilter === 'noimg') r = r.filter((p) => !p.img && !p.pi);
     if (admin && adminFilter === 'notags') r = r.filter((p) => !p.t);
@@ -223,9 +296,15 @@ export function Catalog({ admin }) {
     if (sort === 'desc') r = [...r].sort((a, b) => b.r - a.r);
     if (sort === 'name') r = [...r].sort((a, b) => a.n.localeCompare(b.n, 'tr'));
     if (sort === 'stock') r = [...r].sort((a, b) => (b.s > 0) - (a.s > 0));
+    // yönetici tablosu başlığına basarak sıralama (1. çoktan aza / aktifler önce, 2. tersi, 3. kapalı)
+    if (admin && asort.k) {
+      const key = { code: (p) => String(p.k || ''), name: (p) => p.n, s: (p) => Number(p.s) || 0, r: (p) => Number(p.r) || 0, w: (p) => priceFor(p, S, user, null).mine ?? -1, a: (p) => (p.a ? 1 : 0), ut: (p) => Math.max(p.ut || 0, lastOrderMap().get(p.id) || 0) }[asort.k];
+      const str = asort.k === 'code' || asort.k === 'name';
+      r = [...r].sort((a, b) => { const x = key(a), y = key(b); const c = str ? String(x).localeCompare(String(y), 'tr') : x - y; return asort.d === 'desc' ? -c : c; });
+    }
     return r;
   };
-  const deps = [all, q, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet];
+  const deps = [all, q, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet, asort];
   const scopedList = useMemo(() => filterList(true), deps);
   const scoped = cat != null || !!brand;
   const globalList = useMemo(() => (q.trim() && scoped ? filterList(false) : null), deps);
@@ -255,7 +334,7 @@ export function Catalog({ admin }) {
   return (
     <div className="catalog">
       <div className={'cat-layout' + (admin ? ' resizable' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
-        <aside className="cat-side" aria-label="Kategoriler">
+        <aside className="cat-side" aria-label="Kategoriler" ref={sideRef}>
           <h3 className="eyebrow">Kategoriler</h3>
           <button className={'cat-link' + (cat == null ? ' on' : '')} onClick={() => setCat(null)}><span>Tümü</span><b>{all.length}</b></button>
           <CatTree nodes={tree.roots} counts={counts} cat={cat} open={openPath} onPick={setCat} />
@@ -273,15 +352,15 @@ export function Catalog({ admin }) {
               <button className="chip only-m" onClick={() => setCatSheet(true)}><Icon n="filter" s={15} />{cat == null ? 'Kategoriler' : tree.nodes.get(cat)?.name || catName(S, cat)}</button>
               {cat != null && <button className="chip on only-m" onClick={() => setCat(null)}>Tümü <Icon n="x" s={14} /></button>}
               {user?.role === 'public' && (favs.length > 0 || favOnly) && <button className={'chip fav-chip' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
-              <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>
-              <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>
+              {!admin && <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>}
+              {!admin && <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>}
               <label className={'chip select' + (price ? ' on' : '')}>
                 <Icon n="tag" s={14} />
                 <select id="cat-price" value={price} onChange={(e) => setPrice(e.target.value)} aria-label="Fiyat aralığı">
                   <option value="">Tüm fiyatlar</option><option value="u10">$10 altı</option><option value="10-50">$10 – $50</option><option value="50-200">$50 – $200</option><option value="200+">$200 üstü</option>
                 </select>
               </label>
-              <button className={'chip' + (imgOnly ? ' on' : '')} onClick={() => setImgOnly(!imgOnly)}><Icon n="camera" s={14} />Resimli</button>
+              {!admin && <button className={'chip' + (imgOnly ? ' on' : '')} onClick={() => setImgOnly(!imgOnly)}><Icon n="camera" s={14} />Resimli</button>}
               {brands.length > 1 && (
                 <label className={'chip select' + (brand ? ' on' : '')}>
                   <select id="cat-brand" value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="Marka">
@@ -304,7 +383,10 @@ export function Catalog({ admin }) {
                 <label className="chip select">
                   <select id="adm-filter" value={adminFilter} onChange={(e) => setAdminFilter(e.target.value)} aria-label="Filtre">
                     <option value="all">Tüm ürünler</option>
+                    <option value="active">Aktif olanlar</option>
                     <option value="inactive">Pasif olanlar</option>
+                    <option value="instock">Stoktakiler</option>
+                    <option value="nostock">Stoğu bitenler</option>
                     <option value="nowholesale">Toptan fiyatı girilmemiş</option>
                     <option value="noimg">Resmi olmayanlar</option>
                     <option value="notags">Etiketi olmayanlar</option>
@@ -315,7 +397,7 @@ export function Catalog({ admin }) {
                 </label>
               )}
               {admin && <button className="chip accent" onClick={() => setEdit({})}><Icon n="plus" s={15} />Yeni ürün</button>}
-              {admin && <SyncButton small />}
+
             </div>
           </div>
 
@@ -337,6 +419,7 @@ export function Catalog({ admin }) {
           {moreOutside > 0 && <div className="banner info widen"><Icon n="search" /><div>{scopeName} dışında da <b>{moreOutside} sonuç</b> var.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Tüm ürünlerde ara</button></div>}
           <div className="result-line">
             <span>{list.length.toLocaleString('tr-TR')} ürün{!widened && scopeName && <> · <b>{scopeName}</b></>}</span>
+            {admin && <SyncButton icon />}
             <span className="view-sw" role="group" aria-label="Görünüm">
               <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Kutu kutu" title="Kutu kutu"><Icon n="grid" s={17} /></button>
               <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Sıra sıra" title="Sıra sıra"><Icon n="list" s={17} /></button>
@@ -350,8 +433,8 @@ export function Catalog({ admin }) {
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
           ) : (
             <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + cardAdd(S, user?.role)}>
-              {admin && view !== 'grid' && <li className="prow-head" aria-hidden="true"><span>Ürün</span><span>Stok</span><span>Alış</span><span>Satış</span><span>Toptan</span><span>Durum</span><span /></li>}
-              {shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
+              {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} />
+                : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
             </ul>
           )}
           {limit < list.length && <div ref={sentinel} className="more"><button className="btn ghost" onClick={more}>Daha fazla göster ({list.length - limit})</button></div>}
@@ -962,7 +1045,7 @@ async function clearChecks() {
 async function quickSave(p, patch, msg) {
   const list = store.s.catalog.map(({ _s, _t, ...x }) => {
     if (x.id !== p.id) return x;
-    const n = { ...x, ...patch, ut: Date.now() };
+    const n = { ...x, ur: 'edit', ...patch, ut: Date.now() }; // ut/ur: son işlem tarihi ve nedeni (tabloda)
     for (const k of Object.keys(patch)) if (patch[k] == null) delete n[k];
     return n;
   });
