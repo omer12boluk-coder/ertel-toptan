@@ -9,7 +9,9 @@ export function startRate(A) {
     if (document.hidden) return;
     try { const r = await fetch(W.replace(/\/$/, '') + '/rate', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); if (j.usd > 0) store.set({ rate: j }); } } catch {}
   };
-  get(); setInterval(get, 60000); document.addEventListener('visibilitychange', get);
+  // ziyaretçi başına dakikada bir istek bekçinin günlük ücretsiz sınırını (100.000) dolduruyordu → 5 dakikada bir; sekmeye dönünce en çok dakikada bir
+  let last = 0; const tick = () => { if (Date.now() - last < 55000) return; last = Date.now(); get(); };
+  tick(); setInterval(tick, 5 * 60000); document.addEventListener('visibilitychange', tick);
 }
 // Site eşitleme: yönetim paneli açılınca sitede değişiklik var mı bakılır; "Şimdi eşitle" hemen başlatır
 export async function syncNow(force) {
