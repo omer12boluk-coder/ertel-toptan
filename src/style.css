@@ -2754,7 +2754,7 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .plist.pgrid > li.prow.hov .prow-info { transform: translateY(26px); }
 .plist.pgrid .cimg-strip { flex-wrap: nowrap; gap: 6px; padding: 12px 12px 0; overflow: hidden; }
 .plist.pgrid .cimg-th { width: 42px; height: 42px; border-radius: 10px; flex: none; }
-@media (min-width: 640px) { .order-page .o-info { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 640px) { .order-page .o-info { grid-template-columns: repeat(3, minmax(0, 1fr)); } .order-page:not(.admin-order) .o-info { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .plist.pgrid .cimg-th { width: min(44px, calc((100% - 24px) / 5)); height: auto; aspect-ratio: 1; }
 .mi-sub { margin: 10px 0 0; font: 700 16px/1.2 var(--f-display); }
 .mi-sub small { font: 400 13px var(--f-body); }

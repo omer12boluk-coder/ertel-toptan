@@ -483,8 +483,8 @@ export function OrderPage({ id }) {
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
 
       <div className="o-info">
-        <div className="o-card"><h3>İletişim</h3><p><b>{o.contact?.name}</b></p><p className="num">{o.contact?.phone}</p>{o.contact?.email && <p>{o.contact.email}</p>}</div>
-        <div className="o-card"><h3>Teslimat</h3><p><b>{DELIVERY[o.delivery?.method] || ''}</b>{o.delivery?.method !== 'pickup' && CARRIERS[o.delivery?.carrier] && <span className="muted"> · {CARRIERS[o.delivery.carrier].name}</span>}</p>{o.delivery?.addr ? <>{o.delivery.addr.name && <p>{o.delivery.addr.name}{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></> : <p>{[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}</p>}</div>
+        {/* İletişim kartı yok (27.10.2026): alıcı Teslimat'ta, dükkândan teslimde teslim alacak kişi aşağıda */}
+        <div className="o-card"><h3>Teslimat</h3><p><b>{DELIVERY[o.delivery?.method] || ''}</b>{o.delivery?.method !== 'pickup' && CARRIERS[o.delivery?.carrier] && <span className="muted"> · {CARRIERS[o.delivery.carrier].name}</span>}</p>{o.delivery?.addr ? <>{o.delivery.addr.name && <p>{o.delivery.addr.name}{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></> : <>{o.contact?.name && <p>Teslim alacak: {o.contact.name}{o.contact.phone && <> · <span className="num">{o.contact.phone}</span></>}</p>}<p>{[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}</p></>}</div>
         <div className="o-card"><h3>Fatura</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>
       </div>
       {o.note && <p className="o-note"><b>Notunuz:</b> {o.note}</p>}
