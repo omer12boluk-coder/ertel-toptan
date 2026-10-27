@@ -21,7 +21,9 @@ const HELIO = {
   g91: 'MT6781', g96: 'MT6781', g99: 'MT6789', g100: 'MT6789', p90: 'MT6779', p95: 'MT6779', p23: 'MT6763', p20: 'MT6757', p25: 'MT6757', p10: 'MT6755', x20: 'MT6797', x25: 'MT6797', x27: 'MT6797', x10: 'MT6795', x30: 'MT6799',
 };
 const KIRIN = { 650: 'HI6250', 655: 'HI6250', 658: 'HI6250', 659: 'HI6250', 935: 'HI3650', 950: 'HI3650', 955: 'HI3650', 925: 'HI3630', 930: 'HI3630', 620: 'HI6220', 710: 'HI6260', '710a': 'HI6260', '710f': 'HI6260', 810: 'HI6280', 960: 'HI3660', 970: 'HI3670', 980: 'HI3680', 985: 'HI6290', 990: 'HI3690', 9000: 'HI36A0', '9000e': 'HI36A0' };
-const EXY = { 1480: 'E8845', 1380: 'E8835', 1330: 'E8535', 1280: 'E8825', 1080: 'E9815' }; // yeni Exynos'ların parça adı
+// Exynos pazarlama adı ↔ Samsung parça numarası (S5E3830 = Exynos 850); kalıplarda çoğu zaman parça numarası yazar ("Samsung 3830 XGO")
+const EXY = { 850: '3830', 980: '9630', 990: '9830', 1080: '9815', 1280: '8825', 1330: '8535', 1380: '8835', 1480: '8845', 1580: '8855', 2100: '9840', 2200: '9925', 2400: '9945' };
+const EXY_R = Object.fromEntries(Object.entries(EXY).map(([k, v]) => [v, k]));
 
 
 const GEN = { '8 GEN 1': 'SM8450', '8+ GEN 1': 'SM8475', '8 GEN 2': 'SM8550', '8 GEN 3': 'SM8650', '7 GEN 1': 'SM7450', '7+ GEN 2': 'SM7475', '7 GEN 3': 'SM7550', '7S GEN 2': 'SM7435' };
@@ -36,8 +38,9 @@ export function chipCodes(text) {
   for (const m of t.matchAll(/\b(?:SDM|SMD)\s?(\d{3})\b/g)) out.add('SDM' + m[1]);
   for (const m of t.matchAll(/\bMSM\s?(\d{4})/g)) out.add('MSM' + m[1]);
   for (const m of t.matchAll(/\b([78])\s?(\+|S)?\s?GEN\s?(\d)/g)) { const c = GEN[`${m[1]}${m[2] || ''} GEN ${m[3]}`]; if (c) out.add(c); }
-  for (const m of t.matchAll(/\bEXYNOS\s?(\d{3,4})/g)) { out.add('EX' + m[1]); if (EXY[m[1]]) out.add(EXY[m[1]]); }
-  for (const m of t.matchAll(/\bE(8\d{3}|9\d{3})P?\b/g)) out.add('E' + m[1]);
+  for (const m of t.matchAll(/\bEXYNOS\s?(\d{3,4})/g)) out.add('EX' + m[1]);
+  for (const m of t.matchAll(/\b(?:S5E|SAMSUNG\s?)(\d{4})(?!\d)/g)) if (EXY_R[m[1]]) out.add('E' + m[1]); // "SAMSUNG 3830", "S5E9925"
+  for (const m of t.matchAll(/\bE(3\d{3}|8\d{3}|9\d{3})P?\b/g)) out.add('E' + m[1]);
   for (const m of t.matchAll(/\bHI\s?(3[0-9][0-9A-F][0-9A-F]|6[0-9]{3})\b/g)) out.add('HI' + m[1]);
   // Apple A serisi: "A15", "A18 Pro", "A8 - A19Pro" (aralık)
   const appleOk = /IPHONE|APPLE/.test(t) || !/SAMSUNG|GALAXY|\bSAM\s?\d/.test(t); // Samsung'un A15 gibi model adları iPhone işlemcisi sanılmasın
@@ -48,6 +51,8 @@ export function chipCodes(text) {
     if (!m[4] && b >= 17) out.delete('A' + b + 'P');
   }
   for (const m of t.matchAll(/(?:^|[\s/(,])A(\d{1,2})\s?(PRO|BIONIC)?(?=[\s/),.]|$)/g)) { const n = +m[1]; if (n >= 4 && n <= 30) apple(n, m[2] === 'PRO'); }
+  // Exynos adı ve parça numarası birbirini tamamlar: EX850 ↔ E3830
+  for (const c of [...out]) { let m; if ((m = /^EX(\d+)$/.exec(c)) && EXY[m[1]]) out.add('E' + EXY[m[1]]); else if ((m = /^E(\d{4})$/.exec(c)) && EXY_R[m[1]]) out.add('EX' + EXY_R[m[1]]); }
   return out;
 }
 
