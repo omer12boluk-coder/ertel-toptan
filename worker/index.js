@@ -478,7 +478,7 @@ async function r2Obj(req, env, url) {
   const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('r2:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');
   if ((req.headers.get('X-Key') || '') !== want) return json({ ok: false, error: 'yetki' }, 403);
   const key = decodeURIComponent(url.pathname.slice('/r2obj/'.length));
-  if (!key.startsWith('platin/') || key.includes('..')) return json({ ok: false, error: 'izin verilmeyen yol' }, 400);
+  if (!key.startsWith('platin/') || key.split('/').some((x) => x === '..' || x === '.')) return json({ ok: false, error: 'izin verilmeyen yol' }, 400);
   if (req.method === 'PUT') {
     await env.R2.put(key, req.body, { httpMetadata: { contentType: req.headers.get('Content-Type') || 'application/octet-stream', cacheControl: 'public, max-age=31536000, immutable' } });
     return json({ ok: true });
