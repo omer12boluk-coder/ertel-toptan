@@ -36,6 +36,7 @@ export function ProductEdit({ p, onClose }) {
     walk(tree.roots, 0); return out;
   }, [catalog, S]);
   const brands = useMemo(() => [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr')), [catalog]);
+  const [brandNew, setBrandNew] = useState(false);
   const [desc, setDesc] = useState(null);
   const [desc0, setDesc0] = useState('');
   const [preview, setPreview] = useState(false);
@@ -120,8 +121,14 @@ export function ProductEdit({ p, onClose }) {
           <div className="row2">
             <Field label="Stok kodu"><input id="pe-code" value={f.k} onChange={(e) => set('k', e.target.value)} /></Field>
             <Field label="Marka">
-              <input id="pe-brand" list="pe-brands" value={f.b || ''} onChange={(e) => set('b', e.target.value)} />
-              <datalist id="pe-brands">{brands.map((b) => <option key={b} value={b} />)}</datalist>
+              {/* seçmeli liste (datalist tarayıcıda bozuk açılıyordu); listede yoksa "Yeni marka yaz…" */}
+              {brandNew
+                ? <span className="brand-new"><input id="pe-brand" autoFocus placeholder="Yeni marka adı" value={f.b || ''} onChange={(e) => set('b', e.target.value)} /><button type="button" className="linkish" onClick={() => { setBrandNew(false); if (!brands.includes(f.b)) set('b', ''); }}>Listeden seç</button></span>
+                : <select id="pe-brand" value={brands.includes(f.b) ? f.b : ''} onChange={(e) => { if (e.target.value === '__new') { setBrandNew(true); set('b', ''); } else set('b', e.target.value); }}>
+                    <option value="">Marka yok</option>
+                    {brands.map((b) => <option key={b} value={b}>{b}</option>)}
+                    <option value="__new">+ Yeni marka yaz…</option>
+                  </select>}
             </Field>
           </div>
           <div className="row2">

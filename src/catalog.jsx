@@ -69,19 +69,32 @@ function PlusVat({ S: So, role: ro }) { const S0 = useStore((s) => s.settings); 
 // S / role verilirse (Ayarlar önizlemesi) o ayarlar ve o müşteri tipiyle çizilir
 // Yönetici ürün listesi fiyatı: satış (liste) fiyatı büyük, altında küçük toptan ve alış; TL yok
 const upd = (t) => { const d = new Date(t); const today = d.toDateString() === new Date().toDateString(); return (today ? 'Bugün ' : d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ') + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); };
-function AdminPrice({ p }) {
+// son işlem: ürünün kendi güncellemesi (ut) ile son siparişi (mağaza + bayi, panelde yüklü olanlar) hangisi yeniyse
+let lastOrdCache = { o: null, r: null, m: new Map() };
+function lastOrderMap() {
+  const { orders, requests } = store.s;
+  if (lastOrdCache.o === orders && lastOrdCache.r === requests) return lastOrdCache.m;
+  const m = new Map();
+  for (const o of orders || []) for (const it of o.items || []) if ((m.get(it.id) || 0) < o.createdAt) m.set(it.id, o.createdAt);
+  for (const r of requests || []) for (const it of r.items || []) if ((m.get(it.id) || 0) < (r.createdAt || 0)) m.set(it.id, r.createdAt);
+  lastOrdCache = { o: orders, r: requests, m }; return m;
+}
+// Yönetici ürün satırı (27.10.2026): Stok · Alış · Satış (büyük) · Toptan sütunları + Aktif/Pasif seçici; TL yok
+function AdminCols({ p }) {
   const { settings: S, user, costs } = useStore();
   const pr = priceFor(p, S, user, null);
   const ap = costs?.[p.id];
-  return (
-    <div className="aprice">
-      <b className="num aprice-r">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b>
-      <span className="aprice-sub">
-        <span title={p.w != null ? 'Elle girilen toptan' : 'Kurala göre otomatik toptan'}>Toptan <b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i>oto</i>}</span>
-        {ap > 0 && <span>Alış <b className="num">{fmt(ap, p.cur)}</b></span>}
-      </span>
-    </div>
-  );
+  const stMenu = (e) => openMenu(e, [
+    { label: 'Aktif', color: '#1f6b47', on: !!p.a, hint: p.a ? '✓' : undefined, onClick: () => !p.a && quickSave(p, { a: 1, so: null, sg: null }, 'Ürün aktif yapıldı') },
+    { label: 'Pasif', color: '#8a919e', on: !p.a, hint: !p.a ? '✓' : undefined, onClick: () => p.a && quickSave(p, { a: 0 }, 'Ürün pasif yapıldı') },
+  ], 'Durum');
+  return <>
+    <span className="ac ac-s" data-l="Stok"><b className={'num' + (p.s <= 0 ? ' zero' : '')}>{p.s ?? 0}</b></span>
+    <span className="ac ac-a" data-l="Alış">{ap > 0 ? <b className="num">{fmt(ap, p.cur)}</b> : <i>—</i>}</span>
+    <span className="ac ac-r" data-l="Satış"><b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b></span>
+    <span className="ac ac-w" data-l="Toptan" title={p.w != null ? 'Elle girilen toptan' : 'Kurala göre otomatik toptan'}><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</span>
+    <span className="ac ac-st"><button type="button" className={'pst ' + (p.a ? 'on' : 'off')} onClick={stMenu} title="Durumu değiştir"><span>{p.a ? 'Aktif' : 'Pasif'}</span><Icon n="chev" s={13} /></button></span>
+  </>;
 }
 export function PriceBlock({ p, big, S: So, role: ro }) {
   const st = useStore();
@@ -333,6 +346,7 @@ export function Catalog({ admin }) {
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
           ) : (
             <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + cardAdd(S, user?.role)}>
+              {admin && view !== 'grid' && <li className="prow-head" aria-hidden="true"><span>Ürün</span><span>Stok</span><span>Alış</span><span>Satış</span><span>Toptan</span><span>Durum</span><span /></li>}
               {shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
             </ul>
           )}
@@ -410,7 +424,7 @@ function ProductRow({ p, admin, onOpen }) {
     site && user?.role !== 'public' && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
-    <li className={'prow' + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '') + (hov && multi ? ' hov' : '')} onContextMenu={menu}
+    <li className={'prow' + (admin ? ' adm' : '') + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '') + (hov && multi ? ' hov' : '')} onContextMenu={menu}
       onMouseEnter={multi ? () => setHov(true) : undefined} onMouseLeave={multi ? () => { setHov(false); setIx(0); } : undefined}>
       {user?.role === 'public' && <FavBtn id={p.id} />}
       <button className="prow-main" onClick={onOpen}>
@@ -422,16 +436,15 @@ function ProductRow({ p, admin, onOpen }) {
             {S.catalog.showBrand && p.b && <span className="brand-tag">{p.b}</span>}
             {st && <span className={'dot tone-' + st.tone}>{st.t}</span>}
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
-            {admin && !p.a && <span className="dot tone-muted">Pasif</span>}
             {admin && p.nw && <span className="dot tone-info">Siteden yeni</span>}
             {admin && p.so && <span className="dot tone-muted">Sitede satışta değil</span>}
             {admin && p.pc && <span className="dot tone-bad">Liste {fmt(p.pc.r0, p.cur)} → {fmt(p.r, p.cur)}</span>}
-            {admin && p.ut && <span className="prow-ut" title="Son güncelleme (fiyat, ad, açılıp kapanma, düzenleme)">{upd(p.ut)}</span>}
+            {admin && (() => { const lo = lastOrderMap().get(p.id) || 0; const t = Math.max(p.ut || 0, lo); return t ? <span className="prow-ut" title={lo >= (p.ut || 0) ? 'Son işlem: sipariş' : 'Son işlem: fiyat / ad / aktif-pasif / düzenleme'}>{upd(t)}{lo >= (p.ut || 0) ? ' · sipariş' : ''}</span> : null; })()}
           </span>
         </div>
       </button>
       <div className="prow-side">
-        {admin ? <AdminPrice p={p} /> : <PriceBlock p={p} />}
+        {admin ? <AdminCols p={p} /> : <PriceBlock p={p} />}
         {admin ? (
           <button className="btn sm ghost" onClick={onOpen}><Icon n="edit" s={15} />Düzenle</button>
         ) : user?.role !== 'public' && ['icon', 'plus'].includes(cardAdd(S, user?.role)) ? (
