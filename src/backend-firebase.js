@@ -124,8 +124,10 @@ export class FirebaseBackend {
   // Katalog değişince (eşitleme veya yönetici kaydı) açık ekranlara haber verir
   watchCatalog(cb, pub) {
     let first = true;
-    return this.F.onSnapshot(this.d(pub ? 'pubcatalog' : 'catalog', '_meta'), async () => {
+    return this.F.onSnapshot(this.d(pub ? 'pubcatalog' : 'catalog', '_meta'), async (snap) => {
       if (first) { first = false; return; }
+      // kendi kaydımız: ekran zaten güncel (eski kopyayı okuyup geri çevirmesin — aktif/pasif bir an geri dönüyordu)
+      if (snap.metadata?.hasPendingWrites || this._saving || (this._ownV && snap.data()?.version === this._ownV)) return;
       try { cb(pub ? await this.loadPublicCatalog() : await this.loadCatalog()); } catch (e) { console.warn(e); }
     }, () => {});
   }
@@ -153,11 +155,14 @@ export class FirebaseBackend {
     const parts = chunkBySize(items.map(clean));
     const chunks = Math.max(1, parts.length);
     parts.forEach((part, i) => b.set(this.d('catalog', 'c' + i), { items: part }));
-    const version = now();
+    const version = now(); this._ownV = version;
     b.set(this.d('catalog', '_meta'), { version, chunks, count: items.length });
-    await b.commit();
-    idbSet('cat', { version, items: items.map(clean) });
-    await this.savePublicCatalog(items);
+    this._saving = (this._saving || 0) + 1;
+    try {
+      idbSet('cat', { version, items: items.map(clean) });
+      await b.commit();
+      await this.savePublicCatalog(items);
+    } finally { this._saving--; }
   }
   // Ziyaretçi mağazası için herkese açık katalog: toptan fiyat, etiket ve pasif ürünler yok
   async savePublicCatalog(items) {

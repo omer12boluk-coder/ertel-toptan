@@ -115,7 +115,19 @@ function AdminTable({ list, asort, sortBy, onEdit, onCopy }) {
   const [cw, setCw0] = useState(() => ls.get('atw', {}));
   const [nameW, setNameW] = useState(0); // ürün sütununun varsayılanı: tablonun kalan genişliği
   const [del, setDel] = useState(null);
+  const [rh, setRh0] = useState(() => ls.get('atrh', 0)); // satır yüksekliği (0 = içeriğe göre), Excel gibi satır alt kenarından
   const headRef = useRef(null);
+  useLayoutEffect(() => { const ul = headRef.current?.parentElement; if (!ul) return; ul.classList.toggle('fixh', rh > 0); ul.classList.toggle('h1', rh > 0 && rh < 58); rh > 0 ? ul.style.setProperty('--atrh', rh + 'px') : ul.style.removeProperty('--atrh'); }, [rh]);
+  const rowGrip = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const li = e.currentTarget.closest('li'), y0 = e.clientY, h0 = li.offsetHeight, el = e.currentTarget; el.setPointerCapture?.(e.pointerId); el.classList.add('on');
+    document.documentElement.classList.add('row-resizing');
+    let last = rh;
+    const mv = (ev) => { last = Math.max(38, Math.min(160, Math.round(h0 + ev.clientY - y0))); setRh0(last); };
+    const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); el.classList.remove('on'); document.documentElement.classList.remove('row-resizing'); ls.set('atrh', last); };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  };
+  const rowReset = () => { setRh0(0); ls.set('atrh', 0); };
   useLayoutEffect(() => {
     const ul = headRef.current?.parentElement; if (!ul) return;
     // varsayılan sütun genişliklerine göre (sürüklenen genişlikler ürün sütununu daraltmasın: kenar imleçle gitsin)
@@ -150,7 +162,7 @@ function AdminTable({ list, asort, sortBy, onEdit, onCopy }) {
       ))}
       <div className="tc tc-ed" />
     </li>
-    {list.map((p) => <AdminRow key={p.id} p={p} onEdit={() => onEdit(p)} onCopy={() => onCopy(p)} onDel={() => setDel(p)} />)}
+    {list.map((p) => <AdminRow key={p.id} p={p} onEdit={() => onEdit(p)} onCopy={() => onCopy(p)} onDel={() => setDel(p)} grip={rowGrip} gripReset={rowReset} />)}
     {del && <Confirm title="Ürün silinsin mi?" text={delText(del)} okLabel="Sil" tone="danger" onOk={() => removeProduct(del)} onClose={() => setDel(null)} />}
   </>;
 }
@@ -162,7 +174,7 @@ const stMenu = (p) => (e) => openMenu(e, [
 function StatusPick({ p }) {
   return <button type="button" className={'pst2 ' + (p.a ? 'on' : 'off')} onClick={stMenu(p)} title="Durumu değiştir"><i /><span>{p.a ? 'Aktif' : 'Pasif'}</span><Icon n="chev" s={13} /></button>;
 }
-function AdminRow({ p, onEdit, onCopy, onDel }) {
+function AdminRow({ p, onEdit, onCopy, onDel, grip, gripReset }) {
   const { settings: S, user } = useStore();
   const pr = priceFor(p, S, user, null);
   const lo = lastOrderMap().get(p.id) || 0; const t = Math.max(p.ut || 0, lo);
@@ -182,7 +194,7 @@ function AdminRow({ p, onEdit, onCopy, onDel }) {
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
     <li className={'atr' + (p.a ? '' : ' off') + (needsCheck(p) ? ' changed' : '')} onContextMenu={menu}>
-      <div className="tc tc-code"><EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} /></div>
+      <div className="tc tc-code"><EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} />{grip && <span className="row-grip" role="separator" aria-orientation="horizontal" title="Sürükleyerek satırları incelt / kalınlaştır · çift tık: otomatik" onPointerDown={grip} onDoubleClick={gripReset} />}</div>
       <div className="tc tc-name">
         <button type="button" className="at-prod" onClick={onEdit} title="Ürünü düzenle">
           <Thumb p={p} size="sm" />
@@ -1118,12 +1130,26 @@ async function clearChecks() {
   const list = store.s.catalog.map(({ _s, _t, ...x }) => { if (!x.pc) return x; const { pc, ...y } = x; return y; });
   try { await api().saveCatalog(list); setCatalog(list); toast('Fiyat uyarıları kaldırıldı'); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
 }
-async function quickSave(p, patch, msg) {
+// Hızlı kayıt: ekran HEMEN değişir (beklemeden), kayıt arkada yapılır. Art arda birkaç değişiklik tek kayıtta birleşir,
+// kayıtlar sırayla gider (biri ötekini ezmesin). Hata olursa katalog sunucudan yeniden okunur.
+let qsT = 0, qsChain = Promise.resolve(), qsMsgs = [];
+function quickSave(p, patch, msg) {
   const list = store.s.catalog.map(({ _s, _t, ...x }) => {
     if (x.id !== p.id) return x;
     const n = { ...x, ur: 'edit', ...patch, ut: Date.now() }; // ut/ur: son işlem tarihi ve nedeni (tabloda)
     for (const k of Object.keys(patch)) if (patch[k] == null) delete n[k];
     return n;
   });
-  try { await api().saveCatalog(list); setCatalog(list); toast(msg); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+  setCatalog(list);
+  if (msg) qsMsgs.push(msg);
+  clearTimeout(qsT);
+  qsT = setTimeout(() => {
+    const msgs = qsMsgs; qsMsgs = [];
+    qsChain = qsChain.then(async () => {
+      const cur = store.s.catalog.map(({ _s, _t, ...x }) => x);
+      try { await api().saveCatalog(cur); toast(msgs.length > 1 ? `${msgs.length} değişiklik kaydedildi` : msgs[0] || 'Kaydedildi'); }
+      catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); try { const fresh = await api().loadCatalog(); fresh && setCatalog(fresh); } catch {} }
+    });
+  }, 450);
+  return Promise.resolve();
 }
