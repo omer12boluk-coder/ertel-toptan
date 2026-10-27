@@ -95,10 +95,12 @@ const shortDT = (t) => {
   else txt = Math.floor(ms / (365 * D)) + ' yıl önce';
   return { txt, full };
 };
+const PHONE = () => matchMedia('(max-width: 700px)').matches;
 function EditCell({ value, show, onSave, kind = 'num', label, className = '' }) {
   const [ed, setEd] = useState(false);
   const [v, setV] = useState('');
-  const start = (e) => { e.stopPropagation(); setV(value ?? ''); setEd(true); };
+  // telefonda tablodan yerinde düzenleme yok (klavye açılıp kalabalık oluyordu): dokunuş satıra geçer, ürün açılır
+  const start = (e) => { if (PHONE()) return; e.stopPropagation(); setV(value ?? ''); setEd(true); };
   const done = useRef(false);
   useEffect(() => { if (ed) done.current = false; }, [ed]);
   const save = async () => {
@@ -214,7 +216,7 @@ function AdminRow({ p, onEdit, onCopy, onDel, grip, gripReset }) {
   return (
     // satırın boş bir yerine basınca ürün açılır (düğme, yazı kutusu, durum seçici, tutamaçlar hariç)
     <li className={'atr' + (p.a ? '' : ' off') + (needsCheck(p) ? ' changed' : '')} onContextMenu={menu}
-      onClick={(e) => { if (e.target.closest('button, input, a, select, textarea, label, .row-grip, .col-grip, .ec2') || getSelection()?.toString()) return; const ec = e.target.closest('.tc')?.querySelector(':scope > .ec'); if (ec) return ec.click(); onEdit(); }}>
+      onClick={(e) => { if (PHONE()) { if (!e.target.closest('.pst2, .at-ed, .at-prod')) onEdit(); return; } if (e.target.closest('button, input, a, select, textarea, label, .row-grip, .col-grip, .ec2') || getSelection()?.toString()) return; const ec = e.target.closest('.tc')?.querySelector(':scope > .ec'); if (ec) return ec.click(); onEdit(); }}>
       <div className="tc tc-code"><EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} />{grip && <span className="row-grip" role="separator" aria-orientation="horizontal" title="Sürükleyerek satırları incelt / kalınlaştır · çift tık: otomatik" onPointerDown={grip} onDoubleClick={gripReset} />}</div>
       <div className="tc tc-name">
         <button type="button" className="at-prod" onClick={onEdit} title="Ürünü düzenle">
@@ -446,12 +448,12 @@ export function Catalog({ admin }) {
             <div className={admin ? 'tb-top' : undefined}>
               {admin && <div className="search code-search">
                 <Icon n="tag" s={15} />
-                <input id="cat-code" type="search" placeholder="Stok kodu" value={qk} onChange={(e) => setQk(e.target.value)} aria-label="Stok koduna göre ara" />
+                <input id="cat-code" type="search" autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} enterKeyHint="search" placeholder="Stok kodu" value={qk} onChange={(e) => setQk(e.target.value)} aria-label="Stok koduna göre ara" />
                 {qk && <button className="icon-btn sm" onClick={() => setQk('')} aria-label="Temizle"><Icon n="x" s={14} /></button>}
               </div>}
               <div className="search">
                 <Icon n="search" s={18} />
-                <input id="cat-search" type="search" placeholder={scopeName ? `${scopeName} içinde ara… (tüm ürünlerde de bakarız)` : admin ? 'Ürün adına göre ara… (ör. jcid face id)' : 'Ürün adı veya stok kodu… (ör. jcid face id)'} value={q} onChange={(e) => setQ(e.target.value)} />
+                <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara… (tüm ürünlerde de bakarız)` : admin ? 'Ürün adına göre ara… (ör. jcid face id)' : 'Ürün adı veya stok kodu… (ör. jcid face id)'} value={q} onChange={(e) => setQ(e.target.value)} />
                 {q && <button className="icon-btn sm" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={16} /></button>}
               </div>
               {admin && <button className="btn primary new-prod" onClick={(e) => openMenu(e, [

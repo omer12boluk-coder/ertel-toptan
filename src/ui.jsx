@@ -143,7 +143,7 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls
     if (!matchMedia('(max-width: 700px)').matches || e.touches.length !== 1) return;
     const body = ref.current.querySelector('.sheet-b');
     const fromTop = e.target.closest('.sheet-h, .sheet-grab');
-    if (sticky && !fromTop) return; // düzenleme penceresi sadece üstteki tutma yerinden çekilerek kapanır
+    if (!fromTop && e.target.closest('.md-t, .md-grid')) return; // resim sıralarken pencere kaymasın
     if (!fromTop && (!body || body.scrollTop > 0 || e.target.closest('input, textarea, select, .gal-track, .gal-thumbs'))) return;
     drag.current = { y0: e.touches[0].clientY, t0: Date.now(), dy: 0, on: false };
   };
@@ -486,4 +486,15 @@ export function useStickySide(gap = 20) {
     return () => { removeEventListener('scroll', onScroll); removeEventListener('resize', onScroll); ro?.disconnect(); };
   }, []);
   return ref;
+}
+
+// Telefonda arama kutusu açıkken (klavye açık) başka bir yere dokunmak SADECE klavyeyi kapatır; alttaki ürün açılmaz
+if (typeof window !== 'undefined' && 'ontouchstart' in window) {
+  let sw = 0;
+  document.addEventListener('touchstart', (e) => {
+    const a = document.activeElement;
+    if (a && a.matches?.('input[type=search], .search input') && !e.target.closest?.('input, textarea, select, .search, .hsearch')) { a.blur(); sw = Date.now(); }
+  }, { capture: true, passive: true });
+  document.addEventListener('touchmove', () => { sw = 0; }, { capture: true, passive: true });
+  document.addEventListener('click', (e) => { if (sw && Date.now() - sw < 700) { sw = 0; e.preventDefault(); e.stopPropagation(); } }, true);
 }

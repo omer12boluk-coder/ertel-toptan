@@ -3860,3 +3860,27 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
   .pe-sheet .sheet-f .btn.primary { flex: 1; }
 }
 @media (max-width: 700px) { .plist > .atr .ec { margin: 0; padding: 2px 0; } .plist > .atr { column-gap: 12px; } }
+/* ===== Telefon rötuşları (28.10.2026 2): yönetim ürün listesi + üst araç çubuğu + sipariş geri düğmesi ===== */
+@media (max-width: 700px) {
+  /* araç çubuğu: daha ince arama, stok kodu ve çipler */
+  .tb-top { gap: 8px; }
+  .tb-top .search input, .code-search input { min-height: 40px !important; height: 40px; font-size: 16px; border-radius: 12px; padding-left: 36px; }
+  .tb-top .search > .ic { left: 12px; width: 17px; height: 17px; }
+  .new-prod { min-height: 40px !important; height: 40px; padding: 0 12px; font-size: 14.5px; border-radius: 12px; }
+  .toolbar .chips .chip, .toolbar .chips select, .toolbar .chips .selbox { min-height: 34px; height: 34px; font-size: 13.5px; padding-top: 0; padding-bottom: 0; }
+  .toolbar { gap: 8px; }
+  .result-line { margin-bottom: 6px; }
+  /* satır: üstte resim + ad (tam genişlik), altta kod · stok · fiyat · toptan … durum ⋮ (⋮ en sağ köşe) */
+  .plist > .atr { grid-template-columns: auto auto auto 1fr auto auto; grid-template-areas: "name name name name name name" "code s r w a ed"; align-items: center; row-gap: 8px; }
+  .atr > .tc-ed { grid-area: ed; align-self: center; justify-content: flex-end; margin-right: -6px; }
+  .atr > .tc-ed .at-ed { width: 34px; height: 34px; border-radius: 10px; color: var(--fg); background: var(--surface-2); }
+  .atr > .tc-a { justify-content: flex-end; }
+  .atr .pst2 { height: 32px; font-size: 13.5px; font-weight: 700; padding: 0 8px 0 10px; border-width: 1.5px; }
+  .atr .pst2.on { border-color: color-mix(in oklab, #1f9d5b 45%, var(--line)); background: color-mix(in oklab, #1f9d5b 7%, var(--surface)); }
+  .atr .pst2.off { border-color: var(--line); background: var(--surface-2); }
+  .atr .ec { cursor: inherit; pointer-events: none; } /* telefonda dokunuş satıra geçer → ürün açılır */
+  /* sipariş detayı geri düğmesi: belirgin yuvarlak */
+  .admin-order .oa-back { width: 38px; height: 38px; padding: 0 !important; border-radius: 12px; background: var(--surface-2); color: var(--fg); display: inline-grid; place-items: center; flex: none; }
+  .admin-order .oa-back .ic { width: 20px; height: 20px; stroke-width: 2.4; }
+}
+@media (max-width: 700px) { .atr > .tc-r, .atr > .tc-s, .atr > .tc-code, .atr > .tc-w { min-width: max-content; } .plist > .atr { column-gap: 9px; } }
