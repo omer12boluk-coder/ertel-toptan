@@ -473,6 +473,7 @@ async function notifyReq(env, b) {
 // R2'ye yazma kapısı (resim taşıma işi, tools/r2-mirror.mjs): PUT/GET /r2obj/<anahtar>, başlık X-Key = sha256('r2:' + TELEGRAM_TOKEN).
 // Sadece platin/ klasörü. Cloudflare REST API toplu yüklemede koruma sayfası (403) döndürdüğü için bekçinin kendi R2 bağlantısı kullanılır.
 async function r2Obj(req, env, url) {
+  const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   if (!env.R2 || !env.TELEGRAM_TOKEN) return json({ ok: false, error: 'R2 bağlı değil' }, 500);
   const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('r2:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');
   if ((req.headers.get('X-Key') || '') !== want) return json({ ok: false, error: 'yetki' }, 403);
