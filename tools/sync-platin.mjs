@@ -158,9 +158,9 @@ for (const code of String(process.env.REMOVE_CODES || '').split(',').map((x) => 
 // Silinmiş: sayfa 404/410 ya da başka sayfaya yönleniyor ya da sayfada bu ürün yok → katalogdan tamamen kaldırılır.
 // Pasif: sayfa duruyor → uygulamada gizli (soluk) kalır. Çalışma başına en çok 6 kontrol, 3 sn arayla; elle eklenen ürünlere bakılmaz.
 st.deleted = 0; st.passive = 0;
-// 27.10.2026: silme AÇIK (kullanıcı: siteden silinen tamamen kalksın, pasife alınan soluk kalsın). Silme kapalıyken "silinmiş" bulunup
-// -2'de bekleyenlere bir kez daha bakılır (sgr). Kapatmak gerekirse sync.yml'de DELETE_OK: '0'.
-const DELETE_OK = process.env.DELETE_OK !== '0';
+// SİLME KAPALI (27.10.2026): PlatinMarket PASİF ürünün sayfasında da 404 veriyor → silinmiş/pasif ayrımı ürün sayfasından YAPILAMIYOR.
+// Açılınca 4 pasif ürün yanlışlıkla kaldırıldı (geri yüklendi). Ayrım için başka kaynak (Excel dışa aktarımı) gerekir.
+const DELETE_OK = process.env.DELETE_OK === '1';
 const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || (DELETE_OK && p.sg === -2 && !p.sgr) || p.id === TEST)).slice(0, 6);
 for (const [i, p] of gone.entries()) {
   if (i || pending.length) await new Promise((r) => setTimeout(r, 3000));
