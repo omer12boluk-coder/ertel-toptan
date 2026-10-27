@@ -1,0 +1,30 @@
+# PlatinMarket'teki ürün resimlerini Cloudflare R2'ye (kutu "ertel", klasör platin/) kopyalar.
+# Siteye bağlamaz: ürünlerdeki resim adresleri PlatinMarket'te kalır. Kaldığı yerden devam eder.
+# Ayrıntı: tools/r2-mirror.mjs · CLAUDE.md > Resimler R2'de
+name: Resimleri depoya taşı
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Kaç resim (0 = hepsi; deneme için 20)'
+        type: number
+        default: 0
+concurrency:
+  group: r2-mirror
+  cancel-in-progress: false
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - name: Resimleri kopyala
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/r2-mirror.mjs --limit ${{ inputs.limit || 0 }} --minutes 320

@@ -262,6 +262,11 @@ Claude'un yapacağı (sırayla):
 5. Ekle: `node tools/kalip-update.mjs add "Marka Model" "Qualcomm SM9575 Snapdragon 8 Elite Gen 6 (2 nm)" "<kaynak url>"` — işlemci satırına parça kodunu da yaz (yeni satış adlarını `kalip.js` tanımayabilir; çıktıdaki "kodlar:" boş kalmamalı). Satış adı yeni bir Dimensity/Snapdragon ise `src/kalip.js` SNAP/DIM tablosuna da ekle.
 6. `node tools/kalip-build.mjs`, `python3 tools/build.py` (kalip.js değiştiyse), commit + push (main'e push siteyi yayınlar). Kullanıcıya eklenen modelleri işlemcileriyle kısa liste hâlinde yaz.
 
+### Resimler R2'de (27.10.2026 — kopyalama, siteye BAĞLANMADI)
+- Actions **"Resimleri depoya taşı"** (`r2-mirror.yml`, elle; `limit` = deneme) → `tools/r2-mirror.mjs`: Firestore `catalog` ürünlerinin `pi` + `im` dosyalarını `https://platincdn.com/3519/pictures/<dosya>`'dan indirip R2 kutusu **`ertel`** (EEUR) içine **`platin/<dosya>`** olarak AYNEN (biçim/ad değişmeden, içerik türüyle) yükler; Cloudflare REST API (`CLOUDFLARE_API_TOKEN`, R2 Edit izni gerekir). Aynı anda 2 indirme + 400 ms bekleme; kaldığı yerden devam (dizin `platin/_manifest.json` {files: {<dosya>: {s, t, at}}, fail}); izin denemesi `platin/_ping.txt`.
+- **Adres eşlemesi (kullanıcı şartı: iki adres de tanınmalı):** dosya adı aynı kaldığı için `platincdn.com/3519/pictures/<dosya>` (küçük resim `pictures/thumb/350X-<dosya>`) ⇄ R2 `platin/<dosya>` birebir çevrilir; ürün kaydında `pi`/`im` çıplak dosya adı olarak kalır. Siteye geçerken sadece `settings.catalog.imageLarge/imageThumb` şablonu R2 adresine çevrilecek (küçük resimler R2'de yok → ya büyük resim ya da Worker/Cloudflare ile küçültme), dizinde olmayan dosya için platin adresine düşülecek. Tam adres olarak kayıtlı platin linkleri (`fileOf`) de aynı dosyaya çözülür. Ürünlerdeki adresler ŞU AN DEĞİŞTİRİLMEDİ.
+- Yeni ürünlerin resimlerini de kopyalama (eşitleme sonrası + gece) ve `resim.ertelgsm.com` (DNS Cloudflare'e taşınınca) sonraki adım.
+
 ## 7. Site eşitleme, Worker, bildirimler
 
 - `tools/sync-platin.mjs` (Actions "Siteyle eşitle"): `https://www.ertelgsm.com/xml-cikti/gm` beslemesini okur. Fiyatlar TL; kur beslemeden hesaplanıp USD'ye çevrilir. Liste fiyatı değişince `pc` uyarısı koyar, toptana dokunmaz. Sitede olmayan ürünü `so=1` ile gizler. Beslemede stok adedi yok. **Siteye toplu istek atma (IP engeli yemiştik).**
