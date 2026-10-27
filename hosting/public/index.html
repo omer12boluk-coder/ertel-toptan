@@ -3825,9 +3825,15 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
 @media (min-width: 701px) { .atr > .tc-code > .row-grip { left: 0; right: 0; bottom: -2px; height: 8px; z-index: 4; } .atr > .tc-code { overflow: visible; } }
 /* dokunmatikte sipariş/liste tablosundaki ürün adı parmak geçince mavi-altı çizili takılı kalmasın */
 @media (hover: none) { .pt-name a, .pt-name a *, .pt-name a:hover *, .pt-name a:focus *, .pt-name a:active * { color: inherit !important; text-decoration: none !important; } .pt-name a { -webkit-tap-highlight-color: transparent; } }
+/* dokunmatik: parmak geçince "üstünde" sayılıp mavi-altı çizili takılı kalan ad bağlantıları (button.pt-t daha özel kuraldı) */
+@media (hover: none) {
+  button.pt-t:hover > span, button.pt-t:focus > span, button.pt-t:active > span, .pt-t:hover > span,
+  .gline-name:hover .prow-name, .gline-p:hover .prow-name { color: inherit !important; text-decoration: none !important; }
+  button.pt-t, .gline-name { -webkit-tap-highlight-color: transparent; }
+}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '8eea99be23';</script>
+<script>window.__BUILD = '62cee03c0c';</script>
 </head>
 <body>
 <div id="root"></div>
