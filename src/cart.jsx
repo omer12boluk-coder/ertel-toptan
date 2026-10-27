@@ -7,7 +7,7 @@ import { useStore, store, setQty, clearCart, freshStart, api, openRequest, toast
 import { Icon, Thumb, Stepper, Empty, VatLines, copyText, openMenu } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { fmt, priceFor, totals, fmtTotals, now, soon, ls } from './utils.js';
-import { TYPE, B2B_DELIV, B2B_PAY } from './config.js';
+import { TYPE, B2B_DELIV, B2B_PAY, B2B_PAY_PICK } from './config.js';
 import { encodeList, listLink, listItems, listRecord } from './listcode.js';
 import { ProductSheet, Lightbox, imageList } from './catalog.jsx';
 import { renderListImages, currentRate, ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -161,7 +161,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
             <div className="sum-total"><span>{pub ? 'Toplam' : 'Toptan toplam'}</span><b className="num">{fmtTotals(tot)}</b></div>
             {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
           </div>
-          <VatLines by={tot} />
+          {pub && <VatLines by={tot} />}
           {(!pub || orders) && (
             <button className="btn primary big" onClick={onConfirm}>
               <Icon n="check" />
@@ -213,7 +213,8 @@ function BayiSend({ items, onBack }) {
   const { settings: S, user } = useStore();
   const [no] = useState(newNo);
   const [deliv, setDeliv] = useState(() => ls.get('b2b-deliv', 'pickup'));
-  const [pay, setPay] = useState(() => ls.get('b2b-pay', 'cash'));
+  const [pay, setPay] = useState(() => ls.get('b2b-pay', 'cash')); // eski 'transfer' seçimi düşer
+  useEffect(() => { if (!B2B_PAY_PICK.includes(pay)) setPay('cash'); }, [pay]);
   const [pickup, setPickup] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -255,7 +256,7 @@ function BayiSend({ items, onBack }) {
       </div>
       <div className="send-opts">
         <div className="b2b-opt"><span className="field-l">Teslimat</span><Seg v={deliv} set={setDeliv} opts={B2B_DELIV} label="Teslimat" /></div>
-        <div className="b2b-opt"><span className="field-l">Ödeme</span><Seg v={pay} set={setPay} opts={B2B_PAY} label="Ödeme" /></div>
+        <div className="b2b-opt"><span className="field-l">Ödeme</span><Seg v={pay} set={setPay} opts={Object.fromEntries(B2B_PAY_PICK.map((k) => [k, B2B_PAY[k]]))} label="Ödeme" /></div>
         <div className="row2">
           {deliv === 'pickup' && S.requests.askPickupTime && <label className="field"><span className="field-l">Ne zaman gelirsiniz? <small className="opt">(isteğe bağlı)</small></span><input id="cart-pickup" placeholder="ör. Bugün 17:00, yarın sabah" value={pickup} onChange={(e) => setPickup(e.target.value)} /></label>}
           <label className="field"><span className="field-l">Not <small className="opt">(isteğe bağlı)</small></span><input id="cart-note" placeholder={deliv === 'cargo' ? 'ör. Kargo adresi değişti, …' : 'ör. Kutusuyla birlikte'} value={note} onChange={(e) => setNote(e.target.value)} /></label>
@@ -268,7 +269,7 @@ function BayiSend({ items, onBack }) {
         </div>
         <p className="fine">Siparişiniz <b>Siparişlerim</b>’de görünür; durumunu ve mesajları oradan takip edebilirsiniz.</p>
       </div>
-      <ListPaper r={rec} label="Sipariş" who={!!rec.userName} />
+      <ListPaper r={rec} label="Sipariş" who={!!rec.userName} b2b />
     </div>
   );
 }

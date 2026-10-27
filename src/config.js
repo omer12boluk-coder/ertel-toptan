@@ -321,7 +321,8 @@ export const TYPE = {
 export const OPEN_STATUSES = ['new', 'offered', 'accepted', 'ready'];
 // Bayi siparişi (talepler koleksiyonunda type 'order'): teslimat ve ödeme seçenekleri (cari sadece etiket; hesap başka yerde tutuluyor)
 export const B2B_DELIV = { pickup: 'Dükkândan alacağım', cargo: 'Kargoyla gönderin' };
-export const B2B_PAY = { cash: 'Elden / dükkânda', transfer: 'Havale / EFT', account: 'Cariye yazın' };
+export const B2B_PAY = { cash: 'Elden / dükkânda', account: 'Cariye yazın', transfer: 'Havale / EFT' }; // havale artık seçilemez (B2B_PAY_PICK); eski kayıtlarda görünsün diye duruyor
+export const B2B_PAY_PICK = ['cash', 'account'];
 
 // Online mağaza siparişleri
 export const ORDER_STATUS = {

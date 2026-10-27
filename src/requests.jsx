@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, openRequest, toast, go } from './store.js';
-import { Icon, Avatar, StatusPill, Empty, Sheet, Stepper, Confirm, openMenu, copyText, VatLines } from './ui.jsx';
+import { Icon, Avatar, StatusPill, Empty, Sheet, Stepper, Confirm, openMenu, copyText, VatLines, Thumb } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { ls } from './utils.js';
 import { fmt, totals, fmtTotals, when, now, roundStep } from './utils.js';
@@ -8,7 +8,7 @@ import { STATUS, TYPE, OPEN_STATUSES, B2B_DELIV, B2B_PAY } from './config.js';
 // bayi siparişinde durum adları teslimata göre: kargoyla gönderilecekse "Hazır" yerine "Kargoya verildi"
 const stLabel = (r, st = r.status) => (st === 'ready' && r.deliv === 'cargo' ? 'Kargoya verildi' : st === 'new' && r.type === 'order' ? 'Onay bekliyor' : STATUS[st]?.label);
 import { CustomerSheet } from './admin.jsx';
-import { GuestLists, AdminListShare, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
+import { GuestLists, AdminListShare, useRate, toTL, fmtTL, rateLabel, ListPaper } from './listsheet.jsx';
 
 // Talepleri (mesajlarıyla) kalıcı olarak sil
 export async function deleteRequests(ids, done) {
@@ -159,6 +159,21 @@ export function NewMessage({ onClose }) {
   );
 }
 
+// Bayi siparişi: mağaza siparişindeki gibi ilerleme adımları
+function B2bTrack({ r }) {
+  if (['rejected', 'cancelled', 'noshow'].includes(r.status)) return null;
+  const cargo = r.deliv === 'cargo';
+  const steps = [r.status === 'offered' ? 'Fiyat onayınızda' : 'Sipariş alındı', 'Onaylandı', cargo ? 'Kargoya verildi' : 'Hazır, gelip alın', cargo ? 'Teslim edildi' : 'Teslim alındı'];
+  const cur = { new: 0, offered: 0, accepted: 1, ready: 2, done: 4 }[r.status] ?? 0;
+  return (
+    <div className="track-wrap b2b-track">
+      <ol className="track" aria-label="Sipariş durumu">
+        {steps.map((t, i) => <li key={i} className={i < cur ? 'done' : i === cur ? 'on' : ''}><span className="track-dot">{i < cur ? <Icon n="check" s={14} /> : i + 1}</span><span>{t}</span></li>)}
+      </ol>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 export function RequestDetail({ id }) {
   const { requests, user, settings: S, customers, byId } = useStore();
@@ -255,9 +270,11 @@ export function RequestDetail({ id }) {
   const tList = totals(items, 'list');
   const quick = admin ? S.requests.adminQuick : S.requests.userQuick;
   const ord = r.type === 'order';
+  const bayiOrd = ord && !admin; // bayi kendi siparişine bakıyor: sohbet değil, sipariş sayfası gibi
+  const shownMsgs = bayiOrd ? msgs.filter((m) => m.from !== 'system') : msgs;
 
   return (
-    <div className="rd">
+    <div className={'rd' + (bayiOrd ? ' rd-ord' : '')}>
       <header className="rd-h">
         <button className="icon-btn only-m" onClick={() => store.set({ openReq: null })} aria-label="Geri"><Icon n="back" /></button>
         <div className="rd-title">
@@ -291,6 +308,7 @@ export function RequestDetail({ id }) {
         </button>
       )}
 
+      {bayiOrd && <B2bTrack r={r} />}
       {!admin && r.status === 'ready' && (r.deliv === 'cargo'
         ? <div className="banner ok"><Icon n="box" /><div><b>Siparişiniz kargoya verildi.</b> Takip bilgisi mesajlarda.</div></div>
         : <div className="banner ok"><Icon n="store" /><div><b>Siparişiniz hazır.</b> {S.shop.name} · {S.shop.address} · {S.shop.hours}</div></div>)}
@@ -304,7 +322,8 @@ export function RequestDetail({ id }) {
         <div className="banner warn"><Icon n="tag" /><div><b>{r.type === 'order' ? 'Fiyatlar yazıldı.' : 'Size teklif geldi.'}</b> Fiyatları kontrol edip onaylayın; onaydan sonra hazırlanır.</div></div>
       )}
 
-      {items.length > 0 && (
+      {bayiOrd && items.length > 0 && <div className="rd-paper"><ListPaper r={r} items={items} label="Sipariş" who={false} rate={null} viewOnly b2b /></div>}
+      {!bayiOrd && items.length > 0 && (
         <div className="rd-items">
           <table className="itable">
             <thead>
@@ -316,7 +335,7 @@ export function RequestDetail({ id }) {
                 const p = byId.get(it.id);
                 return (
                   <tr key={it.id} className={changed ? 'changed' : ''}>
-                    <td className="it-name"><span>{it.n}</span><code>{it.k}</code>{admin && p && <small className="muted"> · stok {p.s}</small>}</td>
+                    <td className="it-name"><span className="it-nm">{(p || it.pi || it.im) && <span className="it-th"><Thumb p={{ ...(p || {}), ...it }} size="sm" /></span>}<span className="it-nt"><span>{it.n}</span><code>{it.k}</code>{admin && p && <small className="muted"> · stok {p.s}</small>}</span></span></td>
                     <td className="r it-qty" data-l="Adet">{editable ? <Stepper small min={1} value={it.qty} onChange={(v) => upd(i, { qty: v })} /> : <span className="num">{it.qty}</span>}</td>
                     {S.pricing.showRetail && <td className="r num muted hide-s it-list">{fmt(it.list, it.cur)}</td>}
                     <td className="r num muted it-asked" data-l={admin ? 'İstenen' : 'Sepet'}>{fmt(it.asked, it.cur)}</td>
@@ -344,7 +363,7 @@ export function RequestDetail({ id }) {
             <span className="rd-total">{ord ? 'Toplam' : 'Teklif'} <b className="num">{fmtTotals(tOffer)}</b></span>
             {admin && rate && toTL(tOffer, rate) != null && <span className="muted rd-tl" title={rateLabel(rate)}>≈ <b className="num">{fmtTL(toTL(tOffer, rate))}</b></span>}
           </div>
-          <VatLines by={tOffer} rate={admin ? rate : null} className="right" />
+          {!ord && <VatLines by={tOffer} rate={admin ? rate : null} className="right" />}
         </div>
       )}
 
@@ -379,8 +398,9 @@ export function RequestDetail({ id }) {
         {dirty && <span className="dirty-note">Değişiklikler kaydedilmedi — teklif gönderin veya onaylayın.</span>}
       </div>
 
-      <div className="chat" aria-live="polite">
-        {msgs.map((m) => (
+      {bayiOrd && <h3 className="rd-msg-h"><Icon n="chat" s={16} />Mesajlar <span className="muted">{shownMsgs.length ? '' : '· sorunuz varsa buradan yazın'}</span></h3>}
+      <div className={'chat' + (bayiOrd && !shownMsgs.length ? ' empty' : '')} aria-live="polite">
+        {shownMsgs.map((m) => (
           m.from === 'system'
             ? <div key={m.id} className="msg sys"><span>{m.text}</span><time>{when(m.at)}</time></div>
             : <div key={m.id} className={'msg ' + (m.from === (admin ? 'admin' : 'user') ? 'me' : 'them')}><p>{m.text}</p><time>{when(m.at)}</time></div>

@@ -38,7 +38,7 @@ const priced = (r) => r.status !== 'new';
 const listRate = (r, live) => (r.rate && r.rate.usd > 0 ? r.rate : live);
 
 // ---- Sayfadaki tablo --------------------------------------------------------
-export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, viewOnly = false }) { // viewOnly: tamamlanmış sipariş — ürün penceresinde Sepete ekle yok
+export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, viewOnly = false, b2b = false }) { // b2b: bayiye KDV yok, liste toplamı ve kârı gösterilir // viewOnly: tamamlanmış sipariş — ürün penceresinde Sepete ekle yok
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const live = useRate();
@@ -58,7 +58,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
       {who && (r.gname || r.userName) && <div className="paper-who">Müşteri: <b>{r.gname || r.userName}</b></div>}
       <div className="paper-scroll">
         <table className="ptable">
-          <thead><tr><th className="c">#</th><th>Ürün</th><th className="r">Adet</th><th className="r">{priced(r) ? 'Fiyat' : 'Liste fiyatı'}</th><th className="r">Tutar</th></tr></thead>
+          <thead><tr><th className="c">#</th><th>Ürün</th><th className="r">Adet</th><th className="r">{b2b ? 'Toptan' : priced(r) ? 'Fiyat' : 'Liste fiyatı'}</th><th className="r">Tutar</th></tr></thead>
           <tbody>
             {items.map((it, k) => {
               const sum = it.offer == null ? null : Number(it.offer) * it.qty;
@@ -92,11 +92,25 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
             {tTL != null && <span className="paper-tl num">≈ {fmtTL(tTL)} <small>({rateLabel(rate)})</small></span>}
           </div>
         </div>
-        <VatLines by={tot} rate={rate} />
+        {b2b ? <B2bGain items={items} /> : <VatLines by={tot} rate={rate} />}
       </footer>
       {zoom && <Lightbox urls={zoom.urls} title={zoom.title} onClose={() => setZoom(null)} />}
       {sheet && <ProductSheet p={sheet} viewOnly={viewOnly} onClose={() => setSheet(null)} />}
     </article>
+  );
+}
+
+// Bayi: liste (perakende) toplamı ile ödediği toptan toplam arasındaki fark = kârı
+function B2bGain({ items }) {
+  const withList = items.filter((i) => i.offer != null && Number(i.list) > 0);
+  const list = totals(withList, 'list'); const paid = totals(withList, 'offer');
+  const gain = Object.entries(list).map(([c, v]) => [c, v - (paid[c] || 0)]).filter(([, v]) => v > 0.004);
+  if (!gain.length) return null;
+  return (
+    <div className="paper-gain">
+      <span>Liste (perakende) toplamı <b className="num">{fmtTotals(list)}</b></span>
+      <span className="gain">Kârınız <b className="num">{gain.map(([c, v]) => fmt(v, c)).join(' + ')}</b></span>
+    </div>
   );
 }
 

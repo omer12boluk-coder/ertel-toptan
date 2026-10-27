@@ -3443,3 +3443,21 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
   .b2b-seg button { flex-basis: calc(50% - 4px); }
   .b2b-send-btns > .btn { flex-basis: 100%; }
 }
+
+/* Bayi siparişi (27.10.2026): sipariş sayfası gibi — ilerleme, resimli liste, kâr, mesajlar altta */
+.rd-ord .b2b-track { margin: 12px 14px 0; border: 0; border-radius: 12px; background: var(--surface-2); }
+.rd-ord .composer { position: static; border-top: 0; padding-top: 4px; }
+.rd-paper { padding: 12px 14px 4px; }
+.rd-paper .paper { margin: 0; }
+.paper-gain { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 18px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13.5px; color: var(--muted); }
+.paper-gain b { color: var(--ink); font-weight: 600; margin-left: 4px; }
+.paper-gain .gain { color: var(--ok, #1f8a4c); font-weight: 600; }
+.paper-gain .gain b { color: inherit; font-weight: 800; }
+.rd-msg-h { display: flex; align-items: center; gap: 7px; margin: 0; padding: 14px 14px 8px; font-size: 15px; border-top: 1px solid var(--line-2); }
+.rd-msg-h .muted { font-weight: 400; font-size: 13px; }
+.rd-ord .chat { border-top: 0; min-height: 0; }
+.rd-ord .chat.empty { display: none; }
+.itable .it-name .it-nm { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.itable .it-name .it-th { display: block; flex: none; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+.it-th > * { width: 100%; height: 100%; }
+.itable .it-name .it-nt { display: block; min-width: 0; }
