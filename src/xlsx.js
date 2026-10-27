@@ -191,7 +191,9 @@ export function mergeCatalog(current, incomingIn) {
   const seen = new Set(), seenCodes = new Set(), idMap = {};
   for (const n0 of incomingIn) {
     const ck = codeKey(n0.k);
-    if (ck && seenCodes.has(ck)) { dupSkipped++; continue; } // dosyada aynı stok kodu iki kez varsa ilki geçerli
+    // dosyada aynı stok kodu iki kez varsa ilki geçerli — ama ikincisi katalogda zaten kendi numarasıyla varsa ayrı üründür (PlatinMarket'te
+    // iki ürüne aynı kod verilmiş olabiliyor, ör. ert01997): atlanırsa "dosyada yok" sayılıp silinmeye aday olurdu
+    if (ck && seenCodes.has(ck) && !byId.has(n0.id)) { dupSkipped++; continue; }
     if (ck) seenCodes.add(ck);
     let n = n0;
     if (!byId.has(n.id) && ck && byCode.has(ck)) { idMap[n.id] = byCode.get(ck); n = { ...n0, id: byCode.get(ck) }; matchedByCode++; }
