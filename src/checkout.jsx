@@ -414,6 +414,8 @@ export function OrderPage({ id }) {
   const [confirm, setConfirm] = useState(null);
   useEffect(() => { setO(undefined); const t = setTimeout(() => setSlow(true), 12000); const un = api().watchOrder(id, setO); return () => { clearTimeout(t); un && un(); }; }, [id]);
   useEffect(() => { if (o0) orderSeen(o0); }, [o0?.id, o0?.updatedAt]); // açılan sipariş artık "yeni güncelleme" sayılmaz
+  // bu cihazda bildirimler açıksa açılan sipariş de bağlanır (sipariş başka yerden — ör. Safari'den — verildiyse de haber gelsin)
+  useEffect(() => { if (api().mode === 'firebase' && o0?.id && ORDER_OPEN.includes(o0.status)) autoPush(o0.id); }, [o0?.id]);
   const o = previewCargo(o0);
   if (o === null) return <div className="page narrow"><Empty icon="search" title="Sipariş bulunamadı"><p>Link eksik kopyalanmış olabilir.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty></div>;
   if (!o) return <div className="page narrow list-wait"><div className="spinner" aria-label="Yükleniyor" />{slow && <><p>Bağlantı yavaş görünüyor.</p><button className="btn primary" onClick={() => location.reload()}><Icon n="refresh" s={16} />Tekrar dene</button></>}</div>;
@@ -843,6 +845,9 @@ function MyOrders({ limit }) {
   const fresh = new Set(unseenOrders(myOrders).map((o) => o.id));
   // tam listede iki sekme: devam eden siparişler / geçmiş (tamamlanan + iptal)
   const act = myOrders.filter((o) => ORDER_OPEN.includes(o.status)); const past = myOrders.filter((o) => !ORDER_OPEN.includes(o.status));
+  // bildirimler bu cihazda açıksa devam eden siparişlerin hepsi bu cihaza bağlanır (oturumda bir kez)
+  const actIds = act.map((o) => o.id).join(',');
+  useEffect(() => { if (api().mode !== 'firebase' || !actIds) return; let done = ''; try { done = sessionStorage.getItem('push-linked') || ''; } catch {} if (done === actIds) return; actIds.split(',').slice(0, 10).forEach((id) => autoPush(id)); try { sessionStorage.setItem('push-linked', actIds); } catch {} }, [actIds]);
   const [tab, setTab] = useState(() => (act.length || !past.length ? 'act' : 'past'));
   const [sel, setSel] = useState(null); // Set | null
   const [open, setOpen] = useState(null); // sola çekilip açık kalan satır

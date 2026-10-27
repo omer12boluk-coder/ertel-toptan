@@ -360,17 +360,25 @@ async function fsDoc(path) {
 async function pushSub(env, b) {
   const id = String(b.id || ''); const s = b.sub || {};
   if (!/^[\w-]{10,40}$/.test(id) || !/^https:\/\//.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth) return { ok: false, error: 'eksik' };
-  if (!(await fsDoc('orders/' + id))) return { ok: false, error: 'sipariş yok' };
+  const o = await fsDoc('orders/' + id); if (!o) return { ok: false, error: 'sipariş yok' };
+  const me = { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } };
   const list = (await env.KV.get('ps:' + id, 'json')) || [];
-  const n = [{ endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } }, ...list.filter((x) => x.endpoint !== s.endpoint)].slice(0, 5);
-  await env.KV.put('ps:' + id, JSON.stringify(n), { expirationTtl: 60 * 60 * 24 * 120 });
+  await env.KV.put('ps:' + id, JSON.stringify([me, ...list.filter((x) => x.endpoint !== s.endpoint)].slice(0, 5)), { expirationTtl: 60 * 60 * 24 * 120 });
+  // üye siparişi: cihaz üyeye de bağlanır → üyenin SONRAKİ siparişlerinin bildirimleri de bu cihaza gelir
+  // (siparişi Safari'den verip bildirimi ana ekran uygulamasında açan da haber alsın)
+  if (o.uid && /^[\w-]{6,64}$/.test(o.uid)) {
+    const ml = (await env.KV.get('pm:' + o.uid, 'json')) || [];
+    await env.KV.put('pm:' + o.uid, JSON.stringify([me, ...ml.filter((x) => x.endpoint !== s.endpoint)].slice(0, 8)), { expirationTtl: 60 * 60 * 24 * 365 });
+  }
   return { ok: true };
 }
 async function pushStatus(env, id, test) {
   if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
-  const list = (await env.KV.get('ps:' + id, 'json')) || [];
-  if (!list.length) return { ok: true, sent: 0, subs: 0 };
   const o = await fsDoc('orders/' + id); if (!o) return { ok: false, error: 'sipariş yok' };
+  const own = (await env.KV.get('ps:' + id, 'json')) || [];
+  const mem = o.uid ? (await env.KV.get('pm:' + o.uid, 'json')) || [] : [];
+  const list = [...own, ...mem.filter((m) => !own.some((x) => x.endpoint === m.endpoint))];
+  if (!list.length) return { ok: true, sent: 0, subs: 0 };
   const st = o.status || 'new';
   if (!test) {
     // kargoda: takip no sonradan eklenince / düzeltilince bir kez daha bildirilir (durum aynı kalsa da)
@@ -388,7 +396,11 @@ async function pushStatus(env, id, test) {
   const data = { title: `${shop} · Sipariş #${o.no}`, body, url: '/magaza/s/' + id, tag: 'o-' + id };
   const keep = []; let sent = 0;
   for (const s of list) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
-  if (keep.length !== list.length) await env.KV.put('ps:' + id, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 120 });
+  if (keep.length !== list.length) {
+    const ok = (x) => keep.some((k) => k.endpoint === x.endpoint);
+    await env.KV.put('ps:' + id, JSON.stringify(own.filter(ok)), { expirationTtl: 60 * 60 * 24 * 120 });
+    if (o.uid) await env.KV.put('pm:' + o.uid, JSON.stringify(mem.filter(ok)), { expirationTtl: 60 * 60 * 24 * 365 });
+  }
   return { ok: true, sent, subs: list.length };
 }
 
