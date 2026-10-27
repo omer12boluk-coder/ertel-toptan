@@ -586,7 +586,7 @@ function CargoCard({ o, flow }) {
   // düğmeye basınca paylaş menüsü açılır (Yazdır / Dosyalara kaydet). Paylaşım beklemeden açılmalı (iPhone dokunuş şartı).
   const mobile = needsPdfPrint();
   const [pdf, setPdf] = useState(null);
-  const [paper, setPaper] = useState(() => { try { return (localStorage.getItem('label-paper') === 'a4' ? 'a4' : '4x6'); } catch { return '4x6'; } });
+  const [paper, setPaper] = useState(() => { try { const v = localStorage.getItem('label-paper'); return v === 'a4' || v === 'a6' ? v : '4x6'; } catch { return '4x6'; } });
   const pickPaper = (v) => { setPaper(v); setPdf(null); try { localStorage.setItem('label-paper', v); } catch {} };
   useEffect(() => { if (!mobile || !live) { setPdf(null); return; } let ok = true; labelPdf(o, S, paper).then((b) => ok && setPdf(b)).catch((e) => console.warn(e)); return () => { ok = false; }; },
     [mobile, live, paper, o.dhl?.ref, o.dhl?.at, o.dhl?.kg, o.dhl?.desi, o.dhl?.pay, o.dhl?.icerik, JSON.stringify(o.delivery?.addr || {})]);
@@ -626,9 +626,10 @@ function CargoCard({ o, flow }) {
           {mobile && <div className="ocg-tip"><span className="fine">Kâğıt:</span>
             <div className="seg sm" role="radiogroup" aria-label="Kâğıt boyutu">
               <button type="button" role="radio" aria-checked={paper === '4x6'} className={paper === '4x6' ? 'on' : ''} onClick={() => pickPaper('4x6')}>4×6 (10×15 cm)</button>
+              <button type="button" role="radio" aria-checked={paper === 'a6'} className={paper === 'a6' ? 'on' : ''} onClick={() => pickPaper('a6')}>A6</button>
               <button type="button" role="radio" aria-checked={paper === 'a4'} className={paper === 'a4' ? 'on' : ''} onClick={() => pickPaper('a4')}>A4</button>
             </div>
-            <p className="fine">Barkod yazdır’a basınca açılan menüden <b>Yazdır</b>’ı seçin.</p></div>}
+            <p className="fine">Barkod yazdır’a basınca açılan menüden <b>Yazdır</b>’ı seçin.{paper === 'a6' && <> Yazıcıya A6 kâğıt takın; iPhone kâğıt olarak A4 gösterse de etiket A6 kâğıda basılır.</>}</p></div>}
           {dhlOpen(o) && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : o.cargo?.code ? 'Teslim edildi mi?' : 'Takip no geldi mi?'}</button>}
           {!o.cargo?.code && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL kaydını iptal et</button>}
           {!o.cargo?.code && <button className="link ocg-manual" onClick={() => flow.openShip(o)}>Takip no’yu elle gir</button>}

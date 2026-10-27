@@ -84,9 +84,23 @@ export async function canvasPdf(canvas, paper = 'a6') {
   // A6 = etiketin kendisi (10×15 cm); A4 = normal yazıcı: etiket sayfaya orantılı büyütülüp ortalanır
   // A6 tam ISO ölçüsünde (105×148 mm = 298×420 pt): iPhone yazıcı menüsü belgenin boyutuna uyan kâğıdı sunar;
   // eskiden 4×6 inç (10,2×15,2 cm) yapınca A6 listede çıkmıyordu.
-  const [pw, ph] = paper === 'a4' ? [595, 842] : [297.64, 419.53]; const m = paper === 'a4' ? 24 : 6;
-  const sc = Math.min((pw - 2 * m) / 288, (ph - 2 * m) / 432); const iw = Math.round(288 * sc), ih = Math.round(432 * sc);
-  const content = `q ${iw} 0 0 ${ih} ${Math.round((pw - iw) / 2)} ${Math.round((ph - ih) / 2)} cm /Im0 Do Q`;
+  // 'a4a6' = A4 sayfa ama etiket tam A6 ölçüsünde, ÜST ORTADA: yazıcıya A6 kâğıt takılıyken iPhone yalnız A4 sunarsa
+  // (yazıcı "çevrimdışı" görünüp kâğıt listesini veremiyor) kâğıt ortadan beslendiği için etiket A6 kâğıda denk gelir;
+  // A4 kâğıda basılırsa köşe işaretlerinden kesilir.
+  let content;
+  const [pw, ph] = paper === 'a4' || paper === 'a4a6' ? [595.28, 841.89] : [297.64, 419.53];
+  if (paper === 'a4a6') {
+    const bw = 297.64, bh = 419.53, bx = (pw - bw) / 2, by = ph - bh, m = 11; // A6 kutusu (pt), içte 4 mm pay
+    const sc = Math.min((bw - 2 * m) / 288, (bh - 2 * m) / 432); const iw = 288 * sc, ih = 432 * sc;
+    const f = (n) => n.toFixed(2);
+    const mk = []; const L = 12, G = 3; // kesim işaretleri A6 kutusunun dışında (A6 kâğıda düşmez)
+    for (const [x, y, sx, sy] of [[bx, by, -1, -1], [bx + bw, by, 1, -1]]) mk.push(`${f(x + sx * G)} ${f(y)} m ${f(x + sx * (G + L))} ${f(y)} l S`, `${f(x)} ${f(y + sy * G)} m ${f(x)} ${f(y + sy * (G + L))} l S`);
+    content = `q ${f(iw)} 0 0 ${f(ih)} ${f(bx + (bw - iw) / 2)} ${f(by + (bh - ih) / 2)} cm /Im0 Do Q q 0.4 w 0.45 G ${mk.join(' ')} Q`;
+  } else {
+    const m = paper === 'a4' ? 24 : 6;
+    const sc = Math.min((pw - 2 * m) / 288, (ph - 2 * m) / 432); const iw = Math.round(288 * sc), ih = Math.round(432 * sc);
+    content = `q ${iw} 0 0 ${ih} ${Math.round((pw - iw) / 2)} ${Math.round((ph - ih) / 2)} cm /Im0 Do Q`;
+  }
   push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
   obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
   obj(2, () => push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'));
@@ -103,7 +117,7 @@ export async function canvasPdf(canvas, paper = 'a6') {
 export async function labelPdf(o, S, paper) {
   const c = drawLabel(o, S);
   if (paper === '4x6') return png4x6(c);
-  return canvasPdf(c, paper);
+  return canvasPdf(c, paper === 'a6' ? 'a4a6' : paper);
 }
 export const needsPdfPrint = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
 
