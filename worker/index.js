@@ -50,6 +50,7 @@ export default {
       if (url.pathname.startsWith('/v/') && (req.method === 'GET' || req.method === 'HEAD') && env.ASSETS) return await serveVideo(req, env, url, cors);
       // R2 videoları: bazı Türk internet sağlayıcıları r2.dev adresini engelliyor; video bekçi üzerinden (Cloudflare içinden) parça parça aktarılır
       if (url.pathname.startsWith('/r2/') && (req.method === 'GET' || req.method === 'HEAD')) return await proxyR2(req, url, cors);
+      if (url.pathname.startsWith('/r2obj/')) return await r2Obj(req, env, url);
     } catch (e) { return json({ error: String(e.message || e) }, 500); }
     return json({ error: 'bulunamadı' }, 404);
   },
@@ -467,6 +468,22 @@ async function notifyReq(env, b) {
   await adminPush(env, { title: `${r.type === 'order' ? '🛒 Yeni bayi siparişi' : '📨 Yeni talep'} #${r.no || ''} · ${who}`, body: (head + (r.note ? ' · ' + r.note : '')).slice(0, 160), url: '/admin/t/' + id, tag: 'ar-' + id }).catch(() => {});
   const text = `📨 Yeni bayi talebi #${r.no || ''}\n${who}\n${head}${r.pickup ? '\nGeliş: ' + r.pickup : ''}${r.note ? '\nNot: ' + r.note : ''}${lines ? '\n\n' + lines : ''}\n\nPanelde aç: ${link}`;
   return notifySend(env, { subject: `${r.type === 'order' ? 'Yeni bayi siparişi' : 'Yeni talep'} #${r.no || ''} · ${who}`, text, link });
+}
+
+// R2'ye yazma kapısı (resim taşıma işi, tools/r2-mirror.mjs): PUT/GET /r2obj/<anahtar>, başlık X-Key = sha256('r2:' + TELEGRAM_TOKEN).
+// Sadece platin/ klasörü. Cloudflare REST API toplu yüklemede koruma sayfası (403) döndürdüğü için bekçinin kendi R2 bağlantısı kullanılır.
+async function r2Obj(req, env, url) {
+  if (!env.R2 || !env.TELEGRAM_TOKEN) return json({ ok: false, error: 'R2 bağlı değil' }, 500);
+  const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('r2:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if ((req.headers.get('X-Key') || '') !== want) return json({ ok: false, error: 'yetki' }, 403);
+  const key = decodeURIComponent(url.pathname.slice('/r2obj/'.length));
+  if (!key.startsWith('platin/') || key.includes('..')) return json({ ok: false, error: 'izin verilmeyen yol' }, 400);
+  if (req.method === 'PUT') {
+    await env.R2.put(key, req.body, { httpMetadata: { contentType: req.headers.get('Content-Type') || 'application/octet-stream', cacheControl: 'public, max-age=31536000, immutable' } });
+    return json({ ok: true });
+  }
+  if (req.method === 'GET') { const o = await env.R2.get(key); return o ? new Response(o.body, { headers: { 'Content-Type': o.httpMetadata?.contentType || 'application/octet-stream' } }) : json({ ok: false, error: 'yok' }, 404); }
+  return json({ ok: false, error: 'yöntem' }, 405);
 }
 
 // PlatinMarket eşitlemesinde değişen ürünler (GitHub Actions'taki eşitleme bildirir; anahtar: sha256('sync:' + TELEGRAM_TOKEN))

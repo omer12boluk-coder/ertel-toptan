@@ -12,6 +12,11 @@ binding = "ASSETS"
 [triggers]
 crons = ["* * * * *"]
 
+# Resim deposu (R2 kutusu "ertel"): taşıma işi /r2obj/ kapısından yazar (anahtarlı)
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "ertel"
+
 [[kv_namespaces]]
 binding = "KV"
 id = "__KV_ID__"

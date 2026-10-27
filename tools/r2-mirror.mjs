@@ -3,18 +3,21 @@
 // Hedef: R2 kutusu "ertel", anahtar  platin/<dosya>   (aynı dosya adı → iki adres birbirine birebir çevrilir:
 //   platincdn.com/3519/pictures/<dosya>  ⇄  platin/<dosya>)
 // Dizin: platin/_manifest.json  { v, at, files: { <dosya>: { s: bayt, t: tür, at } }, fail: { <dosya>: hata } }
-// Kaldığı yerden devam eder (dizindeki dosyalar atlanır). Ortam: FIREBASE_SERVICE_ACCOUNT, CLOUDFLARE_API_TOKEN,
-// CLOUDFLARE_ACCOUNT_ID. Seçenekler: --limit N (deneme), --minutes M (süre dolunca durup dizini kaydeder).
+// Kaldığı yerden devam eder (dizindeki dosyalar atlanır). Ortam: FIREBASE_SERVICE_ACCOUNT, WATCH_URL,
+// TELEGRAM_TOKEN. Seçenekler: --limit N (deneme), --minutes M (süre dolunca durup dizini kaydeder).
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? Number(process.argv[i + 1]) : d; };
 const LIMIT = arg('--limit', 0), MINUTES = arg('--minutes', 300);
 const BUCKET = 'ertel', PREFIX = 'platin/', SRC = 'https://platincdn.com/3519/pictures/';
-const ACC = process.env.CLOUDFLARE_ACCOUNT_ID, TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-if (!ACC || !TOKEN) { console.log('::error::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID yok'); process.exit(1); }
-const API = `https://api.cloudflare.com/client/v4/accounts/${ACC}/r2/buckets/${BUCKET}/objects/`;
-const auth = { Authorization: 'Bearer ' + TOKEN };
+// Yazma bekçinin R2 kapısından (/r2obj/, anahtar sha256('r2:' + TELEGRAM_TOKEN)); Cloudflare REST API toplu yüklemede
+// koruma sayfası (HTML 403) verip kilitleniyordu (27.10.2026, 2.845 resimden sonra).
+import { createHash } from 'node:crypto';
+const W = (process.env.WATCH_URL || '').replace(/\/$/, ''), TG = process.env.TELEGRAM_TOKEN;
+if (!W || !TG) { console.log('::error::WATCH_URL / TELEGRAM_TOKEN yok'); process.exit(1); }
+const API = W + '/r2obj/';
+const auth = { 'X-Key': createHash('sha256').update('r2:' + TG).digest('hex') };
 const note = (t, m) => console.log(`::notice title=${t}::${m}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const t0 = Date.now();
@@ -53,7 +56,7 @@ let man;
 try {
   man = (await r2GetJson(PREFIX + '_manifest.json')) || { v: 1, files: {}, fail: {} };
   await r2Put(PREFIX + '_ping.txt', 'ok ' + new Date().toISOString(), 'text/plain');
-} catch (e) { console.log('::error title=R2::' + e.message + ' — Cloudflare anahtarına "Workers R2 Storage: Edit" izni eklenmeli.'); process.exit(1); }
+} catch (e) { console.log('::error title=R2::' + e.message + ' — bekçi yayınlandı mı (R2 bağlantısı)?'); process.exit(1); }
 man.fail = man.fail || {};
 
 // 2) katalogdaki tüm resim dosyaları
