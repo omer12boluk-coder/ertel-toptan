@@ -152,8 +152,9 @@ export async function check(env, { force = false } = {}) {
   const [lastSig, lastPrices] = await Promise.all([env.KV.get('sig'), env.KV.get('prices', 'json')]);
   const changed = force || sig !== lastSig || priceChanged(lastPrices, items);
   if (!changed) {
-    // sadece kur değiştiyse yeni fiyatları sessizce sakla
-    if (lastPrices && items.some((x) => lastPrices[x.id] !== x.tl)) await env.KV.put('prices', JSON.stringify(prices));
+    // sadece kur değiştiyse yeni fiyatları sessizce sakla — en çok yarım saatte bir (ücretsiz KV: günde 1.000 yazma;
+    // TL fiyatlar kurla her dakika oynarsa her dakika yazıyordu). Karşılaştırma oran (medyan) ile yapıldığı için eski taban da yeter.
+    if (lastPrices && Date.now() - (lastPrices._at || 0) > 30 * 60000 && items.some((x) => lastPrices[x.id] !== x.tl)) await env.KV.put('prices', JSON.stringify({ ...prices, _at: Date.now() }));
     return 'same';
   }
   const last = Number(await env.KV.get('lastDispatch')) || 0;
@@ -164,7 +165,7 @@ export async function check(env, { force = false } = {}) {
     body: JSON.stringify({ ref: 'main' }),
   });
   if (gh.status !== 204) return 'github ' + gh.status;
-  await Promise.all([env.KV.put('sig', sig), env.KV.put('prices', JSON.stringify(prices)), env.KV.put('lastDispatch', String(Date.now()))]);
+  await Promise.all([env.KV.put('sig', sig), env.KV.put('prices', JSON.stringify({ ...prices, _at: Date.now() })), env.KV.put('lastDispatch', String(Date.now()))]);
   return 'dispatched';
 }
 

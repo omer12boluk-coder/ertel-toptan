@@ -8,6 +8,7 @@ import { STATUS, TYPE, OPEN_STATUSES, B2B_DELIV, B2B_PAY } from './config.js';
 // bayi siparişinde durum adları teslimata göre: kargoyla gönderilecekse "Hazır" yerine "Kargoya verildi"
 const stLabel = (r, st = r.status) => (st === 'ready' && r.deliv === 'cargo' ? 'Kargoya verildi' : st === 'new' && r.type === 'order' ? 'Onay bekliyor' : STATUS[st]?.label);
 import { CustomerSheet } from './admin.jsx';
+import { OlderBtn } from './orders.jsx';
 import { GuestLists, AdminListShare, useRate, toTL, fmtTL, rateLabel, ListPaper } from './listsheet.jsx';
 
 // Talepleri (mesajlarıyla) kalıcı olarak sil
@@ -88,6 +89,7 @@ function RequestsInner() {
             {list.map((r) => <ReqCard key={r.id} r={r} admin={admin} on={openReq === r.id} sel={sel} onToggle={toggle} onDelete={(id) => askDelete([id])} onSelect={(id) => setSel(new Set([id]))} />)}
           </ul>
         )}
+        {admin && <OlderBtn kind="reqs" what="kayıtları" />}
       </section>
       <section className="req-detail">
         {openReq ? <RequestDetail key={openReq} id={openReq} /> : <div className="req-placeholder"><Empty icon="box" title="Bir sipariş seçin">Soldaki listeden bir kayda dokunun.</Empty></div>}

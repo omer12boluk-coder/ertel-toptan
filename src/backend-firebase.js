@@ -39,7 +39,12 @@ export class FirebaseBackend {
     this.auth.languageCode = 'tr'; // doğrulama / şifre e-postaları Türkçe
     // Uygulama içi tarayıcılarda canlı bağlantı (WebChannel) takılabiliyor: orada baştan uzun yoklama kullan
     const inApp = /Telegram|FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|MicroMessenger|; wv\)|GSA\//i.test(navigator.userAgent) || typeof window.TelegramWebviewProxy !== 'undefined';
-    try { this.db = F.initializeFirestore(this.app, inApp ? { experimentalForceLongPolling: true } : { experimentalAutoDetectLongPolling: true }); } catch { this.db = F.getFirestore(this.app); }
+    // Yönetim paneli verileri cihazda saklar (27.10.2026): açılışta sadece değişen kayıtlar okunur (Firestore okuma kotası).
+    // Sadece yönetici örneğinde ve normal tarayıcıda; çıkışta silinir (logout).
+    this.persist = this.appName === 'admin' && !inApp && !!F.persistentLocalCache;
+    const net = inApp ? { experimentalForceLongPolling: true } : { experimentalAutoDetectLongPolling: true };
+    try { this.db = F.initializeFirestore(this.app, this.persist ? { ...net, localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) } : net); }
+    catch (e) { console.warn('firestore önbellek', e); this.persist = false; try { this.db = F.initializeFirestore(this.app, net); } catch { this.db = F.getFirestore(this.app); } }
   }
   d(...p) { return this.F.doc(this.db, ...p); }
   c(...p) { return this.F.collection(this.db, ...p); }
@@ -84,7 +89,12 @@ export class FirebaseBackend {
     try { await this.U.signInWithEmailAndPassword(this.auth, toEmail(username), pw); }
     catch (e) { throw new Error(/invalid|wrong|not-found|credential/i.test(e.code || e.message) ? 'Kullanıcı adı veya şifre hatalı' : e.message); }
   }
-  async logout() { if (this.user) ls.del('me-' + this.user.uid); this._fastDone = false; await this.U.signOut(this.auth); sessionStorage.removeItem('auth-tab'); }
+  async logout() {
+    const wipe = this.persist && this.user?.role === 'admin';
+    if (this.user) ls.del('me-' + this.user.uid); this._fastDone = false; await this.U.signOut(this.auth); sessionStorage.removeItem('auth-tab');
+    // yöneticinin cihazda sakladığı müşteri/sipariş verisini sil (sayfa yeniden açılır)
+    if (wipe) { try { await this.F.terminate(this.db); await this.F.clearIndexedDbPersistence(this.db); } catch (e) { console.warn(e); } location.reload(); }
+  }
   // Bayinin kendi başvurusu: hesap açılır ama yönetici onaylayana kadar giriş yapamaz
   async signup({ username, password, name, shop, phone }) {
     this.settingUp = true;
@@ -238,9 +248,10 @@ export class FirebaseBackend {
   async setUserPrices(uid, map) { await this.F.setDoc(this.d('userPrices', uid), { p: map }); }
 
   // ---- Talepler & mesajlar
-  watchRequests(user, cb) {
+  // since: yönetici için sadece bu tarihten sonra güncellenen talepler (varsayılan son 60 gün; "Daha eski" ile geriye açılır)
+  watchRequests(user, cb, since = 0) {
     const q = user.role === 'admin'
-      ? this.F.query(this.c('requests'), this.F.orderBy('updatedAt', 'desc'), this.F.limit(300))
+      ? this.F.query(this.c('requests'), ...(since ? [this.F.where('updatedAt', '>=', since)] : []), this.F.orderBy('updatedAt', 'desc'), this.F.limit(since ? 2000 : 300))
       : this.F.query(this.c('requests'), this.F.where('uid', '==', user.uid));
     return this.F.onSnapshot(q, (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.updatedAt - a.updatedAt)), (e) => console.error(e));
   }
@@ -362,7 +373,12 @@ export class FirebaseBackend {
       return m;
     } finally { this.A.deleteApp(tmp).catch(() => {}); }
   }
-  watchMembers(cb) { return this.F.onSnapshot(this.c('members'), (s) => cb(s.docs.map((x) => ({ uid: x.id, ...x.data() }))), (e) => console.warn(e)); }
+  // since: sadece bu tarihten sonra üye olanlar (panel açılışı); 0 = hepsi (Müşteriler > Mağaza müşterileri açılınca)
+  watchMembers(cb, since = 0) { const q = since ? this.F.query(this.c('members'), this.F.where('createdAt', '>=', since)) : this.c('members'); return this.F.onSnapshot(q, (s) => cb(s.docs.map((x) => ({ uid: x.id, ...x.data() }))), (e) => console.warn(e)); }
+  // tarihine bakmadan açık durumdaki kayıtlar (60 günden eski ama hâlâ bekleyen sipariş/talep listeden düşmesin)
+  watchByStatus(col, statuses, cb) { return this.F.onSnapshot(this.F.query(this.c(col), this.F.where('status', 'in', statuses), this.F.limit(1000)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => { console.warn(e); cb([]); }); }
+  // bir bayinin tüm talepleri (müşteri penceresindeki geçmiş; ana liste son 60 günle sınırlı)
+  watchUserRequests(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('requests'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.updatedAt - a.updatedAt)), () => cb([])); }
   async deleteMember(uid) {
     const s = await this.F.getDoc(this.d('members', uid)); const un = s.exists() && s.data().username;
     const b = this.F.writeBatch(this.db); b.delete(this.d('members', uid)); if (un) b.delete(this.d('usernames', un)); await b.commit();
@@ -383,7 +399,7 @@ export class FirebaseBackend {
   watchOrder(id, cb) { return this.F.onSnapshot(this.d('orders', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null)); }
   watchMyOrders(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
   watchFeed(cb) { return this.F.onSnapshot(this.d('meta', 'feed'), (s) => cb(s.exists() ? s.data().items || [] : []), () => cb([])); }
-  watchOrders(cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.orderBy('createdAt', 'desc'), this.F.limit(300)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
+  watchOrders(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('orders'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 3000 : 300)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
   async updateOrder(id, patch) { await timeout(this.F.updateDoc(this.d('orders', id), patch)); }
   async deleteOrders(ids) { const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('orders', id))); await b.commit(); }
 

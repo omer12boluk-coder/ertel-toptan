@@ -3463,3 +3463,5 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 .itable .it-name .it-nt { display: block; min-width: 0; }
 /* Adres: listede olmayan ilçe / mahalle elle yazılır (27.10.2026) */
 .addr-back { background: none; border: 0; padding: 4px 0 0; font-size: 12.5px; color: var(--accent); cursor: pointer; text-align: left; }
+/* Panel veri penceresi: liste sonunda "Daha eski … göster" (datawin.js) */
+.older-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; padding: 14px 8px 6px; font-size: 13px; text-align: center; }

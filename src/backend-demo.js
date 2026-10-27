@@ -125,10 +125,11 @@ export class DemoBackend {
   async getUserPrices(uid) { return this.db.userPrices[uid] || {}; }
   async setUserPrices(uid, map) { this.db.userPrices[uid] = map; this.persist(); }
 
-  watchRequests(user, cb) {
+  watchRequests(user, cb, since = 0) {
     return this.sub(() => {
       let list = Object.values(this.db.requests);
       if (user.role !== 'admin') list = list.filter((r) => r.uid === user.uid);
+      else if (since) list = list.filter((r) => (r.updatedAt || 0) >= since);
       cb(list.sort((a, b) => b.updatedAt - a.updatedAt).map((r) => ({ ...r })));
     });
   }
@@ -175,14 +176,16 @@ export class DemoBackend {
   async authConfirmReset() {}
   async authVerifyEmail() {}
   async saveMember(m) { const o = this.mem()[m.uid]; Object.assign(o, m); this.persist(); this.memberCb?.(this.pub(o)); }
-  watchMembers(cb) { return this.sub(() => cb(Object.values(this.mem()).map((m) => this.pub(m)))); }
+  watchMembers(cb, since = 0) { return this.sub(() => cb(Object.values(this.mem()).filter((m) => !since || (m.createdAt || 0) >= since).map((m) => this.pub(m)))); }
+  watchByStatus(col, statuses, cb) { return this.sub(() => cb(Object.values(col === 'orders' ? this.ord() : this.db.requests).filter((x) => statuses.includes(x.status)).map((x) => ({ ...x })))); }
+  watchUserRequests(uid, cb) { return this.sub(() => cb(Object.values(this.db.requests).filter((r) => r.uid === uid).sort((a, b) => b.updatedAt - a.updatedAt).map((r) => ({ ...r })))); }
   async deleteMember(uid) { delete this.mem()[uid]; this.persist(); }
   newOrderId() { return 'o' + rid() + rid(); }
   async placeOrder(o, id) { id = id || this.newOrderId(); this.ord()[id] = { ...o, id }; this.persist(); return id; }
   watchOrder(id, cb) { return this.sub(() => cb(this.ord()[id] ? { ...this.ord()[id] } : null)); }
   watchMyOrders(uid, cb) { return this.sub(() => cb(Object.values(this.ord()).filter((o) => o.uid === uid).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
   watchFeed(cb) { return this.sub(() => cb(this.db.feed || [])); }
-  watchOrders(cb) { return this.sub(() => cb(Object.values(this.ord()).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
+  watchOrders(cb, since = 0) { return this.sub(() => cb(Object.values(this.ord()).filter((o) => !since || (o.createdAt || 0) >= since).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
   async updateOrder(id, patch) { Object.assign(this.ord()[id], patch); this.persist(); }
   async deleteOrders(ids) { for (const id of ids) delete this.ord()[id]; this.persist(); }
 

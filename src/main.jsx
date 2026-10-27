@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
 import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
@@ -30,7 +31,7 @@ import { idbGet, idbSet } from './idb.js';
 const ADMIN_ROUTE = ROUTE.admin;
 let unsubs = [];
 let currentUid = null;
-const stopWatchers = () => { unsubs.forEach((f) => { try { f(); } catch {} }); unsubs = []; };
+const stopWatchers = () => { unsubs.forEach((f) => { try { f(); } catch {} }); unsubs = []; stopAdminWatchers(); };
 
 // Uygulamayla gelen başlangıç verisi: Claude demosunda sayfanın içinde, gerçek kurulumda ayrı dosyada
 async function loadJSON(elId, file, fallback) {
@@ -110,11 +111,11 @@ async function boot() {
 function startSession(u, A) {
   const admin = u.role === 'admin';
   stopWatchers();
-  unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
+  // yönetici: siparişler / talepler son 60 gün, üyeler son 62 gün (datawin.js); bayi: kendi talepleri
+  if (admin) startAdminWatchers(A, u); else unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
   if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
   if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
   if (admin && A.watchFeed) unsubs.push(A.watchFeed((feed) => store.set({ feed })));
-  if (admin && A.watchOrders) { unsubs.push(A.watchOrders((orders) => store.set({ orders }))); unsubs.push(A.watchMembers((members) => store.set({ members }))); }
   loadCart();
   if (admin) syncNow(false).catch(() => {});
   // mağaza resimlerindeki ürün bağlantılarına yedek adres yoksa bir kez ekle (ürün kapanınca kutu boş kalmasın)

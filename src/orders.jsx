@@ -8,6 +8,7 @@ import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf } from './
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushStatus } from './push.js';
+import { ensureAllMembers, loadOlder, winLabel } from './datawin.js';
 import { code128svg } from './barcode.js';
 import { labelPdf, needsPdfPrint } from './labelpdf.js';
 import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
@@ -28,6 +29,18 @@ const custMsg = (o, S) => {
   const cargo = o.status === 'shipped' && o.cargo?.code ? `\nKargo: ${o.cargo.company || ''} ${o.cargo.code}` : '';
   return `Merhaba ${o.contact?.name || ''}, ${S.shop.name} · #${o.no} numaralı siparişiniz: ${st}.${cargo}\n${links.order(o.id)}`;
 };
+
+// Liste sonunda: panel siparişleri / talepleri son 60 günle açar; daha eskisi bu düğmeyle 60'ar gün geriye yüklenir
+export function OlderBtn({ kind, what = 'siparişleri' }) {
+  const since = useStore((st) => st.win?.[kind]);
+  if (!since) return null;
+  return (
+    <div className="older-row">
+      <span className="muted">{winLabel(since)} tarihinden bu yana gösteriliyor</span>
+      <button className="btn sm ghost" onClick={() => loadOlder(kind)}><Icon n="clock" s={15} />Daha eski {what} göster</button>
+    </div>
+  );
+}
 
 export function Orders() {
   const { orders, members, openOrder: openId, settings: S } = useStore();
@@ -141,6 +154,7 @@ export function Orders() {
             )}
           </div>
         )}
+        <OlderBtn kind="orders" />
       </>}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
       {flow.sheets}
@@ -247,8 +261,10 @@ function OrderDetail({ id }) {
   const [note, setNote] = useState(null);
   const [mem, setMem] = useState(null); // başlıktaki üye adına basınca: üye bilgileri penceresi (sayfadan çıkmadan)
   const members = useStore((st) => st.members);
+  const allMem = useStore((st) => st.win?.membersAll);
   const memObj = mem ? members.find((m) => m.uid === mem) : null;
-  useEffect(() => { if (mem && !memObj) { toast('Üye kaydı bulunamadı', 'bad'); setMem(null); } }, [mem]);
+  // panel açılışında sadece son üyeler yüklü: bulunamazsa önce hepsini getir, yine yoksa haber ver
+  useEffect(() => { if (mem && !memObj) { if (!allMem) ensureAllMembers(); else { toast('Üye kaydı bulunamadı', 'bad'); setMem(null); } } }, [mem, allMem, !!memObj]);
   // listede yoksa (eski sipariş / linkten gelindi) tek başına getir
   useEffect(() => { if (fromList) return; const un = api().watchOrder(id, setOne); return () => un && un(); }, [id, !!fromList]);
   // sipariş açıkken telefondaki alt menü kayarak gizlenir, listeye dönünce geri gelir
@@ -335,8 +351,9 @@ function OrderDetail({ id }) {
 // ---- Mağaza üyeleri -----------------------------------------------------------------------------
 // Üye bilgileri penceresi (Müşteriler > Mağaza müşterileri ve sipariş başlığındaki üye adı)
 function MemberSheet({ m: open, onClose, onDelete }) {
-  const orders = useStore((st) => st.orders);
-  const mine = orders.filter((o) => o.uid === open.uid);
+  // üyenin TÜM siparişleri (ana liste son 60 günle sınırlı olduğu için ayrı sorgu)
+  const [mine, setMine] = useState([]);
+  useEffect(() => api().watchMyOrders(open.uid, setMine), [open.uid]);
   return (
     <Sheet title={open.name || open.email} sub={`Üye · ${when(open.createdAt)}`} onClose={onClose} footer={<>{onDelete && <button className="btn ghost danger" onClick={onDelete}><Icon n="trash" s={15} />Üyeyi sil</button>}{open.phone && <a className="btn wa" href={waLink(open.phone, `Merhaba ${open.name || ''},`)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp</a>}</>}>
       <div className="o-info one">
@@ -357,6 +374,7 @@ function MemberSheet({ m: open, onClose, onDelete }) {
 
 export function Members() {
   const { members, orders } = useStore();
+  useEffect(() => { ensureAllMembers(); }, []);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -383,7 +401,7 @@ export function Members() {
                   <span className="ocard-who"><b>{m.name || '—'}</b>{m.invoice?.company ? ` · ${m.invoice.company}` : ''}</span>
                   <span className="muted">{[m.email, m.phone].filter(Boolean).join(' · ')}</span>
                 </span>
-                <span className="muted ocard-sum">{count[m.uid] || 0} sipariş</span>
+                <span className="muted ocard-sum" title="Son 2 ayın siparişleri; tümü üyeye basınca">{count[m.uid] ? `${count[m.uid]} sipariş` : ''}</span>
                 <Icon n="back" s={16} className="flip" />
               </button>
             </li>

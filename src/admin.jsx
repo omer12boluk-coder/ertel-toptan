@@ -7,6 +7,7 @@ import { stencilCodes } from './kalip.js';
 import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
+import { ensureAllMembers } from './datawin.js';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
@@ -191,8 +192,9 @@ export function ProductEdit({ p, onClose }) {
 // =========================================================================
 // Müşteriler
 export function Customers() {
-  const { customers, settings: S, requests, members = [] } = useStore();
+  const { customers, settings: S, requests, members = [], win } = useStore();
   const [kind, setKind0] = useState(() => ls.get('cust-kind', 'bayi'));
+  useEffect(() => { if (kind === 'magaza') ensureAllMembers(); }, [kind]);
   const setKind = (k) => { setKind0(k); ls.set('cust-kind', k); };
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
@@ -221,7 +223,7 @@ export function Customers() {
   const kindTabs = (
     <div className="tabs" role="tablist">
       <button role="tab" aria-selected={kind === 'bayi'} className={'tab' + (kind === 'bayi' ? ' on' : '')} onClick={() => setKind('bayi')}>Bayiler ({customers.length - pending.length}){pending.length > 0 && <span className="badge">{pending.length}</span>}</button>
-      <button role="tab" aria-selected={kind === 'magaza'} className={'tab' + (kind === 'magaza' ? ' on' : '')} onClick={() => setKind('magaza')}>Mağaza müşterileri ({members.length})</button>
+      <button role="tab" aria-selected={kind === 'magaza'} className={'tab' + (kind === 'magaza' ? ' on' : '')} onClick={() => setKind('magaza')}>Mağaza müşterileri{win?.membersAll !== false ? ` (${members.length})` : ''}</button>
     </div>
   );
   if (kind === 'magaza') return (
@@ -338,7 +340,9 @@ export function CustomerSheet({ c, onClose }) {
   const [pq, setPq] = useState('');
   useEffect(() => { A.getNote(c.uid).then(setNote); A.getUserPrices(c.uid).then(setPrices); }, [c.uid]);
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
-  const hist = requests.filter((r) => r.uid === c.uid);
+  // bayinin TÜM talepleri (ana liste son 60 günle sınırlı)
+  const [hist, setHist] = useState(() => requests.filter((r) => r.uid === c.uid));
+  useEffect(() => (A.watchUserRequests ? A.watchUserRequests(c.uid, setHist) : undefined), [c.uid]);
   const byId = useMemo(() => new Map(catalog.map((p) => [p.id, p])), [catalog]);
   const matches = pq.length >= 2 ? catalog.filter((p) => norm(pq).split(/\s+/).every((t) => p._s.includes(t))).slice(0, 8) : [];
 
@@ -1253,7 +1257,10 @@ function HomeEditor({ d, set }) {
 
 // Müşteriyi tamamen sil (kayıt, özel fiyatlar, notlar; istenirse talepleri de)
 export function DeleteCustomer({ c, onClose, onDone }) {
-  const n = useStore((s) => s.requests.filter((r) => r.uid === c.uid).length);
+  const n0 = useStore((s) => s.requests.filter((r) => r.uid === c.uid).length);
+  const [all, setAll] = useState(null);
+  useEffect(() => (api().watchUserRequests ? api().watchUserRequests(c.uid, (l) => setAll(l.length)) : undefined), [c.uid]);
+  const n = all ?? n0;
   const [withReq, setWithReq] = useState(true);
   const [busy, setBusy] = useState(false);
   async function go() {
