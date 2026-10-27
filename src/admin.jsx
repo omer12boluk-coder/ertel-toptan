@@ -498,7 +498,7 @@ export function Settings() {
     const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
     try {
       const rows = await readSheet(file);
-      const { items: incoming0, descs } = rowsToProducts(rows);
+      const { items: incoming0, descs, apBad, full } = rowsToProducts(rows);
       // alış fiyatı katalogda tutulmaz (bayiler katalogu okuyabiliyor) → ayrı yönetici belgesi
       const costs = {}; const incoming = incoming0.map(({ ap, ...x }) => { if (ap > 0) costs[x.id] = ap; return x; });
       if (!incoming.length) throw new Error('Dosyada ürün satırı bulunamadı (urun_id veya “Ürün ID” sütunu gerekli)');
@@ -508,20 +508,23 @@ export function Settings() {
       let catNames = {};
       try { for (const r of await readSheet(file, 'Kategoriler')) { const id = Number(r['Id']); const nm = String(r['Kategori Adı'] ?? '').replace(/^_+/, '').trim(); if (id && nm) catNames[id] = nm; } } catch {}
       for (const [from, to] of Object.entries(res.idMap)) if (costs[from] != null) { costs[to] = costs[from]; delete costs[from]; }
-      setImp({ ...res, descs, costs, catNames, file: file.name, rows: incoming.length, fields: Object.keys(Object.assign({}, ...incoming.slice(0, 50))) });
+      setImp({ ...res, descs, costs, apBad, full, delMissing: full && res.missing > 0 && res.missing < res.list.length * 0.3, catNames, file: file.name, rows: incoming.length, fields: Object.keys(Object.assign({}, ...incoming.slice(0, 50))) });
     } catch (err) { toast(err.message, 'bad'); }
   }
   async function applyImport() {
     setBusy(true);
     try {
-      await A.saveCatalog(imp.list); setCatalog(imp.list);
+      // tam dışa aktarımda olmayan ürünler sitede silinmiş: onaylandıysa katalogdan kaldırılır (elle eklenenler hariç)
+      const gone = imp.full && imp.delMissing ? new Set(imp.missingList.map((x) => x.id)) : null;
+      const list = gone ? imp.list.filter((p) => !gone.has(p.id)) : imp.list;
+      await A.saveCatalog(list); setCatalog(list);
       if (Object.keys(imp.costs || {}).length && A.saveCosts) { const all = { ...(store.s.costs || {}), ...imp.costs }; await A.saveCosts(all); store.set({ costs: all }); }
       // bilinmeyen kategori numaralarına dosyadaki adı ver (elle verilmiş adlara dokunma)
       const used = new Set(imp.list.flatMap((p) => [p.c, p.c2]).filter(Boolean));
       const add = {}; for (const [id, nm] of Object.entries(imp.catNames || {})) if (used.has(Number(id)) && !settings.categories?.[id]?.name && !CATEGORY_NAMES[id]) add[id] = { ...(settings.categories?.[id] || {}), name: nm };
       if (Object.keys(add).length) { const S2 = { ...settings, categories: { ...settings.categories, ...add } }; await A.saveSettings(S2); store.set({ settings: S2 }); }
       if (Object.keys(imp.descs).length) await A.saveDescs({ ...(await Promise.resolve(A.loadDescMap ? A.loadDescMap() : {})), ...imp.descs });
-      toast(`Katalog güncellendi: ${imp.added} yeni, ${imp.updated} değişen`); setImp(null);
+      toast(`Katalog güncellendi: ${imp.added} yeni, ${imp.updated} değişen${gone ? `, ${gone.size} silinen` : ''}`); setImp(null);
     }
     catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
@@ -731,7 +734,7 @@ export function Settings() {
           <div className="data-box">
             <div>
               <b>Excel’den ürün ekle / güncelle</b>
-              <p className="fine">PlatinMarket’ten aldığınız dışa aktarımı seçin: “Ürünler” (stoklu) veya “Ürünler Varyasyonlu” (resimler, etiketler, marka, açıklama). İkisini sırayla yükleyebilirsiniz. Aynı ürün no’lu ürünler güncellenir, yeniler eklenir; elle yüklediğiniz resimler ve elle girdiğiniz toptan fiyatlar korunur.</p>
+              <p className="fine">PlatinMarket’ten <b>“Ürünler Varyasyonlu”</b> dışa aktarımını seçin (ana format): fiyat, indirimli fiyat, alış fiyatı, stok (Miktar), aktif / pasif (Ürün Durumu), resimler, etiketler, marka, kategori, açıklama. Dosyada olmayan ürünler sitede silinmiş sayılır; kaldırmadan önce liste gösterilir. Aynı ürün no’lu ürünler güncellenir, yeniler eklenir; elle yüklediğiniz resimler ve elle girdiğiniz toptan fiyatlar korunur.</p>
             </div>
             <label className="btn outline"><Icon n="upload" s={16} />Dosya seç<input type="file" accept=".xlsx,.csv" hidden onChange={pickFile} /></label>
           </div>
@@ -824,7 +827,15 @@ export function Settings() {
           {imp.priceChanged > 0 && <p className="banner warn" style={{ margin: 0 }}><b>{imp.priceChanged} ürünün liste fiyatı değişiyor.</b>&nbsp;Uygulayınca bunlar Ürünler'de “Liste fiyatı değişenler” olarak işaretlenir; toptan fiyatlarını kontrol edersiniz.{imp.manualKept > 0 && <> <b>{imp.manualKept} tanesinde elle girdiğiniz toptan fiyatı var; o fiyatlar korunur, kural uygulanmaz.</b></>}</p>}
           <p className="fine" style={{ margin: 0 }}>Elle girdiğiniz toptan fiyatlar ({imp.list.filter((p) => p.w != null).length} ürün) dosya yüklemede ve site eşitlemesinde silinmez; dosyada “toptan” sütunu yoksa hiç dokunulmaz.</p>
           {(imp.matchedByCode > 0 || imp.dupSkipped > 0) && <p className="fine">{imp.matchedByCode > 0 && <><b>{imp.matchedByCode}</b> ürün, ürün numarası farklı olduğu halde stok kodu tuttuğu için mevcut ürünün üzerine güncellendi (kopya oluşmadı). </>}{imp.dupSkipped > 0 && <><b>{imp.dupSkipped}</b> satır dosyada aynı stok koduyla ikinci kez geçtiği için atlandı.</>}</p>}
-          <p className="fine">Aynı stok kodlu ürün asla ikinci kez eklenmez. Dosyada olmayan ürünler silinmez, olduğu gibi kalır. Okunan bilgiler: {[imp.fields.includes('pi') && 'resimler', imp.fields.includes('t') && 'etiketler', imp.fields.includes('b') && 'marka', imp.fields.includes('s') && 'stok', imp.fields.includes('r') && 'fiyat', Object.keys(imp.descs).length && `${Object.keys(imp.descs).length} açıklama`].filter(Boolean).join(', ')}.</p>
+          {imp.full && imp.missing > 0 && (
+            <div className="banner warn imp-del"><Icon n="trash" /><div>
+              <label className="mini-check"><input type="checkbox" checked={!!imp.delMissing} onChange={(e) => setImp({ ...imp, delMissing: e.target.checked })} /><b>Dosyada olmayan {imp.missing} ürünü katalogdan kaldır</b></label>
+              <small>Bu dosya PlatinMarket'in tam listesi (pasifler de içinde); burada olmayan ürün sitede silinmiş demektir. Elle eklediğiniz ürünlere dokunulmaz.</small>
+              <ul className="imp-del-l">{imp.missingList.slice(0, 40).map((x) => <li key={x.id}><code>{x.k}</code> {x.n}</li>)}{imp.missing > 40 && <li className="muted">… ve {imp.missing - 40} ürün daha</li>}</ul>
+            </div></div>
+          )}
+          {imp.apBad > 0 && <p className="fine" style={{ margin: 0 }}><b>{imp.apBad}</b> üründe alış fiyatı satış fiyatından yüksek ya da eşit olduğu için (büyük ihtimalle TL girilmiş) alınmadı.</p>}
+          <p className="fine">Aynı stok kodlu ürün asla ikinci kez eklenmez.{!imp.full && ' Dosyada olmayan ürünler silinmez, olduğu gibi kalır.'} Okunan bilgiler: {[imp.fields.includes('pi') && 'resimler', imp.fields.includes('t') && 'etiketler', imp.fields.includes('b') && 'marka', imp.fields.includes('s') && 'stok', imp.fields.includes('a') && 'aktif / pasif', imp.fields.includes('r') && 'fiyat', Object.keys(imp.costs || {}).length && `${Object.keys(imp.costs).length} alış fiyatı`, Object.keys(imp.descs).length && `${Object.keys(imp.descs).length} açıklama`].filter(Boolean).join(', ')}.</p>
         </Sheet>
       )}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}

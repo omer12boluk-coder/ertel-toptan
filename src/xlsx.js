@@ -130,7 +130,7 @@ const pick = (o, keys) => { for (const k of keys) if (o[k] != null && o[k] !== '
 const has = (o, keys) => keys.some((k) => k in o);
 const fileName = (v) => String(v).trim().split('?')[0].split('/').pop().replace(/^\d+X-/, '');
 export function rowsToProducts(rows) {
-  const items = [], descs = {};
+  const items = [], descs = {}; let apBad = 0;
   const K = {
     id: ['urun_id', 'Ürün ID', 'id', 'ID'], k: ['urun_stok_kod', 'Stok Kodu', 'stok_kod', 'kod'], n: ['urun_isim', 'Ürün Adı', 'isim', 'urun_adi'],
     c: ['urun_kategori_kod', 'Ürün Kategori Id 1', 'kategori_kod'], c2: ['Ürün Kategori Id 2'], r: ['urun_satis_fiyat', 'Fiyat', 'satis_fiyat'],
@@ -149,9 +149,11 @@ export function rowsToProducts(rows) {
     if (has(o, K.c2)) { const c2 = Number(v('c2')); if (c2 && c2 !== p.c) p.c2 = c2; }
     if (v('r') != null) p.r = Number(v('r')) || 0;
     // liste fiyatı = sitedeki gerçek satış fiyatı: "İndirimli Fiyat" doluysa (ve normalden düşükse) o; toptan bunun üstüne hesaplanır
-    if (Number(v('sale')) > 0 && (!(p.r > 0) || Number(v('sale')) < p.r)) p.r = Number(v('sale'));
+    if (Number(v('sale')) > 0 && (!(p.r > 0) || Number(v('sale')) < p.r)) { p.r = Number(v('sale')); p._sale = p.r; }
     if (Number(v('w')) > 0) p.w = Number(v('w'));
-    if (Number(v('ap')) > 0) p.ap = Number(v('ap')); // alış fiyatı: içe aktarmada katalogdan ayrılıp costs'a yazılır
+    // alış fiyatı: içe aktarmada katalogdan ayrılıp costs'a yazılır. Saçma değer (satış fiyatından yüksek/eşit — PlatinMarket'te
+    // bazılarında TL girilmiş) alınmaz, sayılır
+    if (Number(v('ap')) > 0) { if (p.r > 0 && Number(v('ap')) < p.r) p.ap = Number(v('ap')); else apBad++; }
     if (v('cur') != null) { const pb = String(v('cur')).toUpperCase(); p.cur = pb === 'TL' ? 'TRY' : pb; }
     if (v('s') != null) p.s = Number(v('s')) || 0;
     if (v('a') != null) p.a = Number(v('a')) ? 1 : 0;
@@ -165,7 +167,9 @@ export function rowsToProducts(rows) {
     const d = v('desc'); if (d != null && String(d).trim()) descs[id] = String(d).trim();
     items.push(p);
   }
-  return { items, descs };
+  // "Ürün Durumu" sütunu olan dosya = tam dışa aktarım (pasifler de içinde) → dosyada olmayan ürün sitede SİLİNMİŞ demektir
+  const full = rows.length > 0 && ['urun_durum', 'Ürün Durumu'].some((k) => k in rows[0]);
+  return { items, descs, apBad, full };
 }
 
 const empty = (v) => v == null || v === '' || (Array.isArray(v) && !v.length);
@@ -194,9 +198,13 @@ export function mergeCatalog(current, incomingIn) {
     seen.add(n.id);
     const o = byId.get(n.id);
     if (!o) { const p = { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n, nw: 1 }; byId.set(n.id, p); if (ck) byCode.set(ck, n.id); added++; continue; }
-    const m = { ...o, ...n };
+    const { _sale, ...nn } = n;
+    const m = { ...o, ...nn };
+    if (n.a === 1) { delete m.so; delete m.sg; delete m.sgr; } // sitede aktif
+    // eski "indirimli fiyat = toptan" kaydı (24.10.2026 kuralı): toptan indirimli fiyata eşitse elle toptan sayılmaz
+    const clearW = n.w == null && o.w != null && _sale != null && Number(o.w) === Number(_sale);
     if (n.pi || n.c) delete m.pf; // Excel'den gelen bilgi geçerli: ürün sayfasından tamamlamaya gerek yok
-    if (n.w == null) m.w = o.w ?? null;
+    if (n.w == null) m.w = clearW ? null : o.w ?? null;
     // Liste fiyatı değiştiyse işaretle: yönetici toptan fiyatı kontrol edene kadar uyarı görünür
     if (n.r != null && o.r != null && Number(n.r) !== Number(o.r)) {
       const r0 = o.pc ? o.pc.r0 : o.r;
@@ -205,9 +213,10 @@ export function mergeCatalog(current, incomingIn) {
     if (!same(m, o)) updated++;
     byId.set(n.id, m);
   }
-  const missing = current.filter((p) => !seen.has(p.id)).length;
-  const list = [...byId.values()].sort((a, b) => b.id - a.id);
+  const missingList = current.filter((p) => !seen.has(p.id) && !p.man).map((p) => ({ id: p.id, k: p.k, n: p.n }));
+  const missing = missingList.length;
+  const list = [...byId.values()].map((p) => { if ('_sale' in p) { const { _sale, ...x } = p; return x; } return p; }).sort((a, b) => b.id - a.id);
   const pcList = list.filter((p) => p.pc && !byIdOld(current, p.id)?.pc);
   const priceChanged = pcList.length; const manualKept = pcList.filter((p) => p.w != null).length; // elle toptan fiyatı korunanlar
-  return { list, added, updated, missing, priceChanged, manualKept, dupSkipped, matchedByCode, idMap };
+  return { list, added, updated, missing, missingList, priceChanged, manualKept, dupSkipped, matchedByCode, idMap };
 }
