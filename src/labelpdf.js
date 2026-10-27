@@ -82,7 +82,9 @@ export async function canvasPdf(canvas, paper = 'a6') {
   const push = (x) => { const b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
   const obj = (n, body) => { offs[n] = len; push(`${n} 0 obj\n`); body(); push('\nendobj\n'); };
   // A6 = etiketin kendisi (10×15 cm); A4 = normal yazıcı: etiket sayfaya orantılı büyütülüp ortalanır
-  const [pw, ph] = paper === 'a4' ? [595, 842] : [288, 432]; const m = paper === 'a4' ? 24 : 0;
+  // A6 tam ISO ölçüsünde (105×148 mm = 298×420 pt): iPhone yazıcı menüsü belgenin boyutuna uyan kâğıdı sunar;
+  // eskiden 4×6 inç (10,2×15,2 cm) yapınca A6 listede çıkmıyordu.
+  const [pw, ph] = paper === 'a4' ? [595, 842] : [297.64, 419.53]; const m = paper === 'a4' ? 24 : 6;
   const sc = Math.min((pw - 2 * m) / 288, (ph - 2 * m) / 432); const iw = Math.round(288 * sc), ih = Math.round(432 * sc);
   const content = `q ${iw} 0 0 ${ih} ${Math.round((pw - iw) / 2)} ${Math.round((ph - ih) / 2)} cm /Im0 Do Q`;
   push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
