@@ -3496,3 +3496,9 @@ html.dark .fav-btn, :root[data-theme="dark"] .fav-btn { background: rgba(30, 34,
 /* Siparişlerim: sekme çubuğu sabit genişlik; sayı + "Seç" altındaki satırda (27.10.2026) */
 .mo-sub { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 34px; margin: -4px 0 8px; font-size: 13px; }
 .mo-sub .btn.sm { padding-block: 5px; }
+/* arama kutusu genişliği açılırken ölçülür (HeaderSearch fit): menü ile sağdaki düğmeler arasındaki boşluk kadar (en çok 320px);
+   boşluk 170px'ten azsa kutu menünün altına iner (zil gibi yeni düğmeler eklense de "Kalıp bulucu"ya binmez) */
+@media (min-width: 900px) {
+  .hsearch.mob-open.drop .hsearch-box { position: absolute; right: 0; top: calc(100% + 10px); z-index: 61; box-shadow: 0 16px 40px -18px rgb(15 23 42 / .4); }
+  .hsearch.mob-open.drop { width: 40px; height: 40px; }
+}

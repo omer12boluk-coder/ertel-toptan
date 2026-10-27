@@ -287,7 +287,15 @@ export function HeaderSearch() {
     return { list: all.slice(0, 6), n: all.length };
   }, [q, catalog]);
   const [closing, setClosing] = useState(false);
+  const [fit, setFit] = useState(null); // { w, drop }: açılırken menüyle sağdaki düğmeler arasındaki boşluğa göre
   const closeT = useRef(0);
+  const measure = () => {
+    if (!matchMedia('(min-width: 900px)').matches || !wrap.current) return setFit(null);
+    const navs = document.querySelectorAll('.topnav .topnav-b'); const last = navs[navs.length - 1];
+    if (!last) return setFit(null);
+    const avail = Math.floor(wrap.current.getBoundingClientRect().right - last.getBoundingClientRect().right - 22);
+    setFit(avail >= 170 ? { w: Math.min(320, avail), drop: false } : { w: 300, drop: true });
+  };
   // kapanış da animasyonlu: önce küçülerek kaybolur, sonra simgeye döner
   const close = () => { setOpen(false); clearTimeout(closeT.current); setClosing(true); closeT.current = setTimeout(() => { setMob(false); setClosing(false); }, 200); };
   const hideList = () => setOpen(false); // sadece sonuç listesi kapanır; kutu ve yazı yerinde kalır
@@ -300,8 +308,8 @@ export function HeaderSearch() {
     else if (e.key === 'Escape') { if (q) hideList(); else close(); inp.current?.blur(); }
   };
   return (
-    <div ref={wrap} className={'hsearch' + (mob ? ' mob-open' : '') + (closing ? ' closing' : '')}>
-      <button type="button" className="icon-btn hsearch-btn" onClick={() => { clearTimeout(closeT.current); setClosing(false); setMob(true); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
+    <div ref={wrap} className={'hsearch' + (mob ? ' mob-open' : '') + (closing ? ' closing' : '') + (fit?.drop ? ' drop' : '')} style={fit ? { '--hsw': fit.w + 'px' } : undefined}>
+      <button type="button" className="icon-btn hsearch-btn" onClick={() => { measure(); clearTimeout(closeT.current); setClosing(false); setMob(true); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
       <div className="hsearch-box">
         <Icon n="search" s={19} />
         <input ref={inp} type="search" value={q} placeholder="Ürün ara…" aria-label="Ürün ara"
