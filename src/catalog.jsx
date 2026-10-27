@@ -346,7 +346,8 @@ export function Catalog({ admin }) {
     if (admin && asort.k) {
       const key = { code: (p) => String(p.k || ''), name: (p) => p.n, s: (p) => Number(p.s) || 0, r: (p) => Number(p.r) || 0, w: (p) => priceFor(p, S, user, null).mine ?? -1, a: (p) => (p.a ? 1 : 0), ut: (p) => Math.max(p.ut || 0, lastOrderMap().get(p.id) || 0) }[asort.k];
       const str = asort.k === 'code' || asort.k === 'name';
-      r = [...r].sort((a, b) => { const x = key(a), y = key(b); const c = str ? String(x).localeCompare(String(y), 'tr') : x - y; return asort.d === 'desc' ? -c : c; });
+      const nil = (p) => (asort.k === 'r' && !(Number(p.r) > 0)) || (asort.k === 'w' && !(priceFor(p, S, user, null).mine > 0));
+      r = [...r].sort((a, b) => { const na = nil(a), nb = nil(b); if (na !== nb) return na ? 1 : -1; const x = key(a), y = key(b); const c = str ? String(x).localeCompare(String(y), 'tr') : x - y; return asort.d === 'desc' ? -c : c; });
     }
     return r;
   };
