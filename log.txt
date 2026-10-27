@@ -1,0 +1,234 @@
+Snapdragon 8 Elite Extreme Gen 6: 0
+Snapdragon 8 Elite Gen 5: 0
+Snapdragon 8 Elite Gen 5 V: 0
+Snapdragon 8 Gen 5: 0
+Snapdragon 8 Elite: 0
+Snapdragon 8 Gen 3: 0
+Snapdragon 8s Gen 4: 0
+Snapdragon 8s Gen 3: 0
+Snapdragon 8 Gen 2: 0
+Snapdragon 8+ Gen 1: 0
+Snapdragon 8 Gen 1: 0
+Snapdragon 7 Gen 4: 0
+Snapdragon 7+ Gen 3: 0
+Snapdragon 7 Gen 3: 0
+Snapdragon 7s Gen 4: 0
+Snapdragon 7s Gen 3: 0
+Snapdragon 7s Gen 2: 0
+Snapdragon 7+ Gen 2: 0
+Snapdragon 7 Gen 1: 0
+Snapdragon 6 Gen 4: 0
+Snapdragon 6 Gen 3: 0
+Snapdragon 6s Gen 4: 0
+Snapdragon 6s Gen 3: 0
+Snapdragon 6 Gen 1: 0
+Snapdragon 4 Gen 5: 0
+Snapdragon 4 Gen 4: 0
+Snapdragon 4 Gen 2: 0
+Snapdragon 4s Gen 2: 0
+Snapdragon 4 Gen 1: 0
+Snapdragon 888+: 0
+Snapdragon 888: 0
+Snapdragon 870: 0
+Snapdragon 865+: 0
+Snapdragon 865: 0
+Snapdragon 860: 0
+Snapdragon 855+: 0
+Snapdragon 855: 0
+Snapdragon 845: 0
+Snapdragon 835: 0
+Snapdragon 821: 0
+Snapdragon 820: 0
+Snapdragon 782: 0
+Snapdragon 780: 0
+Snapdragon 778G: 0
+Snapdragon 768: 0
+Snapdragon 765G: 0
+Snapdragon 750: 0
+Snapdragon 732: 0
+Snapdragon 730G: 0
+Snapdragon 730: 0
+Snapdragon 720: 0
+Snapdragon 712: 0
+Snapdragon 710: 0
+Snapdragon 695: 0
+Snapdragon 690: 0
+Snapdragon 685: 0
+Snapdragon 680: 0
+Snapdragon 675: 0
+Snapdragon 670: 0
+Snapdragon 665: 0
+Snapdragon 662: 0
+Snapdragon 660: 0
+Snapdragon 652: 0
+Snapdragon 650: 0
+Snapdragon 636: 0
+Snapdragon 632: 0
+Snapdragon 630: 0
+Snapdragon 625: 0
+Snapdragon 480: 0
+Snapdragon 460: 0
+Snapdragon 450: 0
+Snapdragon 439: 0
+Snapdragon 435: 0
+Snapdragon 430: 0
+Snapdragon 429: 0
+Snapdragon 425: 0
+Snapdragon 215: 0
+Exynos 2600: 0
+Exynos 2500: 0
+Exynos 2400: 0
+Exynos 2400e: 0
+Exynos 2200: 0
+Exynos 2100: 0
+Exynos 1680: 0
+Exynos 1610: 0
+Exynos 1580: 0
+Exynos 1480: 0
+Exynos 1380: 0
+Exynos 1280: 0
+Exynos 1080: 0
+Exynos 990: 0
+Exynos 980: 0
+Exynos 880: 0
+Exynos 850: 0
+Exynos 9825: 0
+Exynos 9820: 0
+Exynos 9810: 0
+Exynos 9611: 0
+Exynos 9610: 0
+Exynos 8895: 0
+Exynos 8890: 0
+Exynos 7904: 0
+Exynos 7884: 0
+Exynos 7870: 0
+Exynos 7580: 0
+Exynos 7420: 0
+Dimensity 9600 Pro: 0
+Dimensity 9600M: 0
+Dimensity 9500: 0
+Dimensity 9500s: 0
+Dimensity 9400+: 0
+Dimensity 9400: 0
+Dimensity 9400e: 0
+Dimensity 9300+: 0
+Dimensity 9300: 0
+Dimensity 9200: 0
+Dimensity 9000: 0
+Dimensity 8500: 0
+Dimensity 8450: 0
+Dimensity 8400: 0
+Dimensity 8350: 0
+Dimensity 8300: 0
+Dimensity 8250: 0
+Dimensity 8200: 0
+Dimensity 8100: 0
+Dimensity 8050: 0
+Dimensity 8020: 0
+Dimensity 8000: 0
+Dimensity 7400X: 0
+Dimensity 7400: 0
+Dimensity 7360: 0
+Dimensity 7300X: 0
+Dimensity 7300: 0
+Dimensity 7200: 0
+Dimensity 7100: 0
+Dimensity 7050: 0
+Dimensity 7030: 0
+Dimensity 7020: 0
+Dimensity 6400: 0
+Dimensity 6300: 0
+Dimensity 6100: 0
+Dimensity 6080: 0
+Dimensity 6020: 0
+Dimensity 1300: 0
+Dimensity 1200: 0
+Dimensity 1100: 0
+Dimensity 1080: 0
+Dimensity 1000: 0
+Dimensity 920: 0
+Dimensity 900: 0
+Dimensity 820: 0
+Dimensity 810: 0
+Dimensity 800: 0
+Dimensity 720: 0
+Dimensity 700: 0
+Helio G200: 0
+Helio G100: 0
+Helio G99: 0
+Helio G96: 0
+Helio G95: 0
+Helio G91: 0
+Helio G90T: 0
+Helio G88: 0
+Helio G85: 0
+Helio G81 Ultra: 0
+Helio G80: 0
+Helio G70: 0
+Helio G35: 0
+Helio P90: 0
+Helio P70: 0
+Helio P65: 0
+Helio P60: 0
+Helio P35: 0
+Helio P25: 0
+Helio P23: 0
+Helio P22: 0
+Helio P20: 0
+Helio P10: 0
+Helio A22: 0
+Helio X25: 0
+Helio X20: 0
+Helio X10: 0
+Kirin 9030 Pro: 0
+Kirin 9020: 0
+Kirin T92A: 0
+Kirin 9010: 0
+Kirin 9000S: 0
+Kirin 9000S: 0
+Kirin 9000e: 0
+Kirin 9000: 0
+Kirin 990: 0
+Kirin 985: 0
+Kirin 980: 0
+Kirin 970: 0
+Kirin 960: 0
+Kirin 810: 0
+Kirin 820 5G: 0
+Kirin 710A: 0
+Kirin 710: 0
+Kirin 659: 0
+iPhone Duo: Apple A20 Pro (2 nm)
+iPhone 18 Pro Max: Apple A20 Pro (2 nm)
+iPhone 18 Pro: Apple A20 Pro (2 nm)
+iPhone 17e: Apple A19 (3 nm)
+iPhone 17 Pro Max: Apple A19 Pro (3 nm)
+iPhone 17 Pro: Apple A19 Pro (3 nm)
+iPhone Air: Apple A19 Pro (3 nm)
+iPhone 17: Apple A19 (3 nm)
+iPhone 16e: Apple A18 (3 nm)
+iPhone 16 Pro Max: Apple A18 Pro (3 nm)
+iPhone 16 Pro: Apple A18 Pro (3 nm)
+iPhone 16 Plus: Apple A18 (3 nm)
+iPhone 16: Apple A18 (3 nm)
+iPhone 15 Pro Max: Apple A17 Pro (3 nm)
+iPhone 15 Pro: Apple A17 Pro (3 nm)
+iPhone 15 Plus: Apple A16 Bionic (4 nm)
+iPhone 15: Apple A16 Bionic (4 nm)
+iPhone 14 Pro Max: Apple A16 Bionic (4 nm)
+iPhone 14 Pro: Apple A16 Bionic (4 nm)
+iPhone 14 Plus: Apple A15 Bionic (5 nm)
+iPhone 14: ?
+# 2026-10-26T23:12:49.905Z başladı; 125 marka bulundu, önceden 20 telefon
+Galaxy F70e: engel
+Galaxy A07: sayfa açılmadı
+Galaxy Z TriFold: sayfa açılmadı
+Galaxy M17: sayfa açılmadı
+Galaxy F07: sayfa açılmadı
+Galaxy M07: sayfa açılmadı
+# süre doldu
+# 2026-10-26T23:23:34.067Z başladı; 125 marka bulundu, önceden 42 telefon
+Galaxy M36: engel
+Galaxy S25 Edge: sayfa açılmadı (429 https://www.gsmarena.com/samsung_galaxy_s25_edge-13506.php)
+Galaxy F56: sayfa açılmadı (429 https://www.gsmarena.com/samsung_galaxy_f56_5g-13855.php)
+# süre doldu
