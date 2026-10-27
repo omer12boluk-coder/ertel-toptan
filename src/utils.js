@@ -122,13 +122,13 @@ export function picUrl(f, t, big) {
 }
 // Ürün medyası tek sırada: pi + im; 'v:<adres>' = video (adres 'r2:…' ya da https). pi her zaman resimdir (kapak).
 // Eski tek video alanı vd (+ vdp kapak): sırada video yoksa 2. sıraya konur.
-export const isVid = (f) => typeof f === 'string' && f.startsWith('v:');
+export function isVid(f) { return typeof f === 'string' && f.startsWith('v:'); }
 export function mediaOf(p) {
   const arr = [p.pi, ...(p.im || [])].filter(Boolean);
   if (p.vd && !arr.some(isVid)) arr.splice(Math.min(1, arr.length), 0, 'v:' + p.vd);
   return arr;
 }
-export const imgFiles = (p) => [p.pi, ...(p.im || [])].filter((f) => f && !isVid(f));
+export function imgFiles(p) { return [p.pi, ...(p.im || [])].filter((f) => f && !isVid(f)); }
 // Dosyanın parmak izi (aynı dosya ikinci kez yüklenmesin, depoda aynı yere düşer)
 export async function fileHash(file) {
   const buf = await file.arrayBuffer();

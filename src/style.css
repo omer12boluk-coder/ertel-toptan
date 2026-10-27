@@ -3805,3 +3805,7 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
 .dp-t.on .dp-ck { background: var(--accent); box-shadow: none; }
 .dp-t .md-play { width: 28px; height: 28px; bottom: auto; top: 30%; }
 .dp-more { margin: 12px auto 0; display: flex; }
+/* satır yüksekliği tutamacı sadece Stok kodu hücresinin alt kenarında (kullanıcı isteği 28.10.2026) */
+@media (min-width: 701px) { .atr > .tc-code > .row-grip { left: 0; right: 0; bottom: -2px; height: 8px; z-index: 4; } .atr > .tc-code { overflow: visible; } }
+/* dokunmatikte sipariş/liste tablosundaki ürün adı parmak geçince mavi-altı çizili takılı kalmasın */
+@media (hover: none) { .pt-name a, .pt-name a *, .pt-name a:hover *, .pt-name a:focus *, .pt-name a:active * { color: inherit !important; text-decoration: none !important; } .pt-name a { -webkit-tap-highlight-color: transparent; } }
