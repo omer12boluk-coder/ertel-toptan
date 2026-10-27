@@ -586,15 +586,15 @@ function CargoCard({ o, flow }) {
   // düğmeye basınca paylaş menüsü açılır (Yazdır / Dosyalara kaydet). Paylaşım beklemeden açılmalı (iPhone dokunuş şartı).
   const mobile = needsPdfPrint();
   const [pdf, setPdf] = useState(null);
-  const [paper, setPaper] = useState(() => { try { return localStorage.getItem('label-paper') || 'a4'; } catch { return 'a4'; } });
+  const [paper, setPaper] = useState(() => { try { return (localStorage.getItem('label-paper') === 'a4' ? 'a4' : '4x6'); } catch { return '4x6'; } });
   const pickPaper = (v) => { setPaper(v); setPdf(null); try { localStorage.setItem('label-paper', v); } catch {} };
   useEffect(() => { if (!mobile || !live) { setPdf(null); return; } let ok = true; labelPdf(o, S, paper).then((b) => ok && setPdf(b)).catch((e) => console.warn(e)); return () => { ok = false; }; },
     [mobile, live, paper, o.dhl?.ref, o.dhl?.at, o.dhl?.kg, o.dhl?.desi, o.dhl?.pay, o.dhl?.icerik, JSON.stringify(o.delivery?.addr || {})]);
-  const openPdf = (b) => { const u = URL.createObjectURL(b); const w = window.open(u, '_blank'); if (!w) { const a = document.createElement('a'); a.href = u; a.download = `DHL-${o.dhl.ref}.pdf`; document.body.appendChild(a); a.click(); a.remove(); } setTimeout(() => URL.revokeObjectURL(u), 60000); };
+  const openPdf = (b) => { const u = URL.createObjectURL(b); const w = window.open(u, '_blank'); if (!w) { const a = document.createElement('a'); a.href = u; a.download = `DHL-${o.dhl.ref}.${b.type === 'image/png' ? 'png' : 'pdf'}`; document.body.appendChild(a); a.click(); a.remove(); } setTimeout(() => URL.revokeObjectURL(u), 60000); };
   const printLabel = () => {
     if (!mobile) { printHtml(dhlLabelHtml(o, S)); return; }
     if (!pdf) { toast('Etiket hazırlanıyor, bir saniye sonra tekrar basın'); return; }
-    const file = new File([pdf], `DHL-${o.dhl.ref}.pdf`, { type: 'application/pdf' });
+    const img = pdf.type === 'image/png'; const file = new File([pdf], `DHL-${o.dhl.ref}.${img ? 'png' : 'pdf'}`, { type: pdf.type });
     if (navigator.canShare?.({ files: [file] })) navigator.share({ files: [file], title: 'DHL etiketi ' + o.dhl.ref }).catch((e) => { if (e?.name !== 'AbortError') openPdf(pdf); });
     else openPdf(pdf);
   };
@@ -625,8 +625,8 @@ function CargoCard({ o, flow }) {
           <button className="btn primary" disabled={!!busy} onClick={printLabel}><Icon n="box" s={16} />{mobile ? 'Barkod yazdır' : 'Barkod yazdır (A6)'}</button>
           {mobile && <div className="ocg-tip"><span className="fine">Kâğıt:</span>
             <div className="seg sm" role="radiogroup" aria-label="Kâğıt boyutu">
-              <button type="button" role="radio" aria-checked={paper === 'a4'} className={paper === 'a4' ? 'on' : ''} onClick={() => pickPaper('a4')}>A4 (normal yazıcı)</button>
-              <button type="button" role="radio" aria-checked={paper === 'a6'} className={paper === 'a6' ? 'on' : ''} onClick={() => pickPaper('a6')}>A6 etiket yazıcısı</button>
+              <button type="button" role="radio" aria-checked={paper === '4x6'} className={paper === '4x6' ? 'on' : ''} onClick={() => pickPaper('4x6')}>4×6 (10×15 cm)</button>
+              <button type="button" role="radio" aria-checked={paper === 'a4'} className={paper === 'a4' ? 'on' : ''} onClick={() => pickPaper('a4')}>A4</button>
             </div>
             <p className="fine">Barkod yazdır’a basınca açılan menüden <b>Yazdır</b>’ı seçin.</p></div>}
           {dhlOpen(o) && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : o.cargo?.code ? 'Teslim edildi mi?' : 'Takip no geldi mi?'}</button>}

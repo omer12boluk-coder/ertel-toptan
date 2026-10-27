@@ -98,5 +98,11 @@ export async function canvasPdf(canvas, paper = 'a6') {
   return new Blob(parts, { type: 'application/pdf' });
 }
 
-export async function labelPdf(o, S, paper) { return canvasPdf(drawLabel(o, S), paper); }
+// '4x6': PDF değil RESİM (PNG) paylaşılır. iPhone resim yazdırırken "fotoğraf" modunda açar ve yazıcının
+// 10×15 / 4×6 kâğıdını listeler; PDF'te (belge modu) sadece A4/A3/mektup gibi belge kâğıtları çıkıyor.
+export async function labelPdf(o, S, paper) {
+  const c = drawLabel(o, S);
+  if (paper === '4x6') return new Promise((r) => c.toBlob(r, 'image/png'));
+  return canvasPdf(c, paper);
+}
 export const needsPdfPrint = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
