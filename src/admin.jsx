@@ -8,7 +8,7 @@ import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
 import { ensureAllMembers } from './datawin.js';
-import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls, nextCode } from './utils.js';
+import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls, nextCode, picUrl, imageBlob } from './utils.js';
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
@@ -62,12 +62,34 @@ export function ProductEdit({ p, copy, onClose }) {
   const [newImg, setNewImg] = useState('');
   const [pcOk, setPcOk] = useState(false);
   useEffect(() => { if (!isNew) api().getDesc(f.id).then((h) => { setDesc(h || ''); setDesc0(h || ''); }); else if (copy) api().getDesc(copy.id).then((h) => setDesc(h || '')).catch(() => setDesc('')); else setDesc(''); }, []);
+  // Resim listesi: ilki ana resim. Her öğe: site dosya adı (PlatinMarket), 'r2:<anahtar>' (depoya yüklenen) ya da tam adres
   const siteFiles = [f.pi, ...(f.im || [])].filter(Boolean);
-  const setFiles = (arr) => setF((x) => ({ ...x, pi: arr[0] || '', im: arr.slice(1) }));
+  const setFiles = (arr) => setF((x) => ({ ...x, pi: arr[0] || '', im: arr.slice(1), ie: 1 })); // ie: eşitleme bu listeye dokunmaz
   const fileOf = (v) => v.trim().split('?')[0].split('/').pop().replace(/^\d+X-/, '');
+  // yapıştırılan: platin adresi → dosya adı; başka tam adres → olduğu gibi; çıplak ad → site dosyası
+  const refOf = (v) => { const t = v.trim(); return /platincdn\.com\/3519\/pictures\//.test(t) || !/^(https?:)?\/\//.test(t) ? fileOf(t) : t; };
+  const kindOf = (x) => (x.startsWith('r2:') ? 'Depo' : x.startsWith('data:') ? 'Cihaz' : /^(https?:)?\/\//.test(x) ? 'Adres' : 'Site');
+  const [upN, setUpN] = useState(0);
+  const pickRef = useRef(null);
+  async function addFiles(e) {
+    const files = [...(e.target.files || [])].filter((x) => x.type.startsWith('image/')); e.target.value = '';
+    if (!files.length) return;
+    setUpN((n) => n + files.length);
+    for (const file of files) {
+      try {
+        const [big, th] = await Promise.all([imageBlob(file, 1600, 0.85), imageBlob(file, 420, 0.8)]);
+        const ref = await api().uploadImage(big, th);
+        setF((x) => { const arr = [x.pi, ...(x.im || [])].filter(Boolean); arr.push(ref); return { ...x, pi: arr[0], im: arr.slice(1), ie: 1 }; });
+      } catch (err) { toast(file.name + ': ' + err.message, 'bad'); }
+      setUpN((n) => n - 1);
+    }
+  }
+  const [dragI, setDragI] = useState(null);
+  const dropAt = (to) => { if (dragI == null || dragI === to) return setDragI(null); const a = [...siteFiles]; const [m] = a.splice(dragI, 1); a.splice(to, 0, m); setFiles(a); setDragI(null); };
 
   async function save() {
     if (!f.n.trim()) return toast('Ürün adı boş olamaz', 'bad');
+    if (upN > 0) return toast('Resimler yükleniyor, biraz bekleyin', 'bad');
     if (f.k && catalog.some((x) => x.id !== f.id && String(x.k || '').toLowerCase() === String(f.k).trim().toLowerCase())) return toast('Bu stok kodu başka üründe var: ' + f.k, 'bad');
     setBusy(true);
     try {
@@ -127,10 +149,10 @@ export function ProductEdit({ p, copy, onClose }) {
         <div className="img-edit">
           <Thumb p={{ ...f, img: f.img === 'fs' ? 'fs' : imgUrl || undefined }} size="lg" />
           <div className="img-btns">
-            <label className="btn sm outline"><Icon n="upload" s={15} />Resim yükle<input type="file" accept="image/*" hidden onChange={upload} /></label>
-            {(f.img || imgUrl) && <button className="btn sm ghost danger" onClick={removeImg}>Kaldır</button>}
+            <button type="button" className="btn sm outline" onClick={() => pickRef.current?.click()} disabled={upN > 0}><Icon n="plus" s={15} />{upN > 0 ? `Yükleniyor (${upN})…` : 'Resim ekle'}</button>
+            {(f.img || imgUrl) && <button className="btn sm ghost danger" onClick={removeImg} title="Eski tek resim alanını kaldır (aşağıdaki liste kullanılır)">Eski resmi kaldır</button>}
           </div>
-          <Field label="veya resim adresi (URL)"><input id="pe-img" placeholder="https://…" value={imgUrl} onChange={(e) => setImgUrl(e.target.value)} disabled={f.img === 'fs'} /></Field>
+          <input ref={pickRef} type="file" accept="image/*" multiple hidden onChange={addFiles} />
           <Field label="Video linki" opt hint="Ürün penceresinde resimlerin yanında sitenin kendi oynatıcısıyla oynar (sessiz, döngülü; dokununca durur). Doğrudan video dosyası linki (.mp4) olmalı."><input id="pe-vd" inputMode="url" placeholder="https://…/video.mp4" value={f.vd || ''} onChange={(e) => set('vd', e.target.value.trim() || undefined)} /></Field>
           {f.vd && <Field label="Video kapak resmi" opt hint="Boşsa videonun ilk saniyelerinden bir kare otomatik kullanılır"><input id="pe-vdp" inputMode="url" placeholder="https://…/kapak.jpg" value={f.vdp || ''} onChange={(e) => set('vdp', e.target.value.trim() || undefined)} /></Field>}
         </div>
@@ -182,14 +204,16 @@ export function ProductEdit({ p, copy, onClose }) {
 
       <section className="pe-sec">
         <div className="pe-sec-h">
-          <h3>Siteden gelen resimler <span className="muted">· {siteFiles.length}</span></h3>
+          <h3>Resimler <span className="muted">· {siteFiles.length}</span></h3>
           {f.u && <a className="link" href={S.catalog.siteUrl + f.u} target="_blank" rel="noopener">Sitede aç ↗</a>}
         </div>
-        {siteFiles.length === 0 ? <p className="fine">Bu ürün için siteden resim yok.</p> : (
+        <p className="fine">İlk resim ana resimdir; sürükleyerek sıralayın. <b>+</b> ile bilgisayardan / telefondan seçtiğiniz resimler kendi depomuza yüklenir. Aşağıya resim adresi de yapıştırabilirsiniz.</p>
+        {(
           <div className="img-strip">
-            {imageList({ ...f, img: null }, S, 'sm').map((u, k) => (
-              <div key={siteFiles[k] + k} className={'img-cell' + (k === 0 ? ' main' : '')}>
-                <img src={u} alt="" loading="lazy" />
+            {siteFiles.map((x, k) => (
+              <div key={x + k} className={'img-cell' + (k === 0 ? ' main' : '') + (dragI === k ? ' drag' : '')} draggable onDragStart={() => setDragI(k)} onDragOver={(e) => e.preventDefault()} onDrop={() => dropAt(k)} onDragEnd={() => setDragI(null)} title={x}>
+                <img src={picUrl(x, S.catalog.imageThumb, false) || ''} alt="" loading="lazy" draggable={false} />
+                <span className="img-kind">{kindOf(x)}</span>
                 <span className="img-cell-tools">
                   {k > 0 && <button type="button" onClick={() => { const a = [...siteFiles]; a.unshift(...a.splice(k, 1)); setFiles(a); }}>Ana resim</button>}
                   <button type="button" aria-label="Resmi kaldır" onClick={() => setFiles(siteFiles.filter((_, j) => j !== k))}><Icon n="x" s={13} /></button>
@@ -197,11 +221,13 @@ export function ProductEdit({ p, copy, onClose }) {
                 {k === 0 && <span className="img-main-badge">Ana</span>}
               </div>
             ))}
+            {Array.from({ length: upN }, (_, i) => <div key={'u' + i} className="img-cell up"><span className="qs-spin" /></div>)}
+            <button type="button" className="img-cell img-add" onClick={() => pickRef.current?.click()} aria-label="Resim ekle" title="Bilgisayardan / telefondan resim ekle"><Icon n="plus" s={22} /><small>Resim ekle</small></button>
           </div>
         )}
         <div className="input-btn">
-          <input id="pe-newimg" placeholder="Sitedeki resim adresi veya dosya adı (…_jbc2se.jpg)" value={newImg} onChange={(e) => setNewImg(e.target.value)} />
-          <button type="button" className="btn sm outline" disabled={!newImg.trim()} onClick={() => { setFiles([...siteFiles, fileOf(newImg)]); setNewImg(''); }}>Ekle</button>
+          <input id="pe-newimg" placeholder="Resim adresi (https://…) ya da sitedeki dosya adı" value={newImg} onChange={(e) => setNewImg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newImg.trim()) { e.preventDefault(); setFiles([...siteFiles, refOf(newImg)]); setNewImg(''); } }} />
+          <button type="button" className="btn sm outline" disabled={!newImg.trim()} onClick={() => { setFiles([...siteFiles, refOf(newImg)]); setNewImg(''); }}>Ekle</button>
         </div>
       </section>
 

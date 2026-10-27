@@ -280,6 +280,15 @@ export class FirebaseBackend {
     return ref.id;
   }
   // oturum anahtarı (bekçi bununla kim olduğunu doğrular)
+  // Ürün resmini Cloudflare deposuna yükle (bekçi /up, yönetici oturumuyla) → 'r2:<anahtar>'
+  async uploadImage(big, th) {
+    const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı, yeniden giriş yapın');
+    const fd = new FormData(); fd.append('big', big, 'b'); if (th) fd.append('th', th, 't');
+    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/up', { method: 'POST', headers: { Authorization: 'Bearer ' + tok }, body: fd }), 60000);
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'Yükleme başarısız (' + r.status + ')');
+    return 'r2:' + j.key;
+  }
   async idToken() { try { return await this.auth.currentUser?.getIdToken(); } catch { return null; } }
   async _pingReq(id, msg) { const token = await this.idToken(); if (token) pingWatch('/notify-req', { id, token, msg }); }
   watchRequest(id, cb) {

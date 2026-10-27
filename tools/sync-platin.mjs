@@ -72,7 +72,7 @@ for (const p of cat) {
   }
   if (p.so) { p.a = 1; delete p.so; delete p.sg; st.shown++; E('shown', p); }
   if (f.stock && !(p.s > 0)) p.s = 1;
-  if (f.pi && f.pi !== p.pi && !p.img) { p.pi = f.pi; st.img++; }
+  if (f.pi && f.pi !== p.pi && !p.img && !p.ie) { p.pi = f.pi; st.img++; } // ie: resimleri panelden elle düzenlendi
   if (f.n && f.n !== p.n) { E('name', p, { from: String(p.n || '').slice(0, 90), n: f.n.slice(0, 90) }); p.n = f.n; st.name++; }
   if (f.b && f.b !== '-' && f.b !== p.b) p.b = f.b;
   if (p.cur === 'USD' && f.tl > 0) {
@@ -138,7 +138,7 @@ if (pending.length) {
         try { const j = JSON.parse(m[1]); if (j['@type'] === 'Product') imgs = [].concat(j.image || []); } catch {}
       }
       const files = [...new Set(imgs.map((u) => String(u).split('?')[0]).filter((u) => u.includes('/pictures/')).map((u) => u.split('/pictures/').pop().replace(/^thumb\/\d+X-/, '')))];
-      if (files.length && !p.img) { p.pi = files[0]; if (files.length > 1) p.im = files.slice(1, 10); }
+      if (files.length && !p.img && !p.ie) { p.pi = files[0]; if (files.length > 1) p.im = files.slice(1, 10); }
       // kategori: sayfadaki reyon numaraları; katalogda kullanılanlardan en özel olanı (en az ürünlü) seçilir
       const ids = ((h.match(/kategori_urunleri_reyon_id"\s+value="([^"]*)"/) || [])[1] || '').match(/\d+/g)?.map(Number) || [];
       // en derin kategori ana kategori; ikinci kategori sadece başka bir daldaysa (üst kategorisi değilse)

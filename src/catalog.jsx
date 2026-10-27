@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } fr
 import { createPortal } from 'react-dom';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm } from './ui.jsx';
-import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode } from './utils.js';
+import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -30,8 +30,7 @@ export function useVisibleProducts(admin) {
 export function imageList(p, S, size) {
   const t = size === 'lg' ? S.catalog.imageLarge || S.catalog.imageThumb : S.catalog.imageThumb;
   const files = [p.pi, ...(p.im || [])].filter(Boolean);
-  const abs = (f) => /^(https?:)?\/\/|^\//.test(f); // tam adres (elle eklenen resim) olduğu gibi kullanılır
-  return files.map((f) => (abs(f) ? f : t && t.includes('{pi}') ? t.replaceAll('{pi}', f) : null)).filter(Boolean);
+  return files.map((f) => picUrl(f, t, size === 'lg')).filter(Boolean); // r2: depo, tam adres, ya da site dosya adı
 }
 
 export function stockInfo(p, S) {

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, setQty, go, api, toast } from './store.js';
 import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
-import { fmt, norm, priceFor, resizeForWeb } from './utils.js';
+import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg } from './utils.js';
 import { waLink } from './route.js';
 import { ProductSheet, useTree, PlayVideo } from './catalog.jsx';
 import { currentRate } from './listsheet.jsx';
@@ -16,7 +16,7 @@ export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elekt
 const imgCache = new Map();
 export const isProdImg = (v) => typeof v === 'string' && v.startsWith('prod:');
 const prodParts = (v) => { const [id, url, c] = v.slice(5).split('|'); return { id: Number(id), url: url || '', c: Number(c) || 0 }; };
-const prodUrl = (p, S) => (!p ? null : p.img && p.img !== 'fs' ? p.img : p.pi ? (S.catalog.imageLarge || S.catalog.imageThumb).replaceAll('{pi}', p.pi).replaceAll('{kod}', p.k).replaceAll('{id}', p.id) : null);
+const prodUrl = (p, S) => (!p ? null : p.img && p.img !== 'fs' ? p.img : p.pi && (p.pi.startsWith('r2:') || isAbsImg(p.pi)) ? picUrl(p.pi, null, true) : p.pi ? (S.catalog.imageLarge || S.catalog.imageThumb).replaceAll('{pi}', p.pi).replaceAll('{kod}', p.k).replaceAll('{id}', p.id) : null);
 function catAlt(c, not) { // aynı kategoriden resimli açık bir ürün
   if (!c) return null; const S = store.s.settings;
   for (const p of store.s.byId.values()) if ((p.c === c || p.c2 === c) && p.id !== not && p.a !== 0 && (p.pi || (p.img && p.img !== 'fs'))) return prodUrl(p, S);

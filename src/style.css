@@ -3683,3 +3683,14 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
 .qs-st.error { background: color-mix(in oklab, #c92a2a 12%, var(--surface)); color: #c92a2a; }
 .qs-spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
 .result-line > span:first-child:has(+ .qs-st) { margin-right: 0; } .result-line .qs-st { margin: 0 auto 0 -2px; } .result-line .qs-st + .sync-ic { margin-left: 0; }
+/* Ürünü düzenle > Resimler: kaynak etiketi, + kutusu, yükleniyor, sürükleme */
+.img-strip { flex-wrap: wrap; overflow: visible; }
+.img-cell { cursor: grab; }
+.img-cell.drag { opacity: .4; }
+.img-kind { position: absolute; top: 4px; right: 4px; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; background: rgb(255 255 255 / .9); color: var(--muted); box-shadow: 0 0 0 1px var(--line); }
+.img-cell.main .img-kind { top: 4px; }
+.img-cell.up { display: grid; place-items: center; color: var(--accent); background: var(--surface-2); cursor: default; }
+.img-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 2px dashed color-mix(in oklab, var(--accent) 45%, var(--line)); background: color-mix(in oklab, var(--accent) 5%, var(--surface)); color: var(--accent); cursor: pointer; font: inherit; }
+.img-add small { font-size: 11px; font-weight: 600; }
+.img-add:hover { background: color-mix(in oklab, var(--accent) 10%, var(--surface)); }
+.img-cell.main { margin: 0; padding: 0; max-width: none; }

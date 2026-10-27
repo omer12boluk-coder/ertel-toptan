@@ -110,6 +110,28 @@ export function fmtTotals(by) {
 }
 
 // ---- Görsel küçültme (profil foto / ürün foto) ---------------------------
+// Ürün resmi adresi: 'r2:<anahtar>' = Cloudflare deposuna yüklenen (küçüğü <anahtar>_t), tam adres / data: olduğu gibi,
+// çıplak dosya adı = sitenin (PlatinMarket) resim şablonu {pi}. Depo kapısı: window.IMG_BASE (ileride resim.ertelgsm.com) yoksa bekçi /p/.
+export const isAbsImg = (f) => /^(https?:)?\/\/|^\/|^data:|^blob:/.test(f || '');
+export function r2Base() { const w = typeof window !== 'undefined' ? window : {}; return w.IMG_BASE || String(w.WATCH_URL || '').replace(/\/$/, '') + '/p/'; }
+export function picUrl(f, t, big) {
+  if (!f) return null;
+  if (f.startsWith('r2:')) { const k = f.slice(3); return r2Base() + (big ? k : k.replace(/\.(\w+)$/, '_t.$1')); }
+  if (isAbsImg(f)) return f;
+  return t && t.includes('{pi}') ? t.replaceAll('{pi}', f) : null;
+}
+// Yükleme için resmi küçült (webp; tarayıcı webp yazamıyorsa jpeg)
+export async function imageBlob(file, max = 1600, q = 0.85) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Resim açılamadı')); i.src = url; });
+    const sc = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * sc)); c.height = Math.max(1, Math.round(img.height * sc));
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+    const b = await new Promise((res) => c.toBlob(res, 'image/webp', q));
+    return b && b.type === 'image/webp' ? b : await new Promise((res) => c.toBlob(res, 'image/jpeg', q));
+  } finally { URL.revokeObjectURL(url); }
+}
 export async function resizeImage(file, max = 640, q = 0.78, square = false) {
   const url = URL.createObjectURL(file);
   try {

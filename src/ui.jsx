@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, api, store, toast } from './store.js';
-import { initials, hue, vatOf, fmtTotals } from './utils.js';
+import { initials, hue, vatOf, fmtTotals, picUrl, isAbsImg } from './utils.js';
 import { STATUS } from './config.js';
 
 const P = {
@@ -187,8 +187,8 @@ export function Thumb({ p, size = 'md' }) {
     if (p.img === 'fs') { let live = true; setSrc(null); api().getImage(p.id).then((d) => live && setSrc(d)); return () => { live = false; }; }
     if (p.img) return setSrc(p.img);
     const t = size === 'lg' ? S.catalog.imageLarge || S.catalog.imageThumb : S.catalog.imageThumb;
-    if (!(/^(https?:)?\/\/|^\//.test(p.pi || '')) && (!t || (t.includes('{pi}') && !p.pi))) return setSrc(null);
-    if (/^(https?:)?\/\/|^\//.test(p.pi || '')) return setSrc(p.pi); // tam adres (elle eklenen ürün resmi)
+    if (p.pi && (p.pi.startsWith('r2:') || isAbsImg(p.pi))) return setSrc(picUrl(p.pi, t, size === 'lg')); // depoya yüklenen / tam adres
+    if (!t || (t.includes('{pi}') && !p.pi)) return setSrc(null);
     setSrc(t.replaceAll('{pi}', p.pi || '').replaceAll('{kod}', p.k).replaceAll('{id}', p.id));
   }, [p?.id, p?.img, p?.pi, S.catalog.imageThumb, S.catalog.imageLarge, size]);
   const brand = (p?.n || '?').split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '').slice(0, 6);

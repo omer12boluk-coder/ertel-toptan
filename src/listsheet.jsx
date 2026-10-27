@@ -7,7 +7,7 @@ import { Icon, Empty, Thumb, Sheet, Stepper, VatLines, copyText } from './ui.jsx
 import { decodeList, encodeList, listItems, listRecord, listLink } from './listcode.js';
 import { Lightbox, imageList, ProductSheet } from './catalog.jsx';
 import { links, waLink } from './route.js';
-import { fmt, totals, fmtTotals, when, ls, roundStep, vatOf } from './utils.js';
+import { fmt, totals, fmtTotals, when, ls, roundStep, vatOf, picUrl, isAbsImg } from './utils.js';
 import { LOGO_MARK } from './config.js';
 
 // ---- Kur (1 USD kaç TL) ------------------------------------------------------
@@ -120,6 +120,7 @@ function loadImg(src, cors) { return new Promise((res) => { if (!src) return res
 function thumbSrc(it, S) {
   const p = { ...(store.s.byId.get(it.id) || {}), ...it };
   if (p.img && p.img !== 'fs') return p.img;
+  if (p.pi && (p.pi.startsWith('r2:') || isAbsImg(p.pi))) return picUrl(p.pi, null, false); // depo CORS'a izin verir
   const u = p.pi && S.catalog.imageThumb?.includes('{pi}') ? S.catalog.imageThumb.replaceAll('{pi}', p.pi) : null;
   // site CDN'i başka siteye resim çizdirmiyor; bekçi üzerinden alınır
   return u && window.WATCH_URL ? window.WATCH_URL.replace(/\/$/, '') + '/img?u=' + encodeURIComponent(u) : u;

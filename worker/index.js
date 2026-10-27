@@ -14,7 +14,7 @@ export default {
   async scheduled(event, env, ctx) { ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message))); },
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
-    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' };
     const json = (o, st = 200, extra = {}) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     try {
@@ -23,6 +23,9 @@ export default {
         const r = await haremRate();
         return r ? json(r, 200, { 'Cache-Control': 'public, max-age=30' }) : json({ error: 'kur alınamadı' }, 502);
       }
+      // Yönetici resim yükleme (Ürünü düzenle > +) ve yüklenen / kopyalanan resimleri gösterme (Cloudflare R2 deposu)
+      if (url.pathname === '/up' && req.method === 'POST') return json(await upImage(req, env));
+      if (url.pathname.startsWith('/p/') && (req.method === 'GET' || req.method === 'HEAD')) return await servePic(req, env, url, ctx, cors);
       // Ürün resimleri için aracı: site CDN'i başka siteden resim okumaya izin vermediği için liste resmini çizerken buradan alınır
       if (url.pathname === '/img') {
         const u = url.searchParams.get('u') || '';
@@ -475,6 +478,37 @@ async function notifyReq(env, b) {
 
 // R2'ye yazma kapısı (resim taşıma işi, tools/r2-mirror.mjs): PUT/GET /r2obj/<anahtar>, başlık X-Key = sha256('r2:' + TELEGRAM_TOKEN).
 // Sadece platin/ klasörü. Cloudflare REST API toplu yüklemede koruma sayfası (403) döndürdüğü için bekçinin kendi R2 bağlantısı kullanılır.
+// POST /up (FormData big + th, Authorization: Bearer <Firebase oturum anahtarı>) → R2 up/<yıl+ay>/<rastgele>.<uzantı> (+ _t küçük resim)
+async function upImage(req, env) {
+  if (!env.R2) return { ok: false, error: 'Depo bağlı değil' };
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''); const uid = tokUid(tok);
+  if (!uid) return { ok: false, error: 'Oturum yok' };
+  const u = await fsAuth('users/' + uid, tok);
+  if (u?.role !== 'admin') return { ok: false, error: 'Yönetici oturumu doğrulanamadı' };
+  const fd = await req.formData().catch(() => null); const big = fd?.get('big'), th = fd?.get('th');
+  if (!big || typeof big === 'string') return { ok: false, error: 'Dosya yok' };
+  if (big.size > 6e6 || (th && typeof th !== 'string' && th.size > 2e6)) return { ok: false, error: 'Dosya çok büyük' };
+  const [type, ext] = big.type === 'image/jpeg' ? ['image/jpeg', 'jpg'] : big.type === 'image/png' ? ['image/png', 'png'] : ['image/webp', 'webp'];
+  const d = new Date(); const rnd = crypto.randomUUID().replace(/-/g, '').slice(0, 14);
+  const key = `up/${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}/${rnd}.${ext}`;
+  const meta = { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000, immutable' } };
+  const bigBuf = await big.arrayBuffer();
+  await env.R2.put(key, bigBuf, meta);
+  await env.R2.put(key.replace(/\.(\w+)$/, '_t.$1'), th && typeof th !== 'string' ? await th.arrayBuffer() : bigBuf, meta);
+  return { ok: true, key };
+}
+// GET /p/<anahtar>: depodaki resim (sadece up/ ve platin/), tarayıcıda 1 yıl önbellek
+async function servePic(req, env, url, ctx, cors) {
+  const key = decodeURIComponent(url.pathname.slice(3));
+  if (!env.R2 || !/^(up|platin)\//.test(key) || key.includes('_manifest') || key.split('/').some((x) => x === '..' || x === '.')) return new Response('yok', { status: 404, headers: cors });
+  const ck = new Request(url.origin + url.pathname);
+  try { const hit = await caches.default.match(ck); if (hit) return hit; } catch {}
+  const o = await env.R2.get(key);
+  if (!o) return new Response('yok', { status: 404, headers: { ...cors, 'Cache-Control': 'public, max-age=60' } });
+  const r = new Response(req.method === 'HEAD' ? null : o.body, { headers: { 'Content-Type': o.httpMetadata?.contentType || 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable', ETag: o.httpEtag, ...cors } });
+  if (req.method === 'GET') try { ctx.waitUntil(caches.default.put(ck, r.clone())); } catch {}
+  return r;
+}
 async function r2Obj(req, env, url) {
   const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
   if (!env.R2 || !env.TELEGRAM_TOKEN) return json({ ok: false, error: 'R2 bağlı değil' }, 500);
