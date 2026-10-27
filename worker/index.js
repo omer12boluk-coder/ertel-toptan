@@ -11,7 +11,7 @@
 //   GET  /push/key, POST /push/sub {id, sub}, POST /push/status {id}  müşteriye sipariş durumu bildirimi (web push)
 //   POST /tg-link {code} Telegram botuna yazılan kodu bulup o sohbeti bildirim alıcısı yapar (sadece ilk bağlantı)
 export default {
-  async scheduled(event, env, ctx) { ctx.waitUntil(check(env)); },
+  async scheduled(event, env, ctx) { ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message))); },
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
@@ -488,7 +488,8 @@ async function soap(env, op, inner) {
   let t = await r.text(); if (env.DHL_PASS) t = t.split(env.DHL_PASS).join('***');
   const inside = (t.match(/<soap:Body>([\s\S]*)<\/soap:Body>/) || [, t])[1];
   const fault = (t.match(/<faultstring>([\s\S]*?)<\/faultstring>/) || [])[1];
-  return { http: r.status, raw: inside.slice(0, 6000), fault };
+  // şema (xs:schema) çok uzun; eskiden 6000 karakterde kesince asıl satır (Table1) kesilip takip no hiç okunamıyordu
+  return { http: r.status, raw: inside.replace(/<xs:schema[\s\S]*?<\/xs:schema>/g, '').slice(0, 30000), fault };
 }
 const tagv = (x, t) => { const m = new RegExp(`<${t}>([\\s\\S]*?)</${t}>`).exec(x || ''); return m ? m[1] : ''; };
 const kv = (o) => Object.entries(o).map(([k, v]) => `<${k}>${xesc(v)}</${k}>`).join('');
@@ -497,6 +498,32 @@ function dhlRow(raw) {
   const row = /<Table1\b[^>]*>([\s\S]*?)<\/Table1>/.exec(raw || ''); if (!row) return null;
   const o = {}; for (const m of row[1].matchAll(/<(\w+)[^>]*>([^<]*)<\/\1>/g)) o[m[1]] = m[2].trim();
   return o;
+}
+// --- Otomatik takip: DHL'e aktarılan referanslar KV'de bekler ('dhl-pend' {ref: {s: 'wait'|'ship', t}}).
+// Bekçi 5 dakikada bir (TR 08-23) DHL'e sorar; takip no gelince ya da teslim edilince GitHub "DHL takip" işini
+// tetikler — o iş siparişe takip no / durum yazar ve müşteriye bildirim gönderir (bekçinin Firestore'a yazma yetkisi yok).
+async function dhlPend(env, ref, st) {
+  const m = (await env.KV.get('dhl-pend', 'json')) || {};
+  if (st === null) delete m[ref]; else m[ref] = { s: st || m[ref]?.s || 'wait', t: m[ref]?.t || Date.now() };
+  await env.KV.put('dhl-pend', JSON.stringify(m));
+}
+async function dhlWatch(env) {
+  if (!env.DHL_USER || !env.DHL_PASS) return;
+  const now = new Date(); const h = (now.getUTCHours() + 3) % 24; const shipping = h >= 8 && h < 23;
+  if (now.getUTCMinutes() % (shipping ? 5 : 30) !== 0) return;
+  const m = (await env.KV.get('dhl-pend', 'json')) || {}; let need = false, dirty = false;
+  for (const [ref, v] of Object.entries(m).slice(0, 30)) {
+    if (Date.now() - v.t > 20 * 864e5) { delete m[ref]; dirty = true; continue; } // 20 günden eski: bırak
+    if (v.s === 'ship' && now.getUTCMinutes() % 30 !== 0) continue; // yoldakini yarım saatte bir sor (teslim edildi mi)
+    const x = await dhlInfo(env, ref).catch(() => null); if (!x?.found) continue;
+    if (x.delivered) { delete m[ref]; dirty = need = true; }
+    else if (x.code && v.s !== 'ship') { m[ref] = { ...v, s: 'ship' }; dirty = need = true; }
+  }
+  if (dirty) await env.KV.put('dhl-pend', JSON.stringify(m));
+  if (need) await fetch(`https://api.github.com/repos/${env.REPO}/actions/workflows/dhl-track.yml/dispatches`, {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.GH_TOKEN, Accept: 'application/vnd.github+json', 'User-Agent': 'ertel-b2b-watch', 'X-GitHub-Api-Version': '2022-11-28' },
+    body: JSON.stringify({ ref: 'main' }),
+  });
 }
 async function dhlInfo(env, ref) {
   const r = await soap(env, 'KargoBilgileriByReferans', kv({ pMusteriNo: env.DHL_USER, pSifre: env.DHL_PASS, pSiparisNo: ref, pGonderiNo: '', pFaturaSeri: '', pFaturaNo: '', pIrsaliyeNo: '', pEFaturaNo: '', pRaporType: '' }));
@@ -511,7 +538,7 @@ async function dhl(env, act, b) {
   if (u?.role !== 'admin') return { ok: false, error: 'Yönetici oturumu doğrulanamadı' };
   if (act === 'sync') { // birkaç siparişin takip bilgisini birden sor (yönetim paneli açılınca)
     const refs = (Array.isArray(b.refs) ? b.refs : []).map(String).filter((r) => /^[\w-]{3,30}$/.test(r)).slice(0, 25);
-    const out = {}; for (const r of refs) out[r] = await dhlInfo(env, r).catch((e) => ({ ok: false, error: e.message }));
+    const out = {}; for (const r of refs) { out[r] = await dhlInfo(env, r).catch((e) => ({ ok: false, error: e.message })); if (out[r]?.found && !out[r].delivered) await dhlPend(env, r); }
     return { ok: true, items: out };
   }
   const id = String(b.id || ''); if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
@@ -534,10 +561,10 @@ async function dhl(env, act, b) {
     };
     const r = await soap(env, 'SiparisGirisiDetayliV3', kv(fields));
     const res = tagv(r.raw, 'SiparisGirisiDetayliV3Result').trim();
-    if (!r.fault && /^0*1$/.test(res)) return { ok: true, ref, kg, desi, icerik };
+    if (!r.fault && /^0*1$/.test(res)) { await dhlPend(env, ref); return { ok: true, ref, kg, desi, icerik }; }
     // aynı referans daha önce kaydedilmişse (ör. yarıda kalan deneme) DHL'de var mı bak
     const ex = await dhlInfo(env, ref).catch(() => null);
-    if (ex?.found) return { ok: true, ref, kg, desi, icerik, existed: true };
+    if (ex?.found) { await dhlPend(env, ref); return { ok: true, ref, kg, desi, icerik, existed: true }; }
     return { ok: false, ref, error: r.fault || res || 'DHL kaydı kabul etmedi', raw: r.raw.slice(0, 1500) };
   }
   if (act === 'track') return dhlInfo(env, ref);
