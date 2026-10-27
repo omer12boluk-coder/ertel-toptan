@@ -3610,10 +3610,10 @@ html.dark .fav-btn, :root[data-theme="dark"] .fav-btn { background: rgba(30, 34,
 .atr.off > .tc:not(.tc-a):not(.tc-ed) { opacity: .55; }
 /* üst satır: büyük ad araması + küçük stok kodu araması + Yeni ürün */
 .tb-top { display: flex; gap: 8px; align-items: stretch; }
-.tb-top > .search:first-child { flex: 1; min-width: 0; }
+.tb-top > .search:not(.code-search) { flex: 1; min-width: 0; }
 .code-search { flex: none; width: 168px; }
 .code-search > .ic { left: 11px; }
-.code-search input { min-height: 48px; padding-left: 32px; padding-right: 30px; font-size: 14px; font-family: var(--f-mono, ui-monospace, monospace); }
+.code-search input { min-height: 48px; padding-left: 34px; padding-right: 30px; }
 .code-search .icon-btn { right: 4px; }
 .new-prod { flex: none; min-height: 48px; padding: 0 16px; gap: 7px; border-radius: var(--r); font-weight: 700; }
 .new-prod > .ic:last-child { opacity: .8; margin-left: -2px; }
@@ -3641,6 +3641,24 @@ html.dark .fav-btn, :root[data-theme="dark"] .fav-btn { background: rgba(30, 34,
   .atr .ac-s::before { content: 'Stok '; font-size: 11px; color: var(--muted); } .ac-r b { font-size: 19px; }
   .atr .ac-ut { flex-direction: row; gap: 6px; } .atr > .tc-ut.none { display: none; }
   .pst2 { height: 30px; font-size: 12.5px; gap: 6px; padding: 0 6px 0 8px; }
-  .tb-top { flex-wrap: wrap; } .tb-top > .search:first-child { flex-basis: 100%; }
+  .tb-top { flex-wrap: wrap; } .tb-top > .search:not(.code-search) { flex-basis: 100%; order: -1; }
   .code-search { flex: 1; } .code-search input, .new-prod { min-height: 42px; }
 }
+@media (min-width: 900px) { .cat-side > *, .acct-side > * { flex-shrink: 0; } }
+
+/* ===== Ürün tablosu (27.10.2026 5): Excel gibi sütunlar, ortalı başlıklar, ⋮ menü ===== */
+@media (min-width: 701px) {
+  .plist.at-ul { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+  .plist.at-ul > .atr { min-width: var(--atw, 0); }
+  .ath-row > .tc.r, .ath-row > .tc.c { justify-content: center; }
+  .ath-row > .tc.r .ath { flex-direction: row; }
+  .atr > .tc.r { justify-content: center; }
+  .atr .ec.r { justify-content: center; text-align: center; }
+  .atr .ac-w { align-items: center; }
+  .atr > .tc-ed { justify-content: flex-start; padding-left: 6px; }
+  .atr > .tc-ed + .tc, .atr > .tc-ed { border-left: 1px solid color-mix(in oklab, var(--line-2) 70%, transparent); }
+}
+.col-grip { right: -5px; width: 10px; top: 0; bottom: 0; }
+.col-grip::after { left: 4px; }
+html.col-resizing, html.col-resizing * { cursor: col-resize !important; user-select: none !important; }
+.at-ed { width: 30px; height: 30px; }

@@ -360,7 +360,10 @@ export function openMenu(e, items, title) {
   e.preventDefault(); e.stopPropagation();
   const list = items.filter(Boolean);
   if (!list.length) return;
-  store.set({ ctx: { x: e.clientX, y: e.clientY, items: list, title, touch: !!(e.nativeEvent || e).lp } });
+  // düğmeden açılan menü düğmeye hizalanır (sağ kenarı düğmenin sağıyla, hemen altında); sağ tık imlecin yerinde
+  const t = e.type === 'click' && e.currentTarget?.getBoundingClientRect ? e.currentTarget.getBoundingClientRect() : null;
+  const rect = t && t.width ? { l: t.left, r: t.right, t: t.top, b: t.bottom } : null;
+  store.set({ ctx: { x: e.clientX, y: e.clientY, rect, items: list, title, touch: !!(e.nativeEvent || e).lp } });
 }
 export const closeMenu = () => store.s.ctx && store.set({ ctx: null });
 export async function copyText(t, label = 'Kopyalandı') {
@@ -405,7 +408,10 @@ function DeskMenu({ ctx }) {
   useEffect(() => {
     if (!ctx) return;
     const el = ref.current; const w = el?.offsetWidth || 220, h = el?.offsetHeight || 200;
-    setPos({ left: Math.max(8, Math.min(ctx.x, innerWidth - w - 8)), top: Math.max(8, Math.min(ctx.y, innerHeight - h - 8)) });
+    const W = document.documentElement.clientWidth || innerWidth, H = document.documentElement.clientHeight || innerHeight, R = ctx.rect;
+    let x = ctx.x, y = ctx.y;
+    if (R) { x = R.r - w; if (x < 8) x = R.l; y = R.b + 6; if (y + h > H - 8 && R.t - h - 6 > 8) y = R.t - h - 6; }
+    setPos({ left: Math.max(8, Math.min(x, W - w - 12)), top: Math.max(8, Math.min(y, H - h - 8)) });
     const close = (ev) => { if (ev.type === 'keydown' && ev.key !== 'Escape') return; if (ev.type === 'mousedown' && ref.current?.contains(ev.target)) return; closeMenu(); };
     addEventListener('mousedown', close, true); addEventListener('keydown', close, true); addEventListener('resize', close); addEventListener('scroll', close, true);
     setTimeout(() => ref.current?.querySelector('button:not(:disabled)')?.focus(), 0);

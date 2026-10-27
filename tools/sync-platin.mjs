@@ -47,6 +47,9 @@ if (!meta.exists) throw new Error('Katalog yok');
 const parts = await Promise.all(Array.from({ length: meta.data().chunks }, (_, i) => db.doc(`catalog/c${i}`).get()));
 const cat = parts.flatMap((p) => (p.exists ? p.data().items : []));
 const byId = new Map(cat.map((p) => [p.id, p]));
+// panelden elle silinen ürünler sitede dursa da yeniden eklenmez
+const delDoc = await db.doc('meta/deleted').get();
+const DELETED = new Set(delDoc.exists ? delDoc.data().ids || [] : []);
 
 // ---- kur: USD ürünlerde TL / USD oranının ortancası
 const ratios = [];
@@ -84,7 +87,7 @@ for (const p of cat) {
   }
 }
 for (const f of feed.values()) {
-  if (byId.has(f.id)) continue;
+  if (byId.has(f.id) || DELETED.has(f.id)) continue;
   const p = { id: f.id, k: f.k, n: f.n, c: 0, r: round2(f.tl / rate), w: null, cur: 'USD', s: 1, a: 1, nw: 1 };
   if (f.pi) p.pi = f.pi;
   if (f.b && f.b !== '-') p.b = f.b;

@@ -142,6 +142,12 @@ export class FirebaseBackend {
     idbSet('cat', { version, items });
     return items;
   }
+  // elle silinen ürünler: eşitleme siteden yeniden eklemesin (meta/deleted, sadece yönetici)
+  async markDeleted(ids) {
+    const r = this.d('meta', 'deleted'); const s = await this.F.getDoc(r);
+    const cur = s.exists() ? s.data().ids || [] : [];
+    await this.F.setDoc(r, { ids: [...new Set([...cur, ...ids])].slice(-3000), at: now() });
+  }
   async saveCatalog(items) {
     const b = this.F.writeBatch(this.db);
     const parts = chunkBySize(items.map(clean));

@@ -91,6 +91,7 @@ export class DemoBackend {
   async saveSettings(s) { this.db.settings = s; this.persist(); }
 
   async loadCatalog() { return this.db.catalog; }
+  async markDeleted() {}
   async saveCatalog(items) { this.db.catalog = items.map((p) => { const o = {}; for (const k in p) if (!k.startsWith('_')) o[k] = p[k]; return o; }); this.db.catalogVersion = now(); if (!ls.set(KEY, this.db)) console.warn('localStorage dolu'); this.emit(); }
   async getDesc(id) {
     const e = this.db.descEdits || {};

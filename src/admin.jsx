@@ -22,9 +22,21 @@ const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',',
 
 // =========================================================================
 // Ürün düzenleme
+// Ürünü katalogdan sil (yönetici). Eşitleme sitede duran ürünü yeniden eklemesin diye meta/deleted'a yazılır.
+export async function removeProduct(p) {
+  const list = store.s.catalog.filter((x) => x.id !== p.id).map(({ _s, _t, ...x }) => x);
+  try {
+    await api().saveCatalog(list); setCatalog(list);
+    api().markDeleted?.([p.id]).catch(() => {});
+    if (p.img === 'fs') api().setImage(p.id, null).catch(() => {});
+    toast('Ürün silindi'); return true;
+  } catch (e) { toast('Silinemedi: ' + e.message, 'bad'); return false; }
+}
+export const delText = (p) => `“${p.n}” (${p.k || '#' + p.id}) katalogdan tamamen silinecek; mağazada ve bayilerde görünmez. Sitede (ertelgsm.com) duruyorsa eşitleme onu yeniden eklemez. Sadece gizlemek istiyorsanız durumu Pasif yapın.`;
 export function ProductEdit({ p, copy, onClose }) {
   const { catalog, settings: S } = useStore();
   const isNew = !p;
+  const [delC, setDelC] = useState(false);
   const [f, setF] = useState(() => {
     if (p) return { ...p };
     const base = { id: Math.max(9000000, ...catalog.map((x) => x.id)) + 1, k: nextCode(catalog), c: 0, r: 0, w: null, n: '', cur: 'USD', s: 0, a: 1, man: 1 };
@@ -99,9 +111,11 @@ export function ProductEdit({ p, copy, onClose }) {
 
   return (
     <Sheet wide title={copy ? 'Kopyadan yeni ürün' : isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={copy ? `“${copy.n}” kopyalandı · yeni stok kodu ${f.k}` : isNew ? '' : `#${f.id} · ${f.k}`} onClose={onClose} footer={<>
+      {!isNew && <button className="btn ghost danger pe-del" onClick={() => setDelC(true)}><Icon n="trash" s={16} />Ürünü sil</button>}
       <button className="btn ghost" onClick={onClose}>Vazgeç</button>
       <button className="btn primary" onClick={save} disabled={busy}><Icon n="check" s={16} />Kaydet</button>
     </>}>
+      {delC && <Confirm title="Ürün silinsin mi?" text={delText(p)} okLabel="Sil" tone="danger" onOk={() => removeProduct(p).then((ok) => ok && onClose())} onClose={() => setDelC(false)} />}
       {f.pc && (
         <div className="banner warn">
           <Icon n="tag" />
