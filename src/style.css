@@ -3461,3 +3461,5 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 .itable .it-name .it-th { display: block; flex: none; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
 .it-th > * { width: 100%; height: 100%; }
 .itable .it-name .it-nt { display: block; min-width: 0; }
+/* Adres: listede olmayan ilçe / mahalle elle yazılır (27.10.2026) */
+.addr-back { background: none; border: 0; padding: 4px 0 0; font-size: 12.5px; color: var(--accent); cursor: pointer; text-align: left; }

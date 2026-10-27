@@ -46,7 +46,9 @@ function useHoods(city) {
 }
 const districtsOf = (city) => TR[city]?.d || [];
 // adres DHL/Yurtiçi için eksiksiz mi: il ve ilçe listede, mahalle seçili, açık adres var
-export const addrOk = (a) => !!(a && TR[a.city] && districtsOf(a.city).includes(a.district) && String(a.hood || '').trim() && String(a.street || '').trim().length >= 3 && String(a.no || '').trim());
+// dm: ilçe listede yoktu, müşteri elle yazdı (liste yılda bir güncellenir; arada yeni ilçe/mahalle çıkarsa müşteri takılmasın)
+const distOk = (a) => (a.dm ? String(a.district || '').trim().length >= 2 : districtsOf(a.city).includes(a.district));
+export const addrOk = (a) => !!(a && TR[a.city] && distOk(a) && String(a.hood || '').trim() && String(a.street || '').trim().length >= 3 && String(a.no || '').trim());
 export const joinAddr = (x) => [String(x.street ?? '').trim(), x.no && 'No:' + String(x.no).trim(), x.door && 'D:' + String(x.door).trim(), String(x.note || '').trim()].filter(Boolean).join(' ');
 function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
   const up = (k) => (e) => set({ ...a, [k]: e.target.value });
@@ -55,6 +57,11 @@ function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
   const dOk = ds.includes(a.district);
   const { data: hoods, fail } = useHoods(a.city);
   const hs = useMemo(() => (dOk && hoods?.[a.district] ? [...hoods[a.district]].sort(trSort) : []), [hoods, a.district, dOk]);
+  // Listede yoksa elle yazma: ilçe (a.dm) ve mahalle (hMan). Kayıtlı mahalle yeni listede yoksa kutu boş kalmasın, elle yazılı gelsin.
+  const [hMan, setHMan] = useState(false);
+  useEffect(() => { if (hoods && dOk && a.hood && !hs.includes(a.hood)) setHMan(true); }, [hoods, dOk]);
+  const hoodManual = fail || a.dm || hMan;
+  const ELLE = '__elle';
   return (
     <div className="form-col addr-fields">
       {title && <Field label="Adres adı" opt><input id={p + '-title'} placeholder="ör. Ev, İş, Dükkan" value={a.title || ''} onChange={up('title')} /></Field>}
@@ -64,15 +71,17 @@ function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
       </div>}
       <div className="row3">
         <Field label="İl" error={err[p + '.city']}>
-          <select id={p + '-city'} value={TR[a.city] ? a.city : ''} onChange={(e) => set({ ...a, city: e.target.value, district: '', hood: '' })}><option value="">İl seçin</option>{ILLER.map((c) => <option key={c}>{c}</option>)}</select>
+          <select id={p + '-city'} value={TR[a.city] ? a.city : ''} onChange={(e) => { setHMan(false); set({ ...a, city: e.target.value, district: '', hood: '', dm: 0 }); }}><option value="">İl seçin</option>{ILLER.map((c) => <option key={c}>{c}</option>)}</select>
         </Field>
-        <Field label="İlçe" error={err[p + '.district']} hint={a.district && !dOk ? `“${a.district}” listede yok, seçin` : undefined}>
-          <select id={p + '-district'} value={dOk ? a.district : ''} disabled={!ds.length} onChange={(e) => set({ ...a, district: e.target.value, hood: '' })}><option value="">{ds.length ? 'İlçe seçin' : 'Önce il seçin'}</option>{ds.map((d) => <option key={d}>{d}</option>)}</select>
+        <Field label="İlçe" error={err[p + '.district']} hint={a.district && !dOk && !a.dm ? `“${a.district}” listede yok, seçin` : undefined}>
+          {a.dm
+            ? <><input id={p + '-district'} value={a.district || ''} placeholder="İlçe adı" onChange={up('district')} /><button type="button" className="addr-back" onClick={() => { setHMan(false); set({ ...a, district: '', hood: '', dm: 0 }); }}>Listeden seç</button></>
+            : <select id={p + '-district'} value={dOk ? a.district : ''} disabled={!ds.length} onChange={(e) => { setHMan(false); set(e.target.value === ELLE ? { ...a, district: '', hood: '', dm: 1 } : { ...a, district: e.target.value, hood: '', dm: 0 }); }}><option value="">{ds.length ? 'İlçe seçin' : 'Önce il seçin'}</option>{ds.map((d) => <option key={d}>{d}</option>)}{ds.length > 0 && <option value={ELLE}>Listede yok, elle yazacağım</option>}</select>}
         </Field>
         <Field label="Mahalle" error={err[p + '.hood']}>
-          {fail
-            ? <input id={p + '-hood'} value={a.hood || ''} placeholder="Mahalle adı" onChange={up('hood')} />
-            : <select id={p + '-hood'} value={hs.includes(a.hood) ? a.hood : ''} disabled={!hs.length} onChange={up('hood')}><option value="">{!dOk ? 'Önce ilçe seçin' : hoods ? 'Mahalle seçin' : 'Yükleniyor…'}</option>{hs.map((h) => <option key={h}>{h}</option>)}</select>}
+          {hoodManual
+            ? <><input id={p + '-hood'} value={a.hood || ''} placeholder="Mahalle adı" onChange={up('hood')} />{hMan && !a.dm && !fail && <button type="button" className="addr-back" onClick={() => { setHMan(false); set({ ...a, hood: '' }); }}>Listeden seç</button>}</>
+            : <select id={p + '-hood'} value={hs.includes(a.hood) ? a.hood : ''} disabled={!hs.length} onChange={(e) => { if (e.target.value === ELLE) { setHMan(true); set({ ...a, hood: '' }); } else set({ ...a, hood: e.target.value }); }}><option value="">{!dOk ? 'Önce ilçe seçin' : hoods ? 'Mahalle seçin' : 'Yükleniyor…'}</option>{hs.map((h) => <option key={h}>{h}</option>)}{hs.length > 0 && <option value={ELLE}>Listede yok, elle yazacağım</option>}</select>}
         </Field>
       </div>
       <div className="row-st">
@@ -91,14 +100,14 @@ function addrErrors(a, p, recip) {
     if (phoneDigits(a?.phone).length !== 11) e[p + '.phone'] = 'Telefonu yazın (0 5xx xxx xx xx)';
   }
   if (!TR[a?.city]) e[p + '.city'] = 'İl seçin';
-  else if (!districtsOf(a.city).includes(a?.district)) e[p + '.district'] = 'İlçeyi listeden seçin';
+  else if (!distOk(a)) e[p + '.district'] = a.dm ? 'İlçe adını yazın' : 'İlçeyi listeden seçin';
   else if (!String(a?.hood || '').trim()) e[p + '.hood'] = 'Mahalleyi seçin';
   const street = String(a?.street ?? (a?.no ? '' : a?.address) ?? '').trim();
   if (street.length < 3) e[p + '.street'] = 'Cadde / sokak yazın';
   if (!String(a?.no || '').trim()) e[p + '.no'] = 'Bina no yazın';
   return e;
 }
-const cleanAddr = (a) => { const x = { city: a.city, district: a.district, hood: String(a.hood || '').trim(), street: String(a.street ?? '').trim(), no: String(a.no || '').trim(), door: String(a.door || '').trim(), note: String(a.note || '').trim() }; return { ...x, address: joinAddr(x) }; };
+const cleanAddr = (a) => { const x = { city: a.city, district: String(a.district || '').trim(), ...(a.dm ? { dm: 1 } : {}), hood: String(a.hood || '').trim(), street: String(a.street ?? '').trim(), no: String(a.no || '').trim(), door: String(a.door || '').trim(), note: String(a.note || '').trim() }; return { ...x, address: joinAddr(x) }; };
 
 // Seçenek kartı (radyo)
 function Choice({ on, onClick, title, sub, icon }) {

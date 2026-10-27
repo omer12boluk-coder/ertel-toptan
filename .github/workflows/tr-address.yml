@@ -1,0 +1,42 @@
+# Adres listesi (il → ilçe → mahalle): yılda bir (ve elle) npm turkey-neighbourhoods paketinin son sürümünü
+# indirir, src/tr-ilce.json + hosting/public/tr/*.json'u yeniler, değişiklik varsa siteyi derleyip yayınlar.
+# Liste eksik/bozuk gelirse tools/tr-address.mjs hiçbir şey yazmaz. Listede olmayan mahalle müşteri tarafından elle yazılabilir.
+name: Adres listesi
+on:
+  schedule:
+    - cron: '23 1 15 1 *'   # her yıl 15 Ocak, 04:23 (TR)
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: tr-address
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Paketi indir
+        run: |
+          cd "$RUNNER_TEMP"
+          npm pack -q turkey-neighbourhoods@latest
+          tar -xzf turkey-neighbourhoods-*.tgz
+          echo "::notice title=Adres listesi::paket sürümü $(node -p 'require("./package/package.json").version')"
+      - name: Listeyi yenile
+        run: node tools/tr-address.mjs "$RUNNER_TEMP/package"
+      - name: Derle, kaydet ve yayınla
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- src/tr-ilce.json hosting/public/tr; then echo "::notice title=Adres listesi::değişiklik yok"; exit 0; fi
+          npm install -q --no-save --no-audit --no-fund
+          python3 tools/build.py
+          git add -A src/tr-ilce.json hosting/public/tr hosting/public/index.html DEMO.html hosting/public/version.json
+          git -c user.name=bot -c user.email=bot@x commit -qm "Adres listesi: yıllık güncelleme"
+          git pull -q --rebase origin main
+          git push -q origin HEAD:main
+          gh workflow run deploy.yml --ref main
