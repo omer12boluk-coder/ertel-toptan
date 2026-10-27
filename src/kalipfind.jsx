@@ -1,5 +1,5 @@
 // Mağaza > Kalıp bulucu: telefon modeli yazılır → işlemcisi gösterilir → katalogdan uyan kalıplar önerilir.
-// Telefon → işlemci verisi /kalip/phones.json (GSMArena'dan toplanır, tools/kalip-build.mjs).
+// Telefon → işlemci verisi /kalip/phones.json (tools/kalip/*.json → tools/kalip-build.mjs; güncelleme: CLAUDE.md > Kalıp telefon listesi).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api } from './store.js';
 import { Icon, Toggle, Thumb, Stepper } from './ui.jsx';

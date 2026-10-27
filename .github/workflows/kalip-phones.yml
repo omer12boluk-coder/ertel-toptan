@@ -1,0 +1,42 @@
+# Kalıp bulucu telefon listesi: ayda bir (ve elle) bytecharts/device_specs_gsmarena'dan yeni modelleri alır,
+# katalogdaki kalıplarda geçip telefonu olmayan işlemci kodlarını tools/kalip/eksik.json'a yazar,
+# hosting/public/kalip/phones.json'u derleyip main'e ekler ve siteyi yayınlar. Ayrıntı: CLAUDE.md > Kalıp telefon listesi.
+name: Kalıp telefon listesi
+on:
+  schedule:
+    - cron: '17 1 1 * *'   # her ayın 1'i, 04:17 (TR)
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: kalip-phones
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Yeni modeller (bytecharts)
+        run: |
+          git clone -q --depth 1 https://github.com/bytecharts/device_specs_gsmarena "$RUNNER_TEMP/bc"
+          echo "bytecharts son güncelleme: $(git -C "$RUNNER_TEMP/bc" log -1 --format=%cd)"
+          node tools/kalip-update.mjs bytecharts "$RUNNER_TEMP/bc"
+      - name: Listeyi derle
+        run: node tools/kalip-build.mjs
+      - name: Telefonu olmayan kalıp kodları
+        continue-on-error: true
+        run: node tools/kalip-update.mjs missing
+      - name: Kaydet ve yayınla
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add tools/kalip hosting/public/kalip/phones.json
+          if git diff --cached --quiet -- tools/kalip/base.json tools/kalip/eksik.json; then echo "değişiklik yok"; exit 0; fi
+          git -c user.name=bot -c user.email=bot@x commit -qm "Kalıp telefon listesi: aylık güncelleme"
+          git pull -q --rebase origin main
+          git push -q origin HEAD:main
+          gh workflow run deploy.yml --ref main
