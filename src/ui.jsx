@@ -112,7 +112,7 @@ if (typeof window !== 'undefined' && matchMedia('(hover: none) and (pointer: coa
   }, { passive: false, capture: true });
 }
 // sticky: boş yere basınca / aşağı çekince / Esc ile KAPANMAZ (düzenleme pencereleri: emek kaybolmasın), sadece × ve düğmeler
-export function Sheet({ title, onClose, children, footer, wide, sub, sticky }) {
+export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls }) {
   const ref = useRef(null);
   // iPhone: menüden seçince parmak kalkarken aynı noktaya "hayalet" tıklama gelir; yeni açılan pencere bunu
   // arka plana tıklama sanıp kendini kapatıyordu → açıldıktan sonraki 500 ms arka plan tıklaması yok sayılır
@@ -140,9 +140,10 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky }) {
   // Telefonda: pencereyi tutup aşağı çekince kapanır (üst kısımdan ya da içerik en üstteyken her yerden)
   const drag = useRef(null);
   const onTouchStart = (e) => {
-    if (sticky || !matchMedia('(max-width: 700px)').matches || e.touches.length !== 1) return;
+    if (!matchMedia('(max-width: 700px)').matches || e.touches.length !== 1) return;
     const body = ref.current.querySelector('.sheet-b');
     const fromTop = e.target.closest('.sheet-h, .sheet-grab');
+    if (sticky && !fromTop) return; // düzenleme penceresi sadece üstteki tutma yerinden çekilerek kapanır
     if (!fromTop && (!body || body.scrollTop > 0 || e.target.closest('input, textarea, select, .gal-track, .gal-thumbs'))) return;
     drag.current = { y0: e.touches[0].clientY, t0: Date.now(), dy: 0, on: false };
   };
@@ -158,13 +159,17 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky }) {
     const d = drag.current; drag.current = null; if (!d || !d.on) return;
     const el = ref.current; const fast = d.dy / Math.max(1, Date.now() - d.t0) > 0.6;
     el.style.transition = 'transform .22s ease';
-    if (d.dy > 110 || (fast && d.dy > 40)) { el.style.transform = 'translateY(100%)'; if (bg.current) { bg.current.style.transition = 'background .22s'; bg.current.style.background = 'transparent'; } setTimeout(onClose, 200); }
+    if (d.dy > 110 || (fast && d.dy > 40)) {
+      el.style.transform = 'translateY(100%)'; if (bg.current) { bg.current.style.transition = 'background .22s'; bg.current.style.background = 'transparent'; }
+      // sticky (düzenleme): kapanış onaya bağlı olabilir → kapanmadıysa pencere geri gelir
+      setTimeout(() => { onClose(); if (sticky) setTimeout(() => { if (ref.current) { ref.current.style.transform = ''; if (bg.current) bg.current.style.background = ''; } }, 60); }, 200);
+    }
     else { el.style.transform = ''; if (bg.current) bg.current.style.background = ''; }
   };
   // pencere sayfanın en üstüne (body) çizilir: içinde bulunduğu kutu ne olursa olsun ekrana göre konumlanır
   return createPortal(
     <div ref={bg} className="sheet-bg" onMouseDown={(e) => !sticky && e.target === e.currentTarget && Date.now() - born.current > 500 && onClose()}>
-      <div ref={ref} className={'sheet' + (wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={title} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+      <div ref={ref} className={'sheet' + (wide ? ' wide' : '') + (cls ? ' ' + cls : '')} role="dialog" aria-modal="true" aria-label={title} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
         <span className="sheet-grab" aria-hidden="true" />
         <header className="sheet-h">
           <div className="sheet-title"><h2>{title}</h2>{sub && <p>{sub}</p>}</div>
@@ -413,7 +418,7 @@ function DeskMenu({ ctx }) {
     let x = ctx.x, y = ctx.y;
     if (R) { x = R.r - w; if (x < 8) x = R.l; y = R.b + 6; if (y + h > H - 8 && R.t - h - 6 > 8) y = R.t - h - 6; }
     setPos({ left: Math.max(8, Math.min(x, W - w - 12)), top: Math.max(8, Math.min(y, H - h - 8)) });
-    const close = (ev) => { if (ev.type === 'keydown' && ev.key !== 'Escape') return; if (ev.type === 'mousedown' && ref.current?.contains(ev.target)) return; closeMenu(); };
+    const close = (ev) => { if (ev.type === 'keydown' && ev.key !== 'Escape') return; if (ev.type === 'mousedown' && (ref.current?.contains(ev.target) || ev.target?.classList?.contains('ctx-catch'))) return; closeMenu(); };
     addEventListener('mousedown', close, true); addEventListener('keydown', close, true); addEventListener('resize', close); addEventListener('scroll', close, true);
     setTimeout(() => ref.current?.querySelector('button:not(:disabled)')?.focus(), 0);
     return () => { removeEventListener('mousedown', close, true); removeEventListener('keydown', close, true); removeEventListener('resize', close); removeEventListener('scroll', close, true); };
@@ -424,7 +429,9 @@ function DeskMenu({ ctx }) {
     const bs = [...ref.current.querySelectorAll('button:not(:disabled)')]; const i = bs.indexOf(document.activeElement);
     bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus();
   };
-  return (
+  // menü açıkken dışarıya dokunmak SADECE menüyü kapatır (alttaki ürün / düğme açılmaz): görünmez yakalayıcı katman
+  return (<>
+    <div className="ctx-catch" onClick={(e) => { e.preventDefault(); e.stopPropagation(); closeMenu(); }} onContextMenu={(e) => { e.preventDefault(); closeMenu(); }} />
     <div ref={ref} className="ctx" role="menu" style={pos || { left: ctx.x, top: ctx.y, visibility: 'hidden' }} onKeyDown={move} onContextMenu={(e) => e.preventDefault()}>
       {ctx.title && <div className="ctx-title">{ctx.title}</div>}
       {ctx.items.map((it, i) => it === '-' ? <div key={i} className="ctx-sep" role="separator" /> : (
@@ -436,7 +443,7 @@ function DeskMenu({ ctx }) {
         </button>
       ))}
     </div>
-  );
+  </>);
 }
 
 // Toplamın altında küçük KDV bilgisi (ürün fiyatlarına dokunmaz). Oran ve göster/gizle: Ayarlar > Fiyatlandırma

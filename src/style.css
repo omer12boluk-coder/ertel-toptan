@@ -3815,3 +3815,48 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
   .gline-name:hover .prow-name, .gline-p:hover .prow-name { color: inherit !important; text-decoration: none !important; }
   button.pt-t, .gline-name { -webkit-tap-highlight-color: transparent; }
 }
+.ctx-catch { position: fixed; inset: 0; z-index: 94; background: transparent; -webkit-tap-highlight-color: transparent; }
+/* ===== Telefon: ürün listesi ve ürün düzenleme sade / sıkı (28.10.2026) ===== */
+@media (max-width: 700px) {
+  /* liste: iki satırlık kompakt kart — üstte resim + ad + ⋮, altta kod · stok · fiyat · toptan · durum */
+  .plist > .atr { grid-template-columns: auto auto auto 1fr auto; grid-template-areas: "name name name name ed" "code s r w a"; gap: 6px 10px; padding: 9px 12px 10px; }
+  .atr > .tc-ut { display: none !important; }
+  .atr .at-prod { gap: 10px; }
+  .atr .at-prod .thumb { width: 42px !important; height: 42px !important; border-radius: 9px; }
+  .atr .at-n b { font-size: 14.5px; line-height: 1.25; }
+  .atr .at-n small { font-size: 11.5px; }
+  .atr .ac-code code { font-size: 11px; }
+  .atr .ac-s::before { font-size: 10.5px; }
+  .atr .ac-s b { font-size: 14px; }
+  .atr .ac-r b { font-size: 16px !important; }
+  .atr .ac-w b { font-size: 13px; } .atr .ac-w .oto { font-size: 9.5px; padding: 0 4px; }
+  .atr .ac-w { flex-direction: row; align-items: baseline; gap: 4px; }
+  .atr .pst2 { height: 28px; font-size: 12.5px; padding: 0 6px 0 8px; gap: 5px; }
+  .atr > .tc-ed .at-ed { width: 30px; height: 30px; }
+  /* düzenleme penceresi: tam ekran, sıkı alanlar, yan yana küçük kutular */
+  .sheet.pe-sheet { max-height: calc(100dvh - 10px); height: calc(100dvh - 10px); border-radius: 18px 18px 0 0; }
+  .pe-sheet .sheet-h { padding: 6px 14px 8px; } .pe-sheet .sheet-title h2 { font-size: 18px; } .pe-sheet .sheet-title p { font-size: 12px; }
+  .pe-sheet .sheet-b { padding: 12px 14px 20px; }
+  .pe-sheet .form-grid { gap: 12px; }
+  .pe-sheet .img-edit { flex-direction: row; align-items: center; gap: 12px; }
+  .pe-sheet .img-edit .thumb-lg, .pe-sheet .img-edit > .thumb { width: 76px !important; height: 76px !important; max-width: 76px; flex: none; border-radius: 12px; }
+  .pe-sheet .img-edit .pe-cover-add { margin: 0; width: auto; flex: 1; }
+  .pe-sheet .form-col { gap: 10px; }
+  .pe-sheet .field { gap: 4px; }
+  .pe-sheet .field-l { font-size: 12px; }
+  .pe-sheet .field-h { font-size: 11.5px; }
+  .pe-sheet input:not([type=checkbox]):not([type=radio]):not([type=file]), .pe-sheet select { min-height: 42px; height: 42px; padding: 0 11px; font-size: 16px; border-radius: 10px; }
+  .pe-sheet textarea { font-size: 16px; padding: 9px 11px; border-radius: 10px; }
+  .pe-sheet .row2 { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pe-sheet .row3 { grid-template-columns: 1fr 1fr 0.8fr; gap: 8px; }
+  .pe-sheet .pe-sec { gap: 8px; padding-top: 12px; }
+  .pe-sheet .pe-sec-h h3 { font-size: 15px; }
+  .pe-sheet .md-t { width: 82px; height: 82px; border-radius: 10px; }
+  .pe-sheet .md-grid { gap: 8px; }
+  .pe-sheet .sheet-f { padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+  .pe-sheet .sheet-f .btn { min-height: 44px; }
+  .pe-sheet .pe-del { font-size: 0; gap: 0; padding: 0 12px; margin-right: auto; }
+  .pe-sheet .pe-del .ic { width: 20px; height: 20px; }
+  .pe-sheet .sheet-f .btn.primary { flex: 1; }
+}
+@media (max-width: 700px) { .plist > .atr .ec { margin: 0; padding: 2px 0; } .plist > .atr { column-gap: 12px; } }

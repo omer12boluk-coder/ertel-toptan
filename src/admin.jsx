@@ -116,7 +116,7 @@ export function ProductEdit({ p, copy, onClose }) {
   }
 
   return (
-    <Sheet wide title={copy ? 'Kopyadan yeni ürün' : isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={copy ? `“${copy.n}” kopyalandı · yeni stok kodu ${f.k}` : isNew ? '' : `#${f.id} · ${f.k}`} sticky onClose={tryClose} footer={<>
+    <Sheet wide title={copy ? 'Kopyadan yeni ürün' : isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={copy ? `“${copy.n}” kopyalandı · yeni stok kodu ${f.k}` : isNew ? '' : `#${f.id} · ${f.k}`} sticky cls="pe-sheet" onClose={tryClose} footer={<>
       {!isNew && <button className="btn ghost danger pe-del" onClick={() => setDelC(true)}><Icon n="trash" s={16} />Ürünü sil</button>}
       <button className="btn ghost" onClick={tryClose}>Vazgeç</button>
       <button className="btn primary" onClick={save} disabled={busy}><Icon n="check" s={16} />Kaydet</button>
