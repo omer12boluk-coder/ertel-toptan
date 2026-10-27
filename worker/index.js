@@ -39,7 +39,7 @@ export default {
       if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: await notifyStatus(env) });
       // müşteriye sipariş durumu bildirimi (web push)
       if (url.pathname === '/push/key') return json({ key: (await vapidKeys(env)).pub });
-      if (url.pathname === '/push/sub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); const r = await pushSub(env, b); if (r.ok && b.hello && !(await env.KV.get('ph:' + b.id))) { await env.KV.put('ph:' + b.id, '1', { expirationTtl: 30 }); r.test = await pushStatus(env, String(b.id), true).catch((e) => ({ error: e.message })); } return json(r); }
+      if (url.pathname === '/push/sub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); const r = await pushSub(env, b); if (r.ok && b.hello && !(await env.KV.get('ph:' + b.id))) { await env.KV.put('ph:' + b.id, '1', { expirationTtl: 60 }); r.test = await pushStatus(env, String(b.id), true).catch((e) => ({ error: e.message })); } return json(r); }
       if (url.pathname === '/push/admin' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminSub(env, b)); }
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
