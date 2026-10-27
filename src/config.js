@@ -46,6 +46,7 @@ export const DEFAULT_SETTINGS = {
     shopPrice: '#c2410c', // mağaza fiyat rengi (bayi toptan fiyat renginden AYRI)
     bg: '', // sayfa arka planı (açık temada)
     cardR: 18, // ürün kartı köşe yuvarlaklığı (px)
+    decor: { id: '', amt: 'md', front: true }, // mağaza teması / süsleme (Ayarlar > Mağaza teması): sadece müşteriler görür
   },
   cards: { // ürün kartları (Ayarlar > Ürün kartları)
     add: 'auto', // mağaza "Sepete ekle": auto (bilgisayarda kutu görünümünde simge, telefonda yazı) | text | icon (sepet+) | plus

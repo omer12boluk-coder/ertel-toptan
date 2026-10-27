@@ -1,3 +1,4 @@
+import { StoreDecor } from './decor.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
@@ -588,6 +589,7 @@ function App() {
       {b === 'error' && <div className="splash"><Brand /><p className="err">{bootError}</p><button className="btn outline" onClick={() => location.reload()}>Tekrar dene</button></div>}
       {b === 'login' && <Login />}
       {b === 'ready' && <Shell />}
+      {b === 'ready' && <StoreDecor />}
       <IntroSplash />
       <Toast />
       <ContextMenu />

@@ -14,6 +14,7 @@ import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
 import { imageList, CardPreview } from './catalog.jsx';
 import { MediaEditor } from './media.jsx';
+import { DecorSettings } from './decor.jsx';
 import { rateLabel } from './listsheet.jsx';
 import { syncNow } from './watch.js';
 import { Members } from './orders.jsx';
@@ -460,6 +461,7 @@ export function CustomerSheet({ c, onClose }) {
 const SECTIONS = [
   ['genel', 'Genel', 'Uygulama adı, logo, özellikler', 'gear'],
   ['gorunum', 'Renkler ve görünüm', 'Mağaza ve bayi renkleri, fiyat renkleri, tema · önizlemeli', 'brush'],
+  ['tema', 'Mağaza teması (süsleme)', 'Yılbaşı, 29 Ekim, bahar, sahil… 18 süs · sadece müşteriler görür', 'star'],
   ['magazaana', 'Mağaza ana sayfası', 'Reklamlar, marka kutuları, raflar (liste hâlinde)', 'store'],
   ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star'],
   ['magaza', 'Online mağaza', 'Sipariş, teslimat, ödeme, kargo firmaları, bildirimler', 'cart'],
@@ -477,7 +479,7 @@ const SECTIONS = [
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
 ];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'] };
+const SEC_KEYS = { tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -598,6 +600,7 @@ export function Settings() {
 
         {sec === 'kart' && <CardSettings d={d} set={set} />}
         {sec === 'gorunum' && <LookSettings d={d} set={set} />}
+        {sec === 'tema' && <DecorSettings d={d} set={set} Toggle={Toggle} />}
 
         {sec === 'kademe' && <>
           <p className="fine">Her bayiye bir kademe atanır. Kademe, genel indirim tablosunu kullanır; isterseniz kademeye <b>kendi tablosunu</b> ve üstüne ek % indirim verebilirsiniz. Bayiye özel ürün fiyatları her şeyin önündedir.</p>
