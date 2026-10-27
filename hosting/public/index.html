@@ -3758,9 +3758,16 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
   .acct2.side-fixed > .acct-ph { display: block; grid-column: 1; grid-row: 1; align-self: start; }
   .acct2.side-fixed > .acct-side { position: fixed !important; top: var(--st, calc(var(--top-h) + 16px)) !important; left: var(--sl); width: var(--sw); z-index: 5; }
 }
+/* Hesabım > Favorilerim: ayrılan alanın tamamı (geniş ekranda satırda 4 ürün), boş hâl ortada */
+.acct-body > .fav-grid, .acct-body > .empty { max-width: none; }
+@media (min-width: 900px) {
+  .acct-body > .fav-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .acct-body > .empty { min-height: 46vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+}
+@media (min-width: 1300px) { .acct2 { max-width: 1240px; } }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '3d94ee3b4a';</script>
+<script>window.__BUILD = '2d0c11118f';</script>
 </head>
 <body>
 <div id="root"></div>
