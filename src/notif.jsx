@@ -2,10 +2,11 @@
 // bayi başvurusu, yeni mağaza üyesi ve PlatinMarket eşitlemesinde değişen ürünler (meta/feed) tek listede.
 // Okundu bilgisi cihazda (ls 'notif-seen' = son açılış zamanı).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, store, go, openOrder, openRequest } from './store.js';
-import { Icon } from './ui.jsx';
+import { useStore, store, go, openOrder, openRequest, toast } from './store.js';
+import { Icon, Toggle } from './ui.jsx';
+import { pushState, enablePush, disablePush } from './push.js';
 import { fmt, fmtTotals, when, ls } from './utils.js';
-import { TYPE } from './config.js';
+import { TYPE, ORDER_STATUS, ORDER_OPEN } from './config.js';
 
 const DAY = 864e5;
 const KINDS = [['all', 'Tümü'], ['order', 'Siparişler'], ['req', 'Bayi'], ['prod', 'Ürünler'], ['user', 'Üyeler']];
@@ -87,6 +88,111 @@ export function NotifBell() {
               ];
             })}
           </ul>
+        </div>
+      )}
+    </span>
+  );
+}
+
+// =========================================================================================================
+// Mağaza müşterisi > Bildirim merkezi (27.10.2026): siparişlerinin durum geçmişinden (history) oluşur — sunucu yok.
+// Üye: myOrders; misafir: bu cihazdan verdiği siparişler (guestOrders). Okundu bilgisi cihazda (ls 'cnotif-seen').
+// Altta "Telefon bildirimleri" anahtarı (web push aç / kapat).
+const ST_IC = { confirmed: ['check', 'ok'], preparing: ['box', 'info'], shipped: ['box', 'info'], ready: ['store', 'ok'], done: ['check', 'ok'], cancelled: ['x', 'bad'] };
+const cSeenAt = () => ls.get('cnotif-seen', 0);
+export function useShopNotifs() {
+  const { member, myOrders, guestOrders } = useStore();
+  const orders = member ? myOrders : guestOrders;
+  return useMemo(() => {
+    const from = Date.now() - 90 * DAY; const out = [];
+    for (const o of orders || []) {
+      const its = o.items || []; const sub = its.length ? `${its[0].n}${its.length > 1 ? ` +${its.length - 1} ürün` : ''}` : '';
+      for (const h of o.history || []) {
+        if (!h || h.s === 'new' || !(h.at > from) || !ORDER_STATUS[h.s]) continue;
+        const [ic, tone] = ST_IC[h.s] || ['bell', 'info'];
+        const ship = h.s === 'shipped' && o.cargo?.code ? ` · ${o.cargo.company || 'Kargo'} ${o.cargo.code}` : '';
+        out.push({ id: o.id + h.s + h.at, at: h.at, ic, tone, t: `Sipariş #${o.no} · ${ORDER_STATUS[h.s].cust}${ship}`, s: sub, go: () => openOrder(o.id) });
+      }
+    }
+    return out.sort((a, b) => b.at - a.at).slice(0, 100);
+  }, [orders]);
+}
+// telefon bildirimlerini aç / kapat (bekçi: kapatınca abonelik silinir, bildirim gitmez)
+export function PushToggle({ orders }) {
+  const S = useStore((s) => s.settings);
+  const [st, setSt] = useState(() => pushState());
+  const [busy, setBusy] = useState(false);
+  if (S.orders?.push === false || st === 'unsupported') return null;
+  const ids = (() => { const a = (orders || []).filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id); return a.length ? a : (orders || []).slice(0, 1).map((o) => o.id); })();
+  const set = async (v) => {
+    if (!v) { disablePush(); setSt('off'); toast('Telefon bildirimleri kapatıldı'); return; }
+    if (!ids.length) { toast('İlk siparişinizi verince bildirimleri açabilirsiniz'); return; }
+    setBusy(true); try { await enablePush(ids); setSt('on'); toast('Telefon bildirimleri açıldı'); } catch (e) { setSt(pushState()); toast(e.message, 'bad'); } setBusy(false);
+  };
+  const hint = st === 'ios-home' ? 'iPhone’da önce sayfayı ana ekrana ekleyin (Paylaş → Ana Ekrana Ekle), sonra oradan açın.'
+    : st === 'denied' ? 'Bu cihazda bildirim izni kapalı; tarayıcı / telefon ayarlarından izin verin.'
+    : 'Siparişiniz onaylanınca, kargoya verilince telefonunuza haber verelim.';
+  return (
+    <div className={'push-tg' + (busy ? ' busy' : '')}>
+      {st === 'ios-home' || st === 'denied'
+        ? <div className="push-tg-t"><b>Telefon bildirimleri</b><small>{hint}</small></div>
+        : <Toggle id="push-tg" checked={st === 'on'} onChange={set} label="Telefon bildirimleri" hint={hint} />}
+    </div>
+  );
+}
+export function ShopNotifList({ list, seen, onPick, empty = 'Henüz bildirim yok. Sipariş verdiğinizde durum güncellemeleri burada görünür.' }) {
+  let lastDay = '';
+  return (
+    <ul className="nc-list">
+      {list.length === 0 && <li className="nc-empty"><Icon n="bell" s={26} /><span>{empty}</span></li>}
+      {list.map((x) => {
+        const d = new Date(x.at).toDateString(); const head = d !== lastDay ? (lastDay = d, true) : false;
+        const today = d === new Date().toDateString(); const yest = d === new Date(Date.now() - DAY).toDateString();
+        return [
+          head && <li key={'d' + d} className="nc-day">{today ? 'Bugün' : yest ? 'Dün' : new Date(x.at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}</li>,
+          <li key={x.id}>
+            <button className={'nc-i tone-' + x.tone + (x.at > seen ? ' fresh' : '')} onClick={() => onPick(x)}>
+              <span className="nc-ic"><Icon n={x.ic} s={16} /></span>
+              <span className="nc-b"><b>{x.t}</b>{x.s && <small>{x.s}</small>}</span>
+              <span className="nc-at">{new Date(x.at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+            </button>
+          </li>,
+        ];
+      })}
+    </ul>
+  );
+}
+// üst menüdeki zil (mağaza): sadece üyeyse ya da bu cihazdan sipariş verildiyse görünür
+export function ShopBell() {
+  const { member, myOrders, guestOrders } = useStore();
+  const orders = member ? myOrders : guestOrders;
+  const list = useShopNotifs();
+  const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState(cSeenAt);
+  const box = useRef(null);
+  const unread = list.filter((x) => x.at > seen).length;
+  const close = () => { setOpen(false); const t = Date.now(); ls.set('cnotif-seen', t); setSeen(t); };
+  useEffect(() => {
+    if (!open) return;
+    const out = (e) => { if (box.current && !box.current.contains(e.target)) close(); };
+    const esc = (e) => e.key === 'Escape' && close();
+    const t = setTimeout(() => { addEventListener('pointerdown', out); addEventListener('keydown', esc); });
+    return () => { clearTimeout(t); removeEventListener('pointerdown', out); removeEventListener('keydown', esc); };
+  }, [open]);
+  if (!member && !(guestOrders || []).length) return null;
+  return (
+    <span className="nc shop-nc" ref={box}>
+      <button className={'icon-btn nc-bell' + (open ? ' on' : '')} onClick={() => (open ? close() : setOpen(true))} aria-label={`Bildirimler${unread ? ` (${unread} yeni)` : ''}`} title="Bildirimler">
+        <Icon n="bell" s={19} />{unread > 0 && <span key={unread} className="badge">{unread > 9 ? '9+' : unread}</span>}
+      </button>
+      {open && (
+        <div className="nc-panel" role="dialog" aria-label="Bildirimler">
+          <div className="nc-h">
+            <b>Bildirimler</b>
+            <button className="icon-btn sm" onClick={close} aria-label="Kapat"><Icon n="x" s={16} /></button>
+          </div>
+          <ShopNotifList list={list} seen={seen} onPick={(x) => { close(); x.go(); }} />
+          <div className="nc-foot"><PushToggle orders={orders} /></div>
         </div>
       )}
     </span>

@@ -13,6 +13,7 @@ import { SwipeLine } from './cart.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
+import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -498,6 +499,18 @@ export function OrderPage({ id }) {
 }
 
 // Sipariş durumu bildirimi (web push): telefona "onaylandı / kargoda…" bildirimi
+// Hesabım > Bildirimler: telefon bildirimi anahtarı + bildirim listesi (zil ile aynı)
+function AcctNotifs({ orders, list }) {
+  const [seen] = useState(() => ls.get('cnotif-seen', 0) || 0);
+  useEffect(() => () => ls.set('cnotif-seen', Date.now()), []);
+  return (
+    <div className="acct-notif">
+      {pushState() !== 'unsupported' && store.s.settings.orders?.push !== false && <div className="o-card"><PushToggle orders={orders} /></div>}
+      <div className="o-card nc-card"><h3>Son bildirimler</h3><ShopNotifList list={list} seen={seen} onPick={(x) => x.go()} /></div>
+    </div>
+  );
+}
+
 export function PushCard({ ids, compact, hideOn }) {
   const S = useStore((st) => st.settings);
   const [st, setSt] = useState(() => pushState());
@@ -792,12 +805,16 @@ function MemberHome() {
   useStore((st) => st.seenTick);
   const unseen = unseenOrders(myOrders).length;
   const pushOk = S.orders?.push !== false && pushState() !== 'unsupported';
+  const favs = useStore((st) => st.favs);
+  const notifs = useShopNotifs();
+  const nUnread = notifs.filter((x) => x.at > (ls.get('cnotif-seen', 0) || 0)).length;
   const rows = [
     ['orders', 'box', 'Siparişlerim', myOrders.length ? `${myOrders.length} sipariş${active ? ` · ${active} devam ediyor` : ''}` : 'Henüz sipariş yok'],
     ['addr', 'pin', 'Adreslerim', (m.addresses || []).length ? `${m.addresses.length} kayıtlı adres` : 'Adres ekleyin'],
     ['info', 'user', 'Profil bilgilerim', [m.name, m.phone].filter(Boolean).join(' · ') || 'Ad soyad, telefon'],
     ['inv', 'tag', 'Fatura bilgilerim', m.invoice?.type === 'company' ? m.invoice.company || 'Kurumsal' : 'Bireysel'],
-    pushOk && ['notif', 'bell', 'Bildirimler', pushState() === 'on' ? 'Açık · sipariş durumu' : 'Sipariş durumunu haber verelim'],
+    ['favs', 'heart', 'Favorilerim', favs.length ? `${favs.length} ürün` : 'Beğendiğiniz ürünler'],
+    ['notif', 'bell', 'Bildirimler', (pushOk ? (pushState() === 'on' ? 'Telefon bildirimi açık' : 'Telefon bildirimi kapalı') : 'Sipariş güncellemeleri') + (nUnread ? ` · ${nUnread} yeni` : '')],
     ['pay', 'cart', 'Ödeme bilgilerim', 'Kayıtlı kartlar', true],
   ].filter(Boolean);
   const view = acct && ACCT_T[acct] ? acct : null;
@@ -806,10 +823,7 @@ function MemberHome() {
     addr: () => <Addresses />,
     info: () => <MyInfo part="info" />,
     inv: () => <MyInfo part="inv" />,
-    notif: () => <>
-      <PushCard ids={(() => { const a = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id); return a.length ? a : myOrders.slice(0, 1).map((o) => o.id); })()} />
-      {!myOrders.some((o) => ORDER_OPEN.includes(o.status)) && <p className="fine">Açık siparişiniz olunca bildirimleri buradan açabilirsiniz. Bir kez açarsanız sonraki siparişleriniz kendiliğinden bağlanır.</p>}
-    </>,
+    notif: () => <AcctNotifs orders={myOrders} list={notifs} />,
     pay: () => <div className="soon-card acct-soon"><span className="soon-ic"><Icon n="cart" s={28} /></span><span className="soon-tag">Çok yakında</span><h3>Kayıtlı kartlar</h3><p className="muted">Kartlarınızı güvenle kaydedip tek dokunuşla ödeyebileceksiniz. Şimdilik siparişte havale, kart linki ya da dükkânda ödeme seçebilirsiniz.</p></div>,
   };
   return (
@@ -825,7 +839,7 @@ function MemberHome() {
         <nav className="acct-nav" aria-label="Hesabım">
           <button className={'acct-nav-i ov' + (!view ? ' on' : '')} onClick={() => openAcct(null)}><span className="hub-ic"><Icon n="home" s={18} /></span><span className="hub-t"><b>Hesap özeti</b></span></button>
           {rows.map(([k, ic, t, sub, isSoon]) => (
-            <button key={k} className={'acct-nav-i' + (view === k ? ' on' : '')} onClick={() => openAcct(k)}>
+            <button key={k} className={'acct-nav-i' + (view === k ? ' on' : '')} onClick={() => (k === 'favs' ? (go('katalog'), store.set({ catalogGo: { fav: true } })) : openAcct(k))}>
               <span className="hub-ic"><Icon n={ic} s={18} /></span>
               <span className="hub-t"><b>{t}{isSoon && <span className="soon-tag sm">Yakında</span>}</b><small>{sub}</small></span>
               {k === 'orders' && unseen > 0 && <span className="badge" title="Yeni güncelleme">{unseen}</span>}
@@ -916,7 +930,13 @@ function MyOrders({ limit }) {
           <button role="tab" aria-selected={tab === 'act'} className={tab === 'act' ? 'on' : ''} onClick={() => setTab('act')}>Siparişlerim{act.length > 0 && <i className="num">{act.length}</i>}</button>
           <button role="tab" aria-selected={tab === 'past'} className={tab === 'past' ? 'on' : ''} onClick={() => setTab('past')}>Geçmiş siparişler{past.length > 0 && <i className="num">{past.length}</i>}</button>
         </div>
-        {canDel && past.length > 0 && <button className={'btn sm ' + (sel ? 'primary' : 'ghost')} onClick={() => setSel(sel ? null : new Set())}><Icon n="check" s={15} />{sel ? 'Vazgeç' : 'Seç'}</button>}
+      </div>
+    )}
+    {/* sekmeler her iki tarafta aynı genişlikte kalsın diye "Seç" sekme çubuğunda değil, altındaki satırda (iki sekmede de aynı yükseklik) */}
+    {!limit && list.length > 0 && (
+      <div className="mo-sub">
+        <span className="muted">{list.length} sipariş</span>
+        {canDel && tab === 'past' && <button className={'btn sm ' + (sel ? 'primary' : 'ghost')} onClick={() => setSel(sel ? null : new Set())}><Icon n="check" s={15} />{sel ? 'Vazgeç' : 'Seç'}</button>}
       </div>
     )}
     {sel && (

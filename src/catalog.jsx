@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct } from './store.js';
+import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now, ls, soon } from './utils.js';
 import { links } from './route.js';
@@ -136,6 +136,9 @@ export function Catalog({ admin }) {
   const [price, setPrice] = useState(''); // '' | 'u10' | '10-50' | '50-200' | '200+'
   const [newOnly, setNewOnly] = useState(false);
   const [imgOnly, setImgOnly] = useState(false);
+  const [favOnly, setFavOnly] = useState(false);
+  const favs = useStore((s) => s.favs);
+  const favSet = useMemo(() => new Set(favs), [favs]);
   // görünüm: kutu kutu (varsayılan) ya da sıra sıra; cihazda hatırlanır
   const [view, setView0] = useState(() => (admin ? 'list' : ls.get('cat-view', 'grid')));
   const setView = (v) => { setView0(v); if (!admin) ls.set('cat-view', v); };
@@ -145,7 +148,7 @@ export function Catalog({ admin }) {
   // başka ekrandan (mağaza ana sayfası) gelen filtre: marka / kategori / arama
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
-  useEffect(() => { if (!browse) return; setQ(browse.q || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  useEffect(() => { if (!browse) return; setQ(browse.q || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   const changedN = useMemo(() => (admin ? all.filter((p) => p.pc).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);
@@ -168,7 +171,7 @@ export function Catalog({ admin }) {
     const useTags = admin || S.catalog.searchTags;
     const [lo, hi] = PR[price] || [0, Infinity];
     let r = all.filter((p) => (!scoped || cat == null || pcats.get(p.id)?.has(cat)) && (!scoped || !brand || p.b === brand) && (!stockOnly || p.s > 0)
-      && (!price || (p.r >= lo && p.r < hi)) && (!newOnly || newest.has(p.id)) && (!imgOnly || p.pi || p.img)
+      && (!price || (p.r >= lo && p.r < hi)) && (!newOnly || newest.has(p.id)) && (!imgOnly || p.pi || p.img) && (!favOnly || favSet.has(p.id))
       && toks.every((t) => p._s.includes(t) || (useTags && p._t.includes(t))));
     if (toks.length) r = [...r].sort((a, b) => toks.filter((t) => b._s.includes(t)).length - toks.filter((t) => a._s.includes(t)).length);
     if (admin && adminFilter === 'inactive') r = r.filter((p) => !p.a);
@@ -184,7 +187,7 @@ export function Catalog({ admin }) {
     if (sort === 'stock') r = [...r].sort((a, b) => (b.s > 0) - (a.s > 0));
     return r;
   };
-  const deps = [all, q, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest];
+  const deps = [all, q, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet];
   const scopedList = useMemo(() => filterList(true), deps);
   const scoped = cat != null || !!brand;
   const globalList = useMemo(() => (q.trim() && scoped ? filterList(false) : null), deps);
@@ -193,7 +196,7 @@ export function Catalog({ admin }) {
   const list = widened ? globalList : scopedList;
   const moreOutside = globalList && !widened ? globalList.length - scopedList.length : 0;
   const scopeName = [cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : null, brand || null].filter(Boolean).join(' · ');
-  const clearAll = () => { setQ(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); };
+  const clearAll = () => { setQ(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setFavOnly(false); };
   const actives = [
     q.trim() && ['“' + q.trim() + '”', () => setQ('')],
     cat != null && [tree.nodes.get(cat)?.name || catName(S, cat), () => setCat(null)],
@@ -202,9 +205,10 @@ export function Catalog({ admin }) {
     price && [{ u10: '$10 altı', '10-50': '$10–50', '50-200': '$50–200', '200+': '$200 üstü' }[price], () => setPrice('')],
     newOnly && ['Yeni gelenler', () => setNewOnly(false)],
     imgOnly && ['Resimli', () => setImgOnly(false)],
+    favOnly && ['Favorilerim', () => setFavOnly(false)],
   ].filter(Boolean);
 
-  useEffect(() => setLimit(S.catalog.pageSize), [q, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly]);
+  useEffect(() => setLimit(S.catalog.pageSize), [q, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
   const more = useCallback(() => setLimit((l) => l + S.catalog.pageSize), [S.catalog.pageSize]);
   const sentinel = useInfinite(more);
   const shown = list.slice(0, limit);
@@ -229,6 +233,7 @@ export function Catalog({ admin }) {
             <div className="chips" role="tablist" aria-label="Kategori">
               <button className="chip only-m" onClick={() => setCatSheet(true)}><Icon n="filter" s={15} />{cat == null ? 'Kategoriler' : tree.nodes.get(cat)?.name || catName(S, cat)}</button>
               {cat != null && <button className="chip on only-m" onClick={() => setCat(null)}>Tümü <Icon n="x" s={14} /></button>}
+              {user?.role === 'public' && (favs.length > 0 || favOnly) && <button className={'chip fav-chip' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
               <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>
               <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>
               <label className={'chip select' + (price ? ' on' : '')}>
@@ -296,7 +301,9 @@ export function Catalog({ admin }) {
             {!admin && cartCount > 0 && <button className="link" onClick={() => go('sepet')}>Sepette {cartCount} kalem →</button>}
           </div>
 
-          {shown.length === 0 ? (
+          {shown.length === 0 && favOnly && actives.length === 1 ? (
+            <Empty icon="heart" title="Henüz favoriniz yok"><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p></Empty>
+          ) : shown.length === 0 ? (
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
           ) : (
             <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + cardAdd(S, user?.role)}>
@@ -370,6 +377,7 @@ function ProductRow({ p, admin, onOpen }) {
     { label: 'Ürünü aç', icon: 'zoom', onClick: onOpen },
     { label: qty ? `Sepete 1 tane daha ekle (${qty})` : 'Sepete ekle', icon: 'plus', onClick: () => { setQty(p.id, qty + 1); toast('Sepete eklendi'); } },
     qty > 0 && { label: 'Sepetten çıkar', icon: 'trash', danger: true, onClick: () => setQty(p.id, 0) },
+    user?.role === 'public' && { label: store.s.favs.includes(p.id) ? 'Favorilerden çıkar' : 'Favorilere ekle', icon: 'heart', onClick: () => toast(toggleFav(p.id) ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı') },
     user?.role !== 'public' && S.requests.allowQuote && { label: 'Bu ürünü sor', icon: 'chat', onClick: () => askAbout(p, Math.max(1, qty)) },
     '-',
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
@@ -378,6 +386,7 @@ function ProductRow({ p, admin, onOpen }) {
   return (
     <li className={'prow' + (!p.a ? ' inactive' : '') + (p.pc && admin ? ' changed' : '') + (hov && multi ? ' hov' : '')} onContextMenu={menu}
       onMouseEnter={multi ? () => setHov(true) : undefined} onMouseLeave={multi ? () => { setHov(false); setIx(0); } : undefined}>
+      {user?.role === 'public' && <FavBtn id={p.id} />}
       <button className="prow-main" onClick={onOpen}>
         <CardImg p={p} hov={hov && multi} ix={ix} setIx={setIx} />
         <div className="prow-info">
@@ -408,6 +417,18 @@ function ProductRow({ p, admin, onOpen }) {
         )}
       </div>
     </li>
+  );
+}
+
+// Favori kalbi (mağaza): kartın resim köşesinde ve ürün penceresinde; dolu = favoride
+export function FavBtn({ id, big }) {
+  const on = useStore((s) => s.favs.includes(id));
+  const [pop, setPop] = useState(0);
+  return (
+    <button type="button" className={'fav-btn' + (on ? ' on' : '') + (big ? ' big' : '')} aria-pressed={on} aria-label={on ? 'Favorilerden çıkar' : 'Favorilere ekle'} title={on ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+      onClick={(e) => { e.stopPropagation(); const v = toggleFav(id); setPop((x) => x + 1); toast(v ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı'); }}>
+      <Icon key={pop} n="heart" s={big ? 20 : 18} className={pop ? 'fav-pop' : ''} />
+    </button>
   );
 }
 
@@ -468,7 +489,10 @@ function ProductBody({ p, viewOnly, onDone }) {
     <div className="pdetail">
       <Gallery p={p} />
       <div className="pdetail-info">
-        <h3>{p.n}</h3>
+        <div className="pd-h">
+          <h3>{p.n}</h3>
+          {pub && <FavBtn id={p.id} big />}
+        </div>
         <div className="prow-meta"><code>{p.k}</code>{p.b && <span className="brand-tag">{p.b}</span>}<span>{catName(S, p.c)}</span>{st && <span className={'dot tone-' + st.tone}>{st.t}</span>}</div>
         <PriceBlock p={p} big />
         {!viewOnly && <div className="pbuy">

@@ -57,7 +57,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'phone', 'createdAt', 'addresses', 'invoice', 'username']));
       // değişiklik için e-posta doğrulanmış olmalı
       allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && (request.auth.token.email_verified == true || resource.data.get('byAdmin', false) == true) && request.resource.data.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'addresses', 'invoice', 'email', 'photo', 'hiddenOrders'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'addresses', 'invoice', 'email', 'photo', 'hiddenOrders', 'favs'])
+        && (!('favs' in request.resource.data) || (request.resource.data.favs is list && request.resource.data.favs.size() <= 500))
         && (!('hiddenOrders' in request.resource.data) || (request.resource.data.hiddenOrders is list && request.resource.data.hiddenOrders.size() <= 500))
         && (!('photo' in request.resource.data) || request.resource.data.photo == null || (request.resource.data.photo is string && request.resource.data.photo.size() < 60000)));
       allow delete: if isAdmin();

@@ -26,6 +26,8 @@ export const store = {
     rate: null, // Harem Altın dolar satış kuru { usd, src, at }
     member: null, // online mağaza üyesi (giriş yaptıysa)
     myOrders: [], // mağaza üyesinin siparişleri
+    guestOrders: [], // misafirin bu cihazdan verdiği siparişler (bildirim merkezi için canlı)
+    favs: [], // mağaza: favori ürün numaraları (cihazda + üyede members.favs)
     orders: [], // yönetici: mağaza siparişleri
     members: [], // yönetici: mağaza üyeleri
     openOrder: null, // açık sipariş (mağazada takip sayfası, yönetimde detay)
@@ -127,3 +129,23 @@ export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); w
 export function orderSeen(o) { if (!o?.id) return; const m = ls0('order-seen', {}); const t = o.updatedAt || o.createdAt || 0; if ((m[o.id] || 0) >= t) return; m[o.id] = t; try { localStorage.setItem('order-seen', JSON.stringify(m)); } catch {} store.set({ seenTick: (store.s.seenTick || 0) + 1 }); }
 export function unseenOrders(list) { const m = ls0('order-seen', {}); return (list || []).filter((o) => o.status !== 'new' && (o.updatedAt || o.createdAt || 0) > (m[o.id] || 0)); }
 function ls0(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
+
+// ---- Favoriler (mağaza müşterisi, 27.10.2026): cihazda (ls 'favs') ve üye girişliyse hesabında (members.favs) tutulur
+let favT = null;
+export function loadFavs() { store.set({ favs: ls0('favs', []) }); }
+export function isFav(id) { return store.s.favs.includes(id); }
+export function toggleFav(id) {
+  const on = !isFav(id);
+  const favs = on ? [id, ...store.s.favs].slice(0, 500) : store.s.favs.filter((x) => x !== id);
+  store.set({ favs }); try { localStorage.setItem('favs', JSON.stringify(favs)); } catch {}
+  const m = store.s.member;
+  if (m) { clearTimeout(favT); favT = setTimeout(() => store.s.api?.saveMember({ ...store.s.member, favs: store.s.favs }).catch(() => {}), 800); }
+  return on;
+}
+// üye girişi: cihazdaki favorilerle hesaptakiler birleşir (iki taraf da kaybolmaz)
+export function mergeFavs(m) {
+  const local = ls0('favs', []); const acc = Array.isArray(m?.favs) ? m.favs : [];
+  const all = [...new Set([...acc, ...local])].slice(0, 500);
+  store.set({ favs: all }); try { localStorage.setItem('favs', JSON.stringify(all)); } catch {}
+  if (m && all.length !== acc.length) store.s.api?.saveMember({ ...m, favs: all }).catch(() => {});
+}

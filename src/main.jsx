@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
+import { loadFavs, mergeFavs } from './store.js';
 import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
@@ -12,7 +13,7 @@ import { Catalog, ProductPage } from './catalog.jsx';
 import { KalipFinder } from './kalipfind.jsx';
 import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
-import { NotifBell } from './notif.jsx';
+import { NotifBell, ShopBell } from './notif.jsx';
 import { Customers, Settings, Profile } from './admin.jsx';
 import { Landing, HomePage } from './home.jsx';
 import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
@@ -199,6 +200,18 @@ function migrate(S) {
   return S;
 }
 
+// Misafirin bu cihazdan verdiği son siparişler (ls 'my-orders', en çok 8) canlı izlenir: bildirim merkezi + rozet
+let guestUn = [];
+function stopGuestOrders() { guestUn.forEach((f) => { try { f(); } catch {} }); guestUn = []; store.set({ guestOrders: [] }); }
+function watchGuestOrders(A) {
+  stopGuestOrders(); if (!A.watchOrder) return;
+  let mine = []; try { mine = JSON.parse(localStorage.getItem('my-orders') || '[]'); } catch {}
+  const got = new Map();
+  for (const x of mine.filter((x) => x?.id && Date.now() - (x.at || 0) < 120 * 864e5).slice(0, 8)) {
+    guestUn.push(A.watchOrder(x.id, (o) => { if (o) got.set(x.id, o); else got.delete(x.id); store.set({ guestOrders: [...got.values()].sort((a, b) => b.createdAt - a.createdAt) }); }));
+  }
+}
+
 // Herkese açık vitrin: giriş yok, sadece liste fiyatı; sepet WhatsApp'la gönderilir
 async function bootShop(A) {
   if (store.s.settings.access?.publicShop === false) { store.set({ boot: 'error', bootError: 'Online vitrin şu an kapalı.' }); return; }
@@ -208,7 +221,8 @@ async function bootShop(A) {
   A.onMember?.((m) => {
     unOrders?.(); unOrders = null;
     store.set({ member: m, myOrders: [] });
-    if (m) unOrders = A.watchMyOrders(m.uid, (myOrders) => store.set({ myOrders }));
+    if (m) { unOrders = A.watchMyOrders(m.uid, (myOrders) => store.set({ myOrders })); mergeFavs(m); stopGuestOrders(); }
+    else { loadFavs(); watchGuestOrders(A); }
   });
   // Sipariş takip linki (/magaza/s/<no>) katalog beklemeden açılır
   if (ROUTE.orderId) { loadCart(); store.set({ boot: 'ready' }); openOrder(ROUTE.orderId); }
@@ -458,6 +472,7 @@ function ShellFull() {
           </nav>
           <span className="top-sp" />
           {pub && <HeaderSearch />}
+          {pub && <ShopBell />}
           {!admin && <HeaderCart on={tab === 'sepet'} />}
           {!admin && <a className="icon-btn to-landing" href="/" title="Giriş sayfasına dön (Mağaza / Bayi girişi)" aria-label="Giriş sayfasına dön"><Icon n="home" s={19} /></a>}
           {admin && <NotifBell />}

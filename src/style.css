@@ -3465,3 +3465,34 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 .addr-back { background: none; border: 0; padding: 4px 0 0; font-size: 12.5px; color: var(--accent); cursor: pointer; text-align: left; }
 /* Panel veri penceresi: liste sonunda "Daha eski … göster" (datawin.js) */
 .older-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; padding: 14px 8px 6px; font-size: 13px; text-align: center; }
+
+/* Favoriler (27.10.2026): kart resminin köşesinde kalp; dolu = favoride */
+.fav-btn { position: absolute; z-index: 3; top: 8px; right: 8px; width: 34px; height: 34px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; color: #5b6475; background: rgba(255, 255, 255, .9); box-shadow: 0 1px 4px rgba(15, 23, 42, .14); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: transform .15s var(--ease), color .15s; }
+.fav-btn:hover { color: #e0245e; transform: scale(1.06); }
+.fav-btn.on { color: #e0245e; }
+.fav-btn.on .ic { fill: currentColor; }
+.fav-btn .fav-pop { animation: favPop .38s var(--ease); }
+@keyframes favPop { 0% { transform: scale(.6); } 55% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.plist:not(.pgrid) > li.prow > .fav-btn { top: 6px; right: auto; left: 6px; width: 28px; height: 28px; }
+.plist:not(.pgrid) > li.prow > .fav-btn .ic { width: 15px; height: 15px; }
+.pd-h { display: flex; align-items: flex-start; gap: 10px; }
+.pd-h h3 { flex: 1; min-width: 0; }
+.fav-btn.big { position: static; flex: none; width: 40px; height: 40px; background: var(--surface-2); box-shadow: none; }
+.fav-chip .ic { color: #e0245e; }
+.fav-chip.on .ic { fill: currentColor; }
+.fav-chip b { margin-left: 2px; font-weight: 700; opacity: .75; }
+html.dark .fav-btn, :root[data-theme="dark"] .fav-btn { background: rgba(30, 34, 44, .85); color: #c9cfdb; }
+/* Mağaza bildirim merkezi (zil) + Hesabım > Bildirimler */
+.nc-foot { flex: none; border-top: 1px solid var(--line-2); padding: 10px 16px 12px; }
+.push-tg .toggle { margin: 0; }
+.push-tg-t { display: flex; flex-direction: column; gap: 3px; } .push-tg-t small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.push-tg.busy { opacity: .6; pointer-events: none; }
+.acct-notif { display: grid; gap: 12px; }
+.acct-notif .nc-card { padding-bottom: 6px; }
+.acct-notif .nc-list { padding: 0; max-height: none; overflow: visible; }
+.acct-notif .nc-day { background: var(--surface); }
+.nc-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 26px 14px; color: var(--muted); text-align: center; font-size: 13.5px; }
+@media (max-width: 560px) { .shop-nc .nc-bell { width: 38px; height: 38px; } }
+/* Siparişlerim: sekme çubuğu sabit genişlik; sayı + "Seç" altındaki satırda (27.10.2026) */
+.mo-sub { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 34px; margin: -4px 0 8px; font-size: 13px; }
+.mo-sub .btn.sm { padding-block: 5px; }
