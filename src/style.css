@@ -3425,3 +3425,4 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 }
 /* mağaza: dar bilgisayar ekranında (Kalıp bulucu eklenince sığmıyordu) seçili olmayan sekmeler sadece simge */
 @media (max-width: 1150px) and (min-width: 900px) { .shell.public .topnav-b:not(.on) .topnav-l { display: none; } .shell.public .topnav-b:not(.on) { padding: 0 11px; } }
+@media (max-width: 560px) { .push-card { flex-wrap: wrap; } .push-card > .btn { flex-basis: 100%; } }

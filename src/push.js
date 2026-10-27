@@ -37,6 +37,18 @@ export async function enablePush(ids) {
   const list = [...new Set(ids.filter(Boolean))];
   await Promise.all(list.map((id, i) => send(id, sub, i === 0)));
 }
+// Deneme: aboneliği (yoksa yeniden) kurar, siparişlere bağlar ve hemen bir deneme bildirimi gönderir; sonucu döner
+export async function testPush(ids) {
+  if (Notification.permission !== 'granted') { const p = await Notification.requestPermission(); if (p !== 'granted') throw new Error('Bildirim izni verilmedi'); }
+  const sub = await subscription(true); ls.set('push-on', true);
+  const list = [...new Set(ids.filter(Boolean))]; if (!list.length) throw new Error('Bağlanacak sipariş yok');
+  const r = await send(list[0], sub, true); await Promise.all(list.slice(1).map((id) => send(id, sub, false)));
+  return r;
+}
+// iPhone aboneliği zamanla düşürebiliyor: "açık" görünüyorsa gerçekten abonelik var mı bak, yoksa sessizce yeniden kur ve bağla
+export async function ensurePush(ids) {
+  try { if (pushState() !== 'on') return; const had = await subscription(false); const sub = had || (await subscription(true)); if (!had) await Promise.all([...new Set(ids.filter(Boolean))].map((id) => send(id, sub, false))); } catch {}
+}
 // Bildirim daha önce açıldıysa yeni siparişi sessizce bağlar
 export async function autoPush(id) {
   try { if (pushState() !== 'on') return; const sub = await subscription(false); if (sub) await send(id, sub, false); } catch {}

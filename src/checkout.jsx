@@ -12,7 +12,7 @@ import TR from './tr-ilce.json';
 import { SwipeLine } from './cart.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
-import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch } from './push.js';
+import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -486,6 +486,15 @@ export function PushCard({ ids, compact, hideOn }) {
   const S = useStore((st) => st.settings);
   const [st, setSt] = useState(() => pushState());
   const [busy, setBusy] = useState(false);
+  const idKey = ids.join(',');
+  useEffect(() => { if (st === 'on' && idKey) ensurePush(ids); }, [st, idKey]);
+  const test = async () => {
+    setBusy(true);
+    try { const r = await testPush(ids); const t = r?.test || {};
+      if (t.sent > 0) toast('Deneme bildirimi gönderildi. Birkaç saniye içinde gelmeli.');
+      else toast('Bildirim gönderilemedi' + (t.codes?.length ? ' (kod ' + t.codes.join(',') + ')' : t.error ? ': ' + t.error : r?.error ? ': ' + r.error : ''), 'bad');
+    } catch (e) { toast(e.message, 'bad'); } setBusy(false);
+  };
   if (S.orders?.push === false || st === 'unsupported' || !ids.length) return null;
   const on = async () => { setBusy(true); try { await enablePush(ids); setSt('on'); toast('Bildirimler açıldı'); } catch (e) { setSt(pushState()); toast(e.message, 'bad'); } setBusy(false); };
   if (st === 'on' && hideOn) return null;
@@ -493,7 +502,8 @@ export function PushCard({ ids, compact, hideOn }) {
     <div className={'push-card on' + (compact ? ' compact' : '')}>
       <span className="push-ic"><Icon n="bell" s={20} /></span>
       <div><b>Bildirimler açık</b><small>Siparişiniz onaylanınca, kargoya verilince telefonunuza haber vereceğiz.</small></div>
-      {compact && <button className="btn sm ghost" onClick={() => { disablePush(); setSt('off'); }}>Kapat</button>}
+      {compact ? <button className="btn sm ghost" onClick={() => { disablePush(); setSt('off'); }}>Kapat</button>
+        : <button className="btn sm outline" disabled={busy} onClick={test}>{busy ? 'Gönderiliyor…' : 'Deneme bildirimi'}</button>}
     </div>
   );
   if (st === 'ios-home') return (
@@ -781,7 +791,7 @@ function MemberHome() {
     info: () => <MyInfo part="info" />,
     inv: () => <MyInfo part="inv" />,
     notif: () => <>
-      <PushCard ids={myOrders.filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id)} />
+      <PushCard ids={(() => { const a = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id); return a.length ? a : myOrders.slice(0, 1).map((o) => o.id); })()} />
       {!myOrders.some((o) => ORDER_OPEN.includes(o.status)) && <p className="fine">Açık siparişiniz olunca bildirimleri buradan açabilirsiniz. Bir kez açarsanız sonraki siparişleriniz kendiliğinden bağlanır.</p>}
     </>,
     pay: () => <div className="soon-card acct-soon"><span className="soon-ic"><Icon n="cart" s={28} /></span><span className="soon-tag">Çok yakında</span><h3>Kayıtlı kartlar</h3><p className="muted">Kartlarınızı güvenle kaydedip tek dokunuşla ödeyebileceksiniz. Şimdilik siparişte havale, kart linki ya da dükkânda ödeme seçebilirsiniz.</p></div>,
