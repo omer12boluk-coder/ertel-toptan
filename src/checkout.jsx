@@ -153,10 +153,19 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   const fixA = savedBad ? (f.fix?.id === selSaved.id ? f.fix : { ...selSaved, name: selSaved.name || f.contact.name, phone: selSaved.phone || f.contact.phone }) : null;
   const delivAddr = f.method !== 'cargo' ? null : savedBad ? fixA : selSaved || f.addr;
 
+  // İletişim ayrı bölüm değil (27.10.2026, kullanıcı: "aşağıda bir daha giriyoruz"): kargoda adresteki alıcı,
+  // dükkândan teslimde "teslim alacak kişi", üyede hesap bilgisi siparişin iletişimi olur
+  const contactOut = () => {
+    const m = member || {};
+    if (f.method === 'cargo' && delivAddr) return { name: String(m.name || delivAddr.name || f.contact.name).trim(), phone: m.phone || delivAddr.phone || f.contact.phone };
+    return { name: f.contact.name.trim(), phone: f.contact.phone };
+  };
   function validate() {
     const e = {};
-    if (f.contact.name.trim().length < 3) e.name = 'Adınızı ve soyadınızı yazın';
-    if (digits(f.contact.phone).length !== 11) e.phone = 'Telefonu 0(5xx) xxx xx xx şeklinde yazın';
+    if (f.method !== 'cargo') {
+      if (f.contact.name.trim().length < 3) e.name = 'Teslim alacak kişinin adını soyadını yazın';
+      if (digits(f.contact.phone).length !== 11) e.phone = 'Telefonu 0(5xx) xxx xx xx şeklinde yazın';
+    }
     if (f.contact.email.trim() && !emailOk(f.contact.email)) e.email = 'E-posta adresi geçersiz';
     if (!member && f.signup) { if (!emailOk(f.contact.email)) e.email = 'Üyelik için e-posta gerekli'; if (f.pw.length < 6) e.pw = 'Şifre en az 6 karakter olmalı'; if (f.uname && !unameOk(f.uname)) e.uname = '3-20 karakter: harf, rakam, nokta, tire'; }
     if (f.method === 'cargo') Object.assign(e, addrErrors(delivAddr, 'addr', f.addrId === 'new' || !saved.length || savedBad));
@@ -188,7 +197,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       let signedUp = false;
       if (!member && f.signup) {
         const addr = f.method === 'cargo' ? [{ ...cleanA(delivAddr), id: rid(), title: 'Adresim' }] : [];
-        const m = await A.memberSignup({ email, password: f.pw, name: f.contact.name.trim(), phone: f.contact.phone, username: f.uname || undefined, addresses: addr, invoice: inv }, true);
+        const m = await A.memberSignup({ email, password: f.pw, name: contactOut().name, phone: contactOut().phone, username: f.uname || undefined, addresses: addr, invoice: inv }, true);
         uid = m.uid; signedUp = true;
       }
       const t = now(), no = orderNo(), id = A.newOrderId();
@@ -196,7 +205,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         no, uid, member: !!uid, status: 'new', createdAt: t, updatedAt: t, unread: 1, history: [{ s: 'new', at: t }],
         items: items.map(({ id: pid, k, n, cur, qty, offer, pi, u }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u })),
         total: tot, rate: rate?.usd || null,
-        contact: { name: f.contact.name.trim(), phone: f.contact.phone, email },
+        contact: { ...contactOut(), email },
         delivery: { method: f.method, addr: f.method === 'cargo' ? cleanA(delivAddr) : null, ...(f.method === 'cargo' ? { carrier: f.carrier || 'dhl' } : {}) },
         // teslimat adresiyle aynıysa adres faturaya da yazılır (fatura kendi başına eksiksiz okunsun)
         invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' ? (f.billSame ? cleanA(delivAddr) : cleanA(f.bill, false)) : f.bill?.address ? cleanA(f.bill, false) : null },
@@ -250,16 +259,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
           )}
 
           <section className="co-sec">
-            <h2><span className="co-n">1</span>İletişim bilgileri</h2>
-            <div className="row2">
-              <Field label="Ad soyad" error={err.name}><input id="co-name" autoComplete="name" value={f.contact.name} onChange={setC('name')} /></Field>
-              <Field label="Cep telefonu" error={err.phone}><PhoneInput id="co-phone" value={f.contact.phone} onChange={setC('phone')} /></Field>
-            </div>
-            <Field label="E-posta" opt={!f.signup && !member} error={err.email} hint="Sipariş bilgisi için"><input id="co-email" type="email" autoComplete="email" value={f.contact.email} readOnly={!!member} onChange={setC('email')} /></Field>
-          </section>
-
-          <section className="co-sec">
-            <h2><span className="co-n">2</span>Teslimat</h2>
+            <h2><span className="co-n">1</span>Teslimat</h2>
             {methods.length > 1 && (
               <div className="seg-cards" role="radiogroup" aria-label="Teslimat şekli">
                 <Choice on={f.method === 'cargo'} onClick={() => set({ method: 'cargo' })} icon="box" title={DELIVERY.cargo} sub="Adresinize gönderilir" />
@@ -295,11 +295,18 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
                 {member && <label className="mini-check"><input type="checkbox" checked={f.saveAddr} onChange={(e) => set({ saveAddr: e.target.checked })} />Bu adresi hesabıma kaydet</label>}
               </>}
             </>}
-            {f.method === 'pickup' && <p className="fine co-pick"><Icon n="store" s={16} />{S.shop.name} · {[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}. Siparişiniz hazır olunca haber veririz.</p>}
+            {f.method === 'pickup' && <>
+              <p className="fine co-pick"><Icon n="store" s={16} />{S.shop.name} · {[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}. Siparişiniz hazır olunca haber veririz.</p>
+              <div className="row2">
+                <Field label="Teslim alacak kişinin adı soyadı" error={err.name}><input id="co-name" autoComplete="name" value={f.contact.name} onChange={setC('name')} /></Field>
+                <Field label="Telefonu" error={err.phone}><PhoneInput id="co-phone" value={f.contact.phone} onChange={setC('phone')} /></Field>
+              </div>
+            </>}
+            {!member && <Field label="E-posta" opt={!f.signup} error={err.email} hint="Sipariş durumunu e-postayla da bildirelim"><input id="co-email" type="email" autoComplete="email" value={f.contact.email} onChange={setC('email')} /></Field>}
           </section>
 
           <section className="co-sec">
-            <h2><span className="co-n">3</span>Fatura</h2>
+            <h2><span className="co-n">2</span>Fatura</h2>
             <div className="seg-cards two" role="radiogroup" aria-label="Fatura tipi">
               <Choice on={f.inv.type === 'person'} onClick={() => set({ inv: { ...f.inv, type: 'person' }, billSame: true })} title="Bireysel" sub="Adınıza fatura" />
               <Choice on={f.inv.type === 'company'} onClick={() => set({ inv: { ...f.inv, type: 'company' }, billSame: false })} title="Kurumsal" sub="Firma adına fatura" />
@@ -320,7 +327,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
           </section>
 
           <section className="co-sec">
-            <h2><span className="co-n">4</span>Ödeme</h2>
+            <h2><span className="co-n">3</span>Ödeme</h2>
             <div className="seg-cards col" role="radiogroup" aria-label="Ödeme şekli">
               {pays.includes('havale') && <Choice on={f.pay === 'havale'} onClick={() => set({ pay: 'havale' })} title={PAY.havale} sub="Banka bilgileri sipariş sonrası gösterilir" />}
               {pays.includes('card') && <Choice on={f.pay === 'card'} onClick={() => set({ pay: 'card' })} title={PAY.card} sub="Sipariş onaylanınca güvenli ödeme linki gönderilir" />}
