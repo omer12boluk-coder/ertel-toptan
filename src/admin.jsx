@@ -84,12 +84,31 @@ export function ProductEdit({ p, copy, onClose }) {
       setUpN((n) => n - 1);
     }
   }
+  const [vProg, setVProg] = useState(null); // video yükleme ilerlemesi 0-1
+  const [coverBusy, setCoverBusy] = useState(false);
+  const vidRef = useRef(null), coverRef = useRef(null);
+  async function addVideo(e) {
+    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
+    if (file.size > 95e6) return toast('Video 95 MB\'tan büyük olamaz. Telefonda kısaltıp ya da daha düşük kalitede kaydedip deneyin.', 'bad');
+    if (!/^video\/(mp4|webm|quicktime)$/.test(file.type)) return toast('Sadece MP4, WebM ya da MOV video yüklenebilir', 'bad');
+    setVProg(0);
+    try { const ref = await api().uploadVideo(file, setVProg); setF((x) => ({ ...x, vd: ref })); toast('Video yüklendi, kaydetmeyi unutmayın'); }
+    catch (err) { toast('Video yüklenemedi: ' + err.message, 'bad'); }
+    setVProg(null);
+  }
+  async function addCover(e) {
+    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
+    setCoverBusy(true);
+    try { const [big, th] = await Promise.all([imageBlob(file, 1600, 0.85), imageBlob(file, 420, 0.8)]); const ref = await api().uploadImage(big, th); set('vdp', ref); }
+    catch (err) { toast('Resim yüklenemedi: ' + err.message, 'bad'); }
+    setCoverBusy(false);
+  }
   const [dragI, setDragI] = useState(null);
   const dropAt = (to) => { if (dragI == null || dragI === to) return setDragI(null); const a = [...siteFiles]; const [m] = a.splice(dragI, 1); a.splice(to, 0, m); setFiles(a); setDragI(null); };
 
   async function save() {
     if (!f.n.trim()) return toast('Ürün adı boş olamaz', 'bad');
-    if (upN > 0) return toast('Resimler yükleniyor, biraz bekleyin', 'bad');
+    if (upN > 0 || vProg != null || coverBusy) return toast('Yükleme sürüyor, biraz bekleyin', 'bad');
     if (f.k && catalog.some((x) => x.id !== f.id && String(x.k || '').toLowerCase() === String(f.k).trim().toLowerCase())) return toast('Bu stok kodu başka üründe var: ' + f.k, 'bad');
     setBusy(true);
     try {
@@ -153,8 +172,25 @@ export function ProductEdit({ p, copy, onClose }) {
             {(f.img || imgUrl) && <button className="btn sm ghost danger" onClick={removeImg} title="Eski tek resim alanını kaldır (aşağıdaki liste kullanılır)">Eski resmi kaldır</button>}
           </div>
           <input ref={pickRef} type="file" accept="image/*" multiple hidden onChange={addFiles} />
-          <Field label="Video linki" opt hint="Ürün penceresinde resimlerin yanında sitenin kendi oynatıcısıyla oynar (sessiz, döngülü; dokununca durur). Doğrudan video dosyası linki (.mp4) olmalı."><input id="pe-vd" inputMode="url" placeholder="https://…/video.mp4" value={f.vd || ''} onChange={(e) => set('vd', e.target.value.trim() || undefined)} /></Field>
-          {f.vd && <Field label="Video kapak resmi" opt hint="Boşsa videonun ilk saniyelerinden bir kare otomatik kullanılır"><input id="pe-vdp" inputMode="url" placeholder="https://…/kapak.jpg" value={f.vdp || ''} onChange={(e) => set('vdp', e.target.value.trim() || undefined)} /></Field>}
+          <Field label="Video" opt hint="Ürün penceresinde resimlerin yanında oynar (sessiz, döngülü; dokununca durur). Bilgisayardan / telefondan yükleyin (MP4, en çok 95 MB) ya da doğrudan video linki (.mp4) yapıştırın.">
+            {String(f.vd || '').startsWith('r2:') || String(f.vd || '').startsWith('blob:') ? (
+              <div className="up-chip"><Icon n="check" s={15} /><span>Depoya yüklenen video</span><button type="button" className="linkish danger" onClick={() => setF((x) => { const { vd, vdp, ...r } = x; return r; })}>Kaldır</button></div>
+            ) : <div className="input-btn">
+              <input id="pe-vd" inputMode="url" placeholder="https://…/video.mp4" value={f.vd || ''} onChange={(e) => set('vd', e.target.value.trim() || undefined)} />
+              <button type="button" className="btn sm outline" disabled={vProg != null} onClick={() => vidRef.current?.click()}><Icon n="upload" s={15} />{vProg != null ? '%' + Math.round(vProg * 100) : 'Video yükle'}</button>
+            </div>}
+            {vProg != null && <div className="up-bar"><i style={{ width: Math.round(vProg * 100) + '%' }} /></div>}
+            <input ref={vidRef} type="file" accept="video/mp4,video/webm,video/quicktime" hidden onChange={addVideo} />
+          </Field>
+          {f.vd && <Field label="Video kapak resmi" opt hint="Boşsa videonun ilk saniyelerinden bir kare otomatik kullanılır">
+            {String(f.vdp || '').startsWith('r2:') || String(f.vdp || '').startsWith('data:') ? (
+              <div className="up-chip"><img src={picUrl(f.vdp, null, false)} alt="" /><span>Yüklenen kapak resmi</span><button type="button" className="linkish danger" onClick={() => set('vdp', undefined)}>Kaldır</button></div>
+            ) : <div className="input-btn">
+              <input id="pe-vdp" inputMode="url" placeholder="https://…/kapak.jpg" value={f.vdp || ''} onChange={(e) => set('vdp', e.target.value.trim() || undefined)} />
+              <button type="button" className="btn sm outline" disabled={coverBusy} onClick={() => coverRef.current?.click()}><Icon n="upload" s={15} />{coverBusy ? 'Yükleniyor…' : 'Resim yükle'}</button>
+            </div>}
+            <input ref={coverRef} type="file" accept="image/*" hidden onChange={addCover} />
+          </Field>}
         </div>
         <div className="form-col">
           <Field label="Ürün adı"><textarea id="pe-name" rows="2" value={f.n} onChange={(e) => set('n', e.target.value)} /></Field>

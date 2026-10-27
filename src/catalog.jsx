@@ -776,7 +776,7 @@ export function Gallery({ p }) {
   const thumbs = imageList(p, S, 'sm');
   // kaydırma sayfaları: elle yüklenen resim (fs), siteden resimler; video varsa ikinci sırada
   const slides = (p.img ? [{ t: 'fs' }] : []).concat(urls.map((u, z) => ({ t: 'img', u, z, th: thumbs[z] || u })));
-  if (p.vd) slides.splice(Math.min(1, slides.length), 0, { t: 'vid', u: p.vd, poster: p.vdp || '' });
+  if (p.vd) slides.splice(Math.min(1, slides.length), 0, { t: 'vid', u: p.vd, poster: p.vdp ? picUrl(p.vdp, null, true) : '' });
   const [i, setI] = useState(0);
   const [bad, setBad] = useState({});
   const [zoom, setZoom] = useState(null);
@@ -837,6 +837,7 @@ export function Gallery({ p }) {
 const frameCache = new Map();
 // r2.dev adresleri bazı internet sağlayıcılarında açılmıyor → bekçi (workers.dev) üzerinden aktarılır
 export function mediaUrl(u) {
+  if (String(u || '').startsWith('r2:')) return picUrl(u, null, true); // depoya yüklenen video / resim
   const m = /^https?:\/\/pub-([0-9a-f]{32})\.r2\.dev\/(.+)$/.exec(String(u || '').trim());
   return m && window.WATCH_URL ? `${window.WATCH_URL}/r2/${m[1]}/${m[2]}` : u;
 }

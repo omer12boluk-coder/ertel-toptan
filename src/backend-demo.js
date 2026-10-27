@@ -92,6 +92,7 @@ export class DemoBackend {
 
   async loadCatalog() { return this.db.catalog; }
   async markDeleted() {}
+  async uploadVideo(file, onProg) { onProg?.(1); return URL.createObjectURL(file); } // demo: sadece bu oturumda
   async uploadImage(big) { return await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(big); }); } // demo: resim cihazda kalır
   async saveCatalog(items) { this.db.catalog = items.map((p) => { const o = {}; for (const k in p) if (!k.startsWith('_')) o[k] = p[k]; return o; }); this.db.catalogVersion = now(); if (!ls.set(KEY, this.db)) console.warn('localStorage dolu'); this.emit(); }
   async getDesc(id) {

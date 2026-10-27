@@ -25,6 +25,7 @@ export default {
       }
       // Yönetici resim yükleme (Ürünü düzenle > +) ve yüklenen / kopyalanan resimleri gösterme (Cloudflare R2 deposu)
       if (url.pathname === '/up' && req.method === 'POST') return json(await upImage(req, env));
+      if (url.pathname === '/upv' && req.method === 'POST') return json(await upVideo(req, env));
       if (url.pathname.startsWith('/p/') && (req.method === 'GET' || req.method === 'HEAD')) return await servePic(req, env, url, ctx, cors);
       // Ürün resimleri için aracı: site CDN'i başka siteden resim okumaya izin vermediği için liste resmini çizerken buradan alınır
       if (url.pathname === '/img') {
@@ -497,10 +498,41 @@ async function upImage(req, env) {
   await env.R2.put(key.replace(/\.(\w+)$/, '_t.$1'), th && typeof th !== 'string' ? await th.arrayBuffer() : bigBuf, meta);
   return { ok: true, key };
 }
+// POST /upv (gövde = video dosyasının kendisi, en çok ~95 MB; ücretsiz planda istek sınırı 100 MB) → R2 up/<yıl+ay>/<rastgele>.<uzantı>
+async function upVideo(req, env) {
+  if (!env.R2) return { ok: false, error: 'Depo bağlı değil' };
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''); const uid = tokUid(tok);
+  if (!uid) return { ok: false, error: 'Oturum yok' };
+  const u = await fsAuth('users/' + uid, tok);
+  if (u?.role !== 'admin') return { ok: false, error: 'Yönetici oturumu doğrulanamadı' };
+  const type = (req.headers.get('Content-Type') || '').split(';')[0];
+  const ext = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' }[type];
+  if (!ext) return { ok: false, error: 'Sadece MP4, WebM ya da MOV video' };
+  const len = Number(req.headers.get('Content-Length') || 0);
+  if (!len) return { ok: false, error: 'Dosya boyutu bilinmiyor' };
+  if (len > 95e6) return { ok: false, error: 'Video 95 MB\'tan büyük olamaz' };
+  const d = new Date(); const rnd = crypto.randomUUID().replace(/-/g, '').slice(0, 14);
+  const key = `up/${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}/${rnd}.${ext}`;
+  await env.R2.put(key, req.body, { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000, immutable' } });
+  return { ok: true, key };
+}
 // GET /p/<anahtar>: depodaki resim (sadece up/ ve platin/), tarayıcıda 1 yıl önbellek
 async function servePic(req, env, url, ctx, cors) {
   const key = decodeURIComponent(url.pathname.slice(3));
   if (!env.R2 || !/^(up|platin)\//.test(key) || key.includes('_manifest') || key.split('/').some((x) => x === '..' || x === '.')) return new Response('yok', { status: 404, headers: cors });
+  // video: iPhone parça parça ister (Range) → 206
+  const rg = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get('Range') || '');
+  if (rg || /\.(mp4|webm|mov)$/i.test(key)) {
+    const head = await env.R2.head(key); if (!head) return new Response('yok', { status: 404, headers: cors });
+    const size = head.size; let a = 0, b = size - 1;
+    if (rg) { if (rg[1] === '') { a = Math.max(0, size - Number(rg[2])); } else { a = Number(rg[1]); if (rg[2] !== '') b = Math.min(size - 1, Number(rg[2])); } }
+    if (a > b || a >= size) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}`, ...cors } });
+    const h = { 'Content-Type': head.httpMetadata?.contentType || 'video/mp4', 'Accept-Ranges': 'bytes', 'Content-Length': String(b - a + 1), 'Cache-Control': 'public, max-age=31536000, immutable', ETag: head.httpEtag, 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges', ...cors };
+    if (rg) h['Content-Range'] = `bytes ${a}-${b}/${size}`;
+    if (req.method === 'HEAD') return new Response(null, { status: rg ? 206 : 200, headers: h });
+    const o = await env.R2.get(key, { range: { offset: a, length: b - a + 1 } });
+    return new Response(o.body, { status: rg ? 206 : 200, headers: h });
+  }
   const ck = new Request(url.origin + url.pathname);
   try { const hit = await caches.default.match(ck); if (hit) return hit; } catch {}
   const o = await env.R2.get(key);

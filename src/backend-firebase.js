@@ -289,6 +289,19 @@ export class FirebaseBackend {
     if (!j.ok) throw new Error(j.error || 'Yükleme başarısız (' + r.status + ')');
     return 'r2:' + j.key;
   }
+  // Video: dosyanın kendisi gönderilir (ilerleme yüzdesiyle) → 'r2:<anahtar>'
+  async uploadVideo(file, onProg) {
+    const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı, yeniden giriş yapın');
+    const j = await new Promise((res, rej) => {
+      const x = new XMLHttpRequest(); x.open('POST', String(window.WATCH_URL || '').replace(/\/$/, '') + '/upv');
+      x.setRequestHeader('Authorization', 'Bearer ' + tok); x.setRequestHeader('Content-Type', file.type);
+      x.upload.onprogress = (e) => e.lengthComputable && onProg?.(e.loaded / e.total);
+      x.onload = () => { try { res(JSON.parse(x.responseText)); } catch { rej(new Error('Yükleme başarısız (' + x.status + ')')); } };
+      x.onerror = () => rej(new Error('Bağlantı hatası')); x.send(file);
+    });
+    if (!j.ok) throw new Error(j.error || 'Yükleme başarısız');
+    return 'r2:' + j.key;
+  }
   async idToken() { try { return await this.auth.currentUser?.getIdToken(); } catch { return null; } }
   async _pingReq(id, msg) { const token = await this.idToken(); if (token) pingWatch('/notify-req', { id, token, msg }); }
   watchRequest(id, cb) {

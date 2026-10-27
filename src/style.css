@@ -3694,3 +3694,8 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
 .img-add small { font-size: 11px; font-weight: 600; }
 .img-add:hover { background: color-mix(in oklab, var(--accent) 10%, var(--surface)); }
 .img-cell.main { margin: 0; padding: 0; max-width: none; }
+.up-chip { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: 14px; font-weight: 600; }
+.up-chip > .ic { color: #1f9d5b; } .up-chip img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
+.up-chip button { margin-left: auto; }
+.up-bar { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
+.up-bar i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
