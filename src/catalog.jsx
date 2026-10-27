@@ -352,11 +352,13 @@ export function Catalog({ admin }) {
     const toks = norm(q).split(/\s+/).filter(Boolean);
     const kq = admin ? norm(qk).replace(/\s+/g, '') : '';
     const useTags = admin || S.catalog.searchTags;
+    // yönetici: ad kutusu stok koduna bakmaz (stok kodu ayrı kutuda); mağaza/bayi tek kutuda ikisini de arar
+    const hay = admin ? nameHay : (p) => p._s;
     const [lo, hi] = PR[price] || [0, Infinity];
     let r = all.filter((p) => (!scoped || cat == null || pcats.get(p.id)?.has(cat)) && (!scoped || !brand || p.b === brand) && (!stockOnly || p.s > 0)
       && (!price || (p.r >= lo && p.r < hi)) && (!newOnly || newest.has(p.id)) && (!imgOnly || p.pi || p.img) && (!favOnly || favSet.has(p.id))
-      && (!kq || norm(p.k || '').replace(/\s+/g, '').includes(kq)) && toks.every((t) => p._s.includes(t) || (useTags && p._t.includes(t))));
-    if (toks.length) r = [...r].sort((a, b) => toks.filter((t) => b._s.includes(t)).length - toks.filter((t) => a._s.includes(t)).length);
+      && (!kq || norm(p.k || '').replace(/\s+/g, '').includes(kq)) && toks.every((t) => hay(p).includes(t) || (useTags && p._t.includes(t))));
+    if (toks.length) r = [...r].sort((a, b) => toks.filter((t) => hay(b).includes(t)).length - toks.filter((t) => hay(a).includes(t)).length);
     if (admin && adminFilter === 'inactive') r = r.filter((p) => !p.a);
     if (admin && adminFilter === 'active') r = r.filter((p) => p.a);
     if (admin && adminFilter === 'instock') r = r.filter((p) => p.s > 0);
@@ -1133,6 +1135,8 @@ async function clearChecks() {
 // Hızlı kayıt: ekran HEMEN değişir (beklemeden), kayıt arkada yapılır. Art arda birkaç değişiklik tek kayıtta birleşir,
 // kayıtlar sırayla gider (biri ötekini ezmesin). Hata olursa katalog sunucudan yeniden okunur.
 let qsT = 0, qsChain = Promise.resolve(), qsMsgs = [];
+const NH = new WeakMap(); // ürün → aranacak ad + marka (stok kodu hariç)
+function nameHay(p) { let v = NH.get(p); if (v == null) NH.set(p, (v = norm(p.n + ' ' + (p.b || '')))); return v; }
 function quickSave(p, patch, msg) {
   const list = store.s.catalog.map(({ _s, _t, ...x }) => {
     if (x.id !== p.id) return x;
