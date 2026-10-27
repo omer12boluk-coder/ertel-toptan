@@ -281,20 +281,31 @@ export class FirebaseBackend {
   }
   // oturum anahtarı (bekçi bununla kim olduğunu doğrular)
   // Ürün resmini Cloudflare deposuna yükle (bekçi /up, yönetici oturumuyla) → 'r2:<anahtar>'
-  async uploadImage(big, th) {
+  // Aynı dosya depoda var mı (parmak izi) → 'r2:<anahtar>' ya da null
+  async findUpload(h) {
+    try { const j = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/up/has?h=' + h).then((r) => r.json()), 15000); return j.key ? 'r2:' + j.key : null; } catch { return null; }
+  }
+  // Depodaki yüklemeler (Ürünü düzenle > Depodan seç): [{ref, v, t, s}], cursor
+  async listUploads(cursor) {
+    const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı');
+    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/up/list' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''), { headers: { Authorization: 'Bearer ' + tok } }), 30000);
+    const j = await r.json().catch(() => ({})); if (!j.ok) throw new Error(j.error || 'Depo okunamadı');
+    return { items: j.items.map((x) => ({ ref: 'r2:' + x.k, v: x.v, t: x.t, s: x.s })), cursor: j.cursor };
+  }
+  async uploadImage(big, th, h) {
     const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı, yeniden giriş yapın');
-    const fd = new FormData(); fd.append('big', big, 'b'); if (th) fd.append('th', th, 't');
+    const fd = new FormData(); fd.append('big', big, 'b'); if (th) fd.append('th', th, 't'); if (h) fd.append('h', h);
     const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/up', { method: 'POST', headers: { Authorization: 'Bearer ' + tok }, body: fd }), 60000);
     const j = await r.json().catch(() => ({}));
     if (!j.ok) throw new Error(j.error || 'Yükleme başarısız (' + r.status + ')');
     return 'r2:' + j.key;
   }
   // Video: dosyanın kendisi gönderilir (ilerleme yüzdesiyle) → 'r2:<anahtar>'
-  async uploadVideo(file, onProg) {
+  async uploadVideo(file, onProg, h) {
     const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı, yeniden giriş yapın');
     const j = await new Promise((res, rej) => {
       const x = new XMLHttpRequest(); x.open('POST', String(window.WATCH_URL || '').replace(/\/$/, '') + '/upv');
-      x.setRequestHeader('Authorization', 'Bearer ' + tok); x.setRequestHeader('Content-Type', file.type);
+      x.setRequestHeader('Authorization', 'Bearer ' + tok); x.setRequestHeader('Content-Type', file.type); if (h) x.setRequestHeader('X-Hash', h);
       x.upload.onprogress = (e) => e.lengthComputable && onProg?.(e.loaded / e.total);
       x.onload = () => { try { res(JSON.parse(x.responseText)); } catch { rej(new Error('Yükleme başarısız (' + x.status + ')')); } };
       x.onerror = () => rej(new Error('Bağlantı hatası')); x.send(file);

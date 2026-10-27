@@ -14,7 +14,7 @@ export default {
   async scheduled(event, env, ctx) { ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message))); },
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
-    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' };
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hash' };
     const json = (o, st = 200, extra = {}) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     try {
@@ -26,6 +26,8 @@ export default {
       // Yönetici resim yükleme (Ürünü düzenle > +) ve yüklenen / kopyalanan resimleri gösterme (Cloudflare R2 deposu)
       if (url.pathname === '/up' && req.method === 'POST') return json(await upImage(req, env));
       if (url.pathname === '/upv' && req.method === 'POST') return json(await upVideo(req, env));
+      if (url.pathname === '/up/has' && req.method === 'GET') return json(await upHas(env, url));
+      if (url.pathname === '/up/list' && req.method === 'GET') return json(await upList(req, env, url));
       if (url.pathname.startsWith('/p/') && (req.method === 'GET' || req.method === 'HEAD')) return await servePic(req, env, url, ctx, cors);
       // Ürün resimleri için aracı: site CDN'i başka siteden resim okumaya izin vermediği için liste resmini çizerken buradan alınır
       if (url.pathname === '/img') {
@@ -480,6 +482,28 @@ async function notifyReq(env, b) {
 // R2'ye yazma kapısı (resim taşıma işi, tools/r2-mirror.mjs): PUT/GET /r2obj/<anahtar>, başlık X-Key = sha256('r2:' + TELEGRAM_TOKEN).
 // Sadece platin/ klasörü. Cloudflare REST API toplu yüklemede koruma sayfası (403) döndürdüğü için bekçinin kendi R2 bağlantısı kullanılır.
 // POST /up (FormData big + th, Authorization: Bearer <Firebase oturum anahtarı>) → R2 up/<yıl+ay>/<rastgele>.<uzantı> (+ _t küçük resim)
+async function adminOf(req) {
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''); const uid = tokUid(tok);
+  if (!uid) return 'Oturum yok';
+  const u = await fsAuth('users/' + uid, tok);
+  return u?.role === 'admin' ? null : 'Yönetici oturumu doğrulanamadı';
+}
+// Dosyanın parmak izi (h, istemci hesaplar) varsa anahtar up/h/<h>.<uzantı>: aynı dosya ikinci kez yüklenmez
+const hashKey = (h, ext) => (/^[0-9a-f]{16,64}$/.test(h || '') ? `up/h/${h}.${ext}` : null);
+async function findByHash(env, h) {
+  if (!/^[0-9a-f]{16,64}$/.test(h || '')) return null;
+  const l = await env.R2.list({ prefix: `up/h/${h}.`, limit: 2 });
+  return l.objects.find((o) => !o.key.includes('_t.'))?.key || null;
+}
+// GET /up/has?h=… → {key} (depoda varsa) · GET /up/list?cursor=… (yönetici) → yüklenen resim / videolar, yeni üstte
+async function upHas(env, url) { return { ok: true, key: await findByHash(env, url.searchParams.get('h')) }; }
+async function upList(req, env, url) {
+  const err = await adminOf(req); if (err) return { ok: false, error: err };
+  const l = await env.R2.list({ prefix: 'up/', limit: 1000, cursor: url.searchParams.get('cursor') || undefined, include: ['httpMetadata'] });
+  const items = l.objects.filter((o) => !/_t\.\w+$/.test(o.key)).map((o) => ({ k: o.key, s: o.size, t: +new Date(o.uploaded), v: /^video\//.test(o.httpMetadata?.contentType || '') || /\.(mp4|webm|mov)$/i.test(o.key) }));
+  items.sort((a, b) => b.t - a.t);
+  return { ok: true, items, cursor: l.truncated ? l.cursor : null };
+}
 async function upImage(req, env) {
   if (!env.R2) return { ok: false, error: 'Depo bağlı değil' };
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''); const uid = tokUid(tok);
@@ -490,8 +514,9 @@ async function upImage(req, env) {
   if (!big || typeof big === 'string') return { ok: false, error: 'Dosya yok' };
   if (big.size > 6e6 || (th && typeof th !== 'string' && th.size > 2e6)) return { ok: false, error: 'Dosya çok büyük' };
   const [type, ext] = big.type === 'image/jpeg' ? ['image/jpeg', 'jpg'] : big.type === 'image/png' ? ['image/png', 'png'] : ['image/webp', 'webp'];
+  const h = String(fd.get('h') || ''); const old = await findByHash(env, h); if (old) return { ok: true, key: old, dup: true };
   const d = new Date(); const rnd = crypto.randomUUID().replace(/-/g, '').slice(0, 14);
-  const key = `up/${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}/${rnd}.${ext}`;
+  const key = hashKey(h, ext) || `up/${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}/${rnd}.${ext}`;
   const meta = { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000, immutable' } };
   const bigBuf = await big.arrayBuffer();
   await env.R2.put(key, bigBuf, meta);
@@ -512,7 +537,8 @@ async function upVideo(req, env) {
   if (!len) return { ok: false, error: 'Dosya boyutu bilinmiyor' };
   if (len > 95e6) return { ok: false, error: 'Video 95 MB\'tan büyük olamaz' };
   const d = new Date(); const rnd = crypto.randomUUID().replace(/-/g, '').slice(0, 14);
-  const key = `up/${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}/${rnd}.${ext}`;
+  const h = req.headers.get('X-Hash') || ''; const old = await findByHash(env, h); if (old) return { ok: true, key: old, dup: true };
+  const key = hashKey(h, ext) || `up/${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}/${rnd}.${ext}`;
   await env.R2.put(key, req.body, { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000, immutable' } });
   return { ok: true, key };
 }

@@ -92,8 +92,11 @@ export class DemoBackend {
 
   async loadCatalog() { return this.db.catalog; }
   async markDeleted() {}
-  async uploadVideo(file, onProg) { onProg?.(1); return URL.createObjectURL(file); } // demo: sadece bu oturumda
-  async uploadImage(big) { return await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(big); }); } // demo: resim cihazda kalır
+  // demo: yüklemeler bu oturumda bellekte (resim data URL, video blob URL)
+  async uploadVideo(file, onProg, h) { onProg?.(1); const ref = URL.createObjectURL(file); (this._ups = this._ups || []).unshift({ ref, v: true, t: Date.now(), s: file.size, h }); return ref; }
+  async uploadImage(big, th, h) { const ref = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(big); }); (this._ups = this._ups || []).unshift({ ref, v: false, t: Date.now(), s: big.size, h }); return ref; }
+  async findUpload(h) { return (this._ups || []).find((x) => x.h && x.h === h)?.ref || null; }
+  async listUploads() { return { items: this._ups || [], cursor: null }; }
   async saveCatalog(items) { this.db.catalog = items.map((p) => { const o = {}; for (const k in p) if (!k.startsWith('_')) o[k] = p[k]; return o; }); this.db.catalogVersion = now(); if (!ls.set(KEY, this.db)) console.warn('localStorage dolu'); this.emit(); }
   async getDesc(id) {
     const e = this.db.descEdits || {};

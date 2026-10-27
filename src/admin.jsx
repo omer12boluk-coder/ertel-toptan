@@ -13,6 +13,7 @@ import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
 import { imageList, CardPreview } from './catalog.jsx';
+import { MediaEditor } from './media.jsx';
 import { rateLabel } from './listsheet.jsx';
 import { syncNow } from './watch.js';
 import { Members } from './orders.jsx';
@@ -62,53 +63,17 @@ export function ProductEdit({ p, copy, onClose }) {
   const [newImg, setNewImg] = useState('');
   const [pcOk, setPcOk] = useState(false);
   useEffect(() => { if (!isNew) api().getDesc(f.id).then((h) => { setDesc(h || ''); setDesc0(h || ''); }); else if (copy) api().getDesc(copy.id).then((h) => setDesc(h || '')).catch(() => setDesc('')); else setDesc(''); }, []);
-  // Resim listesi: ilki ana resim. Her öğe: site dosya adı (PlatinMarket), 'r2:<anahtar>' (depoya yüklenen) ya da tam adres
-  const siteFiles = [f.pi, ...(f.im || [])].filter(Boolean);
-  const setFiles = (arr) => setF((x) => ({ ...x, pi: arr[0] || '', im: arr.slice(1), ie: 1 })); // ie: eşitleme bu listeye dokunmaz
-  const fileOf = (v) => v.trim().split('?')[0].split('/').pop().replace(/^\d+X-/, '');
-  // yapıştırılan: platin adresi → dosya adı; başka tam adres → olduğu gibi; çıplak ad → site dosyası
-  const refOf = (v) => { const t = v.trim(); return /platincdn\.com\/3519\/pictures\//.test(t) || !/^(https?:)?\/\//.test(t) ? fileOf(t) : t; };
-  const kindOf = (x) => (x.startsWith('r2:') ? 'Depo' : x.startsWith('data:') ? 'Cihaz' : /^(https?:)?\/\//.test(x) ? 'Adres' : 'Site');
-  const [upN, setUpN] = useState(0);
-  const pickRef = useRef(null);
-  async function addFiles(e) {
-    const files = [...(e.target.files || [])].filter((x) => x.type.startsWith('image/')); e.target.value = '';
-    if (!files.length) return;
-    setUpN((n) => n + files.length);
-    for (const file of files) {
-      try {
-        const [big, th] = await Promise.all([imageBlob(file, 1600, 0.85), imageBlob(file, 420, 0.8)]);
-        const ref = await api().uploadImage(big, th);
-        setF((x) => { const arr = [x.pi, ...(x.im || [])].filter(Boolean); arr.push(ref); return { ...x, pi: arr[0], im: arr.slice(1), ie: 1 }; });
-      } catch (err) { toast(file.name + ': ' + err.message, 'bad'); }
-      setUpN((n) => n - 1);
-    }
-  }
-  const [vProg, setVProg] = useState(null); // video yükleme ilerlemesi 0-1
-  const [coverBusy, setCoverBusy] = useState(false);
-  const vidRef = useRef(null), coverRef = useRef(null);
-  async function addVideo(e) {
-    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
-    if (file.size > 95e6) return toast('Video 95 MB\'tan büyük olamaz. Telefonda kısaltıp ya da daha düşük kalitede kaydedip deneyin.', 'bad');
-    if (!/^video\/(mp4|webm|quicktime)$/.test(file.type)) return toast('Sadece MP4, WebM ya da MOV video yüklenebilir', 'bad');
-    setVProg(0);
-    try { const ref = await api().uploadVideo(file, setVProg); setF((x) => ({ ...x, vd: ref })); toast('Video yüklendi, kaydetmeyi unutmayın'); }
-    catch (err) { toast('Video yüklenemedi: ' + err.message, 'bad'); }
-    setVProg(null);
-  }
-  async function addCover(e) {
-    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
-    setCoverBusy(true);
-    try { const [big, th] = await Promise.all([imageBlob(file, 1600, 0.85), imageBlob(file, 420, 0.8)]); const ref = await api().uploadImage(big, th); set('vdp', ref); }
-    catch (err) { toast('Resim yüklenemedi: ' + err.message, 'bad'); }
-    setCoverBusy(false);
-  }
-  const [dragI, setDragI] = useState(null);
-  const dropAt = (to) => { if (dragI == null || dragI === to) return setDragI(null); const a = [...siteFiles]; const [m] = a.splice(dragI, 1); a.splice(to, 0, m); setFiles(a); setDragI(null); };
-
+  // Resimler + videolar tek sıra (MediaEditor): pi = kapak (resim), im = geri kalanlar ('v:' video). Eski vd/vdp bu sıraya katılır.
+  const media = mediaOf(f);
+  // pencere boş yere basınca / Esc ile kapanmaz (sticky); × ya da Vazgeç'te kaydedilmemiş değişiklik varsa sorulur
+  const f0 = useRef(null); if (f0.current == null) f0.current = JSON.stringify(f);
+  const [askClose, setAskClose] = useState(false);
+  const tryClose = () => { if (JSON.stringify(f) !== f0.current || (desc != null && desc !== desc0 && !isNew)) setAskClose(true); else onClose(); };
+  const setMedia = (arr) => setF((x) => { const { vd, vdp, ...r } = x; return { ...r, pi: arr[0] || '', im: arr.slice(1), ie: 1 }; });
+  const mediaOpen = useRef(null);
   async function save() {
     if (!f.n.trim()) return toast('Ürün adı boş olamaz', 'bad');
-    if (upN > 0 || vProg != null || coverBusy) return toast('Yükleme sürüyor, biraz bekleyin', 'bad');
+    if (document.querySelector('.md-t.up')) return toast('Yükleme sürüyor, biraz bekleyin', 'bad');
     if (f.k && catalog.some((x) => x.id !== f.id && String(x.k || '').toLowerCase() === String(f.k).trim().toLowerCase())) return toast('Bu stok kodu başka üründe var: ' + f.k, 'bad');
     setBusy(true);
     try {
@@ -151,11 +116,12 @@ export function ProductEdit({ p, copy, onClose }) {
   }
 
   return (
-    <Sheet wide title={copy ? 'Kopyadan yeni ürün' : isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={copy ? `“${copy.n}” kopyalandı · yeni stok kodu ${f.k}` : isNew ? '' : `#${f.id} · ${f.k}`} onClose={onClose} footer={<>
+    <Sheet wide title={copy ? 'Kopyadan yeni ürün' : isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={copy ? `“${copy.n}” kopyalandı · yeni stok kodu ${f.k}` : isNew ? '' : `#${f.id} · ${f.k}`} sticky onClose={tryClose} footer={<>
       {!isNew && <button className="btn ghost danger pe-del" onClick={() => setDelC(true)}><Icon n="trash" s={16} />Ürünü sil</button>}
-      <button className="btn ghost" onClick={onClose}>Vazgeç</button>
+      <button className="btn ghost" onClick={tryClose}>Vazgeç</button>
       <button className="btn primary" onClick={save} disabled={busy}><Icon n="check" s={16} />Kaydet</button>
     </>}>
+      {askClose && <Confirm title="Değişiklikler kaydedilmedi" text="Yaptığınız değişiklikler (yüklenen resim / videolar dahil) bu ürüne kaydedilmeyecek. Çıkılsın mı?" okLabel="Kaydetmeden çık" tone="danger" onOk={onClose} onClose={() => setAskClose(false)} />}
       {delC && <Confirm title="Ürün silinsin mi?" text={delText(p)} okLabel="Sil" tone="danger" onOk={() => removeProduct(p).then((ok) => ok && onClose())} onClose={() => setDelC(false)} />}
       {f.pc && (
         <div className="banner warn">
@@ -166,31 +132,9 @@ export function ProductEdit({ p, copy, onClose }) {
       )}
       <div className="form-grid">
         <div className="img-edit">
-          <Thumb p={{ ...f, img: f.img === 'fs' ? 'fs' : imgUrl || undefined }} size="lg" />
-          <div className="img-btns">
-            <button type="button" className="btn sm outline" onClick={() => pickRef.current?.click()} disabled={upN > 0}><Icon n="plus" s={15} />{upN > 0 ? `Yükleniyor (${upN})…` : 'Resim ekle'}</button>
-            {(f.img || imgUrl) && <button className="btn sm ghost danger" onClick={removeImg} title="Eski tek resim alanını kaldır (aşağıdaki liste kullanılır)">Eski resmi kaldır</button>}
-          </div>
-          <input ref={pickRef} type="file" accept="image/*" multiple hidden onChange={addFiles} />
-          <Field label="Video" opt hint="Ürün penceresinde resimlerin yanında oynar (sessiz, döngülü; dokununca durur). Bilgisayardan / telefondan yükleyin (MP4, en çok 95 MB) ya da doğrudan video linki (.mp4) yapıştırın.">
-            {String(f.vd || '').startsWith('r2:') || String(f.vd || '').startsWith('blob:') ? (
-              <div className="up-chip"><Icon n="check" s={15} /><span>Depoya yüklenen video</span><button type="button" className="linkish danger" onClick={() => setF((x) => { const { vd, vdp, ...r } = x; return r; })}>Kaldır</button></div>
-            ) : <div className="input-btn">
-              <input id="pe-vd" inputMode="url" placeholder="https://…/video.mp4" value={f.vd || ''} onChange={(e) => set('vd', e.target.value.trim() || undefined)} />
-              <button type="button" className="btn sm outline" disabled={vProg != null} onClick={() => vidRef.current?.click()}><Icon n="upload" s={15} />{vProg != null ? '%' + Math.round(vProg * 100) : 'Video yükle'}</button>
-            </div>}
-            {vProg != null && <div className="up-bar"><i style={{ width: Math.round(vProg * 100) + '%' }} /></div>}
-            <input ref={vidRef} type="file" accept="video/mp4,video/webm,video/quicktime" hidden onChange={addVideo} />
-          </Field>
-          {f.vd && <Field label="Video kapak resmi" opt hint="Boşsa videonun ilk saniyelerinden bir kare otomatik kullanılır">
-            {String(f.vdp || '').startsWith('r2:') || String(f.vdp || '').startsWith('data:') ? (
-              <div className="up-chip"><img src={picUrl(f.vdp, null, false)} alt="" /><span>Yüklenen kapak resmi</span><button type="button" className="linkish danger" onClick={() => set('vdp', undefined)}>Kaldır</button></div>
-            ) : <div className="input-btn">
-              <input id="pe-vdp" inputMode="url" placeholder="https://…/kapak.jpg" value={f.vdp || ''} onChange={(e) => set('vdp', e.target.value.trim() || undefined)} />
-              <button type="button" className="btn sm outline" disabled={coverBusy} onClick={() => coverRef.current?.click()}><Icon n="upload" s={15} />{coverBusy ? 'Yükleniyor…' : 'Resim yükle'}</button>
-            </div>}
-            <input ref={coverRef} type="file" accept="image/*" hidden onChange={addCover} />
-          </Field>}
+          <Thumb p={{ ...f, pi: media.find((x) => !isVid(x)) || '', img: f.img === 'fs' ? 'fs' : imgUrl || undefined }} size="lg" />
+          {!media.some((x) => !isVid(x)) && !f.img && <button type="button" className="pe-cover-add" onClick={() => mediaOpen.current?.()}><Icon n="plus" s={16} />Kapak resmi ekle</button>}
+          {(f.img || imgUrl) && <div className="img-btns"><button className="btn sm ghost danger" onClick={removeImg} title="Eski tek resim alanını kaldır (Resimler listesi kullanılır)">Eski resmi kaldır</button></div>}
         </div>
         <div className="form-col">
           <Field label="Ürün adı"><textarea id="pe-name" rows="2" value={f.n} onChange={(e) => set('n', e.target.value)} /></Field>
@@ -240,31 +184,10 @@ export function ProductEdit({ p, copy, onClose }) {
 
       <section className="pe-sec">
         <div className="pe-sec-h">
-          <h3>Resimler <span className="muted">· {siteFiles.length}</span></h3>
+          <h3>Resimler ve videolar <span className="muted">· {media.length}</span></h3>
           {f.u && <a className="link" href={S.catalog.siteUrl + f.u} target="_blank" rel="noopener">Sitede aç ↗</a>}
         </div>
-        <p className="fine">İlk resim ana resimdir; sürükleyerek sıralayın. <b>+</b> ile bilgisayardan / telefondan seçtiğiniz resimler kendi depomuza yüklenir. Aşağıya resim adresi de yapıştırabilirsiniz.</p>
-        {(
-          <div className="img-strip">
-            {siteFiles.map((x, k) => (
-              <div key={x + k} className={'img-cell' + (k === 0 ? ' main' : '') + (dragI === k ? ' drag' : '')} draggable onDragStart={() => setDragI(k)} onDragOver={(e) => e.preventDefault()} onDrop={() => dropAt(k)} onDragEnd={() => setDragI(null)} title={x}>
-                <img src={picUrl(x, S.catalog.imageThumb, false) || ''} alt="" loading="lazy" draggable={false} />
-                <span className="img-kind">{kindOf(x)}</span>
-                <span className="img-cell-tools">
-                  {k > 0 && <button type="button" onClick={() => { const a = [...siteFiles]; a.unshift(...a.splice(k, 1)); setFiles(a); }}>Ana resim</button>}
-                  <button type="button" aria-label="Resmi kaldır" onClick={() => setFiles(siteFiles.filter((_, j) => j !== k))}><Icon n="x" s={13} /></button>
-                </span>
-                {k === 0 && <span className="img-main-badge">Ana</span>}
-              </div>
-            ))}
-            {Array.from({ length: upN }, (_, i) => <div key={'u' + i} className="img-cell up"><span className="qs-spin" /></div>)}
-            <button type="button" className="img-cell img-add" onClick={() => pickRef.current?.click()} aria-label="Resim ekle" title="Bilgisayardan / telefondan resim ekle"><Icon n="plus" s={22} /><small>Resim ekle</small></button>
-          </div>
-        )}
-        <div className="input-btn">
-          <input id="pe-newimg" placeholder="Resim adresi (https://…) ya da sitedeki dosya adı" value={newImg} onChange={(e) => setNewImg(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newImg.trim()) { e.preventDefault(); setFiles([...siteFiles, refOf(newImg)]); setNewImg(''); } }} />
-          <button type="button" className="btn sm outline" disabled={!newImg.trim()} onClick={() => { setFiles([...siteFiles, refOf(newImg)]); setNewImg(''); }}>Ekle</button>
-        </div>
+        <MediaEditor list={media} onChange={setMedia} S={S} openRef={mediaOpen} />
       </section>
 
       <section className="pe-sec">

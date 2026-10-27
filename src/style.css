@@ -3767,3 +3767,41 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
   .plist > .atr > .tc > .ec:not(.on):hover { background: none; box-shadow: none; }
   .plist > .atr > .tc > .ec { cursor: text; }
 }
+/* ===== Ürünü düzenle > Resimler ve videolar (MediaEditor, media.jsx) ===== */
+.md-grid { position: relative; display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 8px; }
+.md-t { position: relative; flex: none; width: 104px; height: 104px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #fff; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.md-t img, .md-t video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; }
+.md-t.vid { background: #0f172a; } .md-t.vid video { object-fit: cover; opacity: .9; }
+.md-t.cover { border: 2px solid var(--accent); }
+.md-t.drag { z-index: 20; cursor: grabbing; box-shadow: 0 18px 40px -12px rgb(15 23 42 / .45); border-color: var(--accent); }
+.md-grid.dragging .md-t:not(.drag) { opacity: .92; }
+.md-play { position: absolute; inset: 0; margin: auto; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgb(255 255 255 / .92); color: #0f172a; pointer-events: none; box-shadow: 0 4px 12px rgb(0 0 0 / .25); }
+.md-cover, .md-kind { position: absolute; top: 5px; left: 5px; padding: 2px 7px; border-radius: 6px; font-size: 10.5px; font-weight: 700; pointer-events: none; }
+.md-cover { background: var(--accent); color: #fff; }
+.md-kind { background: rgb(255 255 255 / .92); color: var(--muted); box-shadow: 0 0 0 1px var(--line); }
+.md-tools { position: absolute; inset: auto 0 0; display: flex; align-items: center; gap: 4px; padding: 4px; background: linear-gradient(transparent, rgb(0 0 0 / .55)); opacity: 0; transition: opacity .15s; }
+.md-t:hover .md-tools, .md-t:focus-within .md-tools { opacity: 1; }
+@media (hover: none) { .md-tools { opacity: 1; } }
+.md-tools button { color: #fff; font: 700 11px/1 var(--f-body); padding: 4px 6px; border-radius: 6px; background: rgb(0 0 0 / .35); border: 0; cursor: pointer; }
+.md-tools .md-x { margin-left: auto; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; }
+.md-t.up { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: var(--surface-2); color: var(--accent); cursor: default; }
+.md-t.up small { font-size: 11px; font-weight: 700; }
+.md-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); transition: width .2s; }
+.md-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 2px dashed color-mix(in oklab, var(--accent) 45%, var(--line)); background: color-mix(in oklab, var(--accent) 5%, var(--surface)); color: var(--accent); cursor: pointer; font: inherit; text-align: center; padding: 6px; }
+.md-add small { font-size: 11.5px; font-weight: 700; line-height: 1.2; }
+.md-add:hover { background: color-mix(in oklab, var(--accent) 10%, var(--surface)); }
+.md-help { margin: 0 0 8px; }
+.pe-cover-add { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 8px; padding: 10px; border-radius: 10px; border: 2px dashed color-mix(in oklab, var(--accent) 45%, var(--line)); background: color-mix(in oklab, var(--accent) 5%, var(--surface)); color: var(--accent); font: 700 14px/1 var(--f-body); cursor: pointer; }
+/* Depodan seç */
+.dp-chips { margin-bottom: 10px; }
+.dp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.dp-t { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 0 0 6px; border-radius: 12px; overflow: hidden; border: 2px solid var(--line); background: var(--surface); cursor: pointer; text-align: center; font: inherit; }
+.dp-t img, .dp-t video { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fff; display: block; }
+.dp-t video { object-fit: cover; background: #0f172a; }
+.dp-t small { font-size: 11px; color: var(--muted); padding: 0 4px; }
+.dp-t.on { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent); }
+.dp-t.had { opacity: .45; cursor: default; }
+.dp-ck { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgb(255 255 255 / .9); box-shadow: 0 0 0 1px var(--line); color: #fff; }
+.dp-t.on .dp-ck { background: var(--accent); box-shadow: none; }
+.dp-t .md-play { width: 28px; height: 28px; bottom: auto; top: 30%; }
+.dp-more { margin: 12px auto 0; display: flex; }
