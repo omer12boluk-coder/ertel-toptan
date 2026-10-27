@@ -43,6 +43,8 @@ export default {
       if (url.pathname === '/push/admin' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminSub(env, b)); }
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/push/fav' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushFav(env, req.headers.get('X-Key') || '', b)); }
+      if (url.pathname === '/push/member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushMember(env, b)); }
       if (url.pathname === '/notify-sync' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifySync(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname.startsWith('/dhl/') && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await dhl(env, url.pathname.slice(5), b)); }
       if (url.pathname === '/push/status' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushStatus(env, String(b.id || ''))); }
@@ -486,6 +488,38 @@ async function r2Obj(req, env, url) {
   }
   if (req.method === 'GET') { const o = await env.R2.get(key); return o ? new Response(o.body, { headers: { 'Content-Type': o.httpMetadata?.contentType || 'application/octet-stream' } }) : json({ ok: false, error: 'yok' }, 404); }
   return json({ ok: false, error: 'yöntem' }, 405);
+}
+
+// Favorideki ürünün fiyatı düştü (eşitleme bildirir; anahtar sync ile aynı): üyenin cihazlarına (KV pm:<uid>) bildirim. Yükselişte gönderilmez.
+async function pushFav(env, key, b) {
+  if (!env.TELEGRAM_TOKEN) return { ok: false, error: 'anahtar yok' };
+  const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('sync:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if (key !== want) return { ok: false, error: 'yetki' };
+  const pub = (await fsDoc('settings/public')) || {};
+  if (pub.orders?.push === false) return { ok: true, off: true };
+  let sent = 0, users = 0;
+  for (const { uid, items } of (Array.isArray(b.list) ? b.list : []).slice(0, 500)) {
+    if (!/^[\w-]{6,64}$/.test(String(uid)) || !Array.isArray(items) || !items.length) continue;
+    const subs = (await env.KV.get('pm:' + uid, 'json')) || []; if (!subs.length) continue; users++;
+    const it = items[0]; const m = (v) => '$' + Number(v).toFixed(2).replace(/\.00$/, '');
+    const data = items.length === 1
+      ? { title: '💸 Favorinizdeki ürünün fiyatı düştü', body: `${it.n}: ${m(it.from)} → ${m(it.to)}`, url: '/magaza/urun/' + it.id, tag: 'fav-' + it.id }
+      : { title: `💸 ${items.length} favori ürününüzün fiyatı düştü`, body: items.slice(0, 3).map((x) => `${String(x.n).slice(0, 40)}: ${m(x.to)}`).join(' · '), url: '/magaza/urunler', tag: 'fav' };
+    const keep = [];
+    for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
+    if (keep.length !== subs.length) await env.KV.put('pm:' + uid, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 365 });
+  }
+  return { ok: true, users, sent };
+}
+// Üye siparişi olmadan da telefon bildirimini açabilsin (favori fiyat düşüşü): oturum anahtarıyla members/{uid} okunur, cihaz pm:<uid>'e bağlanır
+async function pushMember(env, b) {
+  const tok = String(b.token || ''); const uid = tokUid(tok); const s = b.sub || {};
+  if (!uid || !/^https:\/\//.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth) return { ok: false, error: 'eksik' };
+  const m = await fsAuth('members/' + uid, tok); if (!m) return { ok: false, error: 'Üye doğrulanamadı' };
+  const me = { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } };
+  const ml = (await env.KV.get('pm:' + uid, 'json')) || [];
+  await env.KV.put('pm:' + uid, JSON.stringify([me, ...ml.filter((x) => x.endpoint !== s.endpoint)].slice(0, 8)), { expirationTtl: 60 * 60 * 24 * 365 });
+  return { ok: true };
 }
 
 // PlatinMarket eşitlemesinde değişen ürünler (GitHub Actions'taki eşitleme bildirir; anahtar: sha256('sync:' + TELEGRAM_TOKEN))

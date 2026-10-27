@@ -219,6 +219,17 @@ if (!DRY) {
       const key = createHash('sha256').update('sync:' + T).digest('hex');
       await fetch(W.replace(/\/$/, '') + '/notify-sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Key': key }, body: JSON.stringify({ items: ev.slice(0, 40), count: ev.length }) })
         .then((r) => r.text()).then((t) => note('Bildirim', t.slice(0, 200))).catch((e) => note('Bildirim hatası', e));
+      // favorideki ürünün fiyatı DÜŞTÜYSE (en az %1) o ürünü favorilemiş üyelere telefon bildirimi; yükselişte bildirim yok
+      const drops = ev.filter((x) => x.t === 'price' && x.to > 0 && x.from > 0 && x.to < x.from * 0.99 && byId.get(x.id)?.a);
+      if (drops.length) {
+        const ids = [...new Set(drops.map((x) => x.id))]; const byMem = new Map();
+        for (let i = 0; i < ids.length; i += 30) {
+          const qs = await db.collection('members').where('favs', 'array-contains-any', ids.slice(i, i + 30)).get().catch((e) => { note('Favori sorgusu', e.message); return { docs: [] }; });
+          for (const d of qs.docs) { const fv = new Set(d.data().favs || []); const mine = drops.filter((x) => fv.has(x.id)).map((x) => ({ id: x.id, n: x.n, from: x.from, to: x.to })); if (mine.length) byMem.set(d.id, mine); }
+        }
+        if (byMem.size) await fetch(W.replace(/\/$/, '') + '/push/fav', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Key': key }, body: JSON.stringify({ list: [...byMem].map(([uid, items]) => ({ uid, items: items.slice(0, 10) })).slice(0, 500) }) })
+          .then((r) => r.text()).then((t) => note('Favori fiyat bildirimi', `${byMem.size} üye · ${t.slice(0, 160)}`)).catch((e) => note('Favori bildirimi hatası', e));
+      }
     }
   }
   if (Object.keys(newDescs).length) { // açıklamalar (sadece hiç açıklaması olmayan yeni ürünler)

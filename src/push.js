@@ -53,6 +53,16 @@ export async function ensurePush(ids) {
 export async function autoPush(id) {
   try { if (pushState() !== 'on') return; const sub = await subscription(false); if (sub) await send(id, sub, false); } catch {}
 }
+// Üye: cihazı hesaba bağla (siparişi olmasa da favori fiyat düşüşü bildirimi gelsin)
+export async function linkMember(token, ask) {
+  try {
+    if (!token) return;
+    if (ask) { const perm = await Notification.requestPermission(); if (perm !== 'granted') throw new Error('Bildirim izni verilmedi'); ls.set('push-on', true); }
+    else if (pushState() !== 'on') return;
+    const sub = await subscription(true);
+    await fetch(W() + '/push/member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, sub: sub.toJSON() }) });
+  } catch (e) { if (ask) throw e; }
+}
 export function disablePush() { ls.set('push-on', false); subscription(false).then((s) => s?.unsubscribe()).catch(() => {}); }
 // yönetici durum değiştirince
 export function pushStatus(id) {

@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, go, openOrder, openRequest, toast } from './store.js';
 import { Icon, Toggle } from './ui.jsx';
-import { pushState, enablePush, disablePush } from './push.js';
+import { pushState, enablePush, disablePush, linkMember } from './push.js';
 import { fmt, fmtTotals, when, ls } from './utils.js';
 import { TYPE, ORDER_STATUS, ORDER_OPEN } from './config.js';
 
@@ -100,11 +100,31 @@ export function NotifBell() {
 // Altta "Telefon bildirimleri" anahtarı (web push aç / kapat).
 const ST_IC = { confirmed: ['check', 'ok'], preparing: ['box', 'info'], shipped: ['box', 'info'], ready: ['store', 'ok'], done: ['check', 'ok'], cancelled: ['x', 'bad'] };
 const cSeenAt = () => ls.get('cnotif-seen', 0);
+// Favori fiyat takibi (cihazda): ls 'fav-px' {id: son görülen liste fiyatı}; fiyat en az %1 DÜŞÜNCE ls 'fav-drops'a olay yazılır
+// (zilde "Favorinizdeki ürünün fiyatı düştü"). Yükselişte sadece kayıtlı fiyat güncellenir, bildirim yok.
+export function useFavWatch() {
+  const { favs, byId, catalog } = useStore();
+  useEffect(() => {
+    if (!favs.length || !catalog.length) return;
+    const px = ls.get('fav-px', {}); const drops = ls.get('fav-drops', []); let ch = false, nd = false;
+    for (const id of favs) {
+      const p = byId.get(id); if (!p || !(p.r > 0)) continue;
+      const old = px[id];
+      if (old == null) { px[id] = p.r; ch = true; }
+      else if (p.r < old * 0.99) { drops.unshift({ id, n: p.n, from: old, to: p.r, cur: p.cur, at: Date.now() }); px[id] = p.r; ch = nd = true; }
+      else if (p.r !== old) { px[id] = p.r; ch = true; }
+    }
+    for (const k of Object.keys(px)) if (!favs.includes(Number(k))) { delete px[k]; ch = true; }
+    if (ch) ls.set('fav-px', px);
+    if (nd) { ls.set('fav-drops', drops.filter((d) => Date.now() - d.at < 30 * DAY).slice(0, 50)); store.set({ favTick: Date.now() }); }
+  }, [favs, catalog]);
+}
 export function useShopNotifs() {
-  const { member, myOrders, guestOrders } = useStore();
+  const { member, myOrders, guestOrders, favTick } = useStore();
   const orders = member ? myOrders : guestOrders;
   return useMemo(() => {
     const from = Date.now() - 90 * DAY; const out = [];
+    for (const d of ls.get('fav-drops', [])) if (d.at > Date.now() - 30 * DAY) out.push({ id: 'fd' + d.id + d.at, at: d.at, ic: 'heart', tone: 'new', t: 'Favorinizdeki ürünün fiyatı düştü', s: `${d.n} · ${fmt(d.from, d.cur)} → ${fmt(d.to, d.cur)}`, go: () => { go('katalog'); store.set({ catalogGo: { fav: true } }); } });
     for (const o of orders || []) {
       const its = o.items || []; const sub = its.length ? `${its[0].n}${its.length > 1 ? ` +${its.length - 1} ürün` : ''}` : '';
       for (const h of o.history || []) {
@@ -115,7 +135,7 @@ export function useShopNotifs() {
       }
     }
     return out.sort((a, b) => b.at - a.at).slice(0, 100);
-  }, [orders]);
+  }, [orders, favTick]);
 }
 // telefon bildirimlerini aç / kapat (bekçi: kapatınca abonelik silinir, bildirim gitmez)
 export function PushToggle({ orders }) {
@@ -124,14 +144,21 @@ export function PushToggle({ orders }) {
   const [busy, setBusy] = useState(false);
   if (S.orders?.push === false || st === 'unsupported') return null;
   const ids = (() => { const a = (orders || []).filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id); return a.length ? a : (orders || []).slice(0, 1).map((o) => o.id); })();
+  const member = useStore((s) => s.member);
   const set = async (v) => {
     if (!v) { disablePush(); setSt('off'); toast('Telefon bildirimleri kapatıldı'); return; }
-    if (!ids.length) { toast('İlk siparişinizi verince bildirimleri açabilirsiniz'); return; }
-    setBusy(true); try { await enablePush(ids); setSt('on'); toast('Telefon bildirimleri açıldı'); } catch (e) { setSt(pushState()); toast(e.message, 'bad'); } setBusy(false);
+    if (!ids.length && !member) { toast('İlk siparişinizi verince bildirimleri açabilirsiniz'); return; }
+    setBusy(true);
+    try {
+      if (ids.length) await enablePush(ids);
+      if (member) await linkMember(await store.s.api?.idToken?.(), !ids.length); // üye: favori fiyat düşüşleri için cihaz hesaba bağlanır
+      setSt('on'); toast('Telefon bildirimleri açıldı');
+    } catch (e) { setSt(pushState()); toast(e.message, 'bad'); }
+    setBusy(false);
   };
   const hint = st === 'ios-home' ? 'iPhone’da önce sayfayı ana ekrana ekleyin (Paylaş → Ana Ekrana Ekle), sonra oradan açın.'
     : st === 'denied' ? 'Bu cihazda bildirim izni kapalı; tarayıcı / telefon ayarlarından izin verin.'
-    : 'Siparişiniz onaylanınca, kargoya verilince telefonunuza haber verelim.';
+    : 'Sipariş durumunu ve favorilerinizin fiyatı düşünce telefonunuza haber verelim.';
   return (
     <div className={'push-tg' + (busy ? ' busy' : '')}>
       {st === 'ios-home' || st === 'denied'
@@ -164,6 +191,7 @@ export function ShopNotifList({ list, seen, onPick, empty = 'Henüz bildirim yok
 }
 // üst menüdeki zil (mağaza): sadece üyeyse ya da bu cihazdan sipariş verildiyse görünür
 export function ShopBell() {
+  useFavWatch();
   const { member, myOrders, guestOrders } = useStore();
   const orders = member ? myOrders : guestOrders;
   const list = useShopNotifs();
@@ -179,7 +207,7 @@ export function ShopBell() {
     const t = setTimeout(() => { addEventListener('pointerdown', out); addEventListener('keydown', esc); });
     return () => { clearTimeout(t); removeEventListener('pointerdown', out); removeEventListener('keydown', esc); };
   }, [open]);
-  if (!member && !(guestOrders || []).length) return null;
+  if (!member && !(guestOrders || []).length && !list.length) return null;
   return (
     <span className="nc shop-nc" ref={box}>
       <button className={'icon-btn nc-bell' + (open ? ' on' : '')} onClick={() => (open ? close() : setOpen(true))} aria-label={`Bildirimler${unread ? ` (${unread} yeni)` : ''}`} title="Bildirimler">
@@ -192,7 +220,7 @@ export function ShopBell() {
             <button className="icon-btn sm" onClick={close} aria-label="Kapat"><Icon n="x" s={16} /></button>
           </div>
           <ShopNotifList list={list} seen={seen} onPick={(x) => { close(); x.go(); }} />
-          <div className="nc-foot"><PushToggle orders={orders} /></div>
+          {pushState() !== 'unsupported' && store.s.settings.orders?.push !== false && <div className="nc-foot"><PushToggle orders={orders} /></div>}
         </div>
       )}
     </span>

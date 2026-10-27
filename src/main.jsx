@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
 import { loadFavs, mergeFavs } from './store.js';
+import { linkMember } from './push.js';
 import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
@@ -221,7 +222,7 @@ async function bootShop(A) {
   A.onMember?.((m) => {
     unOrders?.(); unOrders = null;
     store.set({ member: m, myOrders: [] });
-    if (m) { unOrders = A.watchMyOrders(m.uid, (myOrders) => store.set({ myOrders })); mergeFavs(m); stopGuestOrders(); }
+    if (m) { unOrders = A.watchMyOrders(m.uid, (myOrders) => store.set({ myOrders })); mergeFavs(m); stopGuestOrders(); setTimeout(() => A.idToken?.().then((t) => linkMember(t, false)), 3000); } // bildirim açık cihaz üyeye bağlansın (favori fiyat düşüşü)
     else { loadFavs(); watchGuestOrders(A); }
   });
   // Sipariş takip linki (/magaza/s/<no>) katalog beklemeden açılır
