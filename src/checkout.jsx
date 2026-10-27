@@ -10,6 +10,7 @@ import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resize
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf } from './config.js';
 import TR from './tr-ilce.json';
 import { SwipeLine } from './cart.jsx';
+import { FavGrid } from './catalog.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
@@ -788,7 +789,7 @@ function LocalOrders({ inSheet }) {
 
 // Üye hesabı: profil başlığı + seçilerek açılan satırlar (her biri kendi penceresinde)
 // Hesabım: bilgisayarda solda profil + menü, sağda seçilen bölüm (sayfa); telefonda menü listesi → bölüm ayrı sayfa (geri: Hesabım)
-const ACCT_T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', notif: 'Bildirimler', pay: 'Ödeme bilgilerim' };
+const ACCT_T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', favs: 'Favorilerim', notif: 'Bildirimler', pay: 'Ödeme bilgilerim' };
 function MemberHome() {
   const { member: m, myOrders, api: A, settings: S, acct } = useStore();
   const [busy, setBusy] = useState(false);
@@ -801,6 +802,14 @@ function MemberHome() {
     setBusy(false);
   }
   const removePhoto = () => A.saveMember({ ...m, photo: null }).then(() => toast('Fotoğraf kaldırıldı'));
+  // yapışkan sol menü ekrandan uzunsa alt kenarından yapışsın (menünün altı görünmüyordu, sağ taraf ayrı kayıyordu)
+  const sideRef = useRef(null);
+  useEffect(() => {
+    const el = sideRef.current; if (!el || typeof ResizeObserver === 'undefined') return;
+    const fit = () => { const topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 64; const t = Math.min(topH + 20, innerHeight - el.offsetHeight - 16); el.style.setProperty('--acct-top', t + 'px'); };
+    const ro = new ResizeObserver(fit); ro.observe(el); addEventListener('resize', fit); fit();
+    return () => { ro.disconnect(); removeEventListener('resize', fit); };
+  }, []);
   const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
   useStore((st) => st.seenTick);
   const unseen = unseenOrders(myOrders).length;
@@ -823,12 +832,13 @@ function MemberHome() {
     addr: () => <Addresses />,
     info: () => <MyInfo part="info" />,
     inv: () => <MyInfo part="inv" />,
+    favs: () => <FavGrid />,
     notif: () => <AcctNotifs orders={myOrders} list={notifs} />,
     pay: () => <div className="soon-card acct-soon"><span className="soon-ic"><Icon n="cart" s={28} /></span><span className="soon-tag">Çok yakında</span><h3>Kayıtlı kartlar</h3><p className="muted">Kartlarınızı güvenle kaydedip tek dokunuşla ödeyebileceksiniz. Şimdilik siparişte havale, kart linki ya da dükkânda ödeme seçebilirsiniz.</p></div>,
   };
   return (
     <div className={'page acct2' + (view ? ' has-view' : '')}>
-      <aside className="acct-side">
+      <aside className="acct-side" ref={sideRef}>
         <div className="acct-prof">
           <button className={'hub-av' + (busy ? ' busy' : '')} onClick={() => fileRef.current?.click()} aria-label="Profil fotoğrafını değiştir" title="Fotoğrafı değiştir">
             <Avatar u={m} size={72} /><span className="hub-cam"><Icon n="camera" s={14} /></span>
@@ -839,7 +849,7 @@ function MemberHome() {
         <nav className="acct-nav" aria-label="Hesabım">
           <button className={'acct-nav-i ov' + (!view ? ' on' : '')} onClick={() => openAcct(null)}><span className="hub-ic"><Icon n="home" s={18} /></span><span className="hub-t"><b>Hesap özeti</b></span></button>
           {rows.map(([k, ic, t, sub, isSoon]) => (
-            <button key={k} className={'acct-nav-i' + (view === k ? ' on' : '')} onClick={() => (k === 'favs' ? (go('katalog'), store.set({ catalogGo: { fav: true } })) : openAcct(k))}>
+            <button key={k} className={'acct-nav-i' + (view === k ? ' on' : '')} onClick={() => openAcct(k)}>
               <span className="hub-ic"><Icon n={ic} s={18} /></span>
               <span className="hub-t"><b>{t}{isSoon && <span className="soon-tag sm">Yakında</span>}</b><small>{sub}</small></span>
               {k === 'orders' && unseen > 0 && <span className="badge" title="Yeni güncelleme">{unseen}</span>}

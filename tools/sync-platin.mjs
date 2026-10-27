@@ -58,7 +58,7 @@ if (!rate) throw new Error('Kur hesaplanamadı');
 const st = { price: [], hidden: 0, shown: 0, img: 0, name: 0, added: [] };
 // yönetim panelindeki bildirim merkezi için olay günlüğü (meta/feed): t price|name|new|hidden|shown
 const ev = [];
-const E = (t, p, extra) => ev.push({ t, at: now, id: p.id, k: p.k || '', n: String(p.n || '').slice(0, 90), ...extra });
+const E = (t, p, extra) => { p.ut = now; ev.push({ t, at: now, id: p.id, k: p.k || '', n: String(p.n || '').slice(0, 90), ...extra }); }; // ut: son güncelleme (yönetici listesinde)
 const round2 = (v) => Math.round(v * 100) / 100;
 for (const p of cat) {
   const f = feed.get(p.id);
@@ -158,7 +158,10 @@ for (const code of String(process.env.REMOVE_CODES || '').split(',').map((x) => 
 // Silinmiş: sayfa 404/410 ya da başka sayfaya yönleniyor ya da sayfada bu ürün yok → katalogdan tamamen kaldırılır.
 // Pasif: sayfa duruyor → uygulamada gizli (soluk) kalır. Çalışma başına en çok 6 kontrol, 3 sn arayla; elle eklenen ürünlere bakılmaz.
 st.deleted = 0; st.passive = 0;
-const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || p.id === TEST)).slice(0, 6);
+// 27.10.2026: silme AÇIK (kullanıcı: siteden silinen tamamen kalksın, pasife alınan soluk kalsın). Silme kapalıyken "silinmiş" bulunup
+// -2'de bekleyenlere bir kez daha bakılır (sgr). Kapatmak gerekirse sync.yml'de DELETE_OK: '0'.
+const DELETE_OK = process.env.DELETE_OK !== '0';
+const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || (DELETE_OK && p.sg === -2 && !p.sgr) || p.id === TEST)).slice(0, 6);
 for (const [i, p] of gone.entries()) {
   if (i || pending.length) await new Promise((r) => setTimeout(r, 3000));
   let verdict = null, why = '';
@@ -172,9 +175,7 @@ for (const [i, p] of gone.entries()) {
   } catch (e) { note('Ürün sayfası kontrol edilemedi', `${p.k}: ${e.message}`); }
   note('Siteden kalkan ürün', `${p.k} → ${verdict || 'bilinmiyor'} (${why})`);
   if (DRY && p.id === TEST) continue;
-  // DOĞRULANANA KADAR KAPALI: pasif ürün sayfası da "silinmiş" gibi görünüyorsa yanlışlıkla kaldırmamak için silme yapılmaz,
-  // sonuç sadece not olarak yazılır. Pasif bir ürünle denenip ayrım doğrulanınca DELETE_OK = true yapılacak.
-  const DELETE_OK = process.env.DELETE_OK === '1';
+  if (p.sg === -2) p.sgr = 1; // eski kayıt bir kez yeniden bakıldı
   if (verdict === 'deleted' && !DELETE_OK) { p.sg = -2; E('hidden', p); continue; }
   if (verdict === 'deleted') { cat.splice(cat.indexOf(p), 1); st.deleted++; E('deleted', p); }
   else if (verdict === 'passive') { p.sg = 1; st.passive++; E('hidden', p); }

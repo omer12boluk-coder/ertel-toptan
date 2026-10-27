@@ -67,6 +67,22 @@ function PriceExtras({ v, cur, S: So, role: ro }) {
 function PlusVat({ S: So, role: ro }) { const S0 = useStore((s) => s.settings); const r0 = useStore((s) => s.user?.role); const S = So || S0; return priceShow(S, ro || r0).plus && Number(S.pricing.vatPct) > 0 ? <em className="plusvat">+KDV</em> : null; }
 
 // S / role verilirse (Ayarlar önizlemesi) o ayarlar ve o müşteri tipiyle çizilir
+// Yönetici ürün listesi fiyatı: satış (liste) fiyatı büyük, altında küçük toptan ve alış; TL yok
+const upd = (t) => { const d = new Date(t); const today = d.toDateString() === new Date().toDateString(); return (today ? 'Bugün ' : d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ') + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); };
+function AdminPrice({ p }) {
+  const { settings: S, user, costs } = useStore();
+  const pr = priceFor(p, S, user, null);
+  const ap = costs?.[p.id];
+  return (
+    <div className="aprice">
+      <b className="num aprice-r">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b>
+      <span className="aprice-sub">
+        <span title={p.w != null ? 'Elle girilen toptan' : 'Kurala göre otomatik toptan'}>Toptan <b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i>oto</i>}</span>
+        {ap > 0 && <span>Alış <b className="num">{fmt(ap, p.cur)}</b></span>}
+      </span>
+    </div>
+  );
+}
 export function PriceBlock({ p, big, S: So, role: ro }) {
   const st = useStore();
   const S = So || st.settings; const role = ro || st.user?.role;
@@ -143,6 +159,15 @@ export function Catalog({ admin }) {
   const [view, setView0] = useState(() => (admin ? 'list' : ls.get('cat-view', 'grid')));
   const setView = (v) => { setView0(v); if (!admin) ls.set('cat-view', v); };
   const tree = useTree();
+  // yönetici: kategori paneli sürükleyerek daraltılır / genişletilir (tabloya yer), cihazda hatırlanır; çift tık = varsayılan
+  const [catW, setCatW0] = useState(() => ls.get('cat-w', 240));
+  const setCatW = (w) => { setCatW0(w); ls.set('cat-w', w); };
+  const gripDown = (e) => {
+    e.preventDefault(); const x0 = e.clientX, w0 = catW; const el = e.currentTarget; el.setPointerCapture?.(e.pointerId); el.classList.add('on');
+    const mv = (ev) => setCatW0(Math.max(130, Math.min(380, Math.round(w0 + ev.clientX - x0))));
+    const up = (ev) => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.classList.remove('on'); setCatW(Math.max(130, Math.min(380, Math.round(w0 + ev.clientX - x0)))); };
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up);
+  };
   const intent = useStore((s) => s.intent);
   useEffect(() => { if (admin && intent === 'newProduct') { store.set({ intent: null }); setEdit({}); } }, [intent]);
   // başka ekrandan (mağaza ana sayfası) gelen filtre: marka / kategori / arama
@@ -216,13 +241,14 @@ export function Catalog({ admin }) {
 
   return (
     <div className="catalog">
-      <div className="cat-layout">
+      <div className={'cat-layout' + (admin ? ' resizable' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
         <aside className="cat-side" aria-label="Kategoriler">
           <h3 className="eyebrow">Kategoriler</h3>
           <button className={'cat-link' + (cat == null ? ' on' : '')} onClick={() => setCat(null)}><span>Tümü</span><b>{all.length}</b></button>
           <CatTree nodes={tree.roots} counts={counts} cat={cat} open={openPath} onPick={setCat} />
         </aside>
 
+        {admin && <span className="cat-grip" role="separator" aria-orientation="vertical" aria-label="Kategoriler panelinin genişliği" title="Sürükleyerek daralt / genişlet" onPointerDown={gripDown} onDoubleClick={() => setCatW(240)} />}
         <section className="cat-main">
           <div className="toolbar">
             <div className="search">
@@ -397,15 +423,15 @@ function ProductRow({ p, admin, onOpen }) {
             {st && <span className={'dot tone-' + st.tone}>{st.t}</span>}
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
             {admin && !p.a && <span className="dot tone-muted">Pasif</span>}
-            {admin && p.w == null && <span className="dot tone-warn">Toptan: oto</span>}
             {admin && p.nw && <span className="dot tone-info">Siteden yeni</span>}
             {admin && p.so && <span className="dot tone-muted">Sitede satışta değil</span>}
             {admin && p.pc && <span className="dot tone-bad">Liste {fmt(p.pc.r0, p.cur)} → {fmt(p.r, p.cur)}</span>}
+            {admin && p.ut && <span className="prow-ut" title="Son güncelleme (fiyat, ad, açılıp kapanma, düzenleme)">{upd(p.ut)}</span>}
           </span>
         </div>
       </button>
       <div className="prow-side">
-        <PriceBlock p={p} />
+        {admin ? <AdminPrice p={p} /> : <PriceBlock p={p} />}
         {admin ? (
           <button className="btn sm ghost" onClick={onOpen}><Icon n="edit" s={15} />Düzenle</button>
         ) : user?.role !== 'public' && ['icon', 'plus'].includes(cardAdd(S, user?.role)) ? (
@@ -418,6 +444,20 @@ function ProductRow({ p, admin, onOpen }) {
       </div>
     </li>
   );
+}
+
+// Hesabım > Favorilerim: favori ürünler kutu görünümünde (kart, ürün penceresi, sepete ekle aynı)
+export function FavGrid() {
+  const { favs, byId, settings: S, user } = useStore();
+  const [open, setOpen] = useState(null);
+  const list = favs.map((id) => byId.get(id)).filter((p) => p && p.a !== 0 && !p.so);
+  if (!list.length) return <Empty icon="heart" title={favs.length ? 'Favorilerinizdeki ürünler şu an satışta değil' : 'Henüz favoriniz yok'}><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere göz at</button></Empty>;
+  return <>
+    <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>
+      {list.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}
+    </ul>
+    {open && <ProductSheet p={open} onClose={() => setOpen(null)} />}
+  </>;
 }
 
 // Favori kalbi (mağaza): kartın resim köşesinde ve ürün penceresinde; dolu = favoride
@@ -900,7 +940,7 @@ async function askAbout(p, qty) {
 async function quickSave(p, patch, msg) {
   const list = store.s.catalog.map(({ _s, _t, ...x }) => {
     if (x.id !== p.id) return x;
-    const n = { ...x, ...patch };
+    const n = { ...x, ...patch, ut: Date.now() };
     for (const k of Object.keys(patch)) if (patch[k] == null) delete n[k];
     return n;
   });

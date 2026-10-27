@@ -18,6 +18,7 @@ export function startAdminWatchers(api, u) {
   // 62 gün: Genel bakış'ta "bu ay"ı önceki ayla kıyaslamaya yetsin
   store.set({ win: { orders: t - 62 * DAY, reqs: t - 62 * DAY, membersAll: false } });
   watchOrders(); watchReqs(); watchMembers();
+  A.loadCosts?.().then((costs) => store.set({ costs })).catch(() => {});
   // tarihine bakmadan açık olanlar da (eski ama hâlâ bekleyen kayıt listeden düşmesin)
   if (A.watchByStatus) {
     if (A.watchOrders) un.ordersOpen = A.watchByStatus('orders', ORDER_OPEN, (l) => { part.ordersOpen = l; mergeOrders(); });

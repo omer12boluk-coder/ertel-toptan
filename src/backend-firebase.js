@@ -214,6 +214,9 @@ export class FirebaseBackend {
     const p = this.F.getDoc(this.d('img', String(id))).then((s) => (s.exists() ? s.data().d : null)).catch(() => null);
     this.imgCache.set(id, p); return p;
   }
+  // alış fiyatları {ürün no: fiyat} — sadece yönetici okur/yazar (katalog bayiye açık olduğu için ayrı belge)
+  async loadCosts() { try { const s = await timeout(this.F.getDoc(this.d('costs', 'main'))); return s.exists() ? s.data().p || {} : {}; } catch { return {}; } }
+  async saveCosts(map) { await this.F.setDoc(this.d('costs', 'main'), { p: map }); }
   async setImage(id, data) {
     this.imgCache.delete(id);
     if (data) await this.F.setDoc(this.d('img', String(id)), { d: data });

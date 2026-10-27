@@ -102,6 +102,8 @@ export class DemoBackend {
   async saveDescs(map) { this._d = { ...(this._d || (await this.loadDescs())), ...map }; this.db.descEdits = {}; this.persist(); }
   async setDesc(id, html) { (this.db.descEdits = this.db.descEdits || {})[id] = html || ''; this.persist(); }
   async getImage(id) { return this.db.images[id] || null; }
+  async loadCosts() { return this.db.costs || {}; }
+  async saveCosts(map) { this.db.costs = map; this.persist(); }
   async setImage(id, data) { if (data) this.db.images[id] = data; else delete this.db.images[id]; this.persist(); }
 
   async me() { return this.pub(this.db.users[this.db[this.sk]]); }

@@ -20,6 +20,8 @@ service cloud.firestore {
     match /settings/public { allow read: if true; allow write: if isAdmin(); }
     match /settings/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
     match /catalog/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
+    // alış fiyatları sadece yönetici (bayiler katalogu okuyabildiği için ayrı belgede)
+    match /costs/{doc} { allow read, write: if isAdmin(); }
     // ziyaretçi mağazası: toptan fiyatsız katalog herkese açık
     match /pubcatalog/{doc} { allow read: if true; allow write: if isAdmin(); }
     match /img/{doc} { allow read: if true; allow write: if isAdmin(); }

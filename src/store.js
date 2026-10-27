@@ -94,14 +94,20 @@ function pushTab(tab) {
   } catch {}
 }
 // Hesabım alt sayfaları: /magaza/hesap/<bölüm> (telefonda geri kaydırınca Hesabım'a döner)
-export const ACCT = { orders: 'siparisler', addr: 'adresler', info: 'profil', inv: 'fatura', notif: 'bildirimler', pay: 'odeme' };
+export const ACCT = { orders: 'siparisler', addr: 'adresler', info: 'profil', inv: 'fatura', favs: 'favoriler', notif: 'bildirimler', pay: 'odeme' };
 export function acctFromPath() { const m = /^\/magaza\/hesap\/([\w-]+)/.exec(location.pathname); const e = m && Object.entries(ACCT).find(([, x]) => x === m[1]); return e ? e[0] : null; }
 export function openAcct(v) {
   try {
     history.replaceState({ ...(history.state || {}), tab: 'hesap', acct: store.s.acct || null, y: scrollY }, '');
     history.pushState({ tab: 'hesap', acct: v || null }, '', '/magaza/hesap' + (v ? '/' + ACCT[v] : ''));
   } catch {}
-  store.set({ tab: 'hesap', acct: v || null, openOrder: null }); window.scrollTo(0, 0);
+  // bilgisayarda soldaki menü yerinde kalır: sayfa en başa atılmaz, sadece bölüm başı ekranın üstündeyse oraya kadar çıkılır
+  const desk = typeof matchMedia !== 'undefined' && matchMedia('(min-width: 900px)').matches && store.s.tab === 'hesap';
+  store.set({ tab: 'hesap', acct: v || null, openOrder: null });
+  if (!desk) { window.scrollTo(0, 0); return; }
+  const main = document.querySelector('.acct-main'); const topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 64;
+  const target = main ? Math.max(0, main.getBoundingClientRect().top + scrollY - topH - 20) : 0;
+  if (scrollY > target) window.scrollTo(0, target);
 }
 // Ürün sayfası (Ayarlar > Ürün kartları > Ürün açılışı: sayfa): /magaza/urun/<no>
 export function pidFromPath() { const m = /^\/magaza\/urun\/(\d+)/.exec(location.pathname); return m ? Number(m[1]) : null; }
