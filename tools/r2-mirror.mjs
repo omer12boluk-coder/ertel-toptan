@@ -28,14 +28,17 @@ function fileOf(v) {
 }
 const keyOf = (f) => PREFIX + f.split('/').map(encodeURIComponent).join('/');
 
+// Cloudflare API arada HTML'li 403/429 döndürüyor (hız sınırı / koruma) → izin hatası sayılmaz, bekleyip tekrar dener.
+// Gerçek izin hatası JSON gelir (success:false, kod 10000 vb.) → durur.
 async function r2Put(key, body, type) {
-  for (let i = 0; i < 3; i++) {
-    const r = await fetch(API + key, { method: 'PUT', headers: { ...auth, 'Content-Type': type }, body });
+  for (let i = 0; i < 6; i++) {
+    const r = await fetch(API + key, { method: 'PUT', headers: { ...auth, 'Content-Type': type }, body }).catch((e) => ({ ok: false, status: 0, text: async () => e.message }));
     if (r.ok) return;
     const t = await r.text();
-    if (r.status === 401 || r.status === 403) throw Object.assign(new Error(`R2 izni yok (${r.status}): ${t.slice(0, 200)}`), { fatal: true });
-    if (i === 2) throw new Error(`R2 ${r.status}: ${t.slice(0, 200)}`);
-    await sleep(2000 * (i + 1));
+    const html = /^\s*</.test(t);
+    if ((r.status === 401 || r.status === 403) && !html) throw Object.assign(new Error(`R2 izni yok (${r.status}): ${t.slice(0, 200)}`), { fatal: true });
+    if (i === 5) throw Object.assign(new Error(`R2 ${r.status}${html ? ' (koruma sayfası)' : ''}: ${t.slice(0, 120)}`), { fatal: html });
+    await sleep(html || r.status === 429 ? 30000 * (i + 1) : 2000 * (i + 1));
   }
 }
 async function r2GetJson(key) {
@@ -92,7 +95,7 @@ let idx = 0;
 async function worker() {
   while (!stop && idx < queue.length) {
     if (Date.now() - t0 > MINUTES * 60000) { stop = true; break; }
-    const f = queue[idx++]; await one(f); await sleep(400);
+    const f = queue[idx++]; await one(f); await sleep(700);
   }
 }
 await Promise.all([worker(), worker()]);
