@@ -12,8 +12,9 @@ import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername,
 import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
-import { imageList, CardPreview } from './catalog.jsx';
+import { imageList, CardPreview, saveCatalogLater } from './catalog.jsx';
 import { MediaEditor } from './media.jsx';
+import { queueSave } from './saveq.js';
 import { DecorSettings } from './decor.jsx';
 import { rateLabel } from './listsheet.jsx';
 import { syncNow } from './watch.js';
@@ -27,12 +28,11 @@ const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',',
 // Ürünü katalogdan sil (yönetici). Eşitleme sitede duran ürünü yeniden eklemesin diye meta/deleted'a yazılır.
 export async function removeProduct(p) {
   const list = store.s.catalog.filter((x) => x.id !== p.id).map(({ _s, _t, ...x }) => x);
-  try {
-    await api().saveCatalog(list); setCatalog(list);
-    api().markDeleted?.([p.id]).catch(() => {});
-    if (p.img === 'fs') api().setImage(p.id, null).catch(() => {});
-    toast('Ürün silindi'); return true;
-  } catch (e) { toast('Silinemedi: ' + e.message, 'bad'); return false; }
+  setCatalog(list); toast('Ürün silindi');
+  saveCatalogLater();
+  queueSave('del:' + p.id, () => api().markDeleted?.([p.id]));
+  if (p.img === 'fs') api().setImage(p.id, null).catch(() => {});
+  return true;
 }
 export const delText = (p) => `“${p.n}” (${p.k || '#' + p.id}) katalogdan tamamen silinecek; mağazada ve bayilerde görünmez. Sitede (ertelgsm.com) duruyorsa eşitleme onu yeniden eklemez. Sadece gizlemek istiyorsanız durumu Pasif yapın.`;
 export function ProductEdit({ p, copy, onClose }) {
@@ -92,9 +92,10 @@ export function ProductEdit({ p, copy, onClose }) {
       rec.b = (rec.b || '').trim();
       if (rec.c2 === '' || rec.c2 === rec.c) delete rec.c2; else if (rec.c2 != null) rec.c2 = Number(rec.c2);
       const list = isNew ? [rec, ...catalog] : catalog.map((x) => (x.id === rec.id ? rec : x));
-      await api().saveCatalog(list.map(({ _s, _t, ...x }) => x));
-      if (desc != null && desc !== desc0) await api().setDesc(rec.id, desc);
+      // hemen kapanır; kayıt arka plan kuyruğunda (saveq.js), durum sağ altta / hata olursa tekrar dener
       setCatalog(list); toast('Ürün kaydedildi'); onClose();
+      saveCatalogLater();
+      if (desc != null && desc !== desc0) { const id = rec.id, h = desc; queueSave('desc:' + id, () => api().setDesc(id, h)); }
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
@@ -499,7 +500,7 @@ export function Settings() {
 
   async function save() {
     setBusy(true);
-    try { const clean = withProdFallback(withDefaults(d)); await A.saveSettings(clean); store.set({ settings: clean }); toast('Ayarlar kaydedildi'); }
+    try { const clean = withProdFallback(withDefaults(d)); store.set({ settings: clean }); toast('Ayarlar kaydedildi'); queueSave('settings', () => A.saveSettings(store.s.settings)); }
     catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }

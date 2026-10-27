@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid } from './utils.js';
@@ -531,7 +532,6 @@ export function Catalog({ admin }) {
           {moreOutside > 0 && <div className="banner info widen"><Icon n="search" /><div>{scopeName} dışında da <b>{moreOutside} sonuç</b> var.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Tüm ürünlerde ara</button></div>}
           <div className="result-line">
             <span>{list.length.toLocaleString('tr-TR')} ürün{!widened && scopeName && <> · <b>{scopeName}</b></>}</span>
-            {admin && <SaveState />}
             {admin && <SyncButton icon />}
             <span className="view-sw" role="group" aria-label="Görünüm">
               <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Kutu kutu" title="Kutu kutu"><Icon n="grid" s={17} /></button>
@@ -1158,20 +1158,11 @@ async function askAbout(p, qty) {
 // "Toptanı kontrol edilecekler": tüm liste fiyatı uyarılarını kaldır (otomatik toptanlılardaki eski uyarılar da temizlenir)
 async function clearChecks() {
   const list = store.s.catalog.map(({ _s, _t, ...x }) => { if (!x.pc) return x; const { pc, ...y } = x; return y; });
-  try { await api().saveCatalog(list); setCatalog(list); toast('Fiyat uyarıları kaldırıldı'); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
-}
-// Hızlı kayıt: ekran HEMEN değişir (beklemeden), kayıt arkada yapılır. Art arda birkaç değişiklik tek kayıtta birleşir,
-// kayıtlar sırayla gider (biri ötekini ezmesin). Hata olursa katalog sunucudan yeniden okunur.
-let qsT = 0, qsDoneT = 0, qsPend = 0, qsChain = Promise.resolve();
-// kaydedilmemiş değişiklik varken sayfadan çıkılırsa tarayıcı uyarsın
-if (typeof window !== 'undefined') addEventListener('beforeunload', (e) => { if (qsPend) { e.preventDefault(); e.returnValue = ''; } });
-function SaveState() {
-  const qs = useStore((s) => s.qs);
-  if (!qs) return null;
-  return <span className={'qs-st ' + qs} role="status">{qs === 'saving' ? <><i className="qs-spin" />Kaydediliyor…</> : qs === 'saved' ? <><Icon n="check" s={13} />Kaydedildi</> : <>Kaydedilemedi</>}</span>;
+  setCatalog(list); toast('Fiyat uyarıları kaldırıldı'); saveCatalogLater();
 }
 const NH = new WeakMap(); // ürün → aranacak ad + marka (stok kodu hariç)
 function nameHay(p) { let v = NH.get(p); if (v == null) NH.set(p, (v = norm(p.n + ' ' + (p.b || '')))); return v; }
+// Hızlı kayıt: ekran HEMEN değişir, kayıt arka plan kuyruğunda (saveq.js; durum SaveDock'ta)
 function quickSave(p, patch, msg) {
   const list = store.s.catalog.map(({ _s, _t, ...x }) => {
     if (x.id !== p.id) return x;
@@ -1180,16 +1171,8 @@ function quickSave(p, patch, msg) {
     return n;
   });
   setCatalog(list);
-  // bilgi değişiklik ANINDA (toast); kaydın durumu ürün sayısının yanındaki küçük işarette: Kaydediliyor… → ✓ Kaydedildi
   if (msg) toast(msg);
-  qsPend++; store.set({ qs: 'saving' });
-  clearTimeout(qsT);
-  qsT = setTimeout(() => {
-    qsChain = qsChain.then(async () => {
-      const cur = store.s.catalog.map(({ _s, _t, ...x }) => x);
-      try { await api().saveCatalog(cur); qsPend = 0; store.set({ qs: 'saved' }); clearTimeout(qsDoneT); qsDoneT = setTimeout(() => store.s.qs === 'saved' && store.set({ qs: null }), 2500); }
-      catch (e) { qsPend = 0; store.set({ qs: 'error' }); toast('Kaydedilemedi: ' + e.message, 'bad'); try { const fresh = await api().loadCatalog(); fresh && setCatalog(fresh); } catch {} }
-    });
-  }, 450);
+  saveCatalogLater();
   return Promise.resolve();
 }
+export const saveCatalogLater = () => queueSave('catalog', () => api().saveCatalog(store.s.catalog.map(({ _s, _t, ...x }) => x)));

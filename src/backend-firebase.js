@@ -150,17 +150,31 @@ export class FirebaseBackend {
     const cur = s.exists() ? s.data().ids || [] : [];
     await this.F.setDoc(r, { ids: [...new Set([...cur, ...ids])].slice(-3000), at: now() });
   }
-  async saveCatalog(items) {
+  // Hız: sadece DEĞİŞEN parçalar yazılır (tek ürün düzenlenince ~1 MB yerine birkaç yüz KB). Güvenlik: sunucudaki sürüm
+  // en son BİZİM yazdığımız değilse (eşitleme vb. yazdıysa) parça düzeni farklı olabilir → hepsi yazılır.
+  async _writeChunks(col, parts, meta) {
+    const sig = (part) => { const t = JSON.stringify(part); let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return t.length + ':' + (h >>> 0); };
+    const sigs = parts.map(sig);
+    this._sig = this._sig || {};
+    const prev = this._sig[col];
+    let same = false;
+    if (prev && prev.v) { try { const m = await timeout(this.F.getDoc(this.d(col, '_meta')), 8000); same = m.exists() && m.data().version === prev.v; } catch { same = false; } }
     const b = this.F.writeBatch(this.db);
-    const parts = chunkBySize(items.map(clean));
-    const chunks = Math.max(1, parts.length);
-    parts.forEach((part, i) => b.set(this.d('catalog', 'c' + i), { items: part }));
+    let n = 0;
+    parts.forEach((part, i) => { if (same && prev.s[i] === sigs[i]) return; b.set(this.d(col, 'c' + i), { items: part }); n++; });
+    b.set(this.d(col, '_meta'), meta);
+    await b.commit();
+    this._sig[col] = { v: meta.version, s: sigs };
+    return n;
+  }
+  async saveCatalog(items) {
+    const cl = items.map(clean);
+    const parts = chunkBySize(cl);
     const version = now(); this._ownV = version;
-    b.set(this.d('catalog', '_meta'), { version, chunks, count: items.length });
     this._saving = (this._saving || 0) + 1;
     try {
-      idbSet('cat', { version, items: items.map(clean) });
-      await b.commit();
+      idbSet('cat', { version, items: cl });
+      await this._writeChunks('catalog', parts, { version, chunks: Math.max(1, parts.length), count: items.length });
       await this.savePublicCatalog(items);
     } finally { this._saving--; }
   }
@@ -168,10 +182,7 @@ export class FirebaseBackend {
   async savePublicCatalog(items) {
     const pub = items.filter((p) => p.a).map(publicItem);
     const parts = chunkBySize(pub);
-    const b = this.F.writeBatch(this.db);
-    parts.forEach((part, i) => b.set(this.d('pubcatalog', 'c' + i), { items: part }));
-    b.set(this.d('pubcatalog', '_meta'), { version: now(), chunks: parts.length, count: pub.length, kc: 3 });
-    await b.commit();
+    await this._writeChunks('pubcatalog', parts, { version: now(), chunks: parts.length, count: pub.length, kc: 3 });
   }
   async hasPublicCatalog() { const m = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta'))); return m.exists() && m.data().kc >= 3; } // kc: kalıp anahtarları eklenmiş sürüm
   async loadPublicCatalog() {

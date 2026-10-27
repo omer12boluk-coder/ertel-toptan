@@ -1,3 +1,4 @@
+import { SaveDock } from './savedock.jsx';
 import { StoreDecor } from './decor.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -590,6 +591,7 @@ function App() {
       {b === 'login' && <Login />}
       {b === 'ready' && <Shell />}
       {b === 'ready' && <StoreDecor />}
+      {b === 'ready' && <SaveDock />}
       <IntroSplash />
       <Toast />
       <ContextMenu />

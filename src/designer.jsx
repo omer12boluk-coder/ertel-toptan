@@ -1,3 +1,4 @@
+import { queueSave } from './saveq.js';
 // Yönetim paneli > Tasarım: mağaza ana sayfasını, mağazanın kendisi üzerinde düzenleme.
 // Bölümler seçilir, sürüklenip sıralanır, gizlenir; marka / reklam kutuları elle taşınır; büyük reklam alanı
 // alt kenarından tutulup boyutlandırılır; araya başlık, ürün rafı ya da görsel bant eklenir.
@@ -69,7 +70,7 @@ export function ShopDesigner() {
 
   async function save() {
     setBusy(true);
-    try { const clean = withProdFallback(withDefaults(store.s.designDraft)); await A.saveSettings(clean); store.set({ settings: clean, designDraft: null }); hist.current.list = []; toast('Mağaza tasarımı kaydedildi'); }
+    try { const clean = withProdFallback(withDefaults(store.s.designDraft)); store.set({ settings: clean, designDraft: null }); hist.current.list = []; toast('Mağaza tasarımı kaydedildi'); queueSave('settings', () => A.saveSettings(store.s.settings)); }
     catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
