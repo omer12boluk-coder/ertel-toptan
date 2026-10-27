@@ -3749,3 +3749,14 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
   .acct-body > .empty { min-height: 46vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 }
 @media (min-width: 1300px) { .acct2 { max-width: 1240px; } }
+/* satır: boş yere basınca ürün açılır; satır yüksekliği tutamacı tüm satırın alt kenarında */
+@media (min-width: 701px) {
+  .plist > .atr:not(.ath-row) { position: relative; cursor: pointer; }
+  .plist > .atr > .row-grip { left: 0; right: 0; bottom: -2px; height: 8px; z-index: 4; }
+  .plist > .atr > .row-grip::after { top: 3px; }
+  .atr > .tc > .ec { align-self: stretch; width: calc(100% + 12px); margin: -8px -6px; padding: 8px 6px; }
+}
+/* sabit menünün atası hareket etmesin (animasyonlu ata varken fixed öğe ona göre konumlanıp kayıyordu) */
+@media (min-width: 900px) { .main > .acct2, .acct2 { animation: none !important; transform: none !important; } }
+/* Hesabım'da bölüm değişince kaydırma çubuğu çıkıp kaybolmasın (sayfa ve sol menü yana milim kayıyordu) */
+@media (min-width: 900px) { html:has(.acct2) { overflow-y: scroll; } }

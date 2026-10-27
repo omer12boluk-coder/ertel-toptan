@@ -212,10 +212,11 @@ function AdminRow({ p, onEdit, onCopy, onDel, grip, gripReset }) {
     { label: 'Ürünü sil', icon: 'trash', danger: true, onClick: onDel },
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
-    <li className={'atr' + (p.a ? '' : ' off') + (needsCheck(p) ? ' changed' : '')} onContextMenu={menu}>
+    // satırın boş bir yerine basınca ürün açılır (düğme, yazı kutusu, durum seçici, tutamaçlar hariç)
+    <li className={'atr' + (p.a ? '' : ' off') + (needsCheck(p) ? ' changed' : '')} onContextMenu={menu}
+      onClick={(e) => { if (e.target.closest('button, input, a, select, textarea, label, .row-grip, .col-grip, .ec2') || getSelection()?.toString()) return; const ec = e.target.closest('.tc')?.querySelector(':scope > .ec'); if (ec) return ec.click(); onEdit(); }}>
       <div className="tc tc-code"><EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} /></div>
       <div className="tc tc-name">
-        {grip && <span className="row-grip" role="separator" aria-orientation="horizontal" title="Sürükleyerek satırları incelt / kalınlaştır · çift tık: otomatik" onPointerDown={grip} onDoubleClick={gripReset} />}
         <button type="button" className="at-prod" onClick={onEdit} title="Ürünü düzenle">
           <Thumb p={p} size="sm" />
           <span className="at-n"><b>{p.n}</b><small>{[p.b, p.so ? 'sitede satışta değil' : '', needsCheck(p) ? `liste ${fmt(p.pc.r0, p.cur)} → ${fmt(p.r, p.cur)}, elle toptanı kontrol edin` : ''].filter(Boolean).join(' · ')}</small></span>
@@ -227,6 +228,7 @@ function AdminRow({ p, onEdit, onCopy, onDel, grip, gripReset }) {
       <div className="tc tc-a c"><StatusPick p={p} /></div>
       <div className={'tc tc-ut' + (dt ? '' : ' none')}><span className="ac-ut" title={dt ? dt.full : undefined}>{dt ? <><b>{dt.txt}</b>{why && <small>{why}</small>}</> : <small>—</small>}</span></div>
       <div className="tc tc-ed"><button type="button" className="icon-btn sm at-ed" onClick={menu} aria-label="İşlemler" title="Düzenle, kopyala, sil"><Icon n="more" s={18} /></button></div>
+      {grip && <span className="row-grip" role="separator" aria-orientation="horizontal" title="Sürükleyerek satırları incelt / kalınlaştır · çift tık: otomatik" onPointerDown={grip} onDoubleClick={gripReset} />}
     </li>
   );
 }

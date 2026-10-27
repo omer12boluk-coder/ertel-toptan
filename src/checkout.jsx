@@ -819,9 +819,12 @@ function MemberHome() {
       side.style.setProperty('--sl', q.left + 'px'); side.style.setProperty('--sw', q.width + 'px'); side.style.setProperty('--st', (q.top + scrollY) + 'px');
       ph.style.height = side.offsetHeight + 'px';
     };
-    fit(); const ro = new ResizeObserver(fit); ro.observe(side); ro.observe(root);
-    addEventListener('resize', fit);
-    return () => { ro.disconnect(); removeEventListener('resize', fit); root.classList.remove('side-fixed'); };
+    // geri dönüşte (sipariş sayfasından) sayfa kaydırması / animasyon sonradan oturur → birkaç kez ve kaydırma bitince yeniden ölç
+    let raf = 0; const later = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(fit); };
+    fit(); const ro = new ResizeObserver(later); ro.observe(side); ro.observe(root);
+    const ts = [60, 250, 600, 1200].map((ms) => setTimeout(fit, ms));
+    addEventListener('resize', later); addEventListener('scroll', later, { passive: true }); root.addEventListener('animationend', later);
+    return () => { ro.disconnect(); ts.forEach(clearTimeout); cancelAnimationFrame(raf); removeEventListener('resize', later); removeEventListener('scroll', later); root.removeEventListener('animationend', later); root.classList.remove('side-fixed'); };
   }, []);
   const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
   useStore((st) => st.seenTick);
