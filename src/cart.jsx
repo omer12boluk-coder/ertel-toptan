@@ -1,13 +1,13 @@
 // Sepet — online mağaza (/magaza) ve bayi (/b2b) aynı ekranı kullanır; sadece fiyat ve son adım farklıdır.
 //   Mağaza: Sepet → "Sepeti onayla" → sipariş bilgileri (checkout.jsx) → Yönetim paneli > Siparişler
 //           ya da "WhatsApp'tan liste gönder" → sadece liste linki gider (hiçbir yere kaydedilmez)
-//   Bayi:   Sepet → "Sepeti onayla" → talep türü / not → talep kaydedilir (sohbet Talepler'de devam eder)
+//   Bayi:   Sepet → "Sepeti onayla" → teslimat / ödeme → bayi siparişi (talepler koleksiyonu, type 'order'; sohbet Siparişlerim'de)
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, setQty, clearCart, freshStart, api, openRequest, toast, go } from './store.js';
 import { Icon, Thumb, Stepper, Empty, VatLines, copyText, openMenu } from './ui.jsx';
 import { waLink, links } from './route.js';
-import { fmt, priceFor, totals, fmtTotals, now, soon } from './utils.js';
-import { TYPE } from './config.js';
+import { fmt, priceFor, totals, fmtTotals, now, soon, ls } from './utils.js';
+import { TYPE, B2B_DELIV, B2B_PAY } from './config.js';
 import { encodeList, listLink, listItems, listRecord } from './listcode.js';
 import { ProductSheet, Lightbox, imageList } from './catalog.jsx';
 import { renderListImages, currentRate, ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -165,7 +165,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
           {(!pub || orders) && (
             <button className="btn primary big" onClick={onConfirm}>
               <Icon n="check" />
-              <span><b>Sepeti onayla</b><small>{pub ? 'Teslimat ve fatura bilgileri' : 'Hazırlatın ya da fiyat sorun'}</small></span>
+              <span><b>Sepeti onayla</b><small>{pub ? 'Teslimat ve fatura bilgileri' : 'Teslimat ve ödeme seçin'}</small></span>
             </button>
           )}
           {coming && ( // çok yakında: sistem hazır, müşteriye henüz açık değil (Ayarlar > Online mağaza)
@@ -206,61 +206,69 @@ function ShopWhatsApp({ items, strong }) {
   );
 }
 
-// ---- Bayi: talep gönder (hazırlayın / fiyat sor) ----------------------------------------------
+// ---- Bayi: sipariş ver (toptan fiyatlarla) — talepler koleksiyonuna type 'order' olarak yazılır;
+// mağaza siparişlerine karışmaz, yönetimde "Bayi siparişleri"nde görünür. Fiyatı olmayan ürünlerin fiyatı sorulur.
+// "Sadece fiyat sor" eski fiyat sorma talebidir (type 'quote').
 function BayiSend({ items, onBack }) {
   const { settings: S, user } = useStore();
   const [no] = useState(newNo);
-  const [type, setType] = useState(S.requests.allowReserve ? 'reserve' : 'quote');
+  const [deliv, setDeliv] = useState(() => ls.get('b2b-deliv', 'pickup'));
+  const [pay, setPay] = useState(() => ls.get('b2b-pay', 'cash'));
   const [pickup, setPickup] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const tot = totals(items, 'offer');
+  const ask = items.filter((i) => i.offer == null).length;
   const at = useMemo(() => now(), []);
   const rec = { no, userName: user.shop || user.name, items, status: 'offered', createdAt: at, updatedAt: at };
-  const types = [['reserve', 'Hazırlayın, geliyorum', 'Bu fiyatlarla ayırın', S.requests.allowReserve], ['quote', 'Fiyat sor', 'Son ne olur? Teklif isteyin', S.requests.allowQuote]].filter((t) => t[3]);
-  async function send(viaWA) {
+  async function send(type, viaWA) {
     if (busy) return;
     const win = viaWA ? window.open('about:blank', '_blank') : null; // tarayıcı engellemesin diye pencere tıklamada açılır
     setBusy(true);
     try {
-      const t = now();
-      const msgs = [{ from: 'system', text: `${TYPE[type]} · ${items.length} kalem · ${fmtTotals(tot)}`, at: t }];
+      const t = now(); const order = type === 'order';
+      const head = order ? `Sipariş · ${B2B_DELIV[deliv]} · ${B2B_PAY[pay]}` : TYPE[type];
+      const msgs = [{ from: 'system', text: `${head} · ${items.length} kalem · ${fmtTotals(tot)}${order && ask ? ` · ${ask} ürünün fiyatı sorulacak` : ''}`, at: t }];
       if (note.trim()) msgs.push({ from: 'user', text: note.trim(), at: t + 1 });
-      const id = await api().createRequest({ no, type, status: 'new', items, note: note.trim(), pickup: type === 'reserve' ? pickup.trim() : '', createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: note.trim() || TYPE[type], lastFrom: 'user', uid: user.uid, userName: user.name || user.username, shop: user.shop || '' }, msgs);
+      const id = await api().createRequest({ no, type, status: 'new', items, note: note.trim(), pickup: order && deliv === 'pickup' ? pickup.trim() : '', ...(order ? { deliv, pay } : {}), createdAt: t, updatedAt: t + 1, unreadAdmin: 1, unreadUser: 0, lastMsg: note.trim() || head, lastFrom: 'user', uid: user.uid, userName: user.name || user.username, shop: user.shop || '' }, msgs);
+      if (order) { ls.set('b2b-deliv', deliv); ls.set('b2b-pay', pay); }
       clearCart();
-      if (viaWA) { const url = waLink(S.shop.whatsapp, `Merhaba, #${no} numaralı talebim:\n${links.adminRequest(id)}`); if (win) win.location.href = url; else location.href = url; }
-      toast(type === 'reserve' ? 'Talebiniz iletildi, hazırlanınca haber vereceğiz' : 'Fiyat sorunuz iletildi');
+      if (viaWA) { const url = waLink(S.shop.whatsapp, `Merhaba, #${no} numaralı ${order ? 'siparişim' : 'fiyat sorum'}:\n${links.adminRequest(id)}`); if (win) win.location.href = url; else location.href = url; }
+      toast(order ? 'Siparişiniz alındı, onaylanınca haber vereceğiz' : 'Fiyat sorunuz iletildi');
       openRequest(id);
     } catch (e) { win?.close(); toast('Gönderilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
+  const Seg = ({ v, set, opts, label }) => (
+    <div className="b2b-seg" role="radiogroup" aria-label={label}>
+      {Object.entries(opts).map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={v === k} className={v === k ? 'on' : ''} onClick={() => set(k)}>{l}</button>)}
+    </div>
+  );
   return (
-    <div className="page send-step">
+    <div className="page send-step b2b-send">
       <div className="send-bar">
         <button className="btn sm ghost" onClick={onBack}><Icon n="back" s={16} />Sepet</button>
-        <div className="send-t"><b>Talep #{no}</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
+        <div className="send-t"><b>Sipariş #{no}</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
         <div className="send-btns">
-          <button className="btn primary" disabled={busy} onClick={() => send(false)}><Icon n="send" s={16} />Gönder</button>
-          {S.shop.whatsapp && <button className="btn wa" disabled={busy} onClick={() => send(true)}><Icon n="wa" s={17} />WhatsApp’tan gönder</button>}
+          <button className="btn primary" disabled={busy} onClick={() => send('order')}><Icon n="check" s={16} />Siparişi gönder</button>
         </div>
       </div>
       <div className="send-opts">
-        {types.length > 1 && (
-          <div className="seg-cards" role="radiogroup" aria-label="Talep türü">
-            {types.map(([k, l, sub]) => (
-              <button key={k} role="radio" aria-checked={type === k} className={'seg-card' + (type === k ? ' on' : '')} onClick={() => setType(k)}>
-                <span className="radio" aria-hidden="true" /><span><b>{l}</b><small>{sub}</small></span>
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="b2b-opt"><span className="field-l">Teslimat</span><Seg v={deliv} set={setDeliv} opts={B2B_DELIV} label="Teslimat" /></div>
+        <div className="b2b-opt"><span className="field-l">Ödeme</span><Seg v={pay} set={setPay} opts={B2B_PAY} label="Ödeme" /></div>
         <div className="row2">
-          {type === 'reserve' && S.requests.askPickupTime && <label className="field"><span className="field-l">Ne zaman gelirsiniz? <small className="opt">(isteğe bağlı)</small></span><input id="cart-pickup" placeholder="ör. Bugün 17:00, yarın sabah" value={pickup} onChange={(e) => setPickup(e.target.value)} /></label>}
-          <label className="field"><span className="field-l">Not <small className="opt">(isteğe bağlı)</small></span><input id="cart-note" placeholder={type === 'quote' ? 'ör. Hepsini alırsam son ne olur?' : 'ör. Kutusuyla birlikte'} value={note} onChange={(e) => setNote(e.target.value)} /></label>
+          {deliv === 'pickup' && S.requests.askPickupTime && <label className="field"><span className="field-l">Ne zaman gelirsiniz? <small className="opt">(isteğe bağlı)</small></span><input id="cart-pickup" placeholder="ör. Bugün 17:00, yarın sabah" value={pickup} onChange={(e) => setPickup(e.target.value)} /></label>}
+          <label className="field"><span className="field-l">Not <small className="opt">(isteğe bağlı)</small></span><input id="cart-note" placeholder={deliv === 'cargo' ? 'ör. Kargo adresi değişti, …' : 'ör. Kutusuyla birlikte'} value={note} onChange={(e) => setNote(e.target.value)} /></label>
         </div>
-        <p className="fine">Gönderince talebiniz <b>Talepler</b>’e düşer; dükkanla oradan yazışabilirsiniz. WhatsApp’tan gönderirseniz mesajda sadece talebin linki gider.</p>
+        {ask > 0 && <div className="banner warn"><Icon n="tag" /><div><b>{ask} ürünün fiyatı sorulacak.</b> Fiyatları yazıp size bildireceğiz, onayınızdan sonra hazırlanır.</div></div>}
+        <div className="b2b-send-btns">
+          <button className="btn primary big" disabled={busy} onClick={() => send('order')}><Icon n="check" /><span><b>Siparişi gönder</b><small>{ask ? 'Fiyatı belli olanlar toptan fiyatla' : 'Toptan fiyatlarla'}</small></span></button>
+          {S.requests.allowQuote && <button className="btn outline" disabled={busy} onClick={() => send('quote')}><Icon n="tag" s={16} />Sipariş vermeden fiyat sor</button>}
+          {S.shop.whatsapp && <button className="btn ghost wa-txt" disabled={busy} onClick={() => send('order', true)}><Icon n="wa" s={17} />Gönder ve WhatsApp’tan haber ver</button>}
+        </div>
+        <p className="fine">Siparişiniz <b>Siparişlerim</b>’de görünür; durumunu ve mesajları oradan takip edebilirsiniz.</p>
       </div>
-      <ListPaper r={rec} label="Talep" who={!!rec.userName} />
+      <ListPaper r={rec} label="Sipariş" who={!!rec.userName} />
     </div>
   );
 }

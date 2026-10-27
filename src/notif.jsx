@@ -8,7 +8,7 @@ import { fmt, fmtTotals, when, ls } from './utils.js';
 import { TYPE } from './config.js';
 
 const DAY = 864e5;
-const KINDS = [['all', 'Tümü'], ['order', 'Siparişler'], ['req', 'Talepler'], ['prod', 'Ürünler'], ['user', 'Üyeler']];
+const KINDS = [['all', 'Tümü'], ['order', 'Siparişler'], ['req', 'Bayi'], ['prod', 'Ürünler'], ['user', 'Üyeler']];
 const seenAt = () => ls.get('notif-seen', 0) || Date.now() - DAY;
 
 function useNotifs() {
@@ -23,7 +23,7 @@ function useNotifs() {
     }
     for (const r of requests) {
       const who = (r.userName || '') + (r.shop ? ` · ${r.shop}` : '');
-      if (r.createdAt > from) out.push({ id: 'r' + r.id, at: r.createdAt, g: 'req', ic: 'chat', tone: 'info', t: `Yeni talep #${r.no || ''} · ${who}`, s: [TYPE[r.type], r.items?.length ? r.items.length + ' ürün' : '', r.note].filter(Boolean).join(' · '), go: () => openRequest(r.id) });
+      if (r.createdAt > from) out.push({ id: 'r' + r.id, at: r.createdAt, g: 'req', ic: 'chat', tone: 'info', t: `${r.type === 'order' ? 'Yeni bayi siparişi' : 'Yeni talep'} #${r.no || ''} · ${who}`, s: [TYPE[r.type], r.items?.length ? r.items.length + ' ürün' : '', r.note].filter(Boolean).join(' · '), go: () => openRequest(r.id) });
       if (r.lastFrom === 'user' && r.updatedAt > from && r.updatedAt - (r.createdAt || 0) > 5000) out.push({ id: 'm' + r.id + r.updatedAt, at: r.updatedAt, g: 'req', ic: 'chat', tone: 'info', t: `Mesaj · ${who}`, s: r.lastMsg || '', go: () => openRequest(r.id) });
     }
     for (const u of customers) if (u.pending && (u.createdAt || 0) > from) out.push({ id: 'u' + u.uid, at: u.createdAt, g: 'user', ic: 'users', tone: 'warn', t: `Bayi başvurusu · ${u.name || u.username || ''}`, s: [u.shop, u.phone].filter(Boolean).join(' · ') + ' · onay bekliyor', go: () => { ls.set('cust-kind', 'bayi'); go('musteriler'); } });

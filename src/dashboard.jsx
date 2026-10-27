@@ -76,7 +76,7 @@ export function AdminHome() {
         <Kpi ic="tag" tone="green" label="Satış tutarı" value={fmt(st.rev, 'USD')} sub={<>{tl(st.rev)}{diff != null && <span className={'dash-diff ' + (diff >= 0 ? 'up' : 'down')}>{diff >= 0 ? '▲' : '▼'} %{Math.abs(diff)}</span>}</>} />
         <Kpi ic="box" tone="violet" label="Ortalama sepet" value={fmt(st.avg, 'USD')} sub={tl(st.avg)} />
         <Kpi ic="users" tone="teal" label="Yeni üye" value={st.newMembers} sub={perName} onClick={() => go('siparisler')} />
-        <Kpi ic="chat" tone="orange" label="Bayi talebi" value={st.reqs} sub={st.unread ? `${st.unread} okunmamış` : perName} onClick={() => go('talepler')} />
+        <Kpi ic="chat" tone="orange" label="Bayi siparişi" value={st.reqs} sub={st.unread ? `${st.unread} okunmamış` : perName} onClick={() => go('talepler')} />
       </section>
 
       <section className="dash-quick">
@@ -132,7 +132,7 @@ export function AdminHome() {
             ) : (
               <li key={'r' + f.r.id}><button onClick={() => openRequest(f.r.id)}>
                 <span className="dash-fi orange"><Icon n="chat" s={18} /></span>
-                <span className="dash-ft"><b>Talep #{f.r.no} · {f.r.shop || f.r.userName || ''}</b><small>{f.r.lastMsg ? f.r.lastMsg.slice(0, 70) : (f.r.items || []).length + ' ürün'} · {ago(f.t)}</small></span>
+                <span className="dash-ft"><b>{f.r.type === 'order' ? 'Bayi siparişi' : 'Talep'} #{f.r.no} · {f.r.shop || f.r.userName || ''}</b><small>{f.r.lastMsg ? f.r.lastMsg.slice(0, 70) : (f.r.items || []).length + ' ürün'} · {ago(f.t)}</small></span>
                 {f.r.unreadAdmin > 0 && <span className="badge">{f.r.unreadAdmin}</span>}
               </button></li>
             ))}

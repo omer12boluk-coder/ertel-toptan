@@ -59,7 +59,7 @@ export function HomePage() {
   const tiles = [
     ['katalog', 'Katalog', 'grid', 'Tüm ürünler ve toptan fiyatlar', null],
     ['sepet', 'Sepet', 'cart', cartN ? `${cartN} kalem sepette` : 'Sepetiniz boş', cartN],
-    ['talepler', 'Talepler', 'chat', unread ? `${unread} yeni mesaj` : open ? `${open} açık talep` : 'Siparişler ve teklifler', unread],
+    ['talepler', 'Siparişlerim', 'box', unread ? `${unread} yeni mesaj` : open ? `${open} açık sipariş` : 'Siparişleriniz ve fiyat sorularınız', unread],
     ['mesaj', 'Mesaj yaz', 'send', 'Ürün sormadan doğrudan yazın', null],
     ['profil', 'Profil', 'user', user.shop || 'Bilgileriniz', null],
   ];

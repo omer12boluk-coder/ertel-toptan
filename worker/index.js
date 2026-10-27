@@ -449,7 +449,7 @@ async function notifyCancel(env, id) {
   return notifySend(env, { subject: `İptal: sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, link, replyTo: o.contact?.email });
 }
 // Bayi yeni talep açınca / mesaj yazınca. Talep, bayinin kendi oturum anahtarıyla okunur (başkası adına bildirim yollanamaz).
-const REQ_TYPE = { reserve: 'Hazırlayın, geliyorum', quote: 'Fiyat sor', message: 'Mesaj' };
+const REQ_TYPE = { order: 'Bayi siparişi', reserve: 'Hazırlayın, geliyorum', quote: 'Fiyat sor', message: 'Mesaj' };
 async function notifyReq(env, b) {
   const id = String(b.id || ''); const tok = String(b.token || ''); const uid = tokUid(tok);
   if (!/^[\w-]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
@@ -464,9 +464,9 @@ async function notifyReq(env, b) {
   const n = (r.items || []).length;
   const lines = (r.items || []).slice(0, 30).map((i) => `• ${i.qty || 1} × ${i.n || ''}${i.k ? ` (${i.k})` : ''}`).join('\n');
   const head = `${REQ_TYPE[r.type] || 'Talep'}${n ? ` · ${n} ürün` : ''}`;
-  await adminPush(env, { title: `📨 Yeni talep #${r.no || ''} · ${who}`, body: (head + (r.note ? ' · ' + r.note : '')).slice(0, 160), url: '/admin/t/' + id, tag: 'ar-' + id }).catch(() => {});
+  await adminPush(env, { title: `${r.type === 'order' ? '🛒 Yeni bayi siparişi' : '📨 Yeni talep'} #${r.no || ''} · ${who}`, body: (head + (r.note ? ' · ' + r.note : '')).slice(0, 160), url: '/admin/t/' + id, tag: 'ar-' + id }).catch(() => {});
   const text = `📨 Yeni bayi talebi #${r.no || ''}\n${who}\n${head}${r.pickup ? '\nGeliş: ' + r.pickup : ''}${r.note ? '\nNot: ' + r.note : ''}${lines ? '\n\n' + lines : ''}\n\nPanelde aç: ${link}`;
-  return notifySend(env, { subject: `Yeni talep #${r.no || ''} · ${who}`, text, link });
+  return notifySend(env, { subject: `${r.type === 'order' ? 'Yeni bayi siparişi' : 'Yeni talep'} #${r.no || ''} · ${who}`, text, link });
 }
 
 // PlatinMarket eşitlemesinde değişen ürünler (GitHub Actions'taki eşitleme bildirir; anahtar: sha256('sync:' + TELEGRAM_TOKEN))

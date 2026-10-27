@@ -222,9 +222,9 @@ export function Stepper({ value, onChange, min = 0, small }) {
   );
 }
 
-export function StatusPill({ status, map = STATUS }) {
+export function StatusPill({ status, map = STATUS, label }) {
   const st = map[status] || { label: status, tone: 'muted' };
-  return <span className={'pill tone-' + st.tone}>{st.label}</span>;
+  return <span className={'pill tone-' + st.tone}>{label || st.label}</span>;
 }
 
 export function Field({ label, hint, children, row, error, opt, className = '' }) {

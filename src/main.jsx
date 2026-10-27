@@ -365,8 +365,8 @@ function Login() {
 }
 
 // [sekme, ad, ikon, telefondaki kısa ad]
-const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Talepler', 'chat'], ['profil', 'Hesabım', 'user']];
-const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Talepler', 'chat'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Siparişlerim', 'box', 'Siparişler'], ['profil', 'Hesabım', 'user']];
+const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['kalip', 'Kalıp bulucu', 'chip', 'Kalıp'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 const shopFirst = () => (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa');
 
@@ -383,7 +383,7 @@ function pageMenu(e, role) {
     !admin && { label: 'Sepete git', icon: 'cart', onClick: () => go('sepet') },
     pub && { label: 'Hesabım', icon: 'user', onClick: () => go('hesap') },
     admin && { label: 'Mağaza siparişleri', icon: 'box', onClick: () => go('siparisler') },
-    !pub && { label: admin ? 'Gelen talepler' : 'Taleplerim', icon: 'chat', onClick: () => go('talepler') },
+    !pub && { label: admin ? 'Bayi siparişleri' : 'Siparişlerim', icon: 'chat', onClick: () => go('talepler') },
     admin && '-',
     admin && { label: 'Yeni ürün ekle', icon: 'plus', onClick: () => { go('katalog'); store.set({ intent: 'newProduct' }); } },
     admin && { label: 'Yeni müşteri ekle', icon: 'users', onClick: () => { go('musteriler'); store.set({ intent: 'newCustomer' }); } },
@@ -429,7 +429,7 @@ function ShellFull() {
   const prev = useRef(unread);
   const [demoNote, setDemoNote] = useState(() => !ls.get('demo-note-off', false));
   useEffect(() => {
-    if (unread > prev.current) { toast(admin ? 'Yeni talep / mesaj geldi' : 'Dükkandan yeni mesaj', 'info'); try { navigator.vibrate?.(120); } catch {} }
+    if (unread > prev.current) { toast(admin ? 'Yeni bayi siparişi / mesaj geldi' : 'Dükkandan yeni mesaj', 'info'); try { navigator.vibrate?.(120); } catch {} }
     prev.current = unread;
     document.title = (unread ? `(${unread}) ` : '') + store.s.settings.brand.appName;
   }, [unread]);

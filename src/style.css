@@ -3426,3 +3426,20 @@ html.od-open .botnav { transform: translateY(115%); transition: transform .26s e
 /* mağaza: dar bilgisayar ekranında (Kalıp bulucu eklenince sığmıyordu) seçili olmayan sekmeler sadece simge */
 @media (max-width: 1150px) and (min-width: 900px) { .shell.public .topnav-b:not(.on) .topnav-l { display: none; } .shell.public .topnav-b:not(.on) { padding: 0 11px; } }
 @media (max-width: 560px) { .push-card { flex-wrap: wrap; } .push-card > .btn { flex-basis: 100%; } }
+/* bayi siparişi (sepet → sipariş gönder) */
+.b2b-send .b2b-opt { display: flex; flex-direction: column; gap: 6px; }
+.b2b-seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.b2b-seg button { flex: 1 1 0; min-width: 0; padding: 11px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); font: 600 14.5px/1.2 var(--f-body); cursor: pointer; transition: border-color .15s, background .15s; }
+.b2b-seg button.on { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, var(--surface)); color: var(--accent); }
+.b2b-send-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.b2b-send-btns .btn.big { flex: 1 1 260px; }
+.b2b-send-btns .wa-txt { color: #1a8f4c; }
+.b2b-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.b2b-chips .tag { display: inline-flex; align-items: center; gap: 4px; }
+.b2b-dtag.cargo { background: color-mix(in oklab, #3567c4 12%, var(--surface)); color: #2a55a8; }
+.b2b-dtag.pickup { background: color-mix(in oklab, #3f9a6b 12%, var(--surface)); color: #2c7a52; }
+@media (max-width: 700px) {
+  .b2b-send .send-bar .send-btns { display: none; }
+  .b2b-seg button { flex-basis: calc(50% - 4px); }
+  .b2b-send-btns > .btn { flex-basis: 100%; }
+}

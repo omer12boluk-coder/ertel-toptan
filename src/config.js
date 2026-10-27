@@ -312,12 +312,16 @@ export const STATUS = {
 };
 
 export const TYPE = {
+  order: 'Sipariş',
   reserve: 'Hazırlayın, geliyorum',
   quote: 'Fiyat sor',
   message: 'Mesaj',
 };
 
 export const OPEN_STATUSES = ['new', 'offered', 'accepted', 'ready'];
+// Bayi siparişi (talepler koleksiyonunda type 'order'): teslimat ve ödeme seçenekleri (cari sadece etiket; hesap başka yerde tutuluyor)
+export const B2B_DELIV = { pickup: 'Dükkândan alacağım', cargo: 'Kargoyla gönderin' };
+export const B2B_PAY = { cash: 'Elden / dükkânda', transfer: 'Havale / EFT', account: 'Cariye yazın' };
 
 // Online mağaza siparişleri
 export const ORDER_STATUS = {

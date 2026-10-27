@@ -4,7 +4,9 @@ import { Icon, Avatar, StatusPill, Empty, Sheet, Stepper, Confirm, openMenu, cop
 import { waLink, links } from './route.js';
 import { ls } from './utils.js';
 import { fmt, totals, fmtTotals, when, now, roundStep } from './utils.js';
-import { STATUS, TYPE, OPEN_STATUSES } from './config.js';
+import { STATUS, TYPE, OPEN_STATUSES, B2B_DELIV, B2B_PAY } from './config.js';
+// bayi siparişinde durum adları teslimata göre: kargoyla gönderilecekse "Hazır" yerine "Kargoya verildi"
+const stLabel = (r, st = r.status) => (st === 'ready' && r.deliv === 'cargo' ? 'Kargoya verildi' : st === 'new' && r.type === 'order' ? 'Onay bekliyor' : STATUS[st]?.label);
 import { CustomerSheet } from './admin.jsx';
 import { GuestLists, AdminListShare, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
 
@@ -18,7 +20,7 @@ export async function deleteRequests(ids, done) {
 }
 
 const FILTERS_ADMIN = [
-  ['open', 'Açık'], ['new', 'Yeni'], ['offered', 'Teklifte'], ['accepted', 'Hazırlanacak'], ['ready', 'Hazır'], ['closed', 'Kapanan'], ['all', 'Hepsi'],
+  ['open', 'Açık'], ['new', 'Yeni'], ['offered', 'Fiyat verildi'], ['accepted', 'Hazırlanacak'], ['ready', 'Hazır / kargoda'], ['closed', 'Kapanan'], ['all', 'Hepsi'],
 ];
 const FILTERS_USER = [['open', 'Açık'], ['closed', 'Geçmiş'], ['all', 'Hepsi']];
 
@@ -55,7 +57,7 @@ function RequestsInner() {
     <div className={'page req-page' + (openReq ? ' has-detail' : '')}>
       <section className="req-list">
         <div className="req-list-h">
-          <h1 className="page-t">{admin ? 'Gelen talepler' : 'Taleplerim'}</h1>
+          <h1 className="page-t">{admin ? 'Bayi siparişleri' : 'Siparişlerim'}</h1>
           {!admin && !pub && S.requests.allowMessage && <button className="btn sm outline" onClick={() => setNewMsg(true)}><Icon n="chat" s={16} />Mesaj yaz</button>}
           {admin && <div className="req-h-btns">
             <button className="btn sm ghost" onClick={() => store.set({ vitrinOpen: true })} title="Müşterinin WhatsApp’tan gönderdiği vitrin linkini açıp fiyatlayın"><Icon n="store" s={15} />Vitrin listesi</button>
@@ -78,8 +80,8 @@ function RequestsInner() {
           ))}
         </div>
         {list.length === 0 ? (
-          <Empty icon="chat" title={f === 'open' ? 'Açık talep yok' : 'Bu filtrede talep yok'}>
-            {!admin && <p>Sepetinizi gönderdiğinizde ya da mesaj yazdığınızda burada görünür.</p>}
+          <Empty icon="box" title={f === 'open' ? 'Açık sipariş yok' : 'Bu filtrede kayıt yok'}>
+            {!admin && <p>Sepetinizden sipariş verdiğinizde, fiyat sorduğunuzda ya da mesaj yazdığınızda burada görünür.</p>}
           </Empty>
         ) : (
           <ul className="rlist">
@@ -88,7 +90,7 @@ function RequestsInner() {
         )}
       </section>
       <section className="req-detail">
-        {openReq ? <RequestDetail key={openReq} id={openReq} /> : <div className="req-placeholder"><Empty icon="chat" title="Bir talep seçin">Soldaki listeden bir talebe dokunun.</Empty></div>}
+        {openReq ? <RequestDetail key={openReq} id={openReq} /> : <div className="req-placeholder"><Empty icon="box" title="Bir sipariş seçin">Soldaki listeden bir kayda dokunun.</Empty></div>}
       </section>
       {newMsg && <NewMessage onClose={() => setNewMsg(false)} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
@@ -103,7 +105,7 @@ function ReqCard({ r, admin, on, sel, onToggle, onDelete, onSelect }) {
   const menu = (e) => openMenu(e, admin ? [
     { label: 'Talebi aç', icon: 'chat', onClick: () => openRequest(r.id) },
     unread ? { label: 'Okundu işaretle', icon: 'check', onClick: () => api().updateRequest(r.id, { unreadAdmin: 0 }) } : { label: 'Okunmadı işaretle', icon: 'eye', onClick: () => api().updateRequest(r.id, { unreadAdmin: 1 }) },
-    r.status === 'accepted' && { label: 'Hazır olarak işaretle', icon: 'store', onClick: () => quickStatus(r, 'ready', 'Hazır, dükkandan teslim alabilirsiniz') },
+    r.status === 'accepted' && (r.deliv === 'cargo' ? { label: 'Kargoya verildi', icon: 'box', onClick: () => quickStatus(r, 'ready', 'Kargoya verildi') } : { label: 'Hazır olarak işaretle', icon: 'store', onClick: () => quickStatus(r, 'ready', 'Hazır, dükkandan teslim alabilirsiniz') }),
     r.status === 'ready' && { label: 'Teslim edildi', icon: 'check', onClick: () => quickStatus(r, 'done') },
     '-',
     phone && { label: "WhatsApp'tan yaz", icon: 'wa', onClick: () => window.open(waLink(phone, `Merhaba ${r.userName || ''}, #${r.no} numaralı talebiniz: ${r.guest ? links.guestRequest(r.id) : links.userRequest(r.id)}`), '_blank', 'noopener') },
@@ -122,11 +124,12 @@ function ReqCard({ r, admin, on, sel, onToggle, onDelete, onSelect }) {
         {admin && <Avatar u={{ name: r.userName, photo: store.s.customers.find((c) => c.uid === r.uid)?.photo }} size={38} />}
         <div className="rcard-b">
           <div className="rcard-top">
-            <strong>{admin ? r.userName : TYPE[r.type]}{admin && r.guest && <span className="tag guest-tag">Vitrin</span>}</strong>
+            <strong>{admin ? (r.shop || r.userName) : TYPE[r.type]}{admin && r.guest && <span className="tag guest-tag">Vitrin</span>}</strong>
             <span className="muted num">{when(r.updatedAt)}</span>
           </div>
           <div className="rcard-mid">
-            <StatusPill status={r.status} />
+            <StatusPill status={r.status} label={stLabel(r)} />
+            {r.type === 'order' && r.deliv && <span className={'tag b2b-dtag ' + r.deliv}>{r.deliv === 'cargo' ? 'Kargo' : 'Gel-al'}</span>}
             <span className="muted">#{r.no}{n ? ` · ${n} kalem · ` : ''}{n ? <b className="num">{fmtTotals(totals(r.items, 'offer'))}</b> : null}</span>
           </div>
           <p className="rcard-last">{r.lastFrom === 'admin' && !admin ? 'Siz: ' : ''}{r.lastFrom === 'admin' && admin ? 'Siz: ' : ''}{r.lastMsg}</p>
@@ -251,6 +254,7 @@ export function RequestDetail({ id }) {
   const tOffer = totals(items, 'offer');
   const tList = totals(items, 'list');
   const quick = admin ? S.requests.adminQuick : S.requests.userQuick;
+  const ord = r.type === 'order';
 
   return (
     <div className="rd">
@@ -259,8 +263,9 @@ export function RequestDetail({ id }) {
         <div className="rd-title">
           <h2>{TYPE[r.type]} <span className="muted">#{r.no}</span></h2>
           <span className="muted">{when(r.createdAt)}{r.pickup ? ' · Gelme: ' + r.pickup : ''}</span>
+          {r.type === 'order' && <span className="b2b-chips">{r.deliv && <span className={'tag b2b-dtag ' + r.deliv}><Icon n={r.deliv === 'cargo' ? 'box' : 'store'} s={13} />{B2B_DELIV[r.deliv]}</span>}{r.pay && <span className="tag"><Icon n="tag" s={13} />{B2B_PAY[r.pay]}</span>}</span>}
         </div>
-        <StatusPill status={r.status} />
+        <StatusPill status={r.status} label={stLabel(r)} />
       </header>
 
       {admin && r.guest && (
@@ -286,21 +291,24 @@ export function RequestDetail({ id }) {
         </button>
       )}
 
-      {!admin && r.status === 'ready' && (
-        <div className="banner ok"><Icon n="store" /><div><b>Siparişiniz hazır.</b> {S.shop.name} · {S.shop.address} · {S.shop.hours}</div></div>
+      {!admin && r.status === 'ready' && (r.deliv === 'cargo'
+        ? <div className="banner ok"><Icon n="box" /><div><b>Siparişiniz kargoya verildi.</b> Takip bilgisi mesajlarda.</div></div>
+        : <div className="banner ok"><Icon n="store" /><div><b>Siparişiniz hazır.</b> {S.shop.name} · {S.shop.address} · {S.shop.hours}</div></div>)}
+      {!admin && r.type === 'order' && r.status === 'new' && (
+        <div className="banner"><Icon n="clock" /><div><b>Siparişiniz alındı.</b> {(r.items || []).some((i) => i.offer == null) ? 'Fiyatı sorulan ürünlere fiyat yazıp onayınıza sunacağız.' : 'Onaylanınca hazırlanmaya başlar.'}</div></div>
       )}
       {!admin && r.guest && ['accepted', 'ready', 'done'].includes(r.status) && S.shop.payInfo && (
         <div className="banner ok pay-info"><Icon n="tag" /><div><b>Ödeme bilgileri</b><pre>{S.shop.payInfo}</pre><span className="fine">Açıklamaya talep numarasını yazın: #{r.no}</span></div></div>
       )}
       {!admin && r.status === 'offered' && (
-        <div className="banner warn"><Icon n="tag" /><div><b>Size teklif geldi.</b> Fiyatları kontrol edip onaylayın; onaydan sonra hazırlanır.</div></div>
+        <div className="banner warn"><Icon n="tag" /><div><b>{r.type === 'order' ? 'Fiyatlar yazıldı.' : 'Size teklif geldi.'}</b> Fiyatları kontrol edip onaylayın; onaydan sonra hazırlanır.</div></div>
       )}
 
       {items.length > 0 && (
         <div className="rd-items">
           <table className="itable">
             <thead>
-              <tr><th>Ürün</th><th className="r">Adet</th>{S.pricing.showRetail && <th className="r hide-s">Liste</th>}<th className="r">{admin ? 'İstenen' : 'Sepet'}</th><th className="r">Teklif</th><th className="r">Tutar</th>{editable && <th />}</tr>
+              <tr><th>Ürün</th><th className="r">Adet</th>{S.pricing.showRetail && <th className="r hide-s">Liste</th>}<th className="r">{admin ? 'İstenen' : 'Sepet'}</th><th className="r">{ord ? 'Fiyat' : 'Teklif'}</th><th className="r">Tutar</th>{editable && <th />}</tr>
             </thead>
             <tbody>
               {items.map((it, i) => {
@@ -312,7 +320,7 @@ export function RequestDetail({ id }) {
                     <td className="r it-qty" data-l="Adet">{editable ? <Stepper small min={1} value={it.qty} onChange={(v) => upd(i, { qty: v })} /> : <span className="num">{it.qty}</span>}</td>
                     {S.pricing.showRetail && <td className="r num muted hide-s it-list">{fmt(it.list, it.cur)}</td>}
                     <td className="r num muted it-asked" data-l={admin ? 'İstenen' : 'Sepet'}>{fmt(it.asked, it.cur)}</td>
-                    <td className="r it-offer" data-l="Teklif">
+                    <td className="r it-offer" data-l={ord ? 'Fiyat' : 'Teklif'}>
                       {editable ? (
                         <div className="adj">
                           <button onClick={() => upd(i, { offer: roundStep((it.offer || 0) - step, 0.01) })} aria-label={`Fiyatı ${step} düşür`} title={`−${step}`}>−</button>
@@ -333,7 +341,7 @@ export function RequestDetail({ id }) {
           <div className="rd-totals">
             {S.pricing.showRetail && <span className="muted">Liste <span className="num">{fmtTotals(tList)}</span></span>}
             <span className="muted">{admin ? 'İstenen' : 'Sepet'} <span className="num">{fmtTotals(tAsked)}</span></span>
-            <span className="rd-total">Teklif <b className="num">{fmtTotals(tOffer)}</b></span>
+            <span className="rd-total">{ord ? 'Toplam' : 'Teklif'} <b className="num">{fmtTotals(tOffer)}</b></span>
             {admin && rate && toTL(tOffer, rate) != null && <span className="muted rd-tl" title={rateLabel(rate)}>≈ <b className="num">{fmtTL(toTL(tOffer, rate))}</b></span>}
           </div>
           <VatLines by={tOffer} rate={admin ? rate : null} className="right" />
@@ -344,9 +352,11 @@ export function RequestDetail({ id }) {
         {admin && r.guest && items.length > 0 && <button className="btn primary" onClick={prepareList}><Icon n="send" s={16} />{dirty || r.status === 'new' ? 'Fiyatları kaydet, resmi hazırla' : 'Tablo resmi / link'}</button>}
         {admin && editable && !r.guest && (
           <>
-            <button className="btn outline" onClick={sendOffer}><Icon n="send" s={16} />Teklif gönder<small className="hide-s">müşteri onaylasın</small></button>
+            {(!ord || dirty || items.some((i) => i.offer == null)) && <button className="btn outline" onClick={sendOffer}><Icon n="send" s={16} />{r.type === 'order' ? 'Fiyatları gönder' : 'Teklif gönder'}<small className="hide-s">bayi onaylasın</small></button>}
             <button className="btn primary" onClick={approve}><Icon n="check" s={16} />{r.status === 'accepted' && !dirty ? 'Onaylı' : 'Onayla, hazırlıyorum'}</button>
-            {r.status === 'accepted' && !dirty && <button className="btn primary" onClick={() => setStatus('ready', {}, 'Hazır, dükkandan teslim alabilirsiniz')}><Icon n="store" s={16} />Hazır</button>}
+            {r.status === 'accepted' && !dirty && (r.deliv === 'cargo'
+              ? <button className="btn primary" onClick={() => setStatus('ready', {}, 'Kargoya verildi')}><Icon n="box" s={16} />Kargoya verildi</button>
+              : <button className="btn primary" onClick={() => setStatus('ready', {}, 'Hazır, dükkandan teslim alabilirsiniz')}><Icon n="store" s={16} />Hazır</button>)}
             <button className="btn ghost danger" onClick={() => setConfirm({ title: 'Talebi reddet', text: 'Müşteriye “Reddedildi” olarak bildirilecek.', okLabel: 'Reddet', tone: 'danger', onOk: () => setStatus('rejected') })}>Reddet</button>
           </>
         )}
@@ -360,11 +370,11 @@ export function RequestDetail({ id }) {
         {admin && <button className="btn ghost danger" onClick={() => setConfirm({ title: 'Talebi sil', text: 'Talep ve tüm mesajları kalıcı olarak silinir. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => deleteRequests([r.id]) })}><Icon n="trash" s={15} />Sil</button>}
         {!admin && r.status === 'offered' && (
           <>
-            <button className="btn primary" onClick={() => setStatus('accepted', {}, 'Müşteri teklifi kabul etti')}><Icon n="check" s={16} />Teklifi kabul et</button>
+            <button className="btn primary" onClick={() => setStatus('accepted', {}, r.type === 'order' ? 'Bayi fiyatları onayladı' : 'Müşteri teklifi kabul etti')}><Icon n="check" s={16} />{r.type === 'order' ? 'Fiyatları onayla' : 'Teklifi kabul et'}</button>
             <button className="btn ghost danger" onClick={() => setStatus('rejected', {}, 'Müşteri teklifi reddetti')}>Reddet</button>
           </>
         )}
-        {!admin && ['new', 'offered'].includes(r.status) && <button className="btn ghost" onClick={() => setConfirm({ title: 'Talebi iptal et', text: 'Bu talep kapatılacak.', okLabel: 'İptal et', tone: 'danger', onOk: () => setStatus('cancelled', {}, 'Müşteri talebi iptal etti') })}>İptal et</button>}
+        {!admin && ['new', 'offered'].includes(r.status) && <button className="btn ghost" onClick={() => setConfirm({ title: r.type === 'order' ? 'Siparişi iptal et' : 'Talebi iptal et', text: 'Bu kayıt kapatılacak.', okLabel: 'İptal et', tone: 'danger', onOk: () => setStatus('cancelled', {}, r.type === 'order' ? 'Bayi siparişi iptal etti' : 'Müşteri talebi iptal etti') })}>İptal et</button>}
         {waTo && <a className="btn wa" href={waTo} target="_blank" rel="noopener"><Icon n="wa" s={16} />{admin ? 'WhatsApp’tan gönder' : 'WhatsApp’tan haber ver'}</a>}
         {dirty && <span className="dirty-note">Değişiklikler kaydedilmedi — teklif gönderin veya onaylayın.</span>}
       </div>
