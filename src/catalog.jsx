@@ -508,6 +508,7 @@ export function Catalog({ admin }) {
           {moreOutside > 0 && <div className="banner info widen"><Icon n="search" /><div>{scopeName} dışında da <b>{moreOutside} sonuç</b> var.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Tüm ürünlerde ara</button></div>}
           <div className="result-line">
             <span>{list.length.toLocaleString('tr-TR')} ürün{!widened && scopeName && <> · <b>{scopeName}</b></>}</span>
+            {admin && <SaveState />}
             {admin && <SyncButton icon />}
             <span className="view-sw" role="group" aria-label="Görünüm">
               <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Kutu kutu" title="Kutu kutu"><Icon n="grid" s={17} /></button>
@@ -1134,7 +1135,14 @@ async function clearChecks() {
 }
 // Hızlı kayıt: ekran HEMEN değişir (beklemeden), kayıt arkada yapılır. Art arda birkaç değişiklik tek kayıtta birleşir,
 // kayıtlar sırayla gider (biri ötekini ezmesin). Hata olursa katalog sunucudan yeniden okunur.
-let qsT = 0, qsChain = Promise.resolve(), qsMsgs = [];
+let qsT = 0, qsDoneT = 0, qsPend = 0, qsChain = Promise.resolve();
+// kaydedilmemiş değişiklik varken sayfadan çıkılırsa tarayıcı uyarsın
+if (typeof window !== 'undefined') addEventListener('beforeunload', (e) => { if (qsPend) { e.preventDefault(); e.returnValue = ''; } });
+function SaveState() {
+  const qs = useStore((s) => s.qs);
+  if (!qs) return null;
+  return <span className={'qs-st ' + qs} role="status">{qs === 'saving' ? <><i className="qs-spin" />Kaydediliyor…</> : qs === 'saved' ? <><Icon n="check" s={13} />Kaydedildi</> : <>Kaydedilemedi</>}</span>;
+}
 const NH = new WeakMap(); // ürün → aranacak ad + marka (stok kodu hariç)
 function nameHay(p) { let v = NH.get(p); if (v == null) NH.set(p, (v = norm(p.n + ' ' + (p.b || '')))); return v; }
 function quickSave(p, patch, msg) {
@@ -1145,14 +1153,15 @@ function quickSave(p, patch, msg) {
     return n;
   });
   setCatalog(list);
-  if (msg) qsMsgs.push(msg);
+  // bilgi değişiklik ANINDA (toast); kaydın durumu ürün sayısının yanındaki küçük işarette: Kaydediliyor… → ✓ Kaydedildi
+  if (msg) toast(msg);
+  qsPend++; store.set({ qs: 'saving' });
   clearTimeout(qsT);
   qsT = setTimeout(() => {
-    const msgs = qsMsgs; qsMsgs = [];
     qsChain = qsChain.then(async () => {
       const cur = store.s.catalog.map(({ _s, _t, ...x }) => x);
-      try { await api().saveCatalog(cur); toast(msgs.length > 1 ? `${msgs.length} değişiklik kaydedildi` : msgs[0] || 'Kaydedildi'); }
-      catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); try { const fresh = await api().loadCatalog(); fresh && setCatalog(fresh); } catch {} }
+      try { await api().saveCatalog(cur); qsPend = 0; store.set({ qs: 'saved' }); clearTimeout(qsDoneT); qsDoneT = setTimeout(() => store.s.qs === 'saved' && store.set({ qs: null }), 2500); }
+      catch (e) { qsPend = 0; store.set({ qs: 'error' }); toast('Kaydedilemedi: ' + e.message, 'bad'); try { const fresh = await api().loadCatalog(); fresh && setCatalog(fresh); } catch {} }
     });
   }, 450);
   return Promise.resolve();

@@ -3676,3 +3676,10 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
 .plist.h1 .ac-r b { font-size: 16px; }
 .plist.h1 .pst2 { height: 26px; }
 @media (max-width: 700px) { .row-grip { display: none; } .plist.fixh > .atr:not(.ath-row) { height: auto; } }
+
+/* hızlı kayıt durumu (ürün sayısının yanında) */
+.qs-st { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 3px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600; background: var(--surface-2); color: var(--muted); animation: up .2s ease; }
+.qs-st.saved { background: color-mix(in oklab, #1f9d5b 12%, var(--surface)); color: #1f7a48; }
+.qs-st.error { background: color-mix(in oklab, #c92a2a 12%, var(--surface)); color: #c92a2a; }
+.qs-spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+.result-line > span:first-child:has(+ .qs-st) { margin-right: 0; } .result-line .qs-st { margin: 0 auto 0 -2px; } .result-line .qs-st + .sync-ic { margin-left: 0; }
