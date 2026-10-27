@@ -87,18 +87,22 @@ function EditCell({ value, show, onSave, kind = 'num', label, className = '' }) 
   const [ed, setEd] = useState(false);
   const [v, setV] = useState('');
   const start = (e) => { e.stopPropagation(); setV(value ?? ''); setEd(true); };
+  const done = useRef(false);
+  useEffect(() => { if (ed) done.current = false; }, [ed]);
   const save = async () => {
+    if (done.current) return; done.current = true;
     let out = String(v).trim();
-    if (kind === 'num' || kind === 'opt') { if (out === '' && kind === 'opt') out = null; else { const n = Number(out.replace(',', '.')); if (!isFinite(n) || n < 0) return toast('Geçerli bir sayı yazın', 'bad'); out = n; } }
-    else if (!out) return toast(label + ' boş olamaz', 'bad');
+    if (kind === 'num' || kind === 'opt') { if (out === '' && kind === 'opt') out = null; else { const n = Number(out.replace(',', '.')); if (!isFinite(n) || n < 0) { done.current = false; setEd(false); return toast('Geçerli bir sayı yazın', 'bad'); } out = n; } }
+    else if (!out) { done.current = false; setEd(false); return toast(label + ' boş olamaz', 'bad'); }
     setEd(false); if (out !== value) await onSave(out);
   };
   if (!ed) return <button type="button" className={'ec ' + className} onClick={start} title={label + ' — değiştirmek için tıklayın'}>{show}</button>;
   return (
-    <span className={'ec on ' + className} onClick={(e) => e.stopPropagation()}>
-      <input autoFocus inputMode={kind === 'text' ? 'text' : 'decimal'} value={v} placeholder={kind === 'opt' ? 'oto' : ''} aria-label={label}
-        onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEd(false); }} onBlur={() => setTimeout(() => setEd(false), 150)} />
-      <button type="button" className="ec-ok" onMouseDown={(e) => e.preventDefault()} onClick={save} aria-label="Kaydet"><Icon n="check" s={14} /></button>
+    // hücrenin tamamını kaplayan sade yazı kutusu (dar sütunda da taşmaz); Enter ya da dışarı tıklamak kaydeder, Esc vazgeçer
+    <span className={'ec2 ' + className} onClick={(e) => e.stopPropagation()}>
+      <input autoFocus onFocus={(e) => e.target.select()} inputMode={kind === 'text' ? 'text' : 'decimal'} value={v} placeholder={kind === 'opt' ? 'oto' : ''} aria-label={label}
+        onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } if (e.key === 'Escape') { done.current = true; setEd(false); } }} onBlur={save} />
+      <button type="button" className="ec2-ok" tabIndex={-1} onMouseDown={(e) => e.preventDefault()} onClick={save} aria-label="Kaydet"><Icon n="check" s={12} /></button>
     </span>
   );
 }
@@ -108,12 +112,16 @@ const COLW_MIN = 56, COLW_MAX = 420, NAME_MIN = 200, NAME_MAX = 900;
 // Excel gibi: her sütun sabit genişlikte; bir sütunu genişletince sağındakiler kayar, artan yer en sondaki ⋮ sütununa kalır
 // (sığmazsa tablo yana kayar). Ürün sütununun varsayılanı kalan genişlik.
 const cwOf = (w, k, d, nameW) => k === 'name' ? Math.max(NAME_MIN, Math.min(NAME_MAX, w.name || nameW || 360)) : Math.max(COLW_MIN, Math.min(COLW_MAX, w[k] || d));
-function colTpl(w, nameW) { return COLS.map(([k, , d]) => cwOf(w, k, d, nameW) + 'px').join(' ') + ' minmax(44px, 1fr)'; }
-const colSum = (w, nameW) => COLS.reduce((t, [k, , d]) => t + cwOf(w, k, d, nameW), 0) + 44;
+function colTpl(w, nameW, hide = []) { return COLS.filter(([k]) => !hide.includes(k)).map(([k, , d]) => cwOf(w, k, d, nameW) + 'px').join(' ') + ' minmax(44px, 1fr)'; }
+const colSum = (w, nameW, hide = []) => COLS.filter(([k]) => !hide.includes(k)).reduce((t, [k, , d]) => t + cwOf(w, k, d, nameW), 0) + 44;
+const COL_NAMES = { code: 'Stok kodu', s: 'Stok', r: 'Satış', w: 'Toptan', a: 'Durum', ut: 'Son işlem' };
 function AdminTable({ list, asort, sortBy, onEdit, onCopy }) {
   const [cw, setCw0] = useState(() => ls.get('atw', {}));
   const [nameW, setNameW] = useState(0); // ürün sütununun varsayılanı: tablonun kalan genişliği
   const [del, setDel] = useState(null);
+  const [hide, setHide0] = useState(() => ls.get('atc-hide', [])); // gizlenen sütunlar (ürün sütunu gizlenemez)
+  const setHide = (h) => { setHide0(h); ls.set('atc-hide', h); };
+  const colMenu = (e) => openMenu(e, Object.entries(COL_NAMES).map(([k, l]) => ({ label: l, icon: hide.includes(k) ? 'eyeoff' : 'eye', hint: hide.includes(k) ? 'gizli' : '✓', onClick: () => setHide(hide.includes(k) ? hide.filter((x) => x !== k) : [...hide, k]) })), 'Sütunları göster / gizle');
   const [rh, setRh0] = useState(() => ls.get('atrh', 0)); // satır yüksekliği (0 = içeriğe göre), Excel gibi satır alt kenarından
   const headRef = useRef(null);
   useLayoutEffect(() => { const ul = headRef.current?.parentElement; if (!ul) return; ul.classList.toggle('fixh', rh > 0); ul.classList.toggle('h1', rh > 0 && rh < 58); rh > 0 ? ul.style.setProperty('--atrh', rh + 'px') : ul.style.removeProperty('--atrh'); }, [rh]);
@@ -130,10 +138,10 @@ function AdminTable({ list, asort, sortBy, onEdit, onCopy }) {
   useLayoutEffect(() => {
     const ul = headRef.current?.parentElement; if (!ul) return;
     // varsayılan sütun genişliklerine göre (sürüklenen genişlikler ürün sütununu daraltmasın: kenar imleçle gitsin)
-    const fit = () => { const others = COLS.reduce((t, [k, , d]) => t + (k === 'name' ? 0 : d), 0) + 44; setNameW(Math.max(NAME_MIN, ul.clientWidth - others - 2)); };
+    const fit = () => { const others = COLS.reduce((t, [k, , d]) => t + (k === 'name' || hide.includes(k) ? 0 : d), 0) + 44; setNameW(Math.max(NAME_MIN, ul.clientWidth - others - 2)); };
     fit(); const ro = new ResizeObserver(fit); ro.observe(ul); return () => ro.disconnect();
-  }, []);
-  useLayoutEffect(() => { const ul = headRef.current?.parentElement; if (!ul) return; ul.classList.add('at-ul'); ul.style.setProperty('--atc', colTpl(cw, nameW)); ul.style.setProperty('--atw', colSum(cw, nameW) + 'px'); }, [cw, nameW]);
+  }, [hide.join()]);
+  useLayoutEffect(() => { const ul = headRef.current?.parentElement; if (!ul) return; ul.classList.add('at-ul'); for (const k of Object.keys(COL_NAMES)) ul.classList.toggle('hide-' + k, hide.includes(k)); ul.style.setProperty('--atc', colTpl(cw, nameW, hide)); ul.style.setProperty('--atw', colSum(cw, nameW, hide) + 'px'); }, [cw, nameW, hide.join()]);
   useEffect(() => () => { const ul = headRef.current?.parentElement; if (ul) { ul.classList.remove('at-ul'); ul.style.removeProperty('--atc'); ul.style.removeProperty('--atw'); } }, []);
   // sütunun SAĞ kenarı tutulur: kenar imleçle birlikte gider, soldaki sütunlar yerinden oynamaz
   const grip = (k, d) => (e) => {
@@ -150,16 +158,16 @@ function AdminTable({ list, asort, sortBy, onEdit, onCopy }) {
   const [noHov, setNoHov] = useState(null);
   const click = (k) => () => { setNoHov(k); sortBy(k); };
   return <>
-    <li className="atr ath-row" ref={headRef}>
+    <li className="atr ath-row" ref={headRef} onContextMenu={colMenu}>
       {COLS.map(([k, l, d, al]) => (
         <div key={k} className={'tc tc-' + k + (al ? ' ' + al : '')}>
-          <button type="button" className={'ath' + (asort.k === k ? ' on ' + asort.d : '') + (noHov === k ? ' nohov' : '')} onClick={click(k)} onMouseLeave={() => noHov === k && setNoHov(null)}>
+          <button type="button" className={'ath' + (asort.k === k ? ' on ' + asort.d : '') + (noHov === k ? ' nohov' : '')} onClick={click(k)} onMouseLeave={() => noHov === k && setNoHov(null)} title={l.charAt(0) + l.slice(1).toLocaleLowerCase('tr') + ' — sırala'}>
             <span>{l}</span><svg className="ath-ar" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 8 1.5 3.5h7z" /></svg>
           </button>
           <span className="col-grip" role="separator" aria-orientation="vertical" title="Sürükleyerek genişlet / daralt · çift tık: varsayılan" onPointerDown={grip(k, d)} onDoubleClick={() => reset(k)} />
         </div>
       ))}
-      <div className="tc tc-ed" />
+      <div className="tc tc-ed"><button type="button" className="icon-btn sm at-cols" onClick={colMenu} aria-label="Sütunlar" title="Sütunları göster / gizle"><Icon n="eye" s={16} /></button></div>
     </li>
     {list.map((p) => <AdminRow key={p.id} p={p} onEdit={() => onEdit(p)} onCopy={() => onCopy(p)} onDel={() => setDel(p)} grip={rowGrip} gripReset={rowReset} />)}
     {del && <Confirm title="Ürün silinsin mi?" text={delText(del)} okLabel="Sil" tone="danger" onOk={() => removeProduct(del)} onClose={() => setDel(null)} />}
@@ -193,8 +201,9 @@ function AdminRow({ p, onEdit, onCopy, onDel, grip, gripReset }) {
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
   return (
     <li className={'atr' + (p.a ? '' : ' off') + (needsCheck(p) ? ' changed' : '')} onContextMenu={menu}>
-      <div className="tc tc-code"><EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} />{grip && <span className="row-grip" role="separator" aria-orientation="horizontal" title="Sürükleyerek satırları incelt / kalınlaştır · çift tık: otomatik" onPointerDown={grip} onDoubleClick={gripReset} />}</div>
+      <div className="tc tc-code"><EditCell className="ac-code" value={p.k} show={<code>{p.k || '—'}</code>} kind="text" label="Stok kodu" onSave={saveCode} /></div>
       <div className="tc tc-name">
+        {grip && <span className="row-grip" role="separator" aria-orientation="horizontal" title="Sürükleyerek satırları incelt / kalınlaştır · çift tık: otomatik" onPointerDown={grip} onDoubleClick={gripReset} />}
         <button type="button" className="at-prod" onClick={onEdit} title="Ürünü düzenle">
           <Thumb p={p} size="sm" />
           <span className="at-n"><b>{p.n}</b><small>{[p.b, p.so ? 'sitede satışta değil' : '', needsCheck(p) ? `liste ${fmt(p.pc.r0, p.cur)} → ${fmt(p.r, p.cur)}, elle toptanı kontrol edin` : ''].filter(Boolean).join(' · ')}</small></span>
