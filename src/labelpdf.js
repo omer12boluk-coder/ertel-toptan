@@ -102,7 +102,25 @@ export async function canvasPdf(canvas, paper = 'a6') {
 // 10×15 / 4×6 kâğıdını listeler; PDF'te (belge modu) sadece A4/A3/mektup gibi belge kâğıtları çıkıyor.
 export async function labelPdf(o, S, paper) {
   const c = drawLabel(o, S);
-  if (paper === '4x6') return new Promise((r) => c.toBlob(r, 'image/png'));
+  if (paper === '4x6') return png4x6(c);
   return canvasPdf(c, paper);
 }
 export const needsPdfPrint = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+
+// 4×6 resim: yazıcılar fotoğrafı kenarsız "doldur" diye büyütüp kenarlarını kırpabiliyor → etiket %88'e küçültülüp
+// beyaz pay bırakılır; PNG'ye 300 dpi bilgisi (pHYs) yazılır ki gerçek boyutu 4×6 inç olsun (yoksa 72/96 dpi sanılıp büyütülüyor).
+const SAFE = 0.88;
+let CRC;
+function crc32(b) { if (!CRC) { CRC = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; CRC[n] = c >>> 0; } } let c = 0xffffffff; for (const x of b) c = CRC[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+async function png4x6(label) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  const w = Math.round(W * SAFE), h = Math.round(H * SAFE); ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(label, Math.round((W - w) / 2), Math.round((H - h) / 2), w, h);
+  const png = new Uint8Array(await (await new Promise((r) => c.toBlob(r, 'image/png'))).arrayBuffer());
+  const ppm = Math.round(DPI / 0.0254); // piksel / metre
+  const body = new Uint8Array(13); const dv = new DataView(body.buffer); body.set([112, 72, 89, 115], 0); dv.setUint32(4, ppm); dv.setUint32(8, ppm); body[12] = 1; // 'pHYs'
+  const chunk = new Uint8Array(4 + 13 + 4); new DataView(chunk.buffer).setUint32(0, 9); chunk.set(body, 4); new DataView(chunk.buffer).setUint32(17, crc32(body));
+  const at = 8 + 25; // imza + IHDR
+  return new Blob([png.slice(0, at), chunk, png.slice(at)], { type: 'image/png' });
+}
