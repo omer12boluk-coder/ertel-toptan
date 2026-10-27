@@ -20,3 +20,14 @@ export function code128svg(text, { h = 90, mod = 2, quiet = 10 } = {}) {
   const W = x + quiet * mod;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${h}" width="${W}" height="${h}" preserveAspectRatio="none" shape-rendering="crispEdges"><rect width="${W}" height="${h}" fill="#fff"/><g fill="#000">${bars}</g></svg>`;
 }
+
+// Aynı barkodun çubukları (tuval için): [{x, w}] modül cinsinden + toplam genişlik
+export function code128bars(text, quiet = 10) {
+  const s = String(text).replace(/[^\x20-\x7e]/g, '');
+  const codes = [104]; for (const ch of s) codes.push(ch.charCodeAt(0) - 32);
+  let sum = 104; codes.slice(1).forEach((c, i) => (sum += c * (i + 1)));
+  codes.push(sum % 103, 106);
+  let x = quiet; const bars = [];
+  for (const c of codes) { const w = P[c]; for (let i = 0; i < w.length; i++) { const n = Number(w[i]); if (i % 2 === 0) bars.push({ x, w: n }); x += n; } }
+  return { bars, width: x + quiet };
+}

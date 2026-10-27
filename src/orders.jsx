@@ -9,6 +9,7 @@ import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushStatus } from './push.js';
 import { code128svg } from './barcode.js';
+import { labelPdf, needsPdfPrint } from './labelpdf.js';
 import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 
 // Durum filtreleri: üstte renkli sayaç kutuları (bir bakışta ne kadar iş bekliyor), yanında Tümü / Tamamlanan / İptal
@@ -581,7 +582,20 @@ function CargoCard({ o, flow }) {
       toast('DHL’e aktarıldı: ' + j.ref);
     } catch (e) { setErr('Bağlantı hatası: ' + e.message); } finally { setBusy(''); }
   }
-  const printLabel = () => printHtml(dhlLabelHtml(o, S));
+  // Telefonda window.print() çalışmıyor (özellikle ana ekrandaki uygulamada) → etiket PDF'i önceden hazırlanır,
+  // düğmeye basınca paylaş menüsü açılır (Yazdır / Dosyalara kaydet). Paylaşım beklemeden açılmalı (iPhone dokunuş şartı).
+  const mobile = needsPdfPrint();
+  const [pdf, setPdf] = useState(null);
+  useEffect(() => { if (!mobile || !live) { setPdf(null); return; } let ok = true; labelPdf(o, S).then((b) => ok && setPdf(b)).catch((e) => console.warn(e)); return () => { ok = false; }; },
+    [mobile, live, o.dhl?.ref, o.dhl?.at, o.dhl?.kg, o.dhl?.desi, o.dhl?.pay, o.dhl?.icerik, JSON.stringify(o.delivery?.addr || {})]);
+  const openPdf = (b) => { const u = URL.createObjectURL(b); const w = window.open(u, '_blank'); if (!w) { const a = document.createElement('a'); a.href = u; a.download = `DHL-${o.dhl.ref}.pdf`; document.body.appendChild(a); a.click(); a.remove(); } setTimeout(() => URL.revokeObjectURL(u), 60000); };
+  const printLabel = () => {
+    if (!mobile) { printHtml(dhlLabelHtml(o, S)); return; }
+    if (!pdf) { toast('Etiket hazırlanıyor, bir saniye sonra tekrar basın'); return; }
+    const file = new File([pdf], `DHL-${o.dhl.ref}.pdf`, { type: 'application/pdf' });
+    if (navigator.canShare?.({ files: [file] })) navigator.share({ files: [file], title: 'DHL etiketi ' + o.dhl.ref }).catch((e) => { if (e?.name !== 'AbortError') openPdf(pdf); });
+    else openPdf(pdf);
+  };
   async function check() {
     setBusy('check');
     try { const x = await dhlCall('track', { id: o.id }); const r = await dhlApply(o, x); if (r) toast(r === 'done' ? 'Teslim edildi' : 'Takip no geldi: ' + x.code); else toast(x?.found ? (x.text || 'Henüz şubede okutulmadı') : 'DHL’de kayıt bulunamadı', x?.found ? undefined : 'bad'); }
@@ -607,6 +621,7 @@ function CargoCard({ o, flow }) {
         <p className="fine">Referans <b className="num">{o.dhl.ref}</b> · {when(o.dhl.at)} · {o.dhl.pkg ? o.dhl.pkg + ' · ' : ''}{o.dhl.kg || 1} kg / {o.dhl.desi || 1} desi · {o.dhl.pay === 'P' ? 'gönderici ödemeli' : 'alıcı ödemeli'}</p>
         <div className="row-btns">
           <button className="btn primary" disabled={!!busy} onClick={printLabel}><Icon n="box" s={16} />Barkod yazdır (A6)</button>
+          {mobile && <p className="fine ocg-tip">Açılan menüden <b>Yazdır</b>’ı seçin (etiket 10×15 cm / A6).</p>}
           {dhlOpen(o) && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : o.cargo?.code ? 'Teslim edildi mi?' : 'Takip no geldi mi?'}</button>}
           {!o.cargo?.code && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL kaydını iptal et</button>}
           {!o.cargo?.code && <button className="link ocg-manual" onClick={() => flow.openShip(o)}>Takip no’yu elle gir</button>}
