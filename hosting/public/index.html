@@ -3776,9 +3776,16 @@ html.row-resizing, html.row-resizing * { cursor: row-resize !important; user-sel
 @media (min-width: 900px) { .main > .acct2, .acct2 { animation: none !important; transform: none !important; } }
 /* Hesabım'da bölüm değişince kaydırma çubuğu çıkıp kaybolmasın (sayfa ve sol menü yana milim kayıyordu) */
 @media (min-width: 900px) { html:has(.acct2) { overflow-y: scroll; } }
+/* düzenlenebilir hücre: hücrenin TAMAMI düzenleme alanı gibi görünür (imleç + vurgu), boş alan sanılmasın */
+@media (min-width: 701px) {
+  .plist > .atr > .tc:has(> .ec) { cursor: text; transition: background .12s, box-shadow .12s; }
+  .plist > .atr > .tc:has(> .ec):hover { background: color-mix(in oklab, var(--accent) 6%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent); }
+  .plist > .atr > .tc > .ec:not(.on):hover { background: none; box-shadow: none; }
+  .plist > .atr > .tc > .ec { cursor: text; }
+}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'df4bb35358';</script>
+<script>window.__BUILD = '6769219318';</script>
 </head>
 <body>
 <div id="root"></div>
