@@ -9,6 +9,7 @@ import LOGO_WIDE from '../assets/logo-wide.png';
 export { LOGO_MARK, LOGO_WIDE };
 
 export const DEFAULT_SETTINGS = {
+  preq: { on: true, perDay: 5, days: 30 }, // Ürün talebi (mağaza üyesi fotoğraf + açıklama; preq.jsx)
   brand: {
     appName: 'ERTEL GSM',
     tagline: 'Bayilere özel katalog',

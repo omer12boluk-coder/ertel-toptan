@@ -20,6 +20,7 @@ import { rateLabel } from './listsheet.jsx';
 import { syncNow } from './watch.js';
 import { Members } from './orders.jsx';
 import { KalipSettings } from './kalipfind.jsx';
+import { PreqAdmin, PreqSettings } from './preq.jsx';
 
 const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')));
 
@@ -208,9 +209,12 @@ export function ProductEdit({ p, copy, onClose }) {
 // =========================================================================
 // Müşteriler
 export function Customers() {
-  const { customers, settings: S, requests, members = [], win } = useStore();
+  const { customers, settings: S, requests, members = [], win, preqs = [] } = useStore();
+  const pqNew = preqs.filter((q) => q.seenAdmin === false).length;
   const [kind, setKind0] = useState(() => ls.get('cust-kind', 'bayi'));
   useEffect(() => { if (kind === 'magaza') ensureAllMembers(); }, [kind]);
+  const openPreq = useStore((s) => s.openPreq);
+  useEffect(() => { if (openPreq && kind !== 'talep') setKind('talep'); }, [openPreq]); // bildirimden / linkten gelen talep
   const setKind = (k) => { setKind0(k); ls.set('cust-kind', k); };
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
@@ -240,6 +244,14 @@ export function Customers() {
     <div className="tabs" role="tablist">
       <button role="tab" aria-selected={kind === 'bayi'} className={'tab' + (kind === 'bayi' ? ' on' : '')} onClick={() => setKind('bayi')}>Bayiler ({customers.length - pending.length}){pending.length > 0 && <span className="badge">{pending.length}</span>}</button>
       <button role="tab" aria-selected={kind === 'magaza'} className={'tab' + (kind === 'magaza' ? ' on' : '')} onClick={() => setKind('magaza')}>Mağaza müşterileri{win?.membersAll !== false ? ` (${members.length})` : ''}</button>
+      <button role="tab" aria-selected={kind === 'talep'} className={'tab' + (kind === 'talep' ? ' on' : '')} onClick={() => setKind('talep')}>Ürün talepleri{pqNew > 0 && <span className="badge">{pqNew}</span>}</button>
+    </div>
+  );
+  if (kind === 'talep') return (
+    <div className="page">
+      <div className="page-h fixh"><h1 className="page-t">Müşteriler</h1></div>
+      {kindTabs}
+      <PreqAdmin />
     </div>
   );
   if (kind === 'magaza') return (
@@ -473,6 +485,7 @@ const SECTIONS = [
   ['kart', 'Ürün kartları', 'Fiyat gösterimi, sepete ekle düğmesi, resimler · önizlemeli', 'grid'],
   ['katalog', 'Katalog', 'Stok gösterimi, sayfa, arama', 'grid'],
   ['kalip', 'Kalıp bulucu', 'Telefon modelleri ve işlemcileri · uyan kalıplar', 'chip'],
+  ['urtalep', 'Ürün talebi', 'Müşterinin fotoğraflı ürün isteği · günlük sınır, fotoğraf saklama süresi', 'camera'],
   ['talep', 'Talepler', 'Bayi talepleri ve mesajlar', 'chat'],
   ['dukkan', 'Dükkan', 'Adres, telefon, WhatsApp, erişim', 'phone'],
   ['kategori', 'Kategoriler', 'Kategori adları ve sırası', 'list'],
@@ -480,7 +493,7 @@ const SECTIONS = [
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
 ];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'] };
+const SEC_KEYS = { tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -672,6 +685,7 @@ export function Settings() {
 
         {sec === 'altbilgi' && <FooterSettings d={d} set={set} />}
         {sec === 'kalip' && <KalipSettings d={d} set={set} />}
+        {sec === 'urtalep' && <PreqSettings d={d} set={set} />}
 
         {sec === 'magaza' && <>
           <p className="fine">Herkese açık mağaza: <b>{location.host}/magaza</b>. Müşteri ürünleri sepete ekler, <b>Sepeti onayla</b> ile teslimat, fatura ve ödeme bilgilerini girip siparişi tamamlar; sipariş <b>Siparişler</b>’e düşer. İsterse üye olur (bilgileri bir dahakine hazır gelir), isterse misafir devam eder. Ayrıca sepeti sadece link olarak WhatsApp’tan da gönderebilir (o liste hiçbir yere kaydedilmez).</p>

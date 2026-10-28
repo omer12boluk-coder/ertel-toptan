@@ -117,7 +117,7 @@ export class FirebaseBackend {
   async savePublicSettings(S) {
     const p = S.pricing || {};
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
-      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, showVatInc: !!p.showVatInc, plusVat: !!p.plusVat, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, footer: S.footer || null, cards: S.cards || null, look: S.look || null, kalip: S.kalip || null, v: S.v || 0 });
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, showVatInc: !!p.showVatInc, plusVat: !!p.plusVat, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, footer: S.footer || null, cards: S.cards || null, look: S.look || null, kalip: S.kalip || null, preq: S.preq || null, v: S.v || 0 });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan
@@ -325,6 +325,26 @@ export class FirebaseBackend {
     return 'r2:' + j.key;
   }
   async idToken() { try { return await this.auth.currentUser?.getIdToken(); } catch { return null; } }
+  // ---- Ürün talebi (mağaza üyesi: fotoğraf + açıklama; yönetici yanıtlar). Fotoğraflar bekçi üzerinden R2'ye (kotalı), kayıt preq/{id}
+  async _watchPost(path, body, isForm) {
+    const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı, yeniden giriş yapın');
+    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + path, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, ...(isForm ? {} : { 'Content-Type': 'application/json' }) }, body: isForm ? body : JSON.stringify(body) }), 60000);
+    const j = await r.json().catch(() => ({})); if (!j.ok) throw new Error(j.error || 'İşlem başarısız (' + r.status + ')'); return j;
+  }
+  // blobs: küçültülmüş fotoğraflar → { id, keys }
+  async preqUpload(blobs) { const fd = new FormData(); blobs.forEach((b, i) => fd.append('f' + i, b, 'f' + i)); return this._watchPost('/preq/up', fd, true); }
+  async createPreq(id, doc) {
+    await timeout(this.F.setDoc(this.d('preq', id), doc));
+    this._watchPost('/preq/new', { id }).catch((e) => console.warn('talep bildirimi', e));
+  }
+  watchMyPreqs(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('preq'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
+  watchPreqs(cb) { return this.F.onSnapshot(this.F.query(this.c('preq'), this.F.orderBy('createdAt', 'desc'), this.F.limit(400)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
+  async updatePreq(id, patch) { await timeout(this.F.updateDoc(this.d('preq', id), patch)); }
+  // yönetici yanıtı: kayda eklenir, bekçi üyenin telefonuna bildirir
+  async replyPreq(id, patch) { await this.updatePreq(id, patch); this._watchPost('/preq/reply', { id }).catch((e) => console.warn('yanıt bildirimi', e)); }
+  // talep + fotoğrafları birlikte silinir (bekçi; yönetici ya da sahibi)
+  async deletePreq(id) { await this._watchPost('/preq/del', { id }); }
+  preqPic(key) { return /^(data:|blob:|https?:)/.test(key) ? key : String(window.WATCH_URL || '').replace(/\/$/, '') + '/p/' + key; }
   async _pingReq(id, msg) { const token = await this.idToken(); if (token) pingWatch('/notify-req', { id, token, msg }); }
   watchRequest(id, cb) {
     return this.F.onSnapshot(this.d('requests', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null));

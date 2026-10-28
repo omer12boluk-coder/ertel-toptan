@@ -88,6 +88,22 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---- Ürün talebi (mağaza üyesi: fotoğraf + açıklama). Fotoğraflar bekçi üzerinden R2'ye (pr/<id>/…), kayıt burada.
+    // Üye sadece kendi talebini görür / siler, yanıtı "görüldü" işaretler; yanıtı yönetici yazar.
+    match /preq/{id} {
+      function ownPq() { return signedIn() && resource.data.uid == request.auth.uid; }
+      allow get, list: if isAdmin() || ownPq();
+      allow create: if signedIn() && id.matches('^[A-Za-z0-9]{10,40}$')
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'new'
+        && request.resource.data.keys().hasOnly(['uid', 'no', 'name', 'email', 'phone', 'text', 'photos', 'status', 'createdAt', 'updatedAt', 'seenAdmin', 'seenUser'])
+        && request.resource.data.text is string && request.resource.data.text.size() <= 600
+        && request.resource.data.photos is list && request.resource.data.photos.size() <= 3
+        && (request.resource.data.photos.size() <= 0 || request.resource.data.photos[0].matches('^pr/' + id + '/[0-9][.](webp|jpg)$')) && (request.resource.data.photos.size() <= 1 || request.resource.data.photos[1].matches('^pr/' + id + '/[0-9][.](webp|jpg)$')) && (request.resource.data.photos.size() <= 2 || request.resource.data.photos[2].matches('^pr/' + id + '/[0-9][.](webp|jpg)$'));
+      allow update: if isAdmin() || (ownPq() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenUser']));
+      allow delete: if isAdmin() || ownPq();
+    }
+
     match /requests/{id} {
       function isGuestReq() { return resource.data.get('guest', false) == true; }
       function mine() { return signedIn() && resource.data.uid == request.auth.uid; }

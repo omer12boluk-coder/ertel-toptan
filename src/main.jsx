@@ -14,6 +14,7 @@ import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
 import { Catalog, ProductPage } from './catalog.jsx';
 import { KalipFinder } from './kalipfind.jsx';
+import { PreqPage, PreqAdmin } from './preq.jsx';
 import { Cart } from './cart.jsx';
 import { Requests } from './requests.jsx';
 import { NotifBell, ShopBell } from './notif.jsx';
@@ -120,6 +121,7 @@ function startSession(u, A) {
   if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
   if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
   if (admin && A.watchFeed) unsubs.push(A.watchFeed((feed) => store.set({ feed })));
+  if (admin && A.watchPreqs) unsubs.push(A.watchPreqs((preqs) => store.set({ preqs })));
   loadCart();
   if (admin) syncNow(false).catch(() => {});
   // mağaza resimlerindeki ürün bağlantılarına yedek adres yoksa bir kez ekle (ürün kapanınca kutu boş kalmasın)
@@ -127,6 +129,7 @@ function startSession(u, A) {
   // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
   store.set({ boot: 'ready', tab: tabFromPath() || 'anasayfa', openReq: null });
   if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
+  if (admin && ROUTE.preqId) { ls.set('cust-kind', 'talep'); store.set({ tab: 'musteriler', openPreq: ROUTE.preqId }); history.replaceState(null, '', '/admin/musteriler'); }
   if (admin && ROUTE.listCode) { store.set({ vitrinCode: ROUTE.listCode }); history.replaceState(null, '', '/admin'); }
   if (admin && ROUTE.orderId) { openOrder(ROUTE.orderId); history.replaceState(null, '', '/admin'); }
 }
@@ -220,10 +223,11 @@ async function bootShop(A) {
   if (store.s.settings.access?.publicShop === false) { store.set({ boot: 'error', bootError: 'Online vitrin şu an kapalı.' }); return; }
   store.set({ user: { uid: 'guest', role: 'public', name: 'Ziyaretçi' }, boot: 'loading' });
   // Mağaza üyeliği: giriş yaptıysa bilgileri ve siparişleri
-  let unOrders = null;
+  let unOrders = null, unPreqs = null;
   A.onMember?.((m) => {
-    unOrders?.(); unOrders = null;
-    store.set({ member: m, myOrders: [] });
+    unOrders?.(); unOrders = null; unPreqs?.(); unPreqs = null;
+    store.set({ member: m, myOrders: [], myPreqs: [] });
+    if (m && A.watchMyPreqs) unPreqs = A.watchMyPreqs(m.uid, (myPreqs) => store.set({ myPreqs }));
     if (m) { unOrders = A.watchMyOrders(m.uid, (myOrders) => store.set({ myOrders })); mergeFavs(m); stopGuestOrders(); setTimeout(() => A.idToken?.().then((t) => linkMember(t, false)), 3000); } // bildirim açık cihaz üyeye bağlansın (favori fiyat düşüşü)
     else { loadFavs(); watchGuestOrders(A); }
   });
@@ -451,7 +455,7 @@ function ShellFull() {
     prev.current = unread;
     document.title = (unread ? `(${unread}) ` : '') + store.s.settings.brand.appName;
   }, [unread]);
-  const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length);
+  const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length + (admin ? s.preqs.filter((q) => q.seenAdmin === false).length : 0));
   const priceN = useStore((s) => (admin ? s.catalog.filter((p) => p.pc && p.w != null).length : 0));
   const newOrders = useStore((s) => (admin ? s.orders.filter((o) => o.unread).length : 0));
   const member = useStore((s) => s.member);
@@ -514,6 +518,7 @@ function ShellFull() {
         {tab === 'hesap' && pub && <Account />}
         {tab === 'urun' && pub && <ProductPage id={pid} />}
         {tab === 'kalip' && pub && <KalipFinder />}
+        {tab === 'talep' && pub && <PreqPage />}
         {tab === 'islem' && pub && <AuthAction />}
         {tab === 'ayarlar' && admin && <Settings />}
         {tab === 'tasarim' && admin && <ShopDesigner />}

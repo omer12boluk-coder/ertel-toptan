@@ -32,6 +32,9 @@ export const store = {
     members: [], // yönetici: mağaza üyeleri
     openOrder: null, // açık sipariş (mağazada takip sayfası, yönetimde detay)
     orderJust: false, // sipariş az önce verildi (teşekkür kutusu)
+    myPreqs: [], // mağaza üyesinin ürün talepleri
+    preqs: [], // yönetici: ürün talepleri (Müşteriler > Ürün talepleri)
+    openPreq: null, // yönetici: açık ürün talebi
   },
   get() { return this.s; },
   set(patch) { this.s = { ...this.s, ...(typeof patch === 'function' ? patch(this.s) : patch) }; subs.forEach((f) => f()); },
@@ -79,7 +82,7 @@ export function freshStart() {
 // Sekmeler adres çubuğuna da yazılır (/magaza/urunler, /magaza/sepet…): telefonda geri kaydırınca bir önceki ekrana döner,
 // sayfa yeniden yüklenmez (pushState). Geri dönünce kaldığınız yere kaydırılır.
 const SLUGS = {
-  magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap', urun: 'urun', kalip: 'kalip' },
+  magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap', urun: 'urun', kalip: 'kalip', talep: 'talep' },
   b2b: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', talepler: 'talepler', profil: 'profil' },
   admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
 };

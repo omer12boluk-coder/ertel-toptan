@@ -65,6 +65,7 @@ const P = {
   eyeoff: 'M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.8M6.6 7.6C3.6 9.4 2 12 2 12s3.6 6 10 6a10 10 0 0 0 4.4-1',
   home: 'M3 11l9-7 9 7v9h-6v-6H9v6H3z',
   more: 'M12 5h.01M12 12h.01M12 19h.01',
+  ask: 'M4 5h16v11h-8l-5 4v-4H4zM9.6 8.9a2.4 2.4 0 1 1 3.3 2.2c-.6.3-.9.7-.9 1.3M12 14.4v.01',
 };
 // Kargo firması işareti (logo yerine sade yazı-işaret; ödeme adımı ve yönetim kargo kartı)
 export function CarrierMark({ k, size = 'md' }) {

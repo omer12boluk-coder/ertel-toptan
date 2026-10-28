@@ -7,13 +7,14 @@ import { Icon, Toggle } from './ui.jsx';
 import { pushState, enablePush, disablePush, linkMember } from './push.js';
 import { fmt, fmtTotals, when, ls } from './utils.js';
 import { TYPE, ORDER_STATUS, ORDER_OPEN } from './config.js';
+import { preqNotifs } from './preq.jsx';
 
 const DAY = 864e5;
 const KINDS = [['all', 'Tümü'], ['order', 'Siparişler'], ['req', 'Bayi'], ['prod', 'Ürünler'], ['user', 'Üyeler']];
 const seenAt = () => ls.get('notif-seen', 0) || Date.now() - DAY;
 
 function useNotifs() {
-  const { orders, requests, customers, members, feed } = useStore();
+  const { orders, requests, customers, members, feed, preqs } = useStore();
   return useMemo(() => {
     const from = Date.now() - 30 * DAY; const out = [];
     for (const o of orders) {
@@ -28,6 +29,7 @@ function useNotifs() {
       if (r.lastFrom === 'user' && r.updatedAt > from && r.updatedAt - (r.createdAt || 0) > 5000) out.push({ id: 'm' + r.id + r.updatedAt, at: r.updatedAt, g: 'req', ic: 'chat', tone: 'info', t: `Mesaj · ${who}`, s: r.lastMsg || '', go: () => openRequest(r.id) });
     }
     for (const u of customers) if (u.pending && (u.createdAt || 0) > from) out.push({ id: 'u' + u.uid, at: u.createdAt, g: 'user', ic: 'users', tone: 'warn', t: `Bayi başvurusu · ${u.name || u.username || ''}`, s: [u.shop, u.phone].filter(Boolean).join(' · ') + ' · onay bekliyor', go: () => { ls.set('cust-kind', 'bayi'); go('musteriler'); } });
+    for (const q of preqs || []) if ((q.createdAt || 0) > from) out.push({ id: 'pq' + q.id, at: q.createdAt, g: 'user', ic: 'camera', tone: 'info', t: `Ürün talebi #${q.no} · ${q.name || 'Üye'}`, s: q.text || `${(q.photos || []).length} fotoğraf`, go: () => { ls.set('cust-kind', 'talep'); go('musteriler'); store.set({ openPreq: q.id }); } });
     for (const m of members) if ((m.createdAt || 0) > from) out.push({ id: 'mb' + m.uid, at: m.createdAt, g: 'user', ic: 'user', tone: 'muted', t: `Yeni mağaza üyesi · ${m.name || m.email || ''}`, s: m.email || '', go: () => { ls.set('cust-kind', 'magaza'); go('musteriler'); } });
     for (const [i, x] of (feed || []).entries()) {
       if (x.at <= from) continue;
@@ -35,7 +37,7 @@ function useNotifs() {
       if (P) out.push({ id: 'f' + i + x.at + x.id, at: x.at, g: 'prod', ic: P[0], tone: P[1], t: P[2], s: P[3], go: () => { go('katalog'); store.set({ catalogGo: x.k ? { code: x.k } : { q: x.n || String(x.id) } }); /* stok kodu kendi kutusuna (ad aramasına değil) */ } });
     }
     return out.sort((a, b) => b.at - a.at).slice(0, 300);
-  }, [orders, requests, customers, members, feed]);
+  }, [orders, requests, customers, members, feed, preqs]);
 }
 
 export function NotifBell() {
@@ -120,7 +122,7 @@ export function useFavWatch() {
   }, [favs, catalog]);
 }
 export function useShopNotifs() {
-  const { member, myOrders, guestOrders, favTick } = useStore();
+  const { member, myOrders, guestOrders, favTick, myPreqs } = useStore();
   const orders = member ? myOrders : guestOrders;
   return useMemo(() => {
     const from = Date.now() - 90 * DAY; const out = [];
@@ -134,8 +136,9 @@ export function useShopNotifs() {
         out.push({ id: o.id + h.s + h.at, at: h.at, ic, tone, t: `Sipariş #${o.no} · ${ORDER_STATUS[h.s].cust}${ship}`, s: sub, go: () => openOrder(o.id) });
       }
     }
+    if (member) out.push(...preqNotifs(myPreqs).filter((x) => x.at > from));
     return out.sort((a, b) => b.at - a.at).slice(0, 100);
-  }, [orders, favTick]);
+  }, [orders, favTick, myPreqs, member]);
 }
 // telefon bildirimlerini aç / kapat (bekçi: kapatınca abonelik silinir, bildirim gitmez)
 export function PushToggle({ orders }) {

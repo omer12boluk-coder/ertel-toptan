@@ -197,6 +197,19 @@ export class DemoBackend {
   async updateOrder(id, patch) { Object.assign(this.ord()[id], patch); this.persist(); }
   async deleteOrders(ids) { for (const id of ids) delete this.ord()[id]; this.persist(); }
 
+  // ---- Ürün talebi (demo: fotoğraflar data URL olarak cihazda)
+  pq() { return (this.db.preq = this.db.preq || {}); }
+  async preqUpload(blobs) {
+    const keys = await Promise.all(blobs.map((b) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); })));
+    return { id: 'q' + rid() + rid(), keys };
+  }
+  async createPreq(id, doc) { this.pq()[id] = { ...doc, id }; this.persist(); }
+  watchMyPreqs(uid, cb) { return this.sub(() => cb(Object.values(this.pq()).filter((x) => x.uid === uid).sort((a, b) => b.createdAt - a.createdAt).map((x) => ({ ...x })))); }
+  watchPreqs(cb) { return this.sub(() => cb(Object.values(this.pq()).sort((a, b) => b.createdAt - a.createdAt).map((x) => ({ ...x })))); }
+  async updatePreq(id, patch) { Object.assign(this.pq()[id], patch); this.persist(); }
+  async replyPreq(id, patch) { return this.updatePreq(id, patch); }
+  async deletePreq(id) { delete this.pq()[id]; this.persist(); }
+  preqPic(key) { return key; }
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
   async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => { const kc = stencilKeys({ ...p, t }); return kc ? { ...p, kc } : p; }); }
   async hasPublicCatalog() { return true; }

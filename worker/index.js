@@ -11,7 +11,11 @@
 //   GET  /push/key, POST /push/sub {id, sub}, POST /push/status {id}  müşteriye sipariş durumu bildirimi (web push)
 //   POST /tg-link {code} Telegram botuna yazılan kodu bulup o sohbeti bildirim alıcısı yapar (sadece ilk bağlantı)
 export default {
-  async scheduled(event, env, ctx) { ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message))); },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message)));
+    // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
+    if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 17) ctx.waitUntil(preqSweep(env).catch((e) => console.log('preqSweep', e.message)));
+  },
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hash' };
@@ -29,6 +33,11 @@ export default {
       if (url.pathname === '/up/has' && req.method === 'GET') return json(await upHas(env, url));
       if (url.pathname === '/up/list' && req.method === 'GET') return json(await upList(req, env, url));
       if (url.pathname.startsWith('/p/') && (req.method === 'GET' || req.method === 'HEAD')) return await servePic(req, env, url, ctx, cors);
+      // Ürün talebi (mağaza üyesi fotoğraf + açıklama): yükleme (kotalı), silme (fotoğraflar da), yeni talep / yanıt bildirimi
+      if (url.pathname === '/preq/up' && req.method === 'POST') return json(await preqUp(req, env));
+      if (url.pathname === '/preq/del' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await preqDel(req, env, b)); }
+      if (url.pathname === '/preq/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await preqNew(req, env, b, url.origin)); }
+      if (url.pathname === '/preq/reply' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await preqReply(req, env, b)); }
       // Ürün resimleri için aracı: site CDN'i başka siteden resim okumaya izin vermediği için liste resmini çizerken buradan alınır
       if (url.pathname === '/img') {
         const u = url.searchParams.get('u') || '';
@@ -248,14 +257,17 @@ async function tgLink(env, code) {
   await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: m.chat.id, text: '✅ Bağlandı. Yeni mağaza siparişleri buraya bildirilecek.' }) }).catch(() => {});
   return { ok: true, name };
 }
-async function notifySend(env, { subject, text, short, replyTo, link, noEmail }) {
+async function notifySend(env, { subject, text, short, replyTo, link, noEmail, photo }) {
   const out = {};
   if (env.TELEGRAM_TOKEN) {
     const chat = JSON.parse((await env.KV.get('tg-chat')) || 'null');
     if (!chat) out.telegram = 'bağlanmamış';
     else try {
-      const r = await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat.id, text: (subject + '\n\n' + text).slice(0, 4000), disable_web_page_preview: true }) });
-      const j = await r.json().catch(() => ({})); out.telegram = j.ok ? 'gönderildi' : 'hata: ' + (j.description || r.status);
+      // fotoğraflı bildirim (ürün talebi): önce resim + kısa yazı; olmazsa düz mesaj
+      let j = null;
+      if (photo) { const r = await fetch(TG(env, 'sendPhoto'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat.id, photo, caption: (subject + '\n\n' + text).slice(0, 1000) }) }); j = await r.json().catch(() => ({})); }
+      if (!j?.ok) { const r = await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat.id, text: (subject + '\n\n' + text).slice(0, 4000), disable_web_page_preview: true }) }); j = await r.json().catch(() => ({})); if (!j.ok) j.description = j.description || r.status; }
+      out.telegram = j.ok ? 'gönderildi' : 'hata: ' + j.description;
     } catch (e) { out.telegram = 'hata: ' + e; }
   } else out.telegram = 'TELEGRAM_TOKEN eklenmemiş';
   if (noEmail) out.email = 'yok';
@@ -545,7 +557,13 @@ async function upVideo(req, env) {
 // GET /p/<anahtar>: depodaki resim (sadece up/ ve platin/), tarayıcıda 1 yıl önbellek
 async function servePic(req, env, url, ctx, cors) {
   const key = decodeURIComponent(url.pathname.slice(3));
-  if (!env.R2 || !/^(up|platin)\//.test(key) || key.includes('_manifest') || key.split('/').some((x) => x === '..' || x === '.')) return new Response('yok', { status: 404, headers: cors });
+  if (!env.R2 || !/^(up|platin|pr)\//.test(key) || key.includes('_manifest') || key.split('/').some((x) => x === '..' || x === '.')) return new Response('yok', { status: 404, headers: cors });
+  // ürün talebi fotoğrafı: silinebildiği için uzun önbellek yok (Cloudflare önbelleğine de konmaz)
+  if (key.startsWith('pr/')) {
+    const o = await env.R2.get(key);
+    if (!o) return new Response('yok', { status: 404, headers: { ...cors, 'Cache-Control': 'no-store' } });
+    return new Response(req.method === 'HEAD' ? null : o.body, { headers: { 'Content-Type': o.httpMetadata?.contentType || 'image/webp', 'Cache-Control': 'private, max-age=3600', ...cors } });
+  }
   // video: iPhone parça parça ister (Range) → 206
   const rg = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get('Range') || '');
   if (rg || /\.(mp4|webm|mov)$/i.test(key)) {
@@ -732,4 +750,122 @@ async function dhl(env, act, b) {
     return { ok: !r.fault, ref, result: res, fault: r.fault };
   }
   return { ok: false, error: 'işlem' };
+}
+
+// ---- Ürün talebi (28.10.2026) ------------------------------------------------------------------------
+// Mağaza üyesi aradığı ürünün fotoğrafını (en çok 3) + açıklamasını gönderir; yönetici "gelecek (tarih) / mağazada var /
+// getiremiyoruz / mesaj" diye yanıtlar, üyenin zil + telefon bildirimine düşer.
+// Kötüye kullanım önlemleri (R2 şişmesin):
+//   - sadece doğrulanmış üye (members/{uid} kendi oturum anahtarıyla okunur), dosya başına en çok 700 KB, sadece webp/jpeg (ilk baytlara bakılır)
+//   - üye günde en çok settings/public.preq.perDay talep (varsayılan 5), tüm mağaza günde en çok 300 (KV sayaçları, 2 gün yaşar)
+//   - fotoğraflar R2 pr/<talep>/<n>.<uzantı>; talep silinince hemen, değilse preq.days gün (varsayılan 30) sonra saatlik temizlikte silinir
+const PQ_FILE = 700e3, PQ_FILES = 3, PQ_ALL = 300;
+const pqDay = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10); // Türkiye günü
+const pqId = () => crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+const tokClaims = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return {}; } };
+const bearer = (req) => (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+async function pqSettings() { const pub = (await fsDoc('settings/public').catch(() => null)) || {}; const q = pub.preq || {}; return { on: q.on !== false, perDay: Math.min(50, Math.max(1, Number(q.perDay) || 5)), days: Math.min(365, Math.max(1, Number(q.days) || 30)), shop: pub.brand?.appName || 'ERTEL GSM' }; }
+async function pqMember(tok) {
+  const uid = tokUid(tok); if (!uid) return { error: 'Oturum yok, yeniden giriş yapın' };
+  const m = await fsAuth('members/' + uid, tok); if (!m) return { error: 'Üyelik doğrulanamadı' };
+  if (!tokClaims(tok).email_verified && !m.byAdmin) return { error: 'Önce e-posta adresinizi doğrulayın' };
+  return { uid, m };
+}
+// POST /preq/up (FormData f0..f2; Authorization: Bearer <üye oturum anahtarı>) → { id, keys: ['pr/<id>/0.webp', …] }
+async function preqUp(req, env) {
+  if (!env.R2) return { ok: false, error: 'Depo bağlı değil' };
+  const who = await pqMember(bearer(req)); if (who.error) return { ok: false, error: who.error };
+  const S = await pqSettings(); if (!S.on) return { ok: false, error: 'Ürün talebi şu an kapalı' };
+  const fd = await req.formData().catch(() => null); if (!fd) return { ok: false, error: 'Eksik bilgi' };
+  const files = []; for (let i = 0; i < 6; i++) { const f = fd.get('f' + i); if (f && typeof f !== 'string') files.push(f); }
+  if (files.length > PQ_FILES) return { ok: false, error: `En çok ${PQ_FILES} fotoğraf eklenebilir` };
+  const bufs = [];
+  for (const f of files) {
+    if (f.size > PQ_FILE) return { ok: false, error: 'Fotoğraf çok büyük' };
+    const b = new Uint8Array(await f.arrayBuffer());
+    const webp = b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50;
+    const jpg = b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+    if (!webp && !jpg) return { ok: false, error: 'Sadece fotoğraf yüklenebilir' };
+    bufs.push({ b, ext: webp ? 'webp' : 'jpg', type: webp ? 'image/webp' : 'image/jpeg' });
+  }
+  const day = pqDay(); const ku = `pq:${who.uid}:${day}`, ka = `pq:all:${day}`;
+  const [nu, na] = await Promise.all([env.KV.get(ku), env.KV.get(ka)]).then((a) => a.map((x) => Number(x) || 0));
+  if (nu >= S.perDay) return { ok: false, error: `Bugün en çok ${S.perDay} talep gönderebilirsiniz. Yarın tekrar deneyin.` };
+  if (na >= PQ_ALL) return { ok: false, error: 'Bugün çok fazla talep geldi, yarın tekrar deneyin.' };
+  await Promise.all([env.KV.put(ku, String(nu + 1), { expirationTtl: 172800 }), env.KV.put(ka, String(na + 1), { expirationTtl: 172800 })]);
+  const id = pqId(); const keys = [];
+  for (const [i, x] of bufs.entries()) { const key = `pr/${id}/${i}.${x.ext}`; await env.R2.put(key, x.b, { httpMetadata: { contentType: x.type }, customMetadata: { uid: who.uid } }); keys.push(key); }
+  return { ok: true, id, keys, left: S.perDay - nu - 1 };
+}
+async function pqDropFiles(env, id) {
+  if (!env.R2 || !/^[A-Za-z0-9]{10,40}$/.test(id)) return 0;
+  const l = await env.R2.list({ prefix: `pr/${id}/`, limit: 20 });
+  if (l.objects.length) await env.R2.delete(l.objects.map((o) => o.key));
+  return l.objects.length;
+}
+// POST /preq/del {id} (yönetici ya da talebin sahibi): fotoğraflar R2'den, talep Firestore'dan (aynı oturum anahtarıyla) silinir
+async function preqDel(req, env, b) {
+  const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
+  const admin = !(await adminOf(req));
+  if (!admin) { const d = await fsAuth('preq/' + id, tok); if (d && d.uid !== uid) return { ok: false, error: 'yetki' }; }
+  const files = await pqDropFiles(env, id);
+  const r = await fetch(FS + 'preq/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + tok } });
+  return { ok: r.ok, files, error: r.ok ? undefined : 'Talep silinemedi (' + r.status + ')' };
+}
+const PQ_KIND = { eta: 'Getireceğiz', have: 'Mağazada var', no: 'Temin edemiyoruz', note: 'Mesaj' };
+const trDate = (d) => { const t = new Date(d); return isNaN(t) ? '' : t.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', timeZone: 'Europe/Istanbul' }); };
+// POST /preq/new {id} (üye oturumu): yeni talep → Telegram (ilk fotoğrafla) + yönetici telefon bildirimi, bir kez
+async function preqNew(req, env, b, origin) {
+  const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
+  if (await env.KV.get('nq:' + id)) return { ok: true, already: true };
+  const d = await fsAuth('preq/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'talep yok' };
+  await env.KV.put('nq:' + id, '1', { expirationTtl: 60 * 60 * 24 * 7 });
+  const who = [d.name, d.phone].filter(Boolean).join(' · ');
+  const link = `https://erteltoptan.web.app/admin/u/${id}`;
+  const n = (d.photos || []).length;
+  const pics = (d.photos || []).map((k) => origin + '/p/' + k);
+  await adminPush(env, { title: `📷 Ürün talebi · ${d.name || 'Üye'}`, body: (String(d.text || '') || `${n} fotoğraf`).slice(0, 160), url: '/admin/u/' + id, tag: 'aq-' + id }).catch(() => {});
+  const text = `📷 Yeni ürün talebi #${d.no || ''}\n${who}${d.email ? '\n' + d.email : ''}\n\n${d.text || '(açıklama yok)'}${n ? `\n\n${n} fotoğraf:\n` + pics.join('\n') : ''}\n\nPanelde yanıtla: ${link}`;
+  return notifySend(env, { subject: `Ürün talebi #${d.no || ''} · ${d.name || ''}`, text, link, replyTo: d.email, photo: pics[0] });
+}
+// POST /preq/reply {id} (yönetici): son yanıt üyenin telefonlarına (KV pm:<uid>) bildirilir; aynı yanıt bir kez
+async function preqReply(req, env, b) {
+  const err = await adminOf(req); if (err) return { ok: false, error: err };
+  const id = String(b.id || ''); if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return { ok: false, error: 'eksik' };
+  const d = await fsAuth('preq/' + id, bearer(req)); if (!d) return { ok: false, error: 'talep yok' };
+  const r = (d.replies || []).slice(-1)[0]; if (!r || !d.uid) return { ok: true, sent: 0 };
+  if ((await env.KV.get('pqr:' + id)) === String(r.at)) return { ok: true, same: true };
+  await env.KV.put('pqr:' + id, String(r.at), { expirationTtl: 60 * 60 * 24 * 60 });
+  const subs = (await env.KV.get('pm:' + d.uid, 'json')) || []; if (!subs.length) return { ok: true, sent: 0, subs: 0 };
+  const S = await pqSettings();
+  const head = r.k === 'eta' ? `Ürününüz ${r.d ? trDate(r.d) + ' civarında' : 'yakında'} gelecek.` : r.k === 'have' ? 'Aradığınız ürün mağazamızda.' : r.k === 'no' ? 'Maalesef bu ürünü temin edemiyoruz.' : '';
+  const body = [head, r.t].filter(Boolean).join(' ').slice(0, 200) || 'Talebiniz yanıtlandı.';
+  const data = { title: `${S.shop} · Ürün talebiniz`, body, url: r.k === 'have' && r.p ? '/magaza/urun/' + r.p : '/magaza/talep', tag: 'pq-' + id };
+  const keep = []; let sent = 0;
+  for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
+  if (keep.length !== subs.length) await env.KV.put('pm:' + d.uid, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 365 });
+  return { ok: true, sent, subs: subs.length };
+}
+// Saatlik: süresi dolan talep fotoğrafları (yüklenme + preq.days gün) silinir. Talebi hiç oluşturulmamış (yarım kalan) yüklemeler de 1 günde gider.
+async function preqSweep(env) {
+  if (!env.R2) return 0;
+  const S = await pqSettings(); const limit = Date.now() - S.days * 864e5; const orphan = Date.now() - 864e5;
+  let cursor, gone = 0;
+  for (let page = 0; page < 20; page++) {
+    const l = await env.R2.list({ prefix: 'pr/', limit: 1000, cursor, include: ['customMetadata'] });
+    const old = l.objects.filter((o) => +new Date(o.uploaded) < limit).map((o) => o.key);
+    for (let i = 0; i < old.length; i += 500) { await env.R2.delete(old.slice(i, i + 500)); gone += old.slice(i, i + 500).length; }
+    if (!l.truncated) break; cursor = l.cursor;
+  }
+  // yarım kalanlar: fotoğraf yüklendi ama talep kaydı hiç yazılmadı (Firestore'da yok) → 1 gün sonra silinir
+  const ids = new Set(); let c2;
+  for (let page = 0; page < 5; page++) {
+    const l = await env.R2.list({ prefix: 'pr/', limit: 1000, cursor: c2 });
+    for (const o of l.objects) if (+new Date(o.uploaded) < orphan) ids.add(o.key.split('/')[1]);
+    if (!l.truncated) break; c2 = l.cursor;
+  }
+  for (const id of [...ids].slice(0, 40)) { const r = await fetch(FS + 'preq/' + id); if (r.status === 404) gone += await pqDropFiles(env, id); }
+  return gone;
 }
