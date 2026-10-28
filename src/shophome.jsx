@@ -294,7 +294,10 @@ export function HeaderSearch() {
     const navs = document.querySelectorAll('.topnav .topnav-b'); const last = navs[navs.length - 1];
     if (!last) return setFit(null);
     const avail = Math.floor(wrap.current.getBoundingClientRect().right - last.getBoundingClientRect().right - 22);
-    setFit(avail >= 170 ? { w: Math.min(320, avail), drop: false } : { w: 300, drop: true });
+    if (avail >= 170) return setFit({ w: Math.min(320, avail), drop: false });
+    // yer yoksa (küçük / eski ekran): kutu menünün altına inmez, menü sekmelerinin ÜSTÜNE (aynı satırda) açılır
+    const nav = document.querySelector('.topnav'); const left = nav ? nav.getBoundingClientRect().left : 0;
+    setFit({ w: Math.max(220, Math.min(400, Math.floor(wrap.current.getBoundingClientRect().right - left + 2))), drop: true });
   };
   // kapanış da animasyonlu: önce küçülerek kaybolur, sonra simgeye döner
   const close = () => { setOpen(false); clearTimeout(closeT.current); setClosing(true); closeT.current = setTimeout(() => { setMob(false); setClosing(false); }, 200); };

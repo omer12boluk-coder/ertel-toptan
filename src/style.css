@@ -4016,3 +4016,23 @@ body:has(> #root .decor:not(.pv)) .shell, body:has(.decor:not(.pv)) .shell { pos
 .main:has(> .pq) { width: 100%; box-sizing: border-box; }
 .pq-slots { grid-template-columns: repeat(3, minmax(0, 150px)); }
 @media (max-width: 560px) { .pq-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* arama: yer yoksa menü sekmelerinin üstüne aynı satırda açılır (eskiden menünün altına iniyordu, kayık duruyordu) */
+@media (min-width: 900px) {
+  .hsearch.mob-open.drop .hsearch-box { position: absolute; right: 0; top: 50%; margin-top: -21px; height: 42px; z-index: 61; width: var(--hsw, 320px); background: var(--surface); box-shadow: 0 0 0 6px var(--surface), 0 10px 30px -14px rgb(15 23 42 / .35); }
+  .hsearch.mob-open.drop .hsearch-box:focus-within { width: var(--hsw, 320px); }
+  .hsearch.mob-open.drop .hsearch-res { top: calc(100% + 10px); right: 0; }
+}
+@media (min-width: 900px) and (max-width: 1150px) { .hsearch.mob-open:not(.drop) { width: auto; height: auto; } .hsearch.mob-open:not(.drop) .hsearch-box { position: static; box-shadow: none; } }
+/* Hesabım sol menüsü kısa ekranda (eski dizüstü): daha sıkı, hepsi ekrana sığsın */
+@media (min-width: 900px) {
+  .acct2.side-tight .acct-prof { padding: 8px 12px; }
+  .acct2.side-tight .acct-prof .hub-av .avatar, .acct2.side-tight .acct-prof .hub-av > span:first-child { width: 40px !important; height: 40px !important; font-size: 15px !important; }
+  .acct2.side-tight .acct-prof .hub-cam { display: none; }
+  .acct2.side-tight .acct-prof .hub-id p, .acct2.side-tight .acct-prof .hub-id .linkish { display: none; }
+  .acct2.side-tight .acct-nav-i { padding: 5px 12px; }
+  .acct2.side-tight .acct-nav-i .hub-ic { width: 28px; height: 28px; }
+  .acct2.side-tight .acct-nav-i .hub-t small { display: none; }
+  .acct2.side-tight > .acct-side { gap: 8px; }
+  .acct2.side-tight > .acct-side > .hub-out { padding: 7px 12px; }
+}
+@media (min-width: 900px) { .acct2.side-fixed.side-scroll > .acct-side { max-height: calc(100vh - var(--st) - 10px); overflow-y: auto; overscroll-behavior: contain; } }

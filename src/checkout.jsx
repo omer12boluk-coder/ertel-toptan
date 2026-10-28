@@ -811,12 +811,18 @@ function MemberHome() {
     const fit = () => {
       if (!matchMedia('(min-width: 900px)').matches) { root.classList.remove('side-fixed'); return; }
       const r = (root.classList.contains('side-fixed') ? ph : side).getBoundingClientRect();
-      const top = r.top + scrollY; // sayfa en üstteyken durduğu yer: menü hep orada kalır
-      const fits = side.offsetHeight + top + 16 <= innerHeight;
-      root.classList.toggle('side-fixed', fits);
-      if (!fits) return;
+      const docTop = r.top + scrollY; // sayfa en üstteyken durduğu yer
+      const topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 58;
+      // kısa ekran (eski 17" dizüstü vb.): önce sıkı görünüm, sonra menü yukarı (üst menünün hemen altına) alınır
+      if (side.offsetHeight + topH + 24 > innerHeight) root.classList.add('side-tight');
+      else if (side.offsetHeight + topH + 120 < innerHeight) root.classList.remove('side-tight');
+      const h = side.offsetHeight;
+      const top = Math.max(topH + 12, Math.min(docTop, innerHeight - h - 12));
+      // çok kısa ekranda bile menü yerinde durur; sığmayan kısım menünün kendi içinde kayar (son çare)
+      root.classList.add('side-fixed');
+      root.classList.toggle('side-scroll', h + topH + 24 > innerHeight);
       const q = ph.getBoundingClientRect();
-      side.style.setProperty('--sl', q.left + 'px'); side.style.setProperty('--sw', q.width + 'px'); side.style.setProperty('--st', (q.top + scrollY) + 'px');
+      side.style.setProperty('--sl', q.left + 'px'); side.style.setProperty('--sw', q.width + 'px'); side.style.setProperty('--st', top + 'px');
       ph.style.height = side.offsetHeight + 'px';
     };
     // geri dönüşte (sipariş sayfasından) sayfa kaydırması / animasyon sonradan oturur → birkaç kez ve kaydırma bitince yeniden ölç
