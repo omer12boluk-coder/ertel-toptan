@@ -390,18 +390,25 @@ async function fsDoc(path) {
   const r = await fetch(FS + path); if (!r.ok) return null;
   const doc = await r.json(); return Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
 }
+// Aboneliği listeye ekle — SADECE değiştiyse yaz (ücretsiz KV günde 1.000 yazma; her sayfa açılışında her sipariş için
+// yeniden yazmak 30.10.2026'da kotanın %90'ını doldurmuştu). Aynı cihaz zaten kayıtlıysa ve kaydı 20 günden yeniyse dokunulmaz.
+async function addSub(env, key, me, max, ttl) {
+  const list = (await env.KV.get(key, 'json')) || [];
+  const old = list.find((x) => x.endpoint === me.endpoint);
+  if (old && old.keys?.auth === me.keys.auth && old.keys?.p256dh === me.keys.p256dh && Date.now() - (old.t || 0) < 20 * 864e5) return false;
+  await env.KV.put(key, JSON.stringify([{ ...me, t: Date.now() }, ...list.filter((x) => x.endpoint !== me.endpoint)].slice(0, max)), { expirationTtl: ttl });
+  return true;
+}
 async function pushSub(env, b) {
   const id = String(b.id || ''); const s = b.sub || {};
   if (!/^[\w-]{10,40}$/.test(id) || !/^https:\/\//.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth) return { ok: false, error: 'eksik' };
   const o = await fsDoc('orders/' + id); if (!o) return { ok: false, error: 'sipariş yok' };
   const me = { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } };
-  const list = (await env.KV.get('ps:' + id, 'json')) || [];
-  await env.KV.put('ps:' + id, JSON.stringify([me, ...list.filter((x) => x.endpoint !== s.endpoint)].slice(0, 5)), { expirationTtl: 60 * 60 * 24 * 120 });
+  await addSub(env, 'ps:' + id, me, 5, 60 * 60 * 24 * 120);
   // üye siparişi: cihaz üyeye de bağlanır → üyenin SONRAKİ siparişlerinin bildirimleri de bu cihaza gelir
   // (siparişi Safari'den verip bildirimi ana ekran uygulamasında açan da haber alsın)
   if (o.uid && /^[\w-]{6,64}$/.test(o.uid)) {
-    const ml = (await env.KV.get('pm:' + o.uid, 'json')) || [];
-    await env.KV.put('pm:' + o.uid, JSON.stringify([me, ...ml.filter((x) => x.endpoint !== s.endpoint)].slice(0, 8)), { expirationTtl: 60 * 60 * 24 * 365 });
+    await addSub(env, 'pm:' + o.uid, me, 8, 60 * 60 * 24 * 365);
   }
   return { ok: true };
 }
@@ -454,7 +461,7 @@ async function adminSub(env, b) {
   if (b.off) { await env.KV.put('ps-admin', JSON.stringify(rest)); return { ok: true, off: true }; }
   if (!s.keys?.p256dh || !s.keys?.auth) return { ok: false, error: 'eksik' };
   const sub = { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } };
-  await env.KV.put('ps-admin', JSON.stringify([sub, ...rest].slice(0, 10)));
+  await addSub(env, 'ps-admin', sub, 10, 60 * 60 * 24 * 365);
   if (b.hello) await pushOne(env, sub, { title: 'ERTEL Yönetim', body: 'Bildirimler açık. Yeni sipariş, iptal ve bayi talepleri buraya gelecek.', url: '/admin', tag: 'a-hello', icon: '/icon-admin-192.png' }).catch(() => 0);
   return { ok: true };
 }
@@ -639,8 +646,7 @@ async function pushMember(env, b) {
   if (!uid || !/^https:\/\//.test(s.endpoint || '') || !s.keys?.p256dh || !s.keys?.auth) return { ok: false, error: 'eksik' };
   const m = await fsAuth('members/' + uid, tok); if (!m) return { ok: false, error: 'Üye doğrulanamadı' };
   const me = { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } };
-  const ml = (await env.KV.get('pm:' + uid, 'json')) || [];
-  await env.KV.put('pm:' + uid, JSON.stringify([me, ...ml.filter((x) => x.endpoint !== s.endpoint)].slice(0, 8)), { expirationTtl: 60 * 60 * 24 * 365 });
+  await addSub(env, 'pm:' + uid, me, 8, 60 * 60 * 24 * 365);
   return { ok: true };
 }
 

@@ -50,8 +50,11 @@ export async function ensurePush(ids) {
   try { if (pushState() !== 'on') return; const had = await subscription(false); const sub = had || (await subscription(true)); if (!had) await Promise.all([...new Set(ids.filter(Boolean))].map((id) => send(id, sub, false))); } catch {}
 }
 // Bildirim daha önce açıldıysa yeni siparişi sessizce bağlar
+// (30.10.2026) aynı sipariş + aynı cihaz 7 günde bir defadan fazla bekçiye gönderilmez (her açılışta yazmak KV kotasını dolduruyordu)
+const sentRecently = (key, ep) => { try { const m = JSON.parse(localStorage.getItem('push-sent') || '{}'); const v = m[key]; return v && v.e === ep && Date.now() - v.t < 7 * 864e5; } catch { return false; } };
+const markSent = (key, ep) => { try { const m = JSON.parse(localStorage.getItem('push-sent') || '{}'); m[key] = { e: ep, t: Date.now() }; const ks = Object.keys(m); if (ks.length > 200) ks.sort((a, b) => m[a].t - m[b].t).slice(0, ks.length - 200).forEach((k) => delete m[k]); localStorage.setItem('push-sent', JSON.stringify(m)); } catch {} };
 export async function autoPush(id) {
-  try { if (pushState() !== 'on') return; const sub = await subscription(false); if (sub) await send(id, sub, false); } catch {}
+  try { if (pushState() !== 'on') return; const sub = await subscription(false); if (!sub || sentRecently('o:' + id, sub.endpoint)) return; await send(id, sub, false); markSent('o:' + id, sub.endpoint); } catch {}
 }
 // Üye: cihazı hesaba bağla (siparişi olmasa da favori fiyat düşüşü bildirimi gelsin)
 export async function linkMember(token, ask) {
@@ -60,6 +63,8 @@ export async function linkMember(token, ask) {
     if (ask) { const perm = await Notification.requestPermission(); if (perm !== 'granted') throw new Error('Bildirim izni verilmedi'); ls.set('push-on', true); }
     else if (pushState() !== 'on') return;
     const sub = await subscription(true);
+    if (!ask && sentRecently('m', sub.endpoint)) return;
+    markSent('m', sub.endpoint);
     await fetch(W() + '/push/member', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, sub: sub.toJSON() }) });
   } catch (e) { if (ask) throw e; }
 }
