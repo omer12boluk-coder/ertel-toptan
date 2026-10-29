@@ -4573,3 +4573,15 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .of-state { font-size: 12px; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
 .of-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #3f9a6b; }
 .of-state.dirty { color: #c9772b; } .of-state.dirty::before { background: #c9772b; }
+/* Telefonda adet seçici (29.10.2026): üstüne gelme vurgusu dokunuştan sonra takılı kalıyordu → dokunmatikte hover yok,
+   sadece basılıyken kısa vurgu; kartta − sayı + tüm genişliği eşit paylaşır (vurgu düğmenin tamamı, yuvarlak kenarla kırpılır) */
+@media (hover: none) {
+  .stepper button:hover { background: transparent; }
+  .stepper button:active { background: var(--accent-soft); }
+  .stepper { overflow: hidden; }
+}
+@media (max-width: 560px) {
+  .plist.pgrid .prow-side .stepper, .qty-morph > .stepper { display: flex; }
+  .plist.pgrid .prow-side .stepper button, .qty-morph > .stepper button { flex: 1 1 0; width: auto; min-width: 0; }
+  .plist.pgrid .prow-side .stepper input, .qty-morph > .stepper input { flex: 1.1 1 0; width: auto; min-width: 0; }
+}

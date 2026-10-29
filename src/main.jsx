@@ -617,7 +617,7 @@ function App() {
 if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => { if (!e.target.closest?.('.lb')) e.preventDefault(); }, { passive: false });
   setupLongPress();
-  setupPress();
+  // setupPress(); — 29.10.2026: telefonda basma animasyonları KALDIRILDI (App Store sonrasına)
   setupPull();
 }
 
