@@ -669,65 +669,35 @@ function setupPull() {
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
   if (!IOS || !STANDALONE) return; // Safari'nin kendi çekip yenilesi var; bu sadece ana ekran uygulamasında
-  // 30.10.2026 (7) — modern uygulamalardaki (Chrome / Android, Instagram) gibi: SAYFA HİÇ OYNAMAZ. En üstteyken aşağı çekince
-  // yuvarlak gösterge üst menünün arkasından çıkıp parmakla birlikte içeriğin üstüne iner, ok çekişe göre döner.
-  // Eşiği geçip bırakınca kısa bir dönüş (~0,3 sn) ve küçülerek kaybolur; eşikten önce bırakınca yukarı geri kayar.
-  // Yeni sürüm yoksa sayfa yeniden yüklenmez (veriler canlı) → flaş yok.
-  const TH = 92, MAX = 150, RUB = 260;
-  const rubber = (dy) => Math.min(MAX, (1 - 1 / (dy * 0.62 / RUB + 1)) * RUB);
-  let box = null, on = false, started = false, y0 = 0, x0 = 0, d = 0, ready = false, busy = false, raf = 0;
+  // 30.10.2026 (8) — SAFARI'NİN KOPYASI (kullanıcı: "Safari'deki çok iyi çalışıyor"): telefonun kendi esnemesi serbest,
+  // üst menü dahil bütün sayfa aşağı esner; üstte açılan boşlukta dönen gösterge belirir (esnemeyi birebir izler).
+  // Sayfa zaten en üstteyken bilerek yeterince çekip bırakınca sayfa Safari'deki gibi HEMEN yenilenir.
+  const TH = 72;
+  let box = null, finger = false, armed = false, ready = false, busy = false, raf = 0;
   const ui = () => {
     if (box) return box;
-    box = document.createElement('div'); box.className = 'ptr7'; box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<span class="ptr7-c"><svg class="ptr7-a" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg><svg class="ptr7-ok" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="ptr-t"></span>';
+    box = document.createElement('div'); box.className = 'ptr8'; box.setAttribute('aria-hidden', 'true');
+    box.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>';
     document.body.appendChild(box); return box;
   };
-  const headB = () => { const r = document.querySelector('.topbar')?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
-  const draw = (px, cls = '') => {
+  const paint = () => {
+    raf = 0; const px = (armed || busy) ? Math.max(0, -scrollY) : 0; if (!px && !box) return;
     const b = ui(); const k = Math.min(1, px / TH);
-    b.style.setProperty('--top', headB() + 'px'); b.style.setProperty('--y', px + 'px'); b.style.setProperty('--k', k);
-    b.className = 'ptr7' + (ready ? ' ready' : '') + (cls ? ' ' + cls : '');
+    if (finger && armed && !busy) ready = px >= TH;
+    b.style.setProperty('--y', px + 'px'); b.style.setProperty('--k', busy ? 1 : k);
+    b.className = 'ptr8' + (ready ? ' ready' : '') + (busy ? ' spin' : '');
   };
-  const blocked = (t) => !(t instanceof Element) || t.closest('.sheet-bg, .sheet, .lb, .vv, .dz, .ctx-sheet-bg, .ctx, .botnav, input, textarea, select, .hsearch-res, .kf-list, .nc-panel') || document.querySelector('.sheet-bg, .lb, .vv');
-  const scrolledParent = (t) => { for (let e = t; e && e !== document.body; e = e.parentElement) { if (e.scrollTop > 0 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) return true; } return false; };
-  addEventListener('touchstart', (ev) => {
-    on = false; started = false;
-    if (busy || ev.touches.length !== 1 || scrollY > 0 || blocked(ev.target) || scrolledParent(ev.target)) return;
-    on = true; d = 0; ready = false; y0 = ev.touches[0].clientY; x0 = ev.touches[0].clientX;
+  const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
+  addEventListener('scroll', req, { passive: true });
+  addEventListener('touchmove', req, { passive: true });
+  addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !busy && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); }, { passive: true });
+  addEventListener('touchend', () => {
+    finger = false; const go = armed && ready; ready = false;
+    if (!go || busy || document.querySelector('.sheet-bg, .lb, .vv')) { armed = false; req(); return; }
+    busy = true; haptic(); req();
+    if (navigator.onLine === false) { busy = false; armed = false; toast('İnternet bağlantısı yok', 'bad'); req(); return; }
+    setTimeout(() => location.reload(), 120); // gösterge dönmeye başlasın, sonra Safari gibi yenile
   }, { passive: true });
-  addEventListener('touchmove', (ev) => {
-    if (!on) return; const p = ev.touches[0]; const dy = p.clientY - y0, dx = p.clientX - x0;
-    if (!started) {
-      if (Math.abs(dx) > Math.abs(dy) || dy < 0) { on = false; return; } // yana ya da yukarı: normal kaydırma
-      ev.preventDefault(); if (dy < 8) return; started = true;
-    }
-    ev.preventDefault(); // bu çekişte sayfa/esneme oynamaz, sadece gösterge iner
-    d = dy > 0 ? rubber(dy) : 0;
-    ready = d >= TH;
-    cancelAnimationFrame(raf); raf = requestAnimationFrame(() => draw(d, 'drag'));
-  }, { passive: false });
-  const end = async () => {
-    if (!on) return; on = false; cancelAnimationFrame(raf);
-    if (!started) return;
-    if (!ready) { draw(0, 'back'); return; }
-    ready = false; busy = true; haptic(); draw(Math.min(d, TH * 0.78), 'spin');
-    const t0 = Date.now(); let err = '';
-    try {
-      if (navigator.onLine === false) throw new Error('İnternet bağlantısı yok');
-      const c = new AbortController(); const tm = setTimeout(() => c.abort(), 6000);
-      const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
-      if (!r.ok) throw new Error('Bağlantı kurulamadı');
-      const j = await r.json().catch(() => ({}));
-      if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; }
-    } catch (e) { err = e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message; }
-    // görünür ama kısa: ~0,7 sn döner, sonra ✓ olur (yenilendiği anlaşılsın), küçülerek kaybolur
-    setTimeout(() => {
-      const b = ui(); if (err) { b.querySelector('.ptr-t').textContent = err; b.classList.add('err'); } else b.classList.add('ok');
-      setTimeout(() => { b.classList.add('done'); setTimeout(() => { busy = false; b.querySelector('.ptr-t').textContent = ''; draw(0, 'gone done'); }, 240); }, err ? 1600 : 420);
-    }, Math.max(0, 700 - (Date.now() - t0)));
-  };
-  addEventListener('touchend', end, { passive: true });
-  addEventListener('touchcancel', end, { passive: true });
 }
 
 // Telefonda (29.10.2026): basma animasyonu yerine bilgisayardaki "üstüne gelince" görünümü (marka kutusunda renk + ok,

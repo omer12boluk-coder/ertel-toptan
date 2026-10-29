@@ -4734,3 +4734,10 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .ptr7.spin .ptr7-c svg.ptr7-a { animation: ptr7spin .6s linear infinite; }
 .ptr7 .ptr7-c svg.ptr7-ok { transform: scale(.4); }
 .ptr7.ok .ptr7-c svg.ptr7-ok { transform: none; }
+/* ===== Çekip yenile (8): Safari gibi — gösterge en üstte, esnemenin açtığı boşluğun ortasında; esnemeyi birebir izler ===== */
+.ptr8 { position: fixed; left: 50%; top: env(safe-area-inset-top, 0px); z-index: 30; pointer-events: none; color: color-mix(in oklab, var(--fg) 55%, transparent);
+  transform: translate(-50%, -50%) translateY(calc(var(--y, 0px) / 2)); opacity: min(1, calc(var(--k, 0) * 1.6)); }
+.ptr8 svg { display: block; transform: rotate(calc(var(--k, 0) * 300deg)); }
+.ptr8.ready { color: var(--accent); }
+.ptr8.spin { color: var(--accent); }
+.ptr8.spin svg { animation: ptr7spin .6s linear infinite; }
