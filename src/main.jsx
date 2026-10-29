@@ -684,6 +684,8 @@ function setupCrispBack() {
   addEventListener('pointerdown', (e) => {
     const b = e.target instanceof Element && e.target.closest('.back-btn'); if (!b || !matchMedia('(max-width: 899px)').matches) return;
     downAt = Date.now(); held = b; sx = e.clientX; sy = e.clientY; b._going = false; b.classList.add('tap');
+    b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge'); // ok bir kez kayıp döner
+    clearTimeout(b._nt); b._nt = setTimeout(() => b.classList.remove('nudge'), 320);
   }, { capture: true, passive: true });
   addEventListener('pointermove', (e) => { if (held && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) release(); }, { capture: true, passive: true });
   addEventListener('pointercancel', release, { capture: true, passive: true });

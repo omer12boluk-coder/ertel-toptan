@@ -4691,7 +4691,6 @@ html:has(.kf) { scrollbar-gutter: stable; }
 /* Telefonda basma geri bildirimi: animasyonsuz, ANINDA hafif koyulaşma (geri düğmeleri, düğmeler, çipler) */
 @media (hover: none) {
   .back-btn, .btn, .icon-btn, .chip, .of-ib, .set-find-btn, .cart-clear { transition: none !important; }
-  .back-btn:active > svg { transform: none !important; }
   .back-btn:active, .icon-btn:active, .chip:active, .of-ib:active, .cart-clear:active { background-color: color-mix(in oklab, var(--fg) 9%, var(--surface)) !important; }
   .btn:active:not(:disabled) { filter: brightness(.9); }
 }
@@ -4767,8 +4766,6 @@ html:has(.kf) { scrollbar-gutter: stable; }
    Hesabım satırları gibi: basılıyken anında hafif koyulaşma; geri düğmesinde ok sola küçük bir adım atar (ileri satırların tersi).
    Marka kutusu basılıyken çok az içe göçer, bırakınca yumuşak döner. Sayfa geçişi setupNavAnim'de (main.jsx). */
 @media (hover: none) {
-  .back-btn > svg { transition: transform .16s cubic-bezier(.2,.7,.2,1) !important; }
-  .back-btn:active > svg { transform: translateX(-3px) !important; }
   .sh-brand { transition: transform .22s cubic-bezier(.2,.7,.2,1); }
   .sh-brand:active { transform: scale(.965); transition-duration: .08s; }
   /* telefonda sayfa geçişini setupNavAnim yapar → Hesabım alt sayfasının kendi kayması iki kez olmasın */
@@ -4818,9 +4815,16 @@ html:has(.kf) { scrollbar-gutter: stable; }
 /* geri düğmesi: dokununca kısa süre basılı kalır (setupCrispBack) */
 @media (hover: none) {
   .back-btn.tap { background-color: color-mix(in oklab, var(--fg) 9%, var(--surface)) !important; }
-  .back-btn.tap > svg { transform: translateX(-3px) !important; }
 }
 
 /* sayfa geçişinde solan örtü (setupNavAnim): sayfa renginde, menülerin altında, dokunmayı engellemez */
 .nav-cover { position: fixed; inset: 0; z-index: 18; background: var(--bg); pointer-events: none; opacity: 0; }
 @media (min-width: 900px) { .nav-cover { display: none; } }
+
+/* geri okunun dokunuş hareketi (30.10.2026): durum değil TEK SEFERLİK küçük bir hareket (.nudge, setupCrispBack basışta ekler):
+   ok 3px sola gidip yumuşakça döner. Önceden :active / .tap açılıp kapandıkça ok ileri-geri gidip 'titriyordu'. */
+@media (hover: none) {
+  .back-btn > svg, .back-btn:active > svg, .back-btn:hover > svg { transition: none !important; transform: none; }
+  .back-btn.nudge > svg { animation: backNudge .28s cubic-bezier(.2,.7,.2,1); }
+}
+@keyframes backNudge { 35% { transform: translateX(-3px); } }
