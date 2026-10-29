@@ -669,13 +669,11 @@ function setupPull() {
 }
 
 function setupPress() {
-  const SEL = '.ocard, .rcard, .ucard, .seg-card, .addr-card:not(.static), .tile, .dash-kpi, .dash-q, .door, .cat-link, .pcard, .btn, .chip, .icon-btn, .stepper button, .sh-brand, .sh-box, .sh-card, .sh-cta-btn, .sh-more, .mini-card';
+  const SEL = '.ocard, .rcard, .ucard, .seg-card, .addr-card:not(.static), .tile, .dash-kpi, .dash-q, .door, .cat-link, .pcard, .btn, .chip, .icon-btn, .stepper button';
   let el = null, t0 = 0, sx = 0, sy = 0;
   const release = () => {
     const e = el; el = null; if (!e) return;
-    // ana sayfa kutuları: basılı bekletme yok, parmak kalkınca hemen geri döner (sayfa açılırken içe göçük donmuş kalmasın)
-    const fast = e.matches('.sh-brand, .sh-box, .sh-card, .mini-card, .sh-cta-btn, .sh-more');
-    setTimeout(() => { e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); }, fast ? 0 : Math.max(0, 120 - (Date.now() - t0)));
+    setTimeout(() => { e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); }, Math.max(0, 120 - (Date.now() - t0)));
   };
   addEventListener('touchstart', (ev) => {
     if (ev.touches.length !== 1) return;

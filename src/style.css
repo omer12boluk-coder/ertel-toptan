@@ -4329,12 +4329,6 @@ button.wait-row { cursor: pointer; }
 .plist.pgrid .prow-side:has(> .notify-btn) .notify-btn { flex: none; margin-left: auto; }
 .plist.pgrid .prow-side .price-ask { white-space: nowrap; }
 @media (max-width: 560px) { .plist.pgrid .prow-side:has(> .notify-btn) { flex-direction: row; align-items: flex-end; justify-content: space-between; } }
-/* telefonda ana sayfa öğeleri: az ve tok basma hissi (yaylanma yok, kısa) */
-@media (hover: none) {
-  :is(.sh-brand, .sh-box, .sh-card, .mini-card).tp { transform: scale(.965) !important; box-shadow: inset 0 0 0 100vmax rgb(0 0 0 / .06) !important; transition: transform .09s ease-out !important; }
-  :is(.sh-cta-btn, .sh-more).tp { transform: scale(.95) !important; transition: transform .09s ease-out !important; }
-  :is(.sh-brand, .sh-box, .sh-card, .mini-card, .sh-cta-btn, .sh-more).tp-rel { transition: transform .14s ease-out, box-shadow .14s ease !important; }
-}
 /* çekip yenile (setupPull, sadece dokunmatik) */
 @media (hover: none) and (pointer: coarse) { html, body { overscroll-behavior-y: none; } }
 .ptr { position: fixed; z-index: 75; left: 50%; top: var(--ptr-top, 0px); transform: translate(-50%, calc(var(--ptr, 0px) - 46px)); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; opacity: var(--ptr-k, 0); }
@@ -4436,3 +4430,21 @@ html:has(.kf) { scrollbar-gutter: stable; }
 @media (max-width: 560px) {
   .plist.pgrid .prow-side:has(> .notify-btn) { flex-direction: column; align-items: stretch; justify-content: flex-start; min-height: 0; padding-bottom: 52px; }
 }
+
+/* ödeme adımı: yeni sipariş özeti (29.10.2026; Ayarlar > Online mağaza > "eski sipariş özeti" ile geri alınır):
+   liste 4 ürüne kadar kaydırmasız (ekran kısaysa 3 / 2), onay + Siparişi tamamla kutunun altında, gerekirse ekranın dibine yapışık */
+@media (min-width: 960px) {
+  .co-grid.sum2 .co-side { max-height: none; display: block; }
+  .co-grid.sum2 .co-side .cart-sum { max-height: none; overflow: visible; }
+  .co-grid.sum2 .co-side .co-items { flex: none; max-height: 212px; }
+  .co-grid.sum2 .co-foot { position: sticky; bottom: 0; z-index: 2; margin: 0 -16px -16px; padding: 10px 16px 16px; background: var(--surface); border-radius: 0 0 var(--r) var(--r); display: flex; flex-direction: column; gap: 12px; }
+}
+@media (min-width: 960px) and (max-height: 820px) { .co-grid.sum2 .co-side .co-items { max-height: 158px; } }
+@media (min-width: 960px) and (max-height: 700px) { .co-grid.sum2 .co-side .co-items { max-height: 104px; } }
+.co-foot { display: flex; flex-direction: column; gap: 12px; }
+/* kısa sayfalarda (ör. boş Kalıp bulucu) içerik daralıp ortaya kaymasın: alt bilgi düzeninde main tam genişlik */
+.shell:has(> .sfoot) > main { width: 100%; }
+/* ana sayfa ürün rafları: üstüne gelince kalkan kartın kenarı / gölgesi kırpılmasın */
+.sh-rail { padding: 12px 10px 22px; margin: -12px -10px -22px; scroll-padding-inline: 10px; }
+@media (max-width: 700px) { .sh-rail { margin-inline: -16px; padding: 12px 16px 22px; scroll-padding-inline: 16px; } }
+.sfoot-col h4.sfoot-h2 { margin-top: 22px; }

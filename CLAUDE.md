@@ -320,7 +320,6 @@ Claude'un yapacağı (sırayla):
 
 ### 29.10.2026 düzenlemeleri (3)
 - **Üst arama:** sonuçlardan biri ok tuşuyla seçilmediyse (`hi = -1`) Enter → Tüm ürünler'de aynı metinle arama (`catalogGo {q}`), kutu kapanır. Telefonda büyüteç → `flushSync` ile kutu çizilip AYNI dokunuşta `focus()` (iPhone klavyeyi ancak böyle açar).
-- **Telefonda basma hissi** ana sayfa öğelerine de: `.sh-brand, .sh-box, .sh-card, .sh-cta-btn, .sh-more, .mini-card` (setupPress SEL; az ve tok: scale .965, .09 sn, yaylanmasız dönüş).
 - **Çekip yenile** (`setupPull`, main.jsx, sadece dokunmatik): `html, body { overscroll-behavior-y: none }` → üst menü sayfayla kaymaz, üstte boş beyaz alan çıkmaz. Sayfa en üstteyken aşağı çekince üst menünün altında dönen simge (`.ptr`), bırakınca `/version.json` denenir → varsa `location.reload()`, yoksa "İnternet bağlantısı yok" / "Bağlantı kurulamadı". Pencere/menü açıkken, iç kutu kaymışken, yana kaydırmada çalışmaz.
 - **Haber bekleyenler:** `notifyHit` aynı ürünü tekrar yazmaz (backend `backInStock` + `waitcheck.mjs`), `WaitGrid` kimlikleri tekilleştirir (aynı key → React kartları çoğaltıyordu). Dar kartta (`container` ≤290px) "Haber vereceğiz" sadece çan.
 - **Kutu kartta "Fiyat sorun"** fiyatlı kartın fiyat satırıyla aynı yerde: `PriceBlock` görünmez fiyat iskeleti (`.price-ghost`, sadece `.plist.pgrid`) + üstüne mutlak konumlu yazı.
@@ -338,8 +337,12 @@ Claude'un yapacağı (sırayla):
 - Kart "Gelince haber ver" (kutu görünüm): fiyat satırında DEĞİL, "Stok yok" satırının altında kendi satırında (`.prow-nb`; satır görünümünde eskisi gibi fiyatın yanında) → fiyat yerinden oynamaz. Takipte değilken yazılı, takibe alınınca yazı daralarak kaybolur (çan). Stokta olmayan kartın fiyat kutusu stoktaki kartla aynı yükseklikte (`min-height: 62px` + ortalı; telefonda alta 52px boşluk = sepet düğmesinin yeri) → yan yana kartlarda fiyatlar aynı hizada.
 - `.plist.pgrid { overflow: visible }` (üstüne gelince kalkan en üst sıra kartın üst çizgisi kesiliyordu). Kalıp bulucuda `scrollbar-gutter: stable` (sonuç gelince kaydırma çubuğu çıkıp arama kutusu sola kayıyordu). Bildirim paneli bilgisayarda en çok 560px boy.
 - Alt bilgide "Yardım" sütunu: Ürün talebi (`/magaza/talep`), Sorun bildir (`/magaza/sorun`); küçük alt bilgide de.
-- Telefonda ana sayfa kutularında basılı bekletme yok (parmak kalkınca .14 sn'de döner).
 - **Sipariş formu (/admin/form, 29.10.2026):** açık form cihazda 12 saat (`order-draft.at`, `TTL`; tarihsiz eski taslak temizlenir). Arama sırası: önce adında/stok kodunda geçenler (tam ifade +40, baştan +8, kelime +6, parça +3), sonra sadece etiketten gelenler; grup içinde kullanım (`ls of-use` forma ekleme ×2 + panelde yüklü mağaza/bayi siparişlerinde geçme). **Kaydet / Güncelle** (başlıkta + Müşteriye gönder'de) → Firestore `oforms/{id}` {no, name, items, at, total} (kural: yönetici; `watchForms` en yeni 60). Altta "Kaydedilen formlar": aç / sil; açık form doluysa "Önce kaydet, sonra aç / Kaydetmeden aç / Vazgeç". Telefonda arama kutusu odaktayken sonuçlarda "Ekle" tek dokunuşta çalışır (ui.jsx dokunuş süzgecine `.oform-res` istisnası).
+- **Ödeme adımı yeni sipariş özeti (DENEME, geri alınabilir):** `.co-grid.sum2` (bilgisayar): ürün listesi 4 ürüne kadar kaydırmasız (`max-height` 212px; ekran ≤820px yüksekse 3, ≤700px ise 2 satır), onay kutusu + Siparişi tamamla `.co-foot` içinde (gerekirse ekranın dibine yapışık). Eskiye dönüş: Ayarlar > Online mağaza > "Ödeme adımında eski sipariş özeti" (`orders.sumOld`).
+- Alt bilgi: Yardım, Bilgi sütununun ALTINDA ikinci başlık (`.sfoot-h2`); Yasal kendi sütununda (Yardım ayrı sütun olunca Yasal alta düşüyordu).
+- `.shell:has(> .sfoot) > main { width: 100% }` — alt bilgi düzeninde (flex column) kısa sayfalarda main içeriğe göre daralıp ortalanıyordu (boş Kalıp bulucu ortada, sonuç gelince sola kayıyordu).
+- Ana sayfa rafları `.sh-rail` 12/10/22px iç boşluk + eksi dış boşluk: üstüne gelince kalkan kartın üst/sol çizgisi kırpılmıyor.
+- Telefonda ana sayfa kutularındaki basma animasyonu KALDIRILDI (kullanıcı: kötü çalışıyor, sonra bakılacak).
 - **Bekleyen kararlar:** (1) ödeme adımında sipariş özeti 2 üründe bile kayıyor → çözüm önerildi, onay bekleniyor; (2) ana sayfaya "imza" etkileşim fikirleri tartışılıyor.
 
 ### Panel hafifletme (27.10.2026, Firestore okuma kotası)

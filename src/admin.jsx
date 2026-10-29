@@ -725,6 +725,7 @@ export function Settings() {
           <Toggle id="s-ord" label="Mağazadan sipariş alınsın" hint="Kapalıysa müşteri sepeti sadece WhatsApp’tan liste linki olarak gönderir" checked={d.orders.enabled !== false} onChange={(v) => set('orders.enabled', v)} />
           <div className="soon-admin">
             <Toggle id="s-csoon" label="Online sipariş: “Çok yakında” göster" hint="Açıkken müşteri sepette “Sepeti onayla”yı pasif görür, sadece WhatsApp’tan gönderir. Sistemi açmak için kapatın." checked={d.orders.checkoutSoon !== false} onChange={(v) => set('orders.checkoutSoon', v)} />
+            <Toggle id="s-sumold" label="Ödeme adımında eski sipariş özeti" hint="Kapalıyken (yeni düzen): ürün listesi 4 ürüne kadar kaydırmasız, onay kutusu ve Siparişi tamamla hep görünür. Açarsanız eski düzene döner (özet ekrana sığar, liste hemen kayar)." checked={!!d.orders.sumOld} onChange={(v) => set('orders.sumOld', v)} />
             <Toggle id="s-asoon" label="Üyelik / Hesabım: “Çok yakında” göster" hint="Açıkken Hesabım sayfasında “Çok yakında hizmetinizde” yazar." checked={d.orders.accountsSoon !== false} onChange={(v) => set('orders.accountsSoon', v)} />
             <p className="fine">Kendiniz denemek için: <a href="/magaza?onizleme=1" target="_blank" rel="noopener">/magaza?onizleme=1</a> (bu cihazda “yakında” kalkar; geri almak için <code>?onizleme=0</code>).</p>
           </div>

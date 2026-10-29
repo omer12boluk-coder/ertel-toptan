@@ -57,12 +57,13 @@ export function ShopFooter({ compact = false }) {
             {F.email && <li><Icon n="mail" s={17} /><span><a href={'mailto:' + F.email}>{F.email}</a></span></li>}
           </ul>
         </div>
-        {pages.length > 0 && <div className="sfoot-col">
-          <h4>Bilgi</h4>
-          <ul className="sfoot-links">{pages.map((p, i) => <li key={i}><button onClick={() => setPage(p)}>{p.title}<Icon n="chev" s={15} /></button></li>)}</ul>
-        </div>}
+        {/* Bilgi + Yardım aynı sütunda (Yardım, Bilgi'nin altında yeni başlık) — sütun sayısı artmasın */}
         <div className="sfoot-col">
-          <h4>Yardım</h4>
+          {pages.length > 0 && <>
+            <h4>Bilgi</h4>
+            <ul className="sfoot-links">{pages.map((p, i) => <li key={i}><button onClick={() => setPage(p)}>{p.title}<Icon n="chev" s={15} /></button></li>)}</ul>
+          </>}
+          <h4 className={pages.length ? 'sfoot-h2' : ''}>Yardım</h4>
           <ul className="sfoot-links">
             <li><a href="/magaza/talep" onClick={goTab('talep')}>Ürün talebi<Icon n="chev" s={15} /></a></li>
             <li><a href="/magaza/sorun" onClick={goTab('sorun')}>Sorun bildir<Icon n="chev" s={15} /></a></li>
