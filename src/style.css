@@ -4652,3 +4652,21 @@ html:has(.kf) { scrollbar-gutter: stable; }
   .sh-brand.th { background-image: linear-gradient(rgb(0 0 0 / .045), rgb(0 0 0 / .045)); }
   [data-theme="dark"] .sh-brand.th, :root[data-theme="dark"] .sh-brand.th { background-image: linear-gradient(rgb(255 255 255 / .05), rgb(255 255 255 / .05)); }
 }
+/* ===== STANDART GERİ DÜĞMESİ (30.10.2026) — mağaza + bayi tarafında bütün "geri / alışverişe devam et / sepete dön"
+   düğmeleri bu sınıfla: ‹ simgesi + kısa yazı, beyaz yuvarlak hap, ince çerçeve, 36px. Yeni sayfalarda da bunu kullan. */
+.back-btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; height: 36px; margin: 0; padding: 0 14px 0 9px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; font-size: 14px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer;
+  transition: background .15s, border-color .15s; -webkit-tap-highlight-color: transparent; }
+.back-btn > svg { color: var(--accent); flex: none; transition: transform .18s var(--ease); }
+.back-btn:hover { background: var(--surface-2); border-color: color-mix(in oklab, var(--accent) 25%, var(--line)); }
+.back-btn:hover > svg { transform: translateX(-2px); }
+.back-btn:active { background: var(--surface-2); }
+.cart-back.back-btn { margin-bottom: -4px; }
+.acct-back.back-btn { margin-left: 0; }
+/* Ayarlar: arama düğmesi başlığın hemen yanında, yazılı ve belirgin */
+.set-find-btn { margin-left: 4px !important; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px 0 10px; border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--line)); background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.set-find-btn:hover { background: color-mix(in oklab, var(--accent) 16%, var(--surface)); }
+.set-find-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.settings .page-h .set-mode { margin-left: 4px; }
+.settings .page-h { justify-content: flex-start; gap: 12px; }

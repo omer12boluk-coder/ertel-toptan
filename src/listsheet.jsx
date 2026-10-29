@@ -406,7 +406,7 @@ function GuestList({ r }) {
   return (
     <div className="page list-page">
       <div className="list-top">
-        <button className="btn sm ghost" onClick={() => go('katalog')}><Icon n="back" s={16} />Ürünler</button>
+        <button className="back-btn" onClick={() => go('katalog')}><Icon n="back" s={16} />Ürünler</button>
         <span className={'pill tone-' + (priced(r) ? 'ok' : 'info')}>{priced(r) ? 'Fiyatlandırıldı' : 'Dükkana gönderildi'}</span>
       </div>
       <ListPaper r={r} />
@@ -467,7 +467,7 @@ export function CodeList({ code }) {
   return (
     <div className="page list-page">
       <div className="list-top">
-        <button className="btn sm ghost" onClick={() => go('katalog')}><Icon n="back" s={16} />Ürünler</button>
+        <button className="back-btn" onClick={() => go('katalog')}><Icon n="back" s={16} />Ürünler</button>
         <span className={'pill tone-' + (L.priced ? 'ok' : 'info')}>{L.priced ? 'Fiyatlandırıldı' : 'Liste fiyatları'}</span>
       </div>
       <ListPaper r={r} rate={rate} />

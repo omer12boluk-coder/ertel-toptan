@@ -849,7 +849,7 @@ export function ProductPage({ id }) {
   if (!p) return <div className="page narrow"><Empty icon="search" title="Ürün bulunamadı"><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty></div>;
   return (
     <div className="page pdetail-page">
-      <button className="btn sm ghost pp-back" onClick={() => (history.state?.pid ? history.back() : go('katalog'))}><Icon n="back" s={16} />Geri</button>
+      <button className="back-btn pp-back" onClick={() => (history.state?.pid ? history.back() : go('katalog'))}><Icon n="back" s={16} />Geri</button>
       <div className="pp-card"><ProductBody key={p.id} p={p} onPick={(x) => openProduct(x.id)} /></div>
     </div>
   );

@@ -289,7 +289,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   return (
     <div className="page checkout" ref={formRef}>
       <div className="send-bar">
-        <button className="btn co-back-btn" onClick={onBack}><Icon n="back" s={17} />{single ? 'Vazgeç' : <><Icon n="cart" s={17} />Sepete dön</>}</button>
+        <button className="back-btn co-back-std" onClick={onBack}><Icon n="back" s={16} />{single ? 'Vazgeç' : 'Sepete dön'}</button>
         <div className="send-t"><b>Siparişi tamamla</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
       </div>
       <div className="co-grid">
@@ -502,7 +502,7 @@ export function OrderPage({ id }) {
   return (
     <div className="page order-page">
       <div className="list-top">
-        <button className="btn sm ghost" onClick={() => (member ? openAcct('orders') : go('katalog'))}><Icon n="back" s={16} />{member ? 'Siparişlerim' : 'Ürünler'}</button>
+        <button className="back-btn" onClick={() => (member ? openAcct('orders') : go('katalog'))}><Icon n="back" s={16} />{member ? 'Siparişlerim' : 'Ürünler'}</button>
         <span className="list-top-r"><PayChip o={o} /><StatusPill status={o.status} map={ORDER_STATUS} /></span>
       </div>
       {orderJust && (
@@ -945,7 +945,7 @@ function MemberHome() {
       <section className="acct-main">
         {view ? <>
           <div className="acct-main-h">
-            <button className="acct-back" onClick={() => history.state?.acct ? history.back() : openAcct(null)}><Icon n="back" s={18} /><span>Hesabım</span></button>
+            <button className="back-btn acct-back" onClick={() => history.state?.acct ? history.back() : openAcct(null)}><Icon n="back" s={16} /><span>Hesabım</span></button>
             <h2>{ACCT_T[view]}</h2>
           </div>
           <div className="acct-body" key={view}>{body[view]()}</div>

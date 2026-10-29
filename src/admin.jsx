@@ -834,8 +834,8 @@ export function Settings() {
     <div className="page settings">
       <div className="page-h">
         <h1 className="page-t">Ayarlar</h1>
+        <button className={'set-find-btn' + (search ? ' on' : '')} onClick={() => { setSearch(!search); setQ(''); }} aria-label="Ayar ara" title="Ayar ara"><Icon n={search ? 'x' : 'search'} s={16} /><span>{search ? 'Aramayı kapat' : 'Ayar ara'}</span></button>
         <span className="muted set-mode">{A.mode === 'demo' ? 'Demo modu · veriler bu tarayıcıda' : 'Firebase’e bağlı'}</span>
-        <button className={'icon-btn set-find-btn' + (search ? ' on' : '')} onClick={() => { setSearch(!search); setQ(''); }} aria-label="Ayar ara" title="Ayar ara"><Icon n={search ? 'x' : 'search'} s={19} /></button>
       </div>
       {search && (
         <div className="set-find">

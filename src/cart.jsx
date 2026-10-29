@@ -155,7 +155,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
   const openImg = (it) => { const p = prodOf(it); const u = imageList(p, S, 'lg'); if (u.length) setLb({ urls: u, thumbs: imageList(p, S, 'sm'), title: p.n }); else openSheet(it); };
   return (
     <div className="page cart-page">
-      <button type="button" className="cart-back" onClick={() => go('katalog')}><Icon n="back" s={15} />Alışverişe devam et</button>
+      <button type="button" className="back-btn cart-back" onClick={() => go('katalog')}><Icon n="back" s={16} />Alışverişe devam et</button>
       <div className="cart-head">
         <h1 className="page-t">Sepet <span className="muted">· {items.length} ürün</span></h1>
         <button type="button" className="cart-clear cc-m" onClick={() => setAsk(true)}><Icon n="trash" s={14} />Sepeti temizle</button>
@@ -280,7 +280,7 @@ function BayiSend({ items, onBack }) {
   return (
     <div className="page send-step b2b-send">
       <div className="send-bar">
-        <button className="btn sm ghost" onClick={onBack}><Icon n="back" s={16} />Sepet</button>
+        <button className="back-btn" onClick={onBack}><Icon n="back" s={16} />Sepete dön</button>
         <div className="send-t"><b>Sipariş #{no}</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
         <div className="send-btns">
           <button className="btn primary" disabled={busy} onClick={() => send('order')}><Icon n="check" s={16} />Siparişi gönder</button>
