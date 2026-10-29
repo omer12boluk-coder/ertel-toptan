@@ -3,7 +3,7 @@
 //   OrderPage  sipariş alındı / takip sayfası (/magaza/s/<no>)
 //   Account    Hesabım: giriş, üye ol, şifre sıfırlama, siparişlerim, adreslerim, bilgilerim
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders } from './store.js';
 import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
@@ -128,21 +128,24 @@ function Choice({ on, onClick, title, sub, icon }) {
 // Ödeme adımı (bilgisayar, ≥960px): sağdaki sipariş özeti ekrana SABİT — sayfa kayınca hiç oynamaz (Hesabım menüsündeki gibi);
 // sadece içindeki ürün listesi kendi içinde kayar. Yer / genişlik sağ sütundan ölçülür; ekran çok kısaysa normal akışta kalır.
 function useFixedSum(sideRef, sumRef) {
-  useEffect(() => {
+  // useLayoutEffect: ilk boyamadan ÖNCE çalışır → kutu hiç uzun hâliyle görünmez
+  useLayoutEffect(() => {
     const side = sideRef.current, sum = sumRef.current; if (!side || !sum) return;
     let retry = 0;
-    const reset = () => { sum.classList.remove('co-fixed', 'co-in'); sum.style.cssText = ''; };
+    const reset = () => { sum.classList.remove('co-fixed', 'co-pre'); sum.style.cssText = ''; };
     const place = () => {
       if (!matchMedia('(min-width: 960px)').matches) return reset();
-      // sayfa açılış animasyonu (transform) sürerken sabitlenmez: kayan bir atanın içinde "fixed" ona göre konumlanır,
-      // kutu bir an yanlış yerde görünüyordu → animasyon bitene kadar normal akışta kalır, sonra yerinde sabitlenir
-      for (let e = side.parentElement; e && e !== document.body; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.transform !== 'none' || cs.animationName !== 'none' && cs.animationPlayState === 'running' && e.getAnimations?.().some((a) => a.playState === 'running')) { reset(); clearTimeout(retry); retry = setTimeout(place, 90); return; } }
+      // yer sayfa düzeninden (offsetLeft/Top): açılış animasyonundaki kayma (transform) ölçüme karışmaz
       let x = 0, y = 0; for (let e = side; e; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
       const top = Math.round(y); const avail = innerHeight - top - 24;
       if (avail < 300) return reset();
+      // boy ve iç düzen HEMEN sabit hâlindeki gibi (co-pre) → sabitlenince sadece konum türü değişir, zıplama olmaz
+      sum.classList.add('co-pre');
+      Object.assign(sum.style, { width: side.offsetWidth + 'px', maxHeight: avail + 'px' });
+      // sayfa açılış animasyonu (atada transform) sürerken "fixed" ona göre konumlanır → bitene kadar akışta kalır
+      for (let e = side.parentElement; e && e !== document.body; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.transform !== 'none' || e.getAnimations?.().some((a) => a.playState === 'running')) { sum.classList.remove('co-fixed'); sum.style.top = sum.style.left = ''; clearTimeout(retry); retry = setTimeout(place, 60); return; } }
       sum.classList.add('co-fixed');
-      Object.assign(sum.style, { top: top + 'px', left: Math.round(x - scrollX) + 'px', width: side.offsetWidth + 'px', maxHeight: avail + 'px' });
-      requestAnimationFrame(() => sum.classList.add('co-in'));
+      Object.assign(sum.style, { top: top + 'px', left: Math.round(x - scrollX) + 'px' });
     };
     place(); const t = [setTimeout(place, 60), setTimeout(place, 400)];
     const ro = new ResizeObserver(place); ro.observe(document.body);
