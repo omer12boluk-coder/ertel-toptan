@@ -4526,3 +4526,8 @@ html:has(.kf) { scrollbar-gutter: stable; }
 @keyframes coFade { from { opacity: 0; } }
 /* "+KDV" fiyata biraz daha yakın (3-4 haneli fiyatlarda adet seçiciye yapışmasın) */
 .plist.pgrid .price .plusvat { margin-left: 1px; letter-spacing: 0; }
+/* ürün açıklaması: varsayılan tam; Ayarlar > Ürün kartları > "kısa göster" açıkken uzun açıklama 220px'te kesilir, "Devamını göster" */
+.pdesc:not(.cut) .pdesc-body::after { display: none; }
+.pdesc.short.cut .pdesc-body { max-height: 220px !important; overflow: hidden; }
+.pdesc.short.cut .pdesc-body::after { display: block; content: ""; position: absolute; inset: auto 0 0; height: 70px; background: linear-gradient(transparent, var(--surface)); pointer-events: none; }
+.pdesc > .pdesc-more { display: inline-flex !important; align-items: center; gap: 4px; align-self: flex-start; font-weight: 600; }

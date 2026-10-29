@@ -888,9 +888,24 @@ export function Gallery({ p }) {
     setI(Math.round(el.scrollLeft / w));
   };
   const grab = () => { aim.current = null; }; // parmakla kaydırmaya başlayınca normal takibe dön
+  // klavye ← → ile önceki / sonraki resim (yazı yazılırken ve büyük resim penceresi açıkken değil; en üstteki galeri)
+  const gref = useRef(null);
+  const iRef = useRef(i); iRef.current = i;
+  useEffect(() => {
+    const key = (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' || e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target; if (t instanceof Element && t.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('.lb')) return;
+      const all = [...document.querySelectorAll('.gallery')]; if (all[all.length - 1] !== gref.current) return;
+      const k = iRef.current + (e.key === 'ArrowRight' ? 1 : -1);
+      if (k < 0 || k >= slides.length) return;
+      e.preventDefault(); goTo(k);
+    };
+    addEventListener('keydown', key); return () => removeEventListener('keydown', key);
+  }, [slides.length]);
   const onVid = slides[i]?.t === 'vid';
   return (
-    <div className="gallery">
+    <div className="gallery" ref={gref}>
       <div className="gal-stage">
         <div className="gal-track" ref={track} onScroll={onScroll} onTouchStart={grab} onWheel={grab}>
           {slides.map((x, k) => (
@@ -1184,19 +1199,31 @@ export function Lightbox({ urls, thumbs, start = 0, title, onClose }) {
 }
 
 function Description({ id }) {
+  const S = useStore((s) => s.settings);
+  const short = !!S.cards?.descShort; // Ayarlar > Ürün kartları > "Ürün açıklamasını kısa göster"
   const [html, setHtml] = useState(null);
   const [more, setMore] = useState(false);
+  const [long, setLong] = useState(false); // kısa gösterimde açıklama gerçekten uzun mu (değilse düğme yok)
   const [zoom, setZoom] = useState(null);
+  const body = useRef(null);
   useEffect(() => { let live = true; api().getDesc(id).then((h) => live && setHtml(h ? cleanHtml(h) : '')).catch(() => live && setHtml('')); return () => { live = false; }; }, [id]);
+  useEffect(() => {
+    if (!short || !html || !body.current) return;
+    const el = body.current; const check = () => setLong(el.scrollHeight > 244);
+    check(); const ro = new ResizeObserver(check); ro.observe(el); el.querySelectorAll('img').forEach((im) => im.addEventListener('load', check, { once: true }));
+    return () => ro.disconnect();
+  }, [short, html]);
   if (!html) return null;
+  const cut = short && !more;
   return (
-    <section className={'pdesc' + (more ? ' open' : '')}>
+    <section className={'pdesc' + (short ? ' short' : '') + (cut && long ? ' cut' : '') + (more ? ' open' : '')}>
       <h4 className="eyebrow">Ürün açıklaması</h4>
-      <div className="pdesc-body" dangerouslySetInnerHTML={{ __html: html }} onClick={(e) => {
+      <div ref={body} className="pdesc-body" dangerouslySetInnerHTML={{ __html: html }} onClick={(e) => {
         if (e.target.tagName !== 'IMG') return;
         const imgs = [...e.currentTarget.querySelectorAll('img')]; setZoom({ urls: imgs.map((x) => x.src), start: imgs.indexOf(e.target) });
       }} />
-      {!more && <button className="link" onClick={() => setMore(true)}>Devamını göster</button>}
+      {short && long && !more && <button type="button" className="link pdesc-more" onClick={() => setMore(true)}>Devamını göster<Icon n="down" s={15} /></button>}
+      {short && more && <button type="button" className="link pdesc-more" onClick={(e) => { setMore(false); const sec = e.currentTarget.closest('.pdesc'); requestAnimationFrame(() => sec?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }}>Daha az göster<Icon n="up" s={15} /></button>}
       {zoom && <Lightbox urls={zoom.urls} start={zoom.start} title="Açıklama resmi" onClose={() => setZoom(null)} />}
     </section>
   );

@@ -356,6 +356,8 @@ Claude'un yapacağı (sırayla):
 - "Haber bekleyenler" → **"Haber beklenenler"** (menü, başlık, yazılar); adres `/magaza/hesap/haber-beklenenler` (eski `haber-bekleyenler` linki de açılır: `acctFromPath`).
 - Sepet tablosu (bilgisayar): Birim fiyat 19px, Toplam 21px; başlıklar ve değerler ORTALI (sütunlar 110/128/110), başlık harf aralığının sağ fazlası düzeltildi → merkezler birebir aynı (ölçüldü).
 - Kutu kartta "+KDV" fiyata yakın (`margin-left: 1px`).
+- **Ürün resimleri klavyeyle (29.10.2026):** ürün galerisinde ← → tuşları önceki/sonraki resme geçer (yazı alanındayken ve büyük resim açıkken çalışmaz; birden çok galeri varsa en üstteki).
+- **Ürün açıklamasını kısa göster** (`cards.descShort`, Ayarlar > Ürün kartları, ürün açılışı alanlarının altında; varsayılan kapalı): açıklama 220px'ten uzunsa kesilir, alt kısmı solar, "Devamını göster" / "Daha az göster" → "Birlikte iyi gider" ve yorumlar ilk bakışta görünür.
 - **Bekleyen kararlar:** (1) ödeme adımında sipariş özeti 2 üründe bile kayıyor → çözüm önerildi, onay bekleniyor; (2) ana sayfaya "imza" etkileşim fikirleri tartışılıyor.
 
 ### Panel hafifletme (27.10.2026, Firestore okuma kotası)
