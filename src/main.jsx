@@ -638,24 +638,34 @@ function setupPull() {
   };
   const top = () => { const h = document.querySelector('.topbar'); const r = h?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
   // 29.10.2026: üst menü yerinde kalır; altındaki sayfa (main + alt bilgi) aşağı iner, açılan boşlukta simge belirir.
-  // Sayfa "top" ile kaydırılır (transform DEĞİL: içerideki sabit öğeler, ör. sepet çubuğu, yerinden oynamasın).
+  // Kaydırma transform ile (ekran kartında, akıcı; "top" her karede sayfayı yeniden dizip bırakınca takılıyordu).
+  // İçinde sabit (fixed) öğe olan kutuya transform verilmez (sepet çubuğu vb. yerinden kaymasın) → onun çocuklarına inilir.
+  const FIX = '.cart-bar, .cs-fixed, .co-fixed, .side-fixed, .acct-side, .ptr';
   const EASE = 'cubic-bezier(.2,.8,.2,1)';
-  const pages = () => [...document.querySelectorAll('.shell > .main, .shell > .sfoot')];
-  let clr = 0;
+  let els = null, clr = 0;
+  const collect = () => {
+    const out = []; const walk = (e, deep) => {
+      if (e.matches(FIX) || getComputedStyle(e).position === 'fixed') return;
+      if (deep < 4 && e.querySelector(FIX)) { for (const c of e.children) walk(c, deep + 1); return; }
+      out.push(e);
+    };
+    for (const e of document.querySelectorAll('.shell > .main, .shell > .sfoot')) walk(e, 0);
+    return out;
+  };
   const set = (px, cls = '', txt = '') => {
     const b = ui(); const anim = cls === 'back' || cls === 'spin' || cls === 'err' || cls === 'gone';
     b.style.setProperty('--ptr-top', top() + 'px'); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, px / TH));
     b.className = 'ptr' + (cls ? ' ' + cls : ''); b.querySelector('.ptr-t').textContent = txt;
-    clearTimeout(clr);
-    for (const e of pages()) { e.style.transition = anim ? `top .3s ${EASE}` : 'none'; e.style.position = 'relative'; e.style.top = px + 'px'; }
-    if (!px) clr = setTimeout(() => { for (const e of pages()) { e.style.position = e.style.top = e.style.transition = ''; } }, anim ? 340 : 0);
+    clearTimeout(clr); if (!els) els = collect();
+    for (const e of els) { e.style.transition = anim ? `transform .3s ${EASE}` : 'none'; e.style.willChange = 'transform'; e.style.transform = px ? `translate3d(0,${px}px,0)` : ''; }
+    if (!px) clr = setTimeout(() => { if (els) for (const e of els) { e.style.transition = e.style.willChange = e.style.transform = ''; } els = null; }, anim ? 340 : 0);
   };
   const hide = (ms = 0) => setTimeout(() => { if (box) set(0, 'gone'); }, ms);
   const blocked = (t) => !(t instanceof Element) || t.closest('.sheet-bg, .sheet, .lb, .vv, .dz, .ctx-sheet-bg, .ctx, .botnav, input, textarea, select, .hsearch-res, .kf-list, .nc-panel') || document.querySelector('.sheet-bg, .lb, .vv');
   const scrolledParent = (t) => { for (let e = t; e && e !== document.body; e = e.parentElement) { if (e.scrollTop > 0 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) return true; } return false; };
   addEventListener('touchstart', (ev) => {
     on = false; if (busy || ev.touches.length !== 1 || window.scrollY > 0 || blocked(ev.target) || scrolledParent(ev.target)) return;
-    on = true; d = 0; y0 = ev.touches[0].clientY; x0 = ev.touches[0].clientX;
+    on = true; d = 0; if (!box || !box.style.getPropertyValue("--ptr") || box.style.getPropertyValue("--ptr") === "0px") els = null; y0 = ev.touches[0].clientY; x0 = ev.touches[0].clientX;
   }, { passive: true });
   addEventListener('touchmove', (ev) => {
     if (!on) return; const p = ev.touches[0]; const dy = p.clientY - y0, dx = p.clientX - x0;
@@ -673,7 +683,7 @@ function setupPull() {
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
       const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
       if (!r.ok) throw new Error(r.status);
-      location.reload();
+      requestAnimationFrame(() => setTimeout(() => location.reload(), 0));
     } catch { fail('Bağlantı kurulamadı'); }
   };
   addEventListener('touchend', end, { passive: true });
