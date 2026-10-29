@@ -14,6 +14,8 @@ initializeApp({ credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT
 const db = getFirestore();
 const now = Date.now(); const since = now - 120 * 864e5;
 const note = (title, msg) => console.log(`::notice title=${title}::${String(msg).replace(/%/g, '%25').replace(/\n/g, '%0A')}`);
+process.on('unhandledRejection', (e) => { note('Hata', (e && e.stack) || e); process.exit(1); });
+process.on('uncaughtException', (e) => { note('Hata', (e && e.stack) || e); process.exit(1); });
 
 // katalog (aktiflik + stok kontrolü için)
 const meta = await db.doc('catalog/_meta').get();
