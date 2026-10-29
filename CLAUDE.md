@@ -348,6 +348,9 @@ Claude'un yapacağı (sırayla):
 - **Telefonda basma hissi (yeni, `setupPress`):** sadece GERÇEK basışta: parmak 70 ms kıpırdamadan durursa içe göçer, 6px kayarsa / sayfa kayarsa hiç başlamaz ya da yumuşakça geri döner; hızlı dokunuşta kısa "tık". Ana sayfa kutuları da (`.sh-brand, .sh-box, .sh-card, .mini-card` scale .955 + hafif kararma; `.sh-cta-btn, .sh-more` .94), bırakınca hafif yaylanarak döner.
 - Telefonda bildirim paneli artık tüm ekranı kaplamaz: `max-height: min(62dvh, 520px)`, altı serbest.
 - Ödeme özeti sabit kutuda alt boşluk 32px (alttaki not kesilmesin).
+- Kart adet seçici animasyonu: clip-path bitişte KALMAZ (`backwards`; kalınca kenarlık köşeleri kesiliyordu). Bilgisayar kutu kartında adet seçici dar (28/30/28px) + fiyatın TL/KDV satırları `nowrap` → sepete ekleyince kart (ve aynı sıradaki kartlar) uzamaz (TL'li ayarla ölçüldü).
+- `useFixedSum`: konum `offsetLeft/Top` zincirinden; sayfa açılış animasyonu (atada transform) sürerken sabitlemez (fixed, transform'lu atanın içinde ona göre konumlanıp bir an yanlış yerde görünüyordu), bitince sabitler. Sabit kutu ekrana sığmazsa içi kayar; alttaki not ortalı; ödeme sayfası altında 72px boşluk.
+- **HATA DÜZELTİLDİ:** `currentRate` elle kur (`pricing.manualRate`) girilince her çağrıda yeni nesne döndürüyordu → useStore sonsuz döngü, mağaza çöküyordu (React #185). Artık aynı nesne önbellekten.
 - **Bekleyen kararlar:** (1) ödeme adımında sipariş özeti 2 üründe bile kayıyor → çözüm önerildi, onay bekleniyor; (2) ana sayfaya "imza" etkileşim fikirleri tartışılıyor.
 
 ### Panel hafifletme (27.10.2026, Firestore okuma kotası)

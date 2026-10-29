@@ -4449,19 +4449,39 @@ html:has(.kf) { scrollbar-gutter: stable; }
   :is(.sh-brand, .sh-box, .sh-card, .mini-card, .sh-cta-btn, .sh-more).tp-rel { transition: transform .42s cubic-bezier(.2, 1.35, .4, 1), filter .25s ease !important; }
 }
 /* sepete ekle → adet seçici: düğmenin yerinden sola doğru yaylanarak açılır; geri dönüşte düğme küçülerek gelir */
-.qty-morph { display: inline-flex; flex: none; margin-left: auto; }
-.qty-morph.grow > .stepper { animation: qtyGrow .42s cubic-bezier(.22, 1.2, .36, 1) both; transform-origin: right center; }
+.qty-morph { display: inline-flex; flex: 0 1 auto; min-width: 0; margin-left: auto; }
+.qty-morph.grow > .stepper { animation: qtyGrow .42s cubic-bezier(.22, 1.2, .36, 1) backwards; transform-origin: right center; } /* bitişte kırpma kalmaz (kenarlık bozulmasın) */
 .qty-morph.grow > .stepper > * { animation: qtyIn .3s .1s ease both; }
-@keyframes qtyGrow { from { clip-path: inset(0 0 0 calc(100% - 46px) round 12px); } to { clip-path: inset(0 0 0 0 round 12px); } }
+@keyframes qtyGrow { from { clip-path: inset(-2px -2px -2px calc(100% - 46px) round var(--r-sm)); } to { clip-path: inset(-2px round var(--r-sm)); } }
 @keyframes qtyIn { from { opacity: 0; } }
-.btn.add.back { animation: addBack .34s cubic-bezier(.22, 1.2, .36, 1) both; }
-@keyframes addBack { from { clip-path: inset(0 0 0 0 round 12px); transform: scaleX(1.6); transform-origin: right center; opacity: .4; } }
+.btn.add.back { animation: addBack .34s cubic-bezier(.22, 1.2, .36, 1) backwards; }
+@keyframes addBack { from { transform: scaleX(1.6); transform-origin: right center; opacity: .4; } }
 @media (max-width: 560px) {
   .qty-morph { width: 100%; margin-left: 0; } .qty-morph > .stepper { width: 100%; justify-content: center; }
-  @keyframes qtyGrow { from { clip-path: inset(0 30% 0 30% round 10px); } to { clip-path: inset(0 0 0 0 round 10px); } }
-  .btn.add.back { animation: addBackM .3s cubic-bezier(.22, 1.2, .36, 1) both; }
+  @keyframes qtyGrow { from { clip-path: inset(-2px 30% -2px 30% round var(--r-sm)); } to { clip-path: inset(-2px round var(--r-sm)); } }
+  .btn.add.back { animation: addBackM .3s cubic-bezier(.22, 1.2, .36, 1) backwards; }
   @keyframes addBackM { from { transform: scale(.92); opacity: .5; } }
 }
 @media (prefers-reduced-motion: reduce) { .qty-morph.grow > .stepper, .qty-morph.grow > .stepper > *, .btn.add.back { animation: none; } }
 .co-side .cart-sum.co-fixed { padding-bottom: 22px; }
 .co-side .cart-sum.co-fixed > .fine:last-child { margin-bottom: 0; }
+/* ödeme özeti: yeri ölçülüp sabitlenene kadar görünmez (açılışta bir an yanlış yerde görünmesin), sonra yumuşakça belirir */
+@media (min-width: 960px) {
+  .co-side .cart-sum { opacity: 0; }
+  .co-side .cart-sum.co-in, .co-side .cart-sum:not(.co-fixed) { opacity: 1; transition: opacity .18s ease; }
+}
+/* sabit özet ekrana sığmazsa içi kayar (alttaki düğme ve not hiç kesilmez) */
+.co-side .cart-sum.co-fixed { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.co-side .cart-sum.co-fixed .co-items { flex: 0 1 auto; min-height: 64px; }
+.co-side .cart-sum > .fine:last-child { text-align: center; margin: 4px 0 0; }
+.co-side .cart-sum.co-fixed { padding-bottom: 20px; }
+/* sol sütunun (form) sonu ile sayfa sonu arası */
+.co-grid { padding-bottom: 72px; }
+.qty-morph > .stepper { min-width: 0; }
+/* bilgisayarda kutu kartta adet seçici dar (sepet düğmesinin yerine sığsın; fiyatın altındaki TL / KDV satırları kırılıp kart uzamasın) */
+@media (min-width: 561px) {
+  .plist.pgrid .prow-side .stepper { height: 42px; border-radius: 12px; }
+  .plist.pgrid .prow-side .stepper button { width: 28px; }
+  .plist.pgrid .prow-side .stepper input { width: 30px; font-size: 14px; }
+  .plist.pgrid .prow-side .price .vat-inc, .plist.pgrid .prow-side .price .tl-hint { white-space: nowrap; }
+}

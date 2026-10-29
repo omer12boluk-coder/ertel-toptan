@@ -12,9 +12,11 @@ import { LOGO_MARK } from './config.js';
 
 // ---- Kur (1 USD kaç TL) ------------------------------------------------------
 // Öncelik: yöneticinin elle girdiği kur > Harem Altın dolar satış (bekçi dakikada bir günceller)
+let manualRate = {};
 export function currentRate(s = store.s) {
   const manual = Number(s.settings?.pricing?.manualRate);
-  if (manual > 0) return { usd: manual, src: 'manual', at: null };
+  // aynı nesne dönmeli: her seferinde yeni nesne → useStore sonsuz yeniden çizim (elle kur girilince sayfa çöküyordu)
+  if (manual > 0) return manualRate.usd === manual ? manualRate : (manualRate = { usd: manual, src: 'manual', at: null });
   const r = s.rate;
   return r && r.usd > 0 ? r : null;
 }

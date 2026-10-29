@@ -130,18 +130,24 @@ function Choice({ on, onClick, title, sub, icon }) {
 function useFixedSum(sideRef, sumRef) {
   useEffect(() => {
     const side = sideRef.current, sum = sumRef.current; if (!side || !sum) return;
-    const reset = () => { sum.classList.remove('co-fixed'); sum.style.cssText = ''; };
+    let retry = 0;
+    const reset = () => { sum.classList.remove('co-fixed', 'co-in'); sum.style.cssText = ''; };
     const place = () => {
       if (!matchMedia('(min-width: 960px)').matches) return reset();
-      const r = side.getBoundingClientRect(); const top = Math.round(r.top + scrollY); const avail = innerHeight - top - 32;
+      // sayfa açılış animasyonu (transform) sürerken sabitlenmez: kayan bir atanın içinde "fixed" ona göre konumlanır,
+      // kutu bir an yanlış yerde görünüyordu → animasyon bitene kadar normal akışta kalır, sonra yerinde sabitlenir
+      for (let e = side.parentElement; e && e !== document.body; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.transform !== 'none' || cs.animationName !== 'none' && cs.animationPlayState === 'running' && e.getAnimations?.().some((a) => a.playState === 'running')) { reset(); clearTimeout(retry); retry = setTimeout(place, 90); return; } }
+      let x = 0, y = 0; for (let e = side; e; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
+      const top = Math.round(y); const avail = innerHeight - top - 24;
       if (avail < 300) return reset();
       sum.classList.add('co-fixed');
-      Object.assign(sum.style, { top: top + 'px', left: Math.round(r.left) + 'px', width: Math.round(r.width) + 'px', maxHeight: avail + 'px' });
+      Object.assign(sum.style, { top: top + 'px', left: Math.round(x - scrollX) + 'px', width: side.offsetWidth + 'px', maxHeight: avail + 'px' });
+      requestAnimationFrame(() => sum.classList.add('co-in'));
     };
     place(); const t = [setTimeout(place, 60), setTimeout(place, 400)];
     const ro = new ResizeObserver(place); ro.observe(document.body);
     addEventListener('resize', place);
-    return () => { t.forEach(clearTimeout); ro.disconnect(); removeEventListener('resize', place); reset(); };
+    return () => { t.forEach(clearTimeout); clearTimeout(retry); ro.disconnect(); removeEventListener('resize', place); reset(); };
   }, []);
 }
 export function Checkout({ items, onBack, single }) { // single: "Hemen satın al" — sadece o ürün; sepete dokunulmaz
