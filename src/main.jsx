@@ -619,7 +619,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   setupLongPress();
   // setupPress(); — 29.10.2026: telefonda basma animasyonları KALDIRILDI (App Store sonrasına)
   touchHoverToActive();
-  // setupTapHover(); — 30.10.2026: kullanıcı ana sayfa dokunma efektlerini istemedi (marka kutusunda sadece :active karartı)
+  setupTapHover(); // 30.10.2026: SADECE öne çıkan ürün kutularında eğik resmin düzelmesi (kaydırırken çıkmaz)
   setupPull();
 }
 
@@ -685,8 +685,6 @@ function setupPull() {
     b.className = 'ptr native' + (busy ? ' spin' : ready ? ' ready' : '') + (finger ? ' drag' : '');
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
-  // yenilenirken üst menünün alt kenarında ince, akan bir çizgi (gösterge sayfa yerine dönünce de iş sürdüğü belli olsun)
-  const topBar = (on) => { let e = document.querySelector('.ptr-bar'); if (on) { if (!e) { e = document.createElement('div'); e.className = 'ptr-bar'; document.body.appendChild(e); } e.style.top = (document.querySelector('.topbar')?.getBoundingClientRect().bottom || 0) - 2 + 'px'; } else e?.remove(); };
   addEventListener('scroll', req, { passive: true });
   addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !busy && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); }, { passive: true });
   addEventListener('touchmove', req, { passive: true });
@@ -694,7 +692,7 @@ function setupPull() {
   addEventListener('touchend', async () => {
     finger = false; const go = armed && ready; armed = false;
     if (!go || busy || document.querySelector('.sheet-bg, .lb, .vv')) { ready = false; req(); return; }
-    ready = false; busy = true; haptic(); req(); topBar(true);
+    ready = false; busy = true; haptic(); req();
     try {
       if (navigator.onLine === false) throw new Error('İnternet bağlantısı yok');
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
@@ -704,7 +702,7 @@ function setupPull() {
       // ana ekran uygulamasında her bilerek çekişte gerçekten yenilenir
       location.reload(); return;
     } catch (e) { toast2(e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message); }
-    busy = false; topBar(false); req();
+    busy = false; req();
   }, { passive: true });
 }
 
@@ -713,7 +711,7 @@ function setupPull() {
 // Parmak kayarsa / sayfa kayarsa hiç başlamaz ya da hemen geri döner. Kartın içindeki düğmeye (+ vb.) basınca kart oynamaz.
 function setupTapHover() {
   if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
-  const SEL = '.sh-brand, .sh-box, .mini-card, .plist.pgrid > li.prow, .sh-cta-btn, .sh-more'; // raf kartları (.sh-card) efektsiz (kullanıcı)
+  const SEL = '.sh-box.prod'; // kullanıcı: telefonda başka hiçbir yerde dokunma efekti yok
   let cand = null, on = null, tm = 0, sx = 0, sy = 0, sY = 0, off = 0;
   const clear = (e) => { if (e) e.classList.remove('th'); };
   const cancel = () => { clearTimeout(tm); cand = null; if (on) { clear(on); on = null; } };
