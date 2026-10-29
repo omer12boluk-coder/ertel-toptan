@@ -446,8 +446,14 @@ function Shell() {
   if (ROUTE.formOnly) return <FormOnlyShell />;
   return <ShellFull />;
 }
+// Telefonda ana sayfadan açılan ürün sayfası: ana sayfanın üstünde, kendi kaydırması olan katman (store.urunLayer)
+function PPLayer({ pid }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => { if (ref.current) ref.current.scrollTop = 0; }, [pid]); // üründen ürüne geçince başa
+  return <div className="pp-layer" ref={ref}><ProductPage id={pid} /></div>;
+}
 function ShellFull() {
-  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom } = useStore();
+  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom, urunLayer } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
   // telefonda: ana sayfa ve Tüm ürünler bir kez açılınca arkada gizli açık kalır → geri dönünce anında, filtreler ve kaydırma yerinde
@@ -512,7 +518,7 @@ function ShellFull() {
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
         {tab === 'anasayfa' && admin && <AdminHome />}
-        {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' ? '' : ' kp-off')}><ShopHome /></section>}
+        {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><ShopHome /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {(tab === 'katalog' || (pub && kept.current.has('katalog'))) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><Catalog admin={admin} /></section>}
         {tab === 'sepet' && !admin && <Cart />}
@@ -523,7 +529,7 @@ function ShellFull() {
         {tab === 'siparisler' && admin && <Orders />}
         {tab === 'siparis' && pub && <OrderPage id={openOrderId} />}
         {tab === 'hesap' && pub && <Account />}
-        {tab === 'urun' && pub && <ProductPage id={pid} />}
+        {tab === 'urun' && pub && (urunLayer ? <PPLayer pid={pid} /> : <ProductPage id={pid} />)}
         {tab === 'kalip' && pub && <KalipFinder />}
         {tab === 'talep' && pub && <PreqPage />}
         {tab === 'yasal' && pub && <LegalPage />}
@@ -736,6 +742,7 @@ function setupNavAnim() {
     requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
   };
   const pageTargets = (main) => {
+    const layer = main.querySelector?.(':scope > .pp-layer'); if (layer) return [layer]; // ürün katmanı açılırken sadece o kayar
     const out = [];
     const walk = (el, d) => {
       for (const c of el.children) {

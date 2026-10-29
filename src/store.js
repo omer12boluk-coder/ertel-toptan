@@ -127,13 +127,18 @@ export function openProduct(id) {
   } catch {}
   // geldiği sayfa (Tüm ürünler / ana sayfa) arkada gizli açık kalır → geri dönünce filtreler, yüklenen ürünler ve kaydırma yerinde
   const from = store.s.tab === 'urun' ? store.s.urunFrom : store.s.tab;
-  store.set({ tab: 'urun', pid: id, acct: null, openOrder: null, urunFrom: from }); window.scrollTo(0, 0);
+  // telefonda ana sayfadan açılınca ürün sayfası ana sayfanın ÜSTÜNE, kendi kaydırmasıyla bir katman olarak açılır (urunLayer):
+  // ana sayfa hiç gizlenmez / yeniden çizilmez → geri dönüşte hiçbir iş yok, iPhone'daki gibi pürüzsüz
+  const layer = from === 'anasayfa' && store.s.user?.role === 'public' && typeof matchMedia !== 'undefined' && matchMedia('(max-width: 899px)').matches
+    ? true : (store.s.tab === 'urun' && store.s.urunLayer);
+  store.set({ tab: 'urun', pid: id, acct: null, openOrder: null, urunFrom: from, urunLayer: !!layer });
+  if (!layer) window.scrollTo(0, 0);
 }
 export function startHistory(defTab) {
   addEventListener('popstate', (e) => {
     const st = e.state || {};
     const tab = st.tab || tabFromPath() || defTab();
-    store.set({ tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
+    store.set({ urunLayer: tab === 'urun' ? store.s.urunLayer : false, tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
     // ilk karede (React çizdikten hemen sonra) yerine kaydır → üstte bir kare görünüp zıplamaz; içerik geç uzarsa bir kez daha
     requestAnimationFrame(() => { window.scrollTo(0, st.y || 0); requestAnimationFrame(() => { if (Math.abs(scrollY - (st.y || 0)) > 2) window.scrollTo(0, st.y || 0); }); });
   });
@@ -148,7 +153,7 @@ export function go(tab) {
   const y = tab !== from && store.s.user?.role === 'public' && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
   // zaten o sayfadaysak (alt menüde aynı sekmeye tekrar basmak) en üste ŞAK diye atlamak yerine yumuşakça kayarak çıkılır
   const same = tab === from && !store.s.openOrder && !store.s.openReq && !store.s.acct;
-  store.set({ urunFrom: null, tab, acct: null, openReq: null, openOrder: null, orderJust: false });
+  store.set({ urunFrom: null, urunLayer: false, tab, acct: null, openReq: null, openOrder: null, orderJust: false });
   if (same && !store.s.catalogGo) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   window.scrollTo(0, 0);
   if (y) requestAnimationFrame(() => window.scrollTo(0, y)); // gizli sayfa görünür olduktan sonra (React çizdikten sonraki ilk kare)
