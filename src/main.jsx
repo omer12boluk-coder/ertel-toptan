@@ -628,7 +628,9 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
 // yeterince çekip bırakınca önce bağlantı denenir (version.json), varsa sayfa yenilenir, yoksa "Bağlantı yok" yazar.
 function setupPull() {
   if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
-  const TH = 70, MAX = 110;
+  // TH: yenileme eşiği (kısa çekiş yeter). Sınır YOK: eşikten sonra da çekilir, giderek ağırlaşır (iOS lastik hissi)
+  const TH = 58, RUB = 340;
+  const rubber = (dy) => (1 - 1 / (dy * 0.62 / RUB + 1)) * RUB;
   let y0 = 0, x0 = 0, on = false, d = 0, busy = false, box = null;
   const ui = () => {
     if (box) return box;
@@ -641,7 +643,7 @@ function setupPull() {
   // Kaydırma transform ile (ekran kartında, akıcı; "top" her karede sayfayı yeniden dizip bırakınca takılıyordu).
   // İçinde sabit (fixed) öğe olan kutuya transform verilmez (sepet çubuğu vb. yerinden kaymasın) → onun çocuklarına inilir.
   const FIX = '.cart-bar, .cs-fixed, .co-fixed, .side-fixed, .acct-side, .ptr';
-  const EASE = 'cubic-bezier(.2,.8,.2,1)';
+  const EASE = 'cubic-bezier(.22,1,.36,1)', DUR = '.48s'; let raf = 0;
   let els = null, clr = 0;
   const collect = () => {
     const out = []; const walk = (e, deep) => {
@@ -657,8 +659,8 @@ function setupPull() {
     b.style.setProperty('--ptr-top', top() + 'px'); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, px / TH));
     b.className = 'ptr' + (cls ? ' ' + cls : ''); b.querySelector('.ptr-t').textContent = txt;
     clearTimeout(clr); if (!els) els = collect();
-    for (const e of els) { e.style.transition = anim ? `transform .3s ${EASE}` : 'none'; e.style.willChange = 'transform'; e.style.transform = px ? `translate3d(0,${px}px,0)` : ''; }
-    if (!px) clr = setTimeout(() => { if (els) for (const e of els) { e.style.transition = e.style.willChange = e.style.transform = ''; } els = null; }, anim ? 340 : 0);
+    for (const e of els) { e.style.transition = anim ? `transform ${DUR} ${EASE}` : 'none'; e.style.willChange = 'transform'; e.style.transform = px ? `translate3d(0,${px}px,0)` : ''; }
+    if (!px) clr = setTimeout(() => { if (els) for (const e of els) { e.style.transition = e.style.willChange = e.style.transform = ''; } els = null; }, anim ? 520 : 0);
   };
   const hide = (ms = 0) => setTimeout(() => { if (box) set(0, 'gone'); }, ms);
   const blocked = (t) => !(t instanceof Element) || t.closest('.sheet-bg, .sheet, .lb, .vv, .dz, .ctx-sheet-bg, .ctx, .botnav, input, textarea, select, .hsearch-res, .kf-list, .nc-panel') || document.querySelector('.sheet-bg, .lb, .vv');
@@ -670,14 +672,14 @@ function setupPull() {
   addEventListener('touchmove', (ev) => {
     if (!on) return; const p = ev.touches[0]; const dy = p.clientY - y0, dx = p.clientX - x0;
     if (d === 0 && Math.abs(dx) > Math.abs(dy)) { on = false; return; } // yana kaydırma
-    if (dy <= 0 || window.scrollY > 0) { if (d > 0) { d = 0; set(0, 'back'); } return; }
-    d = Math.min(MAX, dy * 0.5); set(d, d >= TH ? 'ready' : '');
+    if (dy <= 0 || window.scrollY > 0) { if (d > 0) { cancelAnimationFrame(raf); d = 0; set(0, 'back'); } return; }
+    d = rubber(dy); const dd = d; cancelAnimationFrame(raf); raf = requestAnimationFrame(() => set(dd, dd >= TH ? 'ready' : ''));
   }, { passive: true });
   const end = async () => {
-    if (!on) return; on = false;
+    if (!on) return; on = false; cancelAnimationFrame(raf);
     if (d < TH) { d = 0; set(0, 'back'); return; }
-    busy = true; set(TH * 0.8, 'spin'); const t0 = Date.now();
-    const fail = (t) => { set(TH * 1.35, 'err', t); busy = false; hide(2200); };
+    busy = true; set(60, 'spin'); const t0 = Date.now();
+    const fail = (t) => { set(96, 'err', t); busy = false; hide(2200); };
     if (navigator.onLine === false) return fail('İnternet bağlantısı yok');
     try {
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
@@ -692,7 +694,7 @@ function setupPull() {
     } catch { fail('Bağlantı kurulamadı'); }
   };
   addEventListener('touchend', end, { passive: true });
-  addEventListener('touchcancel', () => { if (on) { on = false; d = 0; set(0, 'back'); } }, { passive: true });
+  addEventListener('touchcancel', () => { if (on) { on = false; cancelAnimationFrame(raf); d = 0; set(0, 'back'); } }, { passive: true });
 }
 
 function setupPress() {
