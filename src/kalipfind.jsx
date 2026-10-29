@@ -169,7 +169,7 @@ export function KalipFinder() {
             </div>
           )}
         </div>
-        {!sel && <div className="kf-ex"><span>Örnek:</span>{['iPhone 13', 'Redmi Note 10 Pro', 'Galaxy A52', 'SM7150'].map((x) => <button key={x} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(x); setOpen(true); setHi(0); inp.current?.focus(); }}>{x}</button>)}</div>}
+        {!sel && <div className="kf-ex"><span>Örnek:</span>{(matchMedia('(max-width: 700px)').matches ? ['iPhone 13', 'Galaxy A52', 'Redmi Note 10', 'SM7150'] : ['iPhone 13', 'Redmi Note 10 Pro', 'Galaxy A52', 'SM7150']).map((x) => <button key={x} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(x); setOpen(true); setHi(0); inp.current?.focus(); }}>{x}</button>)}</div>}
       </section>
 
       {sel && result && (
