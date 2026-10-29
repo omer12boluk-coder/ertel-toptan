@@ -186,9 +186,6 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
             <div className="cs-head-t"><b>Sepetiniz</b><small>{items.length} ürün · {nQty} adet</small></div>
             <button type="button" className="cart-clear" onClick={() => setAsk(true)} title="Sepetteki tüm ürünleri çıkar"><Icon n="trash" s={14} />Temizle</button>
           </div>
-          {(!pub || orders) && <ol className="cs-steps" aria-label="Sipariş adımları">
-            <li className="on"><i>1</i>Sepet</li><li><i>2</i>Teslimat ve ödeme</li><li><i>3</i>Onay</li>
-          </ol>}
           <div className="sum-rows">
             {!pub && S.pricing.showRetail && saving.length > 0 && <div><span>Liste toplamı</span><span className="num strike">{fmtTotals(tList)}</span></div>}
             {!pub && S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
