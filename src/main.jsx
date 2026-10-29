@@ -618,6 +618,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => { if (!e.target.closest?.('.lb')) e.preventDefault(); }, { passive: false });
   setupLongPress();
   // setupPress(); — 29.10.2026: telefonda basma animasyonları KALDIRILDI (App Store sonrasına)
+  setupTapHover();
   setupPull();
 }
 
@@ -695,6 +696,32 @@ function setupPull() {
   };
   addEventListener('touchend', end, { passive: true });
   addEventListener('touchcancel', () => { if (on) { on = false; cancelAnimationFrame(raf); d = 0; set(0, 'back'); } }, { passive: true });
+}
+
+// Telefonda (29.10.2026): basma animasyonu yerine bilgisayardaki "üstüne gelince" görünümü (marka kutusunda renk + ok,
+// reklam kutusunda eğik resmin düzelmesi, kartın kalkması) SADECE gerçek dokunuşta kısa süre gösterilir (.th).
+// Parmak kayarsa / sayfa kayarsa hiç başlamaz ya da hemen geri döner. Kartın içindeki düğmeye (+ vb.) basınca kart oynamaz.
+function setupTapHover() {
+  if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+  const SEL = '.sh-brand, .sh-box, .sh-card, .mini-card, .plist.pgrid > li.prow, .sh-cta-btn, .sh-more';
+  let cand = null, on = null, tm = 0, sx = 0, sy = 0, sY = 0, off = 0;
+  const clear = (e) => { if (e) e.classList.remove('th'); };
+  const cancel = () => { clearTimeout(tm); cand = null; if (on) { clear(on); on = null; } };
+  const show = (e) => { clearTimeout(off); if (on && on !== e) clear(on); e.classList.add('th'); on = e; };
+  addEventListener('touchstart', (ev) => {
+    cancel(); if (ev.touches.length !== 1) return;
+    const t = ev.target; const e = t instanceof Element && t.closest(SEL); if (!e || e.closest('.dz')) return;
+    const inner = t.closest('button, a, input, select, textarea, [role="button"]'); if (inner && inner !== e && e.contains(inner)) return;
+    cand = e; sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; sY = scrollY;
+    tm = setTimeout(() => { if (cand === e && Math.abs(scrollY - sY) < 2) show(e); }, 130);
+  }, { passive: true });
+  addEventListener('touchmove', (ev) => { const p = ev.touches[0]; if ((cand || on) && p && Math.hypot(p.clientX - sx, p.clientY - sy) > 8) cancel(); }, { passive: true });
+  addEventListener('scroll', () => { if ((cand || on) && Math.abs(scrollY - sY) > 2) cancel(); }, { passive: true, capture: true });
+  addEventListener('touchend', () => {
+    clearTimeout(tm); const e = cand; cand = null; if (!e) return;
+    show(e); off = setTimeout(() => { clear(e); if (on === e) on = null; }, 380);
+  }, { passive: true });
+  addEventListener('touchcancel', cancel, { passive: true });
 }
 
 function setupPress() {
