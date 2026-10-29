@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
 import { loadFavs, mergeFavs } from './store.js';
 import { linkMember } from './push.js';
-import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath } from './store.js';
+import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath, storeListen } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS } from './config.js';
@@ -621,6 +621,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   touchHoverToActive();
   setupTapHover(); // 30.10.2026: SADECE öne çıkan ürün kutularında eğik resmin düzelmesi (kaydırırken çıkmaz)
   setupPull();
+  setupNavAnim();
 }
 
 // Telefonda dokunma hissi: kart/düğmeye basınca yumuşakça içe göçer, çok kısa dokunuşta bile en az ~120 ms basılı görünür,
@@ -664,6 +665,41 @@ export function haptic() {
     l.click();
   } catch {}
 }
+// Telefonda sayfa geçişleri (30.10.2026): Hesabım menüsündeki his her yerde. İleri gidince yeni sayfa sağdan 14px kayarak
+// belirir (Hesabım alt sayfaları gibi), geri gidince (Geri düğmesi / kaydırarak geri) TERS yönden, soldan gelir; alttaki menüyle
+// sekme değişince sadece kısa bir soluş. Sadece transform + opacity (akıcı); içinde sabit öğe olan kutuya (sepet çubuğu vb.)
+// transform verilmez (sabit öğe yerinden oynardı), onun çocuklarına inilir.
+function setupNavAnim() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
+  const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar';
+  const key = (s) => [s.tab, s.acct || '', s.pid || '', s.openOrder || '', s.openReq || ''].join('|');
+  let last = key(store.s), hint = '', hintAt = 0, raf = 0;
+  const mark = (h) => { hint = h; hintAt = Date.now(); };
+  addEventListener('popstate', () => mark('back'), true);
+  addEventListener('pointerdown', (e) => {
+    const t = e.target instanceof Element ? e.target : null; if (!t) return;
+    if (t.closest('.back-btn')) mark('back'); else if (t.closest('.botnav')) mark('tab');
+  }, { capture: true, passive: true });
+  const targets = () => {
+    const main = document.querySelector('.shell > .main'); if (!main) return [];
+    const out = [];
+    const walk = (el, d) => { for (const c of el.children) { if (d < 3 && c.querySelector(FIX)) walk(c, d + 1); else if (!c.matches(FIX)) out.push(c); } };
+    walk(main, 0); return out;
+  };
+  const run = () => {
+    raf = 0; const k = key(store.s); if (k === last) return;
+    const prev = last; last = k;
+    if (!matchMedia('(max-width: 899px)').matches) return;
+    const h = Date.now() - hintAt < 600 ? hint : ''; hint = '';
+    const back = h === 'back', tab = h === 'tab' && prev.split('|')[0] !== k.split('|')[0];
+    const kf = tab ? [{ opacity: 0.35 }, { opacity: 1 }]
+      : [{ opacity: 0, transform: `translate3d(${back ? -14 : 14}px,0,0)` }, { opacity: 1, transform: 'none' }];
+    for (const el of targets()) el.animate(kf, { duration: tab ? 180 : 300, easing: 'cubic-bezier(.2,.7,.2,1)' });
+  };
+  // React yeni sayfayı ilk karede çizmeden hemen önce (rAF) yakalanır → yanıp sönme yok
+  storeListen(() => { if (!raf) raf = requestAnimationFrame(run); });
+}
+
 function setupPull() {
   if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -673,12 +709,12 @@ function setupPull() {
   // (menüyle birlikte esner, menünün üstüne/çentiğe binmez), çekiş arttıkça biraz aşağı iner ve ok döner.
   // Bırakınca: kısa dönüş → yeşil ✓ (dönmez) → menünün arkasına kayıp kaybolur. Sayfa YENİLENMEZ (veriler zaten canlı);
   // arka planda sürüm + kur yoklanır, sadece yeni sürüm yayınlanmışsa location.reload().
-  const TH = 72, SPIN_MIN = 420, OK_MS = 520;
+  const TH = 72, SPIN_MIN = 280, OK_MS = 340;
   let box = null, finger = false, armed = false, ready = false, phase = '', wasOk = false, raf = 0;
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr9'; box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<span class="ptr9-c"><svg class="ptr9-a" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>'
+    box.innerHTML = '<span class="ptr9-c"><i class="ptr9-r"><svg class="ptr9-a" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i>'
       + '<svg class="ptr9-ok" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
     document.body.appendChild(box); return box;
   };
@@ -695,15 +731,17 @@ function setupPull() {
     if (!px && !phase) { if (box) box.className = 'ptr9'; return; }
     const b = ui(); const k = phase ? 1 : Math.min(1, px / TH);
     if (finger && armed && !phase) ready = px >= TH;
-    b.style.setProperty('--top', headBottom() + 'px');
-    b.style.setProperty('--k', k);
-    b.className = 'ptr9 show' + (ready && !phase ? ' ready' : '') + (phase ? ' ' + phase : '') + (wasOk ? ' was-ok' : '');
+    const top = Math.round(headBottom()) + 'px';
+    if (b._t !== top) { b._t = top; b.style.setProperty('--top', top); }
+    if (b._k !== k) { b._k = k; b.style.setProperty('--k', k); }
+    const cn = 'ptr9 show' + (ready && !phase ? ' ready' : '') + (phase ? ' ' + phase : '') + (wasOk ? ' was-ok' : '');
+    if (b.className !== cn) b.className = cn;
     if (phase) raf = requestAnimationFrame(paint); // menü yerine dönerken izlemeye devam
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
   const finish = (ok) => {
     phase = ok ? 'ok' : 'hide'; wasOk = ok; req();
-    setTimeout(() => { phase = 'hide'; setTimeout(() => { phase = ''; wasOk = false; armed = false; cancelAnimationFrame(raf); raf = 0; req(); }, 240); }, ok ? OK_MS : 0);
+    setTimeout(() => { phase = 'hide'; setTimeout(() => { phase = ''; wasOk = false; armed = false; cancelAnimationFrame(raf); raf = 0; req(); }, 200); }, ok ? OK_MS : 0);
   };
   addEventListener('scroll', req, { passive: true });
   addEventListener('touchmove', req, { passive: true });

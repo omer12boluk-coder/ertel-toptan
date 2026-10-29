@@ -4742,20 +4742,34 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .ptr8.spin { color: var(--accent); }
 .ptr8.spin svg { animation: ptr7spin .6s linear infinite; }
 
-/* ===== Çekip yenile (9, 30.10.2026): küçük gösterge üst menünün ALT kenarının arkasından çıkar; bitince ✓ ===== */
-.ptr9 { position: fixed; left: 50%; top: var(--top, 0px); z-index: 19; pointer-events: none; opacity: 0;
-  transform: translate(-50%, calc(-100% + var(--k, 0) * 44px)) scale(calc(.7 + var(--k, 0) * .3)); }
+/* ===== Çekip yenile (9b, 30.10.2026): küçük gösterge üst menünün ALT kenarının arkasından çıkar, biraz aşağıda durur; bitince ✓.
+   Konum transform ile (yerleşim hesabı yok); dönüş HTML sarmalayıcıda (.ptr9-r, ayrı katman) → iPhone'da akıcı ===== */
+.ptr9 { position: fixed; left: 50%; top: 0; z-index: 19; pointer-events: none; opacity: 0; will-change: transform, opacity;
+  transform: translate3d(-50%, calc(var(--top, 0px) - 100% + var(--k, 0) * 60px), 0) scale(calc(.7 + var(--k, 0) * .3)); }
 .ptr9.show { opacity: min(1, calc(var(--k, 0) * 1.8)); }
-.ptr9.spin, .ptr9.ok { transform: translate(-50%, 12px); opacity: 1; transition: transform .22s cubic-bezier(.3,.7,.3,1), opacity .15s; }
-.ptr9.hide { transform: translate(-50%, -100%) scale(.7); opacity: 0; transition: transform .24s ease-in, opacity .2s ease-in; }
+.ptr9.spin, .ptr9.ok { transform: translate3d(-50%, calc(var(--top, 0px) + 24px), 0); opacity: 1; transition: transform .2s cubic-bezier(.3,.7,.3,1), opacity .12s; }
+.ptr9.hide { transform: translate3d(-50%, calc(var(--top, 0px) - 100%), 0) scale(.7); opacity: 0; transition: transform .2s ease-in, opacity .16s ease-in; }
 .ptr9-c { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
   background: var(--surface); color: color-mix(in oklab, var(--fg) 50%, transparent);
-  box-shadow: 0 2px 8px -2px rgb(0 0 0 / .22), 0 0 0 1px var(--line); transition: color .15s; }
-.ptr9-c > svg { position: absolute; }
-.ptr9-a { transform: rotate(calc(var(--k, 0) * 300deg)); transition: opacity .15s; }
+  box-shadow: 0 2px 8px -2px rgb(0 0 0 / .22), 0 0 0 1px var(--line); }
+.ptr9-r, .ptr9-ok { position: absolute; display: grid; place-items: center; }
+.ptr9-r { transform: rotate(calc(var(--k, 0) * 300deg)); will-change: transform; transition: opacity .12s; }
+.ptr9-r svg, .ptr9-ok { display: block; }
 .ptr9.ready .ptr9-c, .ptr9.spin .ptr9-c { color: var(--accent); }
-.ptr9.spin .ptr9-a { animation: ptr9spin .6s linear infinite; }
+.ptr9.spin .ptr9-r { animation: ptr9spin .55s linear infinite; }
 @keyframes ptr9spin { from { transform: rotate(300deg); } to { transform: rotate(660deg); } }
-.ptr9-ok { opacity: 0; transform: scale(.4); color: #1f9d55; transition: opacity .15s, transform .28s cubic-bezier(.3,1.6,.4,1); }
-.ptr9.ok .ptr9-a, .ptr9.hide .ptr9-a { opacity: 0; animation: none; }
+.ptr9-ok { opacity: 0; transform: scale(.4); color: #1f9d55; transition: opacity .12s, transform .24s cubic-bezier(.3,1.6,.4,1); }
+.ptr9.ok .ptr9-r, .ptr9.hide .ptr9-r { opacity: 0; animation: none; }
 .ptr9.ok .ptr9-ok, .ptr9.hide.was-ok .ptr9-ok { opacity: 1; transform: none; }
+
+/* ===== Telefonda dokunma hissi (30.10.2026): geri düğmesi + marka kutuları =====
+   Hesabım satırları gibi: basılıyken anında hafif koyulaşma; geri düğmesinde ok sola küçük bir adım atar (ileri satırların tersi).
+   Marka kutusu basılıyken çok az içe göçer, bırakınca yumuşak döner. Sayfa geçişi setupNavAnim'de (main.jsx). */
+@media (hover: none) {
+  .back-btn > svg { transition: transform .16s cubic-bezier(.2,.7,.2,1) !important; }
+  .back-btn:active > svg { transform: translateX(-3px) !important; }
+  .sh-brand { transition: transform .22s cubic-bezier(.2,.7,.2,1); }
+  .sh-brand:active { transform: scale(.965); transition-duration: .08s; }
+  /* telefonda sayfa geçişini setupNavAnim yapar → Hesabım alt sayfasının kendi kayması iki kez olmasın */
+  .acct-body { animation: none; }
+}

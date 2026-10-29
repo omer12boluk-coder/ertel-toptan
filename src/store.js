@@ -45,6 +45,7 @@ export const store = {
   set(patch) { this.s = { ...this.s, ...(typeof patch === 'function' ? patch(this.s) : patch) }; subs.forEach((f) => f()); },
 };
 const subscribe = (f) => { subs.add(f); return () => subs.delete(f); };
+export const storeListen = subscribe; // React dışı dinleyiciler (telefonda sayfa geçişi)
 export function useStore(sel = (s) => s) { return useSyncExternalStore(subscribe, () => sel(store.s)); }
 
 export const api = () => store.s.api;
