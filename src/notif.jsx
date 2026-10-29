@@ -11,6 +11,7 @@ import { TYPE, ORDER_STATUS, ORDER_OPEN } from './config.js';
 import { preqNotifs } from './preq.jsx';
 import { PushHelp } from './pushhelp.jsx';
 import { issueNotifs } from './issue.jsx';
+import { seenWait } from './extras.jsx';
 
 const DAY = 864e5;
 const KINDS = [['all', 'Tümü'], ['order', 'Siparişler'], ['req', 'Bayi'], ['prod', 'Ürünler'], ['user', 'Üyeler']];
@@ -170,7 +171,7 @@ export function useShopNotifs() {
     }
     if (member) out.push(...preqNotifs(myPreqs).filter((x) => x.at > from));
     if (member) out.push(...issueNotifs(myIssues).filter((x) => x.at > from));
-    if (member) for (const h of member.notifyHit || []) if (h && h.at > from) out.push({ id: 'nh' + h.id + h.at, at: h.at, ic: 'bell', tone: 'ok', t: 'Beklediğiniz ürün geldi', s: h.n || '', go: () => openProduct(h.id) });
+    if (member) for (const h of member.notifyHit || []) if (h && h.at > from) out.push({ id: 'nh' + h.id + h.at, at: h.at, ic: 'bell', tone: 'ok', t: 'Beklediğiniz ürün geldi', s: h.n || '', go: () => { openProduct(h.id); seenWait([h.id]); } });
     return out.sort((a, b) => b.at - a.at).slice(0, 100);
   }, [orders, favTick, myPreqs, myIssues, member]);
 }

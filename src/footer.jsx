@@ -2,13 +2,15 @@
 // bilgi sayfaları (Kargo ve teslimat, İade ve değişim… — Ayarlar > Alt bilgi ve sayfalar'dan yazılır) ve şirket unvanı.
 // Sayfalar pencere olarak açılır. Metin biçimi: boş satır = yeni paragraf, "- " ile başlayan satır = madde, **kalın**.
 import { useState } from 'react';
-import { useStore } from './store.js';
+import { useStore, go } from './store.js';
 import { Icon, Sheet } from './ui.jsx';
 import { waLink } from './route.js';
 import { LOGO_MARK } from './config.js';
 import { LEGAL_DOCS } from './legal.js';
 import { openLegal } from './legalui.jsx';
 
+// Ürün talebi / sorun bildir sayfaları (menüde yok; alt bilgiden açılır, adres /magaza/talep · /magaza/sorun)
+const goTab = (t) => (e) => { e.preventDefault(); go(t); };
 export function ShopFooter({ compact = false }) {
   const S = useStore((s) => s.settings);
   const [page, setPage] = useState(null);
@@ -29,6 +31,8 @@ export function ShopFooter({ compact = false }) {
         <span>© {new Date().getFullYear()} {F.company || S.brand.appName}</span>
         {pages.map((p, i) => <button key={i} onClick={() => setPage(p)}>{p.title}</button>)}
         <button onClick={() => openLegal('kvkk')}>Yasal metinler</button>
+        <a href="/magaza/talep" onClick={goTab('talep')}>Ürün talebi</a>
+        <a href="/magaza/sorun" onClick={goTab('sorun')}>Sorun bildir</a>
         {social.map(([ic, l, u]) => <a key={ic} href={u} target="_blank" rel="noopener" aria-label={l} title={l}><Icon n={ic} s={16} /></a>)}
       </div>
       {page && <Sheet title={page.title} onClose={() => setPage(null)}><RichText text={page.body} /></Sheet>}
@@ -57,6 +61,13 @@ export function ShopFooter({ compact = false }) {
           <h4>Bilgi</h4>
           <ul className="sfoot-links">{pages.map((p, i) => <li key={i}><button onClick={() => setPage(p)}>{p.title}<Icon n="chev" s={15} /></button></li>)}</ul>
         </div>}
+        <div className="sfoot-col">
+          <h4>Yardım</h4>
+          <ul className="sfoot-links">
+            <li><a href="/magaza/talep" onClick={goTab('talep')}>Ürün talebi<Icon n="chev" s={15} /></a></li>
+            <li><a href="/magaza/sorun" onClick={goTab('sorun')}>Sorun bildir<Icon n="chev" s={15} /></a></li>
+          </ul>
+        </div>
         <div className="sfoot-col">
           <h4>Yasal</h4>
           <ul className="sfoot-links">{LEGAL_DOCS.map((d) => <li key={d.k}><button onClick={() => openLegal(d.k)}>{d.title}<Icon n="chev" s={15} /></button></li>)}</ul>

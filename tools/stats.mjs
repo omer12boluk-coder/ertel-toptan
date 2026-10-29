@@ -3,11 +3,9 @@
 //   pair : son 120 günde aynı siparişte birlikte alınanlar {ürün: [ürün, …]} (en çok 6)    → ürün penceresi "Birlikte iyi gider"
 //   cnt  : son 120 günde ürünün geçtiği sipariş sayısı {ürün: adet}                        → kategoride "Ustaların tercihi"
 // Mağaza siparişleri (orders) + bayi siparişleri (requests type 'order'); iptaller sayılmaz. Sonuç stats/public (herkes okur).
-// Aynı çalışmada "Gelince haber ver" kontrolü de yapılır (yönetici stoğu elle açtıysa).
 // Kullanım: node tools/stats.mjs [--dry]
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { waitCheck } from './waitcheck.mjs';
 
 const DRY = process.argv.includes('--dry');
 initializeApp({ credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
@@ -53,6 +51,4 @@ note('Popüler', `${baskets.length} sipariş · ${fav.length} favori ürün · $
 if (size > 900000) throw new Error('stats/public çok büyük: ' + size);
 if (!DRY) {
   await db.doc('stats/public').set(out);
-  const n = await waitCheck(db, byId, note).catch((e) => { note('Gelince haber ver hatası', e.message); return 0; });
-  if (n) note('Gelince haber ver', n + ' üyeye bildirim');
 }

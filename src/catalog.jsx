@@ -9,7 +9,7 @@ import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
 import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
-import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned } from './extras.jsx';
+import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
 
 export function useTree() {
@@ -702,18 +702,18 @@ export function FavGrid() {
 export function WaitGrid() {
   const { member, byId, settings: S, user } = useStore();
   const [open, setOpen] = useState(null);
+  // sayfa açılınca stoğa girmiş beklenen ürünler listeden çıkar (üye gördü sayılır)
+  const [gone, setGone] = useState([]);
+  useEffect(() => { seenWait([...new Set(member?.notify || [])]).then((d) => d.length && setGone(d)); }, []);
   const ids = [...new Set(member?.notify || [])]; // aynı ürün iki kez kayıtlıysa bir kez gösterilir
   const list = ids.map((id) => byId.get(id)).filter((p) => p && p.a !== 0 && !p.so);
-  const hitIds = [...new Set((member?.notifyHit || []).filter((h) => h && h.at > Date.now() - 30 * 864e5 && !ids.includes(h.id)).map((h) => h.id))];
-  const hits = hitIds.map((id) => byId.get(id)).filter((p) => p && p.a !== 0 && !p.so);
-  if (!list.length && !hits.length) return <Empty icon="bell" title="Haber beklediğiniz ürün yok"><p>Stokta olmayan ürünlerde <b>Gelince haber ver</b>’e dokunun; ürün gelince telefonunuza bildirim gönderelim.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere göz at</button></Empty>;
+  const came = gone.map((id) => byId.get(id)).filter(Boolean);
+  const cameLine = came.length > 0 && <p className="wait-came"><Icon n="check" s={15} /><span>Stoğa girdi, listeden çıkarıldı: {came.map((p, i) => <span key={p.id}>{i > 0 && ', '}<button type="button" className="linkish" onClick={() => setOpen(p)}>{p.n.length > 48 ? p.n.slice(0, 46) + '…' : p.n}</button></span>)}</span></p>;
+  if (!list.length) return <>{cameLine}<Empty icon="bell" title="Haber beklediğiniz ürün yok"><p>Stokta olmayan ürünlerde <b>Gelince haber ver</b>’e dokunun; ürün gelince telefonunuza bildirim gönderelim.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere göz at</button></Empty>{open && <ProductSheet p={open} onClose={() => setOpen(null)} />}</>;
   return <>
-    {list.length > 0 && <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>{list.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}</ul>}
-    {hits.length > 0 && <>
-      <h4 className="wait-h">Gelen ürünler <small>· son 30 gün</small></h4>
-      <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>{hits.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}</ul>
-    </>}
-    <p className="fine wait-note">Ürün gelince bildirim bir kez gider ve ürün yukarıdaki listeden “Gelen ürünler”e geçer. Çana dokunarak takibi kapatabilirsiniz.</p>
+    {cameLine}
+    <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>{list.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}</ul>
+    <p className="fine wait-note">Ürün stoğa girince telefonunuza bildirim gelir. Bildirime dokunduğunuzda ya da bu sayfayı açtığınızda ürün listeden çıkar; o zamana kadar her stoğa girişinde yeniden haber veririz. Çana dokunarak takibi kapatabilirsiniz.</p>
     {open && <ProductSheet p={open} onClose={() => setOpen(null)} />}
   </>;
 }
@@ -840,6 +840,9 @@ export function ProductSheet({ p, onClose, viewOnly = false, forceSheet = false 
 export function ProductPage({ id }) {
   const byId = useStore((s) => s.byId);
   const p = byId.get(Number(id));
+  // "Beklediğiniz ürün geldi" bildiriminden gelindiyse (?hb=1) ürün haber bekleme listesinden çıkar
+  const hasMember = useStore((s) => !!s.member);
+  useEffect(() => { if (!p || !hasMember || !/[?&]hb=1/.test(location.search)) return; seenWait([p.id]); try { history.replaceState(history.state, '', location.pathname); } catch {} }, [p?.id, hasMember]);
   if (!p) return <div className="page narrow"><Empty icon="search" title="Ürün bulunamadı"><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty></div>;
   return (
     <div className="page pdetail-page">

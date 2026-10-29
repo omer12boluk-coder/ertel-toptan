@@ -1038,7 +1038,7 @@ async function sendBack(env, b) {
     const subs = (await env.KV.get('pm:' + uid, 'json')) || []; if (!subs.length) continue; users++;
     const it = items[0];
     const data = items.length === 1
-      ? { title: '🔔 Beklediğiniz ürün geldi', body: `${String(it.n).slice(0, 120)} tekrar stokta. Dokunun, hemen sepete ekleyin.`, url: '/magaza/urun/' + it.id, tag: 'back-' + it.id }
+      ? { title: '🔔 Beklediğiniz ürün geldi', body: `${String(it.n).slice(0, 120)} tekrar stokta. Dokunun, hemen sepete ekleyin.`, url: '/magaza/urun/' + it.id + '?hb=1', tag: 'back-' + it.id }
       : { title: `🔔 Beklediğiniz ${items.length} ürün geldi`, body: items.slice(0, 3).map((x) => String(x.n).slice(0, 40)).join(' · '), url: '/magaza/hesap/haber-bekleyenler', tag: 'back' };
     data.title = data.title + ' · ' + shop;
     const keep = [];

@@ -9,7 +9,6 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { cleanText } from '../src/clean.js';
 import { stencilKeys } from '../src/kalip.js';
-import { waitCheck } from './waitcheck.mjs';
 
 const FEED = process.env.FEED_URL || 'https://www.ertelgsm.com/xml-cikti/gm';
 const DRY = process.argv.includes('--dry');
@@ -243,6 +242,6 @@ if (!DRY) {
     const b = db.batch(); dp.forEach((part, i) => b.set(db.doc(`desc/c${i}`), { d: Object.fromEntries(part) }));
     b.set(db.doc('desc/_meta'), { version: now, chunks: dp.length, count: all.length }); await b.commit();
   }
-  await waitCheck(db, byId, note).catch((e) => note('Gelince haber ver hatası', e.message)); // stoğa giren beklenen ürünler
+  // 'Gelince haber ver' artık yönetim panelinde stok açılınca gönderiliyor (stok sadece panelden yönetilir)
   await db.doc('meta/sync').set({ at: now, rate: round2(rate), feed: feed.size, changed, summary, prices: st.price.slice(0, 100), added: st.added.slice(0, 100) });
 }

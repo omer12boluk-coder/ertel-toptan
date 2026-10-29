@@ -226,9 +226,10 @@ async function bootShop(A) {
   if (store.s.settings.access?.publicShop === false) { store.set({ boot: 'error', bootError: 'Online vitrin şu an kapalı.' }); return; }
   store.set({ user: { uid: 'guest', role: 'public', name: 'Ziyaretçi' }, boot: 'loading' });
   // Mağaza üyeliği: giriş yaptıysa bilgileri ve siparişleri
-  let unOrders = null, unPreqs = null, unIssues = null;
+  let unOrders = null, unPreqs = null, unIssues = null, unWait = null;
   A.onMember?.((m) => {
-    unOrders?.(); unOrders = null; unPreqs?.(); unPreqs = null; unIssues?.(); unIssues = null;
+    unOrders?.(); unOrders = null; unPreqs?.(); unPreqs = null; unIssues?.(); unIssues = null; unWait?.(); unWait = null;
+    if (m && A.watchMemberWait) unWait = A.watchMemberWait(m.uid, (w) => store.s.member?.uid === m.uid && store.set({ member: { ...store.s.member, ...w } }));
     store.set({ member: m, myOrders: [], myPreqs: [], myIssues: [] });
     if (m && A.watchMyPreqs) unPreqs = A.watchMyPreqs(m.uid, (myPreqs) => store.set({ myPreqs }));
     if (m && A.watchMyIssues) unIssues = A.watchMyIssues(m.uid, (myIssues) => store.set({ myIssues }));
@@ -672,7 +673,9 @@ function setupPress() {
   let el = null, t0 = 0, sx = 0, sy = 0;
   const release = () => {
     const e = el; el = null; if (!e) return;
-    setTimeout(() => { e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); }, Math.max(0, 120 - (Date.now() - t0)));
+    // ana sayfa kutuları: basılı bekletme yok, parmak kalkınca hemen geri döner (sayfa açılırken içe göçük donmuş kalmasın)
+    const fast = e.matches('.sh-brand, .sh-box, .sh-card, .mini-card, .sh-cta-btn, .sh-more');
+    setTimeout(() => { e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); }, fast ? 0 : Math.max(0, 120 - (Date.now() - t0)));
   };
   addEventListener('touchstart', (ev) => {
     if (ev.touches.length !== 1) return;

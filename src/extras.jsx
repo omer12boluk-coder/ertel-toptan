@@ -93,7 +93,7 @@ export function ShareBtn({ p, big }) {
 }
 
 // =====================================================================================================
-// Gelince haber ver: üyenin members.notify listesi + wait/{ürün} (eşitleme stoğa girince bildirim gönderir, listeden düşürür)
+// Gelince haber ver: üyenin members.notify listesi + wait/{ürün} (yönetici stoğu açınca bildirim gider; ürün üye görene kadar listede kalır)
 export async function toggleNotify(id) {
   const m = store.s.member;
   if (!m) { toast('Haber alabilmek için üye girişi yapın'); go('hesap'); return null; }
@@ -109,6 +109,18 @@ export async function toggleNotify(id) {
   return on;
 }
 export const outOfStock = (p) => p && !(p.s > 0);
+// Üye stoğa giren beklediği ürünü "gördü" (bildirime dokundu ya da Haber bekleyenler'i açtı): o ürün listeden çıkar.
+// Görmediği sürece ürün listede kalır ve her stoğa girişinde yeniden bildirilir.
+export async function seenWait(ids) {
+  const m = store.s.member; if (!m || !Array.isArray(m.notify)) return [];
+  const byId = store.s.byId;
+  const done = ids.filter((id) => m.notify.includes(id) && byId.get(id) && !outOfStock(byId.get(id)));
+  if (!done.length) return [];
+  const notify = m.notify.filter((x) => !done.includes(x));
+  store.set({ member: { ...m, notify } });
+  for (const id of done) await store.s.api.setWait?.(m.uid, id, false, notify).catch(() => {});
+  return done;
+}
 export function NotifyBtn({ p, big }) {
   const S = useStore((s) => s.settings);
   const on = useStore((s) => (s.member?.notify || []).includes(p.id));
@@ -118,7 +130,8 @@ export function NotifyBtn({ p, big }) {
   return (
     <button type="button" className={'notify-btn' + (on ? ' on' : '') + (big ? ' big' : '')} aria-pressed={on} onClick={click} title={on ? 'Haber verme açık · kapatmak için dokunun' : 'Stoğa girince haber ver'}>
       <Icon key={pop} n="bell" s={big ? 18 : 15} className={pop ? 'fav-pop' : ''} />
-      <span>{on ? 'Haber vereceğiz' : 'Gelince haber ver'}</span>
+      {/* kartta: takibe alınınca yazı yumuşakça kapanır, sadece çan kalır (pencerede yazı hep görünür) */}
+      <span>{on ? (big ? 'Haber vereceğiz' : 'Gelince haber ver') : 'Gelince haber ver'}</span>
     </button>
   );
 }
