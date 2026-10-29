@@ -685,10 +685,12 @@ function setupCrispBack() {
     e.stopImmediatePropagation(); e.preventDefault();
     b.classList.add('tap');
     const wait = Math.max(0, 70 - (Date.now() - downAt));
-    requestAnimationFrame(() => setTimeout(() => requestAnimationFrame(() => {
+    // asıl tıklama rAF'ın İÇİNDE değil, basılı kare çizildikten sonra ayrı bir görevde (setTimeout) işlenir: rAF içinde
+    // işlenince sayfa geçişi ve kaydırma bir SONRAKİ kareye kalıyor, yeni sayfa bir kare animasyonsuz görünüp 'flaş' yapıyordu
+    requestAnimationFrame(() => setTimeout(() => {
       pass = true; try { if (b.isConnected) b.click(); } finally { pass = false; }
-      setTimeout(() => b.classList.remove('tap'), 120);
-    }), wait));
+      if (b.isConnected) setTimeout(() => b.classList.remove('tap'), 120);
+    }, wait));
   }, true);
 }
 
