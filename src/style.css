@@ -4741,3 +4741,21 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .ptr8.ready { color: var(--accent); }
 .ptr8.spin { color: var(--accent); }
 .ptr8.spin svg { animation: ptr7spin .6s linear infinite; }
+
+/* ===== Çekip yenile (9, 30.10.2026): küçük gösterge üst menünün ALT kenarının arkasından çıkar; bitince ✓ ===== */
+.ptr9 { position: fixed; left: 50%; top: var(--top, 0px); z-index: 19; pointer-events: none; opacity: 0;
+  transform: translate(-50%, calc(-100% + var(--k, 0) * 44px)) scale(calc(.7 + var(--k, 0) * .3)); }
+.ptr9.show { opacity: min(1, calc(var(--k, 0) * 1.8)); }
+.ptr9.spin, .ptr9.ok { transform: translate(-50%, 12px); opacity: 1; transition: transform .22s cubic-bezier(.3,.7,.3,1), opacity .15s; }
+.ptr9.hide { transform: translate(-50%, -100%) scale(.7); opacity: 0; transition: transform .24s ease-in, opacity .2s ease-in; }
+.ptr9-c { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface); color: color-mix(in oklab, var(--fg) 50%, transparent);
+  box-shadow: 0 2px 8px -2px rgb(0 0 0 / .22), 0 0 0 1px var(--line); transition: color .15s; }
+.ptr9-c > svg { position: absolute; }
+.ptr9-a { transform: rotate(calc(var(--k, 0) * 300deg)); transition: opacity .15s; }
+.ptr9.ready .ptr9-c, .ptr9.spin .ptr9-c { color: var(--accent); }
+.ptr9.spin .ptr9-a { animation: ptr9spin .6s linear infinite; }
+@keyframes ptr9spin { from { transform: rotate(300deg); } to { transform: rotate(660deg); } }
+.ptr9-ok { opacity: 0; transform: scale(.4); color: #1f9d55; transition: opacity .15s, transform .28s cubic-bezier(.3,1.6,.4,1); }
+.ptr9.ok .ptr9-a, .ptr9.hide .ptr9-a { opacity: 0; animation: none; }
+.ptr9.ok .ptr9-ok, .ptr9.hide.was-ok .ptr9-ok { opacity: 1; transform: none; }

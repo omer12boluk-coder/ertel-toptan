@@ -669,34 +669,64 @@ function setupPull() {
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
   if (!IOS || !STANDALONE) return; // Safari'nin kendi çekip yenilesi var; bu sadece ana ekran uygulamasında
-  // 30.10.2026 (8) — SAFARI'NİN KOPYASI (kullanıcı: "Safari'deki çok iyi çalışıyor"): telefonun kendi esnemesi serbest,
-  // üst menü dahil bütün sayfa aşağı esner; üstte açılan boşlukta dönen gösterge belirir (esnemeyi birebir izler).
-  // Sayfa zaten en üstteyken bilerek yeterince çekip bırakınca sayfa Safari'deki gibi HEMEN yenilenir.
-  const TH = 72;
-  let box = null, finger = false, armed = false, ready = false, busy = false, raf = 0;
+  // 30.10.2026 (9): telefonun kendi esnemesi serbest. Küçük gösterge üst menünün ALT kenarının arkasından çıkar
+  // (menüyle birlikte esner, menünün üstüne/çentiğe binmez), çekiş arttıkça biraz aşağı iner ve ok döner.
+  // Bırakınca: kısa dönüş → yeşil ✓ (dönmez) → menünün arkasına kayıp kaybolur. Sayfa YENİLENMEZ (veriler zaten canlı);
+  // arka planda sürüm + kur yoklanır, sadece yeni sürüm yayınlanmışsa location.reload().
+  const TH = 72, SPIN_MIN = 420, OK_MS = 520;
+  let box = null, finger = false, armed = false, ready = false, phase = '', wasOk = false, raf = 0;
   const ui = () => {
     if (box) return box;
-    box = document.createElement('div'); box.className = 'ptr8'; box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>';
+    box = document.createElement('div'); box.className = 'ptr9'; box.setAttribute('aria-hidden', 'true');
+    box.innerHTML = '<span class="ptr9-c"><svg class="ptr9-a" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>'
+      + '<svg class="ptr9-ok" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
     document.body.appendChild(box); return box;
   };
+  const headBottom = () => {
+    const h = document.querySelector('.topbar');
+    if (h) { const r = h.getBoundingClientRect(); if (r.height) return r.bottom; }
+    let pr = document.getElementById('ptr9-sat'); // menü yoksa: çentik/durum çubuğunun hemen altı
+    if (!pr) { pr = document.createElement('div'); pr.id = 'ptr9-sat'; pr.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px);width:0;visibility:hidden;pointer-events:none'; document.body.appendChild(pr); }
+    return pr.offsetHeight + 8;
+  };
   const paint = () => {
-    raf = 0; const px = (armed || busy) ? Math.max(0, -scrollY) : 0; if (!px && !box) return;
-    const b = ui(); const k = Math.min(1, px / TH);
-    if (finger && armed && !busy) ready = px >= TH;
-    b.style.setProperty('--y', px + 'px'); b.style.setProperty('--k', busy ? 1 : k);
-    b.className = 'ptr8' + (ready ? ' ready' : '') + (busy ? ' spin' : '');
+    raf = 0;
+    const px = (armed && !phase) ? Math.max(0, -scrollY) : 0;
+    if (!px && !phase) { if (box) box.className = 'ptr9'; return; }
+    const b = ui(); const k = phase ? 1 : Math.min(1, px / TH);
+    if (finger && armed && !phase) ready = px >= TH;
+    b.style.setProperty('--top', headBottom() + 'px');
+    b.style.setProperty('--k', k);
+    b.className = 'ptr9 show' + (ready && !phase ? ' ready' : '') + (phase ? ' ' + phase : '') + (wasOk ? ' was-ok' : '');
+    if (phase) raf = requestAnimationFrame(paint); // menü yerine dönerken izlemeye devam
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
+  const finish = (ok) => {
+    phase = ok ? 'ok' : 'hide'; wasOk = ok; req();
+    setTimeout(() => { phase = 'hide'; setTimeout(() => { phase = ''; wasOk = false; armed = false; cancelAnimationFrame(raf); raf = 0; req(); }, 240); }, ok ? OK_MS : 0);
+  };
   addEventListener('scroll', req, { passive: true });
   addEventListener('touchmove', req, { passive: true });
-  addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !busy && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); }, { passive: true });
-  addEventListener('touchend', () => {
+  addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !phase && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); }, { passive: true });
+  addEventListener('touchend', async () => {
     finger = false; const go = armed && ready; ready = false;
-    if (!go || busy || document.querySelector('.sheet-bg, .lb, .vv')) { armed = false; req(); return; }
-    busy = true; haptic(); req();
-    if (navigator.onLine === false) { busy = false; armed = false; toast('İnternet bağlantısı yok', 'bad'); req(); return; }
-    setTimeout(() => location.reload(), 120); // gösterge dönmeye başlasın, sonra Safari gibi yenile
+    if (!go || phase || document.querySelector('.sheet-bg, .lb, .vv')) { armed = false; req(); return; }
+    haptic();
+    if (navigator.onLine === false) { finish(false); toast('İnternet bağlantısı yok', 'bad'); return; }
+    phase = 'spin'; req();
+    const t0 = Date.now(); let newer = false;
+    dispatchEvent(new Event('soft-refresh')); // kur vb. arka planda tazelenir (sayfa yeniden çizilmez)
+    try {
+      const cur = window.__BUILD;
+      if (cur) {
+        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 4000);
+        const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: ctl.signal }); clearTimeout(tm);
+        const j = await r.json(); newer = !!(j.v && j.v !== cur);
+      }
+    } catch {}
+    await new Promise((r) => setTimeout(r, Math.max(0, SPIN_MIN - (Date.now() - t0))));
+    if (newer) { location.reload(); return; } // sadece yeni sürüm yayınlandıysa gerçek yenileme
+    finish(true);
   }, { passive: true });
 }
 

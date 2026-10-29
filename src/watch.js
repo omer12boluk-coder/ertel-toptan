@@ -12,6 +12,8 @@ export function startRate(A) {
   // ziyaretçi başına dakikada bir istek bekçinin günlük ücretsiz sınırını (100.000) dolduruyordu → 5 dakikada bir; sekmeye dönünce en çok dakikada bir
   let last = 0; const tick = () => { if (Date.now() - last < 55000) return; last = Date.now(); get(); };
   tick(); setInterval(tick, 5 * 60000); document.addEventListener('visibilitychange', tick);
+  // çekip yenile (setupPull): kur sessizce tazelenir; bekçiyi yormamak için en çok 20 sn'de bir
+  addEventListener('soft-refresh', () => { if (Date.now() - last < 20000) return; last = Date.now(); get(); });
 }
 // Site eşitleme: yönetim paneli açılınca sitede değişiklik var mı bakılır; "Şimdi eşitle" hemen başlatır
 export async function syncNow(force) {
