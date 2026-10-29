@@ -4509,3 +4509,20 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .co-side .cart-sum.co-pre { display: flex; flex-direction: column; overflow: hidden; }
 .co-side .cart-sum.co-pre .co-items { flex: 1 1 auto; min-height: 46px; max-height: none; }
 .co-side:has(.co-pre) { position: static; max-height: none; }
+/* sepet tablosu (bilgisayar): birim fiyat ve toplam biraz büyük ve başlıklarıyla ORTALI; adet seçici başlığın tam altında */
+@media (min-width: 561px) {
+  .gline-ctl { grid-template-columns: 110px 128px 110px 36px; }
+  .gline-h .r, .gline-h .c { text-align: center; }
+  .gline-h .gline-ctl > span { letter-spacing: .07em; margin-right: -.07em; } /* harf aralığının sağdaki fazlası ortalamayı kaydırmasın */
+  .gline-unit { text-align: center; font-size: 19px; }
+  .gline-sum { text-align: center; font-size: 21px; }
+  .gline-ctl .stepper { justify-self: center; }
+}
+/* ödeme sayfası: sayfa bütün olarak kaymaz (özet kutusu kayıp sonra yerine oturuyordu); form kendi içinde yumuşakça gelir,
+   sipariş özeti kaymadan sadece belirir → sabit kutu ilk kareden yerinde */
+.main > *:has(.co-grid) { animation: none; }
+.co-grid > :not(.co-side) { animation: rise .32s var(--ease) backwards; }
+.co-side .cart-sum { animation: coFade .22s ease backwards; }
+@keyframes coFade { from { opacity: 0; } }
+/* "+KDV" fiyata biraz daha yakın (3-4 haneli fiyatlarda adet seçiciye yapışmasın) */
+.plist.pgrid .price .plusvat { margin-left: 1px; letter-spacing: 0; }

@@ -109,7 +109,7 @@ export async function toggleNotify(id) {
   return on;
 }
 export const outOfStock = (p) => p && !(p.s > 0);
-// Üye stoğa giren beklediği ürünü "gördü" (bildirime dokundu ya da Haber bekleyenler'i açtı): o ürün listeden çıkar.
+// Üye stoğa giren beklediği ürünü "gördü" (bildirime dokundu ya da Haber beklenenler'i açtı): o ürün listeden çıkar.
 // Görmediği sürece ürün listede kalır ve her stoğa girişinde yeniden bildirilir.
 export async function seenWait(ids) {
   const m = store.s.member; if (!m || !Array.isArray(m.notify)) return [];
@@ -143,11 +143,11 @@ export function NotifyBox({ p }) {
     <div className="notify-box">
       <span className="notify-box-t"><Icon n="clock" s={16} />Şu an stokta yok</span>
       <NotifyBtn p={p} big />
-      <small className="muted">Stoğa girince telefonunuza bildirim gönderelim. Hesabım › Haber bekleyenler’den kapatabilirsiniz.</small>
+      <small className="muted">Stoğa girince telefonunuza bildirim gönderelim. Hesabım › Haber beklenenler’den kapatabilirsiniz.</small>
     </div>
   );
 }
-// Hesabım > Haber bekleyenler
+// Hesabım > Haber beklenenler
 export function WaitList() {
   const { member, byId } = useStore();
   const ids = member?.notify || [];

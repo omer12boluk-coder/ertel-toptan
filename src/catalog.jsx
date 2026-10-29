@@ -701,7 +701,7 @@ export function FavGrid() {
   </>;
 }
 
-// Hesabım > Haber bekleyenler: favoriler gibi ürün kartları (stokta yoksa kartta "Haber vereceğiz" çanı; dokununca kapanır)
+// Hesabım > Haber beklenenler: favoriler gibi ürün kartları (stokta yoksa kartta "Haber vereceğiz" çanı; dokununca kapanır)
 export function WaitGrid() {
   const { member, byId, settings: S, user } = useStore();
   const [open, setOpen] = useState(null);

@@ -389,7 +389,7 @@ export class FirebaseBackend {
   // ---- Mağaza özellikleri (extras.jsx / reviews.jsx)
   async getStats() { const s = await timeout(this.getSafe('stats', 'public')); return s.exists() ? s.data() : {}; }
   // stoğa giren ürünleri bekleyen üyeler (29.10.2026 2): zil kaydı (notifyHit, aynı ürün tekrar gelirse tarihi yenilenir) +
-  // bekçi /push/back-admin ile telefon bildirimi. Ürün listeden ÇIKARILMAZ: üye bildirime dokununca, Haber bekleyenler'i
+  // bekçi /push/back-admin ile telefon bildirimi. Ürün listeden ÇIKARILMAZ: üye bildirime dokununca, Haber beklenenler'i
   // açınca (ürün stoktayken) ya da kendisi kaldırınca çıkar → o zamana kadar ürün her stoğa girişinde yeniden bildirilir.
   async backInStock(prods) {
     const byMem = new Map(); const at = now();

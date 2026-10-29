@@ -1039,7 +1039,7 @@ async function sendBack(env, b) {
     const it = items[0];
     const data = items.length === 1
       ? { title: '🔔 Beklediğiniz ürün geldi', body: `${String(it.n).slice(0, 120)} tekrar stokta. Dokunun, hemen sepete ekleyin.`, url: '/magaza/urun/' + it.id + '?hb=1', tag: 'back-' + it.id }
-      : { title: `🔔 Beklediğiniz ${items.length} ürün geldi`, body: items.slice(0, 3).map((x) => String(x.n).slice(0, 40)).join(' · '), url: '/magaza/hesap/haber-bekleyenler', tag: 'back' };
+      : { title: `🔔 Beklediğiniz ${items.length} ürün geldi`, body: items.slice(0, 3).map((x) => String(x.n).slice(0, 40)).join(' · '), url: '/magaza/hesap/haber-beklenenler', tag: 'back' };
     data.title = data.title + ' · ' + shop;
     const keep = [];
     for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }

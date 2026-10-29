@@ -847,7 +847,7 @@ function LocalOrders({ inSheet }) {
 
 // Üye hesabı: profil başlığı + seçilerek açılan satırlar (her biri kendi penceresinde)
 // Hesabım: bilgisayarda solda profil + menü, sağda seçilen bölüm (sayfa); telefonda menü listesi → bölüm ayrı sayfa (geri: Hesabım)
-const ACCT_T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', favs: 'Favorilerim', wait: 'Haber bekleyenler', notif: 'Bildirimler', pay: 'Ödeme bilgilerim' };
+const ACCT_T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', favs: 'Favorilerim', wait: 'Haber beklenenler', notif: 'Bildirimler', pay: 'Ödeme bilgilerim' };
 function MemberHome() {
   const { member: m, myOrders, api: A, settings: S, acct } = useStore();
   const [busy, setBusy] = useState(false);
@@ -903,7 +903,7 @@ function MemberHome() {
     ['info', 'user', 'Profil bilgilerim', [m.name, m.phone].filter(Boolean).join(' · ') || 'Ad soyad, telefon'],
     ['inv', 'tag', 'Fatura bilgilerim', m.invoice?.type === 'company' ? m.invoice.company || 'Kurumsal' : 'Bireysel'],
     ['favs', 'heart', 'Favorilerim', favs.length ? `${favs.length} ürün` : 'Beğendiğiniz ürünler'],
-    feat(S).notify && ['wait', 'bell', 'Haber bekleyenler', (m.notify || []).length ? `${m.notify.length} ürün` : 'Stoğa girince haber alın'],
+    feat(S).notify && ['wait', 'bell', 'Haber beklenenler', (m.notify || []).length ? `${m.notify.length} ürün` : 'Stoğa girince haber alın'],
     ['notif', 'bell', 'Bildirimler', (pushOk ? (pushState() === 'on' ? 'Telefon bildirimi açık' : 'Telefon bildirimi kapalı') : 'Sipariş güncellemeleri') + (nUnread ? ` · ${nUnread} yeni` : '')],
     ['pay', 'cart', 'Ödeme bilgilerim', 'Kayıtlı kartlar', true],
   ].filter(Boolean);
