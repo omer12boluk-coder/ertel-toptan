@@ -16,6 +16,7 @@ jobs:
       RESEND_KEY: ${{ secrets.RESEND_KEY }}
       DHL_USER: ${{ secrets.DHL_USER }}
       DHL_PASS: ${{ secrets.DHL_PASS }}
+      FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,6 +64,7 @@ jobs:
           if [ -n "$TELEGRAM_TOKEN" ]; then printf '%s' "$TELEGRAM_TOKEN" | npx -y wrangler@3 secret put TELEGRAM_TOKEN 2>&1 | tail -n 3; else echo "::warning title=Telegram bildirimi kapalı::TELEGRAM_TOKEN gizli ayarı eklenince açılır."; fi
           if [ -n "$RESEND_KEY" ]; then printf '%s' "$RESEND_KEY" | npx -y wrangler@3 secret put RESEND_KEY 2>&1 | tail -n 3; else echo "::warning title=E-posta bildirimi kapalı::RESEND_KEY gizli ayarı eklenince açılır."; fi
           if [ -n "$DHL_USER" ] && [ -n "$DHL_PASS" ]; then printf '%s' "$DHL_USER" | npx -y wrangler@3 secret put DHL_USER 2>&1 | tail -n 2; printf '%s' "$DHL_PASS" | npx -y wrangler@3 secret put DHL_PASS 2>&1 | tail -n 2; fi
+          if [ -n "$FIREBASE_SA" ]; then printf '%s' "$FIREBASE_SA" | npx -y wrangler@3 secret put FIREBASE_SA 2>&1 | tail -n 2; else echo "::warning title=Sunucu siparişi kapalı::FIREBASE_SERVICE_ACCOUNT gizli ayarı yok"; fi
           echo "::notice title=Bekçi yayında::Dakikada bir siteyi kontrol ediyor."
       - name: Kur kontrol (Harem Altın)
         if: steps.ok.outputs.go == 'yes'

@@ -56,6 +56,8 @@ export default {
       }
       if (url.pathname === '/check' && req.method === 'POST') return json({ result: await check(env) }); // sadece değişiklik varsa eşitler
       if (url.pathname === '/sync' && req.method === 'POST') return json({ result: await check(env, { force: true }) });
+      // Mağaza siparişi bekçiden geçer: fiyatlar kataloğdan yeniden hesaplanır, sipariş sunucu anahtarıyla yazılır (fiyat oynanamaz)
+      if (url.pathname === '/order' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await placeOrder(req, env, b, ctx)); }
       if (url.pathname === '/notify' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyOrder(env, String(b.id || ''))); }
       if (url.pathname === '/notify-test' && req.method === 'POST') { if (await env.KV.get('ntest')) return json({ ok: false, error: 'Biraz bekleyip tekrar deneyin' }); await env.KV.put('ntest', '1', { expirationTtl: 120 }); return json(await notifySend(env, { subject: 'ERTEL GSM · bildirim denemesi', text: 'Bu bir deneme bildirimidir. Mağazadan sipariş gelince buna benzer bir mesaj alacaksınız.' })); }
       if (url.pathname === '/tg-link' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await tgLink(env, String(b.code || ''))); }
@@ -1062,4 +1064,104 @@ async function revNew(req, env, b) {
   await env.KV.put('nrv:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
   await adminPush(env, { title: `⭐ Yeni yorum ${'★'.repeat(Number(d.stars) || 0)} · ${d.name || 'Üye'}`, body: (String(d.text || '') || 'Sadece yıldız verdi').slice(0, 160) + (d.status === 'pending' ? ' · onay bekliyor' : ''), url: '/admin/musteriler', tag: 'rv-' + id }).catch(() => {});
   return { ok: true };
+}
+
+
+// ---- Sunucu tarafı sipariş (POST /order {id, order}; üye ise Authorization: Bearer <üye oturum anahtarı>) -------------
+// Tarayıcıdan gelen fiyat ve toplamlara GÜVENİLMEZ: her kalemin fiyatı herkese açık katalogdan (pubcatalog, liste fiyatı r)
+// yeniden alınır. Sepetteki fiyat katalogdan farklıysa sipariş yazılmaz, { ok:false, code:'price', items } döner (müşteri
+// güncel fiyatı görüp tekrar onaylar). Durum, tarih, geçmiş gibi alanları sunucu koyar. Yazma Firebase servis hesabıyla
+// (gizli ayar FIREBASE_SA) yapılır; bu yüzden ileride kurallarda müşterinin doğrudan sipariş yazması kapatılabilir.
+const ORD_FIELDS = ['contact', 'delivery', 'invoice', 'pay', 'note', 'legal'];
+const ORD_PAYS = ['havale', 'card', 'shop'];
+let pubCache = null; // { v, map: Map(id → ürün) } — aynı Worker örneğinde katalog sürümü değişmedikçe tekrar okunmaz
+async function pubPrices() {
+  const meta = await fsDoc('pubcatalog/_meta'); if (!meta) throw new Error('Katalog okunamadı');
+  if (pubCache && pubCache.v === meta.version) return pubCache.map;
+  const parts = await Promise.all(Array.from({ length: Number(meta.chunks) || 1 }, (_, i) => fsDoc('pubcatalog/c' + i)));
+  const map = new Map();
+  for (const part of parts) for (const p of part?.items || []) if (p && p.id != null) map.set(String(p.id), p);
+  pubCache = { v: meta.version, map };
+  return map;
+}
+const r2c = (n) => Math.round(Number(n) * 100) / 100;
+async function placeOrder(req, env, b, ctx) {
+  const id = String(b.id || ''); const o = b.order || {};
+  if (!/^[A-Za-z0-9]{15,40}$/.test(id)) return { ok: false, error: 'Geçersiz sipariş kimliği' };
+  if (!env.FIREBASE_SA) return { ok: false, code: 'setup', error: 'Sunucu sipariş anahtarı henüz eklenmemiş' };
+  // aşırı kullanım sınırı: aynı bağlantıdan saatte en çok 15 sipariş
+  const ip = req.headers.get('CF-Connecting-IP') || 'x'; const kr = 'ord-ip:' + ip + ':' + Math.floor(Date.now() / 3600000);
+  const nr = Number(await env.KV.get(kr)) || 0;
+  if (nr >= 15) return { ok: false, error: 'Çok fazla sipariş denemesi, biraz sonra tekrar deneyin' };
+  // üye siparişi: oturum anahtarı Firestore'a sorularak doğrulanır (anahtar sahte ise üye kaydı okunamaz)
+  let uid = null;
+  if (o.uid) {
+    const tok = bearer(req); uid = tokUid(tok);
+    if (!uid || uid !== o.uid || !(await fsAuth('members/' + uid, tok))) return { ok: false, code: 'auth', error: 'Oturum doğrulanamadı, yeniden giriş yapın' };
+  }
+  const list = Array.isArray(o.items) ? o.items : [];
+  if (!list.length || list.length > 300) return { ok: false, error: 'Sepet boş ya da çok büyük' };
+  const pay = String(o.pay || ''); if (!ORD_PAYS.includes(pay)) return { ok: false, error: 'Ödeme yöntemi geçersiz' };
+  if (pay === 'shop' && o.delivery?.method !== 'pickup') return { ok: false, error: 'Dükkânda ödeme sadece dükkândan teslimde seçilebilir' };
+  if (!['cargo', 'pickup'].includes(o.delivery?.method)) return { ok: false, error: 'Teslimat yöntemi geçersiz' };
+  const cat = await pubPrices();
+  const items = [], changed = [], total = {};
+  for (const it of list) {
+    const p = cat.get(String(it?.id));
+    const qty = Math.floor(Number(it?.qty));
+    if (!p) { changed.push({ id: it?.id, n: it?.n, gone: true }); continue; }
+    if (!(qty >= 1 && qty <= 9999)) return { ok: false, error: 'Adet geçersiz: ' + p.n };
+    const price = Number(p.r) > 0 ? r2c(p.r) : null; const cur = p.cur || 'USD';
+    if (price == null) { changed.push({ id: p.id, n: p.n, gone: true }); continue; }
+    if (r2c(it.price) !== price || (it.cur || 'USD') !== cur) changed.push({ id: p.id, n: p.n, price, cur });
+    items.push({ id: p.id, k: p.k, n: p.n, cur, qty, price, ...(p.pi != null ? { pi: p.pi } : {}), ...(p.u ? { u: p.u } : {}) });
+    total[cur] = r2c((total[cur] || 0) + price * qty);
+  }
+  if (changed.length) return { ok: false, code: 'price', error: 'Bazı ürünlerin fiyatı değişti', items: changed };
+  const t = Date.now(); const rate = await haremRate().catch(() => null);
+  const doc = {
+    no: /^[A-Z0-9]{4,10}$/.test(String(o.no || '')) ? String(o.no) : Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join(''),
+    uid, member: !!uid, status: 'new', createdAt: t, updatedAt: t, unread: 1, history: [{ s: 'new', at: t }],
+    items, total, rate: rate?.usd || (Number(o.rate) > 0 ? Number(o.rate) : null), via: 'srv',
+  };
+  for (const k of ORD_FIELDS) if (o[k] !== undefined && o[k] !== null) doc[k] = o[k];
+  if (typeof doc.note === 'string') doc.note = doc.note.slice(0, 1000);
+  if (JSON.stringify(doc).length > 200000) return { ok: false, error: 'Sipariş çok büyük' };
+  const w = await fsCreate(env, 'orders', id, doc);
+  if (!w.ok) return { ok: false, error: w.exists ? 'Bu sipariş zaten kayıtlı' : 'Sipariş kaydedilemedi, tekrar deneyin' };
+  await env.KV.put(kr, String(nr + 1), { expirationTtl: 7200 });
+  ctx.waitUntil(notifyOrder(env, id).catch((e) => console.log('notify', e.message)));
+  return { ok: true, id, no: doc.no, total, items };
+}
+
+// Firestore'a servis hesabıyla yazma (kurallara takılmaz). Erişim anahtarı ~55 dk KV'de saklanır (imza her istekte atılmasın).
+const b64uBytes = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64uStr = (s) => b64uBytes(new TextEncoder().encode(s));
+async function saToken(env) {
+  const hit = await env.KV.get('sa-tok', 'json'); if (hit && hit.exp > Date.now() + 60000) return hit.tok;
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const now = Math.floor(Date.now() / 1000);
+  const unsigned = b64uStr(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + b64uStr(JSON.stringify({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 }));
+  const pem = sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const key = await crypto.subtle.importKey('pkcs8', Uint8Array.from(atob(pem), (c) => c.charCodeAt(0)), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned)));
+  const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + unsigned + '.' + b64uBytes(sig) });
+  const j = await r.json().catch(() => ({})); if (!j.access_token) throw new Error('Servis anahtarı alınamadı');
+  await env.KV.put('sa-tok', JSON.stringify({ tok: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 - 300000 }), { expirationTtl: 3300 });
+  return j.access_token;
+}
+function toFs(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === 'string') return { stringValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFs) } };
+  if (typeof v === 'object') return { mapValue: { fields: Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined).map(([k, x]) => [k, toFs(x)])) } };
+  return { nullValue: null };
+}
+async function fsCreate(env, col, id, data) {
+  const tok = await saToken(env);
+  const r = await fetch(FS + col + '?documentId=' + encodeURIComponent(id), { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: toFs(data).mapValue.fields }) });
+  if (r.ok) return { ok: true };
+  return { ok: false, exists: r.status === 409, status: r.status };
 }
