@@ -218,16 +218,20 @@ export function Avatar({ u, size = 40 }) {
   );
 }
 
-// onRemove: adet en alttayken − yerine çöp kovası çıkar, basınca ürün kaldırılır (sepet, ürün penceresi)
+// onRemove: adet en alttayken − yerine çöp kovası çıkar (aynı renkte), basınca ürün kaldırılır (sepet, ürün penceresi);
+// çöp ⇄ − geçişi ve sayının artıp azalması hafif animasyonlu
 export function Stepper({ value, onChange, min = 0, small, onRemove }) {
   const [txt, setTxt] = useState(String(value));
   useEffect(() => setTxt(String(value)), [value]);
+  const prev = useRef(value); const [dir, setDir] = useState('');
+  useEffect(() => { if (value !== prev.current) setDir(value > prev.current ? 'up' : 'down'); prev.current = value; }, [value]);
+  const del = !!onRemove && value <= Math.max(min, 1);
   return (
     <div className={'stepper' + (small ? ' sm' : '')}>
-      {onRemove && value <= Math.max(min, 1)
-        ? <button type="button" className="st-del" onClick={onRemove} aria-label="Sepetten çıkar" title="Sepetten çıkar"><Icon n="trash" s={15} /></button>
-        : <button type="button" onClick={() => onChange(Math.max(min, value - 1))} aria-label="Azalt"><Icon n="minus" s={16} /></button>}
-      <input inputMode="numeric" value={txt} aria-label="Adet"
+      <button type="button" className={'st-minus' + (del ? ' is-del' : '')} onClick={() => (del ? onRemove() : onChange(Math.max(min, value - 1)))} aria-label={del ? 'Sepetten çıkar' : 'Azalt'} title={del ? 'Sepetten çıkar' : undefined}>
+        {onRemove ? <span className="st-ic" aria-hidden="true"><Icon n="minus" s={16} className="st-i-m" /><Icon n="trash" s={15} className="st-i-t" /></span> : <Icon n="minus" s={16} />}
+      </button>
+      <input key={value} className={dir ? 'st-' + dir : undefined} inputMode="numeric" value={txt} aria-label="Adet"
         onChange={(e) => setTxt(e.target.value.replace(/\D/g, ''))}
         onBlur={() => onChange(Math.max(min, Number(txt) || 0))}
         onKeyDown={(e) => e.key === 'Enter' && e.target.blur()} />

@@ -676,7 +676,7 @@ function setupPull() {
 // Parmak kayarsa / sayfa kayarsa hiç başlamaz ya da hemen geri döner. Kartın içindeki düğmeye (+ vb.) basınca kart oynamaz.
 function setupTapHover() {
   if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
-  const SEL = '.sh-brand, .sh-box, .sh-card, .mini-card, .plist.pgrid > li.prow, .sh-cta-btn, .sh-more';
+  const SEL = '.sh-brand, .sh-box, .mini-card, .plist.pgrid > li.prow, .sh-cta-btn, .sh-more'; // raf kartları (.sh-card) efektsiz (kullanıcı)
   let cand = null, on = null, tm = 0, sx = 0, sy = 0, sY = 0, off = 0;
   const clear = (e) => { if (e) e.classList.remove('th'); };
   const cancel = () => { clearTimeout(tm); cand = null; if (on) { clear(on); on = null; } };

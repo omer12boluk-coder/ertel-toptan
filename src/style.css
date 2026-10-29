@@ -4610,12 +4610,36 @@ html:has(.kf) { scrollbar-gutter: stable; }
   .sh-cta-btn.th { transform: translateY(-2px); } .sh-cta-btn.th > span { transform: translateX(4px) rotate(-8deg); }
   .sh-more.th .ic { transform: translateX(4px); }
 }
-/* adet 1'deyken − yerine çöp kovası (Stepper onRemove) — temadaki gibi sade, üstüne gelince/basınca hafif kırmızı */
-.stepper button.st-del { color: var(--muted); }
-.stepper button.st-del:hover, .stepper button.st-del:active { color: #c43d3d; background: color-mix(in oklab, #c43d3d 8%, var(--surface)); }
-@media (hover: none) { .stepper button.st-del:hover { background: transparent; color: var(--muted); } .stepper button.st-del:active { color: #c43d3d; background: color-mix(in oklab, #c43d3d 8%, var(--surface)); } }
+/* adet 1'deyken − yerine çöp kovası (Stepper onRemove): aynı renk; − ⇄ çöp yumuşak dönerek geçer; sayı değişince hafifçe kayar */
+.st-ic { position: relative; width: 16px; height: 16px; display: grid; place-items: center; }
+.st-ic > svg { position: absolute; transition: transform .28s cubic-bezier(.22, 1.2, .36, 1), opacity .18s ease; }
+.st-minus .st-i-t { opacity: 0; transform: scale(.4) rotate(-40deg); }
+.st-minus.is-del .st-i-m { opacity: 0; transform: scale(.4) rotate(40deg); }
+.st-minus.is-del .st-i-t { opacity: 1; transform: none; }
+.stepper input.st-up { animation: stUp .24s cubic-bezier(.22, 1, .36, 1); }
+.stepper input.st-down { animation: stDown .24s cubic-bezier(.22, 1, .36, 1); }
+@keyframes stUp { from { transform: translateY(6px); opacity: .25; } }
+@keyframes stDown { from { transform: translateY(-6px); opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .st-ic > svg { transition: none; } .stepper input.st-up, .stepper input.st-down { animation: none; } }
 
 /* iPhone çekip yenile (doğal yaylanma): simge en üstte, esnemenin açtığı boşluğun ortasında; hata yazısı üst menünün üstünde kısa süre */
 .ptr.native { top: env(safe-area-inset-top, 0px); z-index: 30; transition: none; }
 .ptr.native.show { opacity: 1; --ptr: 120px; transition: opacity .2s; }
 .ptr.native.show .ptr-c { display: none; }
+/* Ana sayfa raf kartı: alt satır hep sepet düğmesi boyunda (adet seçiciye geçince fiyat / kart oynamaz);
+   adet seçici ince ve yuvarlak, Tüm ürünler kartındaki gibi düğmenin yerinden açılır; dönüşte sepet düğmesi yaylanır */
+.sh-card { cursor: pointer; }
+.sh-card-f { min-height: 48px; } /* 4px üst boşluk + 44px sepet düğmesi */
+.sh-card-f .qty-morph { margin-left: auto; width: auto; flex: none; }
+.sh-card-f .stepper { height: 34px; border-radius: 10px; overflow: hidden; display: inline-flex; }
+.sh-card-f .stepper button { width: 30px; flex: none; border-radius: 0; }
+.sh-card-f .stepper input { width: 30px; flex: none; font-size: 14px; }
+.sh-card-f .qty-morph.grow > .stepper { animation: qtyGrowR .42s cubic-bezier(.22, 1.2, .36, 1) backwards; }
+@keyframes qtyGrowR { from { clip-path: inset(-2px -2px -2px calc(100% - 44px) round 10px); } to { clip-path: inset(-2px round 10px); } }
+.sh-add.back { animation: addBack .34s cubic-bezier(.22, 1.2, .36, 1) backwards; }
+/* telefonda raf kartında hiçbir dokunma efekti yok (kart açılır, o kadar) */
+@media (hover: none) { .sh-card, .sh-card * { -webkit-tap-highlight-color: transparent; } .sh-card :focus { outline: none; } .sh-add:active { transform: none; } }
+/* sayı animasyonunda ayraç çizgileri kıpırdamasın: çizgiler sayı kutusunda değil düğmelerin kenarında */
+.stepper input { border-inline: 0 !important; }
+.stepper > button:first-child { border-right: 1px solid var(--line-2); }
+.stepper > button:last-child { border-left: 1px solid var(--line-2); }

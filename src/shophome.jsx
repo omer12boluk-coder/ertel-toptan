@@ -738,9 +738,12 @@ export function PCard({ p, i, isNew, onOpen }) {
   const { settings: S, user, userPrices, cart } = useStore();
   const E = useContext(DesignCtx);
   const qty = cart[p.id] || 0;
+  // sepete ekle ⇄ adet seçici: Tüm ürünler kartlarındaki geçişin aynısı (sadece bu kartta değişince)
+  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
+  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
   const pr = E ? priceFor(p, S, { role: 'public' }, null) : priceFor(p, S, user, userPrices); // tasarımda müşterinin gördüğü fiyat
   return (
-    <div className="sh-card" style={{ '--i': i }} onMouseMove={spot}>
+    <div className="sh-card" style={{ '--i': i }} onMouseMove={spot} onClick={(e) => { if (!E && !e.target.closest('button, input, .stepper')) onOpen?.(); }}>
       <button className="sh-card-img" onClick={onOpen} aria-label={p.n}>
         <Thumb p={p} size="lg" />
         {isNew && <span className="sh-new">YENİ</span>}
@@ -751,8 +754,8 @@ export function PCard({ p, i, isNew, onOpen }) {
         <div className="sh-card-f">
           <b className="sh-card-p">{pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur)}</b>
           {qty > 0
-            ? <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} />
-            : <button className="sh-add" onClick={() => { if (E) return; setQty(p.id, 1); toast('Sepete eklendi'); }} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
+            ? <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} /></span>
+            : <button className={'sh-add' + (morph === 'back' ? ' back' : '')} onClick={() => { if (E) return; setQty(p.id, 1); toast('Sepete eklendi'); }} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
         </div>
       </div>
     </div>
