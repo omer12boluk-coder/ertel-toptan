@@ -125,17 +125,20 @@ export function openProduct(id) {
     history.replaceState({ ...(history.state || {}), tab: store.s.tab, acct: store.s.acct || null, pid: store.s.pid || null, y: scrollY }, '');
     history.pushState({ tab: 'urun', pid: id }, '', '/magaza/urun/' + id);
   } catch {}
-  store.set({ tab: 'urun', pid: id, acct: null, openOrder: null }); window.scrollTo(0, 0);
+  // geldiği sayfa (Tüm ürünler / ana sayfa) arkada gizli açık kalır → geri dönünce filtreler, yüklenen ürünler ve kaydırma yerinde
+  const from = store.s.tab === 'urun' ? store.s.urunFrom : store.s.tab;
+  store.set({ tab: 'urun', pid: id, acct: null, openOrder: null, urunFrom: from }); window.scrollTo(0, 0);
 }
 export function startHistory(defTab) {
   addEventListener('popstate', (e) => {
     const st = e.state || {};
     const tab = st.tab || tabFromPath() || defTab();
     store.set({ tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
-    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, st.y || 0)));
+    // ilk karede (React çizdikten hemen sonra) yerine kaydır → üstte bir kare görünüp zıplamaz; içerik geç uzarsa bir kez daha
+    requestAnimationFrame(() => { window.scrollTo(0, st.y || 0); requestAnimationFrame(() => { if (Math.abs(scrollY - (st.y || 0)) > 2) window.scrollTo(0, st.y || 0); }); });
   });
 }
-export function go(tab) { if (tab !== store.s.tab || store.s.openOrder || store.s.openReq || store.s.acct) pushTab(tab); store.set({ tab, acct: null, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0); }
+export function go(tab) { if (tab !== store.s.tab || store.s.openOrder || store.s.openReq || store.s.acct) pushTab(tab); store.set({ urunFrom: null, tab, acct: null, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0); }
 export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: just || false }); window.scrollTo(0, 0); }
 export const home = () => go(store.s.user?.role === 'admin' ? 'anasayfa' : store.s.user?.role === 'public' ? (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa') : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }

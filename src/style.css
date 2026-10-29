@@ -4748,7 +4748,8 @@ html:has(.kf) { scrollbar-gutter: stable; }
   transform: translate3d(-50%, calc(var(--top, 0px) - 100% + var(--k, 0) * 60px), 0) scale(calc(.7 + var(--k, 0) * .3)); }
 .ptr9.show { opacity: min(1, calc(var(--k, 0) * 1.8)); }
 .ptr9.spin, .ptr9.ok { transform: translate3d(-50%, calc(var(--top, 0px) + 24px), 0); opacity: 1; transition: transform .2s cubic-bezier(.3,.7,.3,1), opacity .12s; }
-.ptr9.hide { transform: translate3d(-50%, calc(var(--top, 0px) - 100%), 0) scale(.7); opacity: 0; transition: transform .2s ease-in, opacity .16s ease-in; }
+/* kayboluş: yerinde küçülüp solar (yukarı kayma yok → takılma hissi yok), yumuşak çıkış eğrisi */
+.ptr9.hide { transform: translate3d(-50%, calc(var(--top, 0px) + 24px), 0) scale(.5); opacity: 0; transition: transform .22s cubic-bezier(.2,.7,.2,1), opacity .2s cubic-bezier(.2,.7,.2,1); }
 .ptr9-c { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
   background: var(--surface); color: color-mix(in oklab, var(--fg) 50%, transparent);
   box-shadow: 0 2px 8px -2px rgb(0 0 0 / .22), 0 0 0 1px var(--line); }
@@ -4773,3 +4774,10 @@ html:has(.kf) { scrollbar-gutter: stable; }
   /* telefonda sayfa geçişini setupNavAnim yapar → Hesabım alt sayfasının kendi kayması iki kez olmasın */
   .acct-body { animation: none; }
 }
+
+/* Ürün sayfasının arkasında gizli açık kalan Tüm ürünler / ana sayfa (geri dönünce her şey yerinde) */
+.kp { display: contents; }
+.kp-off { display: none !important; }
+.main > .kp > * { animation: rise .32s var(--ease) backwards; }
+/* telefonda sayfa açılışlarını setupNavAnim yapar (yön bilgisiyle) → eski "aşağıdan yükselme" ile çakışmasın */
+@media (hover: none) and (max-width: 899px) { .main > *, .main > .kp > * { animation: none; } }

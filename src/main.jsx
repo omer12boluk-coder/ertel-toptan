@@ -447,7 +447,7 @@ function Shell() {
   return <ShellFull />;
 }
 function ShellFull() {
-  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid } = useStore();
+  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
   const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
@@ -510,9 +510,9 @@ function ShellFull() {
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
         {tab === 'anasayfa' && admin && <AdminHome />}
-        {tab === 'anasayfa' && pub && <ShopHome />}
+        {pub && (tab === 'anasayfa' || (tab === 'urun' && urunFrom === 'anasayfa')) && <section className={'kp' + (tab === 'anasayfa' ? '' : ' kp-off')}><ShopHome /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
-        {tab === 'katalog' && <Catalog admin={admin} />}
+        {(tab === 'katalog' || (tab === 'urun' && urunFrom === 'katalog')) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><Catalog admin={admin} /></section>}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
         {tab === 'profil' && !pub && <Profile />}
@@ -672,32 +672,61 @@ export function haptic() {
 function setupNavAnim() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
   const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar';
+  const EASE = 'cubic-bezier(.2,.7,.2,1)';
   const key = (s) => [s.tab, s.acct || '', s.pid || '', s.openOrder || '', s.openReq || ''].join('|');
-  let last = key(store.s), hint = '', hintAt = 0, raf = 0;
+  let last = key(store.s), hint = '', hintAt = 0, click = null, mo = null, watched = null;
   const mark = (h) => { hint = h; hintAt = Date.now(); };
+  const mob = () => matchMedia('(max-width: 899px)').matches;
   addEventListener('popstate', () => mark('back'), true);
   addEventListener('pointerdown', (e) => {
     const t = e.target instanceof Element ? e.target : null; if (!t) return;
     if (t.closest('.back-btn')) mark('back'); else if (t.closest('.botnav')) mark('tab');
   }, { capture: true, passive: true });
-  const targets = () => {
-    const main = document.querySelector('.shell > .main'); if (!main) return [];
+  // sayfa içi geçişler (sepet → ödeme, sipariş detayı, adımlar…): adres değişmese de tıklanan düğme kaybolup yerine büyük bir bölüm gelirse
+  addEventListener('click', (e) => {
+    const t = e.target instanceof Element ? e.target : null; if (!t || !t.closest('.shell > .main')) return;
+    const btn = t.closest('button, a, [role="button"]') || t;
+    click = { el: btn, at: Date.now(), back: !!t.closest('.back-btn') };
+  }, { capture: true, passive: true });
+  const slide = (back) => [{ opacity: 0, transform: `translate3d(${back ? -14 : 14}px,0,0)` }, { opacity: 1, transform: 'none' }];
+  const play = (els, kf, ms) => { for (const el of els) el.animate(kf, { duration: ms, easing: EASE }); };
+  const pageTargets = (main) => {
     const out = [];
-    const walk = (el, d) => { for (const c of el.children) { if (d < 3 && c.querySelector(FIX)) walk(c, d + 1); else if (!c.matches(FIX)) out.push(c); } };
+    const walk = (el, d) => {
+      for (const c of el.children) {
+        if (c.classList.contains('kp-off')) continue;
+        if (getComputedStyle(c).display === 'contents' || (d < 3 && c.querySelector(FIX))) walk(c, d + 1); else if (!c.matches(FIX)) out.push(c);
+      }
+    };
     walk(main, 0); return out;
   };
-  const run = () => {
-    raf = 0; const k = key(store.s); if (k === last) return;
-    const prev = last; last = k;
-    if (!matchMedia('(max-width: 899px)').matches) return;
-    const h = Date.now() - hintAt < 600 ? hint : ''; hint = '';
-    const back = h === 'back', tab = h === 'tab' && prev.split('|')[0] !== k.split('|')[0];
-    const kf = tab ? [{ opacity: 0.35 }, { opacity: 1 }]
-      : [{ opacity: 0, transform: `translate3d(${back ? -14 : 14}px,0,0)` }, { opacity: 1, transform: 'none' }];
-    for (const el of targets()) el.animate(kf, { duration: tab ? 180 : 300, easing: 'cubic-bezier(.2,.7,.2,1)' });
+  // MutationObserver: React yeni sayfayı DOM'a yazdığı anda (boyamadan önce) çalışır → ilk kare zaten animasyonlu, yanıp sönme yok
+  const onMut = (muts) => {
+    const k = key(store.s), main = watched;
+    if (k !== last) {
+      const prev = last; last = k; click = null;
+      if (!mob()) return;
+      const h = Date.now() - hintAt < 600 ? hint : ''; hint = '';
+      if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play(pageTargets(main), [{ opacity: 0.35 }, { opacity: 1 }], 180);
+      else play(pageTargets(main), slide(h === 'back'), 300);
+      return;
+    }
+    const c = click; if (!c || Date.now() - c.at > 450 || c.el.isConnected || !mob()) return;
+    const min = innerHeight * 0.45, added = [];
+    for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1 && !n.closest('.sheet, .sheet-bg, .ctx-sheet-bg') && n.offsetHeight > min && !n.matches(FIX)) added.push(n);
+    const top = added.filter((n) => !added.some((o) => o !== n && o.contains(n)));
+    if (!top.length) return;
+    click = null;
+    const els = []; for (const n of top) { if (n.querySelector(FIX)) els.push(...[...n.children].filter((x) => !x.matches(FIX) && !x.querySelector(FIX))); else els.push(n); }
+    play(els, slide(c.back), 300);
   };
-  // React yeni sayfayı ilk karede çizmeden hemen önce (rAF) yakalanır → yanıp sönme yok
-  storeListen(() => { if (!raf) raf = requestAnimationFrame(run); });
+  const attach = () => {
+    const main = document.querySelector('.shell > .main');
+    if (main === watched) return; mo?.disconnect(); watched = main; last = key(store.s);
+    if (main) { mo = new MutationObserver(onMut); mo.observe(main, { childList: true, subtree: true }); }
+  };
+  storeListen(() => { if (!watched?.isConnected) requestAnimationFrame(attach); });
+  attach();
 }
 
 function setupPull() {
@@ -714,8 +743,8 @@ function setupPull() {
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr9'; box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<span class="ptr9-c"><i class="ptr9-r"><svg class="ptr9-a" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i>'
-      + '<svg class="ptr9-ok" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
+    box.innerHTML = '<span class="ptr9-m"><span class="ptr9-c"><i class="ptr9-r"><svg class="ptr9-a" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i>'
+      + '<svg class="ptr9-ok" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></span>';
     document.body.appendChild(box); return box;
   };
   const headBottom = () => {
@@ -732,16 +761,16 @@ function setupPull() {
     const b = ui(); const k = phase ? 1 : Math.min(1, px / TH);
     if (finger && armed && !phase) ready = px >= TH;
     const top = Math.round(headBottom()) + 'px';
-    if (b._t !== top) { b._t = top; b.style.setProperty('--top', top); }
+    if (b._t !== top && phase !== 'hide') { b._t = top; b.style.setProperty('--top', top); }
     if (b._k !== k) { b._k = k; b.style.setProperty('--k', k); }
-    const cn = 'ptr9 show' + (ready && !phase ? ' ready' : '') + (phase ? ' ' + phase : '') + (wasOk ? ' was-ok' : '');
+    const cn = 'ptr9 show' + (phase ? ' busy' : '') + (ready && !phase ? ' ready' : '') + (phase ? ' ' + phase : '') + (wasOk ? ' was-ok' : '');
     if (b.className !== cn) b.className = cn;
-    if (phase) raf = requestAnimationFrame(paint); // menü yerine dönerken izlemeye devam
+    if (phase === 'spin') raf = requestAnimationFrame(paint); // menü yerine dönerken izlemeye devam (✓ ve kapanışta konum sabit)
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
   const finish = (ok) => {
     phase = ok ? 'ok' : 'hide'; wasOk = ok; req();
-    setTimeout(() => { phase = 'hide'; setTimeout(() => { phase = ''; wasOk = false; armed = false; cancelAnimationFrame(raf); raf = 0; req(); }, 200); }, ok ? OK_MS : 0);
+    setTimeout(() => { phase = 'hide'; req(); setTimeout(() => { phase = ''; wasOk = false; armed = false; cancelAnimationFrame(raf); raf = 0; req(); }, 230); }, ok ? OK_MS : 0);
   };
   addEventListener('scroll', req, { passive: true });
   addEventListener('touchmove', req, { passive: true });
