@@ -4566,3 +4566,10 @@ html:has(.kf) { scrollbar-gutter: stable; }
   .cart-side .cs-head .cart-clear { display: none; }
   .cart-back { margin-bottom: -8px; }
 }
+/* Sipariş formu: başlığın yanında "Yeni form" + kayıt durumu */
+.of-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.of-new { background: color-mix(in oklab, var(--accent) 10%, var(--surface)); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--line)); font-weight: 700; }
+.of-new:hover { background: color-mix(in oklab, var(--accent) 16%, var(--surface)); }
+.of-state { font-size: 12px; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.of-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #3f9a6b; }
+.of-state.dirty { color: #c9772b; } .of-state.dirty::before { background: #c9772b; }

@@ -15,8 +15,10 @@ const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
 const KEY = 'order-draft';
 const TTL = 12 * 3600e3; // açık form 12 saat sonra kendiliğinden temizlenir
-const blank = () => ({ no: newNo(), name: '', items: [] });
-const loadDraft = () => { const x = ls.get(KEY, null); return x && x.items && x.at && Date.now() - x.at < TTL ? x : blank(); };
+// imza: formun kaydedilmiş/açılmış hâliyle karşılaştırmak için (değişiklik yoksa Kaydet düğmesi görünmez)
+const sig = (x) => JSON.stringify([(x.name || '').trim(), (x.items || []).map((it) => [it.id, Number(it.qty) || 0, it.price == null || it.price === '' ? null : Number(it.price)])]);
+const blank = () => { const b = { no: newNo(), name: '', items: [] }; b.base = sig(b); return b; };
+const loadDraft = () => { const x = ls.get(KEY, null); if (!(x && x.items && x.at && Date.now() - x.at < TTL)) return blank(); if (x.base == null) x.base = x.sid ? sig(x) : sig({}); return x; };
 // arama sıralaması için kullanım: bu cihazda forma ekleme sayısı + siparişlerde geçme sayısı
 const USE = 'of-use';
 const bump = (id) => { const u = ls.get(USE, {}); u[id] = (u[id] || 0) + 1; ls.set(USE, u); };
@@ -31,6 +33,8 @@ export function OrderForm() {
   const [forms, setForms] = useState(null);
   const [ask, setAsk] = useState(null); // açık form doluyken kayıtlı form açma sorusu
   const [del, setDel] = useState(null);
+  const [wipe, setWipe] = useState(false); // "Formu temizle" onayı
+  const [askNew, setAskNew] = useState(false); // kaydedilmemiş değişiklik varken "Yeni form"
   useEffect(() => { const A = api(); return A?.watchForms ? A.watchForms(setForms) : setForms([]); }, []);
   const [q, setQ] = useState('');
   const [imgs, setImgs] = useState(null); // [{ file, url }]
@@ -81,16 +85,22 @@ export function OrderForm() {
     bump(p.id);
     toast('Eklendi: ' + (p.n.length > 40 ? p.n.slice(0, 38) + '…' : p.n));
   }
-  function clear() { setD(blank()); setImgs(null); setQ(''); }
+  const dirty = sig(d) !== d.base; // açıldığı / kaydedildiği hâlden farklı mı
+  // Formu temizle: içindeki ürünler ve müşteri adı silinir; kayıtlı formdan açıldıysa kayıt (kaydetmedikçe) eski hâliyle kalır
+  function wipeForm() { setD((x) => ({ ...x, name: '', items: [] })); setImgs(null); setQ(''); toast('Form temizlendi'); }
+  // Yeni form: kaydedilmeyen değişiklikler bırakılır; kayıtlı form listede eski hâliyle durur
+  function newForm() { setD(blank()); setImgs(null); setQ(''); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  const tryNew = () => (dirty && (d.items.length || d.sid) ? setAskNew(true) : newForm());
   // ---- kaydedilen formlar
   const saveForm = async (then) => {
     if (!d.items.length) return toast('Form boş', 'warn');
     const A = api(); const id = d.sid || A.newFormId();
     const data = { no: d.no, name: d.name.trim(), items: d.items.map(({ id: pid, qty, price }) => ({ id: pid, qty, price: price == null ? null : Number(price) })), at: Date.now(), total: tot };
-    try { await A.saveForm(id, data); setD((x) => ({ ...x, sid: id })); toast(d.sid ? 'Form güncellendi' : 'Form kaydedildi'); then?.(); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+    const base = sig(d);
+    try { await A.saveForm(id, data); setD((x) => ({ ...x, sid: id, base })); toast(d.sid ? 'Değişiklikler kaydedildi' : 'Form kaydedildi'); then?.(); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
   };
-  const load = (f) => { setD({ no: f.no || newNo(), name: f.name || '', items: (f.items || []).filter((it) => byId.get(it.id)), sid: f.id }); setImgs(null); setQ(''); window.scrollTo({ top: 0, behavior: 'smooth' }); toast('Form açıldı'); };
-  const openForm = (f) => { if (d.items.length && d.sid !== f.id) setAsk(f); else load(f); };
+  const load = (f) => { const x = { no: f.no || newNo(), name: f.name || '', items: (f.items || []).filter((it) => byId.get(it.id)), sid: f.id }; x.base = sig(x); setD(x); setImgs(null); setQ(''); window.scrollTo({ top: 0, behavior: 'smooth' }); toast('Form açıldı'); };
+  const openForm = (f) => { if (d.sid === f.id && !dirty) return; if (dirty && d.items.length) setAsk(f); else load(f); };
 
   // Liste değişince resimleri yeniden hazırla
   const gen = useRef(0);
@@ -127,11 +137,15 @@ export function OrderForm() {
   return (
     <div className="page oform">
       <div className="page-h">
-        <h1 className="page-t">Sipariş formu <span className="muted">#{d.no}</span></h1>
+        <div className="of-title">
+          <h1 className="page-t">Sipariş formu <span className="muted">#{d.no}</span></h1>
+          {(d.sid || d.items.length > 0 || d.name) && <button type="button" className="btn sm of-new" onClick={tryNew}><Icon n="plus" s={15} />Yeni form</button>}
+          {d.sid && <span className={'of-state' + (dirty ? ' dirty' : '')}>{dirty ? 'Kaydedilmemiş değişiklik' : 'Kayıtlı form'}</span>}
+        </div>
         <span className="row-btns">
           {rows.length > 0 && <button className="btn sm wa" onClick={() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Icon n="wa" s={15} />Müşteriye gönder</button>}
-          {rows.length > 0 && <button className="btn sm outline" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Güncelle' : 'Kaydet'}</button>}
-          {d.items.length > 0 && <button className="btn sm ghost danger" onClick={clear}><Icon n="trash" s={15} />Yeni form</button>}
+          {dirty && rows.length > 0 && <button className="btn sm primary" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</button>}
+          {(d.items.length > 0 || d.name) && <button className="btn sm ghost danger" onClick={() => setWipe(true)}><Icon n="trash" s={15} />Formu temizle</button>}
         </span>
       </div>
 
@@ -194,7 +208,7 @@ export function OrderForm() {
                 {canShareImgs && <button className="btn wa" disabled={!imgs || busy} onClick={shareImgs}><Icon n="wa" s={16} />{imgs && imgs.length > 1 ? `Tabloyu gönder (${imgs.length} resim)` : 'Tabloyu WhatsApp’ta gönder'}</button>}
                 <a className={'btn ' + (canShareImgs ? 'outline' : 'wa')} href={waLink('', 'Siparişiniz:\n' + link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’ta gönder</a>
                 <button className="btn outline" onClick={() => copyText(link, 'Link kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
-                <button className="btn outline" onClick={() => saveForm()}><Icon n="check" s={16} />{d.sid ? 'Formu güncelle' : 'Formu kaydet'}</button>
+                {dirty && <button className="btn outline" onClick={() => saveForm()}><Icon n="check" s={16} />{d.sid ? 'Değişiklikleri kaydet' : 'Formu kaydet'}</button>}
               </div>
             </div>
             {!imgs ? <div className="list-wait"><div className="spinner" /></div> : (
@@ -244,11 +258,22 @@ export function OrderForm() {
           <button className="btn outline" onClick={() => { const f = ask; setAsk(null); saveForm(() => load(f)); }}>Önce kaydet, sonra aç</button>
           <button className="btn primary" onClick={() => { const f = ask; setAsk(null); load(f); }}>Kaydetmeden aç</button>
         </>}>
-          <p>Açık formda <b>{d.items.length} ürün</b> var. “{ask.name || 'İsimsiz form'} #{ask.no}” formunu açarsanız şu anki formdaki ürünler bu ekrandan silinir.</p>
-          <p className="fine">Şu anki formu kaybetmek istemiyorsanız önce kaydedin; sonra Kaydedilen formlar’dan yeniden açabilirsiniz.</p>
+          <p>Açık formda <b>kaydedilmemiş değişiklikler</b> var. “{ask.name || 'İsimsiz form'} #{ask.no}” formunu açarsanız bu değişiklikler bırakılır.</p>
+          <p className="fine">{d.sid ? 'Kayıtlı form, Kaydedilen formlar’da son kaydettiğiniz hâliyle durmaya devam eder.' : 'Bu form hiç kaydedilmedi; kaydetmezseniz kaybolur.'}</p>
         </Sheet>
       )}
-      {del && <Confirm title="Formu sil" text={`“${del.name || 'İsimsiz form'} #${del.no}” kalıcı olarak silinecek.`} okLabel="Sil" tone="danger" onClose={() => setDel(null)} onOk={async () => { try { await api().deleteForm(del.id); if (d.sid === del.id) setD((x) => ({ ...x, sid: undefined })); toast('Form silindi'); } catch (e) { toast(e.message, 'bad'); } }} />}
+      {askNew && (
+        <Sheet title="Yeni form" onClose={() => setAskNew(false)} footer={<>
+          <button className="btn ghost" onClick={() => setAskNew(false)}>Vazgeç</button>
+          <button className="btn outline" onClick={() => { setAskNew(false); saveForm(newForm); }}>Kaydet, sonra yeni form</button>
+          <button className="btn primary" onClick={() => { setAskNew(false); newForm(); }}>Kaydetmeden yeni form</button>
+        </>}>
+          <p>Açık formda <b>kaydedilmemiş değişiklikler</b> var.</p>
+          <p className="fine">{d.sid ? 'Kaydetmeden geçerseniz bu değişiklikler bırakılır; form Kaydedilen formlar’da açmadan önceki hâliyle durur.' : 'Bu form hiç kaydedilmedi; kaydetmeden geçerseniz kaybolur.'}</p>
+        </Sheet>
+      )}
+      {wipe && <Confirm title="Formu temizle" text={d.sid ? 'Formdaki tüm ürünler ve müşteri adı silinecek. Kaydetmezseniz kayıtlı form eski hâliyle kalır.' : 'Formdaki tüm ürünler ve müşteri adı silinecek.'} okLabel="Temizle" tone="danger" onClose={() => setWipe(false)} onOk={wipeForm} />}
+      {del && <Confirm title="Formu sil" text={`“${del.name || 'İsimsiz form'} #${del.no}” kalıcı olarak silinecek.`} okLabel="Sil" tone="danger" onClose={() => setDel(null)} onOk={async () => { try { await api().deleteForm(del.id); if (d.sid === del.id) setD((x) => ({ ...x, sid: undefined, base: sig({}) })); toast('Form silindi'); } catch (e) { toast(e.message, 'bad'); } }} />}
     </div>
   );
 }
