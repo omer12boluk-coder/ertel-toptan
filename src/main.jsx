@@ -633,7 +633,7 @@ function setupPull() {
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr'; box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<span class="ptr-c"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></span><span class="ptr-t"></span>';
+    box.innerHTML = '<span class="ptr-c"><i class="ptr-r"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i></span><span class="ptr-t"></span>';
     document.body.appendChild(box); return box;
   };
   const top = () => { const h = document.querySelector('.topbar'); const r = h?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
@@ -676,14 +676,19 @@ function setupPull() {
   const end = async () => {
     if (!on) return; on = false;
     if (d < TH) { d = 0; set(0, 'back'); return; }
-    busy = true; set(TH * 0.8, 'spin');
+    busy = true; set(TH * 0.8, 'spin'); const t0 = Date.now();
     const fail = (t) => { set(TH * 1.35, 'err', t); busy = false; hide(2200); };
     if (navigator.onLine === false) return fail('İnternet bağlantısı yok');
     try {
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
       const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
       if (!r.ok) throw new Error(r.status);
-      requestAnimationFrame(() => setTimeout(() => location.reload(), 0));
+      const j = await r.json().catch(() => ({}));
+      // yeni sürüm varsa sayfa yenilenir; yoksa YENİLENMEZ (veriler zaten canlı geliyor) → ürünler silinip yeniden çizilmez,
+      // simge kısa bir süre döner ve sayfayla birlikte yumuşakça yukarı kapanır
+      if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; }
+      const wait = Math.max(0, 650 - (Date.now() - t0));
+      setTimeout(() => { busy = false; d = 0; set(0, 'gone'); }, wait);
     } catch { fail('Bağlantı kurulamadı'); }
   };
   addEventListener('touchend', end, { passive: true });

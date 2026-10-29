@@ -4335,10 +4335,11 @@ button.wait-row { cursor: pointer; }
 .ptr.back, .ptr.gone, .ptr.spin, .ptr.err { transition: transform .3s cubic-bezier(.2,.8,.2,1), opacity .25s ease; }
 .ptr.gone { opacity: 0; }
 .ptr-c { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--accent); box-shadow: 0 6px 18px -6px rgb(0 0 0 / .35), 0 0 0 1px var(--line); }
-.ptr-c svg { transform: rotate(calc(var(--ptr-k, 0) * 270deg)); transition: transform .08s linear; }
+.ptr-r { display: grid; place-items: center; transform: rotate(calc(var(--ptr-k, 0) * 270deg)); will-change: transform; }
+.ptr-r svg { display: block; }
 .ptr.ready .ptr-c { color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--surface)); }
-.ptr.spin .ptr-c svg { animation: ptr-spin .8s linear infinite; }
-@keyframes ptr-spin { to { transform: rotate(360deg); } }
+.ptr.spin .ptr-r { animation: ptr-spin .7s linear infinite; }
+@keyframes ptr-spin { from { transform: rotate(270deg); } to { transform: rotate(630deg); } }
 .ptr.err .ptr-c { color: #c0392b; }
 .ptr-t { font-size: 12.5px; font-weight: 700; color: #fff; background: #c0392b; padding: 4px 10px; border-radius: 9px; white-space: nowrap; }
 .ptr-t:empty { display: none; }
