@@ -705,16 +705,24 @@ function setupNavAnim() {
     walk(main, 0); return out;
   };
   // MutationObserver: React yeni sayfayı DOM'a yazdığı anda (boyamadan önce) çalışır → ilk kare zaten animasyonlu, yanıp sönme yok
+  // Adres değişen geçişler: store değişince, React yeni sayfayı yazdıktan SONRA ama ekrana çizmeden ÖNCE (rAF) oynatılır.
+  // (MutationObserver'da yapınca arkadaki gizli sayfadaki ufak bir değişiklik React'ten önce tetikleyip eski sayfayı
+  // oynatabiliyordu → bazen geri dönüş animasyonsuz geliyordu.) Kabuk henüz yeni sekmeyi göstermiyorsa bir kare daha beklenir.
+  let pend = 0;
+  const runKey = (tries) => {
+    pend = 0; const k = key(store.s); if (k === last) return;
+    const shell = document.querySelector('.shell');
+    if (tries < 3 && shell && !shell.classList.contains('tab-' + store.s.tab)) { pend = requestAnimationFrame(() => runKey(tries + 1)); return; }
+    const prev = last; last = k; click = null;
+    if (!mob() || !watched?.isConnected) return;
+    const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
+    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play(pageTargets(watched), [{ opacity: 0.35 }, { opacity: 1 }], 180);
+    else play(pageTargets(watched), slide(h === 'back'), 300);
+  };
+  storeListen(() => { if (!pend && key(store.s) !== last) pend = requestAnimationFrame(() => runKey(0)); });
+  // sayfa içi geçişler (adres değişmeden): MutationObserver, tıklanan düğme kaybolup yerine büyük bölüm gelince
   const onMut = (muts) => {
-    const k = key(store.s), main = watched;
-    if (k !== last) {
-      const prev = last; last = k; click = null;
-      if (!mob()) return;
-      const h = Date.now() - hintAt < 600 ? hint : ''; hint = '';
-      if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play(pageTargets(main), [{ opacity: 0.35 }, { opacity: 1 }], 180);
-      else play(pageTargets(main), slide(h === 'back'), 300);
-      return;
-    }
+    if (pend || key(store.s) !== last) return;
     const c = click; if (!c || Date.now() - c.at > 450 || c.el.isConnected || !mob()) return;
     const min = innerHeight * 0.45, added = [];
     for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1 && !n.closest('.sheet, .sheet-bg, .ctx-sheet-bg') && n.offsetHeight > min && !n.matches(FIX)) added.push(n);
