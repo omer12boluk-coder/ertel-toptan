@@ -677,22 +677,27 @@ export function haptic() {
 // ancak o kare ekrana çıktıktan sonra asıl tıklama işlenir → Hesabım'daki gibi net bir 'tık'.
 function setupCrispBack() {
   let pass = false, downAt = 0;
-  addEventListener('pointerdown', (e) => { if (e.target instanceof Element && e.target.closest('.back-btn')) downAt = Date.now(); }, { capture: true, passive: true });
+  // basılı görünüm parmak değdiği anda .tap ile açılır ve tıklama işlenene kadar KESİNTİSİZ kalır. (Önceden :active parmak
+  // kalkınca sönüyor, tıklamada .tap ile yeniden yanıyordu → arka plan 'yan-sön-yan' tekliyordu.) Kaydırıp vazgeçince söner.
+  let held = null, sx = 0, sy = 0;
+  const release = () => { const b = held; held = null; if (b) setTimeout(() => { if (!b._going) b.classList.remove('tap'); }, 60); };
+  addEventListener('pointerdown', (e) => {
+    const b = e.target instanceof Element && e.target.closest('.back-btn'); if (!b || !matchMedia('(max-width: 899px)').matches) return;
+    downAt = Date.now(); held = b; sx = e.clientX; sy = e.clientY; b._going = false; b.classList.add('tap');
+  }, { capture: true, passive: true });
+  addEventListener('pointermove', (e) => { if (held && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) release(); }, { capture: true, passive: true });
+  addEventListener('pointercancel', release, { capture: true, passive: true });
+  addEventListener('pointerup', () => { const b = held; held = null; if (b) setTimeout(() => { if (!b._going) b.classList.remove('tap'); }, 400); }, { capture: true, passive: true });
+  addEventListener('scroll', () => { if (held) release(); }, { passive: true });
   addEventListener('click', (e) => {
     if (pass) return;
     const b = e.target instanceof Element && e.target.closest('.back-btn');
     if (!b || b.disabled || !matchMedia('(max-width: 899px)').matches) return;
-    e.stopImmediatePropagation(); e.preventDefault();
-    b.classList.add('tap');
+    // basılı görünüm parmak değdiği anda başladığı (.tap) için tıklama artık BEKLETİLMEZ (bekletmek dönüşü ~0,1 sn geciktiriyordu)
+    b._going = true; b.classList.add('tap');
     // kapanacak sayfadaki videolar hemen durur → geri dönüş karesi video çözümüyle yarışmaz
     document.querySelectorAll('.main video').forEach((x) => { try { x.pause(); } catch {} });
-    const wait = Math.max(0, 70 - (Date.now() - downAt));
-    // asıl tıklama rAF'ın İÇİNDE değil, basılı kare çizildikten sonra ayrı bir görevde (setTimeout) işlenir: rAF içinde
-    // işlenince sayfa geçişi ve kaydırma bir SONRAKİ kareye kalıyor, yeni sayfa bir kare animasyonsuz görünüp 'flaş' yapıyordu
-    requestAnimationFrame(() => setTimeout(() => {
-      pass = true; try { if (b.isConnected) b.click(); } finally { pass = false; }
-      if (b.isConnected) setTimeout(() => b.classList.remove('tap'), 120);
-    }, wait));
+    setTimeout(() => { if (b.isConnected) b.classList.remove('tap'); }, 160);
   }, true);
 }
 

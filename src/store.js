@@ -146,7 +146,11 @@ export function go(tab) {
   if (KEEP.includes(from) && !store.s.acct && !store.s.openOrder) tabY[from] = scrollY;
   if (tab !== from || store.s.openOrder || store.s.openReq || store.s.acct) pushTab(tab);
   const y = tab !== from && store.s.user?.role === 'public' && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
-  store.set({ urunFrom: null, tab, acct: null, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0);
+  // zaten o sayfadaysak (alt menüde aynı sekmeye tekrar basmak) en üste ŞAK diye atlamak yerine yumuşakça kayarak çıkılır
+  const same = tab === from && !store.s.openOrder && !store.s.openReq && !store.s.acct;
+  store.set({ urunFrom: null, tab, acct: null, openReq: null, openOrder: null, orderJust: false });
+  if (same && !store.s.catalogGo) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  window.scrollTo(0, 0);
   if (y) requestAnimationFrame(() => window.scrollTo(0, y)); // gizli sayfa görünür olduktan sonra (React çizdikten sonraki ilk kare)
 }
 export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: just || false }); window.scrollTo(0, 0); }

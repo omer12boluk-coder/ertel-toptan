@@ -105,17 +105,25 @@ export function useOpenLink() {
 // baştan yazıp 'in'i siliyordu → ürün sayfasından ana sayfaya dönünce bölümler yeniden görünmez olup ~0,5 sn sonra 'patlayarak' geliyordu
 function useReveal() {
   const ref = useRef(null);
+  const io = useRef(null); const seen = useRef(new WeakSet());
+  // bir kez kurulur; sonraki çizimlerde sadece YENİ eklenen bölümler izlenmeye alınır (önceden her çizimde gözlemci baştan
+  // kuruluyor ve konum ölçümü yapılıyordu → sekme değişiminde ana sayfa geçişi takılıyordu)
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    if (!('IntersectionObserver' in window)) { el.setAttribute('data-in', ''); return; }
-    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.setAttribute('data-in', ''); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
-    el.querySelectorAll('.rv').forEach((x) => io.observe(x));
-    if (el.classList.contains('rv')) io.observe(el);
+    if (!('IntersectionObserver' in window)) { el.querySelectorAll('.rv').forEach((x) => x.setAttribute('data-in', '')); return; }
+    const o = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.setAttribute('data-in', ''); o.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    io.current = o;
     // yedek: bazı tarayıcılarda (arka plandaki sekme, uygulama içi tarayıcı) gözlemci geç kalabiliyor
     const check = () => el.querySelectorAll('.rv:not([data-in])').forEach((x) => { if (x.getBoundingClientRect().top < innerHeight * 0.95) x.setAttribute('data-in', ''); });
     const t = setTimeout(check, 600);
-    addEventListener('scroll', check, { passive: true });
-    return () => { io.disconnect(); clearTimeout(t); removeEventListener('scroll', check); };
+    let rq = 0; const onS = () => { if (!rq) rq = requestAnimationFrame(() => { rq = 0; check(); }); };
+    addEventListener('scroll', onS, { passive: true });
+    return () => { o.disconnect(); io.current = null; seen.current = new WeakSet(); clearTimeout(t); cancelAnimationFrame(rq); removeEventListener('scroll', onS); };
+  }, []);
+  useEffect(() => {
+    const el = ref.current, o = io.current; if (!el || !o) return;
+    const add = (x) => { if (!x.hasAttribute('data-in') && !seen.current.has(x)) { seen.current.add(x); o.observe(x); } };
+    el.querySelectorAll('.rv').forEach(add); if (el.classList.contains('rv')) add(el);
   });
   return ref;
 }
@@ -157,8 +165,9 @@ export const moveItem = (list, from, to) => { const n = [...list]; const [x] = n
 
 export function ShopHome({ S: Sover }) {
   const E = useContext(DesignCtx);
-  const store_ = useStore();
-  const S = Sover || store_.settings; const catalog = store_.catalog;
+  // tek tek seçilir (bütün store'a abone olunca her sekme değişiminde bütün ana sayfa yeniden çiziliyordu → geçiş takılıyordu)
+  const S0 = useStore((s) => s.settings); const catalog = useStore((s) => s.catalog);
+  const S = Sover || S0;
   const H = S.shopHome || {};
   const [product, setProduct] = useState(null);
   const open = useOpenLink();
@@ -695,7 +704,7 @@ function Slide({ s, on, open, logo, k }) {
 
 // ---- ürün rafı -------------------------------------------------------------------------------------
 function Rail({ sec, open, onProduct, onTitle, edit }) {
-  const { catalog, byId } = useStore();
+  const catalog = useStore((s) => s.catalog); const byId = useStore((s) => s.byId);
   const tree = useTree();
   const railRef = useRef(null);
   const limit = Number(sec.limit) || 10;
@@ -719,7 +728,7 @@ function Rail({ sec, open, onProduct, onTitle, edit }) {
 }
 // "Herkesin favorisi": en çok kalplenen ürünler (stats/public.fav, haftada iki kez hesaplanır). Ayarlar > Mağaza özellikleri'nden kapanır.
 function FavRail({ onProduct, edit, S }) {
-  const { byId } = useStore();
+  const byId = useStore((s) => s.byId);
   const F = feat(S);
   const st = useStats(F.popFav);
   const railRef = useRef(null);
@@ -736,9 +745,9 @@ function FavRail({ onProduct, edit, S }) {
   );
 }
 export function PCard({ p, i, isNew, onOpen }) {
-  const { settings: S, user, userPrices, cart } = useStore();
+  const S = useStore((s) => s.settings); const user = useStore((s) => s.user); const userPrices = useStore((s) => s.userPrices);
+  const qty = useStore((s) => s.cart[p.id] || 0);
   const E = useContext(DesignCtx);
-  const qty = cart[p.id] || 0;
   // sepete ekle ⇄ adet seçici: Tüm ürünler kartlarındaki geçişin aynısı (sadece bu kartta değişince)
   const prevQ = useRef(qty); const [morph, setMorph] = useState('');
   useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
