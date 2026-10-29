@@ -25,19 +25,13 @@ export function ShopFooter({ compact = false }) {
     F.facebook && ['fb', 'Facebook', F.facebook],
     wa && ['wa', 'WhatsApp', waLink(wa, '')],
   ].filter(Boolean);
+  // kısa alt bilgi (ana sayfa dışındaki sayfalar): kullanıcı isteği (30.10.2026) — tıklanabilir hiçbir şey yok, sadece unvan
   if (compact) return (
     <footer className="sfoot compact">
-      <div className="sfoot-mini">
-        <span>© {new Date().getFullYear()} {F.company || S.brand.appName}</span>
-        {pages.map((p, i) => <button key={i} onClick={() => setPage(p)}>{p.title}</button>)}
-        <button onClick={() => openLegal('kvkk')}>Yasal metinler</button>
-        <a href="/magaza/talep" onClick={goTab('talep')}>Ürün talebi</a>
-        <a href="/magaza/sorun" onClick={goTab('sorun')}>Sorun bildir</a>
-        {social.map(([ic, l, u]) => <a key={ic} href={u} target="_blank" rel="noopener" aria-label={l} title={l}><Icon n={ic} s={16} /></a>)}
-      </div>
-      {page && <Sheet title={page.title} onClose={() => setPage(null)}><RichText text={page.body} /></Sheet>}
+      <div className="sfoot-mini"><span>© {new Date().getFullYear()} {F.company || S.brand.appName}</span></div>
     </footer>
   );
+
   return (
     <footer className="sfoot">
       <div className="sfoot-in">
