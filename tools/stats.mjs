@@ -28,7 +28,7 @@ const act = (id) => { const p = byId.get(id); return p && p.a !== 0 && !p.so; };
 const favN = new Map();
 const ms = await db.collection('members').select('favs').get();
 for (const d of ms.docs) for (const id of new Set(d.data().favs || [])) if (act(id)) favN.set(id, (favN.get(id) || 0) + 1);
-const fav = [...favN].filter(([, n]) => n >= 1).sort((a, b) => b[1] - a[1]).slice(0, 30);
+const fav = [...favN].filter(([, n]) => n >= 1).sort((a, b) => b[1] - a[1]).slice(0, 30).map(([id, n]) => ({ id, n })); // Firestore iç içe dizi kabul etmez
 
 // siparişler (mağaza + bayi)
 const baskets = [];

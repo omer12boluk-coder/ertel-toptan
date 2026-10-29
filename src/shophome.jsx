@@ -721,7 +721,7 @@ function FavRail({ onProduct, edit, S }) {
   const F = feat(S);
   const st = useStats(F.popFav);
   const railRef = useRef(null);
-  const list = useMemo(() => (st?.fav || []).map(([id, n]) => ({ p: byId.get(id), n })).filter((x) => x.p && x.p.a !== 0 && !x.p.so).slice(0, 12), [st, byId]);
+  const list = useMemo(() => (st?.fav || []).map((x) => (Array.isArray(x) ? { id: x[0], n: x[1] } : x)).map(({ id, n }) => ({ p: byId.get(id), n })).filter((x) => x.p && x.p.a !== 0 && !x.p.so).slice(0, 12), [st, byId]);
   if (!F.popFav) return edit ? <Empty label="Herkesin favorisi rafı kapalı (Ayarlar › Mağaza özellikleri)" /> : null;
   if (list.length < 3) return edit ? <Empty label="Herkesin favorisi: henüz yeterli favori yok (en az 3 ürün)" /> : null;
   return (

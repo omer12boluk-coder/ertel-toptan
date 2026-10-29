@@ -231,7 +231,7 @@ export class DemoBackend {
     const act = this.db.catalog.filter((p) => p.a && !p.so); const ids = act.map((p) => p.id);
     const pair = {}; ids.slice(0, 200).forEach((id, i) => { pair[id] = [ids[(i + 1) % ids.length], ids[(i + 7) % ids.length], ids[(i + 13) % ids.length], ids[(i + 21) % ids.length]]; });
     const cnt = {}; ids.forEach((id, i) => { if (i % 3 === 0) cnt[id] = 1 + ((i * 7) % 11); });
-    return { at: Date.now(), fav: ids.slice(0, 10).map((id, i) => [id, 48 - i * 4]), pair, cnt };
+    return { at: Date.now(), fav: ids.slice(0, 10).map((id, i) => ({ id, n: 48 - i * 4 })), pair, cnt };
   }
   async setWait(uid, pid, on, notify) { const m = this.mem()[uid]; if (m) { m.notify = notify; this.persist(); } }
   rv() { return (this.db.reviews = this.db.reviews || {}); }
