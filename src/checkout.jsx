@@ -10,14 +10,14 @@ import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resize
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf } from './config.js';
 import TR from './tr-ilce.json';
 import { SwipeLine } from './cart.jsx';
-import { FavGrid } from './catalog.jsx';
+import { FavGrid, WaitGrid } from './catalog.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
 import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
 import { LegalConsent, SignupConsent, legalFromOrder, OrderLegalLink } from './legalui.jsx';
 import { LEGAL_V } from './legal.js';
-import { WaitList, feat } from './extras.jsx';
+import { feat } from './extras.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -248,6 +248,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         ls.set('guest-checkout', { contact: order.contact, addr: f.method === 'cargo' ? { ...cleanA(delivAddr), id: 'g' } : null, inv: f.inv }); // bu cihazda bir dahakine hazır gelsin
       }
       if (single) store.set({ buyNow: null }); else clearCart();
+      store.set({ justOrder: { id, ...order } }); // sipariş sayfası sunucuyu beklemeden hemen açılsın
       openOrder(id, signedUp ? 'verify' : true);
     } catch (x) { toast('Sipariş gönderilemedi: ' + x.message, 'bad'); }
     setBusy(false);
@@ -447,10 +448,11 @@ function ShipCard({ o }) {
 // Sipariş sayfası: az önce verildiyse teşekkür kutusu; her zaman durum, ödeme, teslimat ve ürünler
 export function OrderPage({ id }) {
   const { settings: S, orderJust, member } = useStore();
-  const [o0, setO] = useState(undefined);
+  const seed = () => (store.s.justOrder?.id === id ? store.s.justOrder : undefined);
+  const [o0, setO] = useState(seed);
   const [slow, setSlow] = useState(false);
   const [confirm, setConfirm] = useState(null);
-  useEffect(() => { setO(undefined); const t = setTimeout(() => setSlow(true), 12000); const un = api().watchOrder(id, setO); return () => { clearTimeout(t); un && un(); }; }, [id]);
+  useEffect(() => { setO(seed()); const t = setTimeout(() => setSlow(true), 12000); const un = api().watchOrder(id, (x) => setO((cur) => (x === null && cur && store.s.justOrder?.id === id ? cur : x))); return () => { clearTimeout(t); un && un(); }; }, [id]);
   useEffect(() => { if (o0) orderSeen(o0); }, [o0?.id, o0?.updatedAt]); // açılan sipariş artık "yeni güncelleme" sayılmaz
   // bu cihazda bildirimler açıksa açılan sipariş de bağlanır (sipariş başka yerden — ör. Safari'den — verildiyse de haber gelsin)
   useEffect(() => { if (api().mode === 'firebase' && o0?.id && ORDER_OPEN.includes(o0.status)) autoPush(o0.id); }, [o0?.id]);
@@ -879,7 +881,7 @@ function MemberHome() {
     info: () => <MyInfo part="info" />,
     inv: () => <MyInfo part="inv" />,
     favs: () => <FavGrid />,
-    wait: () => <WaitList />,
+    wait: () => <WaitGrid />,
     notif: () => <AcctNotifs orders={myOrders} list={notifs} />,
     pay: () => <div className="soon-card acct-soon"><span className="soon-ic"><Icon n="cart" s={28} /></span><span className="soon-tag">Çok yakında</span><h3>Kayıtlı kartlar</h3><p className="muted">Kartlarınızı güvenle kaydedip tek dokunuşla ödeyebileceksiniz. Şimdilik siparişte havale, kart linki ya da dükkânda ödeme seçebilirsiniz.</p></div>,
   };

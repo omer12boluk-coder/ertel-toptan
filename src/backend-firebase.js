@@ -14,6 +14,21 @@ try { localStorage.removeItem('cat-cache'); localStorage.removeItem('pubcat-cach
 const V = '10.12.2';
 const CDN = `https://www.gstatic.com/firebasejs/${V}/`;
 // Bağlantı takılırsa sonsuza kadar beklemesin: belirli sürede cevap gelmezse hata verir (ekranda "Tekrar dene" çıkar)
+// Firestore REST (düz HTTPS) yedeği: iPhone Safari'de Firestore'un canlı bağlantısı (WebChannel) bazen hiç cevap vermiyor →
+// herkese açık belgeler (sipariş takip, mağaza ayarları, mağaza katalogu…) birkaç saniye sonra REST ile de istenir, hangisi önce gelirse.
+function restVal(v) {
+  if (!v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('timestampValue' in v) return Date.parse(v.timestampValue);
+  if ('mapValue' in v) return Object.fromEntries(Object.entries(v.mapValue.fields || {}).map(([k, x]) => [k, restVal(x)]));
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(restVal);
+  return null;
+}
+// sahte DocumentSnapshot: exists() / data() / id (getDoc ile aynı kullanım)
+const fakeSnap = (id, data) => ({ id, exists: () => data != null, data: () => data || undefined });
 const timeout = (p, ms = 20000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('Sunucu cevap vermedi, bağlantınızı kontrol edip tekrar deneyin')), ms))]);
 const toEmail = (u) => `${u.trim().toLowerCase()}@${EMAIL_DOMAIN}`;
 
@@ -49,7 +64,7 @@ export class FirebaseBackend {
   d(...p) { return this.F.doc(this.db, ...p); }
   c(...p) { return this.F.collection(this.db, ...p); }
 
-  async publicInfo() { const s = await timeout(this.F.getDoc(this.d('settings', 'public'))); return s.exists() ? s.data() : null; }
+  async publicInfo() { const s = await timeout(this.getSafe('settings', 'public')); return s.exists() ? s.data() : null; }
   async needsSetup() { const s = await timeout(this.F.getDoc(this.d('meta', 'owner'))); return !s.exists(); }
   async setupAdmin({ username, password, name }) {
     this.settingUp = true;
@@ -184,14 +199,14 @@ export class FirebaseBackend {
     const parts = chunkBySize(pub);
     await this._writeChunks('pubcatalog', parts, { version: now(), chunks: parts.length, count: pub.length, kc: 3 });
   }
-  async hasPublicCatalog() { const m = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta'))); return m.exists() && m.data().kc >= 3; } // kc: kalıp anahtarları eklenmiş sürüm
+  async hasPublicCatalog() { const m = await timeout(this.getSafe('pubcatalog', '_meta')); return m.exists() && m.data().kc >= 3; } // kc: kalıp anahtarları eklenmiş sürüm
   async loadPublicCatalog() {
-    const meta = await timeout(this.F.getDoc(this.d('pubcatalog', '_meta')));
+    const meta = await timeout(this.getSafe('pubcatalog', '_meta'));
     if (!meta.exists()) return [];
     const { version, chunks } = meta.data();
     const cached = await idbGet('pubcat');
     if (cached && cached.version === version) return cached.items;
-    const parts = await timeout(Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('pubcatalog', 'c' + i)))), 45000);
+    const parts = await timeout(Promise.all(Array.from({ length: chunks }, (_, i) => this.getSafe('pubcatalog', 'c' + i))), 45000);
     const items = parts.flatMap((p) => (p.exists() ? p.data().items : []));
     idbSet('pubcat', { version, items });
     return items;
@@ -201,12 +216,12 @@ export class FirebaseBackend {
     if (this._descs) return this._descs;
     this._descsP = this._descsP || (async () => {
       // açıklamalar ~1,5 MB: sürüm değişmediyse cihazdaki kopya (her ziyarette 1 okuma, veri inmez)
-      const meta = await timeout(this.F.getDoc(this.d('desc', '_meta')));
+      const meta = await timeout(this.getSafe('desc', '_meta'));
       if (!meta.exists()) return {};
       const { version, chunks } = meta.data();
       const cached = await idbGet('desc').catch(() => null);
       if (cached && cached.version === version && cached.d) return cached.d;
-      const parts = await Promise.all(Array.from({ length: chunks }, (_, i) => this.F.getDoc(this.d('desc', 'c' + i))));
+      const parts = await Promise.all(Array.from({ length: chunks }, (_, i) => this.getSafe('desc', 'c' + i)));
       const d = Object.assign({}, ...parts.map((x) => (x.exists() ? x.data().d : {})));
       idbSet('desc', { version, d });
       return d;
@@ -367,14 +382,14 @@ export class FirebaseBackend {
   async deleteIssue(id) { await this._watchPost('/issue/del', { id }); }
   issuePic(key) { return this.preqPic(key); }
   // ---- Mağaza özellikleri (extras.jsx / reviews.jsx)
-  async getStats() { const s = await timeout(this.F.getDoc(this.d('stats', 'public'))); return s.exists() ? s.data() : {}; }
+  async getStats() { const s = await timeout(this.getSafe('stats', 'public')); return s.exists() ? s.data() : {}; }
   async setWait(uid, pid, on, notify) {
     await timeout(this.F.updateDoc(this.d('members', uid), { notify }));
     const ref = this.d('wait', String(pid));
     if (on) await timeout(this.F.setDoc(ref, { uids: this.F.arrayUnion(uid), at: now() }, { merge: true }));
     else await timeout(this.F.updateDoc(ref, { uids: this.F.arrayRemove(uid), at: now() })).catch(() => {});
   }
-  async getRevSum() { const s = await timeout(this.F.getDoc(this.d('revsum', 'main'))); return s.exists() ? s.data().s || {} : {}; }
+  async getRevSum() { const s = await timeout(this.getSafe('revsum', 'main')); return s.exists() ? s.data().s || {} : {}; }
   async myReviews(uid) { const s = await timeout(this.F.getDocs(this.F.query(this.c('reviews'), this.F.where('uid', '==', uid)))); return s.docs.map((x) => ({ id: x.id, ...x.data() })); }
   async reviewsOf(pid) { const s = await timeout(this.F.getDocs(this.F.query(this.c('reviews'), this.F.where('pid', '==', pid), this.F.where('status', '==', 'pub'), this.F.limit(60)))); return s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt); }
   async createReview(id, doc) { await timeout(this.F.setDoc(this.d('reviews', id), doc)); this._watchPost('/rev/new', { id }).catch((e) => console.warn('yorum bildirimi', e)); }
@@ -515,7 +530,32 @@ export class FirebaseBackend {
   // ---- Online mağaza siparişleri
   newOrderId() { return this.F.doc(this.c('orders')).id; }
   async placeOrder(o, id) { const ref = this.F.doc(this.c('orders'), id || this.newOrderId()); await timeout(this.F.setDoc(ref, o)); return ref.id; }
-  watchOrder(id, cb) { return this.F.onSnapshot(this.d('orders', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null)); }
+  // REST ile tek belge (giriş varsa oturum anahtarıyla)
+  async restGet(path) {
+    const pid = this.config.projectId; const tok = await this.idToken?.().catch(() => null);
+    const r = await fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/${path}`, { headers: tok ? { Authorization: 'Bearer ' + tok } : {}, cache: 'no-store' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('REST ' + r.status);
+    const j = await r.json(); return restVal({ mapValue: { fields: j.fields || {} } });
+  }
+  // getDoc + 3,5 sn sonra REST yedeği: hangisi önce sonuç verirse
+  getSafe(col, id) {
+    return new Promise((res, rej) => {
+      let done = false, errs = 0;
+      const ok = (x) => { if (!done) { done = true; clearTimeout(t); res(x); } };
+      const bad = (e) => { if (++errs >= 2 && !done) { done = true; rej(e); } };
+      this.F.getDoc(this.d(col, id)).then(ok, bad);
+      const t = setTimeout(() => this.restGet(col + '/' + id).then((d) => ok(fakeSnap(id, d)), bad), 3500);
+    });
+  }
+  // sipariş takip: canlı dinleyici; 3,5 sn içinde cevap gelmezse REST ile getirilir ve dinleyici sessiz kaldıkça 20 sn'de bir yenilenir
+  watchOrder(id, cb) {
+    let live = false, stop = false, poll = null;
+    const un = this.F.onSnapshot(this.d('orders', id), (s) => { live = true; clearInterval(poll); cb(s.exists() ? { id: s.id, ...s.data() } : null); }, () => { if (!live) rest(); });
+    const rest = () => this.restGet('orders/' + id).then((d) => { if (!live && !stop) cb(d ? { id, ...d } : null); }).catch(() => {});
+    const t = setTimeout(() => { if (live || stop) return; rest(); poll = setInterval(() => (live || stop ? clearInterval(poll) : rest()), 20000); }, 3500);
+    return () => { stop = true; clearTimeout(t); clearInterval(poll); un(); };
+  }
   watchMyOrders(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
   watchFeed(cb) { return this.F.onSnapshot(this.d('meta', 'feed'), (s) => cb(s.exists() ? s.data().items || [] : []), () => cb([])); }
   watchOrders(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('orders'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 3000 : 300)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }

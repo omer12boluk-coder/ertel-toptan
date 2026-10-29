@@ -680,6 +680,25 @@ export function FavGrid() {
   </>;
 }
 
+// Hesabım > Haber bekleyenler: favoriler gibi ürün kartları (stokta yoksa kartta "Haber vereceğiz" çanı; dokununca kapanır)
+export function WaitGrid() {
+  const { member, byId, settings: S, user } = useStore();
+  const [open, setOpen] = useState(null);
+  const ids = member?.notify || [];
+  const list = ids.map((id) => byId.get(id)).filter((p) => p && p.a !== 0 && !p.so);
+  const hits = (member?.notifyHit || []).filter((h) => h && h.at > Date.now() - 30 * 864e5 && !ids.includes(h.id)).map((h) => byId.get(h.id)).filter((p) => p && p.a !== 0 && !p.so);
+  if (!list.length && !hits.length) return <Empty icon="bell" title="Haber beklediğiniz ürün yok"><p>Stokta olmayan ürünlerde <b>Gelince haber ver</b>’e dokunun; ürün gelince telefonunuza bildirim gönderelim.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere göz at</button></Empty>;
+  return <>
+    {list.length > 0 && <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>{list.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}</ul>}
+    {hits.length > 0 && <>
+      <h4 className="wait-h">Gelen ürünler <small>· son 30 gün</small></h4>
+      <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>{hits.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}</ul>
+    </>}
+    <p className="fine wait-note">Ürün gelince bildirim bir kez gider ve ürün yukarıdaki listeden “Gelen ürünler”e geçer. Çana dokunarak takibi kapatabilirsiniz.</p>
+    {open && <ProductSheet p={open} onClose={() => setOpen(null)} />}
+  </>;
+}
+
 // Favori kalbi (mağaza): kartın resim köşesinde ve ürün penceresinde; dolu = favoride
 export function FavBtn({ id, big }) {
   const on = useStore((s) => s.favs.includes(id));
