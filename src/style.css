@@ -4833,3 +4833,19 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .pp-layer { position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; top: calc(env(safe-area-inset-top, 0px) + var(--top-h) + 1px);
   overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; background: var(--bg);
   padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(var(--bot-h) + env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px)); }
+
+/* Telefonda alttan açılan pencereler (30.10.2026): kenardan tam kayarak gelir (iOS sayfa kartı gibi), arka plan yumuşak kararır */
+@media (max-width: 700px) {
+  .sheet { animation: sheetUp .34s cubic-bezier(.2,.8,.2,1); }
+  .sheet-bg { animation: fade .26s ease; }
+}
+@keyframes sheetUp { from { transform: translate3d(0, 100%, 0); } }
+/* yönetici ürün listesi: satıra basınca anında hafif vurgu (Hesabım satırları gibi) */
+@media (hover: none) { .atr:not(.ath-row):active { background: var(--surface-2); transition: none; } }
+
+/* Resim görüntüleyici: aşağı / yukarı çekerek kapatma (Lightbox) — arka plan --lbk ile açılır, üst / alt çubuklar solar */
+.lb { background-color: rgb(8 10 16 / calc(.97 * var(--lbk, 1))) !important; }
+.lb.lb-drag .lb-top, .lb.lb-drag .lb-strip, .lb.lb-drag .lb-nav, .lb.lb-out .lb-top, .lb.lb-out .lb-strip, .lb.lb-out .lb-nav { opacity: 0; transition: opacity .15s; }
+.lb.lb-rel { transition: background-color .24s ease; }
+.lb.lb-rel .lb-track { transition: transform .24s cubic-bezier(.2,.8,.2,1); }
+.lb.lb-drag .lb-track { transition: none; }

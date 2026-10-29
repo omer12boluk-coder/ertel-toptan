@@ -150,7 +150,7 @@ export function go(tab) {
   const from = store.s.tab;
   if (KEEP.includes(from) && !store.s.acct && !store.s.openOrder) tabY[from] = scrollY;
   if (tab !== from || store.s.openOrder || store.s.openReq || store.s.acct) pushTab(tab);
-  const y = tab !== from && store.s.user?.role === 'public' && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
+  const y = tab !== from && (store.s.user?.role === 'public' || (store.s.user?.role === 'admin' && tab === 'katalog')) && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
   // zaten o sayfadaysak (alt menüde aynı sekmeye tekrar basmak) en üste ŞAK diye atlamak yerine yumuşakça kayarak çıkılır
   const same = tab === from && !store.s.openOrder && !store.s.openReq && !store.s.acct;
   store.set({ urunFrom: null, urunLayer: false, tab, acct: null, openReq: null, openOrder: null, orderJust: false });

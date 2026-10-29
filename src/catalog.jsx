@@ -1178,9 +1178,51 @@ export function Lightbox({ urls, thumbs, start = 0, title, onClose }) {
     setZoomed(true);
     requestAnimationFrame(() => { const sc = img.parentElement; sc.scrollLeft = fx * img.offsetWidth - sc.clientWidth / 2; sc.scrollTop = fy * img.offsetHeight - sc.clientHeight / 2; });
   }
+  // Telefonda: resmi parmakla yukarı / aşağı çekince (Fotoğraflar uygulaması gibi) resim parmağı izler, arka plan açılır;
+  // yeterince çekip bırakınca kapanır, az çekince yerine döner. Yakınlaştırılmışken çalışmaz.
+  const root = useRef(null);
+  const zRef = useRef(false); zRef.current = zoomed;
+  useEffect(() => {
+    const el = root.current; if (!el) return;
+    let d = null;
+    const tr = () => track.current;
+    const start = (e) => {
+      if (zRef.current || e.touches.length !== 1 || e.target.closest('.lb-top, .lb-strip, .lb-nav')) { d = null; return; }
+      d = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), on: false, dy: 0 };
+    };
+    const move = (e) => {
+      if (!d) return; const dx = e.touches[0].clientX - d.x, dy = e.touches[0].clientY - d.y;
+      if (!d.on) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { d = null; return; } // yana: resimler arası geçiş
+        if (Math.abs(dy) < 8) return;
+        d.on = true; el.classList.add('lb-drag');
+      }
+      if (e.cancelable) e.preventDefault();
+      d.dy = dy; const k = Math.min(1, Math.abs(dy) / 420);
+      const t = tr(); if (t) t.style.transform = `translate3d(0, ${dy}px, 0) scale(${1 - k * 0.12})`;
+      el.style.setProperty('--lbk', String(1 - k * 0.9));
+    };
+    const end = () => {
+      if (!d || !d.on) { d = null; return; }
+      const { dy, t: t0 } = d; d = null; const fast = Math.abs(dy) / Math.max(1, Date.now() - t0) > 0.5;
+      const t = tr(); el.classList.remove('lb-drag'); el.classList.add('lb-rel');
+      if (Math.abs(dy) > 120 || (fast && Math.abs(dy) > 40)) {
+        if (t) t.style.transform = `translate3d(0, ${dy > 0 ? innerHeight : -innerHeight}px, 0) scale(.85)`;
+        el.style.setProperty('--lbk', '0'); el.classList.add('lb-out');
+        setTimeout(onClose, 220);
+      } else {
+        if (t) t.style.transform = ''; el.style.setProperty('--lbk', '1');
+        setTimeout(() => el.classList.remove('lb-rel'), 260);
+      }
+    };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end, { passive: true }); el.addEventListener('touchcancel', end, { passive: true });
+    return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); };
+  }, []);
   const many = urls.length > 1;
   return createPortal(
-    <div className={'lb' + (many ? ' many' : '')} role="dialog" aria-modal="true" aria-label={title}>
+    <div ref={root} className={'lb' + (many ? ' many' : '')} role="dialog" aria-modal="true" aria-label={title}>
       <div className={'lb-track' + (zoomed ? ' locked' : '')} ref={track} onScroll={(e) => { if (!zoomed) { const el = e.currentTarget; const n = Math.round(el.scrollLeft / el.clientWidth); if (n !== iRef.current) setI(n); } }}>
         {urls.map((u, k) => (
           <div key={k} className={'lb-slide' + (zoomed && k === i ? ' zoomed' : '')}>

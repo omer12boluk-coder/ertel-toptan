@@ -142,6 +142,14 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls
       }
     };
   }, []);
+  // açılış kayması ilk (bazen ağır: büyük form) kare ekrana çıkana kadar başlangıçta bekler, sonra baştan sona oynar
+  // → ağır pencerede kayma yarıdan başlayıp 'takılmış' görünmez
+  useLayoutEffect(() => {
+    const as = [bg.current, ref.current].flatMap((e) => (e?.getAnimations ? e.getAnimations() : []));
+    as.forEach((a) => a.pause());
+    const r = requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
+    return () => cancelAnimationFrame(r);
+  }, []);
   // Telefonda: pencereyi tutup aşağı çekince kapanır (üst kısımdan ya da içerik en üstteyken her yerden)
   const drag = useRef(null);
   const onTouchStart = (e) => {

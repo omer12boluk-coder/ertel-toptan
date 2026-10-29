@@ -41,6 +41,15 @@ export async function removeProduct(p) {
   return true;
 }
 export const delText = (p) => `“${p.n}” (${p.k || '#' + p.id}) katalogdan tamamen silinecek; mağazada ve bayilerde görünmez. Sitede (ertelgsm.com) duruyorsa eşitleme onu yeniden eklemez. Sadece gizlemek istiyorsanız durumu Pasif yapın.`;
+const editListsCache = new WeakMap();
+function editLists(catalog, S) {
+  const hit = editListsCache.get(catalog); if (hit && hit.S === S) return hit;
+  const tree = buildTree(S, [...new Set(catalog.flatMap((x) => [x.c, x.c2]).filter((x) => x != null))]);
+  const catOpts = []; const walk = (ns, d) => ns.forEach((n) => { catOpts.push([n.id, '\u2003'.repeat(d) + n.name]); walk(n.children, d + 1); });
+  walk(tree.roots, 0);
+  const brands = [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const v = { S, catOpts, brands }; editListsCache.set(catalog, v); return v;
+}
 export function ProductEdit({ p, copy, onClose }) {
   const { catalog, settings: S } = useStore();
   const isNew = !p;
@@ -53,16 +62,15 @@ export function ProductEdit({ p, copy, onClose }) {
     const { id, k, u, ut, ur, pc, nw, so, sg, sgr, pf, man, _s, _t, img, ...rest } = copy;
     return { ...rest, ...base, c: copy.c ?? 0, r: copy.r || 0, w: copy.w ?? null, cur: copy.cur || 'USD', s: copy.s || 0, n: copy.n, ...(img && img !== 'fs' ? { img } : {}) };
   });
+  // alttaki ağır bölümler (resim / video düzenleyici, açıklama) pencere açılış kayması bittikten sonra çizilir → hızlı açılır
+  const [full, setFull] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setFull(true), 340); return () => clearTimeout(t); }, []);
   const [busy, setBusy] = useState(false);
   const [imgUrl, setImgUrl] = useState(p?.img && p.img !== 'fs' ? p.img : '');
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const auto = priceFor({ ...f, w: null }, S, null, null).mine;
-  const catOpts = useMemo(() => {
-    const tree = buildTree(S, [...new Set(catalog.flatMap((x) => [x.c, x.c2]).filter((x) => x != null))]);
-    const out = []; const walk = (ns, d) => ns.forEach((n) => { out.push([n.id, '\u2003'.repeat(d) + n.name]); walk(n.children, d + 1); });
-    walk(tree.roots, 0); return out;
-  }, [catalog, S]);
-  const brands = useMemo(() => [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr')), [catalog]);
+  // kategori / marka listeleri katalog başına bir kez hesaplanır (her açılışta 10 bin ürünü taramak pencereyi geç açıyordu)
+  const { catOpts, brands } = editLists(catalog, S);
   const [brandNew, setBrandNew] = useState(false);
   const [desc, setDesc] = useState(null);
   const [desc0, setDesc0] = useState('');
@@ -190,6 +198,7 @@ export function ProductEdit({ p, copy, onClose }) {
         </div>
       </div>
 
+      {full && <>
       <section className="pe-sec">
         <div className="pe-sec-h">
           <h3>Resimler ve videolar <span className="muted">· {media.length}</span></h3>
@@ -207,6 +216,8 @@ export function ProductEdit({ p, copy, onClose }) {
           ? <textarea id="pe-desc" rows="8" className="mono-in" value={desc} onChange={(e) => setDesc(e.target.value)} />
           : <RichText value={desc} onChange={setDesc} />}
       </section>
+      </>}
+      {!full && <div className="pe-later" aria-hidden="true" />}
     </Sheet>
   );
 }

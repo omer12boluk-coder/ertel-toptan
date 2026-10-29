@@ -457,7 +457,7 @@ function ShellFull() {
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
   // telefonda: ana sayfa ve Tüm ürünler bir kez açılınca arkada gizli açık kalır → geri dönünce anında, filtreler ve kaydırma yerinde
-  const kept = useRef(new Set()); if (pub && (tab === 'anasayfa' || tab === 'katalog')) kept.current.add(tab);
+  const kept = useRef(new Set()); if ((pub && (tab === 'anasayfa' || tab === 'katalog')) || (admin && tab === 'katalog')) kept.current.add(tab); // yönetici: Ürünler de arkada açık kalır
   const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
@@ -520,7 +520,7 @@ function ShellFull() {
         {tab === 'anasayfa' && admin && <AdminHome />}
         {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><ShopHome /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
-        {(tab === 'katalog' || (pub && kept.current.has('katalog'))) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><Catalog admin={admin} /></section>}
+        {(tab === 'katalog' || ((pub || admin) && kept.current.has('katalog'))) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><Catalog admin={admin} /></section>}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
         {tab === 'profil' && !pub && <Profile />}
