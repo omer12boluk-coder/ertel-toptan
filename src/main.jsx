@@ -637,8 +637,20 @@ function setupPull() {
     document.body.appendChild(box); return box;
   };
   const top = () => { const h = document.querySelector('.topbar'); const r = h?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
-  const set = (px, cls = '', txt = '') => { const b = ui(); b.style.setProperty('--ptr-top', top() + 'px'); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, px / TH)); b.className = 'ptr' + (cls ? ' ' + cls : ''); b.querySelector('.ptr-t').textContent = txt; };
-  const hide = (ms = 0) => setTimeout(() => { if (!box) return; box.className = 'ptr gone'; box.style.setProperty('--ptr', '0px'); }, ms);
+  // 29.10.2026: üst menü yerinde kalır; altındaki sayfa (main + alt bilgi) aşağı iner, açılan boşlukta simge belirir.
+  // Sayfa "top" ile kaydırılır (transform DEĞİL: içerideki sabit öğeler, ör. sepet çubuğu, yerinden oynamasın).
+  const EASE = 'cubic-bezier(.2,.8,.2,1)';
+  const pages = () => [...document.querySelectorAll('.shell > .main, .shell > .sfoot')];
+  let clr = 0;
+  const set = (px, cls = '', txt = '') => {
+    const b = ui(); const anim = cls === 'back' || cls === 'spin' || cls === 'err' || cls === 'gone';
+    b.style.setProperty('--ptr-top', top() + 'px'); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, px / TH));
+    b.className = 'ptr' + (cls ? ' ' + cls : ''); b.querySelector('.ptr-t').textContent = txt;
+    clearTimeout(clr);
+    for (const e of pages()) { e.style.transition = anim ? `top .3s ${EASE}` : 'none'; e.style.position = 'relative'; e.style.top = px + 'px'; }
+    if (!px) clr = setTimeout(() => { for (const e of pages()) { e.style.position = e.style.top = e.style.transition = ''; } }, anim ? 340 : 0);
+  };
+  const hide = (ms = 0) => setTimeout(() => { if (box) set(0, 'gone'); }, ms);
   const blocked = (t) => !(t instanceof Element) || t.closest('.sheet-bg, .sheet, .lb, .vv, .dz, .ctx-sheet-bg, .ctx, .botnav, input, textarea, select, .hsearch-res, .kf-list, .nc-panel') || document.querySelector('.sheet-bg, .lb, .vv');
   const scrolledParent = (t) => { for (let e = t; e && e !== document.body; e = e.parentElement) { if (e.scrollTop > 0 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) return true; } return false; };
   addEventListener('touchstart', (ev) => {
@@ -655,7 +667,7 @@ function setupPull() {
     if (!on) return; on = false;
     if (d < TH) { d = 0; set(0, 'back'); return; }
     busy = true; set(TH * 0.8, 'spin');
-    const fail = (t) => { set(TH * 0.8, 'err', t); busy = false; hide(2200); };
+    const fail = (t) => { set(TH * 1.35, 'err', t); busy = false; hide(2200); };
     if (navigator.onLine === false) return fail('İnternet bağlantısı yok');
     try {
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
