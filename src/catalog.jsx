@@ -361,7 +361,8 @@ export function Catalog({ admin }) {
   // başka ekrandan (mağaza ana sayfası) gelen filtre: marka / kategori / arama
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
-  useEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  // useLayoutEffect: marka / kategori linkinden gelince süzme EKRANA ÇİZİLMEDEN uygulanır (önce eski liste görünüp 'patlamasın')
+  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   const changedN = useMemo(() => (admin ? all.filter(needsCheck).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);
@@ -444,7 +445,7 @@ export function Catalog({ admin }) {
     favOnly && ['Favorilerim', () => setFavOnly(false)],
   ].filter(Boolean);
 
-  useEffect(() => setLimit(S.catalog.pageSize), [q, qk, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
+  useLayoutEffect(() => setLimit(S.catalog.pageSize), [q, qk, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
   const more = useCallback(() => setLimit((l) => l + S.catalog.pageSize), [S.catalog.pageSize]);
   const sentinel = useInfinite(more);
   const shown = list.slice(0, limit);

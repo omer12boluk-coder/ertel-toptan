@@ -624,6 +624,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   setupTapHover(); // 30.10.2026: SADECE öne çıkan ürün kutularında eğik resmin düzelmesi (kaydırırken çıkmaz)
   setupPull();
   setupNavAnim();
+  setupCrispBack();
 }
 
 // Telefonda dokunma hissi: kart/düğmeye basınca yumuşakça içe göçer, çok kısa dokunuşta bile en az ~120 ms basılı görünür,
@@ -671,6 +672,26 @@ export function haptic() {
 // belirir (Hesabım alt sayfaları gibi), geri gidince (Geri düğmesi / kaydırarak geri) TERS yönden, soldan gelir; alttaki menüyle
 // sekme değişince sadece kısa bir soluş. Sadece transform + opacity (akıcı); içinde sabit öğe olan kutuya (sepet çubuğu vb.)
 // transform verilmez (sabit öğe yerinden oynardı), onun çocuklarına inilir.
+// Geri düğmelerinde keskin basma hissi (30.10.2026): sepet / ödeme gibi ağır sayfalara dönerken yeni sayfanın çizimi
+// basılı görünümü ekrana hiç çıkarmıyordu. Telefonda geri düğmesine dokununca düğme önce en az ~70 ms basılı görünür (.tap),
+// ancak o kare ekrana çıktıktan sonra asıl tıklama işlenir → Hesabım'daki gibi net bir 'tık'.
+function setupCrispBack() {
+  let pass = false, downAt = 0;
+  addEventListener('pointerdown', (e) => { if (e.target instanceof Element && e.target.closest('.back-btn')) downAt = Date.now(); }, { capture: true, passive: true });
+  addEventListener('click', (e) => {
+    if (pass) return;
+    const b = e.target instanceof Element && e.target.closest('.back-btn');
+    if (!b || b.disabled || !matchMedia('(max-width: 899px)').matches) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    b.classList.add('tap');
+    const wait = Math.max(0, 70 - (Date.now() - downAt));
+    requestAnimationFrame(() => setTimeout(() => requestAnimationFrame(() => {
+      pass = true; try { if (b.isConnected) b.click(); } finally { pass = false; }
+      setTimeout(() => b.classList.remove('tap'), 120);
+    }), wait));
+  }, true);
+}
+
 function setupNavAnim() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
   const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar';
@@ -691,7 +712,12 @@ function setupNavAnim() {
     click = { el: btn, at: Date.now(), back: !!t.closest('.back-btn') };
   }, { capture: true, passive: true });
   const slide = (back) => [{ opacity: 0, transform: `translate3d(${back ? -14 : 14}px,0,0)` }, { opacity: 1, transform: 'none' }];
-  const play = (els, kf, ms) => { for (const el of els) el.animate(kf, { duration: ms, easing: EASE }); };
+  // Animasyon ilk karede başlangıç hâlinde DURAKLATILIR, o (bazen ağır: gizli sayfanın açılması, uzun liste) kare ekrana
+  // çıktıktan sonraki karede oynatılır → ağır karede süre tükenip 'animasyonsuz' görünmez, her zaman 300 ms'nin tamamı görünür.
+  const play = (els, kf, ms) => {
+    const as = els.map((el) => { const a = el.animate(kf, { duration: ms, easing: EASE }); a.pause(); return a; });
+    requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
+  };
   const pageTargets = (main) => {
     const out = [];
     const walk = (el, d) => {

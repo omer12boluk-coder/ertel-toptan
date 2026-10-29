@@ -4811,3 +4811,9 @@ html:has(.kf) { scrollbar-gutter: stable; }
 @media (hover: none) and (max-width: 899px) {
   .plist > li, .olist > li, .co-sec, .o-card, .set-card, .done-card, .cart-sum, .gline { animation: none; }
 }
+
+/* geri düğmesi: dokununca kısa süre basılı kalır (setupCrispBack) */
+@media (hover: none) {
+  .back-btn.tap { background-color: color-mix(in oklab, var(--fg) 9%, var(--surface)) !important; }
+  .back-btn.tap > svg { transform: translateX(-3px) !important; }
+}
