@@ -678,7 +678,7 @@ function ProductRow({ p, admin, onOpen, pinned }) {
         ) : user?.role === 'public' && outOfStock(p) && feat(S).notify && !qty ? (
           <NotifyBtn p={p} />
         ) : qty > 0 ? (
-          <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(v) => setQty(p.id, v)} /></span>
+          <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} /></span>
         ) : (
           <button className={'btn sm add' + (morph === 'back' ? ' back' : '')} onClick={() => setQty(p.id, 1)} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-cart" aria-hidden="true"><Icon n="cart" s={18} /><i>+</i></span><span className="add-l">Sepete ekle</span></button>
         )}
@@ -801,7 +801,7 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
         {!viewOnly && pub && outOfStock(p) && feat(S).notify ? <NotifyBox p={p} /> : !viewOnly && <div className="pbuy">
           <div className="qty-line">
             <span>Adet</span>
-            <Stepper value={qty} min={1} onChange={setQ} />
+            <Stepper value={qty} min={1} onChange={setQ} onRemove={cart[p.id] ? () => { setQty(p.id, 0); toast('Sepetten çıkarıldı'); } : undefined} />
             {pr.mine != null && <span className="pbuy-tot"><small>Toplam</small><b className="num">{fmt(pr.mine * qty, p.cur)}</b></span>}
           </div>
           <div className="pbuy-btns">

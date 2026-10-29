@@ -218,12 +218,15 @@ export function Avatar({ u, size = 40 }) {
   );
 }
 
-export function Stepper({ value, onChange, min = 0, small }) {
+// onRemove: adet en alttayken − yerine çöp kovası çıkar, basınca ürün kaldırılır (sepet, ürün penceresi)
+export function Stepper({ value, onChange, min = 0, small, onRemove }) {
   const [txt, setTxt] = useState(String(value));
   useEffect(() => setTxt(String(value)), [value]);
   return (
     <div className={'stepper' + (small ? ' sm' : '')}>
-      <button type="button" onClick={() => onChange(Math.max(min, value - 1))} aria-label="Azalt"><Icon n="minus" s={16} /></button>
+      {onRemove && value <= Math.max(min, 1)
+        ? <button type="button" className="st-del" onClick={onRemove} aria-label="Sepetten çıkar" title="Sepetten çıkar"><Icon n="trash" s={15} /></button>
+        : <button type="button" onClick={() => onChange(Math.max(min, value - 1))} aria-label="Azalt"><Icon n="minus" s={16} /></button>}
       <input inputMode="numeric" value={txt} aria-label="Adet"
         onChange={(e) => setTxt(e.target.value.replace(/\D/g, ''))}
         onBlur={() => onChange(Math.max(min, Number(txt) || 0))}

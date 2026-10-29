@@ -258,7 +258,7 @@ function KfRow({ s, hit, onOpen, i = 0 }) {
       <div className="kf-row-f">
         <b className="kf-row-p">{pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur)}</b>
         {qty > 0
-          ? <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
+          ? <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} />
           : <button type="button" className="sh-add" onClick={() => { setQty(p.id, 1); toast('Sepete eklendi'); }} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
       </div>
     </div>

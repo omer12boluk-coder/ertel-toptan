@@ -174,7 +174,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
               </div>
               <div className="gline-ctl">
                 <span className="num gline-unit" data-l="Birim">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}</span>
-                <Stepper small min={1} value={it.qty} onChange={(v) => setQty(it.id, v)} />
+                <Stepper small min={1} value={it.qty} onChange={(v) => setQty(it.id, v)} onRemove={() => setQty(it.id, 0)} />
                 <b className="num gline-sum">{it.offer == null ? '—' : fmt(it.offer * it.qty, it.cur)}</b>
                 <button className="icon-btn sm" onClick={() => setQty(it.id, 0)} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
               </div>
