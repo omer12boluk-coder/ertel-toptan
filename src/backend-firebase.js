@@ -404,7 +404,7 @@ export class FirebaseBackend {
       const mref = this.d('members', uid);
       const m = await timeout(this.F.getDoc(mref)).catch(() => null); if (!m?.exists()) continue;
       const d = m.data(); const ids = new Set(its.map((x) => x.id));
-      await timeout(this.F.updateDoc(mref, { notify: (d.notify || []).filter((x) => !ids.has(x)), notifyHit: [...its.map((x) => ({ ...x, at })), ...(d.notifyHit || [])].slice(0, 20) })).catch(() => {});
+      await timeout(this.F.updateDoc(mref, { notify: (d.notify || []).filter((x) => !ids.has(x)), notifyHit: [...its.map((x) => ({ ...x, at })), ...(d.notifyHit || []).filter((h) => !ids.has(h.id))].slice(0, 20) })).catch(() => {});
     }
     const tok = await this.idToken();
     if (tok && window.WATCH_URL) await fetch(String(window.WATCH_URL).replace(/\/$/, '') + '/push/back-admin', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ list: [...byMem].map(([uid, items]) => ({ uid, items: items.slice(0, 10) })) }) }).catch(() => {});

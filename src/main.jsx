@@ -617,12 +617,58 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => { if (!e.target.closest?.('.lb')) e.preventDefault(); }, { passive: false });
   setupLongPress();
   setupPress();
+  setupPull();
 }
 
 // Telefonda dokunma hissi: kart/düğmeye basınca yumuşakça içe göçer, çok kısa dokunuşta bile en az ~120 ms basılı görünür,
 // bırakınca hafif yaylanarak geri gelir (CSS :active iPhone'da bir an yanıp sönüyordu, "çiğ" duruyordu).
+// Telefonda sayfanın en üstündeyken aşağı çekince yenile (29.10.2026): tarayıcının lastik gibi esnemesi kapalı
+// (html overscroll-behavior-y: none → üst menü sayfayla birlikte kaymaz), üst menünün altında dönen küçük simge çıkar;
+// yeterince çekip bırakınca önce bağlantı denenir (version.json), varsa sayfa yenilenir, yoksa "Bağlantı yok" yazar.
+function setupPull() {
+  if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+  const TH = 70, MAX = 110;
+  let y0 = 0, x0 = 0, on = false, d = 0, busy = false, box = null;
+  const ui = () => {
+    if (box) return box;
+    box = document.createElement('div'); box.className = 'ptr'; box.setAttribute('aria-hidden', 'true');
+    box.innerHTML = '<span class="ptr-c"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></span><span class="ptr-t"></span>';
+    document.body.appendChild(box); return box;
+  };
+  const top = () => { const h = document.querySelector('.topbar'); const r = h?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
+  const set = (px, cls = '', txt = '') => { const b = ui(); b.style.setProperty('--ptr-top', top() + 'px'); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, px / TH)); b.className = 'ptr' + (cls ? ' ' + cls : ''); b.querySelector('.ptr-t').textContent = txt; };
+  const hide = (ms = 0) => setTimeout(() => { if (!box) return; box.className = 'ptr gone'; box.style.setProperty('--ptr', '0px'); }, ms);
+  const blocked = (t) => !(t instanceof Element) || t.closest('.sheet-bg, .sheet, .lb, .vv, .dz, .ctx-sheet-bg, .ctx, .botnav, input, textarea, select, .hsearch-res, .kf-list, .nc-panel') || document.querySelector('.sheet-bg, .lb, .vv');
+  const scrolledParent = (t) => { for (let e = t; e && e !== document.body; e = e.parentElement) { if (e.scrollTop > 0 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) return true; } return false; };
+  addEventListener('touchstart', (ev) => {
+    on = false; if (busy || ev.touches.length !== 1 || window.scrollY > 0 || blocked(ev.target) || scrolledParent(ev.target)) return;
+    on = true; d = 0; y0 = ev.touches[0].clientY; x0 = ev.touches[0].clientX;
+  }, { passive: true });
+  addEventListener('touchmove', (ev) => {
+    if (!on) return; const p = ev.touches[0]; const dy = p.clientY - y0, dx = p.clientX - x0;
+    if (d === 0 && Math.abs(dx) > Math.abs(dy)) { on = false; return; } // yana kaydırma
+    if (dy <= 0 || window.scrollY > 0) { if (d > 0) { d = 0; set(0, 'back'); } return; }
+    d = Math.min(MAX, dy * 0.5); set(d, d >= TH ? 'ready' : '');
+  }, { passive: true });
+  const end = async () => {
+    if (!on) return; on = false;
+    if (d < TH) { d = 0; set(0, 'back'); return; }
+    busy = true; set(TH * 0.8, 'spin');
+    const fail = (t) => { set(TH * 0.8, 'err', t); busy = false; hide(2200); };
+    if (navigator.onLine === false) return fail('İnternet bağlantısı yok');
+    try {
+      const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
+      const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
+      if (!r.ok) throw new Error(r.status);
+      location.reload();
+    } catch { fail('Bağlantı kurulamadı'); }
+  };
+  addEventListener('touchend', end, { passive: true });
+  addEventListener('touchcancel', () => { if (on) { on = false; d = 0; set(0, 'back'); } }, { passive: true });
+}
+
 function setupPress() {
-  const SEL = '.ocard, .rcard, .ucard, .seg-card, .addr-card:not(.static), .tile, .dash-kpi, .dash-q, .door, .cat-link, .pcard, .btn, .chip, .icon-btn, .stepper button';
+  const SEL = '.ocard, .rcard, .ucard, .seg-card, .addr-card:not(.static), .tile, .dash-kpi, .dash-q, .door, .cat-link, .pcard, .btn, .chip, .icon-btn, .stepper button, .sh-brand, .sh-box, .sh-card, .sh-cta-btn, .sh-more, .mini-card';
   let el = null, t0 = 0, sx = 0, sy = 0;
   const release = () => {
     const e = el; el = null; if (!e) return;

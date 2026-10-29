@@ -7,13 +7,26 @@ import { Icon, Empty, Toggle, openMenu, copyText } from './ui.jsx';
 import { fmt, priceFor, picUrl } from './utils.js';
 import { waLink } from './route.js';
 import { pushState } from './push.js';
+import { queueSave } from './saveq.js';
 
 // ---- anahtarlar
 export function feat(S) {
   const F = S?.feat || {}; const P = F.pop || {}; const R = F.rev || {};
   const pop = P.on !== false; const rev = R.on !== false;
-  return { share: F.share !== false, notify: F.notify !== false, pop, popFav: pop && P.fav !== false, popPair: pop && P.pair !== false, popCat: pop && P.cat !== false, rev, revMod: R.moderate !== false };
+  return { share: F.share !== false, notify: F.notify !== false, pop, popFav: pop && P.fav !== false, popPair: pop && P.pair !== false, popCat: pop && P.cat !== false, rev, revMod: R.moderate !== false,
+    pin: F.pinOn !== false, pins: F.pinOn !== false && Array.isArray(F.pins) ? F.pins : [] };
 }
+// ---- Kategoride öne çıkarma (29.10.2026): yönetici ürünü sabitler (settings.feat.pins, sıralı); mağazada o ürünün
+// kategorileri seçiliyken (varsayılan sıralama, arama yokken) en başta "Öne çıkan" etiketiyle görünür.
+export function togglePin(p) {
+  const S = store.s.settings; const cur = Array.isArray(S.feat?.pins) ? S.feat.pins : [];
+  const on = !cur.includes(p.id);
+  const pins = on ? [...cur, p.id].slice(-200) : cur.filter((x) => x !== p.id);
+  store.set({ settings: { ...S, feat: { ...(S.feat || {}), pins } } });
+  queueSave('settings', () => api().saveSettings(store.s.settings));
+  toast(on ? (S.feat?.pinOn === false ? 'Öne çıkarıldı · özellik Ayarlar’da kapalı' : 'Kategorisinde öne çıkarıldı') : 'Öne çıkarma kaldırıldı');
+}
+export const isPinned = (S, id) => Array.isArray(S?.feat?.pins) && S.feat.pins.includes(id);
 export const useFeat = () => feat(useStore((s) => s.settings));
 
 // ---- Popüler verisi (oturumda bir kez)
@@ -39,6 +52,21 @@ async function imgFile(p, S) {
   const b = await r.blob(); if (!/^image\//.test(b.type)) return null;
   return new File([b], 'urun-' + p.id + (b.type.includes('png') ? '.png' : b.type.includes('webp') ? '.webp' : '.jpg'), { type: b.type });
 }
+// Paylaş menüsü (ürün penceresi düğmesi + kart sağ tık menüsü ortak)
+export function shareMenu(e, p, S, onImg) {
+  const url = location.origin + '/magaza/urun/' + p.id;
+  const pr = priceFor(p, S, { role: 'public' }, null).mine;
+  const text = p.n + (pr != null ? ' · ' + fmt(pr, p.cur) + (S.pricing?.showVat !== false ? ' + KDV' : '') : '') + ' — ' + (S.brand?.appName || '');
+  const shareLink = async () => { try { await navigator.share({ title: p.n, text, url }); } catch (x) { if (x?.name !== 'AbortError') copyText(url, 'Ürün linki kopyalandı'); } };
+  const shareImg = onImg || (async () => { try { const f = await imgFile(p, S); if (f && navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f], text: text + '\n' + url }); else await shareLink(); } catch (x) { if (x?.name !== 'AbortError') shareLink(); } });
+  const can = typeof navigator.share === 'function';
+  openMenu(e, [
+    can && { label: 'Paylaş…', icon: 'share', hint: 'WhatsApp, Instagram, mesaj', onClick: shareLink },
+    can && { label: 'Resmiyle paylaş', icon: 'camera', hint: 'Fotoğraf + link', onClick: shareImg },
+    { label: "WhatsApp'ta gönder", icon: 'wa', onClick: () => window.open(waLink('', text + '\n' + url), '_blank', 'noopener') },
+    { label: 'Linki kopyala', icon: 'copy', onClick: () => copyText(url, 'Ürün linki kopyalandı') },
+  ], 'Ürünü paylaş');
+}
 export function ShareBtn({ p, big }) {
   const S = useStore((s) => s.settings);
   const [busy, setBusy] = useState(false);
@@ -56,16 +84,7 @@ export function ShareBtn({ p, big }) {
     } catch (x) { if (x?.name !== 'AbortError') toast('Resim paylaşılamadı, link paylaşılıyor', 'warn'), shareLink(); }
     setBusy(false);
   };
-  const open = (e) => {
-    e.stopPropagation();
-    const can = typeof navigator.share === 'function';
-    openMenu(e, [
-      can && { label: 'Paylaş…', icon: 'share', hint: 'WhatsApp, Instagram, mesaj', onClick: shareLink },
-      can && { label: 'Resmiyle paylaş', icon: 'camera', hint: 'Fotoğraf + link', onClick: shareImg },
-      { label: "WhatsApp'ta gönder", icon: 'wa', onClick: () => window.open(waLink('', text + '\n' + url), '_blank', 'noopener') },
-      { label: 'Linki kopyala', icon: 'copy', onClick: () => copyText(url, 'Ürün linki kopyalandı') },
-    ], 'Ürünü paylaş');
-  };
+  const open = (e) => { e.stopPropagation(); shareMenu(e, p, S, shareImg); };
   return (
     <button type="button" className={'share-btn' + (big ? ' big' : '') + (busy ? ' busy' : '')} onClick={open} aria-label="Ürünü paylaş" title="Paylaş">
       <Icon n="share" s={big ? 19 : 17} />
@@ -220,6 +239,23 @@ export function CatTop({ ids, onOpen }) {
 
 // =====================================================================================================
 // Ayarlar > Mağaza özellikleri: basit anahtarlar
+function PinList({ ids, onChange }) {
+  const byId = useStore((s) => s.byId);
+  if (!ids.length) return <p className="fine pin-empty">Henüz öne çıkarılan ürün yok.</p>;
+  const mv = (i, d) => { const a = [...ids]; const j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; onChange(a); };
+  return (
+    <ul className="pin-list">
+      {ids.map((id, i) => { const p = byId.get(id); return (
+        <li key={id}>
+          <span className="pin-n"><b>{p?.n || 'Ürün #' + id}</b>{p && <small className="muted">{p.k}{p.a === 0 || p.so ? ' · mağazada kapalı' : ''}</small>}</span>
+          <button type="button" className="icon-btn sm" disabled={i === 0} onClick={() => mv(i, -1)} aria-label="Yukarı"><Icon n="up" s={15} /></button>
+          <button type="button" className="icon-btn sm" disabled={i === ids.length - 1} onClick={() => mv(i, 1)} aria-label="Aşağı"><Icon n="down" s={15} /></button>
+          <button type="button" className="icon-btn sm" onClick={() => onChange(ids.filter((x) => x !== id))} aria-label="Kaldır"><Icon n="x" s={15} /></button>
+        </li>
+      ); })}
+    </ul>
+  );
+}
 export function FeatSettings({ d, set }) {
   const F = d.feat || {}; const P = F.pop || {}; const R = F.rev || {};
   const pop = P.on !== false; const rev = R.on !== false;
@@ -239,6 +275,10 @@ export function FeatSettings({ d, set }) {
           <Toggle id="ft-pop-pair" label="Ürün penceresinde “Birlikte iyi gider”" hint="Aynı siparişte sık alınan ürünler" checked={P.pair !== false} onChange={(v) => set('feat.pop.pair', v)} />
           <Toggle id="ft-pop-cat" label="Kategoride “Ustaların tercihi”" hint="Kategoride en çok alınanlar sıralı · az satılan kategoride kendiliğinden gizli" checked={P.cat !== false} onChange={(v) => set('feat.pop.cat', v)} />
         </div>
+      </div>
+      <div className={'feat-card' + (F.pinOn !== false ? '' : ' off')}>
+        <Toggle id="ft-pin" label="Kategoride öne çıkanlar" hint="Seçtiğiniz ürünler kendi kategorilerinde en başta “Öne çıkan” etiketiyle görünür · ürünün ⋮ / sağ tık menüsünden “Kategoride öne çıkar”" checked={F.pinOn !== false} onChange={(v) => set('feat.pinOn', v)} />
+        <PinList ids={Array.isArray(F.pins) ? F.pins : []} onChange={(v) => set('feat.pins', v)} />
       </div>
       <div className={'feat-card' + (rev ? '' : ' off')}>
         <Toggle id="ft-rev" label="Ürün yorumları" hint="Sadece ürünü satın almış üyeler yıldız + yorum yazabilir" checked={rev} onChange={(v) => set('feat.rev.on', v)} />

@@ -117,8 +117,16 @@ export function KalipFinder() {
   const sugg = useMemo(() => (phones && q && open ? searchPhones(phones, q) : []), [phones, q, open]);
   const qCodes = useMemo(() => [...chipCodes(q)], [q]);
 
-  const pick = (ph) => { setSel(ph); setQ(ph.n); setOpen(false); inp.current?.blur(); try { history.replaceState(history.state, '', '/magaza/kalip?m=' + encodeURIComponent(ph.n)); } catch {} };
-  const pickCode = () => { if (!qCodes.length) return; setSel({ n: null, c: q.trim().toUpperCase(), k: qCodes }); setOpen(false); inp.current?.blur(); };
+  // seçince sayfa bir anda zıplamasın: yazma alanının boyu kısa süre korunur, sonuçlara yumuşak kaydırılır
+  const [hold, setHold] = useState(false);
+  const resRef = useRef(null);
+  const reveal = () => {
+    setHold(true);
+    setTimeout(() => { const el = resRef.current; if (el) { const topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 64; const y = el.getBoundingClientRect().top + scrollY - topH - 12; if (y > scrollY + 4 || y < scrollY - 4) scrollTo({ top: Math.max(0, y), behavior: 'smooth' }); } }, 180);
+    setTimeout(() => setHold(false), 650);
+  };
+  const pick = (ph) => { setSel(ph); setQ(ph.n); setOpen(false); inp.current?.blur(); reveal(); try { history.replaceState(history.state, '', '/magaza/kalip?m=' + encodeURIComponent(ph.n)); } catch {} };
+  const pickCode = () => { if (!qCodes.length) return; setSel({ n: null, c: q.trim().toUpperCase(), k: qCodes }); setOpen(false); inp.current?.blur(); reveal(); };
   // adresteki ?m= ile gelince seçili aç
   useEffect(() => { if (!phones) return; const m = new URLSearchParams(location.search).get('m'); if (m) { const p = phones.find((x) => x.n === m); if (p) { setSel(p); setQ(p.n); } } }, [phones]);
 
@@ -135,7 +143,7 @@ export function KalipFinder() {
   const total = result ? result.single.length + result.sets.length : 0;
 
   return (
-    <div className={'kf' + (open ? ' typing' : '')}>
+    <div className={'kf' + (open || hold ? ' typing' : '')}>
       <section className="kf-hero">
         <div className="kf-head">
           <span className="kf-ic"><Icon n="chip" s={18} /></span>
@@ -165,7 +173,7 @@ export function KalipFinder() {
       </section>
 
       {sel && result && (
-        <>
+        <div className="kf-out" key={sel.n || sel.c} ref={resRef}>
           {S.kalip?.view === 'grid' ? (<>
           <section className="kf-phone solo">
             <span className={'kf-chipic v-' + (result.v || 'x')}><Icon n="chip" s={30} /></span>
@@ -203,9 +211,9 @@ export function KalipFinder() {
             </div>
             {total > 0 && (
               <div className="kf-list">
-                {result.single.map((x) => <KfRow key={x.p.id} s={x} hit={sel.k} onOpen={() => setProd(x.p)} />)}
+                {result.single.map((x, i) => <KfRow key={x.p.id} i={i} s={x} hit={sel.k} onOpen={() => setProd(x.p)} />)}
                 {result.sets.length > 0 && <div className="kf-sub"><Icon n="box" s={15} />Kalıp setleri<span className="num">{result.sets.length}</span></div>}
-                {result.sets.map((x) => <KfRow key={x.p.id} s={x} hit={sel.k} onOpen={() => setProd(x.p)} />)}
+                {result.sets.map((x, i) => <KfRow key={x.p.id} i={result.single.length + i} s={x} hit={sel.k} onOpen={() => setProd(x.p)} />)}
               </div>
             )}
             {total === 0 && (
@@ -219,16 +227,19 @@ export function KalipFinder() {
           )}
           {result.more.length > 0 && <KfGroup title="Bunlara da bakın" sub="Genel setler · içeriğini ürün açıklamasından kontrol edin" list={result.more} onOpen={setProd} muted />}
           {total > 0 && wa && <p className="kf-ask">Emin olamadınız mı? <a href={wa} target="_blank" rel="noopener">WhatsApp’tan sorun</a>, uygun kalıbı birlikte seçelim.</p>}
-        </>
+        </div>
       )}
-      {prod && <ProductSheet p={prod} onClose={() => setProd(null)} />}
+      {/* yönetimden yazılan bilgi / sorumluluk notu (Ayarlar > Kalıp bulucu); kapalı ya da boşsa hiç çizilmez */}
+      {S.kalip?.noteOn !== false && String(S.kalip?.note || '').trim() && <p className="kf-note"><Icon n="ask" s={15} /><span>{String(S.kalip.note).trim()}</span></p>}
+      {/* kalıp bulucudan açılan ürün her zaman pencerede (mağaza ayarından bağımsız) */}
+      {prod && <ProductSheet p={prod} forceSheet onClose={() => setProd(null)} />}
     </div>
   );
 }
 
 const nice = (c) => c.replace(/^A(\d+)P$/, 'A$1 Pro').replace(/^EX(\d+)/, 'Exynos $1');
 // Sonuç satırı: resim · ad · kalıbın işlemci kodları (aranan işlemciye uyan kod dolu renkte, başta) · fiyat · sepete ekle
-function KfRow({ s, hit, onOpen }) {
+function KfRow({ s, hit, onOpen, i = 0 }) {
   const { settings: S, user, userPrices, cart } = useStore();
   const p = s.p; const qty = cart[p.id] || 0; const pr = priceFor(p, S, user, userPrices);
   const h = new Set(hit); const apple = hit.some((c) => /^A\d/.test(c)); // Apple kodları yalnızca iPhone aranınca (Samsung A12/A13 model adları karışmasın)
@@ -238,7 +249,7 @@ function KfRow({ s, hit, onOpen }) {
   const vis = [...vis0.filter((c) => h.has(c)), ...vis0.filter((c) => !h.has(c))];
   const show = vis.slice(0, 7); const more = vis.length - show.length;
   return (
-    <div className="kf-row">
+    <div className="kf-row" style={{ '--i': Math.min(i, 12) }}>
       <button type="button" className="kf-row-img" onClick={onOpen} aria-label={p.n}><Thumb p={p} /></button>
       <div className="kf-row-b">
         <button type="button" className="kf-row-n" onClick={onOpen}>{p.n}</button>
@@ -285,6 +296,8 @@ export function KalipSettings({ d, set }) {
     <div className="kfs">
       <Toggle id="s-kalip" label="Mağazada Kalıp bulucu görünsün" checked={d.kalip?.on !== false} onChange={(v) => set('kalip.on', v)} />
       <Toggle id="s-kalip-view" label="Sonuçlar liste görünümünde" hint="Kapalıysa eski görünüm: işlemci kartı + kalıp kartları ızgarası" checked={d.kalip?.view !== 'grid'} onChange={(v) => set('kalip.view', v ? 'list' : 'grid')} />
+      <Toggle id="s-kalip-note-on" label="Kalıp bulucuda bilgi notu göster" hint="Örn. sorumluluk notu · yazı boşsa hiçbir şey görünmez" checked={d.kalip?.noteOn !== false} onChange={(v) => set('kalip.noteOn', v)} />
+      {d.kalip?.noteOn !== false && <label className="kfs-note"><span className="field-l">Bilgi notu</span><textarea id="s-kalip-note" rows="3" maxLength={500} value={d.kalip?.note || ''} onChange={(e) => set('kalip.note', e.target.value)} placeholder="Örn. Liste bilgi amaçlıdır; kalıbı almadan önce işlemci kodunu cihazınızdan kontrol edin. Yanlış seçimden doğan sorunlardan sorumluluk kabul edilmez." /></label>}
       <p className="fine">Listede {base ? <b>{base.length.toLocaleString('tr-TR')}</b> : '…'} telefon modeli var. Model arayın ya da yeni model yazın; işlemcisini seçin (ör. <i>Snapdragon 732G</i>, <i>Helio G85</i>, <i>Apple A15</i> ya da kod: <i>SM7150</i>, <i>MT6769</i>). Uyan kalıplar hemen altta görünür. Kaydet’e basınca mağazada geçerli olur.</p>
       <div className="kfs-q"><Icon n="search" s={17} /><input id="s-kalip-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Model ara ya da yeni model yaz…" />{q && <button type="button" className="kf-x" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={13} /></button>}</div>
       {q.trim().length >= 2 && all && !exists && (

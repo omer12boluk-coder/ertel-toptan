@@ -218,7 +218,8 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       }
       const t = now(), no = orderNo(), id = A.newOrderId();
       const order = strip({
-        no, uid, member: !!uid, status: 'new', createdAt: t, updatedAt: t, unread: 1, history: [{ s: 'new', at: t }],
+        // kredi kartıyla ödenen sipariş beklemez: doğrudan "Onaylandı" (29.10.2026, kullanıcı)
+        no, uid, member: !!uid, status: f.pay === 'card' ? 'confirmed' : 'new', createdAt: t, updatedAt: t, unread: 1, history: f.pay === 'card' ? [{ s: 'new', at: t }, { s: 'confirmed', at: t, by: 'card' }] : [{ s: 'new', at: t }],
         items: items.map(({ id: pid, k, n, cur, qty, offer, pi, u }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u })),
         total: tot, rate: rate?.usd || null,
         contact: { ...contactOut(), email },

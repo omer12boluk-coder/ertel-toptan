@@ -2,6 +2,7 @@
 // bayi başvurusu, yeni mağaza üyesi ve PlatinMarket eşitlemesinde değişen ürünler (meta/feed) tek listede.
 // Okundu bilgisi cihazda (ls 'notif-seen' = son açılış zamanı).
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore, store, go, openOrder, openRequest, toast, openProduct } from './store.js';
 import { Icon, Toggle } from './ui.jsx';
 import { pushState, enablePush, disablePush, linkMember } from './push.js';
@@ -44,6 +45,32 @@ function useNotifs() {
   }, [orders, requests, customers, members, feed, preqs, issues, reviews, byId]);
 }
 
+// Gezinirken yeni bildirim gelince küçük açılır kart (29.10.2026): sadece sayfa açıldıktan SONRA gelenler;
+// 6 sn sonra kendiliğinden kaybolur, basınca bildirimin gittiği yere gider. Zil paneli açıksa çıkmaz.
+export function NotifPop({ list, onPick, off }) {
+  const t0 = useRef(Date.now()); const known = useRef(null);
+  const [cur, setCur] = useState(null); const tm = useRef(0);
+  useEffect(() => {
+    if (!known.current) { known.current = new Set(list.map((x) => x.id)); return; }
+    const fresh = list.filter((x) => !known.current.has(x.id) && x.at > t0.current - 3000);
+    list.forEach((x) => known.current.add(x.id));
+    if (!fresh.length || off) return;
+    const x = fresh.sort((a, b) => b.at - a.at)[0];
+    setCur({ ...x, more: fresh.length - 1, k: Date.now() });
+    clearTimeout(tm.current); tm.current = setTimeout(() => setCur(null), 6500);
+  }, [list]);
+  useEffect(() => () => clearTimeout(tm.current), []);
+  if (!cur) return null;
+  return createPortal(
+    <div className={'npop tone-' + cur.tone} key={cur.k} role="status">
+      <button type="button" className="npop-b" onClick={() => { setCur(null); onPick(cur); }}>
+        <span className="nc-ic"><Icon n={cur.ic} s={17} /></span>
+        <span className="npop-t"><b>{cur.t}</b>{cur.s && <small>{cur.s}</small>}{cur.more > 0 && <small className="npop-more">+{cur.more} bildirim daha</small>}</span>
+      </button>
+      <button type="button" className="npop-x" onClick={() => setCur(null)} aria-label="Kapat"><Icon n="x" s={15} /></button>
+    </div>, document.body);
+}
+
 export function NotifBell() {
   const list = useNotifs();
   const [open, setOpen] = useState(false);
@@ -66,6 +93,7 @@ export function NotifBell() {
   let lastDay = '';
   return (
     <span className="nc" ref={box}>
+      <NotifPop list={list} off={open} onPick={pick} />
       <button className={'icon-btn nc-bell' + (open ? ' on' : '')} onClick={() => (open ? close() : setOpen(true))} aria-label={`Bildirimler${unread ? ` (${unread} yeni)` : ''}`} title="Bildirimler">
         <Icon n="bell" s={19} />{unread > 0 && <span key={unread} className="badge">{unread > 99 ? '99+' : unread}</span>}
       </button>
@@ -222,6 +250,7 @@ export function ShopBell() {
   if (!member && !(guestOrders || []).length && !list.length) return null;
   return (
     <span className="nc shop-nc" ref={box}>
+      <NotifPop list={list} off={open} onPick={(x) => { close(); x.go(); }} />
       <button className={'icon-btn nc-bell' + (open ? ' on' : '')} onClick={() => (open ? close() : setOpen(true))} aria-label={`Bildirimler${unread ? ` (${unread} yeni)` : ''}`} title="Bildirimler">
         <Icon n="bell" s={19} />{unread > 0 && <span key={unread} className="badge">{unread > 9 ? '9+' : unread}</span>}
       </button>

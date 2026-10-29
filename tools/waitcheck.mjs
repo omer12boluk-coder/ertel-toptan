@@ -30,7 +30,7 @@ export async function waitCheck(db, byId, note = console.log) {
     const ref = db.doc('members/' + uid);
     const m = (await ref.get()).data(); if (!m) continue;
     const ids = new Set(items.map((x) => x.id));
-    const hit = [...items.map((x) => ({ ...x, at: now })), ...(m.notifyHit || [])].slice(0, 20);
+    const hit = [...items.map((x) => ({ ...x, at: now })), ...(m.notifyHit || []).filter((h) => !ids.has(h.id))].slice(0, 20); // aynı ürün tekrar gelirse eskisi silinir
     await ref.update({ notify: (m.notify || []).filter((x) => !ids.has(x)), notifyHit: hit }).catch((e) => note('Üye güncellenemedi', e.message));
   }
   for (const r of done) await r.delete().catch(() => {});

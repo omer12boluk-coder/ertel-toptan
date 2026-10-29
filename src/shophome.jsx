@@ -1,6 +1,7 @@
 // Online mağaza ana sayfası (/magaza → Ana sayfa): büyük reklam alanı, avantajlar, marka kutuları,
 // kare reklam kutuları (bento), ürün rafları ve alt WhatsApp bandı. İçerik: Ayarlar > Mağaza ana sayfası (settings.shopHome).
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useStore, store, setQty, go, api, toast } from './store.js';
 import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
 import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg } from './utils.js';
@@ -274,7 +275,7 @@ export function HeaderSearch() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [mob, setMob] = useState(false); // telefonda simgeye basınca açılan kutu
-  const [hi, setHi] = useState(0);
+  const [hi, setHi] = useState(-1); // -1: hiçbir sonuç seçili değil → Enter tüm ürünlerde arar
   const [prod, setProd] = useState(null);
   const inp = useRef(null);
   const wrap = useRef(null);
@@ -304,21 +305,21 @@ export function HeaderSearch() {
   // kapanış da animasyonlu: önce küçülerek kaybolur, sonra simgeye döner
   const close = () => { setOpen(false); clearTimeout(closeT.current); setClosing(true); closeT.current = setTimeout(() => { setMob(false); setClosing(false); }, 200); };
   const hideList = () => setOpen(false); // sadece sonuç listesi kapanır; kutu ve yazı yerinde kalır
-  const goAll = () => { if (!q.trim()) return; store.set({ catalogGo: { q: q.trim() } }); go('katalog'); hideList(); inp.current?.blur(); };
+  const goAll = () => { if (!q.trim()) return; store.set({ catalogGo: { q: q.trim() } }); go('katalog'); hideList(); inp.current?.blur(); setQ(''); close(); };
   const pick = (p) => { setQ(''); close(); inp.current?.blur(); setProd(p); }; // ürüne bakınca arama temizlenir
   const key = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, res.list.length)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
-    else if (e.key === 'Enter') { e.preventDefault(); if (hi < res.list.length && res.list[hi]) pick(res.list[hi]); else goAll(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, -1)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (hi >= 0 && hi < res.list.length && res.list[hi]) pick(res.list[hi]); else goAll(); } // ok tuşuyla seçilmediyse Tüm ürünler'de aranır
     else if (e.key === 'Escape') { if (q) hideList(); else close(); inp.current?.blur(); }
   };
   return (
     <div ref={wrap} className={'hsearch' + (mob ? ' mob-open' : '') + (closing ? ' closing' : '') + (fit?.drop ? ' drop' : '')} style={fit ? { '--hsw': fit.w + 'px' } : undefined}>
-      <button type="button" className="icon-btn hsearch-btn" onClick={() => { measure(); clearTimeout(closeT.current); setClosing(false); setMob(true); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
+      <button type="button" className="icon-btn hsearch-btn" onClick={() => { measure(); clearTimeout(closeT.current); flushSync(() => { setClosing(false); setMob(true); }); inp.current?.focus(); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
       <div className="hsearch-box">
         <Icon n="search" s={19} />
         <input ref={inp} type="search" value={q} placeholder="Ürün ara…" aria-label="Ürün ara"
-          onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => { setOpen(false); if (!inp.current?.value) close(); }, 180)} onKeyDown={key} />
+          onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(-1); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => { setOpen(false); if (!inp.current?.value) close(); }, 180)} onKeyDown={key} />
         {(q || mob) && <button type="button" className="hsearch-x" onMouseDown={(e) => e.preventDefault()} onClick={() => { if (q) setQ(''); else close(); }} aria-label="Temizle"><Icon n="x" s={14} /></button>}
         {open && q.trim() && (
           <div className="hsearch-res" role="listbox">

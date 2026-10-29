@@ -9,7 +9,7 @@ import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
 import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
-import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat } from './extras.jsx';
+import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
 
 export function useTree() {
@@ -213,6 +213,7 @@ function AdminRow({ p, onEdit, onCopy, onDel, grip, gripReset }) {
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
     { label: 'Ürün adını kopyala', icon: 'copy', onClick: () => copyText(p.n) },
     links.product(p, S) && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(links.product(p, S), '_blank', 'noopener') },
+    { label: isPinned(S, p.id) ? 'Öne çıkarmayı kaldır' : 'Kategoride öne çıkar', icon: 'tack', onClick: () => togglePin(p) },
     '-',
     { label: 'Ürünü sil', icon: 'trash', danger: true, onClick: onDel },
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
@@ -271,8 +272,12 @@ export function PriceBlock({ p, big, S: So, role: ro }) {
   if (role === 'public') {
     return (
       <div className={'price' + (big ? ' big' : '')}>
-        {pr.mine == null ? <span className="price-ask">Fiyat sorun</span> : <span className="price-mine"><small>Fiyat:</small>{fmt(pr.mine, p.cur)}<PlusVat {...ex} /></span>}
-        <PriceExtras v={pr.mine} cur={p.cur} {...ex} />
+        {pr.mine == null ? <>
+          {/* kutu kartta "Fiyat sorun" fiyatlı kartın fiyat satırıyla aynı yerde dursun: görünmez fiyat iskeleti aynı yüksekliği tutar */}
+          {!big && <span className="price-ghost" aria-hidden="true"><span className="price-mine"><small>Fiyat:</small>{fmt(1, p.cur)}<PlusVat {...ex} /></span><PriceExtras v={1} cur={p.cur} {...ex} /></span>}
+          <span className="price-ask">Fiyat sorun</span>
+        </> : <span className="price-mine"><small>Fiyat:</small>{fmt(pr.mine, p.cur)}<PlusVat {...ex} /></span>}
+        {pr.mine != null && <PriceExtras v={pr.mine} cur={p.cur} {...ex} />}
       </div>
     );
   }
@@ -399,6 +404,13 @@ export function Catalog({ admin }) {
     if (sort === 'desc') r = [...r].sort((a, b) => b.r - a.r);
     if (sort === 'name') r = [...r].sort((a, b) => a.n.localeCompare(b.n, 'tr'));
     if (sort === 'stock') r = [...r].sort((a, b) => (b.s > 0) - (a.s > 0));
+    // kategoride öne çıkanlar (mağaza ve bayi; varsayılan sıralama, arama yokken) en başta, yöneticinin verdiği sırayla
+    const pins = feat(S).pins;
+    if (scoped && !admin && cat != null && sort === 'default' && !toks.length && pins.length) {
+      const pos = new Map(pins.map((id, i) => [id, i]));
+      const top = r.filter((p) => pos.has(p.id)).sort((a, b) => pos.get(a.id) - pos.get(b.id));
+      if (top.length) r = [...top, ...r.filter((p) => !pos.has(p.id))];
+    }
     // yönetici tablosu başlığına basarak sıralama (1. çoktan aza / aktifler önce, 2. tersi, 3. kapalı)
     if (admin && asort.k) {
       const key = { code: (p) => String(p.k || ''), name: (p) => p.n, s: (p) => Number(p.s) || 0, r: (p) => Number(p.r) || 0, w: (p) => priceFor(p, S, user, null).mine ?? -1, a: (p) => (p.a ? 1 : 0), ut: (p) => Math.max(p.ut || 0, lastOrderMap().get(p.id) || 0) }[asort.k];
@@ -408,7 +420,8 @@ export function Catalog({ admin }) {
     }
     return r;
   };
-  const deps = [all, q, qk, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet, asort];
+  const deps = [all, q, qk, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet, asort, S.feat];
+  const pinShow = !admin && cat != null && sort === 'default' && !q.trim() ? new Set(feat(S).pins) : null;
   const scopedList = useMemo(() => filterList(true), deps);
   const scoped = cat != null || !!brand;
   const globalList = useMemo(() => (q.trim() && scoped ? filterList(false) : null), deps);
@@ -551,7 +564,7 @@ export function Catalog({ admin }) {
           ) : (
             <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + cardAdd(S, user?.role)}>
               {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
-                : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
+                : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} pinned={!!pinShow?.has(p.id)} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
             </ul>
           )}
           {limit < list.length && <div ref={sentinel} className="more"><button className="btn ghost" onClick={more}>Daha fazla göster ({list.length - limit})</button></div>}
@@ -602,7 +615,7 @@ function InlineQty({ qty, onChange, icon }) {
   );
 }
 
-function ProductRow({ p, admin, onOpen }) {
+function ProductRow({ p, admin, onOpen, pinned }) {
   const { settings: S, cart, user } = useStore();
   const qty = cart[p.id] || 0;
   const [hov, setHov] = useState(false); // bilgisayar: üstüne gelince (birden çok resim varsa) yazılar aşağı kayar, küçük resimler çıkar
@@ -618,6 +631,8 @@ function ProductRow({ p, admin, onOpen }) {
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
     { label: 'Ürün adını kopyala', icon: 'copy', onClick: () => copyText(p.n) },
     site && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
+    '-',
+    { label: isPinned(S, p.id) ? 'Öne çıkarmayı kaldır' : 'Kategoride öne çıkar', icon: 'tack', onClick: () => togglePin(p) },
   ] : [
     { label: 'Ürünü aç', icon: 'zoom', onClick: onOpen },
     { label: qty ? `Sepete 1 tane daha ekle (${qty})` : 'Sepete ekle', icon: 'plus', onClick: () => { setQty(p.id, qty + 1); toast('Sepete eklendi'); } },
@@ -625,6 +640,8 @@ function ProductRow({ p, admin, onOpen }) {
     user?.role === 'public' && { label: store.s.favs.includes(p.id) ? 'Favorilerden çıkar' : 'Favorilere ekle', icon: 'heart', onClick: () => toast(toggleFav(p.id) ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı') },
     user?.role !== 'public' && S.requests.allowQuote && { label: 'Bu ürünü sor', icon: 'chat', onClick: () => askAbout(p, Math.max(1, qty)) },
     '-',
+    user?.role === 'public' && feat(S).share && { label: 'Ürünü paylaş', icon: 'share', onClick: () => setTimeout(() => shareMenu(e, p, S), 0) },
+    { label: 'Ürün adını kopyala', icon: 'copy', onClick: () => copyText(p.n, 'Ürün adı kopyalandı') },
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
     site && user?.role !== 'public' && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
   ], p.n.length > 42 ? p.n.slice(0, 40) + '…' : p.n);
@@ -632,6 +649,7 @@ function ProductRow({ p, admin, onOpen }) {
     <li className={'prow' + (admin ? ' adm' : '') + (!p.a ? ' inactive' : '') + (needsCheck(p) && admin ? ' changed' : '') + (hov && multi ? ' hov' : '')} onContextMenu={menu}
       onMouseEnter={multi ? () => setHov(true) : undefined} onMouseLeave={multi ? () => { setHov(false); setIx(0); } : undefined}>
       {user?.role === 'public' && <FavBtn id={p.id} />}
+      {pinned && <span className="pin-tag"><Icon n="tack" s={12} />Öne çıkan</span>}
       <button className="prow-main" onClick={onOpen}>
         <CardImg p={p} hov={hov && multi} ix={ix} setIx={setIx} />
         <div className="prow-info">
@@ -684,9 +702,10 @@ export function FavGrid() {
 export function WaitGrid() {
   const { member, byId, settings: S, user } = useStore();
   const [open, setOpen] = useState(null);
-  const ids = member?.notify || [];
+  const ids = [...new Set(member?.notify || [])]; // aynı ürün iki kez kayıtlıysa bir kez gösterilir
   const list = ids.map((id) => byId.get(id)).filter((p) => p && p.a !== 0 && !p.so);
-  const hits = (member?.notifyHit || []).filter((h) => h && h.at > Date.now() - 30 * 864e5 && !ids.includes(h.id)).map((h) => byId.get(h.id)).filter((p) => p && p.a !== 0 && !p.so);
+  const hitIds = [...new Set((member?.notifyHit || []).filter((h) => h && h.at > Date.now() - 30 * 864e5 && !ids.includes(h.id)).map((h) => h.id))];
+  const hits = hitIds.map((id) => byId.get(id)).filter((p) => p && p.a !== 0 && !p.so);
   if (!list.length && !hits.length) return <Empty icon="bell" title="Haber beklediğiniz ürün yok"><p>Stokta olmayan ürünlerde <b>Gelince haber ver</b>’e dokunun; ürün gelince telefonunuza bildirim gönderelim.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere göz at</button></Empty>;
   return <>
     {list.length > 0 && <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>{list.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}</ul>}
@@ -798,11 +817,14 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
     <div className="pd-end" aria-hidden="true" />
   </>;
 }
-export function ProductSheet({ p, onClose, viewOnly = false }) {
+// Ürün açılışı (Ayarlar > Ürün kartları): bilgisayar ve telefon ayrı seçilir (productView / productViewM; telefon boşsa bilgisayarınki)
+export const isPhoneUI = () => matchMedia('(max-width: 899px), (hover: none) and (pointer: coarse)').matches;
+export const productViewFor = (S) => { const C = S.cards || {}; return (isPhoneUI() ? C.productViewM || C.productView : C.productView) || 'sheet'; };
+export function ProductSheet({ p, onClose, viewOnly = false, forceSheet = false }) {
   const S = useStore((s) => s.settings);
   const pub = useStore((s) => s.user?.role === 'public');
   // Ayarlar > Ürün kartları > "Ürün açılışı: sayfa" → pencere yerine ürün sayfası
-  const asPage = pub && !viewOnly && S.cards?.productView === 'page';
+  const asPage = pub && !viewOnly && !forceSheet && productViewFor(S) === 'page';
   const [cur, setCur] = useState(p);
   useEffect(() => setCur(p), [p?.id]);
   useEffect(() => { if (asPage) { onClose(); openProduct(p.id); } }, [asPage]);
@@ -1083,10 +1105,10 @@ export function ThumbStrip({ n, active, onPick, render, dark }) {
     if (l < el.scrollLeft + 8) el.scrollTo({ left: l - 40, behavior: 'smooth' });
     else if (r > el.scrollLeft + el.clientWidth - 8) el.scrollTo({ left: r - el.clientWidth + 40, behavior: 'smooth' });
   }, [active]);
-  const page = (d) => { const el = ref.current; el?.scrollBy({ left: d * el.clientWidth * 0.8, behavior: 'smooth' }); };
   return (
     <div className={'strip' + (dark ? ' dark' : '')}>
-      {edge.l && <button className="strip-arrow l" onClick={() => page(-1)} aria-label="Önceki resimler"><Icon n="back" s={16} /></button>}
+      {/* oklar şeridi kaydırmaz, bir önceki / sonraki resme geçer (şerit seçili resmi kendiliğinden gösterir) */}
+      {(edge.l || edge.r) && active > 0 && <button className="strip-arrow l" onClick={() => onPick(active - 1)} aria-label="Önceki resim"><Icon n="back" s={16} /></button>}
       <div className="gal-thumbs" ref={ref} onScroll={measure}>
         {Array.from({ length: n }, (_, k) => (
           <button key={k} className={'gal-th' + (k === active ? ' on' : '')} onClick={() => onPick(k)} aria-label={`Resim ${k + 1}`} aria-current={k === active}>
@@ -1094,7 +1116,7 @@ export function ThumbStrip({ n, active, onPick, render, dark }) {
           </button>
         ))}
       </div>
-      {edge.r && <button className="strip-arrow r" onClick={() => page(1)} aria-label="Sonraki resimler"><Icon n="back" s={16} /></button>}
+      {(edge.l || edge.r) && active < n - 1 && <button className="strip-arrow r" onClick={() => onPick(active + 1)} aria-label="Sonraki resim"><Icon n="back" s={16} /></button>}
     </div>
   );
 }
