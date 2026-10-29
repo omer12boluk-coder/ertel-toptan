@@ -4704,3 +4704,7 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .ptr.pull5 .ptr-ios svg { transform: rotate(calc(var(--ptr-k, 0) * 120deg)); will-change: transform; }
 .ptr.pull5.spin .ptr-ios svg { animation: ptrIos .8s steps(8) infinite; }
 .ptr.pull5.err { opacity: 1; }
+/* (6) gösterge yine mavi yuvarlak ok; kapanış daha kısa */
+.ptr.pull5.anim { transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .22s ease; }
+.ptr.pull5 .ptr-r { transform: rotate(calc(var(--ptr-k, 0) * 270deg)); }
+.ptr.pull5.spin .ptr-r { animation: ptr-spin .7s linear infinite; }

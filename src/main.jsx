@@ -676,8 +676,8 @@ function setupPull() {
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr pull5'; box.setAttribute('aria-hidden', 'true');
-    const ticks = Array.from({ length: 8 }, (_, i) => `<line x1="12" y1="3" x2="12" y2="7.2" transform="rotate(${i * 45} 12 12)" style="opacity:0"/>`).join('');
-    box.innerHTML = `<span class="ptr-ios"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">${ticks}</svg></span><span class="ptr-t"></span>`;
+    // mavi yuvarlak ok (kullanıcı bunu beğendi); dönüşü ekran kartında, akıcı
+    box.innerHTML = '<span class="ptr-c"><i class="ptr-r"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i></span><span class="ptr-t"></span>';
     document.body.appendChild(box); return box;
   };
   const collect = () => {
@@ -692,10 +692,9 @@ function setupPull() {
   const headB = () => { const r = document.querySelector('.topbar')?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
   const draw = (px, anim) => {
     if (!els) els = collect();
-    for (const e of els) { e.style.transition = anim ? `transform .42s ${EASE}` : 'none'; e.style.willChange = px ? 'transform' : ''; e.style.transform = px ? `translate3d(0,${px}px,0)` : ''; }
+    for (const e of els) { e.style.transition = anim ? `transform .3s ${EASE}` : 'none'; e.style.willChange = px ? 'transform' : ''; e.style.transform = px ? `translate3d(0,${px}px,0)` : ''; }
     const b = ui(); const k = Math.min(1, px / TH);
     b.style.setProperty('--ptr-top', headB() + 'px'); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', busy ? 1 : k);
-    const n = busy ? 8 : Math.round(k * 8); b.querySelectorAll('line').forEach((l, i) => { l.style.opacity = i < n ? String(busy ? 1 - i * 0.1 : 0.35 + 0.65 * (i / 7)) : '0'; });
     b.className = 'ptr pull5' + (busy ? ' spin' : ready ? ' ready' : '') + (anim ? ' anim' : '');
     if (!px && anim) { const E = els; els = null; setTimeout(() => E.forEach((e) => { if (!on && !busy) e.style.transition = ''; }), 460); }
   };
@@ -733,7 +732,7 @@ function setupPull() {
       const j = await r.json().catch(() => ({}));
       if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; } // sadece yeni sürümde gerçek yenileme
     } catch (e) { err = e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message; }
-    setTimeout(() => { if (err) say(err); setTimeout(() => { busy = false; d = 0; draw(0, true); }, err ? 1400 : 0); }, Math.max(0, 800 - (Date.now() - t0)));
+    setTimeout(() => { if (err) say(err); setTimeout(() => { busy = false; d = 0; draw(0, true); }, err ? 1400 : 0); }, Math.max(0, 380 - (Date.now() - t0)));
   };
   addEventListener('touchend', end, { passive: true });
   addEventListener('touchcancel', end, { passive: true });
