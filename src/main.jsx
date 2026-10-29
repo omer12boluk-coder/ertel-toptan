@@ -684,6 +684,8 @@ function setupCrispBack() {
     if (!b || b.disabled || !matchMedia('(max-width: 899px)').matches) return;
     e.stopImmediatePropagation(); e.preventDefault();
     b.classList.add('tap');
+    // kapanacak sayfadaki videolar hemen durur → geri dönüş karesi video çözümüyle yarışmaz
+    document.querySelectorAll('.main video').forEach((x) => { try { x.pause(); } catch {} });
     const wait = Math.max(0, 70 - (Date.now() - downAt));
     // asıl tıklama rAF'ın İÇİNDE değil, basılı kare çizildikten sonra ayrı bir görevde (setTimeout) işlenir: rAF içinde
     // işlenince sayfa geçişi ve kaydırma bir SONRAKİ kareye kalıyor, yeni sayfa bir kare animasyonsuz görünüp 'flaş' yapıyordu

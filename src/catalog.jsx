@@ -952,11 +952,12 @@ export function useVideoFrame(src0, given) {
     if (given) { setU(given); return; }
     if (!src) { setU(''); return; }
     if (frameCache.has(src)) { setU(frameCache.get(src)); return; }
-    let dead = false, v = null, to = 0;
+    let dead = false, v = null, to = 0, wait = 0;
     const done = (x) => { clearTimeout(to); if (x != null) frameCache.set(src, x); if (!dead) setU(x || ''); if (v) { v.removeAttribute('src'); try { v.load(); } catch {} } };
     // Önce video sitesi kare almaya (CORS) izin veriyor mu, ayrı ve zararsız bir istekle sorulur. İzin yoksa videoya
     // "izinli modda" hiç dokunulmaz: başarısız izinli deneme tarayıcının video önbelleğini bozup asıl videoyu açtırmıyordu.
-    fetch(src, { mode: 'cors', headers: { Range: 'bytes=0-0' } }).then((r) => {
+    // sayfa geçişi (~0,3 sn) bitene kadar başlamaz: video indirme + kare çizme + JPEG'e çevirme telefonda ağır, açılış animasyonunu takıltıyordu
+    wait = setTimeout(() => fetch(src, { mode: 'cors', headers: { Range: 'bytes=0-0' } }).then((r) => {
       if (dead) return;
       if (!r.ok && r.status !== 206) return done('');
       v = document.createElement('video');
@@ -972,8 +973,8 @@ export function useVideoFrame(src0, given) {
       }, { once: true });
       v.addEventListener('error', () => done(''), { once: true });
       v.src = src + (src.includes('?') ? '&' : '?') + 'kare=1'; // asıl videodan ayrı önbellek kaydı
-    }).catch(() => done(''));
-    return () => { dead = true; clearTimeout(to); };
+    }).catch(() => done('')), 500);
+    return () => { dead = true; clearTimeout(to); clearTimeout(wait); };
   }, [src, given]);
   return u; // null: hazırlanıyor · '': alınamadı · adres: resim
 }
@@ -996,7 +997,10 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   const [big, setBig] = useState(false); // tam ekranda mı (aynı video öğesi tam ekran katmanına taşınır)
   const frame = useVideoFrame(src, poster);
   const pst = frame || undefined;
-  useEffect(() => { const el = v.current; if (!el || big) return; if (active && auto) el.play().catch(() => {}); else el.pause(); }, [active, auto, big]);
+  // video öğesi sayfa geçişi bittikten sonra (~0,45 sn) bağlanır → açılış / geri dönüş kayması video çözümüyle takılmaz
+  const [live, setLive] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setLive(true), 450); return () => clearTimeout(t); }, []);
+  useEffect(() => { const el = v.current; if (!el || big || !live) return; if (active && auto) el.play().catch(() => {}); else el.pause(); }, [active, auto, big, live]);
   const toggle = () => { const el = v.current; if (!el) return; el.paused ? el.play().catch(() => {}) : el.pause(); };
   const open = () => setBig(true);
   // alttaki süre çubuğu: parmakla / fareyle tutup ileri-geri çekilir (resim şeridini kaydırmaz)
@@ -1008,7 +1012,7 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   if (err) return <div className={'gal-vid-err ' + className}><Icon n="play" s={26} /><span>Video açılamadı</span></div>;
   return (
     <div className={'gal-vid' + (playing ? ' playing' : '') + ' ' + className}>
-      <video ref={v} src={src} poster={pst} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
+      <video ref={v} src={live ? src : undefined} poster={pst} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
         style={{ objectFit: fit }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => setErr(true)}
         onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); }} onClick={() => !big && toggle()} />
       {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={28} /></button>}
