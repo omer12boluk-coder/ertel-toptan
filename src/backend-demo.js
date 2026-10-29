@@ -185,7 +185,7 @@ export class DemoBackend {
   async authVerifyEmail() {}
   async saveMember(m) { const o = this.mem()[m.uid]; Object.assign(o, m); this.persist(); this.memberCb?.(this.pub(o)); }
   watchMembers(cb, since = 0) { return this.sub(() => cb(Object.values(this.mem()).filter((m) => !since || (m.createdAt || 0) >= since).map((m) => this.pub(m)))); }
-  watchByStatus(col, statuses, cb) { return this.sub(() => cb(Object.values(col === 'orders' ? this.ord() : col === 'preq' ? this.pq() : col === 'issues' ? this.is_() : this.db.requests).filter((x) => statuses.includes(x.status)).map((x) => ({ ...x })))); }
+  watchByStatus(col, statuses, cb) { return this.sub(() => cb(Object.values(col === 'orders' ? this.ord() : col === 'preq' ? this.pq() : col === 'issues' ? this.is_() : col === 'reviews' ? this.rv() : this.db.requests).filter((x) => statuses.includes(x.status)).map((x) => ({ ...x })))); }
   watchUserRequests(uid, cb) { return this.sub(() => cb(Object.values(this.db.requests).filter((r) => r.uid === uid).sort((a, b) => b.updatedAt - a.updatedAt).map((r) => ({ ...r })))); }
   async deleteMember(uid) { delete this.mem()[uid]; this.persist(); }
   newOrderId() { return 'o' + rid() + rid(); }
@@ -226,6 +226,23 @@ export class DemoBackend {
   async msgIssue(id, patch) { return this.updateIssue(id, patch); }
   async deleteIssue(id) { delete this.is_()[id]; this.persist(); }
   issuePic(key) { return key; }
+  // ---- Mağaza özellikleri (demo): popüler verisi katalogdan uydurulur (görünüm denemesi için)
+  async getStats() {
+    const act = this.db.catalog.filter((p) => p.a && !p.so); const ids = act.map((p) => p.id);
+    const pair = {}; ids.slice(0, 200).forEach((id, i) => { pair[id] = [ids[(i + 1) % ids.length], ids[(i + 7) % ids.length], ids[(i + 13) % ids.length], ids[(i + 21) % ids.length]]; });
+    const cnt = {}; ids.forEach((id, i) => { if (i % 3 === 0) cnt[id] = 1 + ((i * 7) % 11); });
+    return { at: Date.now(), fav: ids.slice(0, 10).map((id, i) => [id, 48 - i * 4]), pair, cnt };
+  }
+  async setWait(uid, pid, on, notify) { const m = this.mem()[uid]; if (m) { m.notify = notify; this.persist(); } }
+  rv() { return (this.db.reviews = this.db.reviews || {}); }
+  async getRevSum() { const s = {}; for (const r of Object.values(this.rv())) if (r.status === 'pub') { const x = (s[r.pid] = s[r.pid] || [0, 0]); x[0] += r.stars; x[1]++; } for (const k in s) s[k] = [Math.round((s[k][0] / s[k][1]) * 10) / 10, s[k][1]]; return s; }
+  async myReviews(uid) { return Object.values(this.rv()).filter((r) => r.uid === uid).map((r) => ({ ...r })); }
+  async reviewsOf(pid) { return Object.values(this.rv()).filter((r) => r.pid === pid && r.status === 'pub').sort((a, b) => b.createdAt - a.createdAt).map((r) => ({ ...r })); }
+  async createReview(id, doc) { this.rv()[id] = { ...doc, id }; this.persist(); }
+  watchReviews(cb) { return this.sub(() => cb(Object.values(this.rv()).sort((a, b) => b.createdAt - a.createdAt).map((r) => ({ ...r })))); }
+  async updateReview(id, patch) { Object.assign(this.rv()[id], patch); this.persist(); }
+  async deleteReview(id) { delete this.rv()[id]; this.persist(); }
+  async syncRevSum() {}
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
   async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => { const kc = stencilKeys({ ...p, t }); return kc ? { ...p, kc } : p; }); }
   async hasPublicCatalog() { return true; }

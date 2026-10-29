@@ -67,6 +67,8 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
       if (url.pathname === '/push/fav' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushFav(env, req.headers.get('X-Key') || '', b)); }
+      if (url.pathname === '/push/back' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushBack(env, req.headers.get('X-Key') || '', b)); }
+      if (url.pathname === '/rev/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await revNew(req, env, b)); }
       if (url.pathname === '/push/member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushMember(env, b)); }
       if (url.pathname === '/notify-sync' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifySync(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname.startsWith('/dhl/') && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await dhl(env, url.pathname.slice(5), b)); }
@@ -1014,4 +1016,40 @@ async function issueSweep(env) {
   }
   for (const id of [...ids].slice(0, 40)) { const r = await fetch(FS + 'issues/' + id); if (r.status === 404) gone += await isDropFiles(env, id); }
   return gone;
+}
+
+
+// ---- Gelince haber ver (29.10.2026): eşitleme stoğa giren ve bekleyeni olan ürünleri bildirir (X-Key sync anahtarı)
+// b.list = [{uid, items: [{id, n}]}] → üyenin cihazlarına (pm:<uid>) "Beklediğiniz ürün geldi"
+async function pushBack(env, key, b) {
+  if (!env.TELEGRAM_TOKEN) return { ok: false, error: 'anahtar yok' };
+  const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('sync:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if (key !== want) return { ok: false, error: 'yetki' };
+  const pub = (await fsDoc('settings/public')) || {};
+  if (pub.feat?.notify === false) return { ok: true, off: true };
+  const shop = pub.brand?.appName || 'ERTEL GSM';
+  let sent = 0, users = 0;
+  for (const { uid, items } of (Array.isArray(b.list) ? b.list : []).slice(0, 1000)) {
+    if (!/^[\w-]{6,64}$/.test(String(uid)) || !Array.isArray(items) || !items.length) continue;
+    const subs = (await env.KV.get('pm:' + uid, 'json')) || []; if (!subs.length) continue; users++;
+    const it = items[0];
+    const data = items.length === 1
+      ? { title: '🔔 Beklediğiniz ürün geldi', body: `${String(it.n).slice(0, 120)} tekrar stokta. Dokunun, hemen sepete ekleyin.`, url: '/magaza/urun/' + it.id, tag: 'back-' + it.id }
+      : { title: `🔔 Beklediğiniz ${items.length} ürün geldi`, body: items.slice(0, 3).map((x) => String(x.n).slice(0, 40)).join(' · '), url: '/magaza/hesap/haber-bekleyenler', tag: 'back' };
+    data.title = data.title + ' · ' + shop;
+    const keep = [];
+    for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
+    if (keep.length !== subs.length) await env.KV.put('pm:' + uid, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 365 });
+  }
+  return { ok: true, users, sent };
+}
+// ---- Yeni ürün yorumu (üye oturumu): yöneticiye telefon bildirimi, bir kez
+async function revNew(req, env, b) {
+  const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
+  if (!/^[A-Za-z0-9_-]{6,60}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
+  if (await env.KV.get('nrv:' + id)) return { ok: true, already: true };
+  const d = await fsAuth('reviews/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'yorum yok' };
+  await env.KV.put('nrv:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
+  await adminPush(env, { title: `⭐ Yeni yorum ${'★'.repeat(Number(d.stars) || 0)} · ${d.name || 'Üye'}`, body: (String(d.text || '') || 'Sadece yıldız verdi').slice(0, 160) + (d.status === 'pending' ? ' · onay bekliyor' : ''), url: '/admin/musteriler', tag: 'rv-' + id }).catch(() => {});
+  return { ok: true };
 }

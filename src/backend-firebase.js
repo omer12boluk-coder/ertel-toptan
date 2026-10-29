@@ -117,7 +117,7 @@ export class FirebaseBackend {
   async savePublicSettings(S) {
     const p = S.pricing || {};
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
-      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, showVatInc: !!p.showVatInc, plusVat: !!p.plusVat, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, footer: S.footer || null, cards: S.cards || null, look: S.look || null, kalip: S.kalip || null, preq: S.preq || null, legal: S.legal || null, issue: S.issue || null, v: S.v || 0 });
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, showVatInc: !!p.showVatInc, plusVat: !!p.plusVat, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, footer: S.footer || null, cards: S.cards || null, look: S.look || null, kalip: S.kalip || null, preq: S.preq || null, legal: S.legal || null, issue: S.issue || null, feat: S.feat || null, v: S.v || 0 });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan
@@ -366,6 +366,25 @@ export class FirebaseBackend {
   async msgIssue(id, patch) { await this.updateIssue(id, patch); this._watchPost('/issue/msg', { id }).catch((e) => console.warn('mesaj bildirimi', e)); }
   async deleteIssue(id) { await this._watchPost('/issue/del', { id }); }
   issuePic(key) { return this.preqPic(key); }
+  // ---- Mağaza özellikleri (extras.jsx / reviews.jsx)
+  async getStats() { const s = await timeout(this.F.getDoc(this.d('stats', 'public'))); return s.exists() ? s.data() : {}; }
+  async setWait(uid, pid, on, notify) {
+    await timeout(this.F.updateDoc(this.d('members', uid), { notify }));
+    const ref = this.d('wait', String(pid));
+    if (on) await timeout(this.F.setDoc(ref, { uids: this.F.arrayUnion(uid), at: now() }, { merge: true }));
+    else await timeout(this.F.updateDoc(ref, { uids: this.F.arrayRemove(uid), at: now() })).catch(() => {});
+  }
+  async getRevSum() { const s = await timeout(this.F.getDoc(this.d('revsum', 'main'))); return s.exists() ? s.data().s || {} : {}; }
+  async myReviews(uid) { const s = await timeout(this.F.getDocs(this.F.query(this.c('reviews'), this.F.where('uid', '==', uid)))); return s.docs.map((x) => ({ id: x.id, ...x.data() })); }
+  async reviewsOf(pid) { const s = await timeout(this.F.getDocs(this.F.query(this.c('reviews'), this.F.where('pid', '==', pid), this.F.where('status', '==', 'pub'), this.F.limit(60)))); return s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt); }
+  async createReview(id, doc) { await timeout(this.F.setDoc(this.d('reviews', id), doc)); this._watchPost('/rev/new', { id }).catch((e) => console.warn('yorum bildirimi', e)); }
+  watchReviews(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('reviews'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 2000 : 400)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
+  async updateReview(id, patch) { await timeout(this.F.updateDoc(this.d('reviews', id), patch)); }
+  async deleteReview(id) { await timeout(this.F.deleteDoc(this.d('reviews', id))); }
+  async syncRevSum(pid) {
+    const l = await this.reviewsOf(pid); const n = l.length; const avg = n ? Math.round((l.reduce((a, r) => a + (r.stars || 0), 0) / n) * 10) / 10 : 0;
+    await timeout(this.F.setDoc(this.d('revsum', 'main'), { s: { [String(pid)]: n ? [avg, n] : this.F.deleteField() } }, { merge: true }));
+  }
   preqPic(key) { return /^(data:|blob:|https?:)/.test(key) ? key : String(window.WATCH_URL || '').replace(/\/$/, '') + '/p/' + key; }
   async _pingReq(id, msg) { const token = await this.idToken(); if (token) pingWatch('/notify-req', { id, token, msg }); }
   watchRequest(id, cb) {

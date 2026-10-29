@@ -17,6 +17,7 @@ import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPus
 import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
 import { LegalConsent, SignupConsent, legalFromOrder, OrderLegalLink } from './legalui.jsx';
 import { LEGAL_V } from './legal.js';
+import { WaitList, feat } from './extras.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -811,7 +812,7 @@ function LocalOrders({ inSheet }) {
 
 // Üye hesabı: profil başlığı + seçilerek açılan satırlar (her biri kendi penceresinde)
 // Hesabım: bilgisayarda solda profil + menü, sağda seçilen bölüm (sayfa); telefonda menü listesi → bölüm ayrı sayfa (geri: Hesabım)
-const ACCT_T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', favs: 'Favorilerim', notif: 'Bildirimler', pay: 'Ödeme bilgilerim' };
+const ACCT_T = { orders: 'Siparişlerim', addr: 'Adreslerim', info: 'Profil bilgilerim', inv: 'Fatura bilgilerim', favs: 'Favorilerim', wait: 'Haber bekleyenler', notif: 'Bildirimler', pay: 'Ödeme bilgilerim' };
 function MemberHome() {
   const { member: m, myOrders, api: A, settings: S, acct } = useStore();
   const [busy, setBusy] = useState(false);
@@ -867,6 +868,7 @@ function MemberHome() {
     ['info', 'user', 'Profil bilgilerim', [m.name, m.phone].filter(Boolean).join(' · ') || 'Ad soyad, telefon'],
     ['inv', 'tag', 'Fatura bilgilerim', m.invoice?.type === 'company' ? m.invoice.company || 'Kurumsal' : 'Bireysel'],
     ['favs', 'heart', 'Favorilerim', favs.length ? `${favs.length} ürün` : 'Beğendiğiniz ürünler'],
+    feat(S).notify && ['wait', 'bell', 'Haber bekleyenler', (m.notify || []).length ? `${m.notify.length} ürün` : 'Stoğa girince haber alın'],
     ['notif', 'bell', 'Bildirimler', (pushOk ? (pushState() === 'on' ? 'Telefon bildirimi açık' : 'Telefon bildirimi kapalı') : 'Sipariş güncellemeleri') + (nUnread ? ` · ${nUnread} yeni` : '')],
     ['pay', 'cart', 'Ödeme bilgilerim', 'Kayıtlı kartlar', true],
   ].filter(Boolean);
@@ -877,6 +879,7 @@ function MemberHome() {
     info: () => <MyInfo part="info" />,
     inv: () => <MyInfo part="inv" />,
     favs: () => <FavGrid />,
+    wait: () => <WaitList />,
     notif: () => <AcctNotifs orders={myOrders} list={notifs} />,
     pay: () => <div className="soon-card acct-soon"><span className="soon-ic"><Icon n="cart" s={28} /></span><span className="soon-tag">Çok yakında</span><h3>Kayıtlı kartlar</h3><p className="muted">Kartlarınızı güvenle kaydedip tek dokunuşla ödeyebileceksiniz. Şimdilik siparişte havale, kart linki ya da dükkânda ödeme seçebilirsiniz.</p></div>,
   };

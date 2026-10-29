@@ -1,0 +1,29 @@
+# Popüler ürün verisi (Herkesin favorisi, Birlikte iyi gider, Ustaların tercihi) + "Gelince haber ver" kontrolü
+name: Popüler ürünleri hesapla
+on:
+  schedule:
+    - cron: '23 1 * * 1,4' # Pazartesi ve Perşembe gece (TR 04:23)
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Deneme (kaydetme)'
+        type: boolean
+        default: false
+concurrency:
+  group: stats
+  cancel-in-progress: false
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - name: Hesapla
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+        run: node tools/stats.mjs ${{ inputs.dry && '--dry' || '' }}

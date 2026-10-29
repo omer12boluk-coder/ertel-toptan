@@ -60,7 +60,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'phone', 'createdAt', 'addresses', 'invoice', 'username', 'legal']));
       // değişiklik için e-posta doğrulanmış olmalı
       allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && (request.auth.token.email_verified == true || resource.data.get('byAdmin', false) == true) && request.resource.data.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'addresses', 'invoice', 'email', 'photo', 'hiddenOrders', 'favs'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'addresses', 'invoice', 'email', 'photo', 'hiddenOrders', 'favs', 'notify', 'notifyHit'])
+        && (!('notify' in request.resource.data) || (request.resource.data.notify is list && request.resource.data.notify.size() <= 200))
         && (!('favs' in request.resource.data) || (request.resource.data.favs is list && request.resource.data.favs.size() <= 500))
         && (!('hiddenOrders' in request.resource.data) || (request.resource.data.hiddenOrders is list && request.resource.data.hiddenOrders.size() <= 500))
         && (!('photo' in request.resource.data) || request.resource.data.photo == null || (request.resource.data.photo is string && request.resource.data.photo.size() < 60000)));
@@ -86,6 +87,36 @@ service cloud.firestore {
       allow update: if isAdmin() || (own() && resource.data.status == 'new' && request.resource.data.status == 'cancelled'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'history']));
       allow delete: if isAdmin();
+    }
+
+    // ---- Mağaza özellikleri (29.10.2026, extras.jsx / reviews.jsx)
+    // Popüler ürün verisi (tools/stats.mjs yazar) ve yorum özeti: herkes okur, yönetici yazar
+    match /stats/{d} { allow read: if true; allow write: if isAdmin(); }
+    match /revsum/{d} { allow read: if true; allow write: if isAdmin(); }
+    // Gelince haber ver: ürün başına bekleyen üyeler (eşitleme okur, bildirim gönderip siler). Üye sadece KENDİ kimliğini ekler / çıkarır.
+    match /wait/{pid} {
+      allow read: if isAdmin();
+      allow create: if signedIn() && pid.matches('^[0-9]{1,9}$') && request.resource.data.keys().hasOnly(['uids', 'at']) && request.resource.data.uids == [request.auth.uid];
+      allow update: if signedIn() && request.resource.data.keys().hasOnly(['uids', 'at']) && request.resource.data.uids is list && request.resource.data.uids.size() <= 3000
+        && request.resource.data.uids.toSet().difference(resource.data.uids.toSet()).union(resource.data.uids.toSet().difference(request.resource.data.uids.toSet())).hasOnly([request.auth.uid]);
+      allow delete: if isAdmin();
+    }
+    // Ürün yorumu: kimlik = <sipariş>_<ürün>; sipariş üyenin olmalı ve teslime hazır / kargoda / tamamlanmış olmalı.
+    // Ayarlarda "onaylayınca yayınlansın" açıksa sadece 'pending' ile oluşturulabilir.
+    match /reviews/{id} {
+      allow get, list: if isAdmin() || resource.data.status == 'pub' || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && id.matches('^[A-Za-z0-9_-]{6,60}$')
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['pid', 'oid', 'order', 'uid', 'name', 'stars', 'text', 'status', 'createdAt', 'updatedAt', 'seenAdmin', 'sum'])
+        && request.resource.data.pid is int && id == request.resource.data.oid + '_' + string(request.resource.data.pid)
+        && request.resource.data.stars is int && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+        && request.resource.data.text is string && request.resource.data.text.size() <= 800
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40
+        && get(/databases/$(database)/documents/orders/$(request.resource.data.oid)).data.uid == request.auth.uid
+        && get(/databases/$(database)/documents/orders/$(request.resource.data.oid)).data.status in ['ready', 'shipped', 'done']
+        && (request.resource.data.status == 'pending' || (request.resource.data.status == 'pub' && get(/databases/$(database)/documents/settings/public).data.get('feat', {}).get('rev', {}).get('moderate', true) == false));
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
     // ---- Sorun bildirimi (29.10.2026, issue.jsx): üye fotoğraf / video + açıklama gönderir (dosyalar bekçiyle R2 is/<id>/…),

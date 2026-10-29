@@ -458,7 +458,7 @@ function ShellFull() {
     prev.current = unread;
     document.title = (unread ? `(${unread}) ` : '') + store.s.settings.brand.appName;
   }, [unread]);
-  const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length + (admin ? s.preqs.filter((q) => q.seenAdmin === false).length + (s.issues || []).filter((q) => q.seenAdmin === false).length : 0));
+  const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length + (admin ? s.preqs.filter((q) => q.seenAdmin === false).length + (s.issues || []).filter((q) => q.seenAdmin === false).length + (s.reviews || []).filter((r) => r.status === 'pending').length : 0));
   const priceN = useStore((s) => (admin ? s.catalog.filter((p) => p.pc && p.w != null).length : 0));
   const newOrders = useStore((s) => (admin ? s.orders.filter((o) => o.unread).length : 0));
   const member = useStore((s) => s.member);

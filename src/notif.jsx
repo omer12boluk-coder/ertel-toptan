@@ -2,7 +2,7 @@
 // bayi başvurusu, yeni mağaza üyesi ve PlatinMarket eşitlemesinde değişen ürünler (meta/feed) tek listede.
 // Okundu bilgisi cihazda (ls 'notif-seen' = son açılış zamanı).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, store, go, openOrder, openRequest, toast } from './store.js';
+import { useStore, store, go, openOrder, openRequest, toast, openProduct } from './store.js';
 import { Icon, Toggle } from './ui.jsx';
 import { pushState, enablePush, disablePush, linkMember } from './push.js';
 import { fmt, fmtTotals, when, ls } from './utils.js';
@@ -16,7 +16,7 @@ const KINDS = [['all', 'Tümü'], ['order', 'Siparişler'], ['req', 'Bayi'], ['p
 const seenAt = () => ls.get('notif-seen', 0) || Date.now() - DAY;
 
 function useNotifs() {
-  const { orders, requests, customers, members, feed, preqs, issues = [] } = useStore();
+  const { orders, requests, customers, members, feed, preqs, issues = [], reviews = [], byId } = useStore();
   return useMemo(() => {
     const from = Date.now() - 30 * DAY; const out = [];
     for (const o of orders) {
@@ -33,6 +33,7 @@ function useNotifs() {
     for (const u of customers) if (u.pending && (u.createdAt || 0) > from) out.push({ id: 'u' + u.uid, at: u.createdAt, g: 'user', ic: 'users', tone: 'warn', t: `Bayi başvurusu · ${u.name || u.username || ''}`, s: [u.shop, u.phone].filter(Boolean).join(' · ') + ' · onay bekliyor', go: () => { ls.set('cust-kind', 'bayi'); go('musteriler'); } });
     for (const q of preqs || []) if ((q.createdAt || 0) > from) out.push({ id: 'pq' + q.id, at: q.createdAt, g: 'user', ic: 'camera', tone: 'info', t: `Ürün talebi #${q.no} · ${q.name || 'Üye'}`, s: q.text || `${(q.photos || []).length} fotoğraf`, go: () => { ls.set('cust-kind', 'talep'); go('musteriler'); store.set({ openPreq: q.id }); } });
     for (const q of issues) if ((q.createdAt || 0) > from) out.push({ id: 'is' + q.id, at: q.createdAt, g: 'user', ic: 'ask', tone: 'warn', t: `Sorun bildirimi #${q.no} · ${q.name || 'Üye'}`, s: [q.prod, q.text].filter(Boolean).join(' · '), go: () => { ls.set('cust-kind', 'sorun'); go('musteriler'); store.set({ openIssue: q.id }); } });
+    for (const r of reviews) if ((r.createdAt || 0) > from) out.push({ id: 'rv' + r.id, at: r.createdAt, g: 'user', ic: 'star', tone: r.status === 'pending' ? 'warn' : 'muted', t: `Yeni yorum · ${'★'.repeat(r.stars || 0)} · ${r.name || ''}`, s: [byId?.get(r.pid)?.n, r.text].filter(Boolean).join(' · '), go: () => { ls.set('cust-kind', 'yorum'); go('musteriler'); } });
     for (const m of members) if ((m.createdAt || 0) > from) out.push({ id: 'mb' + m.uid, at: m.createdAt, g: 'user', ic: 'user', tone: 'muted', t: `Yeni mağaza üyesi · ${m.name || m.email || ''}`, s: m.email || '', go: () => { ls.set('cust-kind', 'magaza'); go('musteriler'); } });
     for (const [i, x] of (feed || []).entries()) {
       if (x.at <= from) continue;
@@ -40,7 +41,7 @@ function useNotifs() {
       if (P) out.push({ id: 'f' + i + x.at + x.id, at: x.at, g: 'prod', ic: P[0], tone: P[1], t: P[2], s: P[3], go: () => { go('katalog'); store.set({ catalogGo: x.k ? { code: x.k } : { q: x.n || String(x.id) } }); /* stok kodu kendi kutusuna (ad aramasına değil) */ } });
     }
     return out.sort((a, b) => b.at - a.at).slice(0, 300);
-  }, [orders, requests, customers, members, feed, preqs, issues]);
+  }, [orders, requests, customers, members, feed, preqs, issues, reviews, byId]);
 }
 
 export function NotifBell() {
@@ -141,6 +142,7 @@ export function useShopNotifs() {
     }
     if (member) out.push(...preqNotifs(myPreqs).filter((x) => x.at > from));
     if (member) out.push(...issueNotifs(myIssues).filter((x) => x.at > from));
+    if (member) for (const h of member.notifyHit || []) if (h && h.at > from) out.push({ id: 'nh' + h.id + h.at, at: h.at, ic: 'bell', tone: 'ok', t: 'Beklediğiniz ürün geldi', s: h.n || '', go: () => openProduct(h.id) });
     return out.sort((a, b) => b.at - a.at).slice(0, 100);
   }, [orders, favTick, myPreqs, myIssues, member]);
 }

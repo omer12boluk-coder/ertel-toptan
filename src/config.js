@@ -113,6 +113,8 @@ export const DEFAULT_SETTINGS = {
   },
   // Yasal metinler (legal.js; Ayarlar > Alt bilgi ve sayfalar > Yasal metinler): satıcı bilgileri + metin değişiklikleri (docs[k] boş = varsayılan)
   legal: { email: '', taxOffice: '', taxNo: '', mersis: '', docs: {} },
+  // Mağaza özellikleri (extras.jsx, reviews.jsx; Ayarlar > Mağaza özellikleri): her biri tek anahtarla kapanır
+  feat: { share: true, notify: true, pop: { on: true, fav: true, pair: true, cat: true }, rev: { on: true, moderate: true } },
   // Sorun bildirimi (/magaza/sorun, issue.jsx): günde üye başına en çok perDay bildirim, ekler days gün sonra silinir
   issue: { on: true, perDay: 3, days: 45 },
   access: {

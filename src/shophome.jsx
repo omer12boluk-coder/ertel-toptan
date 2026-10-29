@@ -7,6 +7,7 @@ import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg } from './utils.js'
 import { waLink } from './route.js';
 import { ProductSheet, useTree, PlayVideo } from './catalog.jsx';
 import { currentRate } from './listsheet.jsx';
+import { feat, useStats } from './extras.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
@@ -124,12 +125,12 @@ const spot = (e) => { const r = e.currentTarget.getBoundingClientRect(); e.curre
 // Tasarım modu: ShopHome bu bağlamla sarılınca bölümler seçilebilir / sürüklenebilir olur (designer.jsx)
 export const DesignCtx = createContext(null);
 export const rid = () => Math.random().toString(36).slice(2, 8);
-export const FIXED = { hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', cta: 'Alt bant' };
+export const FIXED = { hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', fav: 'Herkesin favorisi (otomatik raf)', cta: 'Alt bant' };
 const railKey = (r, i) => 'rail:' + (r.id || i);
 // Bölüm sırası: kayıtlı sıra + sonradan eklenenler; silinmiş olanlara ait kayıtlar atılır
 export function layoutOf(H) {
   const rails = H.sections || [];
-  const valid = ['hero', 'usps', 'marquee', 'brands', 'promos', ...rails.map(railKey), ...Object.keys(H.blocks || {}).map((id) => 'b:' + id), 'cta'];
+  const valid = ['hero', 'usps', 'marquee', 'brands', 'promos', 'fav', ...rails.map(railKey), ...Object.keys(H.blocks || {}).map((id) => 'b:' + id), 'cta'];
   const L = (Array.isArray(H.layout) ? H.layout : []).filter((k) => valid.includes(k));
   for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
   return L;
@@ -227,6 +228,7 @@ export function ShopHome({ S: Sover }) {
         </div>
       </section>
     );
+    if (k === 'fav') return <FavRail onProduct={E ? () => E.select(k) : setProduct} edit={!!E} S={S} />;
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
     if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; const up = E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null;
       if (b.t === 'rate') return <RateBlock b={b} up={up} />;
@@ -710,6 +712,24 @@ function Rail({ sec, open, onProduct, onTitle, edit }) {
     <section className="sh-sec rv">
       <SecHead title={sec.title || 'Ürünler'} more={edit ? undefined : more} rail={railRef} onTitle={onTitle} />
       <div className="sh-rail" ref={railRef}>{list.map((p, i) => <PCard key={p.id} p={p} i={i} isNew={sec.mode === 'new' || p.nw} onOpen={() => onProduct(p)} />)}</div>
+    </section>
+  );
+}
+// "Herkesin favorisi": en çok kalplenen ürünler (stats/public.fav, haftada iki kez hesaplanır). Ayarlar > Mağaza özellikleri'nden kapanır.
+function FavRail({ onProduct, edit, S }) {
+  const { byId } = useStore();
+  const F = feat(S);
+  const st = useStats(F.popFav);
+  const railRef = useRef(null);
+  const list = useMemo(() => (st?.fav || []).map(([id, n]) => ({ p: byId.get(id), n })).filter((x) => x.p && x.p.a !== 0 && !x.p.so).slice(0, 12), [st, byId]);
+  if (!F.popFav) return edit ? <Empty label="Herkesin favorisi rafı kapalı (Ayarlar › Mağaza özellikleri)" /> : null;
+  if (list.length < 3) return edit ? <Empty label="Herkesin favorisi: henüz yeterli favori yok (en az 3 ürün)" /> : null;
+  return (
+    <section className="sh-sec rv fav-rail">
+      <SecHead title="Herkesin favorisi" sub="En çok kalplenen ürünler" rail={railRef} />
+      <div className="sh-rail" ref={railRef}>{list.map(({ p, n }, i) => (
+        <div key={p.id} className="fav-rail-i"><span className="fav-rank">{i + 1}</span><PCard p={p} i={i} onOpen={() => onProduct(p)} /><span className="fav-cnt"><Icon n="heart" s={11} />{n}</span></div>
+      ))}</div>
     </section>
   );
 }

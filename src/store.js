@@ -38,6 +38,8 @@ export const store = {
     myIssues: [], // mağaza üyesinin sorun bildirimleri
     issues: [], // yönetici: sorun bildirimleri (Müşteriler > Sorun bildirimleri)
     openIssue: null,
+    reviews: [], // yönetici: ürün yorumları
+    popStats: null, revSum: null, myReviews: null, // mağaza: popüler verisi, yorum özeti, üyenin yorumları (oturumda bir kez)
   },
   get() { return this.s; },
   set(patch) { this.s = { ...this.s, ...(typeof patch === 'function' ? patch(this.s) : patch) }; subs.forEach((f) => f()); },
@@ -100,7 +102,7 @@ function pushTab(tab) {
   } catch {}
 }
 // Hesabım alt sayfaları: /magaza/hesap/<bölüm> (telefonda geri kaydırınca Hesabım'a döner)
-export const ACCT = { orders: 'siparisler', addr: 'adresler', info: 'profil', inv: 'fatura', favs: 'favoriler', notif: 'bildirimler', pay: 'odeme' };
+export const ACCT = { orders: 'siparisler', addr: 'adresler', info: 'profil', inv: 'fatura', favs: 'favoriler', wait: 'haber-bekleyenler', notif: 'bildirimler', pay: 'odeme' };
 export function acctFromPath() { const m = /^\/magaza\/hesap\/([\w-]+)/.exec(location.pathname); const e = m && Object.entries(ACCT).find(([, x]) => x === m[1]); return e ? e[0] : null; }
 export function openAcct(v) {
   try {

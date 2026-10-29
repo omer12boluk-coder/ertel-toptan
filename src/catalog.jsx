@@ -9,6 +9,8 @@ import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
 import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
+import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat } from './extras.jsx';
+import { RatingLine, Reviews } from './reviews.jsx';
 
 export function useTree() {
   const { catalog, settings: S } = useStore();
@@ -414,6 +416,7 @@ export function Catalog({ admin }) {
   const widened = !!globalList && scopedList.length === 0 && globalList.length > 0;
   const list = widened ? globalList : scopedList;
   const moreOutside = globalList && !widened ? globalList.length - scopedList.length : 0;
+  const catIds = useMemo(() => (cat == null ? [] : all.filter((p) => pcats.get(p.id)?.has(cat)).map((p) => p.id)), [all, pcats, cat]);
   const scopeName = [cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : null, brand || null].filter(Boolean).join(' · ');
   const clearAll = () => { setQ(''); setQk(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setFavOnly(false); };
   const actives = [
@@ -540,6 +543,7 @@ export function Catalog({ admin }) {
             {!admin && cartCount > 0 && <button className="link" onClick={() => go('sepet')}>Sepette {cartCount} kalem →</button>}
           </div>
 
+          {!admin && user?.role === 'public' && cat != null && !q.trim() && <CatTop ids={catIds} onOpen={setOpen} />}
           {shown.length === 0 && favOnly && actives.length === 1 ? (
             <Empty icon="heart" title="Henüz favoriniz yok"><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p></Empty>
           ) : shown.length === 0 ? (
@@ -650,6 +654,8 @@ function ProductRow({ p, admin, onOpen }) {
           <button className="btn sm ghost" onClick={onOpen}><Icon n="edit" s={15} />Düzenle</button>
         ) : user?.role !== 'public' && ['icon', 'plus'].includes(cardAdd(S, user?.role)) ? (
           <InlineQty qty={qty} onChange={(v) => setQty(p.id, v)} icon={cardAdd(S, user?.role) === 'icon'} />
+        ) : user?.role === 'public' && outOfStock(p) && feat(S).notify && !qty ? (
+          <NotifyBtn p={p} />
         ) : qty > 0 ? (
           <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
         ) : (
@@ -729,7 +735,7 @@ function SwipeImgs({ p }) {
 }
 
 // Ürün içeriği (pencere ve sayfa ortak): resimler, bilgiler, fiyat, adet + Sepete ekle / Hemen satın al, açıklama
-function ProductBody({ p, viewOnly, onDone }) {
+function ProductBody({ p, viewOnly, onDone, onPick }) {
   const { settings: S, cart, user, userPrices } = useStore();
   const [qty, setQ] = useState(cart[p.id] || 1);
   const st = stockInfo(p, S);
@@ -745,11 +751,13 @@ function ProductBody({ p, viewOnly, onDone }) {
       <div className="pdetail-info">
         <div className="pd-h">
           <h3>{p.n}</h3>
+          {pub && <ShareBtn p={p} big />}
           {pub && <FavBtn id={p.id} big />}
         </div>
+        {pub && <RatingLine p={p} />}
         <div className="prow-meta"><code>{p.k}</code>{p.b && <span className="brand-tag">{p.b}</span>}<span>{catName(S, p.c)}</span>{st && <span className={'dot tone-' + st.tone}>{st.t}</span>}</div>
         <PriceBlock p={p} big />
-        {!viewOnly && <div className="pbuy">
+        {!viewOnly && pub && outOfStock(p) && feat(S).notify ? <NotifyBox p={p} /> : !viewOnly && <div className="pbuy">
           <div className="qty-line">
             <span>Adet</span>
             <Stepper value={qty} min={1} onChange={setQ} />
@@ -766,6 +774,8 @@ function ProductBody({ p, viewOnly, onDone }) {
       </div>
     </div>
     {S.catalog.showDescription && <Description id={p.id} />}
+    {pub && !viewOnly && <PairRail p={p} onPick={onPick} />}
+    {pub && <Reviews p={p} />}
   </>;
 }
 export function ProductSheet({ p, onClose, viewOnly = false }) {
@@ -773,11 +783,14 @@ export function ProductSheet({ p, onClose, viewOnly = false }) {
   const pub = useStore((s) => s.user?.role === 'public');
   // Ayarlar > Ürün kartları > "Ürün açılışı: sayfa" → pencere yerine ürün sayfası
   const asPage = pub && !viewOnly && S.cards?.productView === 'page';
+  const [cur, setCur] = useState(p);
+  useEffect(() => setCur(p), [p?.id]);
   useEffect(() => { if (asPage) { onClose(); openProduct(p.id); } }, [asPage]);
   if (asPage) return null;
+  const pick = (x) => { setCur(x); requestAnimationFrame(() => document.querySelector('.sheet-b, .sheet-body')?.scrollTo?.({ top: 0, behavior: 'smooth' })); };
   return (
     <Sheet wide title="Ürün detayı" onClose={onClose}>
-      <ProductBody p={p} viewOnly={viewOnly} onDone={onClose} />
+      <ProductBody key={cur.id} p={cur} viewOnly={viewOnly} onDone={onClose} onPick={pick} />
     </Sheet>
   );
 }
@@ -789,7 +802,7 @@ export function ProductPage({ id }) {
   return (
     <div className="page pdetail-page">
       <button className="btn sm ghost pp-back" onClick={() => (history.state?.pid ? history.back() : go('katalog'))}><Icon n="back" s={16} />Geri</button>
-      <div className="pp-card"><ProductBody p={p} /></div>
+      <div className="pp-card"><ProductBody key={p.id} p={p} onPick={(x) => openProduct(x.id)} /></div>
     </div>
   );
 }
