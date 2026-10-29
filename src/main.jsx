@@ -624,122 +624,47 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
 
 // Telefonda dokunma hissi: kart/düğmeye basınca yumuşakça içe göçer, çok kısa dokunuşta bile en az ~120 ms basılı görünür,
 // bırakınca hafif yaylanarak geri gelir (CSS :active iPhone'da bir an yanıp sönüyordu, "çiğ" duruyordu).
-// Telefonda sayfanın en üstündeyken aşağı çekince yenile (29.10.2026): tarayıcının lastik gibi esnemesi kapalı
-// (html overscroll-behavior-y: none → üst menü sayfayla birlikte kaymaz), üst menünün altında dönen küçük simge çıkar;
-// yeterince çekip bırakınca önce bağlantı denenir (version.json), varsa sayfa yenilenir, yoksa "Bağlantı yok" yazar.
+// Telefonda çekip yenile (29.10.2026, 3. sürüm): telefonun KENDİ yaylanması açık (html overscroll-behavior serbest;
+// kullanıcı kendi yaptığımız yaylanmayı az ve takılgan buldu). Android'de tarayıcının kendi "çekip yenile"si çalışır → bizimki yok.
+// iPhone'da (ana ekran uygulamasında tarayıcı yenilemesi yok): en üstte aşağı esnetince açılan boşlukta (üst menünün de üstünde)
+// simge belirir, esneme miktarını (−scrollY) birebir izler; yeterince esnetip bırakınca sürüm denenir — yeni sürüm varsa sayfa
+// yenilenir, yoksa yenilenmez (veriler canlı), simge sayfa yerine dönerken onunla birlikte kaybolur.
 function setupPull() {
   if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
-  // TH: yenileme eşiği (kısa çekiş yeter). Sınır YOK: eşikten sonra da çekilir, giderek ağırlaşır (iOS lastik hissi)
-  const TH = 58, RUB = 340;
-  const rubber = (dy) => (1 - 1 / (dy * 0.62 / RUB + 1)) * RUB;
-  let y0 = 0, x0 = 0, on = false, d = 0, busy = false, box = null;
+  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!IOS) return;
+  const TH = 64;
+  let box = null, finger = false, ready = false, busy = false, raf = 0;
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr'; box.setAttribute('aria-hidden', 'true');
     box.innerHTML = '<span class="ptr-c"><i class="ptr-r"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i></span><span class="ptr-t"></span>';
     document.body.appendChild(box); return box;
   };
-  const top = () => { const h = document.querySelector('.topbar'); const r = h?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
-  // 29.10.2026: üst menü yerinde kalır; altındaki sayfa (main + alt bilgi) aşağı iner, açılan boşlukta simge belirir.
-  // Kaydırma transform ile (ekran kartında, akıcı; "top" her karede sayfayı yeniden dizip bırakınca takılıyordu).
-  // İçinde sabit (fixed) öğe olan kutuya transform verilmez (sepet çubuğu vb. yerinden kaymasın) → onun çocuklarına inilir.
-  const FIX = '.cart-bar, .cs-fixed, .co-fixed, .side-fixed, .acct-side, .ptr';
-  const EASE = 'cubic-bezier(.22,1,.36,1)', DUR = '.48s'; let raf = 0;
-  let els = null, clr = 0;
-  const collect = () => {
-    const out = []; const walk = (e, deep) => {
-      if (e.matches(FIX) || getComputedStyle(e).position === 'fixed') return;
-      if (deep < 4 && e.querySelector(FIX)) { for (const c of e.children) walk(c, deep + 1); return; }
-      out.push(e);
-    };
-    for (const e of document.querySelectorAll('.shell > .main, .shell > .sfoot')) walk(e, 0);
-    return out;
+  const paint = () => {
+    raf = 0; const px = Math.max(0, -scrollY); if (!px && !box) return;
+    const b = ui(); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, px / TH));
+    if (finger && !busy) ready = px >= TH;
+    b.className = 'ptr native' + (busy ? ' spin' : ready ? ' ready' : '');
   };
-  const set = (px, cls = '', txt = '') => {
-    const b = ui(); const anim = cls === 'back' || cls === 'spin' || cls === 'err' || cls === 'gone';
-    b.style.setProperty('--ptr-top', top() + 'px'); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, px / TH));
-    b.className = 'ptr' + (cls ? ' ' + cls : ''); b.querySelector('.ptr-t').textContent = txt;
-    clearTimeout(clr); if (!els) els = collect();
-    for (const e of els) { e.style.transition = anim ? `transform ${DUR} ${EASE}` : 'none'; e.style.willChange = 'transform'; e.style.transform = px ? `translate3d(0,${px}px,0)` : ''; }
-    if (!px) clr = setTimeout(() => { if (els) for (const e of els) { e.style.transition = e.style.willChange = e.style.transform = ''; } els = null; }, anim ? 520 : 0);
-  };
-  const hide = (ms = 0) => setTimeout(() => { if (box) set(0, 'gone'); }, ms);
-  const blocked = (t) => !(t instanceof Element) || t.closest('.sheet-bg, .sheet, .lb, .vv, .dz, .ctx-sheet-bg, .ctx, .botnav, input, textarea, select, .hsearch-res, .kf-list, .nc-panel') || document.querySelector('.sheet-bg, .lb, .vv');
-  const scrolledParent = (t) => { for (let e = t; e && e !== document.body; e = e.parentElement) { if (e.scrollTop > 0 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) return true; } return false; };
-  addEventListener('touchstart', (ev) => {
-    on = false; if (busy || ev.touches.length !== 1 || window.scrollY > 0 || blocked(ev.target) || scrolledParent(ev.target)) return;
-    on = true; d = 0; if (!box || !box.style.getPropertyValue("--ptr") || box.style.getPropertyValue("--ptr") === "0px") els = null; y0 = ev.touches[0].clientY; x0 = ev.touches[0].clientX;
-  }, { passive: true });
-  addEventListener('touchmove', (ev) => {
-    if (!on) return; const p = ev.touches[0]; const dy = p.clientY - y0, dx = p.clientX - x0;
-    if (d === 0 && Math.abs(dx) > Math.abs(dy)) { on = false; return; } // yana kaydırma
-    if (dy <= 0 || window.scrollY > 0) { if (d > 0) { cancelAnimationFrame(raf); d = 0; set(0, 'back'); } return; }
-    d = rubber(dy); const dd = d; cancelAnimationFrame(raf); raf = requestAnimationFrame(() => set(dd, dd >= TH ? 'ready' : ''));
-  }, { passive: true });
-  const end = async () => {
-    if (!on) return; on = false; cancelAnimationFrame(raf);
-    if (d < TH) { d = 0; set(0, 'back'); return; }
-    busy = true; set(60, 'spin'); const t0 = Date.now();
-    const fail = (t) => { set(96, 'err', t); busy = false; hide(2200); };
-    if (navigator.onLine === false) return fail('İnternet bağlantısı yok');
+  const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
+  addEventListener('scroll', req, { passive: true });
+  addEventListener('touchstart', () => { finger = true; ready = false; }, { passive: true });
+  addEventListener('touchmove', req, { passive: true });
+  const toast2 = (t) => { const b = ui(); b.querySelector('.ptr-t').textContent = t; b.classList.add('err', 'show'); setTimeout(() => { b.querySelector('.ptr-t').textContent = ''; b.classList.remove('err', 'show'); }, 2200); };
+  addEventListener('touchend', async () => {
+    finger = false; if (!ready || busy || document.querySelector('.sheet-bg, .lb, .vv')) { ready = false; return; }
+    ready = false; busy = true; req();
     try {
+      if (navigator.onLine === false) throw new Error('İnternet bağlantısı yok');
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
       const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
-      if (!r.ok) throw new Error(r.status);
+      if (!r.ok) throw new Error('Bağlantı kurulamadı');
       const j = await r.json().catch(() => ({}));
-      // yeni sürüm varsa sayfa yenilenir; yoksa YENİLENMEZ (veriler zaten canlı geliyor) → ürünler silinip yeniden çizilmez,
-      // simge kısa bir süre döner ve sayfayla birlikte yumuşakça yukarı kapanır
       if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; }
-      const wait = Math.max(0, 650 - (Date.now() - t0));
-      setTimeout(() => { busy = false; d = 0; set(0, 'gone'); }, wait);
-    } catch { fail('Bağlantı kurulamadı'); }
-  };
-  addEventListener('touchend', end, { passive: true });
-  addEventListener('touchcancel', () => { if (on) { on = false; cancelAnimationFrame(raf); d = 0; set(0, 'back'); } }, { passive: true });
-
-  // ---- Yaylanma (29.10.2026): tarayıcının kendi esnemesi kapalı (üst menü oynamasın diye) → sayfanın başına / sonuna
-  // hızla gelince içerik (üst menü hariç) hıza göre biraz esneyip yumuşakça geri döner; sonda parmakla yukarı çekince de lastik gibi esner.
-  const maxY = () => Math.max(0, document.documentElement.scrollHeight - innerHeight);
-  let lastY = scrollY, lastT = performance.now(), v = 0, finger = false, bels = null, banim = [];
-  const bounce = (amt) => {
-    if (on || busy || bon || document.querySelector('.sheet-bg, .lb, .vv')) return;
-    banim.forEach((a) => a.cancel()); bels = collect();
-    banim = bels.map((e) => e.animate([
-      { transform: 'translate3d(0,0,0)', easing: 'cubic-bezier(.15,.75,.35,1)' },
-      { transform: `translate3d(0,${amt}px,0)`, offset: 0.3, easing: 'cubic-bezier(.22,1,.36,1)' },
-      { transform: 'translate3d(0,0,0)' },
-    ], { duration: 560 }));
-  };
-  addEventListener('scroll', () => {
-    const y = scrollY, t = performance.now(), dt = t - lastT;
-    if (dt > 0) v = v * 0.4 + ((y - lastY) / dt) * 0.6;
-    const m = maxY();
-    if (!finger && Math.abs(v) > 0.45) {
-      const amt = Math.min(56, Math.abs(v) * 20);
-      if (lastY > 0 && y <= 0 && v < 0) bounce(amt);
-      else if (lastY < m - 1 && y >= m - 1 && v > 0 && m > 0) bounce(-amt);
-    }
-    lastY = y; lastT = t;
+    } catch (e) { toast2(e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message); }
+    busy = false; req();
   }, { passive: true });
-  // sonda parmakla yukarı çekme
-  let bon = false, by0 = 0, bd = 0;
-  addEventListener('touchstart', (ev) => {
-    finger = true; bon = false;
-    if (ev.touches.length !== 1 || blocked(ev.target) || scrolledParent(ev.target) || maxY() <= 0 || scrollY < maxY() - 1) return;
-    bon = true; bd = 0; by0 = ev.touches[0].clientY; banim.forEach((a) => a.cancel()); bels = collect();
-  }, { passive: true });
-  addEventListener('touchmove', (ev) => {
-    if (!bon) return; const dy = by0 - ev.touches[0].clientY;
-    if (dy <= 0 || scrollY < maxY() - 1) { if (bd) { bd = 0; for (const e of bels) e.style.transform = ''; } return; }
-    bd = rubber(dy) * 0.7; for (const e of bels) { e.style.transition = 'none'; e.style.transform = `translate3d(0,${-bd}px,0)`; }
-  }, { passive: true });
-  const bEnd = () => {
-    finger = false; if (!bon) return; bon = false; if (!bd || !bels) return;
-    for (const e of bels) { e.style.transition = `transform .55s ${EASE}`; e.style.transform = ''; }
-    const els2 = bels; setTimeout(() => { for (const e of els2) e.style.transition = ''; }, 600); bd = 0;
-  };
-  addEventListener('touchend', bEnd, { passive: true });
-  addEventListener('touchcancel', bEnd, { passive: true });
 }
 
 // Telefonda (29.10.2026): basma animasyonu yerine bilgisayardaki "üstüne gelince" görünümü (marka kutusunda renk + ok,

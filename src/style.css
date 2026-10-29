@@ -4330,7 +4330,7 @@ button.wait-row { cursor: pointer; }
 .plist.pgrid .prow-side .price-ask { white-space: nowrap; }
 @media (max-width: 560px) { .plist.pgrid .prow-side:has(> .notify-btn) { flex-direction: row; align-items: flex-end; justify-content: space-between; } }
 /* çekip yenile (setupPull, sadece dokunmatik) */
-@media (hover: none) and (pointer: coarse) { html, body { overscroll-behavior-y: none; } }
+/* (29.10.2026) telefonun kendi yaylanması AÇIK — eskiden overscroll-behavior-y: none ile kapalıydı */
 .ptr { position: fixed; z-index: 15; left: 50%; top: var(--ptr-top, 0px); transform: translate(-50%, -50%) translateY(calc(var(--ptr, 0px) / 2)); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; opacity: var(--ptr-k, 0); }
 .ptr.back, .ptr.gone, .ptr.spin, .ptr.err { transition: transform .48s cubic-bezier(.22,1,.36,1), opacity .3s ease; }
 .ptr.gone { opacity: 0; }
@@ -4614,3 +4614,8 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .stepper button.st-del { color: var(--muted); }
 .stepper button.st-del:hover, .stepper button.st-del:active { color: #c43d3d; background: color-mix(in oklab, #c43d3d 8%, var(--surface)); }
 @media (hover: none) { .stepper button.st-del:hover { background: transparent; color: var(--muted); } .stepper button.st-del:active { color: #c43d3d; background: color-mix(in oklab, #c43d3d 8%, var(--surface)); } }
+
+/* iPhone çekip yenile (doğal yaylanma): simge en üstte, esnemenin açtığı boşluğun ortasında; hata yazısı üst menünün üstünde kısa süre */
+.ptr.native { top: env(safe-area-inset-top, 0px); z-index: 30; transition: none; }
+.ptr.native.show { opacity: 1; --ptr: 120px; transition: opacity .2s; }
+.ptr.native.show .ptr-c { display: none; }
