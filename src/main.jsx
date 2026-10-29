@@ -651,11 +651,17 @@ function touchHoverToActive() {
 
 // iPhone'da titreşim: Safari titreşim API'si vermiyor; iOS 18+ "switch" onay kutusuna tıklamak kısa bir titreşim verir
 export function haptic() {
+  // iPhone: Safari titreşim API'si vermiyor; iOS 18+'da "switch" onay kutusunun etiketine tıklamak kısa bir titreşim verir.
+  // Öğe sayfada kalıcı ve görünmez (display:none olunca iOS titretmiyor); sadece dokunuş bırakılırken (touchend) çalışır.
   try {
-    if (navigator.vibrate) { navigator.vibrate(10); return; }
-    const l = document.createElement('label'); l.setAttribute('aria-hidden', 'true'); l.style.display = 'none';
-    const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); l.appendChild(i);
-    document.body.appendChild(l); l.click(); l.remove();
+    if (navigator.vibrate) { navigator.vibrate(12); return; }
+    let l = document.getElementById('hap-l');
+    if (!l) {
+      l = document.createElement('label'); l.id = 'hap-l'; l.setAttribute('aria-hidden', 'true');
+      l.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;z-index:-1';
+      const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); i.tabIndex = -1; l.appendChild(i); document.body.appendChild(l);
+    }
+    l.click();
   } catch {}
 }
 function setupPull() {
@@ -673,7 +679,7 @@ function setupPull() {
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr7'; box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<span class="ptr7-c"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></span><span class="ptr-t"></span>';
+    box.innerHTML = '<span class="ptr7-c"><svg class="ptr7-a" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg><svg class="ptr7-ok" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span class="ptr-t"></span>';
     document.body.appendChild(box); return box;
   };
   const headB = () => { const r = document.querySelector('.topbar')?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
@@ -697,14 +703,14 @@ function setupPull() {
     }
     ev.preventDefault(); // bu çekişte sayfa/esneme oynamaz, sadece gösterge iner
     d = dy > 0 ? rubber(dy) : 0;
-    const r = d >= TH; if (r && !ready) haptic(); ready = r;
+    ready = d >= TH;
     cancelAnimationFrame(raf); raf = requestAnimationFrame(() => draw(d, 'drag'));
   }, { passive: false });
   const end = async () => {
     if (!on) return; on = false; cancelAnimationFrame(raf);
     if (!started) return;
     if (!ready) { draw(0, 'back'); return; }
-    ready = false; busy = true; draw(Math.min(d, TH * 0.78), 'spin');
+    ready = false; busy = true; haptic(); draw(Math.min(d, TH * 0.78), 'spin');
     const t0 = Date.now(); let err = '';
     try {
       if (navigator.onLine === false) throw new Error('İnternet bağlantısı yok');
@@ -714,10 +720,11 @@ function setupPull() {
       const j = await r.json().catch(() => ({}));
       if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; }
     } catch (e) { err = e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message; }
+    // görünür ama kısa: ~0,7 sn döner, sonra ✓ olur (yenilendiği anlaşılsın), küçülerek kaybolur
     setTimeout(() => {
-      const b = ui(); if (err) { b.querySelector('.ptr-t').textContent = err; b.classList.add('err'); }
-      setTimeout(() => { b.classList.add('done'); setTimeout(() => { busy = false; b.querySelector('.ptr-t').textContent = ''; draw(0, 'gone done'); }, 220); }, err ? 1600 : 0);
-    }, Math.max(0, 260 - (Date.now() - t0)));
+      const b = ui(); if (err) { b.querySelector('.ptr-t').textContent = err; b.classList.add('err'); } else b.classList.add('ok');
+      setTimeout(() => { b.classList.add('done'); setTimeout(() => { busy = false; b.querySelector('.ptr-t').textContent = ''; draw(0, 'gone done'); }, 240); }, err ? 1600 : 420);
+    }, Math.max(0, 700 - (Date.now() - t0)));
   };
   addEventListener('touchend', end, { passive: true });
   addEventListener('touchcancel', end, { passive: true });
