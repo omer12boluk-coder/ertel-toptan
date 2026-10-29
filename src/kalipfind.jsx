@@ -89,6 +89,28 @@ export function KalipFinder() {
   const [sel, setSel] = useState(null); // {n, c, k} ya da {code}
   const [prod, setProd] = useState(null);
   const inp = useRef(null);
+  const boxRef = useRef(null);
+  // Telefon: klavye açılınca öneri listesi klavyenin altında kalmasın → arama kutusu ekranın üstüne kayar,
+  // liste yüksekliği görünen alana (visualViewport) göre ayarlanır
+  const [sMax, setSMax] = useState(0);
+  const fit = () => {
+    const el = boxRef.current; if (!el) return;
+    const vv = window.visualViewport; const vh = vv ? vv.height + vv.offsetTop : innerHeight;
+    const r = el.getBoundingClientRect();
+    setSMax(Math.max(140, Math.round(vh - r.bottom - 14)));
+  };
+  const lift = () => {
+    if (!matchMedia('(max-width: 700px)').matches) return;
+    const el = boxRef.current; if (!el) return;
+    const topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 64;
+    const go = () => { const y = el.getBoundingClientRect().top + scrollY - topH - 10; if (Math.abs(y - scrollY) > 4) scrollTo({ top: y, behavior: 'smooth' }); setTimeout(fit, 260); };
+    go(); setTimeout(go, 320); // iPhone klavye açılırken sayfayı kendisi de kaydırır; bitince tekrar hizala
+  };
+  useEffect(() => {
+    const vv = window.visualViewport; if (!vv) return;
+    const on = () => fit(); vv.addEventListener('resize', on); vv.addEventListener('scroll', on);
+    return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on); };
+  }, []);
   useEffect(() => { document.title = 'Kalıp bulucu'; loadPhones().then(setPhones).catch(() => setErr(true)); }, []);
   const stencils = useStencils();
 
@@ -113,15 +135,16 @@ export function KalipFinder() {
   const total = result ? result.single.length + result.sets.length : 0;
 
   return (
-    <div className="kf">
+    <div className={'kf' + (open ? ' typing' : '')}>
       <section className="kf-hero">
-        <span className="kf-badge"><Icon n="chip" s={15} />Kalıp bulucu</span>
-        <h1>Telefonunuza uygun <em>kalıbı</em> bulun</h1>
-        <p>Modeli yazın; işlemcisini gösterelim, o işlemciye uyan kalıpları önerelim.</p>
-        <div className={'kf-search' + (open && sugg.length ? ' open' : '')}>
+        <div className="kf-head">
+          <span className="kf-ic"><Icon n="chip" s={18} /></span>
+          <div className="kf-head-t"><h1>Kalıp bulucu</h1><p>Telefon modelini yazın, işlemcisine uyan kalıpları gösterelim.</p></div>
+        </div>
+        <div ref={boxRef} className={'kf-search' + (open && sugg.length ? ' open' : '')} style={sMax ? { '--kf-max': sMax + 'px' } : undefined}>
           <Icon n="search" s={20} />
           <input ref={inp} type="search" value={q} placeholder="Örn. Redmi Note 10 Pro 5G, iPhone 13, Galaxy A52…" aria-label="Telefon modeli"
-            onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 160)} onKeyDown={key} autoComplete="off" />
+            onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => { setOpen(true); lift(); }} onBlur={() => setTimeout(() => setOpen(false), 160)} onKeyDown={key} autoComplete="off" />
           {q && <button type="button" className="kf-x" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(''); setSel(null); inp.current?.focus(); }} aria-label="Temizle"><Icon n="x" s={14} /></button>}
           {open && q.trim().length >= 2 && (
             <div className="kf-sugg" role="listbox">
@@ -138,6 +161,7 @@ export function KalipFinder() {
             </div>
           )}
         </div>
+        {!sel && <div className="kf-ex"><span>Örnek:</span>{['iPhone 13', 'Redmi Note 10 Pro', 'Galaxy A52', 'SM7150'].map((x) => <button key={x} type="button" onClick={() => { setQ(x); setOpen(true); setHi(0); inp.current?.focus(); }}>{x}</button>)}</div>}
       </section>
 
       {sel && result && (

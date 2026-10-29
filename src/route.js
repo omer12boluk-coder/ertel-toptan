@@ -21,6 +21,7 @@ export const ROUTE = {
   reqId: (path.match(/\/t\/([\w-]+)$/) || [])[1] || null,
   listCode: (path.match(/\/l\/([\w-]+)$/) || [])[1] || null, // vitrin listesi (bkz. listcode.js)
   preqId: (path.match(/^\/admin\/u\/([\w-]+)$/) || [])[1] || null, // ürün talebi (Telegram / bildirim linki)
+  issueId: (path.match(/^\/admin\/i\/([\w-]+)$/) || [])[1] || null, // sorun bildirimi (Telegram / bildirim linki)
   orderId: (path.match(/\/s\/([\w-]+)$/) || [])[1] || null, // mağaza siparişi: /magaza/s/<no>, /admin/s/<no>
   authAction: /\/magaza\/islem\/?$/.test(path), // e-postadaki şifre yenileme / doğrulama bağlantısı
 };

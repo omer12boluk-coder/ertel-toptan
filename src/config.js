@@ -111,6 +111,10 @@ export const DEFAULT_SETTINGS = {
       { title: 'İade ve değişim', body: 'Teslim aldığınız ürünü **14 gün** içinde iade edebilirsiniz.\n\n- Ürün kullanılmamış, hasarsız ve orijinal kutusuyla birlikte gönderilmelidir.\n- İade talebinizi WhatsApp ya da e-posta ile bize iletin; iade adresini ve süreci size bildirelim.\n- Ürün bize ulaşıp kontrol edildikten sonra ücretiniz, ödeme yaptığınız yönteme iade edilir.\n- Hatalı ya da hasarlı gelen ürünlerde kargo ücreti bize aittir.' },
     ],
   },
+  // Yasal metinler (legal.js; Ayarlar > Alt bilgi ve sayfalar > Yasal metinler): satıcı bilgileri + metin değişiklikleri (docs[k] boş = varsayılan)
+  legal: { email: '', taxOffice: '', taxNo: '', mersis: '', docs: {} },
+  // Sorun bildirimi (/magaza/sorun, issue.jsx): günde üye başına en çok perDay bildirim, ekler days gün sonra silinir
+  issue: { on: true, perDay: 3, days: 45 },
   access: {
     allowSignup: true,
     publicShop: true, // /magaza herkese açık vitrin // bayiler giriş ekranından kendileri üye olabilir; yönetici onaylayınca girebilir
@@ -328,13 +332,13 @@ export const B2B_PAY_PICK = ['cash', 'account'];
 
 // Online mağaza siparişleri
 export const ORDER_STATUS = {
-  new: { label: 'Yeni', tone: 'info', cust: 'Siparişiniz alındı' },
-  confirmed: { label: 'Onaylandı', tone: 'ok', cust: 'Onaylandı' },
-  preparing: { label: 'Hazırlanıyor', tone: 'ok', cust: 'Hazırlanıyor' },
-  shipped: { label: 'Kargoda', tone: 'ok', cust: 'Kargoya verildi' },
-  ready: { label: 'Teslime hazır', tone: 'ok', cust: 'Dükkandan teslim alabilirsiniz' },
-  done: { label: 'Tamamlandı', tone: 'muted', cust: 'Teslim edildi' },
-  cancelled: { label: 'İptal', tone: 'bad', cust: 'İptal edildi' },
+  new: { label: 'Yeni', tone: 'info', c: '#8a919e', cust: 'Siparişiniz alındı' },
+  confirmed: { label: 'Onaylandı', tone: 'ok', c: '#b08d2e', cust: 'Onaylandı' },
+  preparing: { label: 'Hazırlanıyor', tone: 'ok', c: '#3f9a6b', cust: 'Hazırlanıyor' },
+  shipped: { label: 'Kargoda', tone: 'ok', c: '#3567c4', cust: 'Kargoya verildi' },
+  ready: { label: 'Teslime hazır', tone: 'ok', c: '#7a62b8', cust: 'Dükkandan teslim alabilirsiniz' },
+  done: { label: 'Tamamlandı', tone: 'muted', c: '#1f6b47', cust: 'Teslim edildi' },
+  cancelled: { label: 'İptal', tone: 'bad', c: '#a3a7ae', cust: 'İptal edildi' },
 };
 export const ORDER_OPEN = ['new', 'confirmed', 'preparing', 'shipped', 'ready'];
 export const PAY = { havale: 'Havale / EFT', card: 'Kredi kartı (ödeme linki)', shop: 'Dükkanda ödeme' };

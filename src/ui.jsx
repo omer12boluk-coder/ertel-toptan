@@ -232,6 +232,8 @@ export function Stepper({ value, onChange, min = 0, small }) {
 
 export function StatusPill({ status, map = STATUS, label }) {
   const st = map[status] || { label: status, tone: 'muted' };
+  // durum rengi (st.c) varsa yönetimdeki sipariş renkleriyle aynı: renkli nokta + yazı
+  if (st.c) return <span className={'pill st-pill st-' + status} style={{ '--t': st.c }}><i className="st-pill-d" />{label || st.label}</span>;
   return <span className={'pill tone-' + st.tone}>{label || st.label}</span>;
 }
 
@@ -494,7 +496,7 @@ if (typeof window !== 'undefined' && 'ontouchstart' in window) {
   let sw = 0;
   document.addEventListener('touchstart', (e) => {
     const a = document.activeElement;
-    if (a && a.matches?.('input[type=search], .search input') && !e.target.closest?.('input, textarea, select, .search, .hsearch')) { a.blur(); sw = Date.now(); }
+    if (a && a.matches?.('input[type=search], .search input') && !e.target.closest?.('input, textarea, select, .search, .hsearch, .kf-search')) { a.blur(); sw = Date.now(); }
   }, { capture: true, passive: true });
   document.addEventListener('touchmove', () => { sw = 0; }, { capture: true, passive: true });
   document.addEventListener('click', (e) => { if (sw && Date.now() - sw < 700) { sw = 0; e.preventDefault(); e.stopPropagation(); } }, true);

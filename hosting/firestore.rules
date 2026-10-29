@@ -57,7 +57,7 @@ service cloud.firestore {
     match /members/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
       allow create: if isAdmin() || (signedIn() && request.auth.uid == uid && request.resource.data.uid == uid
-        && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'phone', 'createdAt', 'addresses', 'invoice', 'username']));
+        && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'phone', 'createdAt', 'addresses', 'invoice', 'username', 'legal']));
       // değişiklik için e-posta doğrulanmış olmalı
       allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && (request.auth.token.email_verified == true || resource.data.get('byAdmin', false) == true) && request.resource.data.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'addresses', 'invoice', 'email', 'photo', 'hiddenOrders', 'favs'])
@@ -81,11 +81,32 @@ service cloud.firestore {
       allow create: if request.resource.data.status == 'new'
         && (request.resource.data.uid == null || (signedIn() && request.resource.data.uid == request.auth.uid))
         && request.resource.data.items is list && request.resource.data.items.size() > 0 && request.resource.data.items.size() <= 300
-        && request.resource.data.keys().hasOnly(['no', 'uid', 'member', 'status', 'createdAt', 'updatedAt', 'unread', 'history', 'items', 'total', 'rate', 'contact', 'delivery', 'invoice', 'pay', 'note']);
+        && request.resource.data.keys().hasOnly(['no', 'uid', 'member', 'status', 'createdAt', 'updatedAt', 'unread', 'history', 'items', 'total', 'rate', 'contact', 'delivery', 'invoice', 'pay', 'note', 'legal']);
       // üye kendi siparişini sadece "yeni" iken iptal edebilir
       allow update: if isAdmin() || (own() && resource.data.status == 'new' && request.resource.data.status == 'cancelled'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'history']));
       allow delete: if isAdmin();
+    }
+
+    // ---- Sorun bildirimi (29.10.2026, issue.jsx): üye fotoğraf / video + açıklama gönderir (dosyalar bekçiyle R2 is/<id>/…),
+    // yönetici durum + açıklama (+ fotoğraf) ile yanıtlar. Üye kendi kaydına sadece mesaj ekleyebilir / görüldü işaretler.
+    match /issues/{id} {
+      function ownIs() { return signedIn() && resource.data.uid == request.auth.uid; }
+      allow get, list: if isAdmin() || ownIs();
+      allow create: if signedIn() && id.matches('^[A-Za-z0-9]{10,40}$')
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'new'
+        && request.resource.data.keys().hasOnly(['uid', 'no', 'name', 'email', 'phone', 'order', 'prod', 'text', 'files', 'status', 'createdAt', 'updatedAt', 'seenAdmin', 'seenUser', 'replies'])
+        && request.resource.data.text is string && request.resource.data.text.size() <= 1500
+        && request.resource.data.files is list && request.resource.data.files.size() <= 5
+        && (request.resource.data.files.size() <= 0 || request.resource.data.files[0].k.matches('^is/' + id + '/[cv][0-9][.](webp|jpg|mp4|mov|webm)$'))
+        && (request.resource.data.files.size() <= 1 || request.resource.data.files[1].k.matches('^is/' + id + '/[cv][0-9][.](webp|jpg|mp4|mov|webm)$'))
+        && (request.resource.data.files.size() <= 2 || request.resource.data.files[2].k.matches('^is/' + id + '/[cv][0-9][.](webp|jpg|mp4|mov|webm)$'))
+        && (request.resource.data.files.size() <= 3 || request.resource.data.files[3].k.matches('^is/' + id + '/[cv][0-9][.](webp|jpg|mp4|mov|webm)$'))
+        && (request.resource.data.files.size() <= 4 || request.resource.data.files[4].k.matches('^is/' + id + '/[cv][0-9][.](webp|jpg|mp4|mov|webm)$'));
+      allow update: if isAdmin() || (ownIs() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replies', 'updatedAt', 'seenAdmin', 'seenUser'])
+        && request.resource.data.replies is list && request.resource.data.replies.size() <= 80);
+      allow delete: if isAdmin() || ownIs();
     }
 
     // ---- Ürün talebi (mağaza üyesi: fotoğraf + açıklama). Fotoğraflar bekçi üzerinden R2'ye (pr/<id>/…), kayıt burada.

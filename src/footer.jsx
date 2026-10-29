@@ -6,6 +6,8 @@ import { useStore } from './store.js';
 import { Icon, Sheet } from './ui.jsx';
 import { waLink } from './route.js';
 import { LOGO_MARK } from './config.js';
+import { LEGAL_DOCS } from './legal.js';
+import { openLegal } from './legalui.jsx';
 
 export function ShopFooter({ compact = false }) {
   const S = useStore((s) => s.settings);
@@ -26,6 +28,7 @@ export function ShopFooter({ compact = false }) {
       <div className="sfoot-mini">
         <span>© {new Date().getFullYear()} {F.company || S.brand.appName}</span>
         {pages.map((p, i) => <button key={i} onClick={() => setPage(p)}>{p.title}</button>)}
+        <button onClick={() => openLegal('kvkk')}>Yasal metinler</button>
         {social.map(([ic, l, u]) => <a key={ic} href={u} target="_blank" rel="noopener" aria-label={l} title={l}><Icon n={ic} s={16} /></a>)}
       </div>
       {page && <Sheet title={page.title} onClose={() => setPage(null)}><RichText text={page.body} /></Sheet>}
@@ -54,6 +57,10 @@ export function ShopFooter({ compact = false }) {
           <h4>Bilgi</h4>
           <ul className="sfoot-links">{pages.map((p, i) => <li key={i}><button onClick={() => setPage(p)}>{p.title}<Icon n="chev" s={15} /></button></li>)}</ul>
         </div>}
+        <div className="sfoot-col">
+          <h4>Yasal</h4>
+          <ul className="sfoot-links">{LEGAL_DOCS.map((d) => <li key={d.k}><button onClick={() => openLegal(d.k)}>{d.title}<Icon n="chev" s={15} /></button></li>)}</ul>
+        </div>
       </div>
       <div className="sfoot-bot">
         <span>© {new Date().getFullYear()} {F.company || S.brand.appName}</span>

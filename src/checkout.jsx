@@ -15,6 +15,8 @@ import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
 import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
+import { LegalConsent, SignupConsent, legalFromOrder, OrderLegalLink } from './legalui.jsx';
+import { LEGAL_V } from './legal.js';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -162,6 +164,14 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
     if (f.method === 'cargo' && delivAddr) return { name: String(m.name || delivAddr.name || f.contact.name).trim(), phone: m.phone || delivAddr.phone || f.contact.phone };
     return { name: f.contact.name.trim(), phone: f.contact.phone };
   };
+  // sözleşme önizlemesi için o anki form → sipariş biçimi (kayıt submit'te ayrıca kurulur)
+  const draftOrder = () => ({
+    contact: { ...contactOut(), email: f.contact.email.trim() },
+    items: items.map(({ n, cur, qty, offer }) => ({ n, cur, qty, price: offer })), total: tot,
+    delivery: { method: f.method, addr: f.method === 'cargo' ? delivAddr : null, carrier: f.carrier || 'dhl' },
+    invoice: f.inv.type === 'company' ? { type: 'company', company: f.inv.company, taxOffice: f.inv.taxOffice, taxNo: f.inv.taxNo } : { type: 'person', tc: f.inv.tc },
+    pay: f.pay,
+  });
   function validate() {
     const e = {};
     if (f.method !== 'cargo') {
@@ -177,6 +187,8 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       if (![10, 11].includes(digits(f.inv.taxNo).length)) e['inv.taxNo'] = 'Vergi no 10 haneli olmalı';
     } else if (f.inv.tc && digits(f.inv.tc).length !== 11) e['inv.tc'] = 'TC kimlik no 11 haneli olmalı';
     if (f.method === 'cargo' && !f.billSame) Object.assign(e, addrErrors(f.bill, 'bill'));
+    if (!f.legal) e.legal = 'Siparişi tamamlamak için sözleşmeleri onaylayın';
+    if (!member && f.signup && !f.legalM) e.legalM = 'Üyelik için üyelik sözleşmesini onaylayın';
     return e;
   }
   async function submit() {
@@ -184,7 +196,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
     const e = validate(); setErr(e);
     if (Object.keys(e).length) {
       toast('Eksik bilgileri tamamlayın', 'bad');
-      setTimeout(() => formRef.current?.querySelector('.field.bad input, .field.bad select, .field.bad textarea')?.focus(), 30);
+      setTimeout(() => { const el = formRef.current?.querySelector('.field.bad input, .field.bad select, .field.bad textarea, .legal-ok.bad input'); el?.focus(); el?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }); }, 30);
       return;
     }
     setBusy(true);
@@ -199,7 +211,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       let signedUp = false;
       if (!member && f.signup) {
         const addr = f.method === 'cargo' ? [{ ...cleanA(delivAddr), id: rid(), title: 'Adresim' }] : [];
-        const m = await A.memberSignup({ email, password: f.pw, name: contactOut().name, phone: contactOut().phone, username: f.uname || undefined, addresses: addr, invoice: inv }, true);
+        const m = await A.memberSignup({ email, password: f.pw, name: contactOut().name, phone: contactOut().phone, username: f.uname || undefined, addresses: addr, invoice: inv, legal: { v: LEGAL_V, at: now() } }, true);
         uid = m.uid; signedUp = true;
       }
       const t = now(), no = orderNo(), id = A.newOrderId();
@@ -212,6 +224,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         // teslimat adresiyle aynıysa adres faturaya da yazılır (fatura kendi başına eksiksiz okunsun)
         invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' ? (f.billSame ? cleanA(delivAddr) : cleanA(f.bill, false)) : f.bill?.address ? cleanA(f.bill, false) : null },
         pay: f.pay, note: f.note.trim(),
+        legal: { v: LEGAL_V, at: t }, // ön bilgilendirme + mesafeli satış onayı (metinler sipariş sayfasında bu siparişin bilgileriyle görünür)
       });
       try { await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
       // dükkan sahibine bildirim (e-posta + WhatsApp, bekçi üzerinden); sipariş zaten kaydedildi, hata olursa önemli değil
@@ -305,6 +318,10 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
               </div>
             </>}
             {!member && <Field label="E-posta" opt={!f.signup} error={err.email} hint="Sipariş durumunu e-postayla da bildirelim"><input id="co-email" type="email" autoComplete="email" value={f.contact.email} onChange={setC('email')} /></Field>}
+            {member && <Field label="Bildirim e-postası" opt error={err.email} className="co-mail" hint={f.contact.email.trim().toLowerCase() === String(member.email || '').toLowerCase() ? 'Hesabınızın e-postası. Başkası adına sipariş veriyorsanız onun e-postasını yazın; kargo ve sipariş bilgileri oraya gider.' : 'Bu sipariş için kargo ve sipariş bilgileri bu adrese gider (hesabınız değişmez).'}>
+              <span className="co-mail-in"><input id="co-email" type="email" autoComplete="off" autoCapitalize="none" value={f.contact.email} onChange={setC('email')} />
+                {f.contact.email.trim().toLowerCase() !== String(member.email || '').toLowerCase() && <button type="button" className="linkish" onClick={() => setC('email')(member.email || '')}>Hesabımınkini kullan</button>}</span>
+            </Field>}
           </section>
 
           <section className="co-sec">
@@ -345,6 +362,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
                 <Field label="Kullanıcı adı" opt error={err.uname} hint="E-posta yerine bununla da giriş yapabilirsiniz"><input id="co-uname" autoCapitalize="none" value={f.uname} placeholder={suggestUser(f.contact.email)} onChange={(e) => set({ uname: cleanUsername(e.target.value).slice(0, 20) })} /></Field>
                 <Field label="Şifre belirleyin" error={err.pw} hint="En az 6 karakter"><PasswordInput id="co-pw" autoComplete="new-password" value={f.pw} onChange={(e) => set({ pw: e.target.value })} /></Field>
               </div>}
+              {f.signup && <SignupConsent checked={!!f.legalM} onChange={(v) => set({ legalM: v })} error={err.legalM} />}
               {f.signup && <p className="fine">Siparişten sonra e-postanıza bir doğrulama bağlantısı gelir; ona tıklayınca üyeliğiniz açılır.</p>}
             </section>
           )}
@@ -365,6 +383,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
               {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
             </div>
             <VatLines by={tot} />
+            <LegalConsent checked={!!f.legal} onChange={(v) => set({ legal: v })} error={err.legal} order={legalFromOrder(draftOrder(), S, tTL != null ? fmtTL(tTL) : '')} />
             <button className="btn primary big co-go" disabled={busy} onClick={submit}><Icon n="check" /><span><b>{busy ? 'Gönderiliyor…' : 'Siparişi tamamla'}</b></span></button>
             {f.method === 'cargo' && O.cargoNote && <p className="fine">{O.cargoNote}</p>}
           </div>
@@ -490,6 +509,7 @@ export function OrderPage({ id }) {
         <div className="o-card"><h3>Fatura</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>
       </div>
       {o.note && <p className="o-note"><b>Notunuz:</b> {o.note}</p>}
+      <p className="o-legal-row"><OrderLegalLink o={{ ...o, items }} /></p>
 
       {o.status === 'new' && (mine
         ? <button className="btn ghost danger gclear" onClick={cancel}><Icon n="x" s={15} />Siparişi iptal et</button>
@@ -612,7 +632,8 @@ function AuthForm({ onDone, compact }) {
         if (phoneDigits(f.phone).length !== 11) throw new Error('Telefonu 0(5xx) xxx xx xx şeklinde yazın.');
         if (f.pw.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
         if (f.pw !== f.pw2) throw new Error('Şifreler aynı değil.');
-        await A.memberSignup({ email, password: f.pw, name: f.name.trim(), phone: f.phone, username: f.uname || undefined });
+        if (!f.legal) throw new Error('Üye olmak için üyelik sözleşmesini onaylayın.');
+        await A.memberSignup({ email, password: f.pw, name: f.name.trim(), phone: f.phone, username: f.uname || undefined, legal: { v: LEGAL_V, at: now() } });
         setSentTo(email); setF((x) => ({ ...x, id: f.uname || email, pw: '' })); setView(A.mode === 'demo' ? 'login' : 'verifySent');
         if (A.mode === 'demo') toast('Üyeliğiniz oluşturuldu, giriş yapın');
       } else if (view === 'reset') {
@@ -657,6 +678,7 @@ function AuthForm({ onDone, compact }) {
       {view !== 'signup' && <Field label="E-posta ya da kullanıcı adı"><input id="m-id" autoComplete="username" autoCapitalize="none" value={f.id} onChange={set('id')} required /></Field>}
       {view !== 'reset' && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}
       {view === 'signup' && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}
+      {view === 'signup' && <SignupConsent checked={!!f.legal} onChange={(v) => setF((x) => ({ ...x, legal: v }))} />}
       {err && <p className="err">{err}</p>}
       {view === 'unverified'
         ? <button type="button" className="btn primary big center-btn" disabled={busy} onClick={resend}>{busy ? 'Bekleyin…' : 'Doğrulama e-postasını tekrar gönder'}</button>

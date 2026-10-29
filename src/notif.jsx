@@ -8,13 +8,15 @@ import { pushState, enablePush, disablePush, linkMember } from './push.js';
 import { fmt, fmtTotals, when, ls } from './utils.js';
 import { TYPE, ORDER_STATUS, ORDER_OPEN } from './config.js';
 import { preqNotifs } from './preq.jsx';
+import { PushHelp } from './pushhelp.jsx';
+import { issueNotifs } from './issue.jsx';
 
 const DAY = 864e5;
 const KINDS = [['all', 'Tümü'], ['order', 'Siparişler'], ['req', 'Bayi'], ['prod', 'Ürünler'], ['user', 'Üyeler']];
 const seenAt = () => ls.get('notif-seen', 0) || Date.now() - DAY;
 
 function useNotifs() {
-  const { orders, requests, customers, members, feed, preqs } = useStore();
+  const { orders, requests, customers, members, feed, preqs, issues = [] } = useStore();
   return useMemo(() => {
     const from = Date.now() - 30 * DAY; const out = [];
     for (const o of orders) {
@@ -30,6 +32,7 @@ function useNotifs() {
     }
     for (const u of customers) if (u.pending && (u.createdAt || 0) > from) out.push({ id: 'u' + u.uid, at: u.createdAt, g: 'user', ic: 'users', tone: 'warn', t: `Bayi başvurusu · ${u.name || u.username || ''}`, s: [u.shop, u.phone].filter(Boolean).join(' · ') + ' · onay bekliyor', go: () => { ls.set('cust-kind', 'bayi'); go('musteriler'); } });
     for (const q of preqs || []) if ((q.createdAt || 0) > from) out.push({ id: 'pq' + q.id, at: q.createdAt, g: 'user', ic: 'camera', tone: 'info', t: `Ürün talebi #${q.no} · ${q.name || 'Üye'}`, s: q.text || `${(q.photos || []).length} fotoğraf`, go: () => { ls.set('cust-kind', 'talep'); go('musteriler'); store.set({ openPreq: q.id }); } });
+    for (const q of issues) if ((q.createdAt || 0) > from) out.push({ id: 'is' + q.id, at: q.createdAt, g: 'user', ic: 'ask', tone: 'warn', t: `Sorun bildirimi #${q.no} · ${q.name || 'Üye'}`, s: [q.prod, q.text].filter(Boolean).join(' · '), go: () => { ls.set('cust-kind', 'sorun'); go('musteriler'); store.set({ openIssue: q.id }); } });
     for (const m of members) if ((m.createdAt || 0) > from) out.push({ id: 'mb' + m.uid, at: m.createdAt, g: 'user', ic: 'user', tone: 'muted', t: `Yeni mağaza üyesi · ${m.name || m.email || ''}`, s: m.email || '', go: () => { ls.set('cust-kind', 'magaza'); go('musteriler'); } });
     for (const [i, x] of (feed || []).entries()) {
       if (x.at <= from) continue;
@@ -37,7 +40,7 @@ function useNotifs() {
       if (P) out.push({ id: 'f' + i + x.at + x.id, at: x.at, g: 'prod', ic: P[0], tone: P[1], t: P[2], s: P[3], go: () => { go('katalog'); store.set({ catalogGo: x.k ? { code: x.k } : { q: x.n || String(x.id) } }); /* stok kodu kendi kutusuna (ad aramasına değil) */ } });
     }
     return out.sort((a, b) => b.at - a.at).slice(0, 300);
-  }, [orders, requests, customers, members, feed, preqs]);
+  }, [orders, requests, customers, members, feed, preqs, issues]);
 }
 
 export function NotifBell() {
@@ -122,7 +125,7 @@ export function useFavWatch() {
   }, [favs, catalog]);
 }
 export function useShopNotifs() {
-  const { member, myOrders, guestOrders, favTick, myPreqs } = useStore();
+  const { member, myOrders, guestOrders, favTick, myPreqs, myIssues = [] } = useStore();
   const orders = member ? myOrders : guestOrders;
   return useMemo(() => {
     const from = Date.now() - 90 * DAY; const out = [];
@@ -137,14 +140,16 @@ export function useShopNotifs() {
       }
     }
     if (member) out.push(...preqNotifs(myPreqs).filter((x) => x.at > from));
+    if (member) out.push(...issueNotifs(myIssues).filter((x) => x.at > from));
     return out.sort((a, b) => b.at - a.at).slice(0, 100);
-  }, [orders, favTick, myPreqs, member]);
+  }, [orders, favTick, myPreqs, myIssues, member]);
 }
 // telefon bildirimlerini aç / kapat (bekçi: kapatınca abonelik silinir, bildirim gitmez)
 export function PushToggle({ orders }) {
   const S = useStore((s) => s.settings);
   const [st, setSt] = useState(() => pushState());
   const [busy, setBusy] = useState(false);
+  const [help, setHelp] = useState(false);
   if (S.orders?.push === false || st === 'unsupported') return null;
   const ids = (() => { const a = (orders || []).filter((o) => ORDER_OPEN.includes(o.status)).map((o) => o.id); return a.length ? a : (orders || []).slice(0, 1).map((o) => o.id); })();
   const member = useStore((s) => s.member);
@@ -167,6 +172,8 @@ export function PushToggle({ orders }) {
       {st === 'ios-home' || st === 'denied'
         ? <div className="push-tg-t"><b>Telefon bildirimleri</b><small>{hint}</small></div>
         : <Toggle id="push-tg" checked={st === 'on'} onChange={set} label="Telefon bildirimleri" hint={hint} />}
+      {st !== 'on' && <button type="button" className={'push-help-b' + (st === 'ios-home' || st === 'denied' ? ' strong' : '')} onClick={() => setHelp(true)}><Icon n="ask" s={15} />Nasıl açılır? <small>Resimli anlatım</small></button>}
+      {help && <PushHelp state={st} onClose={() => setHelp(false)} />}
     </div>
   );
 }

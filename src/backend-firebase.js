@@ -117,7 +117,7 @@ export class FirebaseBackend {
   async savePublicSettings(S) {
     const p = S.pricing || {};
     await this.F.setDoc(this.d('settings', 'public'), { brand: S.brand, shop: S.shop, access: S.access, catalog: S.catalog, categories: S.categories || {},
-      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, showVatInc: !!p.showVatInc, plusVat: !!p.plusVat, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, footer: S.footer || null, cards: S.cards || null, look: S.look || null, kalip: S.kalip || null, preq: S.preq || null, v: S.v || 0 });
+      pricing: { vatPct: p.vatPct ?? 20, showVat: p.showVat !== false, showTL: !!p.showTL, showVatInc: !!p.showVatInc, plusVat: !!p.plusVat, manualRate: p.manualRate ?? '' }, orders: S.orders || {}, shopHome: S.shopHome || null, brandLogos: S.brandLogos || {}, footer: S.footer || null, cards: S.cards || null, look: S.look || null, kalip: S.kalip || null, preq: S.preq || null, legal: S.legal || null, issue: S.issue || null, v: S.v || 0 });
   }
 
   // ---- Katalog: önce sürümü kontrol et, değişmediyse cihazdaki kopyayı kullan
@@ -344,6 +344,28 @@ export class FirebaseBackend {
   async replyPreq(id, patch) { await this.updatePreq(id, patch); this._watchPost('/preq/reply', { id }).catch((e) => console.warn('yanıt bildirimi', e)); }
   // talep + fotoğrafları birlikte silinir (bekçi; yönetici ya da sahibi)
   async deletePreq(id) { await this._watchPost('/preq/del', { id }); }
+  // ---- Sorun bildirimi (issue.jsx): dosyalar bekçi üzerinden R2'ye (kotalı, video ilerlemeli), kayıt issues/{id}
+  async issueUpload(imgs, video, onProg) {
+    const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı, yeniden giriş yapın');
+    const fd = new FormData(); imgs.forEach((b, i) => fd.append('f' + i, b, 'f' + i)); if (video) fd.append('v', video, 'v');
+    return new Promise((res, rej) => {
+      const x = new XMLHttpRequest(); x.open('POST', String(window.WATCH_URL || '').replace(/\/$/, '') + '/issue/up');
+      x.setRequestHeader('Authorization', 'Bearer ' + tok); x.timeout = 10 * 60e3;
+      x.upload.onprogress = (e) => e.lengthComputable && onProg?.(e.loaded / e.total);
+      x.onload = () => { let j = {}; try { j = JSON.parse(x.responseText); } catch {} j.ok ? res(j) : rej(new Error(j.error || 'Yükleme başarısız (' + x.status + ')')); };
+      x.onerror = () => rej(new Error('Bağlantı koptu, tekrar deneyin')); x.ontimeout = () => rej(new Error('Yükleme çok uzun sürdü, daha kısa video deneyin'));
+      x.send(fd);
+    });
+  }
+  async issueAdminUpload(id, blobs) { const fd = new FormData(); blobs.forEach((b, i) => fd.append('f' + i, b, 'f' + i)); return this._watchPost('/issue/aup?id=' + encodeURIComponent(id), fd, true); }
+  async createIssue(id, doc) { await timeout(this.F.setDoc(this.d('issues', id), doc)); this._watchPost('/issue/new', { id }).catch((e) => console.warn('sorun bildirimi', e)); }
+  watchMyIssues(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('issues'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
+  watchIssues(cb) { return this.F.onSnapshot(this.F.query(this.c('issues'), this.F.orderBy('createdAt', 'desc'), this.F.limit(400)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
+  async updateIssue(id, patch) { await timeout(this.F.updateDoc(this.d('issues', id), patch)); }
+  async replyIssue(id, patch) { await this.updateIssue(id, patch); this._watchPost('/issue/reply', { id }).catch((e) => console.warn('yanıt bildirimi', e)); }
+  async msgIssue(id, patch) { await this.updateIssue(id, patch); this._watchPost('/issue/msg', { id }).catch((e) => console.warn('mesaj bildirimi', e)); }
+  async deleteIssue(id) { await this._watchPost('/issue/del', { id }); }
+  issuePic(key) { return this.preqPic(key); }
   preqPic(key) { return /^(data:|blob:|https?:)/.test(key) ? key : String(window.WATCH_URL || '').replace(/\/$/, '') + '/p/' + key; }
   async _pingReq(id, msg) { const token = await this.idToken(); if (token) pingWatch('/notify-req', { id, token, msg }); }
   watchRequest(id, cb) {
@@ -387,14 +409,14 @@ export class FirebaseBackend {
   actionUrl() { return { url: location.origin + '/magaza' }; }
   async usernameFree(name) { const s = await timeout(this.F.getDoc(this.d('usernames', name))); return !s.exists(); }
   // keep: true → sipariş adımında üye olunca sipariş yazılana kadar oturum açık kalır; sonra memberDone() çağrılır
-  async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' } }, keep) {
+  async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' }, legal }, keep) {
     if (username && !(await this.usernameFree(username))) throw new Error('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
     this.signingUp = true;
     let cred;
     try { cred = await this.U.createUserWithEmailAndPassword(this.auth, email, password); }
     catch (e) { this.signingUp = false; throw new Error(authMsg(e)); }
     try {
-      const m = { uid: cred.user.uid, email, name, phone, createdAt: now(), addresses, invoice, ...(username ? { username } : {}) };
+      const m = { uid: cred.user.uid, email, name, phone, createdAt: now(), addresses, invoice, ...(username ? { username } : {}), ...(legal ? { legal } : {}) };
       await timeout(this.F.setDoc(this.d('members', m.uid), m));
       if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid: m.uid, email })).catch((e) => console.warn(e));
       await this.U.sendEmailVerification(cred.user, this.actionUrl()).catch((e) => console.warn(e));

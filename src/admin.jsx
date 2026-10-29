@@ -21,6 +21,9 @@ import { syncNow } from './watch.js';
 import { Members } from './orders.jsx';
 import { KalipSettings } from './kalipfind.jsx';
 import { PreqAdmin, PreqSettings } from './preq.jsx';
+import { IssueAdmin, IssueSettings } from './issue.jsx';
+import { LEGAL_DOCS, LEGAL_DEFAULTS } from './legal.js';
+import { LegalSheet } from './legalui.jsx';
 
 const num = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')));
 
@@ -209,12 +212,15 @@ export function ProductEdit({ p, copy, onClose }) {
 // =========================================================================
 // Müşteriler
 export function Customers() {
-  const { customers, settings: S, requests, members = [], win, preqs = [] } = useStore();
+  const { customers, settings: S, requests, members = [], win, preqs = [], issues = [] } = useStore();
   const pqNew = preqs.filter((q) => q.seenAdmin === false).length;
+  const isNew = issues.filter((q) => q.seenAdmin === false).length;
   const [kind, setKind0] = useState(() => ls.get('cust-kind', 'bayi'));
   useEffect(() => { if (kind === 'magaza') ensureAllMembers(); }, [kind]);
   const openPreq = useStore((s) => s.openPreq);
   useEffect(() => { if (openPreq && kind !== 'talep') setKind('talep'); }, [openPreq]); // bildirimden / linkten gelen talep
+  const openIssue = useStore((s) => s.openIssue);
+  useEffect(() => { if (openIssue && kind !== 'sorun') setKind('sorun'); }, [openIssue]);
   const setKind = (k) => { setKind0(k); ls.set('cust-kind', k); };
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
@@ -245,6 +251,7 @@ export function Customers() {
       <button role="tab" aria-selected={kind === 'bayi'} className={'tab' + (kind === 'bayi' ? ' on' : '')} onClick={() => setKind('bayi')}>Bayiler ({customers.length - pending.length}){pending.length > 0 && <span className="badge">{pending.length}</span>}</button>
       <button role="tab" aria-selected={kind === 'magaza'} className={'tab' + (kind === 'magaza' ? ' on' : '')} onClick={() => setKind('magaza')}>Mağaza müşterileri{win?.membersAll !== false ? ` (${members.length})` : ''}</button>
       <button role="tab" aria-selected={kind === 'talep'} className={'tab' + (kind === 'talep' ? ' on' : '')} onClick={() => setKind('talep')}>Ürün talepleri{pqNew > 0 && <span className="badge">{pqNew}</span>}</button>
+      <button role="tab" aria-selected={kind === 'sorun'} className={'tab' + (kind === 'sorun' ? ' on' : '')} onClick={() => setKind('sorun')}>Sorun bildirimleri{isNew > 0 && <span className="badge">{isNew}</span>}</button>
     </div>
   );
   if (kind === 'talep') return (
@@ -252,6 +259,13 @@ export function Customers() {
       <div className="page-h fixh"><h1 className="page-t">Müşteriler</h1></div>
       {kindTabs}
       <PreqAdmin />
+    </div>
+  );
+  if (kind === 'sorun') return (
+    <div className="page">
+      <div className="page-h fixh"><h1 className="page-t">Müşteriler</h1></div>
+      {kindTabs}
+      <IssueAdmin />
     </div>
   );
   if (kind === 'magaza') return (
@@ -478,7 +492,7 @@ const SECTIONS = [
   ['magazaana', 'Mağaza ana sayfası', 'Reklamlar, marka kutuları, raflar (liste hâlinde)', 'store'],
   ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star'],
   ['magaza', 'Online mağaza', 'Sipariş, teslimat, ödeme, kargo firmaları, bildirimler', 'cart'],
-  ['altbilgi', 'Alt bilgi ve sayfalar', 'Mağazanın en altı: iletişim, sosyal medya, Kargo / İade sayfaları', 'list'],
+  ['altbilgi', 'Alt bilgi ve sayfalar', 'Mağazanın en altı: iletişim, sosyal medya, Kargo / İade sayfaları, KVKK ve sözleşmeler', 'list'],
   ['anasayfa', 'Bayi ana sayfası', 'Bayilerin giriş yapınca gördüğü sayfa', 'home'],
   ['fiyat', 'Fiyatlandırma', 'Toptan indirimi, KDV, kur', 'tag'],
   ['kademe', 'Kademeler', 'Bayi indirim kademeleri', 'users'],
@@ -486,6 +500,7 @@ const SECTIONS = [
   ['katalog', 'Katalog', 'Stok gösterimi, sayfa, arama', 'grid'],
   ['kalip', 'Kalıp bulucu', 'Telefon modelleri ve işlemcileri · uyan kalıplar', 'chip'],
   ['urtalep', 'Ürün talebi', 'Müşterinin fotoğraflı ürün isteği · günlük sınır, fotoğraf saklama süresi', 'camera'],
+  ['sorun', 'Sorun bildirimi', 'Müşterinin fotoğraflı / videolu sorun bildirimi · günlük sınır, saklama süresi', 'ask'],
   ['talep', 'Talepler', 'Bayi talepleri ve mesajlar', 'chat'],
   ['dukkan', 'Dükkan', 'Adres, telefon, WhatsApp, erişim', 'phone'],
   ['kategori', 'Kategoriler', 'Kategori adları ve sırası', 'list'],
@@ -493,7 +508,7 @@ const SECTIONS = [
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
 ];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'] };
+const SEC_KEYS = { tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -686,6 +701,7 @@ export function Settings() {
         {sec === 'altbilgi' && <FooterSettings d={d} set={set} />}
         {sec === 'kalip' && <KalipSettings d={d} set={set} />}
         {sec === 'urtalep' && <PreqSettings d={d} set={set} />}
+        {sec === 'sorun' && <IssueSettings d={d} set={set} />}
 
         {sec === 'magaza' && <>
           <p className="fine">Herkese açık mağaza: <b>{location.host}/magaza</b>. Müşteri ürünleri sepete ekler, <b>Sepeti onayla</b> ile teslimat, fatura ve ödeme bilgilerini girip siparişi tamamlar; sipariş <b>Siparişler</b>’e düşer. İsterse üye olur (bilgileri bir dahakine hazır gelir), isterse misafir devam eder. Ayrıca sepeti sadece link olarak WhatsApp’tan da gönderebilir (o liste hiçbir yere kaydedilmez).</p>
@@ -1359,6 +1375,50 @@ function FooterSettings({ d, set }) {
       <button type="button" className="btn sm ghost" onClick={() => setPrev(p)}><Icon n="eye" s={15} />Önizle</button>
     </>} />
     {prev && <Sheet title={prev.title} onClose={() => setPrev(null)}><PageText text={prev.body} /></Sheet>}
+    <LegalSettings d={d} set={set} />
+  </>;
+}
+
+// Yasal metinler: satıcı bilgileri (sözleşmelere yazılır) + her metin varsayılan ya da elle değiştirilmiş
+function LegalSettings({ d, set }) {
+  const L = d.legal || {};
+  const S = (k, v) => set('legal.' + k, v);
+  const [prev, setPrev] = useState(null);
+  const [edit, setEdit] = useState(null);
+  const docs = L.docs || {};
+  return <>
+    <h3>Yasal metinler</h3>
+    <p className="fine">KVKK aydınlatma metni, gizlilik politikası, üyelik sözleşmesi, ön bilgilendirme formu ve mesafeli satış sözleşmesi hazır gelir; alt bilgide "Yasal" başlığında ve <b>/magaza/yasal</b> adresinde görünür. Siparişte müşteri "okudum, onaylıyorum" kutusunu işaretlemeden sipariş veremez. Sözleşmelerdeki satıcı bilgileri yukarıdaki unvan / adres / telefondan ve aşağıdaki alanlardan, alıcı ve ürün bilgileri siparişten otomatik doldurulur. <b>Yayına almadan önce bir avukat ya da mali müşavire kontrol ettirmeniz önerilir.</b></p>
+    <div className="row2">
+      <Field label="Vergi dairesi" opt><input value={L.taxOffice || ''} onChange={(e) => S('taxOffice', e.target.value)} /></Field>
+      <Field label="Vergi no" opt><input inputMode="numeric" value={L.taxNo || ''} onChange={(e) => S('taxNo', e.target.value.replace(/\D/g, '').slice(0, 11))} /></Field>
+    </div>
+    <div className="row2">
+      <Field label="MERSİS no" opt><input inputMode="numeric" value={L.mersis || ''} onChange={(e) => S('mersis', e.target.value.replace(/\D/g, '').slice(0, 16))} /></Field>
+      <Field label="KVKK başvuru e-postası" opt hint="Boşsa alt bilgideki e-posta"><input type="email" value={L.email || ''} placeholder={d.footer?.email || ''} onChange={(e) => S('email', e.target.value.trim())} /></Field>
+    </div>
+    <div className="legal-set">
+      {LEGAL_DOCS.map((x) => {
+        const own = !!(docs[x.k] || '').trim(); const open = edit === x.k;
+        return (
+          <div key={x.k} className={'legal-set-row' + (open ? ' open' : '')}>
+            <div className="legal-set-top">
+              <b>{x.title}</b><small className={own ? 'own' : ''}>{own ? 'Değiştirildi' : 'Hazır metin'}</small>
+              <span className="legal-set-b">
+                <button type="button" className="btn sm ghost" onClick={() => setPrev(x.k)}><Icon n="eye" s={15} />Önizle</button>
+                <button type="button" className="btn sm ghost" onClick={() => setEdit(open ? null : x.k)}><Icon n="edit" s={15} />{open ? 'Kapat' : 'Düzenle'}</button>
+              </span>
+            </div>
+            {open && <>
+              <textarea rows="14" value={own ? docs[x.k] : LEGAL_DEFAULTS[x.k]} onChange={(e) => S('docs', { ...docs, [x.k]: e.target.value === LEGAL_DEFAULTS[x.k] ? '' : e.target.value })} />
+              <p className="fine">Yer tutucular otomatik doldurulur: {'{SATICI_UNVAN} {SATICI_ADRES} {SATICI_TEL} {SATICI_EPOSTA} {SATICI_VERGI} {SATICI_MERSIS} {ALICI_AD} {ALICI_ADRES} {ALICI_TEL} {ALICI_EPOSTA} {ALICI_FATURA} {URUNLER} {TOPLAM} {KARGO_UCRETI} {ODEME} {TESLIMAT} {TARIH}'}</p>
+              {own && <button type="button" className="btn sm ghost" onClick={() => S('docs', { ...docs, [x.k]: '' })}><Icon n="undo" s={15} />Hazır metne dön</button>}
+            </>}
+          </div>
+        );
+      })}
+    </div>
+    {prev && <LegalSheet k={prev} S={d} onClose={() => setPrev(null)} />}
   </>;
 }
 

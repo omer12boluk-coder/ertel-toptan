@@ -210,6 +210,22 @@ export class DemoBackend {
   async replyPreq(id, patch) { return this.updatePreq(id, patch); }
   async deletePreq(id) { delete this.pq()[id]; this.persist(); }
   preqPic(key) { return key; }
+  // ---- Sorun bildirimi (demo: dosyalar data URL olarak cihazda)
+  is_() { return (this.db.issues = this.db.issues || {}); }
+  async issueUpload(imgs, video, onProg) {
+    const rd = (b) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
+    const files = [...(await Promise.all(imgs.map(rd))).map((k) => ({ k, t: 'i' })), ...(video ? [{ k: await rd(video), t: 'v' }] : [])];
+    onProg?.(1); return { id: 'i' + rid() + rid(), files };
+  }
+  async issueAdminUpload(id, blobs) { const rd = (b) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); }); return { files: (await Promise.all(blobs.map(rd))).map((k) => ({ k, t: 'i' })) }; }
+  async createIssue(id, doc) { this.is_()[id] = { ...doc, id }; this.persist(); }
+  watchMyIssues(uid, cb) { return this.sub(() => cb(Object.values(this.is_()).filter((x) => x.uid === uid).sort((a, b) => b.createdAt - a.createdAt).map((x) => ({ ...x })))); }
+  watchIssues(cb) { return this.sub(() => cb(Object.values(this.is_()).sort((a, b) => b.createdAt - a.createdAt).map((x) => ({ ...x })))); }
+  async updateIssue(id, patch) { Object.assign(this.is_()[id], patch); this.persist(); }
+  async replyIssue(id, patch) { return this.updateIssue(id, patch); }
+  async msgIssue(id, patch) { return this.updateIssue(id, patch); }
+  async deleteIssue(id) { delete this.is_()[id]; this.persist(); }
+  issuePic(key) { return key; }
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
   async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => { const kc = stencilKeys({ ...p, t }); return kc ? { ...p, kc } : p; }); }
   async hasPublicCatalog() { return true; }

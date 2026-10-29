@@ -15,6 +15,7 @@ export default {
     ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message)));
     // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 17) ctx.waitUntil(preqSweep(env).catch((e) => console.log('preqSweep', e.message)));
+    if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 37) ctx.waitUntil(issueSweep(env).catch((e) => console.log('issueSweep', e.message)));
   },
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -38,6 +39,13 @@ export default {
       if (url.pathname === '/preq/del' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await preqDel(req, env, b)); }
       if (url.pathname === '/preq/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await preqNew(req, env, b, url.origin)); }
       if (url.pathname === '/preq/reply' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await preqReply(req, env, b)); }
+      // Sorun bildirimi (mağaza üyesi: fotoğraf / video + açıklama; yönetici durum + açıklama + fotoğrafla yanıtlar)
+      if (url.pathname === '/issue/up' && req.method === 'POST') return json(await issueUp(req, env));
+      if (url.pathname === '/issue/aup' && req.method === 'POST') return json(await issueAdminUp(req, env));
+      if (url.pathname === '/issue/del' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await issueDel(req, env, b)); }
+      if (url.pathname === '/issue/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await issueNew(req, env, b, url.origin)); }
+      if (url.pathname === '/issue/reply' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await issueReply(req, env, b)); }
+      if (url.pathname === '/issue/msg' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await issueMsg(req, env, b)); }
       // Ürün resimleri için aracı: site CDN'i başka siteden resim okumaya izin vermediği için liste resmini çizerken buradan alınır
       if (url.pathname === '/img') {
         const u = url.searchParams.get('u') || '';
@@ -557,9 +565,10 @@ async function upVideo(req, env) {
 // GET /p/<anahtar>: depodaki resim (sadece up/ ve platin/), tarayıcıda 1 yıl önbellek
 async function servePic(req, env, url, ctx, cors) {
   const key = decodeURIComponent(url.pathname.slice(3));
-  if (!env.R2 || !/^(up|platin|pr)\//.test(key) || key.includes('_manifest') || key.split('/').some((x) => x === '..' || x === '.')) return new Response('yok', { status: 404, headers: cors });
+  if (!env.R2 || !/^(up|platin|pr|is)\//.test(key) || key.includes('_manifest') || key.split('/').some((x) => x === '..' || x === '.')) return new Response('yok', { status: 404, headers: cors });
   // ürün talebi fotoğrafı: silinebildiği için uzun önbellek yok (Cloudflare önbelleğine de konmaz)
-  if (key.startsWith('pr/')) {
+  const tmp = /^(pr|is)\//.test(key);
+  if (tmp && !/\.(mp4|webm|mov)$/i.test(key)) {
     const o = await env.R2.get(key);
     if (!o) return new Response('yok', { status: 404, headers: { ...cors, 'Cache-Control': 'no-store' } });
     return new Response(req.method === 'HEAD' ? null : o.body, { headers: { 'Content-Type': o.httpMetadata?.contentType || 'image/webp', 'Cache-Control': 'private, max-age=3600', ...cors } });
@@ -571,7 +580,7 @@ async function servePic(req, env, url, ctx, cors) {
     const size = head.size; let a = 0, b = size - 1;
     if (rg) { if (rg[1] === '') { a = Math.max(0, size - Number(rg[2])); } else { a = Number(rg[1]); if (rg[2] !== '') b = Math.min(size - 1, Number(rg[2])); } }
     if (a > b || a >= size) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}`, ...cors } });
-    const h = { 'Content-Type': head.httpMetadata?.contentType || 'video/mp4', 'Accept-Ranges': 'bytes', 'Content-Length': String(b - a + 1), 'Cache-Control': 'public, max-age=31536000, immutable', ETag: head.httpEtag, 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges', ...cors };
+    const h = { 'Content-Type': head.httpMetadata?.contentType || 'video/mp4', 'Accept-Ranges': 'bytes', 'Content-Length': String(b - a + 1), 'Cache-Control': tmp ? 'private, max-age=3600' : 'public, max-age=31536000, immutable', ETag: head.httpEtag, 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges', ...cors };
     if (rg) h['Content-Range'] = `bytes ${a}-${b}/${size}`;
     if (req.method === 'HEAD') return new Response(null, { status: rg ? 206 : 200, headers: h });
     const o = await env.R2.get(key, { range: { offset: a, length: b - a + 1 } });
@@ -867,5 +876,142 @@ async function preqSweep(env) {
     if (!l.truncated) break; c2 = l.cursor;
   }
   for (const id of [...ids].slice(0, 40)) { const r = await fetch(FS + 'preq/' + id); if (r.status === 404) gone += await pqDropFiles(env, id); }
+  return gone;
+}
+
+
+// ---- Sorun bildirimi (29.10.2026) -------------------------------------------------------------------------
+// Mağaza üyesi sorunlu ürünün fotoğraf(lar)ını / kısa videosunu + açıklamasını gönderir; yönetici durum (İşleme alındı,
+// İnceleniyor…) + açıklama + isterse fotoğrafla yanıtlar → üyenin telefonuna bildirim. Kayıt Firestore issues/{id}.
+// Kötüye kullanım önlemleri (R2 şişmesin):
+//   - sadece e-postası doğrulanmış üye; tek gönderimde en çok 4 fotoğraf (≤ 800 KB, webp/jpeg) + 1 video (≤ 40 MB, mp4/mov/webm ilk baytlarına bakılır)
+//   - üye günde en çok settings/public.issue.perDay bildirim (varsayılan 3), aynı ağ (IP) saatte en çok 6 yükleme, tüm mağaza günde en çok 150
+//   - dosyalar R2 is/<id>/…; bildirim silinince hemen, değilse issue.days gün (varsayılan 45) sonra saatlik temizlikte silinir
+const IS_IMG = 800e3, IS_VID = 40e6, IS_IMGS = 4, IS_ALL = 150, IS_IP = 6;
+async function isSettings() { const pub = (await fsDoc('settings/public').catch(() => null)) || {}; const q = pub.issue || {}; return { on: q.on !== false, perDay: Math.min(20, Math.max(1, Number(q.perDay) || 3)), days: Math.min(365, Math.max(1, Number(q.days) || 45)), shop: pub.brand?.appName || 'ERTEL GSM' }; }
+function sniff(b) {
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return { ext: 'webp', type: 'image/webp', img: 1 };
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { ext: 'jpg', type: 'image/jpeg', img: 1 };
+  if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) { const brand = String.fromCharCode(b[8], b[9], b[10], b[11]); return brand === 'qt  ' ? { ext: 'mov', type: 'video/quicktime', vid: 1 } : { ext: 'mp4', type: 'video/mp4', vid: 1 }; }
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return { ext: 'webm', type: 'video/webm', vid: 1 };
+  return null;
+}
+// POST /issue/up (FormData f0..f3 fotoğraf, v video; Authorization: Bearer <üye oturum anahtarı>) → { id, files: [{k, t:'i'|'v'}] }
+async function issueUp(req, env) {
+  if (!env.R2) return { ok: false, error: 'Depo bağlı değil' };
+  const len = Number(req.headers.get('Content-Length') || 0);
+  if (len > IS_VID + IS_IMGS * IS_IMG + 1e6) return { ok: false, error: 'Dosyalar çok büyük. Videoyu daha kısa çekin (20-30 sn).' };
+  const who = await pqMember(bearer(req)); if (who.error) return { ok: false, error: who.error };
+  const S = await isSettings(); if (!S.on) return { ok: false, error: 'Sorun bildirimi şu an kapalı' };
+  const day = pqDay(); const ip = req.headers.get('CF-Connecting-IP') || 'x'; const hour = new Date().toISOString().slice(0, 13);
+  const ku = `is:${who.uid}:${day}`, ka = `is:all:${day}`, ki = `isip:${ip}:${hour}`;
+  const [nu, na, ni] = await Promise.all([env.KV.get(ku), env.KV.get(ka), env.KV.get(ki)]).then((a) => a.map((x) => Number(x) || 0));
+  if (nu >= S.perDay) return { ok: false, error: `Bugün en çok ${S.perDay} sorun bildirimi gönderebilirsiniz. Acil ise WhatsApp'tan yazın.` };
+  if (ni >= IS_IP) return { ok: false, error: 'Bu bağlantıdan çok sık gönderim yapıldı. Biraz sonra tekrar deneyin.' };
+  if (na >= IS_ALL) return { ok: false, error: 'Bugün çok fazla bildirim geldi, yarın tekrar deneyin.' };
+  const fd = await req.formData().catch(() => null); if (!fd) return { ok: false, error: 'Eksik bilgi' };
+  const items = [];
+  for (let i = 0; i < 8; i++) { const f = fd.get('f' + i); if (f && typeof f !== 'string') items.push({ f, vid: false }); }
+  const v = fd.get('v'); if (v && typeof v !== 'string') items.push({ f: v, vid: true });
+  if (items.filter((x) => !x.vid).length > IS_IMGS) return { ok: false, error: `En çok ${IS_IMGS} fotoğraf eklenebilir` };
+  const bufs = [];
+  for (const x of items) {
+    if (x.f.size > (x.vid ? IS_VID : IS_IMG)) return { ok: false, error: x.vid ? 'Video çok büyük (en çok 40 MB). Daha kısa çekin.' : 'Fotoğraf çok büyük' };
+    const b = new Uint8Array(await x.f.arrayBuffer()); const t = sniff(b);
+    if (!t || (x.vid ? !t.vid : !t.img)) return { ok: false, error: x.vid ? 'Video biçimi desteklenmiyor (MP4 / MOV)' : 'Sadece fotoğraf yüklenebilir' };
+    bufs.push({ b, ...t });
+  }
+  await Promise.all([env.KV.put(ku, String(nu + 1), { expirationTtl: 172800 }), env.KV.put(ka, String(na + 1), { expirationTtl: 172800 }), env.KV.put(ki, String(ni + 1), { expirationTtl: 7200 })]);
+  const id = pqId(); const files = []; let n = 0;
+  for (const x of bufs) { const key = `is/${id}/${x.vid ? 'v' : 'c'}${n++}.${x.ext}`; await env.R2.put(key, x.b, { httpMetadata: { contentType: x.type }, customMetadata: { uid: who.uid } }); files.push({ k: key, t: x.vid ? 'v' : 'i' }); }
+  return { ok: true, id, files, left: S.perDay - nu - 1 };
+}
+// POST /issue/aup?id=<bildirim> (yönetici, FormData f0..f5 fotoğraf) → { files } — yanıta eklenen fotoğraflar (is/<id>/a…)
+async function issueAdminUp(req, env) {
+  const err = await adminOf(req); if (err) return { ok: false, error: err };
+  if (!env.R2) return { ok: false, error: 'Depo bağlı değil' };
+  const id = new URL(req.url).searchParams.get('id') || ''; if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return { ok: false, error: 'eksik' };
+  const fd = await req.formData().catch(() => null); if (!fd) return { ok: false, error: 'Eksik bilgi' };
+  const files = [];
+  for (let i = 0; i < 6; i++) {
+    const f = fd.get('f' + i); if (!f || typeof f === 'string') continue;
+    if (f.size > 2e6) return { ok: false, error: 'Fotoğraf çok büyük' };
+    const b = new Uint8Array(await f.arrayBuffer()); const t = sniff(b); if (!t?.img) return { ok: false, error: 'Sadece fotoğraf' };
+    const key = `is/${id}/a${Date.now().toString(36)}${i}.${t.ext}`; await env.R2.put(key, b, { httpMetadata: { contentType: t.type } }); files.push({ k: key, t: 'i' });
+  }
+  return { ok: true, files };
+}
+async function isDropFiles(env, id) {
+  if (!env.R2 || !/^[A-Za-z0-9]{10,40}$/.test(id)) return 0;
+  let n = 0, cursor;
+  for (let p = 0; p < 5; p++) { const l = await env.R2.list({ prefix: `is/${id}/`, limit: 100, cursor }); if (l.objects.length) { await env.R2.delete(l.objects.map((o) => o.key)); n += l.objects.length; } if (!l.truncated) break; cursor = l.cursor; }
+  return n;
+}
+// POST /issue/del {id} (yönetici ya da sahibi): tüm dosyalar R2'den, kayıt Firestore'dan silinir
+async function issueDel(req, env, b) {
+  const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
+  const admin = !(await adminOf(req));
+  if (!admin) { const d = await fsAuth('issues/' + id, tok); if (d && d.uid !== uid) return { ok: false, error: 'yetki' }; }
+  const files = await isDropFiles(env, id);
+  const r = await fetch(FS + 'issues/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + tok } });
+  return { ok: r.ok, files, error: r.ok ? undefined : 'Kayıt silinemedi (' + r.status + ')' };
+}
+// POST /issue/new {id} (üye): yeni sorun bildirimi → Telegram (ilk fotoğrafla) + yönetici telefon bildirimi, bir kez
+async function issueNew(req, env, b, origin) {
+  const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
+  if (await env.KV.get('ni:' + id)) return { ok: true, already: true };
+  const d = await fsAuth('issues/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'kayıt yok' };
+  await env.KV.put('ni:' + id, '1', { expirationTtl: 60 * 60 * 24 * 7 });
+  const who = [d.name, d.phone].filter(Boolean).join(' · ');
+  const link = `https://erteltoptan.web.app/admin/i/${id}`;
+  const fl = d.files || []; const pics = fl.filter((x) => x.t === 'i').map((x) => origin + '/p/' + x.k); const vids = fl.filter((x) => x.t === 'v').map((x) => origin + '/p/' + x.k);
+  await adminPush(env, { title: `🛠️ Sorun bildirimi · ${d.name || 'Üye'}`, body: [d.prod, d.text].filter(Boolean).join(' · ').slice(0, 160) || `${fl.length} dosya`, url: '/admin/i/' + id, tag: 'ai-' + id }).catch(() => {});
+  const text = `🛠️ Yeni sorun bildirimi #${d.no || ''}\n${who}${d.email ? '\n' + d.email : ''}${d.order ? '\nSipariş: #' + d.order : ''}${d.prod ? '\nÜrün: ' + d.prod : ''}\n\n${d.text || '(açıklama yok)'}${pics.length ? `\n\n${pics.length} fotoğraf:\n` + pics.join('\n') : ''}${vids.length ? '\n\nVideo:\n' + vids.join('\n') : ''}\n\nPanelde yanıtla: ${link}`;
+  return notifySend(env, { subject: `Sorun bildirimi #${d.no || ''} · ${d.name || ''}`, text, link, replyTo: d.email, photo: pics[0] });
+}
+const IS_ST = { received: 'İşleme alındı', review: 'İnceleniyor', action: 'Sizden bir adım bekleniyor', shipping: 'Değişim / iade için gönderin', solved: 'Çözüldü', closed: 'Kapatıldı' };
+// POST /issue/reply {id} (yönetici): son yanıt üyenin telefonlarına; aynı yanıt bir kez
+async function issueReply(req, env, b) {
+  const err = await adminOf(req); if (err) return { ok: false, error: err };
+  const id = String(b.id || ''); if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return { ok: false, error: 'eksik' };
+  const d = await fsAuth('issues/' + id, bearer(req)); if (!d) return { ok: false, error: 'kayıt yok' };
+  const r = (d.replies || []).filter((x) => x.by !== 'c').slice(-1)[0]; if (!r || !d.uid) return { ok: true, sent: 0 };
+  if ((await env.KV.get('isr:' + id)) === String(r.at)) return { ok: true, same: true };
+  await env.KV.put('isr:' + id, String(r.at), { expirationTtl: 60 * 60 * 24 * 60 });
+  const subs = (await env.KV.get('pm:' + d.uid, 'json')) || []; if (!subs.length) return { ok: true, sent: 0, subs: 0 };
+  const S = await isSettings();
+  const body = [r.s && IS_ST[r.s] ? IS_ST[r.s] + '.' : '', r.t].filter(Boolean).join(' ').slice(0, 200) || 'Sorun bildiriminiz yanıtlandı.';
+  const data = { title: `${S.shop} · Sorun bildiriminiz #${d.no || ''}`, body, url: '/magaza/sorun', tag: 'is-' + id };
+  const keep = []; let sent = 0;
+  for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
+  if (keep.length !== subs.length) await env.KV.put('pm:' + d.uid, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 365 });
+  return { ok: true, sent, subs: subs.length };
+}
+// POST /issue/msg {id} (üye ek mesaj yazdı): yöneticiye telefon bildirimi, 2 dakikada en çok bir
+async function issueMsg(req, env, b) {
+  const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
+  if (await env.KV.get('nim:' + id)) return { ok: true, already: true };
+  const d = await fsAuth('issues/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'kayıt yok' };
+  await env.KV.put('nim:' + id, '1', { expirationTtl: 120 });
+  const r = (d.replies || []).slice(-1)[0] || {};
+  await adminPush(env, { title: `🛠️ #${d.no || ''} · ${d.name || 'Üye'} yazdı`, body: String(r.t || 'Yeni mesaj').slice(0, 160), url: '/admin/i/' + id, tag: 'ai-' + id }).catch(() => {});
+  return { ok: true };
+}
+// Saatlik: süresi dolan dosyalar (yüklenme + issue.days gün) silinir; kaydı hiç yazılmamış yüklemeler 1 günde gider
+async function issueSweep(env) {
+  if (!env.R2) return 0;
+  const S = await isSettings(); const limit = Date.now() - S.days * 864e5; const orphan = Date.now() - 864e5;
+  let cursor, gone = 0; const ids = new Set();
+  for (let page = 0; page < 20; page++) {
+    const l = await env.R2.list({ prefix: 'is/', limit: 1000, cursor });
+    const old = l.objects.filter((o) => +new Date(o.uploaded) < limit).map((o) => o.key);
+    for (let i = 0; i < old.length; i += 500) { await env.R2.delete(old.slice(i, i + 500)); gone += old.slice(i, i + 500).length; }
+    for (const o of l.objects) if (+new Date(o.uploaded) < orphan && +new Date(o.uploaded) >= limit) ids.add(o.key.split('/')[1]);
+    if (!l.truncated) break; cursor = l.cursor;
+  }
+  for (const id of [...ids].slice(0, 40)) { const r = await fetch(FS + 'issues/' + id); if (r.status === 404) gone += await isDropFiles(env, id); }
   return gone;
 }
