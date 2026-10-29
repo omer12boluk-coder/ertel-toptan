@@ -4478,9 +4478,12 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .qty-morph > .stepper { min-width: 0; }
 /* bilgisayarda kutu kartta adet seçici dar (sepet düğmesinin yerine sığsın; fiyatın altındaki TL / KDV satırları kırılıp kart uzamasın) */
 @media (min-width: 561px) {
-  .plist.pgrid .prow-side .stepper { height: 42px; border-radius: 12px; }
-  .plist.pgrid .prow-side .stepper button { width: 28px; }
-  .plist.pgrid .prow-side .stepper input { width: 30px; font-size: 14px; }
+  /* ince ve yuvarlak (34px), basınca/üstüne gelince yanan zemin de aynı yuvarlak köşelerle kırpılır */
+  .plist.pgrid .prow-side .stepper { height: 34px; border-radius: 10px; overflow: hidden; }
+  .plist.pgrid .prow-side .stepper button { width: 30px; border-radius: 0; }
+  .plist.pgrid .prow-side .stepper input { width: 32px; font-size: 14px; }
+  /* fiyat kutusu her kartta aynı yükseklik (sepet düğmesi 42px'e göre) → adet seçiciye geçince kart boyu ve fiyatın yeri değişmez */
+  .plist.pgrid .prow-side { min-height: 62px; align-items: center; }
   .plist.pgrid .prow-side .price .vat-inc, .plist.pgrid .prow-side .price .tl-hint { white-space: nowrap; }
 }
 /* Kalıp bulucu: başlık + arama kutusu + örnekler HER ZAMAN ortada (boşken de, sonuç varken de); sonuçlar soldan */
