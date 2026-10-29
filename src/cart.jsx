@@ -2,9 +2,9 @@
 //   Mağaza: Sepet → "Sepeti onayla" → sipariş bilgileri (checkout.jsx) → Yönetim paneli > Siparişler
 //           ya da "WhatsApp'tan liste gönder" → sadece liste linki gider (hiçbir yere kaydedilmez)
 //   Bayi:   Sepet → "Sepeti onayla" → teslimat / ödeme → bayi siparişi (talepler koleksiyonu, type 'order'; sohbet Siparişlerim'de)
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, setQty, clearCart, freshStart, api, openRequest, toast, go } from './store.js';
-import { Icon, Thumb, Stepper, Empty, VatLines, copyText, openMenu } from './ui.jsx';
+import { Icon, Thumb, Stepper, Empty, VatLines, Confirm, copyText, openMenu } from './ui.jsx';
 import { waLink, links } from './route.js';
 import { fmt, priceFor, totals, fmtTotals, now, soon, ls } from './utils.js';
 import { TYPE, B2B_DELIV, B2B_PAY, B2B_PAY_PICK } from './config.js';
@@ -104,6 +104,28 @@ export function SwipeLine({ id, open, setOpen, onDelete, children, onContextMenu
   );
 }
 
+// Sepet özeti (bilgisayar): sayfa ne kadar uzarsa uzasın yerinde SABİT (ödeme adımındaki özetle aynı yol).
+// Yer sayfa düzeninden (offsetLeft/Top) ölçülür, ilk boyamadan önce (useLayoutEffect) → açılışta kayıp yerine oturmaz.
+function useFixedCartSum(sideRef, boxRef) {
+  useLayoutEffect(() => {
+    const side = sideRef.current, box = boxRef.current; if (!side || !box) return;
+    let retry = 0;
+    const reset = () => { box.classList.remove('cs-fixed'); box.style.top = box.style.left = box.style.width = ''; };
+    const place = () => {
+      if (!matchMedia('(min-width: 900px)').matches) return reset();
+      let x = 0, y = 0; for (let e = side; e; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
+      if (y + box.offsetHeight + 16 > innerHeight) return reset(); // ekrana sığmıyorsa eski yapışkan düzen
+      for (let e = side.parentElement; e && e !== document.body; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.transform !== 'none' || e.getAnimations?.().some((a) => a.playState === 'running' && a.effect?.getKeyframes?.().some((k) => k.transform))) { reset(); clearTimeout(retry); retry = setTimeout(place, 60); return; } }
+      box.classList.add('cs-fixed');
+      Object.assign(box.style, { top: Math.round(y) + 'px', left: Math.round(x - scrollX) + 'px', width: side.offsetWidth + 'px' });
+    };
+    place(); const t = [setTimeout(place, 60), setTimeout(place, 400)];
+    const ro = new ResizeObserver(place); ro.observe(document.body);
+    addEventListener('resize', place);
+    return () => { t.forEach(clearTimeout); clearTimeout(retry); ro.disconnect(); removeEventListener('resize', place); reset(); };
+  }, []);
+}
+
 // ---- 1. adım: sepet (iki tarafta da aynı) ------------------------------------------------
 function CartStep({ items, pub, orders, coming, onConfirm }) {
   const S = useStore((s) => s.settings);
@@ -117,6 +139,10 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
   const saving = Object.entries(tList).map(([c, v]) => [c, v - (tot[c] || 0)]).filter(([, v]) => v > 0.001);
   const tTL = S.pricing.showTL && rate ? toTL(tot, rate) : null;
   const reset = () => { pub ? freshStart() : clearCart(); go('katalog'); toast('Sepet temizlendi'); };
+  const [ask, setAsk] = useState(false);
+  const nQty = items.reduce((a, it) => a + (it.qty || 0), 0);
+  const sideRef = useRef(null), boxRef = useRef(null);
+  useFixedCartSum(sideRef, boxRef);
   const menu = (e, it) => openMenu(e, [
     { label: '1 tane daha', icon: 'plus', onClick: () => setQty(it.id, it.qty + 1) },
     it.qty > 1 && { label: '1 tane azalt', icon: 'minus', onClick: () => setQty(it.id, it.qty - 1) },
@@ -129,9 +155,10 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
   const openImg = (it) => { const p = prodOf(it); const u = imageList(p, S, 'lg'); if (u.length) setLb({ urls: u, thumbs: imageList(p, S, 'sm'), title: p.n }); else openSheet(it); };
   return (
     <div className="page cart-page">
+      <button type="button" className="cart-back" onClick={() => go('katalog')}><Icon n="back" s={15} />Alışverişe devam et</button>
       <div className="cart-head">
         <h1 className="page-t">Sepet <span className="muted">· {items.length} ürün</span></h1>
-        <button className="btn sm ghost danger" onClick={reset}><Icon n="trash" s={15} />Sepeti temizle</button>
+        <button type="button" className="cart-clear cc-m" onClick={() => setAsk(true)}><Icon n="trash" s={14} />Sepeti temizle</button>
       </div>
       <div className="cart-grid">
         <ul className="clist gclist">
@@ -154,7 +181,14 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
             </SwipeLine>
           ))}
         </ul>
-        <aside className="cart-sum">
+        <div className="cart-side" ref={sideRef}><aside className="cart-sum" ref={boxRef}>
+          <div className="cs-head">
+            <div className="cs-head-t"><b>Sepetiniz</b><small>{items.length} ürün · {nQty} adet</small></div>
+            <button type="button" className="cart-clear" onClick={() => setAsk(true)} title="Sepetteki tüm ürünleri çıkar"><Icon n="trash" s={14} />Temizle</button>
+          </div>
+          {(!pub || orders) && <ol className="cs-steps" aria-label="Sipariş adımları">
+            <li className="on"><i>1</i>Sepet</li><li><i>2</i>Teslimat ve ödeme</li><li><i>3</i>Onay</li>
+          </ol>}
           <div className="sum-rows">
             {!pub && S.pricing.showRetail && saving.length > 0 && <div><span>Liste toplamı</span><span className="num strike">{fmtTotals(tList)}</span></div>}
             {!pub && S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
@@ -176,9 +210,10 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
             </div>
           )}
           {pub && <ShopWhatsApp items={items} strong={!orders} />}
-          <p className="fine">{coming ? 'Şimdilik siparişinizi WhatsApp’tan gönderin, hemen dönüş yapalım.' : pub ? S.orders?.cargoNote || '' : S.shop.pickupNote}</p>
-        </aside>
+          <p className="fine cs-note">{coming ? 'Şimdilik siparişinizi WhatsApp’tan gönderin, hemen dönüş yapalım.' : pub ? S.orders?.cargoNote || '' : S.shop.pickupNote}</p>
+        </aside></div>
       </div>
+      {ask && <Confirm title="Sepet temizlensin mi?" text={`Sepetteki ${items.length} ürün çıkarılacak.`} okLabel="Temizle" tone="danger" onOk={reset} onClose={() => setAsk(false)} />}
       {(orders || !pub) && <div className="cart-bar" aria-hidden="false">
         <span className="cart-bar-t"><small>{pub ? 'Toplam' : 'Toptan toplam'}</small><b className="num">{fmtTotals(tot)}</b></span>
         <button className="btn primary" onClick={onConfirm}><Icon n="check" s={18} />Sepeti onayla</button>
@@ -199,9 +234,9 @@ function ShopWhatsApp({ items, strong }) {
   return (
     <div className="wa-row">
       {wa
-        ? <a className={'btn wa-main ' + (strong ? 'wa' : 'wa-soft')} href={wa} target="_blank" rel="noopener"><Icon n="wa" s={19} />WhatsApp’tan gönder</a>
-        : <span className="btn wa-soft wa-main" aria-disabled="true"><Icon n="wa" s={19} />WhatsApp’tan gönder</span>}
-      <button className="btn outline icon wa-copy" onClick={() => copyText(link, 'Liste linki kopyalandı, WhatsApp’ta yapıştırın')} aria-label="Liste linkini kopyala" title="Liste linkini kopyala"><Icon n="copy" s={18} /></button>
+        ? <a className={'btn wa-main ' + (strong ? 'wa' : 'wa-soft')} href={wa} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’tan gönder</a>
+        : <span className="btn wa-soft wa-main" aria-disabled="true"><Icon n="wa" s={16} />WhatsApp’tan gönder</span>}
+      <button className="btn outline icon wa-copy" onClick={() => copyText(link, 'Liste linki kopyalandı, WhatsApp’ta yapıştırın')} aria-label="Liste linkini kopyala" title="Liste linkini kopyala"><Icon n="copy" s={15} /></button>
     </div>
   );
 }

@@ -4531,3 +4531,37 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .pdesc.short.cut .pdesc-body { max-height: 220px !important; overflow: hidden; }
 .pdesc.short.cut .pdesc-body::after { display: block; content: ""; position: absolute; inset: auto 0 0; height: 70px; background: linear-gradient(transparent, var(--surface)); pointer-events: none; }
 .pdesc > .pdesc-more { display: inline-flex !important; align-items: center; gap: 4px; align-self: flex-start; font-weight: 600; }
+/* ---- Sepet sayfası (29.10.2026): "Alışverişe devam et", özet kutusu başlığı + adımlar, Temizle düğmesi;
+   bilgisayarda özet SABİT (useFixedCartSum) — sayfa bütün olarak kaymaz, liste kendi gelir, özet sadece belirir */
+.cart-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin: 0 0 -6px -4px; padding: 6px 10px 6px 6px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-family: inherit; font-size: 13.5px; font-weight: 600; line-height: 1; cursor: pointer; transition: background .15s, color .15s; }
+.cart-back:hover { background: var(--line-2); color: var(--fg); }
+.cart-back svg { transition: transform .18s var(--ease); }
+.cart-back:hover svg { transform: translateX(-2px); }
+.cart-clear { display: inline-flex; align-items: center; gap: 5px; flex: none; height: 28px; padding: 0 10px 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+.cart-clear:hover { color: #c43d3d; border-color: color-mix(in oklab, #c43d3d 35%, var(--line)); background: color-mix(in oklab, #c43d3d 7%, var(--surface)); }
+.cs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.cs-head-t { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cs-head-t b { font: 700 19px/1.1 var(--f-display); }
+.cs-head-t small { font-size: 12.5px; color: var(--muted); }
+.cs-steps { list-style: none; margin: 0; padding: 10px 0 0; display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--line-2); font-size: 12px; color: var(--muted); }
+.cs-steps li { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.cs-steps li + li::before { content: ""; width: 14px; height: 1px; background: var(--line); margin-right: 1px; }
+.cs-steps i { font-style: normal; width: 17px; height: 17px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 10.5px; font-weight: 700; line-height: 1; border: 1px solid var(--line); background: var(--surface); }
+.cs-steps li.on { color: var(--fg); font-weight: 600; }
+.cs-steps li.on i { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cart-page .cart-sum .sum-total { border-top: 0; padding-top: 0; }
+.cart-page .cs-steps + .sum-rows, .cart-page .cs-head + .sum-rows { padding-top: 12px; border-top: 1px solid var(--line-2); }
+.cart-page .cs-note { text-align: center; margin: 0; }
+.wa-row .wa-main { font-size: 14.5px; gap: 7px; }
+@media (min-width: 900px) {
+  .cart-head .cc-m { display: none; }
+  .cart-side .cart-sum { position: sticky; top: calc(var(--top-h) + 20px); }
+  .cart-side .cart-sum.cs-fixed { position: fixed; z-index: 5; }
+  .main > *:has(.cart-grid) { animation: none; }
+  .cart-page > :not(.cart-grid), .cart-grid > .clist { animation: rise .32s var(--ease) backwards; }
+  .cart-side .cart-sum { animation: coFade .22s ease backwards; }
+}
+@media (max-width: 899px) {
+  .cart-side .cs-head .cart-clear { display: none; }
+  .cart-back { margin-bottom: -8px; }
+}
