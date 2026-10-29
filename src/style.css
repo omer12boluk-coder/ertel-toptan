@@ -4485,3 +4485,8 @@ html:has(.kf) { scrollbar-gutter: stable; }
   .plist.pgrid .prow-side .stepper input { width: 30px; font-size: 14px; }
   .plist.pgrid .prow-side .price .vat-inc, .plist.pgrid .prow-side .price .tl-hint { white-space: nowrap; }
 }
+/* Kalıp bulucu: başlık + arama kutusu + örnekler HER ZAMAN ortada (boşken de, sonuç varken de); sonuçlar soldan */
+.kf-hero:not(.pq-hero) { align-items: center; text-align: left; }
+.kf-hero:not(.pq-hero) .kf-head { width: min(620px, 100%); }
+.kf-hero:not(.pq-hero) .kf-search { width: min(620px, 100%); }
+.kf-hero:not(.pq-hero) .kf-ex { width: min(620px, 100%); }

@@ -351,6 +351,7 @@ Claude'un yapacağı (sırayla):
 - Kart adet seçici animasyonu: clip-path bitişte KALMAZ (`backwards`; kalınca kenarlık köşeleri kesiliyordu). Bilgisayar kutu kartında adet seçici dar (28/30/28px) + fiyatın TL/KDV satırları `nowrap` → sepete ekleyince kart (ve aynı sıradaki kartlar) uzamaz (TL'li ayarla ölçüldü).
 - `useFixedSum`: konum `offsetLeft/Top` zincirinden; sayfa açılış animasyonu (atada transform) sürerken sabitlemez (fixed, transform'lu atanın içinde ona göre konumlanıp bir an yanlış yerde görünüyordu), bitince sabitler. Sabit kutu ekrana sığmazsa içi kayar; alttaki not ortalı; ödeme sayfası altında 72px boşluk.
 - **HATA DÜZELTİLDİ:** `currentRate` elle kur (`pricing.manualRate`) girilince her çağrıda yeni nesne döndürüyordu → useStore sonsuz döngü, mağaza çöküyordu (React #185). Artık aynı nesne önbellekten.
+- **Kalıp bulucu arama bölümü HER ZAMAN ORTADA** (kullanıcı kesin istedi): `.kf-hero:not(.pq-hero)` align-items center, başlık/arama/örnekler 620px; boşken de sonuç varken de aynı yer (ölçüldü). Öneri listesi ve sonuçlar soldan dizilir.
 - **Bekleyen kararlar:** (1) ödeme adımında sipariş özeti 2 üründe bile kayıyor → çözüm önerildi, onay bekleniyor; (2) ana sayfaya "imza" etkileşim fikirleri tartışılıyor.
 
 ### Panel hafifletme (27.10.2026, Firestore okuma kotası)
