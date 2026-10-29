@@ -4693,3 +4693,18 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .seg-mini button { padding: 0 9px; font: inherit; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface); border: 0; cursor: pointer; }
 .seg-mini button + button { border-left: 1px solid var(--line); }
 .seg-mini button.on { background: var(--accent-soft); color: var(--accent); }
+/* iPhone çekip yenile (30.10.2026): yuvarlak kabarcık yok — iOS etkinlik göstergesi (8 çizgi) esnemenin açtığı boşlukta,
+   çekiş arttıkça çizgiler dolar; bırakınca sayfayla biraz geç yukarı kayıp kaybolur; yenilenirken üst menünün altında ince akan çizgi */
+.ptr.native { z-index: 30; }
+.ptr-ios { display: grid; place-items: center; color: color-mix(in oklab, var(--fg) 62%, transparent); }
+.ptr-ios svg { transform: rotate(calc(var(--ptr-k, 0) * 120deg)); }
+.ptr.native:not(.drag) { transition: transform .32s cubic-bezier(.3, .7, .3, 1), opacity .32s ease; }
+.ptr.native.spin .ptr-ios svg { animation: ptrIos .8s steps(8) infinite; }
+@keyframes ptrIos { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.ptr-bar { position: fixed; left: 0; right: 0; height: 2px; z-index: 40; pointer-events: none; overflow: hidden; }
+.ptr-bar::before { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 2px; background: var(--accent); animation: ptrBar 1s cubic-bezier(.4, 0, .2, 1) infinite; }
+@keyframes ptrBar { from { left: -40%; } to { left: 100%; } }
+/* marka kutusu (telefon): kalkma/ok/ışık efekti yok, basılıyken içi sadece çok hafif kararır */
+@media (hover: none) {
+  .sh-brand:active { background-image: linear-gradient(rgb(0 0 0 / .045), rgb(0 0 0 / .045)); }
+}

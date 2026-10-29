@@ -619,7 +619,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   setupLongPress();
   // setupPress(); — 29.10.2026: telefonda basma animasyonları KALDIRILDI (App Store sonrasına)
   touchHoverToActive();
-  setupTapHover();
+  // setupTapHover(); — 30.10.2026: kullanıcı ana sayfa dokunma efektlerini istemedi (marka kutusunda sadece :active karartı)
   setupPull();
 }
 
@@ -640,6 +640,8 @@ function touchHoverToActive() {
       const r = list.cssRules[i];
       if (r.cssRules && r.type !== 1) { const c = r.conditionText || r.media?.mediaText || ''; if (!/hover\s*:\s*hover/.test(c)) walk(r); continue; }
       if (r.type !== 1 || !r.selectorText || !r.selectorText.includes(':hover')) continue;
+      // ana sayfa öğelerinde (.sh-*) telefonda hiçbir dokunma efekti olmasın (kullanıcı, 30.10.2026) → kural tamamen kalkar
+      if (r.selectorText.includes('.sh-')) { try { list.deleteRule(i); } catch {} continue; }
       const sel = r.selectorText.replace(/:hover/g, ':active'), body = r.style.cssText;
       try { list.deleteRule(i); list.insertRule(sel + '{' + body + '}', i); } catch {}
     }
@@ -663,44 +665,46 @@ function setupPull() {
   const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
   if (!IOS || !STANDALONE) return;
   // yenilendikten sonra kısa bildirim (deneme süresince; kullanıcı sonra kaldıracak)
-  setTimeout(() => { try { if (sessionStorage.getItem('ptr-ok')) { sessionStorage.removeItem('ptr-ok'); toast('Sayfa yenilendi'); } } catch {} }, 1200);
   // Sadece İSTEYEREK çekiş: parmak dokunduğunda sayfa ZATEN en üstteyse ve esneme en az TH ise. Hızla yukarı kaydırıp
   // tepeye çarpmak (doğal yaylanma) simgeyi hiç göstermez.
-  // iPhone'un esnemesi parmağın çok gerisinde kalır → eşik hem esnemeye (TH) hem parmak mesafesine (FTH) bakar
-  const TH = 56, FTH = 120;
-  let box = null, finger = false, armed = false, ready = false, busy = false, raf = 0, fy0 = 0, fd = 0;
+  const TH = 62; // iOS gibi: göstergenin 8 çizgisi çekiş arttıkça tek tek dolar, hepsi dolunca (eşik) titreşim → bırakınca yenilenir
+  let box = null, finger = false, armed = false, ready = false, busy = false, raf = 0;
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr'; box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<span class="ptr-c"><i class="ptr-r"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i></span><span class="ptr-t"></span>';
+    const ticks = Array.from({ length: 8 }, (_, i) => `<line x1="12" y1="3" x2="12" y2="7.2" transform="rotate(${i * 45} 12 12)" style="opacity:0"/>`).join('');
+    box.innerHTML = `<span class="ptr-ios"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">${ticks}</svg></span><span class="ptr-t"></span>`;
     document.body.appendChild(box); return box;
   };
   const paint = () => {
     raf = 0; const px = (armed || busy) ? Math.max(0, -scrollY) : 0; if (!px && !box) return;
-    const b = ui(); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, Math.max(px / TH, armed ? fd / FTH : 0)));
-    if (finger && !busy) { const r = px >= TH || (armed && px > 8 && fd >= FTH); if (r && !ready) haptic(); ready = r; }
-    b.className = 'ptr native' + (busy ? ' spin hold' : ready ? ' ready' : '');
+    const b = ui(); const k = Math.min(1, px / TH); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', k);
+    if (finger && !busy) { const r = px >= TH; if (r && !ready) haptic(); ready = r; }
+    // çizgiler: çekerken saat yönünde tek tek belirir; yenilenirken hepsi görünür ve döner (iOS etkinlik göstergesi)
+    const n = busy ? 8 : Math.round(k * 8); b.querySelectorAll('line').forEach((l, i) => { l.style.opacity = i < n ? String(busy ? 1 - i * 0.1 : 0.35 + 0.65 * (i / 7)) : '0'; });
+    b.className = 'ptr native' + (busy ? ' spin' : ready ? ' ready' : '') + (finger ? ' drag' : '');
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
+  // yenilenirken üst menünün alt kenarında ince, akan bir çizgi (gösterge sayfa yerine dönünce de iş sürdüğü belli olsun)
+  const topBar = (on) => { let e = document.querySelector('.ptr-bar'); if (on) { if (!e) { e = document.createElement('div'); e.className = 'ptr-bar'; document.body.appendChild(e); } e.style.top = (document.querySelector('.topbar')?.getBoundingClientRect().bottom || 0) - 2 + 'px'; } else e?.remove(); };
   addEventListener('scroll', req, { passive: true });
-  addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !busy && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); fy0 = ev.touches[0]?.clientY || 0; fd = 0; }, { passive: true });
-  addEventListener('touchmove', (ev) => { if (armed && ev.touches[0]) fd = ev.touches[0].clientY - fy0; req(); }, { passive: true });
+  addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !busy && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); }, { passive: true });
+  addEventListener('touchmove', req, { passive: true });
   const toast2 = (t) => { const b = ui(); b.querySelector('.ptr-t').textContent = t; b.classList.add('err', 'show'); setTimeout(() => { b.querySelector('.ptr-t').textContent = ''; b.classList.remove('err', 'show'); }, 2200); };
   addEventListener('touchend', async () => {
     finger = false; const go = armed && ready; armed = false;
     if (!go || busy || document.querySelector('.sheet-bg, .lb, .vv')) { ready = false; req(); return; }
-    ready = false; busy = true; haptic(); req();
+    ready = false; busy = true; haptic(); req(); topBar(true);
     try {
       if (navigator.onLine === false) throw new Error('İnternet bağlantısı yok');
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
       const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
       if (!r.ok) throw new Error('Bağlantı kurulamadı');
       const j = await r.json().catch(() => ({}));
-      // 30.10.2026: ana ekran uygulamasında her bilerek çekişte gerçekten yenilenir; açılınca "Sayfa yenilendi" yazar
-      try { sessionStorage.setItem('ptr-ok', '1'); } catch {}
+      // ana ekran uygulamasında her bilerek çekişte gerçekten yenilenir
       location.reload(); return;
     } catch (e) { toast2(e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message); }
-    busy = false; req();
+    busy = false; topBar(false); req();
   }, { passive: true });
 }
 
