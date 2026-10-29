@@ -4695,3 +4695,5 @@ html:has(.kf) { scrollbar-gutter: stable; }
   .back-btn:active, .icon-btn:active, .chip:active, .of-ib:active, .cart-clear:active { background-color: color-mix(in oklab, var(--fg) 9%, var(--surface)) !important; }
   .btn:active:not(:disabled) { filter: brightness(.9); }
 }
+/* (4) gösterge yine üst menünün ÜSTÜNDE ama sadece açılan boşlukta: menü de aşağıda tutulduğu için hiçbir şeye binmez */
+.ptr.native, .ptr.native.spin { z-index: 30 !important; }

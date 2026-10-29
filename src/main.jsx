@@ -664,11 +664,12 @@ function setupPull() {
   // Safari'nin kendi çekip yenilesi var; bizimki sadece ana ekran uygulamasında (orada tarayıcı yenilemesi yok)
   const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
   if (!IOS || !STANDALONE) return;
-  // yenilendikten sonra kısa bildirim (deneme süresince; kullanıcı sonra kaldıracak)
-  // Sadece İSTEYEREK çekiş: parmak dokunduğunda sayfa ZATEN en üstteyse ve esneme en az TH ise. Hızla yukarı kaydırıp
-  // tepeye çarpmak (doğal yaylanma) simgeyi hiç göstermez.
-  const TH = 62; // iOS gibi: göstergenin 8 çizgisi çekiş arttıkça tek tek dolar, hepsi dolunca (eşik) titreşim → bırakınca yenilenir
-  let box = null, finger = false, armed = false, ready = false, busy = false, raf = 0;
+  // 30.10.2026 (4) — iOS'taki gibi: sayfa ZATEN en üstteyken bilerek çekilir; gösterge esnemenin üstte açtığı boşlukta belirir.
+  // Bırakınca boşluk HOLD px açık TUTULUR (üst menü + sayfa aşağıda bekler, gösterge yukarıda döner); iş bitince ikisi birlikte kapanır.
+  // Yeni sürüm yoksa sayfa YENİDEN YÜKLENMEZ (veriler canlı geliyor) → hiçbir şey baştan çizilmez, flaş yok.
+  const TH = 62, HOLD = 58, EASE = 'cubic-bezier(.22,1,.36,1)';
+  const FIX = '.cart-bar, .cs-fixed, .co-fixed, .side-fixed, .acct-side, .ptr, .botnav';
+  let box = null, finger = false, armed = false, ready = false, busy = false, raf = 0, hold = 0, els = null;
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr'; box.setAttribute('aria-hidden', 'true');
@@ -676,33 +677,57 @@ function setupPull() {
     box.innerHTML = `<span class="ptr-ios"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">${ticks}</svg></span><span class="ptr-t"></span>`;
     document.body.appendChild(box); return box;
   };
+  // tutulacak öğeler: üst menü + sayfa (içinde sabit öğe olan kutuya transform verilmez, çocuklarına inilir)
+  const collect = () => {
+    const out = []; const walk = (e, deep) => {
+      if (e.matches(FIX) || getComputedStyle(e).position === 'fixed') return;
+      if (deep < 4 && e.querySelector(FIX)) { for (const c of e.children) walk(c, deep + 1); return; }
+      out.push(e);
+    };
+    for (const e of document.querySelectorAll('.shell > .topbar, .shell > .main, .shell > .sfoot')) walk(e, 0);
+    return out;
+  };
+  const setHold = (t, anim) => {
+    if (!els) els = collect();
+    for (const e of els) { e.style.transition = anim ? `transform .38s ${EASE}` : 'none'; e.style.transform = t ? `translate3d(0,${t}px,0)` : ''; }
+    if (!t && anim) { const E = els; els = null; setTimeout(() => E.forEach((e) => { if (!busy) e.style.transition = ''; }), 420); }
+  };
   const paint = () => {
-    raf = 0; const px = (armed || busy) ? Math.max(0, -scrollY) : 0; if (!px && !box) return;
-    const b = ui(); const k = Math.min(1, px / TH); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', k);
+    raf = 0;
+    const over = Math.max(0, -scrollY);
+    // tutma: tarayıcı esnemesi geri dönerken aradaki farkı biz tamamlarız → görünen boşluk HOLD'da sabit kalır (zıplama yok)
+    if (busy && hold) { const t = Math.max(0, HOLD - over); setHold(t, false); }
+    const px = busy ? (hold ? Math.max(over + Math.max(0, HOLD - over), 0) : over) : armed ? over : 0;
+    if (!px && !box) return;
+    const b = ui(); const k = Math.min(1, px / TH); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', busy ? 1 : k);
     if (finger && !busy) { const r = px >= TH; if (r && !ready) haptic(); ready = r; }
-    // çizgiler: çekerken saat yönünde tek tek belirir; yenilenirken hepsi görünür ve döner (iOS etkinlik göstergesi)
     const n = busy ? 8 : Math.round(k * 8); b.querySelectorAll('line').forEach((l, i) => { l.style.opacity = i < n ? String(busy ? 1 - i * 0.1 : 0.35 + 0.65 * (i / 7)) : '0'; });
-    b.className = 'ptr native' + (busy ? ' spin' : ready ? ' ready' : '') + (finger ? ' drag' : '');
+    b.className = 'ptr native' + (busy ? ' spin' : ready ? ' ready' : '') + (finger || busy ? ' drag' : '');
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
   addEventListener('scroll', req, { passive: true });
   addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !busy && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); }, { passive: true });
   addEventListener('touchmove', req, { passive: true });
-  const toast2 = (t) => { const b = ui(); b.querySelector('.ptr-t').textContent = t; b.classList.add('err', 'show'); setTimeout(() => { b.querySelector('.ptr-t').textContent = ''; b.classList.remove('err', 'show'); }, 2200); };
+  const close = () => {
+    hold = 0; setHold(0, true);
+    const b = ui(); b.classList.remove('drag'); b.style.setProperty('--ptr', '0px'); b.style.setProperty('--ptr-k', '0');
+    setTimeout(() => { busy = false; req(); }, 400);
+  };
+  const say = (t) => { const b = ui(); b.querySelector('.ptr-t').textContent = t; b.classList.add('err', 'show'); setTimeout(() => { b.querySelector('.ptr-t').textContent = ''; b.classList.remove('err', 'show'); }, 2200); };
   addEventListener('touchend', async () => {
     finger = false; const go = armed && ready; armed = false;
     if (!go || busy || document.querySelector('.sheet-bg, .lb, .vv')) { ready = false; req(); return; }
-    ready = false; busy = true; haptic(); req();
+    ready = false; busy = true; hold = HOLD; haptic(); req();
+    const t0 = Date.now(); let err = '';
     try {
       if (navigator.onLine === false) throw new Error('İnternet bağlantısı yok');
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
       const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
       if (!r.ok) throw new Error('Bağlantı kurulamadı');
       const j = await r.json().catch(() => ({}));
-      // ana ekran uygulamasında her bilerek çekişte gerçekten yenilenir
-      location.reload(); return;
-    } catch (e) { toast2(e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message); }
-    busy = false; req();
+      if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; } // sadece yeni sürümde gerçek yenileme
+    } catch (e) { err = e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message; }
+    setTimeout(() => { close(); if (err) say(err); }, Math.max(0, 750 - (Date.now() - t0)));
   }, { passive: true });
 }
 
