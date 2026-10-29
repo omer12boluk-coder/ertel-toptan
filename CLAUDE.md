@@ -344,6 +344,10 @@ Claude'un yapacağı (sırayla):
 - `.shell:has(> .sfoot) > main { width: 100% }` — alt bilgi düzeninde (flex column) kısa sayfalarda main içeriğe göre daralıp ortalanıyordu (boş Kalıp bulucu ortada, sonuç gelince sola kayıyordu).
 - Ana sayfa rafları `.sh-rail` 12/10/22px iç boşluk + eksi dış boşluk: üstüne gelince kalkan kartın üst/sol çizgisi kırpılmıyor.
 - Telefonda ana sayfa kutularındaki basma animasyonu KALDIRILDI (kullanıcı: kötü çalışıyor, sonra bakılacak).
+- **Kart: Sepete ekle ⇄ adet seçici geçişi animasyonlu** (`ProductRow` `morph`, `.qty-morph.grow` clip-path ile düğmenin yerinden sola açılır; geri dönüşte `.btn.add.back`; sadece o kartta değişince, sayfa açılışında oynamaz). Fiyat kaymaz (ölçüldü).
+- **Telefonda basma hissi (yeni, `setupPress`):** sadece GERÇEK basışta: parmak 70 ms kıpırdamadan durursa içe göçer, 6px kayarsa / sayfa kayarsa hiç başlamaz ya da yumuşakça geri döner; hızlı dokunuşta kısa "tık". Ana sayfa kutuları da (`.sh-brand, .sh-box, .sh-card, .mini-card` scale .955 + hafif kararma; `.sh-cta-btn, .sh-more` .94), bırakınca hafif yaylanarak döner.
+- Telefonda bildirim paneli artık tüm ekranı kaplamaz: `max-height: min(62dvh, 520px)`, altı serbest.
+- Ödeme özeti sabit kutuda alt boşluk 32px (alttaki not kesilmesin).
 - **Bekleyen kararlar:** (1) ödeme adımında sipariş özeti 2 üründe bile kayıyor → çözüm önerildi, onay bekleniyor; (2) ana sayfaya "imza" etkileşim fikirleri tartışılıyor.
 
 ### Panel hafifletme (27.10.2026, Firestore okuma kotası)

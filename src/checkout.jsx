@@ -133,7 +133,7 @@ function useFixedSum(sideRef, sumRef) {
     const reset = () => { sum.classList.remove('co-fixed'); sum.style.cssText = ''; };
     const place = () => {
       if (!matchMedia('(min-width: 960px)').matches) return reset();
-      const r = side.getBoundingClientRect(); const top = Math.round(r.top + scrollY); const avail = innerHeight - top - 16;
+      const r = side.getBoundingClientRect(); const top = Math.round(r.top + scrollY); const avail = innerHeight - top - 32;
       if (avail < 300) return reset();
       sum.classList.add('co-fixed');
       Object.assign(sum.style, { top: top + 'px', left: Math.round(r.left) + 'px', width: Math.round(r.width) + 'px', maxHeight: avail + 'px' });

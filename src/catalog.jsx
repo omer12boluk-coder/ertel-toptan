@@ -618,6 +618,9 @@ function InlineQty({ qty, onChange, icon }) {
 function ProductRow({ p, admin, onOpen, pinned }) {
   const { settings: S, cart, user } = useStore();
   const qty = cart[p.id] || 0;
+  // sepete ekle ⇄ adet seçici geçişi yaylanarak (sadece bu kartta değişince; sayfa açılışında oynamaz)
+  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
+  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
   const [hov, setHov] = useState(false); // bilgisayar: üstüne gelince (birden çok resim varsa) yazılar aşağı kayar, küçük resimler çıkar
   const [ix, setIx] = useState(0);
   const multi = FINE && S.cards?.hoverImgs !== false && imgFiles(p).length > 1;
@@ -675,9 +678,9 @@ function ProductRow({ p, admin, onOpen, pinned }) {
         ) : user?.role === 'public' && outOfStock(p) && feat(S).notify && !qty ? (
           <NotifyBtn p={p} />
         ) : qty > 0 ? (
-          <Stepper small value={qty} onChange={(v) => setQty(p.id, v)} />
+          <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(v) => setQty(p.id, v)} /></span>
         ) : (
-          <button className="btn sm add" onClick={() => setQty(p.id, 1)} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-cart" aria-hidden="true"><Icon n="cart" s={18} /><i>+</i></span><span className="add-l">Sepete ekle</span></button>
+          <button className={'btn sm add' + (morph === 'back' ? ' back' : '')} onClick={() => setQty(p.id, 1)} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-cart" aria-hidden="true"><Icon n="cart" s={18} /><i>+</i></span><span className="add-l">Sepete ekle</span></button>
         )}
       </div>
     </li>

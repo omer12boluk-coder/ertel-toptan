@@ -669,23 +669,31 @@ function setupPull() {
 }
 
 function setupPress() {
-  const SEL = '.ocard, .rcard, .ucard, .seg-card, .addr-card:not(.static), .tile, .dash-kpi, .dash-q, .door, .cat-link, .pcard, .btn, .chip, .icon-btn, .stepper button';
-  let el = null, t0 = 0, sx = 0, sy = 0;
-  const release = () => {
-    const e = el; el = null; if (!e) return;
-    setTimeout(() => { e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); }, Math.max(0, 120 - (Date.now() - t0)));
-  };
+  // 29.10.2026: basma hissi SADECE gerçek basışta. Parmak değer değmez değil, 70 ms kıpırdamadan durursa içe göçer;
+  // kaydırmaya başlarsa hiç başlamaz (sayfa kayarken kartlar oynamasın). Hızlı dokunuşta kısa bir "tık" gösterilir.
+  // Basıp parmağı kaydırarak vazgeçince yumuşakça eski hâline döner.
+  const SEL = '.ocard, .rcard, .ucard, .seg-card, .addr-card:not(.static), .tile, .dash-kpi, .dash-q, .door, .cat-link, .pcard, .btn, .chip, .icon-btn, .stepper button, .sh-brand, .sh-box, .sh-card, .mini-card, .sh-cta-btn, .sh-more';
+  let el = null, cand = null, tm = 0, t0 = 0, sx = 0, sy = 0;
+  const up = (e, fast) => { e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); };
+  const press = (e) => { e.classList.remove('tp-rel'); e.classList.add('tp'); el = e; t0 = Date.now(); };
+  const cancel = () => { clearTimeout(tm); cand = null; if (el) { const e = el; el = null; up(e); } };
   addEventListener('touchstart', (ev) => {
+    cancel();
     if (ev.touches.length !== 1) return;
     const t = ev.target; const e = t instanceof Element && t.closest(SEL);
     if (!e || e.disabled || e.closest('.botnav, .ctx-sheet-bg, .dz')) return;
-    release(); el = e; t0 = Date.now(); sx = ev.touches[0].clientX; sy = ev.touches[0].clientY;
-    e.classList.remove('tp-rel'); e.classList.add('tp');
+    cand = e; sx = ev.touches[0].clientX; sy = ev.touches[0].clientY;
+    tm = setTimeout(() => { if (cand === e) press(e); }, 70);
   }, { passive: true });
-  addEventListener('touchmove', (ev) => { const p = ev.touches[0]; if (el && p && Math.hypot(p.clientX - sx, p.clientY - sy) > 8) { const e = el; el = null; e.classList.remove('tp'); e.classList.add('tp-rel'); setTimeout(() => e.classList.remove('tp-rel'), 520); } }, { passive: true });
-  addEventListener('touchend', release, { passive: true });
-  addEventListener('touchcancel', release, { passive: true });
-  addEventListener('scroll', () => { if (el) { el.classList.remove('tp'); el = null; } }, true);
+  addEventListener('touchmove', (ev) => { const p = ev.touches[0]; if ((cand || el) && p && Math.hypot(p.clientX - sx, p.clientY - sy) > 6) cancel(); }, { passive: true });
+  addEventListener('touchend', () => {
+    clearTimeout(tm);
+    if (cand && !el) { const e = cand; cand = null; press(e); setTimeout(() => { if (el === e) { el = null; up(e); } }, 90); return; } // hızlı dokunuş: kısa tık
+    cand = null; const e = el; if (!e) return;
+    setTimeout(() => { if (el === e) { el = null; up(e); } }, Math.max(0, 90 - (Date.now() - t0)));
+  }, { passive: true });
+  addEventListener('touchcancel', cancel, { passive: true });
+  addEventListener('scroll', () => { if (el || cand) cancel(); }, true);
 }
 
 // Telefonda uzun basınca, masaüstündeki sağ tık menüsü açılır (iPhone Safari'de sağ tık olayı hiç gelmez, Android'de
