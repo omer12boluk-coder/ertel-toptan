@@ -59,7 +59,7 @@ ratios.sort((a, b) => a - b);
 const rate = ratios[Math.floor(ratios.length / 2)];
 if (!rate) throw new Error('Kur hesaplanamadı');
 
-const st = { price: [], hidden: 0, shown: 0, img: 0, name: 0, added: [], stock: 0 };
+const st = { price: [], hidden: 0, shown: 0, img: 0, name: 0, added: [] };
 // yönetim panelindeki bildirim merkezi için olay günlüğü (meta/feed): t price|name|new|hidden|shown
 const ev = [];
 const E = (t, p, extra) => { p.ut = now; p.ur = t; ev.push({ t, at: now, id: p.id, k: p.k || '', n: String(p.n || '').slice(0, 90), ...extra }); }; // ut: son güncelleme (yönetici listesinde)
@@ -72,7 +72,7 @@ for (const p of cat) {
     continue;
   }
   if (p.so) { p.a = 1; delete p.so; delete p.sg; st.shown++; E('shown', p); }
-  if (f.stock && !(p.s > 0)) { p.s = 1; st.stock++; } // stoğa girdi (sadece stok değişse de kaydedilir; 'Gelince haber ver' buna bakar)
+  // stok sadece yönetim panelinden yönetilir (29.10.2026, kullanıcı): eşitleme var olan ürünün stoğuna dokunmaz
   if (f.pi && f.pi !== p.pi && !p.img && !p.ie) { p.pi = f.pi; st.img++; } // ie: resimleri panelden elle düzenlendi
   if (f.n && f.n !== p.n) { E('name', p, { from: String(p.n || '').slice(0, 90), n: f.n.slice(0, 90) }); p.n = f.n; st.name++; }
   if (f.b && f.b !== '-' && f.b !== p.b) p.b = f.b;
@@ -187,7 +187,7 @@ for (const [i, p] of gone.entries()) {
   else if (p.sg === -1 || p.sg == null) { p.sg = -2; E('hidden', p); } // iki kez anlaşılamadı: genel "satıştan kalktı"
   else p.sg = -1;
 }
-const changed = st.stock + st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length + st.removed;
+const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length + st.removed;
 const has = (id) => (feed.has(id) ? 'var' : 'yok');
 const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length} · tamamlanan ${st.filled} · silinen ${st.deleted} · pasif ${st.passive}`;
 note(DRY ? 'Deneme (kaydedilmedi)' : 'Eşitleme', summary);
