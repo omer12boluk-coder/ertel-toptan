@@ -635,8 +635,9 @@ function setupPull() {
   if (!IOS) return;
   // Sadece İSTEYEREK çekiş: parmak dokunduğunda sayfa ZATEN en üstteyse ve esneme en az TH ise. Hızla yukarı kaydırıp
   // tepeye çarpmak (doğal yaylanma) simgeyi hiç göstermez.
-  const TH = 88;
-  let box = null, finger = false, armed = false, ready = false, busy = false, raf = 0;
+  // iPhone'un esnemesi parmağın çok gerisinde kalır → eşik hem esnemeye (TH) hem parmak mesafesine (FTH) bakar
+  const TH = 56, FTH = 120;
+  let box = null, finger = false, armed = false, ready = false, busy = false, raf = 0, fy0 = 0, fd = 0;
   const ui = () => {
     if (box) return box;
     box = document.createElement('div'); box.className = 'ptr'; box.setAttribute('aria-hidden', 'true');
@@ -645,14 +646,14 @@ function setupPull() {
   };
   const paint = () => {
     raf = 0; const px = (armed || busy) ? Math.max(0, -scrollY) : 0; if (!px && !box) return;
-    const b = ui(); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, px / TH));
-    if (finger && !busy) ready = px >= TH;
+    const b = ui(); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, Math.max(px / TH, armed ? fd / FTH : 0)));
+    if (finger && !busy) ready = px >= TH || (armed && px > 8 && fd >= FTH);
     b.className = 'ptr native' + (busy ? ' spin' : ready ? ' ready' : '');
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
   addEventListener('scroll', req, { passive: true });
-  addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !busy && ev.touches.length === 1 && scrollY <= 0 && !document.querySelector('.sheet-bg, .lb, .vv'); }, { passive: true });
-  addEventListener('touchmove', req, { passive: true });
+  addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !busy && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); fy0 = ev.touches[0]?.clientY || 0; fd = 0; }, { passive: true });
+  addEventListener('touchmove', (ev) => { if (armed && ev.touches[0]) fd = ev.touches[0].clientY - fy0; req(); }, { passive: true });
   const toast2 = (t) => { const b = ui(); b.querySelector('.ptr-t').textContent = t; b.classList.add('err', 'show'); setTimeout(() => { b.querySelector('.ptr-t').textContent = ''; b.classList.remove('err', 'show'); }, 2200); };
   addEventListener('touchend', async () => {
     finger = false; const go = armed && ready; armed = false;
