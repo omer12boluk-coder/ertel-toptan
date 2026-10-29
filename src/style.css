@@ -4776,8 +4776,11 @@ html:has(.kf) { scrollbar-gutter: stable; }
 }
 
 /* Ürün sayfasının arkasında gizli açık kalan Tüm ürünler / ana sayfa (geri dönünce her şey yerinde) */
-.kp { display: contents; }
-.kp-off { display: none !important; }
+.kp { display: block; }
+.main > .kp { animation: none; }
+/* gizli sayfa: content-visibility ile çizilmez ama yerleşimi ve çözülmüş resimleri korunur → açılınca anında, resimler yanıp sönmez */
+.kp-off { content-visibility: hidden; height: 0; overflow: hidden; pointer-events: none; }
+@supports not (content-visibility: hidden) { .kp-off { display: none !important; } }
 .main > .kp > * { animation: rise .32s var(--ease) backwards; }
 /* telefonda sayfa açılışlarını setupNavAnim yapar (yön bilgisiyle) → eski "aşağıdan yükselme" ile çakışmasın */
 @media (hover: none) and (max-width: 899px) { .main > *, .main > .kp > * { animation: none; } }

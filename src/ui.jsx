@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, api, store, toast } from './store.js';
 import { initials, hue, vatOf, fmtTotals, picUrl, isAbsImg } from './utils.js';
@@ -190,18 +190,24 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls
 
 export function Thumb({ p, size = 'md' }) {
   const S = useStore((s) => s.settings);
-  const [src, setSrc] = useState(null);
-  const [bad, setBad] = useState(false);
-  useEffect(() => {
-    setBad(false);
-    if (!p) return setSrc(null);
-    if (p.img === 'fs') { let live = true; setSrc(null); api().getImage(p.id).then((d) => live && setSrc(d)); return () => { live = false; }; }
-    if (p.img) return setSrc(p.img);
+  // resim adresi İLK ÇİZİMDE hesaplanır (önceden useEffect'teydi → kart önce renkli yer tutucuyla çizilip bir kare sonra
+  // resme dönüyordu: sayfa açılırken / geri gelirken 'flaş'). Sadece Firebase'te saklanan resim ('fs') sonradan gelir.
+  const syncSrc = useMemo(() => {
+    if (!p || p.img === 'fs') return null;
+    if (p.img) return p.img;
     const t = size === 'lg' ? S.catalog.imageLarge || S.catalog.imageThumb : S.catalog.imageThumb;
-    if (p.pi && (p.pi.startsWith('r2:') || isAbsImg(p.pi))) return setSrc(picUrl(p.pi, t, size === 'lg')); // depoya yüklenen / tam adres
-    if (!t || (t.includes('{pi}') && !p.pi)) return setSrc(null);
-    setSrc(t.replaceAll('{pi}', p.pi || '').replaceAll('{kod}', p.k).replaceAll('{id}', p.id));
-  }, [p?.id, p?.img, p?.pi, S.catalog.imageThumb, S.catalog.imageLarge, size]);
+    if (p.pi && (p.pi.startsWith('r2:') || isAbsImg(p.pi))) return picUrl(p.pi, t, size === 'lg');
+    if (!t || (t.includes('{pi}') && !p.pi)) return null;
+    return t.replaceAll('{pi}', p.pi || '').replaceAll('{kod}', p.k).replaceAll('{id}', p.id);
+  }, [p?.id, p?.img, p?.pi, p?.k, S.catalog.imageThumb, S.catalog.imageLarge, size]);
+  const [fsSrc, setFsSrc] = useState(null);
+  const [bad, setBad] = useState(false);
+  useEffect(() => { setBad(false); }, [syncSrc]);
+  useEffect(() => {
+    if (!p || p.img !== 'fs') { setFsSrc(null); return; }
+    let live = true; setFsSrc(null); api().getImage(p.id).then((d) => live && setFsSrc(d)); return () => { live = false; };
+  }, [p?.id, p?.img]);
+  const src = p?.img === 'fs' ? fsSrc : syncSrc;
   const brand = (p?.n || '?').split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '').slice(0, 6);
   return (
     <div className={'thumb thumb-' + size} style={{ '--h': hue(brand) }}>
