@@ -144,7 +144,7 @@ export function KalipFinder() {
         <div ref={boxRef} className={'kf-search' + (open && sugg.length ? ' open' : '')} style={sMax ? { '--kf-max': sMax + 'px' } : undefined}>
           <Icon n="search" s={20} />
           <input ref={inp} type="search" value={q} placeholder="Örn. Redmi Note 10 Pro 5G, iPhone 13, Galaxy A52…" aria-label="Telefon modeli"
-            onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => { setOpen(true); lift(); }} onBlur={() => setTimeout(() => setOpen(false), 160)} onKeyDown={key} autoComplete="off" />
+            onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }} onFocus={() => { setOpen(true); lift(); }} onBlur={() => setTimeout(() => { if (document.activeElement !== inp.current) setOpen(false); }, 160)} onKeyDown={key} autoComplete="off" />
           {q && <button type="button" className="kf-x" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(''); setSel(null); inp.current?.focus(); }} aria-label="Temizle"><Icon n="x" s={14} /></button>}
           {open && q.trim().length >= 2 && (
             <div className="kf-sugg" role="listbox">
@@ -161,7 +161,7 @@ export function KalipFinder() {
             </div>
           )}
         </div>
-        {!sel && <div className="kf-ex"><span>Örnek:</span>{['iPhone 13', 'Redmi Note 10 Pro', 'Galaxy A52', 'SM7150'].map((x) => <button key={x} type="button" onClick={() => { setQ(x); setOpen(true); setHi(0); inp.current?.focus(); }}>{x}</button>)}</div>}
+        {!sel && <div className="kf-ex"><span>Örnek:</span>{['iPhone 13', 'Redmi Note 10 Pro', 'Galaxy A52', 'SM7150'].map((x) => <button key={x} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(x); setOpen(true); setHi(0); inp.current?.focus(); }}>{x}</button>)}</div>}
       </section>
 
       {sel && result && (

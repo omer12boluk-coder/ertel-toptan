@@ -795,6 +795,7 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
     {S.catalog.showDescription && <Description id={p.id} />}
     {pub && !viewOnly && <PairRail p={p} onPick={onPick} />}
     {pub && <Reviews p={p} />}
+    <div className="pd-end" aria-hidden="true" />
   </>;
 }
 export function ProductSheet({ p, onClose, viewOnly = false }) {

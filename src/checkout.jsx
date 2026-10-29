@@ -18,6 +18,7 @@ import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
 import { LegalConsent, SignupConsent, legalFromOrder, OrderLegalLink } from './legalui.jsx';
 import { LEGAL_V } from './legal.js';
 import { feat } from './extras.jsx';
+import { OrderRate, useRateable } from './reviews.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -505,6 +506,7 @@ export function OrderPage({ id }) {
 
 
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
+      <OrderRate o={o} />
 
       <div className="o-info">
         {/* İletişim kartı yok (27.10.2026): alıcı Teslimat'ta, dükkândan teslimde teslim alacak kişi aşağıda */}
@@ -943,6 +945,7 @@ function MyOrders({ limit }) {
   const hidden = new Set(m?.hiddenOrders || []);
   const myOrders = all.filter((o) => !hidden.has(o.id));
   const fresh = new Set(unseenOrders(myOrders).map((o) => o.id));
+  const rateable = useRateable();
   // tam listede iki sekme: devam eden siparişler / geçmiş (tamamlanan + iptal)
   const act = myOrders.filter((o) => ORDER_OPEN.includes(o.status)); const past = myOrders.filter((o) => !ORDER_OPEN.includes(o.status));
   // bildirimler bu cihazda açıksa devam eden siparişlerin hepsi bu cihaza bağlanır (oturumda bir kez)
@@ -979,7 +982,7 @@ function MyOrders({ limit }) {
           {show.map((it, i) => <span key={i} className="mo-th" title={it.n}><Thumb p={it} size="sm" />{it.qty > 1 && <i className="num">×{it.qty}</i>}</span>)}
           {more > 0 && <span className="mo-more num">+{more}</span>}
         </span>
-        <span className="mo-foot muted">{its.length === 1 ? its[0].n : `${show[0]?.n || ''}${its.length > 1 ? ` ve ${its.length - 1} ürün daha` : ''}`} · {qty} adet · {o.delivery?.method === 'cargo' && carrierOf(o) ? carrierOf(o).name : DELIVERY[o.delivery?.method] || ''}{o.cargo?.code ? ' · takip no ' + o.cargo.code : ''}<Icon n="back" s={15} className="flip" /></span>
+        <span className="mo-foot muted">{its.length === 1 ? its[0].n : `${show[0]?.n || ''}${its.length > 1 ? ` ve ${its.length - 1} ürün daha` : ''}`} · {qty} adet · {o.delivery?.method === 'cargo' && carrierOf(o) ? carrierOf(o).name : DELIVERY[o.delivery?.method] || ''}{o.cargo?.code ? ' · takip no ' + o.cargo.code : ''}{rateable(o) && <span className="mo-rate"><Icon n="star" s={12} />Değerlendir</span>}<Icon n="back" s={15} className="flip" /></span>
       </button>
     );
   };

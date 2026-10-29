@@ -1,5 +1,6 @@
 import { SaveDock } from './savedock.jsx';
 import { StoreDecor } from './decor.jsx';
+import { RatePrompt } from './reviews.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
@@ -593,6 +594,7 @@ function IntroSplash() {
 function App() {
   useTheme();
   const { boot: b, bootError } = useStore();
+  const pub = useStore((s) => s.user?.role === 'public');
   return (
     <>
       {b === 'loading' && <Splash />}
@@ -601,6 +603,7 @@ function App() {
       {b === 'login' && <Login />}
       {b === 'ready' && <Shell />}
       {b === 'ready' && <StoreDecor />}
+      {b === 'ready' && pub && <RatePrompt />}
       {b === 'ready' && <SaveDock />}
       <IntroSplash />
       <Toast />

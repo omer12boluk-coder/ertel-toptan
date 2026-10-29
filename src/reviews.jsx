@@ -1,12 +1,12 @@
-// Ürün yorumları (29.10.2026). Sadece o ürünü SATIN ALMIŞ üye yazabilir (kayıt kimliği = <sipariş>_<ürün>; kural siparişin
+// Ürün yorumları (29.10.2026). Sadece o ürünü SATIN ALMIŞ üye, teslim edilen siparişinin sayfasından yazar (kayıt kimliği = <sipariş>_<ürün>; kural siparişin
 // üyeye ait ve teslim edilmiş/yolda olduğunu kontrol eder). Ayarlar > Mağaza özellikleri > "onaylayınca yayınlansın" açıksa
 // yorum 'pending' gelir, yönetici Müşteriler > Yorumlar'dan yayınlar. Ürün penceresi önce revsum/main'e bakar (oturumda 1 okuma),
 // yorumu olan üründe yayındaki yorumları okur. Kayıt: reviews/{id} { pid, oid, order, uid, name, stars, text, status, reply?,
 // createdAt, updatedAt, seenAdmin, sum } · revsum/main { s: { <ürün>: [ortalama, adet] } } (yönetici yazar).
-import { useEffect, useMemo, useState } from 'react';
-import { useStore, store, api, go, toast } from './store.js';
-import { Icon, Sheet, Confirm, Empty, openMenu } from './ui.jsx';
-import { now, norm } from './utils.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useStore, store, api, go, toast, openOrder } from './store.js';
+import { Icon, Sheet, Confirm, Empty, openMenu, Thumb } from './ui.jsx';
+import { now, norm, ls } from './utils.js';
 import { feat } from './extras.jsx';
 import { OlderBtn } from './orders.jsx';
 
@@ -45,35 +45,26 @@ export function RatingLine({ p }) {
   return <button type="button" className="rate-line" onClick={() => document.getElementById('rev-' + p.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Stars v={r[0]} /><b>{fmtAvg(r[0])}</b><span>{r[1]} yorum</span></button>;
 }
 
-// Ürün penceresinin altında: özet + yorumlar + "Yorum yaz" (sadece alan üyeye)
+// Ürün penceresinin altında: SADECE yayındaki yorumlar (yorum yazma siparişin içinden — 29.10.2026, kullanıcı isteği).
+// Yayında yorum yoksa bölüm hiç çizilmez.
 export function Reviews({ p }) {
-  const { settings: S, member, myOrders = [] } = useStore();
+  const { settings: S } = useStore();
   const F = feat(S);
   const sum = useRevSum(F.rev);
-  const mine = useMyReviews(F.rev && member);
   const [list, setList] = useState(null);
-  const [write, setWrite] = useState(null);
   const n = sum?.[p.id]?.[1] || 0;
   useEffect(() => { if (!F.rev || !n) { setList([]); return; } let live = true; store.s.api.reviewsOf(p.id).then((l) => live && setList(l)).catch(() => live && setList([])); return () => { live = false; }; }, [p.id, n, F.rev]);
-  // yorum yazabileceği sipariş: bu ürünü içeren, teslim edilmiş / yolda / teslime hazır ve henüz yorumlanmamış
-  const done = new Set((mine || []).map((r) => r.id));
-  const ord = member && myOrders.find((o) => BOUGHT.includes(o.status) && (o.items || []).some((i) => i.id === p.id) && !done.has(o.id + '_' + p.id));
-  const own = (mine || []).find((r) => r.pid === p.id);
-  if (!F.rev) return null;
-  if (!n && !ord && !own) return null;
+  if (!F.rev || !n) return null;
   const items = list || [];
   const bars = [5, 4, 3, 2, 1].map((s) => ({ s, c: items.filter((r) => r.stars === s).length }));
   return (
     <section className="rev" id={'rev-' + p.id}>
-      <div className="rev-h"><b>Yorumlar</b>{ord && <button type="button" className="linkish" onClick={() => setWrite(ord)}>Yorum yaz</button>}</div>
-      {own && own.status !== 'pub' && <p className="rev-own"><Icon n="clock" s={14} />Yorumunuz {own.status === 'hidden' ? 'yayınlanmadı' : 'incelendikten sonra yayınlanacak'}: <Stars v={own.stars} s={12} /></p>}
-      {n > 0 && (
-        <div className="rev-sum">
-          <div className="rev-big"><b>{fmtAvg(sum[p.id][0])}</b><Stars v={sum[p.id][0]} s={13} /><small>{n} yorum</small></div>
-          <div className="rev-bars">{bars.map((b) => <div key={b.s}><span>{b.s}</span><i><em style={{ width: items.length ? Math.round((b.c / items.length) * 100) + '%' : 0 }} /></i></div>)}</div>
-        </div>
-      )}
-      {list == null && n > 0 && <div className="spinner sm" />}
+      <div className="rev-h"><b>Yorumlar</b></div>
+      <div className="rev-sum">
+        <div className="rev-big"><b>{fmtAvg(sum[p.id][0])}</b><Stars v={sum[p.id][0]} s={13} /><small>{n} yorum</small></div>
+        <div className="rev-bars">{bars.map((b) => <div key={b.s}><span>{b.s}</span><i><em style={{ width: items.length ? Math.round((b.c / items.length) * 100) + '%' : 0 }} /></i></div>)}</div>
+      </div>
+      {list == null && <div className="spinner sm" />}
       {items.map((r) => (
         <article key={r.id} className="rev-item">
           <div className="rev-ih"><b>{r.name}</b><span className="rev-buy"><Icon n="check" s={11} />Satın aldı</span><small>{dRel(r.createdAt)}</small></div>
@@ -82,15 +73,102 @@ export function Reviews({ p }) {
           {r.reply && <div className="rev-reply"><b>{S.brand?.appName || 'Mağaza'}:</b> {r.reply}</div>}
         </article>
       ))}
-      {!n && ord && <p className="fine">Bu ürünü aldınız. İlk yorumu siz yazın, diğer ustalara yardımcı olur.</p>}
-      {write && <WriteReview p={p} order={write} onClose={() => setWrite(null)} />}
     </section>
   );
 }
 
-function WriteReview({ p, order, onClose }) {
+// ---------------------------------------------------------------------------------------------------------
+// Siparişten değerlendirme: teslim edilen siparişin sayfasının altında "Ürünleri değerlendirin" kartı.
+const uniqItems = (o) => { const seen = new Set(); return (o.items || []).filter((i) => i.id && !seen.has(i.id) && seen.add(i.id)); };
+const doneAt = (o) => { const h = [...(o.history || [])].reverse().find((x) => x.s === 'done'); return h?.at || o.updatedAt || o.createdAt || 0; };
+export const canRate = (o, mine) => o?.status === 'done' && uniqItems(o).some((i) => !(mine || []).some((r) => r.id === o.id + '_' + i.id));
+export function useRateable() {
+  const { settings: S, member } = useStore();
+  const on = feat(S).rev && !!member;
+  const mine = useMyReviews(on && member);
+  return on && mine ? (o) => canRate(o, mine) : () => false;
+}
+
+export function OrderRate({ o }) {
+  const { settings: S, member, byId } = useStore();
+  const rateFocus = useStore((s) => s.rateFocus);
+  const on = feat(S).rev && member && o.uid === member.uid && o.status === 'done';
+  const mine = useMyReviews(on && member);
+  const [w, setW] = useState(null);
+  const ref = useRef(null);
+  useEffect(() => { if (on && mine && rateFocus === o.id) { store.set({ rateFocus: null }); setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350); } }, [on, !!mine, rateFocus]);
+  if (!on || !mine) return null;
+  const its = uniqItems(o);
+  if (!its.length) return null;
+  const rev = (i) => mine.find((r) => r.id === o.id + '_' + i.id);
+  const left = its.filter((i) => !rev(i)).length;
+  return (
+    <section className="o-rate" id="o-rate" ref={ref}>
+      <div className="o-rate-h">
+        <span className="o-rate-ic"><Icon n="star" s={18} /></span>
+        <span><b>{left ? 'Ürünleri değerlendirin' : 'Değerlendirmeniz için teşekkürler'}</b><small className="muted">{left ? 'Yıldıza dokunun; puanınız diğer ustalara yol gösterir.' : 'Yorumlarınız ürün sayfalarında görünür.'}</small></span>
+      </div>
+      <ul className="o-rate-l">
+        {its.map((i) => { const p = byId.get(i.id) || { ...i, id: i.id }; const r = rev(i); return (
+          <li key={i.id}>
+            <Thumb p={p} size="sm" />
+            <span className="o-rate-n">{p.n || i.n}{r && <small className="muted">{r.status === 'pub' ? 'Yayında' : r.status === 'hidden' ? 'Yayınlanmadı' : 'İnceleniyor'}{r.text ? ' · “' + r.text.slice(0, 40) + (r.text.length > 40 ? '…' : '') + '”' : ''}</small>}</span>
+            {r ? <span className="o-rate-done"><Stars v={r.stars} s={14} /></span> : (
+              <span className="o-rate-s" role="group" aria-label={'Puan ver: ' + (p.n || '')}>
+                {[1, 2, 3, 4, 5].map((k) => <button key={k} type="button" aria-label={k + ' yıldız'} onClick={() => setW({ p, stars: k })}>★</button>)}
+              </span>
+            )}
+          </li>
+        ); })}
+      </ul>
+      {w && <WriteReview p={w.p} order={o} initial={w.stars} onClose={() => setW(null)} />}
+    </section>
+  );
+}
+
+// Tek seferlik, nazik hatırlatma: teslim edilen (son 30 gün) ve değerlendirilmemiş ürünü olan sipariş için mağazaya bir
+// sonraki girişte küçük kart. Her sipariş için EN ÇOK BİR KEZ, iki hatırlatma arası en az 4 gün; sipariş sayfası /
+// sepet / ödeme açıkken gösterilmez. Kayıt cihazda (ls rate-ask {sipariş: zaman}, rate-ask-at son gösterim).
+const ASK_GAP = 4 * 864e5, ASK_WIN = 30 * 864e5;
+export function RatePrompt() {
+  const { settings: S, member, myOrders = [], tab, openOrder: oo, byId } = useStore();
+  const on = feat(S).rev && !!member;
+  const mine = useMyReviews(on && member);
+  const [o, setO] = useState(null);
+  useEffect(() => {
+    if (!on || !mine || o) return;
+    const asked = ls.get('rate-ask', {}); const last = ls.get('rate-ask-at', 0);
+    if (Date.now() - last < ASK_GAP) return;
+    const hidden = new Set(member.hiddenOrders || []);
+    const c = myOrders.filter((x) => !hidden.has(x.id) && !asked[x.id] && canRate(x, mine) && Date.now() - doneAt(x) < ASK_WIN).sort((a, b) => doneAt(b) - doneAt(a))[0];
+    if (!c) return;
+    const t = setTimeout(() => {
+      const s = store.s; if (s.openOrder || ['sepet', 'siparis'].includes(s.tab)) return;
+      // eskiler (bu özellikten önce teslim edilenler) bir daha sorulmasın diye hepsi işaretlenir
+      const a2 = { ...asked }; for (const x of myOrders) if (x.status === 'done') a2[x.id] = Date.now();
+      ls.set('rate-ask', a2); ls.set('rate-ask-at', Date.now()); setO(c);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [on, !!mine, myOrders.length, tab, oo]);
+  if (!o) return null;
+  const its = uniqItems(o).filter((i) => !(mine || []).some((r) => r.id === o.id + '_' + i.id));
+  const close = () => setO(null);
+  return (
+    <div className="rate-ask" role="dialog" aria-label="Ürünleri değerlendirin">
+      <button className="rate-ask-x" aria-label="Kapat" onClick={close}><Icon n="x" s={16} /></button>
+      <div className="rate-ask-th">{its.slice(0, 3).map((i) => <Thumb key={i.id} p={byId.get(i.id) || i} size="sm" />)}</div>
+      <div className="rate-ask-t"><b>Siparişiniz teslim edildi</b><span>#{o.no} · Aldığınız {its.length > 1 ? its.length + ' ürünü' : 'ürünü'} değerlendirmek ister misiniz?</span></div>
+      <div className="rate-ask-b">
+        <button className="btn ghost sm" onClick={close}>Daha sonra</button>
+        <button className="btn primary sm" onClick={() => { close(); store.set({ rateFocus: o.id }); openOrder(o.id); }}><Icon n="star" s={15} />Değerlendir</button>
+      </div>
+    </div>
+  );
+}
+
+function WriteReview({ p, order, onClose, initial = 5 }) {
   const { member, settings: S } = useStore();
-  const [stars, setStars] = useState(5);
+  const [stars, setStars] = useState(initial);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const mod = feat(S).revMod;
@@ -142,7 +220,7 @@ export function ReviewAdmin() {
     <>
       <div className="search"><Icon n="search" s={18} /><input id="rv-search" type="search" placeholder="Müşteri, ürün, yorum…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       <div className="chips scroll">{FILTERS.map(([k, l]) => <button key={k} className={'chip' + (f === k ? ' on' : '')} onClick={() => setF(k)}>{l}{counts[k] ? <b>{counts[k]}</b> : null}</button>)}</div>
-      {list.length === 0 ? <Empty icon="star" title={f === 'pending' ? 'Onay bekleyen yorum yok' : 'Bu filtrede yorum yok'}><p>Ürünü satın alan üyeler ürün penceresinden yıldız ve yorum yazar; burada yayınlar, gizler ya da yanıtlarsınız.</p></Empty> : (
+      {list.length === 0 ? <Empty icon="star" title={f === 'pending' ? 'Onay bekleyen yorum yok' : 'Bu filtrede yorum yok'}><p>Ürünü satın alan üyeler teslim edilen siparişlerinin sayfasından yıldız ve yorum yazar; burada yayınlar, gizler ya da yanıtlarsınız.</p></Empty> : (
         <ul className="rv-list">
           {list.map((r) => { const p = byId.get(r.pid); const st = ST[r.status] || ST.pending; return (
             <li key={r.id} className={'rv-card' + (r.status === 'pending' ? ' pend' : '')}>

@@ -4296,3 +4296,36 @@ button.wait-row { cursor: pointer; }
 .rv-t { margin: 0; font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
 .rv-acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .wait-h small { font-weight: 500; text-transform: none; letter-spacing: 0; } .wait-note { margin-top: 12px; }
+
+/* ===== 29.10.2026: ürün penceresinin altında nefes payı + siparişten değerlendirme ===== */
+.pd-end { flex: none; height: calc(36px + env(safe-area-inset-bottom, 0px)); }
+.pdetail-page .pd-end { height: 12px; }
+.o-rate { margin: 14px 0 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); display: flex; flex-direction: column; gap: 10px; scroll-margin: 90px; }
+.o-rate-h { display: flex; align-items: center; gap: 11px; }
+.o-rate-h > span:last-child { display: flex; flex-direction: column; gap: 2px; } .o-rate-h b { font-size: 15px; } .o-rate-h small { font-size: 12.5px; }
+.o-rate-ic { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; background: color-mix(in oklab, #e5a00d 15%, var(--surface)); color: #c98a06; }
+.o-rate-l { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.o-rate-l li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.o-rate-l .thumb { width: 42px; height: 42px; flex: none; border-radius: 9px; }
+.o-rate-n { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.3; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.o-rate-n small { font-size: 11.5px; }
+.o-rate-s { display: flex; flex: none; }
+.o-rate-s button { width: 30px; height: 34px; border: 0; background: none; padding: 0; font-size: 23px; line-height: 1; color: color-mix(in oklab, var(--fg) 20%, transparent); cursor: pointer; transition: color .12s, transform .12s; }
+@media (hover: hover) { .o-rate-s:hover button { color: #e5a00d; } .o-rate-s button:hover ~ button { color: color-mix(in oklab, var(--fg) 20%, transparent); } }
+.o-rate-s button:active { transform: scale(.88); }
+.o-rate-done { flex: none; }
+@media (max-width: 420px) { .o-rate-s button { width: 26px; font-size: 21px; } .o-rate-l .thumb { width: 38px; height: 38px; } }
+.mo-rate { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 2px 8px; border-radius: 8px; flex: none; font-size: 11.5px; font-weight: 700; color: #b07a05; background: color-mix(in oklab, #e5a00d 14%, var(--surface)); }
+.mo-rate svg { margin: 0 !important; }
+.rate-ask { position: fixed; z-index: 80; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(400px, calc(100vw - 24px)); padding: 14px 16px 12px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 14px 40px rgba(0,0,0,.18); display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; align-items: center; animation: rateIn .38s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes rateIn { from { opacity: 0; transform: translate(-50%, 24px); } }
+@media (max-width: 700px) { .rate-ask { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+.rate-ask-x { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.rate-ask-th { display: flex; } .rate-ask-th .thumb { width: 40px; height: 40px; border-radius: 10px; border: 2px solid var(--surface); } .rate-ask-th .thumb + .thumb { margin-left: -14px; }
+.rate-ask-t { display: flex; flex-direction: column; gap: 2px; padding-right: 20px; } .rate-ask-t b { font-size: 14.5px; } .rate-ask-t span { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.rate-ask-b { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+/* "Haber vereceğiz" düğmesi her kartta aynı yerde: en alt sağ (fiyatın boyu ne olursa olsun) */
+.plist.pgrid .prow-side:has(> .notify-btn) { align-items: flex-end; }
+.plist.pgrid .prow-side:has(> .notify-btn) .notify-btn { flex: none; margin-left: auto; }
+.plist.pgrid .prow-side .price-ask { white-space: nowrap; }
+@media (max-width: 560px) { .plist.pgrid .prow-side:has(> .notify-btn) { flex-direction: row; align-items: flex-end; justify-content: space-between; } }
