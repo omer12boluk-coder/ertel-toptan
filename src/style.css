@@ -4670,3 +4670,26 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .set-find-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .settings .page-h .set-mode { margin-left: 4px; }
 .settings .page-h { justify-content: flex-start; gap: 12px; }
+/* Sipariş formu > Müşteriye gönder: kapalı başlar, başlık satırına basınca açılır; link düğmeleri sadece küçük simge; yazdır + A4/A6 */
+.oform-out { gap: 0; padding: 0; overflow: hidden; }
+.oform-out.open { gap: 12px; padding-bottom: 14px; }
+.oform-out > :not(.oform-out-tg) { margin: 0 14px; }
+.oform-out-tg { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 14px; text-align: left; background: none; border: 0; cursor: pointer; font: inherit; color: inherit; }
+.oform-out-tg:hover { background: var(--surface-2); }
+.oot-ic { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: color-mix(in oklab, #25d366 14%, var(--surface)); color: #1aa851; flex: none; }
+.oot-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.oot-t b { font: 700 17px/1.15 var(--f-display); }
+.oot-t small { font-size: 12.5px; color: var(--muted); }
+.oot-chev { color: var(--muted); transition: transform .25s var(--ease); flex: none; }
+.oform-out.open .oot-chev { transform: rotate(180deg); }
+.oform-out.open > .oform-out-tg { border-bottom: 1px solid var(--line-2); }
+.oform-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.of-ib { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; flex: none; transition: background .15s, border-color .15s; }
+.of-ib:hover { background: var(--surface-2); }
+.of-ib.wa { color: #1aa851; border-color: color-mix(in oklab, #25d366 40%, var(--line)); }
+.of-ib.wa:hover { background: color-mix(in oklab, #25d366 10%, var(--surface)); }
+.of-print { display: inline-flex; align-items: center; gap: 6px; }
+.seg-mini { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; height: 30px; }
+.seg-mini button { padding: 0 9px; font: inherit; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface); border: 0; cursor: pointer; }
+.seg-mini button + button { border-left: 1px solid var(--line); }
+.seg-mini button.on { background: var(--accent-soft); color: var(--accent); }

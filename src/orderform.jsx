@@ -10,6 +10,7 @@ import { links, waLink } from './route.js';
 import { fmt, totals, fmtTotals, norm, roundStep, ls, priceFor } from './utils.js';
 import { renderListImages, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
 import { encodeList, listLink } from './listcode.js';
+import { printHtml } from './orders.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -39,6 +40,8 @@ export function OrderForm() {
   const [q, setQ] = useState('');
   const [imgs, setImgs] = useState(null); // [{ file, url }]
   const [busy, setBusy] = useState(false);
+  const [outOpen, setOutOpen] = useState(false); // "Müşteriye gönder" bölümü: kapalı başlar, başlığa basınca açılır
+  const [paper, setPaper] = useState(() => ls.get('of-paper', 'a4')); // yazdırma kâğıdı: a4 | a6
   const step = Number(S.pricing.adjustStep) || 1;
   useEffect(() => { ls.set(KEY, { ...d, at: Date.now() }); }, [d]);
 
@@ -106,7 +109,7 @@ export function OrderForm() {
   const gen = useRef(0);
   useEffect(() => {
     setImgs(null);
-    if (!items.length) return;
+    if (!items.length || !outOpen) return;
     const my = ++gen.current;
     const t = setTimeout(async () => {
       try {
@@ -116,7 +119,7 @@ export function OrderForm() {
       } catch (e) { console.warn(e); }
     }, 500);
     return () => clearTimeout(t);
-  }, [rec, rate?.usd]);
+  }, [rec, rate?.usd, outOpen]);
   useEffect(() => () => imgs?.forEach((m) => URL.revokeObjectURL(m.url)), [imgs]);
 
   // Telefonda: bütün tablo resimlerini (link olmadan) paylaş menüsüyle WhatsApp'a gönder
@@ -127,6 +130,16 @@ export function OrderForm() {
     if (!navigator.canShare({ files })) return toast('Bu telefon resim paylaşmayı desteklemiyor; resimleri tek tek kopyalayın', 'bad');
     try { await navigator.share({ files }); } catch (e) { if (e.name !== 'AbortError') toast('Paylaşılamadı: ' + e.message, 'bad'); }
   }
+  // Yazdır: bütün resimler (liste birkaç resme bölündüyse hepsi) sırayla, her biri ayrı sayfada, seçilen kâğıda (A4 / A6) sığdırılarak.
+  // Telefonda tarayıcı yazdırması (özellikle ana ekran uygulamasında) çalışmadığı için paylaş menüsü açılır (oradan Yazdır).
+  async function printAll() {
+    if (!imgs?.length) return;
+    if (canShareImgs) { const files = imgs.map((m) => m.file); try { if (navigator.canShare({ files })) await navigator.share({ files }); } catch (e) { if (e.name !== 'AbortError') toast('Yazdırılamadı: ' + e.message, 'bad'); } return; }
+    const sz = paper === 'a6' ? { page: 'A6', m: '5mm', h: '138mm' } : { page: 'A4', m: '10mm', h: '277mm' };
+    const pages = imgs.map((m) => `<div class="pg"><img src="${m.url}" alt=""></div>`).join('');
+    printHtml(`<!doctype html><html><head><style>@page{size:${sz.page};margin:${sz.m}} body{margin:0} .pg{height:${sz.h};display:flex;align-items:flex-start;justify-content:center;break-after:page;page-break-after:always} .pg:last-child{break-after:auto;page-break-after:auto} img{max-width:100%;max-height:100%;object-fit:contain}</style></head><body>${pages}</body></html>`);
+  }
+  const setPaperK = (k) => { setPaper(k); ls.set('of-paper', k); };
   async function copyImg(i) {
     setBusy(true);
     try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': imgs[i].file })]); toast(imgs.length > 1 ? `${i + 1}. resim kopyalandı — WhatsApp’ta Ctrl+V` : 'Resim kopyalandı — WhatsApp’ta Ctrl+V'); }
@@ -139,7 +152,7 @@ export function OrderForm() {
       <div className="page-h">
         <h1 className="page-t">Sipariş formu <span className="muted">#{d.no}</span></h1>
         <span className="row-btns">
-          {rows.length > 0 && <button className="btn sm wa" onClick={() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Icon n="wa" s={15} />Müşteriye gönder</button>}
+          {rows.length > 0 && <button className="btn sm wa" onClick={() => { setOutOpen(true); setTimeout(() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }}><Icon n="wa" s={15} />Müşteriye gönder</button>}
           {dirty && rows.length > 0 && <button className="btn sm primary" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</button>}
           {(d.items.length > 0 || d.name) && <button className="btn sm ghost danger" onClick={() => setWipe(true)}><Icon n="trash" s={15} />Formu temizle</button>}
         </span>
@@ -201,14 +214,23 @@ export function OrderForm() {
           )}
         </section>
         {rows.length > 0 && (
-          <section className="oform-out" id="of-out">
+          <section className={'oform-out' + (outOpen ? ' open' : '')} id="of-out">
+            <button type="button" className="oform-out-tg" onClick={() => setOutOpen((v) => !v)} aria-expanded={outOpen}>
+              <span className="oot-ic"><Icon n="wa" s={18} /></span>
+              <span className="oot-t"><b>Müşteriye gönder</b><small>{outOpen ? 'Liste resmi, link ve yazdırma' : 'Liste resmi, link ve yazdırma · açmak için tıklayın'}</small></span>
+              <Icon n="down" s={18} className="oot-chev" />
+            </button>
+            {outOpen && <>
             <div className="oform-out-h">
-              <h2>Müşteriye gönder</h2>
-              <div className="row-btns">
-                {canShareImgs && <button className="btn wa" disabled={!imgs || busy} onClick={shareImgs}><Icon n="wa" s={16} />{imgs && imgs.length > 1 ? `Tabloyu gönder (${imgs.length} resim)` : 'Tabloyu WhatsApp’ta gönder'}</button>}
-                <a className={'btn ' + (canShareImgs ? 'outline' : 'wa')} href={waLink('', 'Siparişiniz:\n' + link)} target="_blank" rel="noopener"><Icon n="wa" s={16} />Linki WhatsApp’ta gönder</a>
-                <button className="btn outline" onClick={() => copyText(link, 'Link kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>
-                {dirty && <button className="btn outline" onClick={() => saveForm()}><Icon n="check" s={16} />{d.sid ? 'Değişiklikleri kaydet' : 'Formu kaydet'}</button>}
+              <div className="row-btns oform-acts">
+                {canShareImgs && <button className="btn sm wa" disabled={!imgs || busy} onClick={shareImgs}><Icon n="wa" s={15} />{imgs && imgs.length > 1 ? `Tabloyu gönder (${imgs.length})` : 'Tabloyu gönder'}</button>}
+                <a className="of-ib wa" href={waLink('', 'Siparişiniz:\n' + link)} target="_blank" rel="noopener" aria-label="Linki WhatsApp’ta gönder" title="Linki WhatsApp’ta gönder"><Icon n="wa" s={17} /></a>
+                <button className="of-ib" onClick={() => copyText(link, 'Link kopyalandı')} aria-label="Linki kopyala" title="Linki kopyala"><Icon n="copy" s={16} /></button>
+                <span className="of-print">
+                  <button className="btn sm outline" disabled={!imgs} onClick={printAll}><Icon n="print" s={15} />Yazdır{imgs && imgs.length > 1 ? ` (${imgs.length} sayfa)` : ''}</button>
+                  {!canShareImgs && <span className="seg-mini" role="group" aria-label="Kâğıt">{['a4', 'a6'].map((k) => <button key={k} type="button" className={paper === k ? 'on' : ''} onClick={() => setPaperK(k)}>{k.toUpperCase()}</button>)}</span>}
+                </span>
+                {dirty && <button className="btn sm outline" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Değişiklikleri kaydet' : 'Formu kaydet'}</button>}
               </div>
             </div>
             {!imgs ? <div className="list-wait"><div className="spinner" /></div> : (
@@ -229,6 +251,7 @@ export function OrderForm() {
                 </div>
               </>
             )}
+            </>}
           </section>
         )}
         </div>
