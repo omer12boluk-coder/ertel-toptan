@@ -4820,3 +4820,7 @@ html:has(.kf) { scrollbar-gutter: stable; }
   .back-btn.tap { background-color: color-mix(in oklab, var(--fg) 9%, var(--surface)) !important; }
   .back-btn.tap > svg { transform: translateX(-3px) !important; }
 }
+
+/* sayfa geçişinde solan örtü (setupNavAnim): sayfa renginde, menülerin altında, dokunmayı engellemez */
+.nav-cover { position: fixed; inset: 0; z-index: 18; background: var(--bg); pointer-events: none; opacity: 0; }
+@media (min-width: 900px) { .nav-cover { display: none; } }

@@ -713,11 +713,17 @@ function setupNavAnim() {
     const btn = t.closest('button, a, [role="button"]') || t;
     click = { el: btn, at: Date.now(), back: !!t.closest('.back-btn') };
   }, { capture: true, passive: true });
-  const slide = (back) => [{ opacity: 0, transform: `translate3d(${back ? -14 : 14}px,0,0)` }, { opacity: 1, transform: 'none' }];
-  // Animasyon ilk karede başlangıç hâlinde DURAKLATILIR, o (bazen ağır: gizli sayfanın açılması, uzun liste) kare ekrana
-  // çıktıktan sonraki karede oynatılır → ağır karede süre tükenip 'animasyonsuz' görünmez, her zaman 300 ms'nin tamamı görünür.
-  const play = (els, kf, ms) => {
-    const as = els.map((el) => { const a = el.animate(kf, { duration: ms, easing: EASE }); a.pause(); return a; });
+  // Solma içeriğin kendisine DEĞİL, üstüne serilen sayfa renginde tek bir örtüye (.nav-cover) uygulanır: koca bir sayfayı
+  // (ana sayfa: bulanık ışıklar, buzlu cam reklam…) saydamlıkla çizmek iPhone'da çok ağır, 'flaş' yapıyordu; örtüyü soldurmak
+  // bedava. Sayfanın kendisi sadece kayar (transform). Örtü üst menü / alt menü / sepet çubuğunun ALTINDA (z 18).
+  // Animasyon ilk karede başlangıç hâlinde DURAKLATILIR, o (bazen ağır) kare ekrana çıktıktan sonraki karede oynatılır.
+  let cover = null;
+  const getCover = () => { if (!cover || !cover.isConnected) { cover = document.createElement('div'); cover.className = 'nav-cover'; cover.setAttribute('aria-hidden', 'true'); document.body.appendChild(cover); } return cover; };
+  const play = (els, kind, ms) => {
+    const as = [];
+    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -14 : 14}px,0,0)` }, { transform: 'none' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: EASE })); }
+    as.push(getCover().animate([{ opacity: kind === 'tab' ? 0.65 : 1 }, { opacity: 0 }], { duration: ms, easing: EASE }));
+    as.forEach((a) => a.pause());
     requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
   };
   const pageTargets = (main) => {
@@ -727,7 +733,8 @@ function setupNavAnim() {
         if (c.classList.contains('kp-off')) continue;
         // sayfa kabuğuna (.page) ve sabit öğe taşıyabilen kutulara transform VERİLMEZ (sepet çubuğu vb. sonradan gelse bile yerinde kalsın) → çocuklarına inilir
         if (c.matches(FIX)) continue;
-        if (d < 6 && (getComputedStyle(c).display === 'contents' || c.classList.contains('page') || c.querySelector(FIX))) walk(c, d + 1); else out.push(c);
+        // (getComputedStyle KULLANILMAZ: ağır sayfa açılırken stil hesabını erkenden zorlayıp iki kez yaptırıyordu)
+        if (d < 6 && (c.classList.contains('page') || c.querySelector(FIX))) walk(c, d + 1); else out.push(c);
       }
     };
     walk(main, 0); return out;
@@ -744,8 +751,8 @@ function setupNavAnim() {
     const prev = last; last = k; click = null;
     if (!mob() || !watched?.isConnected) return;
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
-    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play(pageTargets(watched), [{ opacity: 0.35 }, { opacity: 1 }], 180);
-    else play(pageTargets(watched), slide(h === 'back'), 300);
+    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play([], 'tab', 180);
+    else play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
   };
   storeListen(() => { if (!pend && key(store.s) !== last) pend = requestAnimationFrame(() => runKey(0)); });
   // sayfa içi geçişler (adres değişmeden): MutationObserver, tıklanan düğme kaybolup yerine büyük bölüm gelince
@@ -758,7 +765,7 @@ function setupNavAnim() {
     if (!top.length) return;
     click = null;
     const els = []; for (const n of top) { if (n.classList.contains('page') || n.querySelector(FIX)) els.push(...pageTargets({ children: [n] })); else els.push(n); }
-    play(els, slide(c.back), 300);
+    play(els, c.back ? 'back' : 'fwd', 300);
   };
   const attach = () => {
     const main = document.querySelector('.shell > .main');
