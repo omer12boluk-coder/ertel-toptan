@@ -4494,13 +4494,13 @@ html:has(.kf) { scrollbar-gutter: stable; }
   .co-side .cart-sum.co-fixed { overflow: hidden; padding-bottom: 14px; }
   .co-side .cart-sum.co-fixed .co-items { flex: 1 1 auto; min-height: 46px; }
   .co-side .co-side-t { font-size: 18px; } .co-side .co-side-n { font-size: 12px; margin-top: 2px; }
-  .co-side .co-items { gap: 8px; } .co-side .co-items li { font-size: 13px; } .co-side .co-items .thumb { width: 38px; height: 38px; } .co-side .co-items b { font-size: 14.5px; }
+  .co-side .co-items { gap: 8px; margin-bottom: 4px; } .co-side .co-items li { font-size: 13px; } .co-side .co-items .thumb { width: 38px; height: 38px; } .co-side .co-items b { font-size: 14.5px; }
   .co-side .sum-rows { gap: 4px; } .co-side .sum-rows > div { font-size: 13px; }
   .co-side .sum-total { padding-top: 6px; } .co-side .sum-total b { font-size: 23px; } .co-side .sum-tl { font-size: 12px; }
   .co-side .cart-sum .vat-lines, .co-side .cart-sum [class*="vat"] { font-size: 11.5px; }
   .co-side .legal-ok { margin: 2px 0 0; padding: 8px 10px; border-radius: 10px; }
-  .co-side .legal-ok .mini-check { font-size: 12.5px; line-height: 1.4; gap: 8px; }
-  .co-side .legal-ok .legal-note { font-size: 11px; margin: 4px 0 0 22px; line-height: 1.35; }
+  .co-side .legal-ok .mini-check { font-size: 12.8px; line-height: 1.4; gap: 8px; }
+  .co-side .legal-ok .legal-note { font-size: 11px; margin: 7px 0 0 22px; line-height: 1.35; }
   .co-side .co-go { min-height: 44px; font-size: 14.5px; border-radius: 11px; }
   .co-side .cart-sum > .fine:last-child { font-size: 11.5px; margin: 0; }
 }
