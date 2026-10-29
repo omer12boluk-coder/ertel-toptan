@@ -618,6 +618,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => { if (!e.target.closest?.('.lb')) e.preventDefault(); }, { passive: false });
   setupLongPress();
   // setupPress(); — 29.10.2026: telefonda basma animasyonları KALDIRILDI (App Store sonrasına)
+  touchHoverToActive();
   setupTapHover();
   setupPull();
 }
@@ -629,10 +630,40 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
 // iPhone'da (ana ekran uygulamasında tarayıcı yenilemesi yok): en üstte aşağı esnetince açılan boşlukta (üst menünün de üstünde)
 // simge belirir, esneme miktarını (−scrollY) birebir izler; yeterince esnetip bırakınca sürüm denenir — yeni sürüm varsa sayfa
 // yenilenir, yoksa yenilenmez (veriler canlı), simge sayfa yerine dönerken onunla birlikte kaybolur.
+// Dokunmatikte (30.10.2026): CSS'teki ":hover" vurguları parmak kalktıktan sonra yanık kalıyordu (alt bilgi linkleri,
+// Hesabım satırları, geri düğmeleri…). Bilgisayara özel (@media (hover: hover)) olmayan tüm :hover kuralları burada
+// ":active"e çevrilir → vurgu SADECE parmak basılıyken görünür, kalkınca / kaydırınca hemen gider (iOS uygulamaları gibi).
+function touchHoverToActive() {
+  if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+  const walk = (list) => {
+    for (let i = list.cssRules.length - 1; i >= 0; i--) {
+      const r = list.cssRules[i];
+      if (r.cssRules && r.type !== 1) { const c = r.conditionText || r.media?.mediaText || ''; if (!/hover\s*:\s*hover/.test(c)) walk(r); continue; }
+      if (r.type !== 1 || !r.selectorText || !r.selectorText.includes(':hover')) continue;
+      const sel = r.selectorText.replace(/:hover/g, ':active'), body = r.style.cssText;
+      try { list.deleteRule(i); list.insertRule(sel + '{' + body + '}', i); } catch {}
+    }
+  };
+  for (const sh of document.styleSheets) { try { walk(sh); } catch {} }
+}
+
+// iPhone'da titreşim: Safari titreşim API'si vermiyor; iOS 18+ "switch" onay kutusuna tıklamak kısa bir titreşim verir
+export function haptic() {
+  try {
+    if (navigator.vibrate) { navigator.vibrate(10); return; }
+    const l = document.createElement('label'); l.setAttribute('aria-hidden', 'true'); l.style.display = 'none';
+    const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); l.appendChild(i);
+    document.body.appendChild(l); l.click(); l.remove();
+  } catch {}
+}
 function setupPull() {
   if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (!IOS) return;
+  // Safari'nin kendi çekip yenilesi var; bizimki sadece ana ekran uygulamasında (orada tarayıcı yenilemesi yok)
+  const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  if (!IOS || !STANDALONE) return;
+  // yenilendikten sonra kısa bildirim (deneme süresince; kullanıcı sonra kaldıracak)
+  setTimeout(() => { try { if (sessionStorage.getItem('ptr-ok')) { sessionStorage.removeItem('ptr-ok'); toast('Sayfa yenilendi'); } } catch {} }, 1200);
   // Sadece İSTEYEREK çekiş: parmak dokunduğunda sayfa ZATEN en üstteyse ve esneme en az TH ise. Hızla yukarı kaydırıp
   // tepeye çarpmak (doğal yaylanma) simgeyi hiç göstermez.
   // iPhone'un esnemesi parmağın çok gerisinde kalır → eşik hem esnemeye (TH) hem parmak mesafesine (FTH) bakar
@@ -647,8 +678,8 @@ function setupPull() {
   const paint = () => {
     raf = 0; const px = (armed || busy) ? Math.max(0, -scrollY) : 0; if (!px && !box) return;
     const b = ui(); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', Math.min(1, Math.max(px / TH, armed ? fd / FTH : 0)));
-    if (finger && !busy) ready = px >= TH || (armed && px > 8 && fd >= FTH);
-    b.className = 'ptr native' + (busy ? ' spin' : ready ? ' ready' : '');
+    if (finger && !busy) { const r = px >= TH || (armed && px > 8 && fd >= FTH); if (r && !ready) haptic(); ready = r; }
+    b.className = 'ptr native' + (busy ? ' spin hold' : ready ? ' ready' : '');
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
   addEventListener('scroll', req, { passive: true });
@@ -658,14 +689,16 @@ function setupPull() {
   addEventListener('touchend', async () => {
     finger = false; const go = armed && ready; armed = false;
     if (!go || busy || document.querySelector('.sheet-bg, .lb, .vv')) { ready = false; req(); return; }
-    ready = false; busy = true; req();
+    ready = false; busy = true; haptic(); req();
     try {
       if (navigator.onLine === false) throw new Error('İnternet bağlantısı yok');
       const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
       const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
       if (!r.ok) throw new Error('Bağlantı kurulamadı');
       const j = await r.json().catch(() => ({}));
-      if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; }
+      // 30.10.2026: ana ekran uygulamasında her bilerek çekişte gerçekten yenilenir; açılınca "Sayfa yenilendi" yazar
+      try { sessionStorage.setItem('ptr-ok', '1'); } catch {}
+      location.reload(); return;
     } catch (e) { toast2(e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message); }
     busy = false; req();
   }, { passive: true });

@@ -4643,3 +4643,12 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .stepper input { border-inline: 0 !important; }
 .stepper > button:first-child { border-right: 1px solid var(--line-2); }
 .stepper > button:last-child { border-left: 1px solid var(--line-2); }
+/* iPhone ana ekran uygulaması: yenilenirken simge sayfa geri dönse de üst menünün altında görünür kalır */
+.ptr.native.hold { opacity: 1 !important; top: calc(var(--top-h, 56px) + env(safe-area-inset-top, 0px) + 30px); transform: translate(-50%, -50%); transition: opacity .2s; }
+/* dokunmatik: dokununca çıkan mavi odak çerçevesi yok (klavye odağı hariç); marka kutusuna basınca içi hafif kararır */
+@media (hover: none) {
+  :focus:not(:focus-visible) { outline: none; }
+  button:focus-visible, a:focus-visible { outline: none; }
+  .sh-brand.th { background-image: linear-gradient(rgb(0 0 0 / .045), rgb(0 0 0 / .045)); }
+  [data-theme="dark"] .sh-brand.th, :root[data-theme="dark"] .sh-brand.th { background-image: linear-gradient(rgb(255 255 255 / .05), rgb(255 255 255 / .05)); }
+}
