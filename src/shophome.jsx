@@ -82,7 +82,7 @@ export function ShopImg({ v, className, alt = '' }) {
     if (!isProdImg(v)) return; const { id, c } = prodParts(v); const alt2 = catAlt(c || store.s.byId.get(id)?.c, id);
     if (alt2 && e.currentTarget.src !== alt2) e.currentTarget.src = alt2;
   };
-  return src ? <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onLoad={onLoad} onError={onError} /> : null;
+  return src ? <img className={className} src={src} alt={alt} loading="lazy" onLoad={onLoad} onError={onError} /> : null;
 }
 
 // ---- link: marka / kategori / arama / ürün / dış adres
@@ -101,17 +101,18 @@ export function useOpenLink() {
   };
 }
 
-// görünür olunca beliren bölümler
+// görünür olunca beliren bölümler. İşaret className yerine data-in özniteliğinde: React yeniden çizince className'i
+// baştan yazıp 'in'i siliyordu → ürün sayfasından ana sayfaya dönünce bölümler yeniden görünmez olup ~0,5 sn sonra 'patlayarak' geliyordu
 function useReveal() {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    if (!('IntersectionObserver' in window)) { el.classList.add('in'); return; }
-    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    if (!('IntersectionObserver' in window)) { el.setAttribute('data-in', ''); return; }
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.setAttribute('data-in', ''); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
     el.querySelectorAll('.rv').forEach((x) => io.observe(x));
     if (el.classList.contains('rv')) io.observe(el);
     // yedek: bazı tarayıcılarda (arka plandaki sekme, uygulama içi tarayıcı) gözlemci geç kalabiliyor
-    const check = () => el.querySelectorAll('.rv:not(.in)').forEach((x) => { if (x.getBoundingClientRect().top < innerHeight * 0.95) x.classList.add('in'); });
+    const check = () => el.querySelectorAll('.rv:not([data-in])').forEach((x) => { if (x.getBoundingClientRect().top < innerHeight * 0.95) x.setAttribute('data-in', ''); });
     const t = setTimeout(check, 600);
     addEventListener('scroll', check, { passive: true });
     return () => { io.disconnect(); clearTimeout(t); removeEventListener('scroll', check); };

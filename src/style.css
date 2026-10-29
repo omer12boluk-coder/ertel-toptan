@@ -1407,9 +1407,9 @@ a.btn { text-decoration: none; }
 
 /* ---- kaydırınca belirme */
 .rv { opacity: 0; transform: translateY(26px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
-.rv.in { opacity: 1; transform: none; }
+.rv[data-in] { opacity: 1; transform: none; }
 .rv .sh-brand, .rv .sh-box, .rv .sh-card, .rv .sh-usp { opacity: 0; transform: translateY(18px) scale(.98); }
-.rv.in .sh-brand, .rv.in .sh-box, .rv.in .sh-card, .rv.in .sh-usp { opacity: 1; transform: none; transition: opacity .55s var(--ease) calc(var(--i, 0) * 55ms), transform .55s var(--ease) calc(var(--i, 0) * 55ms), box-shadow .3s; }
+.rv[data-in] .sh-brand, .rv[data-in] .sh-box, .rv[data-in] .sh-card, .rv[data-in] .sh-usp { opacity: 1; transform: none; transition: opacity .55s var(--ease) calc(var(--i, 0) * 55ms), transform .55s var(--ease) calc(var(--i, 0) * 55ms), box-shadow .3s; }
 
 /* ---- telefon / tablet */
 @media (max-width: 900px) {
@@ -1830,7 +1830,7 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
   /* beliren animasyonlar telefonda kısa ve sade (titreme / kaybolup gelme olmasın) */
   .rv, .rv .sh-brand, .rv .sh-box, .rv .sh-card, .rv .sh-usp { transform: none !important; }
   .rv { transition: opacity .35s ease; }
-  .rv.in .sh-brand, .rv.in .sh-box, .rv.in .sh-card, .rv.in .sh-usp { transition: opacity .3s ease; transition-delay: 0s !important; }
+  .rv[data-in] .sh-brand, .rv[data-in] .sh-box, .rv[data-in] .sh-card, .rv[data-in] .sh-usp { transition: opacity .3s ease; transition-delay: 0s !important; }
 }
 /* markalar: telefonda da sayfa kenarına hizalı (diğer raflar gibi), kenarın altına girmesin */
 @media (max-width: 700px) { .sh-brands { margin-inline: 0; padding: 4px 0 10px; scroll-padding-inline: 0; } }
