@@ -137,11 +137,7 @@ export function OrderForm() {
   return (
     <div className="page oform">
       <div className="page-h">
-        <div className="of-title">
-          <h1 className="page-t">Sipariş formu <span className="muted">#{d.no}</span></h1>
-          {(d.sid || d.items.length > 0 || d.name) && <button type="button" className="btn sm of-new" onClick={tryNew}><Icon n="plus" s={15} />Yeni form</button>}
-          {d.sid && <span className={'of-state' + (dirty ? ' dirty' : '')}>{dirty ? 'Kaydedilmemiş değişiklik' : 'Kayıtlı form'}</span>}
-        </div>
+        <h1 className="page-t">Sipariş formu <span className="muted">#{d.no}</span></h1>
         <span className="row-btns">
           {rows.length > 0 && <button className="btn sm wa" onClick={() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Icon n="wa" s={15} />Müşteriye gönder</button>}
           {dirty && rows.length > 0 && <button className="btn sm primary" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</button>}
@@ -171,6 +167,10 @@ export function OrderForm() {
 
         <div className="oform-right">
         <section className="oform-cart">
+          {(d.sid || d.items.length > 0 || d.name) && <div className="of-title">
+            <button type="button" className="btn sm of-new" onClick={tryNew}><Icon n="plus" s={15} />Yeni form</button>
+            {d.sid && <span className={'of-state' + (dirty ? ' dirty' : '')}>{dirty ? 'Kaydedilmemiş değişiklik' : 'Kayıtlı form'}</span>}
+          </div>}
           <label className="field"><span className="field-l">Müşteri <small className="opt">(resimde görünür, isteğe bağlı)</small></span><input id="of-name" value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="ör. Kadıköy GSM – Ahmet" /></label>
           {rows.length === 0 ? <Empty icon="cart" title="Form boş">Soldan ürün arayıp ekleyin.</Empty> : (
             <>
