@@ -4697,3 +4697,10 @@ html:has(.kf) { scrollbar-gutter: stable; }
 }
 /* (4) gösterge yine üst menünün ÜSTÜNDE ama sadece açılan boşlukta: menü de aşağıda tutulduğu için hiçbir şeye binmez */
 .ptr.native, .ptr.native.spin { z-index: 30 !important; }
+/* (5) çekip yenile: gösterge üst menünün HEMEN ALTINDAKİ boşlukta, menünün arkasında (z 15) — sayfa kapanırken menünün altına girer */
+.ptr.pull5 { position: fixed; left: 50%; top: var(--ptr-top, 0px); z-index: 15 !important; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transform: translate(-50%, -50%) translateY(calc(var(--ptr, 0px) / 2)); opacity: var(--ptr-k, 0); transition: none; }
+.ptr.pull5.anim { transition: transform .42s cubic-bezier(.22,1,.36,1), opacity .3s ease; }
+.ptr.pull5 .ptr-ios svg { transform: rotate(calc(var(--ptr-k, 0) * 120deg)); will-change: transform; }
+.ptr.pull5.spin .ptr-ios svg { animation: ptrIos .8s steps(8) infinite; }
+.ptr.pull5.err { opacity: 1; }
