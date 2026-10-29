@@ -4833,3 +4833,4 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .pp-layer { position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; top: calc(env(safe-area-inset-top, 0px) + var(--top-h) + 1px);
   overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; background: var(--bg);
   padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(var(--bot-h) + env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px)); }
+.pp-layer.pp-ghost { z-index: 16; pointer-events: none; }

@@ -742,11 +742,11 @@ function setupNavAnim() {
     requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
   };
   const pageTargets = (main) => {
-    const layer = main.querySelector?.(':scope > .pp-layer'); if (layer) return [layer]; // ürün katmanı açılırken sadece o kayar
+    const layer = main.querySelector?.(':scope > .pp-layer:not(.pp-ghost)'); if (layer) return [layer]; // ürün katmanı açılırken sadece o kayar
     const out = [];
     const walk = (el, d) => {
       for (const c of el.children) {
-        if (c.classList.contains('kp-off')) continue;
+        if (c.classList.contains('kp-off') || c.classList.contains('pp-ghost')) continue;
         // sayfa kabuğuna (.page) ve sabit öğe taşıyabilen kutulara transform VERİLMEZ (sepet çubuğu vb. sonradan gelse bile yerinde kalsın) → çocuklarına inilir
         if (c.matches(FIX)) continue;
         // (getComputedStyle KULLANILMAZ: ağır sayfa açılırken stil hesabını erkenden zorlayıp iki kez yaptırıyordu)
@@ -766,11 +766,30 @@ function setupNavAnim() {
     if (tries < 3 && shell && !shell.classList.contains('tab-' + store.s.tab)) { pend = requestAnimationFrame(() => runKey(tries + 1)); return; }
     const prev = last; last = k; click = null;
     if (!mob() || !watched?.isConnected) return;
+    if (ghost) { // ürün katmanından geri: sadece kopya çekilir
+      const g = ghost; ghost = null; hint = '';
+      const a = g.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translate3d(32px,0,0)' }], { duration: 240, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
+      a.onfinish = a.oncancel = () => g.remove(); setTimeout(() => g.remove(), 600);
+      return;
+    }
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
     if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play([], 'tab', 180);
     else play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
   };
-  storeListen(() => { if (!pend && key(store.s) !== last) pend = requestAnimationFrame(() => runKey(0)); });
+  // Ürün katmanından geri (ana sayfa): React katmanı kaldırmadan HEMEN önce (store değiştiği an) kopyası alınır; kopya
+  // iPhone'daki gibi sağa kayıp solarak çekilir, alttaki ana sayfa hiç oynamaz (koca sayfayı kaydırmak / soldurmak yok).
+  let ghost = null;
+  storeListen(() => {
+    if (!ghost && store.s.tab === 'anasayfa' && mob() && watched) {
+      const L = watched.querySelector(':scope > .pp-layer:not(.pp-ghost)');
+      if (L) {
+        const g = L.cloneNode(true); g.classList.add('pp-ghost'); g.setAttribute('aria-hidden', 'true');
+        g.querySelectorAll('video').forEach((v) => { v.removeAttribute('src'); v.preload = 'none'; });
+        const top = L.scrollTop; watched.appendChild(g); g.scrollTop = top; ghost = g;
+      }
+    }
+    if (!pend && key(store.s) !== last) pend = requestAnimationFrame(() => runKey(0));
+  });
   // sayfa içi geçişler (adres değişmeden): MutationObserver, tıklanan düğme kaybolup yerine büyük bölüm gelince
   const onMut = (muts) => {
     if (pend || key(store.s) !== last) return;
