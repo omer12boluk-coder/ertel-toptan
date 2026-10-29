@@ -67,6 +67,7 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
       if (url.pathname === '/push/fav' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushFav(env, req.headers.get('X-Key') || '', b)); }
+      if (url.pathname === '/push/back-admin' && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); return json(await sendBack(env, b)); }
       if (url.pathname === '/push/back' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushBack(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/rev/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await revNew(req, env, b)); }
       if (url.pathname === '/push/member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushMember(env, b)); }
@@ -1025,6 +1026,9 @@ async function pushBack(env, key, b) {
   if (!env.TELEGRAM_TOKEN) return { ok: false, error: 'anahtar yok' };
   const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('sync:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');
   if (key !== want) return { ok: false, error: 'yetki' };
+  return sendBack(env, b);
+}
+async function sendBack(env, b) {
   const pub = (await fsDoc('settings/public')) || {};
   if (pub.feat?.notify === false) return { ok: true, off: true };
   const shop = pub.brand?.appName || 'ERTEL GSM';

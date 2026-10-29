@@ -184,6 +184,11 @@ export class FirebaseBackend {
   }
   async saveCatalog(items) {
     const cl = items.map(clean);
+    // "Gelince haber ver": panelden stoğu açılan (ya da tekrar aktif edilen) ürünün bekleyenlerine hemen bildirim
+    const avail = (p) => p && p.a !== 0 && !p.so && Number(p.s) > 0;
+    const prev = this._lastCat || (await idbGet('cat').catch(() => null))?.items;
+    if (prev?.length) { const was = new Map(prev.map((p) => [p.id, p])); const back = cl.filter((p) => avail(p) && was.has(p.id) && !avail(was.get(p.id))); if (back.length) this.backInStock(back).catch((e) => console.warn('haber ver', e)); }
+    this._lastCat = cl;
     const parts = chunkBySize(cl);
     const version = now(); this._ownV = version;
     this._saving = (this._saving || 0) + 1;
@@ -383,6 +388,28 @@ export class FirebaseBackend {
   issuePic(key) { return this.preqPic(key); }
   // ---- Mağaza özellikleri (extras.jsx / reviews.jsx)
   async getStats() { const s = await timeout(this.getSafe('stats', 'public')); return s.exists() ? s.data() : {}; }
+  // stoğa giren ürünleri bekleyen üyeler: zil kaydı (notifyHit) + listeden düş + bekçi /push/back-admin ile telefon bildirimi
+  async backInStock(prods) {
+    const byMem = new Map(); const at = now();
+    for (const p of prods.slice(0, 50)) {
+      const ref = this.d('wait', String(p.id));
+      const w = await timeout(this.F.getDoc(ref)).catch(() => null);
+      const uids = (w?.exists() && w.data().uids) || [];
+      if (!w?.exists()) continue;
+      for (const u of uids) { if (!byMem.has(u)) byMem.set(u, []); byMem.get(u).push({ id: p.id, n: String(p.n || '').slice(0, 120) }); }
+      await timeout(this.F.deleteDoc(ref)).catch(() => {});
+    }
+    if (!byMem.size) return 0;
+    for (const [uid, its] of byMem) {
+      const mref = this.d('members', uid);
+      const m = await timeout(this.F.getDoc(mref)).catch(() => null); if (!m?.exists()) continue;
+      const d = m.data(); const ids = new Set(its.map((x) => x.id));
+      await timeout(this.F.updateDoc(mref, { notify: (d.notify || []).filter((x) => !ids.has(x)), notifyHit: [...its.map((x) => ({ ...x, at })), ...(d.notifyHit || [])].slice(0, 20) })).catch(() => {});
+    }
+    const tok = await this.idToken();
+    if (tok && window.WATCH_URL) await fetch(String(window.WATCH_URL).replace(/\/$/, '') + '/push/back-admin', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ list: [...byMem].map(([uid, items]) => ({ uid, items: items.slice(0, 10) })) }) }).catch(() => {});
+    return byMem.size;
+  }
   async setWait(uid, pid, on, notify) {
     await timeout(this.F.updateDoc(this.d('members', uid), { notify }));
     const ref = this.d('wait', String(pid));
