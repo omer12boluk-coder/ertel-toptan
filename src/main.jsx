@@ -696,6 +696,50 @@ function setupPull() {
   };
   addEventListener('touchend', end, { passive: true });
   addEventListener('touchcancel', () => { if (on) { on = false; cancelAnimationFrame(raf); d = 0; set(0, 'back'); } }, { passive: true });
+
+  // ---- Yaylanma (29.10.2026): tarayıcının kendi esnemesi kapalı (üst menü oynamasın diye) → sayfanın başına / sonuna
+  // hızla gelince içerik (üst menü hariç) hıza göre biraz esneyip yumuşakça geri döner; sonda parmakla yukarı çekince de lastik gibi esner.
+  const maxY = () => Math.max(0, document.documentElement.scrollHeight - innerHeight);
+  let lastY = scrollY, lastT = performance.now(), v = 0, finger = false, bels = null, banim = [];
+  const bounce = (amt) => {
+    if (on || busy || bon || document.querySelector('.sheet-bg, .lb, .vv')) return;
+    banim.forEach((a) => a.cancel()); bels = collect();
+    banim = bels.map((e) => e.animate([
+      { transform: 'translate3d(0,0,0)', easing: 'cubic-bezier(.15,.75,.35,1)' },
+      { transform: `translate3d(0,${amt}px,0)`, offset: 0.3, easing: 'cubic-bezier(.22,1,.36,1)' },
+      { transform: 'translate3d(0,0,0)' },
+    ], { duration: 560 }));
+  };
+  addEventListener('scroll', () => {
+    const y = scrollY, t = performance.now(), dt = t - lastT;
+    if (dt > 0) v = v * 0.4 + ((y - lastY) / dt) * 0.6;
+    const m = maxY();
+    if (!finger && Math.abs(v) > 0.45) {
+      const amt = Math.min(56, Math.abs(v) * 20);
+      if (lastY > 0 && y <= 0 && v < 0) bounce(amt);
+      else if (lastY < m - 1 && y >= m - 1 && v > 0 && m > 0) bounce(-amt);
+    }
+    lastY = y; lastT = t;
+  }, { passive: true });
+  // sonda parmakla yukarı çekme
+  let bon = false, by0 = 0, bd = 0;
+  addEventListener('touchstart', (ev) => {
+    finger = true; bon = false;
+    if (ev.touches.length !== 1 || blocked(ev.target) || scrolledParent(ev.target) || maxY() <= 0 || scrollY < maxY() - 1) return;
+    bon = true; bd = 0; by0 = ev.touches[0].clientY; banim.forEach((a) => a.cancel()); bels = collect();
+  }, { passive: true });
+  addEventListener('touchmove', (ev) => {
+    if (!bon) return; const dy = by0 - ev.touches[0].clientY;
+    if (dy <= 0 || scrollY < maxY() - 1) { if (bd) { bd = 0; for (const e of bels) e.style.transform = ''; } return; }
+    bd = rubber(dy) * 0.7; for (const e of bels) { e.style.transition = 'none'; e.style.transform = `translate3d(0,${-bd}px,0)`; }
+  }, { passive: true });
+  const bEnd = () => {
+    finger = false; if (!bon) return; bon = false; if (!bd || !bels) return;
+    for (const e of bels) { e.style.transition = `transform .55s ${EASE}`; e.style.transform = ''; }
+    const els2 = bels; setTimeout(() => { for (const e of els2) e.style.transition = ''; }, 600); bd = 0;
+  };
+  addEventListener('touchend', bEnd, { passive: true });
+  addEventListener('touchcancel', bEnd, { passive: true });
 }
 
 // Telefonda (29.10.2026): basma animasyonu yerine bilgisayardaki "üstüne gelince" görünümü (marka kutusunda renk + ok,
