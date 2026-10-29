@@ -1,0 +1,21 @@
+name: Cloudflare kullanım raporu
+on: workflow_dispatch
+jobs:
+  usage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Son 24 saat (Worker istekleri, KV, R2)
+        env:
+          T: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          A: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          S=$(date -u -d '-24 hours' +%Y-%m-%dT%H:%M:%SZ); E=$(date -u +%Y-%m-%dT%H:%M:%SZ); D=$(date -u -d '-1 day' +%Y-%m-%d); D2=$(date -u +%Y-%m-%d)
+          q() { curl -s https://api.cloudflare.com/client/v4/graphql -H "Authorization: Bearer $T" -H 'Content-Type: application/json' --data "$1"; }
+          W=$(q "{\"query\":\"{viewer{accounts(filter:{accountTag:\\\"$A\\\"}){workersInvocationsAdaptive(limit:50,filter:{datetime_geq:\\\"$S\\\",datetime_leq:\\\"$E\\\"}){sum{requests subrequests errors} dimensions{scriptName}}}}}\"}")
+          echo "::notice title=Worker::$(echo "$W" | jq -c '[.data.viewer.accounts[0].workersInvocationsAdaptive[]? | {s:.dimensions.scriptName, r:.sum.requests, sub:.sum.subrequests, e:.sum.errors}] , .errors')"
+          K=$(q "{\"query\":\"{viewer{accounts(filter:{accountTag:\\\"$A\\\"}){kvOperationsAdaptiveGroups(limit:50,filter:{datetime_geq:\\\"$S\\\",datetime_leq:\\\"$E\\\"}){sum{requests} dimensions{actionType}}}}}\"}")
+          echo "::notice title=KV::$(echo "$K" | jq -c '[.data.viewer.accounts[0].kvOperationsAdaptiveGroups[]? | {a:.dimensions.actionType, n:.sum.requests}], .errors')"
+          R=$(q "{\"query\":\"{viewer{accounts(filter:{accountTag:\\\"$A\\\"}){r2OperationsAdaptiveGroups(limit:50,filter:{datetime_geq:\\\"$S\\\",datetime_leq:\\\"$E\\\"}){sum{requests} dimensions{actionType}}}}}\"}")
+          echo "::notice title=R2::$(echo "$R" | jq -c '[.data.viewer.accounts[0].r2OperationsAdaptiveGroups[]? | {a:.dimensions.actionType, n:.sum.requests}], .errors')"
+          H=$(q "{\"query\":\"{viewer{accounts(filter:{accountTag:\\\"$A\\\"}){workersInvocationsAdaptive(limit:30,orderBy:[datetimeHour_ASC],filter:{datetime_geq:\\\"$S\\\",datetime_leq:\\\"$E\\\"}){sum{requests} dimensions{datetimeHour}}}}}\"}")
+          echo "::notice title=Saatlik::$(echo "$H" | jq -c '[.data.viewer.accounts[0].workersInvocationsAdaptive[]? | [.dimensions.datetimeHour[11:13], .sum.requests]], .errors')"
