@@ -339,6 +339,7 @@ Claude'un yapacağı (sırayla):
 - `.plist.pgrid { overflow: visible }` (üstüne gelince kalkan en üst sıra kartın üst çizgisi kesiliyordu). Kalıp bulucuda `scrollbar-gutter: stable` (sonuç gelince kaydırma çubuğu çıkıp arama kutusu sola kayıyordu). Bildirim paneli bilgisayarda en çok 560px boy.
 - Alt bilgide "Yardım" sütunu: Ürün talebi (`/magaza/talep`), Sorun bildir (`/magaza/sorun`); küçük alt bilgide de.
 - Telefonda ana sayfa kutularında basılı bekletme yok (parmak kalkınca .14 sn'de döner).
+- **Sipariş formu (/admin/form, 29.10.2026):** açık form cihazda 12 saat (`order-draft.at`, `TTL`; tarihsiz eski taslak temizlenir). Arama sırası: önce adında/stok kodunda geçenler (tam ifade +40, baştan +8, kelime +6, parça +3), sonra sadece etiketten gelenler; grup içinde kullanım (`ls of-use` forma ekleme ×2 + panelde yüklü mağaza/bayi siparişlerinde geçme). **Kaydet / Güncelle** (başlıkta + Müşteriye gönder'de) → Firestore `oforms/{id}` {no, name, items, at, total} (kural: yönetici; `watchForms` en yeni 60). Altta "Kaydedilen formlar": aç / sil; açık form doluysa "Önce kaydet, sonra aç / Kaydetmeden aç / Vazgeç". Telefonda arama kutusu odaktayken sonuçlarda "Ekle" tek dokunuşta çalışır (ui.jsx dokunuş süzgecine `.oform-res` istisnası).
 - **Bekleyen kararlar:** (1) ödeme adımında sipariş özeti 2 üründe bile kayıyor → çözüm önerildi, onay bekleniyor; (2) ana sayfaya "imza" etkileşim fikirleri tartışılıyor.
 
 ### Panel hafifletme (27.10.2026, Firestore okuma kotası)

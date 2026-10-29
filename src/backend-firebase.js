@@ -424,6 +424,11 @@ export class FirebaseBackend {
   watchReviews(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('reviews'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 2000 : 400)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
   async updateReview(id, patch) { await timeout(this.F.updateDoc(this.d('reviews', id), patch)); }
   async deleteReview(id) { await timeout(this.F.deleteDoc(this.d('reviews', id))); }
+  // Yönetim > Sipariş formu: kaydedilen formlar (oforms/{id}, sadece yönetici; en yeni 60)
+  watchForms(cb) { return this.F.onSnapshot(this.F.query(this.c('oforms'), this.F.orderBy('at', 'desc'), this.F.limit(60)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => { console.warn(e); cb([]); }); }
+  newFormId() { return this.F.doc(this.c('oforms')).id; }
+  async saveForm(id, data) { await timeout(this.F.setDoc(this.d('oforms', id), data)); }
+  async deleteForm(id) { await timeout(this.F.deleteDoc(this.d('oforms', id))); }
   async syncRevSum(pid) {
     const l = await this.reviewsOf(pid); const n = l.length; const avg = n ? Math.round((l.reduce((a, r) => a + (r.stars || 0), 0) / n) * 10) / 10 : 0;
     await timeout(this.F.setDoc(this.d('revsum', 'main'), { s: { [String(pid)]: n ? [avg, n] : this.F.deleteField() } }, { merge: true }));

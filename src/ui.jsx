@@ -499,7 +499,7 @@ if (typeof window !== 'undefined' && 'ontouchstart' in window) {
   let sw = 0;
   document.addEventListener('touchstart', (e) => {
     const a = document.activeElement;
-    if (a && a.matches?.('input[type=search], .search input') && !e.target.closest?.('input, textarea, select, .search, .hsearch, .kf-search')) { a.blur(); sw = Date.now(); }
+    if (a && a.matches?.('input[type=search], .search input') && !e.target.closest?.('input, textarea, select, .search, .hsearch, .kf-search, .oform-res')) { a.blur(); sw = Date.now(); }
   }, { capture: true, passive: true });
   document.addEventListener('touchmove', () => { sw = 0; }, { capture: true, passive: true });
   document.addEventListener('click', (e) => { if (sw && Date.now() - sw < 700) { sw = 0; e.preventDefault(); e.stopPropagation(); } }, true);

@@ -91,6 +91,8 @@ service cloud.firestore {
 
     // ---- Mağaza özellikleri (29.10.2026, extras.jsx / reviews.jsx)
     // Popüler ürün verisi (tools/stats.mjs yazar) ve yorum özeti: herkes okur, yönetici yazar
+    // Sipariş formu: kaydedilen formlar (sadece yönetici)
+    match /oforms/{id} { allow read, write: if isAdmin(); }
     match /stats/{d} { allow read: if true; allow write: if isAdmin(); }
     match /revsum/{d} { allow read: if true; allow write: if isAdmin(); }
     // Gelince haber ver: ürün başına bekleyen üyeler (eşitleme okur, bildirim gönderip siler). Üye sadece KENDİ kimliğini ekler / çıkarır.

@@ -242,6 +242,11 @@ export class DemoBackend {
   watchReviews(cb) { return this.sub(() => cb(Object.values(this.rv()).sort((a, b) => b.createdAt - a.createdAt).map((r) => ({ ...r })))); }
   async updateReview(id, patch) { Object.assign(this.rv()[id], patch); this.persist(); }
   async deleteReview(id) { delete this.rv()[id]; this.persist(); }
+  of_() { return (this.db.oforms = this.db.oforms || {}); }
+  watchForms(cb) { return this.sub(() => cb(Object.entries(this.of_()).map(([id, x]) => ({ id, ...x })).sort((a, b) => b.at - a.at))); }
+  newFormId() { return 'f' + rid() + rid(); }
+  async saveForm(id, data) { this.of_()[id] = data; this.persist(); }
+  async deleteForm(id) { delete this.of_()[id]; this.persist(); }
   async syncRevSum() {}
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
   async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => { const kc = stencilKeys({ ...p, t }); return kc ? { ...p, kc } : p; }); }

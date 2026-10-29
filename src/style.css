@@ -4411,3 +4411,14 @@ button.wait-row { cursor: pointer; }
 html:has(.kf) { scrollbar-gutter: stable; }
 /* bildirim paneli bilgisayarda en fazla ~560px boy */
 @media (min-width: 701px) { .nc-panel { max-height: min(560px, calc(100dvh - var(--top-h, 64px) - 24px)); } }
+/* Sipariş formu: kaydedilen formlar (29.10.2026) */
+.oform-saved { margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
+.oform-saved h2 { margin: 0; font-size: 18px; display: flex; align-items: baseline; gap: 8px; }
+.ofs-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.ofs-list li { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); transition: border-color .15s, box-shadow .15s; }
+.ofs-list li.on { border-color: color-mix(in oklab, var(--accent) 50%, var(--line)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 12%, transparent); }
+.ofs-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 2px; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.ofs-th { display: flex; flex: none; } .ofs-th .thumb { width: 36px; height: 36px; border-radius: 9px; border: 2px solid var(--surface); } .ofs-th .thumb + .thumb { margin-left: -12px; }
+.ofs-t { min-width: 0; display: flex; flex-direction: column; gap: 2px; } .ofs-t b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ofs-t small { font-size: 12px; }
+.ofs-open { flex: none; font-size: 12px; font-weight: 700; color: var(--accent); padding: 0 6px; }
+@media (max-width: 700px) { .ofs-list { grid-template-columns: 1fr; } .oform-saved h2 { font-size: 16px; } }
