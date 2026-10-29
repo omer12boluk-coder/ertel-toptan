@@ -4781,3 +4781,33 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .main > .kp > * { animation: rise .32s var(--ease) backwards; }
 /* telefonda sayfa açılışlarını setupNavAnim yapar (yön bilgisiyle) → eski "aşağıdan yükselme" ile çakışmasın */
 @media (hover: none) and (max-width: 899px) { .main > *, .main > .kp > * { animation: none; } }
+
+/* ===== Çekip yenile (10, 30.10.2026): gösterge üst menünün içinde, alt kenarının altındaki kırpılan şeritte =====
+   Menüyle birlikte telefonun kendi esnemesiyle hareket eder (ekran hızında); sadece --k JS'ten gelir, 70 ms geçiş araları doldurur. */
+.ptr10 { position: absolute; left: 0; right: 0; top: 100%; height: 84px; overflow: hidden; pointer-events: none; visibility: hidden; }
+.ptr10.loose { position: fixed; top: env(safe-area-inset-top, 0px); z-index: 19; }
+.ptr10.show { visibility: visible; }
+.ptr10-i { position: absolute; left: 50%; top: 0; padding: 6px; will-change: transform, opacity; opacity: 0;
+  transform: translate3d(-50%, calc(-100% + var(--k, 0) * 56px), 0) scale(calc(.72 + var(--k, 0) * .28));
+  transition: transform 70ms linear, opacity 70ms linear; }
+.ptr10.show .ptr10-i { opacity: min(1, calc(var(--k, 0) * 1.8)); }
+.ptr10.spin .ptr10-i, .ptr10.ok .ptr10-i { opacity: 1; transform: translate3d(-50%, 14px, 0); transition: transform .22s cubic-bezier(.2,.7,.2,1), opacity .12s; }
+.ptr10.hide .ptr10-i { opacity: 0; transform: translate3d(-50%, 14px, 0) scale(.5); transition: transform .22s cubic-bezier(.2,.7,.2,1), opacity .2s cubic-bezier(.2,.7,.2,1); }
+.ptr10-c { position: relative; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface); color: color-mix(in oklab, var(--fg) 50%, transparent);
+  box-shadow: 0 2px 8px -2px rgb(0 0 0 / .22), 0 0 0 1px var(--line); }
+.ptr10-r { position: absolute; inset: 0; display: grid; place-items: center; }
+.ptr10-ok { position: absolute; left: 7px; top: 7px; display: block; }
+.ptr10-r { transform: rotate(calc(var(--k, 0) * 300deg)); will-change: transform; transition: transform 70ms linear, opacity .12s; }
+.ptr10-r svg { display: block; }
+.ptr10.ready .ptr10-c, .ptr10.spin .ptr10-c { color: var(--accent); }
+/* dönüş ekran kartında (transform animasyonu); yavaşça (0,9 sn/tur) → her karede küçük açı, kesik görünmez */
+.ptr10.spin .ptr10-r { animation: ptr10spin .9s linear infinite; transition: none; }
+@keyframes ptr10spin { from { transform: rotate(300deg); } to { transform: rotate(660deg); } }
+.ptr10-ok { opacity: 0; transform: scale(.4); color: #1f9d55; transition: opacity .12s, transform .24s cubic-bezier(.3,1.6,.4,1); }
+.ptr10.ok .ptr10-r, .ptr10.hide .ptr10-r { opacity: 0; animation: none; }
+.ptr10.ok .ptr10-ok, .ptr10.hide.was-ok .ptr10-ok { opacity: 1; transform: none; }
+/* telefonda eski satır satır "yükselme" animasyonları kapalı: sayfa geçişini tek parça setupNavAnim yapar (aksi hâlde ürünler yerine oturmuyor gibi) */
+@media (hover: none) and (max-width: 899px) {
+  .plist > li, .olist > li, .co-sec, .o-card, .set-card, .done-card, .cart-sum, .gline { animation: none; }
+}

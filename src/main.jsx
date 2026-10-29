@@ -450,6 +450,8 @@ function ShellFull() {
   const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
+  // telefonda: ana sayfa ve Tüm ürünler bir kez açılınca arkada gizli açık kalır → geri dönünce anında, filtreler ve kaydırma yerinde
+  const kept = useRef(new Set()); if (pub && (tab === 'anasayfa' || tab === 'katalog')) kept.current.add(tab);
   const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
@@ -510,9 +512,9 @@ function ShellFull() {
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
         {tab === 'anasayfa' && admin && <AdminHome />}
-        {pub && (tab === 'anasayfa' || (tab === 'urun' && urunFrom === 'anasayfa')) && <section className={'kp' + (tab === 'anasayfa' ? '' : ' kp-off')}><ShopHome /></section>}
+        {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' ? '' : ' kp-off')}><ShopHome /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
-        {(tab === 'katalog' || (tab === 'urun' && urunFrom === 'katalog')) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><Catalog admin={admin} /></section>}
+        {(tab === 'katalog' || (pub && kept.current.has('katalog'))) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><Catalog admin={admin} /></section>}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
         {tab === 'profil' && !pub && <Profile />}
@@ -695,7 +697,9 @@ function setupNavAnim() {
     const walk = (el, d) => {
       for (const c of el.children) {
         if (c.classList.contains('kp-off')) continue;
-        if (getComputedStyle(c).display === 'contents' || (d < 3 && c.querySelector(FIX))) walk(c, d + 1); else if (!c.matches(FIX)) out.push(c);
+        // sayfa kabuğuna (.page) ve sabit öğe taşıyabilen kutulara transform VERİLMEZ (sepet çubuğu vb. sonradan gelse bile yerinde kalsın) → çocuklarına inilir
+        if (c.matches(FIX)) continue;
+        if (d < 6 && (getComputedStyle(c).display === 'contents' || c.classList.contains('page') || c.querySelector(FIX))) walk(c, d + 1); else out.push(c);
       }
     };
     walk(main, 0); return out;
@@ -717,7 +721,7 @@ function setupNavAnim() {
     const top = added.filter((n) => !added.some((o) => o !== n && o.contains(n)));
     if (!top.length) return;
     click = null;
-    const els = []; for (const n of top) { if (n.querySelector(FIX)) els.push(...[...n.children].filter((x) => !x.matches(FIX) && !x.querySelector(FIX))); else els.push(n); }
+    const els = []; for (const n of top) { if (n.classList.contains('page') || n.querySelector(FIX)) els.push(...pageTargets({ children: [n] })); else els.push(n); }
     play(els, slide(c.back), 300);
   };
   const attach = () => {
@@ -734,43 +738,37 @@ function setupPull() {
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
   if (!IOS || !STANDALONE) return; // Safari'nin kendi çekip yenilesi var; bu sadece ana ekran uygulamasında
-  // 30.10.2026 (9): telefonun kendi esnemesi serbest. Küçük gösterge üst menünün ALT kenarının arkasından çıkar
-  // (menüyle birlikte esner, menünün üstüne/çentiğe binmez), çekiş arttıkça biraz aşağı iner ve ok döner.
-  // Bırakınca: kısa dönüş → yeşil ✓ (dönmez) → menünün arkasına kayıp kaybolur. Sayfa YENİLENMEZ (veriler zaten canlı);
-  // arka planda sürüm + kur yoklanır, sadece yeni sürüm yayınlanmışsa location.reload().
-  const TH = 72, SPIN_MIN = 280, OK_MS = 340;
-  let box = null, finger = false, armed = false, ready = false, phase = '', wasOk = false, raf = 0;
+  // 30.10.2026 (10): gösterge üst menünün İÇİNE (alt kenarının hemen altına, taşanı kırpılan bir kutuya) konur →
+  // menüyle birlikte telefonun kendi esnemesiyle (120/144 Hz) hareket eder; JS her karede konum hesaplamaz.
+  // JS sadece çekiş oranını (--k) yazar; kısa bir geçiş (70 ms) aradaki kareleri ekran kartında doldurur → takılma yok.
+  // Bırakınca: kısa dönüş → yeşil ✓ → yerinde küçülüp solar. Sayfa YENİLENMEZ (veriler canlı); sadece yeni sürümde reload.
+  const TH = 72, SPIN_MIN = 300, OK_MS = 340;
+  let box = null, finger = false, armed = false, ready = false, phase = '', wasOk = false, raf = 0, lastCn = '', lastK = -1;
   const ui = () => {
-    if (box) return box;
-    box = document.createElement('div'); box.className = 'ptr9'; box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<span class="ptr9-m"><span class="ptr9-c"><i class="ptr9-r"><svg class="ptr9-a" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i>'
-      + '<svg class="ptr9-ok" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></span>';
-    document.body.appendChild(box); return box;
-  };
-  const headBottom = () => {
-    const h = document.querySelector('.topbar');
-    if (h) { const r = h.getBoundingClientRect(); if (r.height) return r.bottom; }
-    let pr = document.getElementById('ptr9-sat'); // menü yoksa: çentik/durum çubuğunun hemen altı
-    if (!pr) { pr = document.createElement('div'); pr.id = 'ptr9-sat'; pr.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px);width:0;visibility:hidden;pointer-events:none'; document.body.appendChild(pr); }
-    return pr.offsetHeight + 8;
+    const host = document.querySelector('.topbar') || document.body;
+    if (box && box.parentNode === host) return box;
+    if (!box) {
+      box = document.createElement('div'); box.setAttribute('aria-hidden', 'true');
+      box.innerHTML = '<span class="ptr10-i"><span class="ptr10-c"><i class="ptr10-r"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i>'
+        + '<svg class="ptr10-ok" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></span>';
+    }
+    box.className = 'ptr10' + (host === document.body ? ' loose' : ''); lastCn = '';
+    host.appendChild(box); return box;
   };
   const paint = () => {
     raf = 0;
     const px = (armed && !phase) ? Math.max(0, -scrollY) : 0;
-    if (!px && !phase) { if (box) box.className = 'ptr9'; return; }
+    if (!px && !phase) { if (box && lastCn !== 'ptr10') { box.className = lastCn = 'ptr10' + (box.parentNode === document.body ? ' loose' : ''); } return; }
     const b = ui(); const k = phase ? 1 : Math.min(1, px / TH);
     if (finger && armed && !phase) ready = px >= TH;
-    const top = Math.round(headBottom()) + 'px';
-    if (b._t !== top && phase !== 'hide') { b._t = top; b.style.setProperty('--top', top); }
-    if (b._k !== k) { b._k = k; b.style.setProperty('--k', k); }
-    const cn = 'ptr9 show' + (phase ? ' busy' : '') + (ready && !phase ? ' ready' : '') + (phase ? ' ' + phase : '') + (wasOk ? ' was-ok' : '');
-    if (b.className !== cn) b.className = cn;
-    if (phase === 'spin') raf = requestAnimationFrame(paint); // menü yerine dönerken izlemeye devam (✓ ve kapanışta konum sabit)
+    const kr = Math.round(k * 100) / 100; if (kr !== lastK) { lastK = kr; b.style.setProperty('--k', kr); }
+    const cn = 'ptr10 show' + (b.parentNode === document.body ? ' loose' : '') + (ready && !phase ? ' ready' : '') + (phase ? ' ' + phase : '') + (wasOk ? ' was-ok' : '');
+    if (cn !== lastCn) { b.className = lastCn = cn; }
   };
   const req = () => { if (!raf) raf = requestAnimationFrame(paint); };
   const finish = (ok) => {
     phase = ok ? 'ok' : 'hide'; wasOk = ok; req();
-    setTimeout(() => { phase = 'hide'; req(); setTimeout(() => { phase = ''; wasOk = false; armed = false; cancelAnimationFrame(raf); raf = 0; req(); }, 230); }, ok ? OK_MS : 0);
+    setTimeout(() => { phase = 'hide'; req(); setTimeout(() => { phase = ''; wasOk = false; armed = false; lastK = -1; req(); }, 240); }, ok ? OK_MS : 0);
   };
   addEventListener('scroll', req, { passive: true });
   addEventListener('touchmove', req, { passive: true });

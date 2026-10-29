@@ -138,7 +138,17 @@ export function startHistory(defTab) {
     requestAnimationFrame(() => { window.scrollTo(0, st.y || 0); requestAnimationFrame(() => { if (Math.abs(scrollY - (st.y || 0)) > 2) window.scrollTo(0, st.y || 0); }); });
   });
 }
-export function go(tab) { if (tab !== store.s.tab || store.s.openOrder || store.s.openReq || store.s.acct) pushTab(tab); store.set({ urunFrom: null, tab, acct: null, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0); }
+// arkada açık kalan sekmeler (mağaza: ana sayfa, Tüm ürünler) dönünce kaldığı yerden devam eder
+const tabY = {};
+const KEEP = ['anasayfa', 'katalog'];
+export function go(tab) {
+  const from = store.s.tab;
+  if (KEEP.includes(from) && !store.s.acct && !store.s.openOrder) tabY[from] = scrollY;
+  if (tab !== from || store.s.openOrder || store.s.openReq || store.s.acct) pushTab(tab);
+  const y = tab !== from && store.s.user?.role === 'public' && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
+  store.set({ urunFrom: null, tab, acct: null, openReq: null, openOrder: null, orderJust: false }); window.scrollTo(0, 0);
+  if (y) requestAnimationFrame(() => window.scrollTo(0, y)); // gizli sayfa görünür olduktan sonra (React çizdikten sonraki ilk kare)
+}
 export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: just || false }); window.scrollTo(0, 0); }
 export const home = () => go(store.s.user?.role === 'admin' ? 'anasayfa' : store.s.user?.role === 'public' ? (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa') : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }
