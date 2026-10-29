@@ -125,9 +125,30 @@ function Choice({ on, onClick, title, sub, icon }) {
 }
 
 // =============================================================================================
+// Ödeme adımı (bilgisayar, ≥960px): sağdaki sipariş özeti ekrana SABİT — sayfa kayınca hiç oynamaz (Hesabım menüsündeki gibi);
+// sadece içindeki ürün listesi kendi içinde kayar. Yer / genişlik sağ sütundan ölçülür; ekran çok kısaysa normal akışta kalır.
+function useFixedSum(sideRef, sumRef) {
+  useEffect(() => {
+    const side = sideRef.current, sum = sumRef.current; if (!side || !sum) return;
+    const reset = () => { sum.classList.remove('co-fixed'); sum.style.cssText = ''; };
+    const place = () => {
+      if (!matchMedia('(min-width: 960px)').matches) return reset();
+      const r = side.getBoundingClientRect(); const top = Math.round(r.top + scrollY); const avail = innerHeight - top - 16;
+      if (avail < 300) return reset();
+      sum.classList.add('co-fixed');
+      Object.assign(sum.style, { top: top + 'px', left: Math.round(r.left) + 'px', width: Math.round(r.width) + 'px', maxHeight: avail + 'px' });
+    };
+    place(); const t = [setTimeout(place, 60), setTimeout(place, 400)];
+    const ro = new ResizeObserver(place); ro.observe(document.body);
+    addEventListener('resize', place);
+    return () => { t.forEach(clearTimeout); ro.disconnect(); removeEventListener('resize', place); reset(); };
+  }, []);
+}
 export function Checkout({ items, onBack, single }) { // single: "Hemen satın al" — sadece o ürün; sepete dokunulmaz
   const { settings: S, member, api: A } = useStore();
   const O = S.orders || {};
+  const sideRef = useRef(null), sumRef = useRef(null);
+  useFixedSum(sideRef, sumRef);
   const rate = useRate();
   const methods = [O.cargo !== false && 'cargo', O.pickup !== false && 'pickup'].filter(Boolean);
   const [f, setF] = useState(() => initForm(member, methods, ls.get('guest-checkout', null)));
@@ -372,9 +393,9 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
           )}
         </div>
 
-        <aside className="co-side">
-          <div className="cart-sum">
-            <h2 className="co-side-t">Sipariş özeti</h2>
+        <aside className="co-side" ref={sideRef}>
+          <div className="cart-sum" ref={sumRef}>
+            <h2 className="co-side-t">Sipariş özeti <small className="co-side-n">{items.length} ürün · {items.reduce((t, it) => t + (Number(it.qty) || 0), 0)} adet</small></h2>
             <ul className="co-items">
               {items.map((it) => (
                 <li key={it.id}><Thumb p={it} size="sm" /><span className="co-it-n">{it.n}<small className="num">{it.qty} × {fmt(it.offer, it.cur)}</small></span><b className="num">{fmt(it.offer * it.qty, it.cur)}</b></li>
@@ -382,7 +403,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
             </ul>
             <div className="sum-rows">
               <div><span>Ürünler</span><span className="num">{fmtTotals(tot)}</span></div>
-              <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span>{f.method === 'pickup' ? 'Dükkandan' : 'Onayda bildirilir'}</span></div>
+              <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span>{f.method === 'pickup' ? 'Dükkandan' : (CARRIERS[f.carrier || 'dhl']?.name || 'Onayda bildirilir')}</span></div>
               <div className="sum-total"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
               {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
             </div>

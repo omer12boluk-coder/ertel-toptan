@@ -4436,3 +4436,8 @@ html:has(.kf) { scrollbar-gutter: stable; }
   .plist.pgrid .prow-side > .notify-btn { width: 100%; height: 34px; margin-left: 0; justify-content: center; font-size: 13px; border-radius: 10px; }
   .pgrid .prow-side .notify-btn.on { width: 100%; padding: 0; }
 }
+/* ödeme adımı: sipariş özeti ekrana sabit (useFixedSum, bilgisayar); sadece ürün listesi kayar */
+.co-side .cart-sum.co-fixed { position: fixed; z-index: 5; display: flex; flex-direction: column; overflow: hidden; }
+.co-side .cart-sum.co-fixed .co-items { flex: 1 1 auto; min-height: 60px; max-height: none; }
+.co-side:has(.co-fixed) { position: static; max-height: none; }
+.co-side-n { display: block; margin-top: 4px; font: 500 13px/1.2 var(--f-body); color: var(--muted); letter-spacing: 0; }
