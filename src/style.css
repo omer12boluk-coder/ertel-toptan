@@ -4708,3 +4708,17 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .ptr.pull5.anim { transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .22s ease; }
 .ptr.pull5 .ptr-r { transform: rotate(calc(var(--ptr-k, 0) * 270deg)); }
 .ptr.pull5.spin .ptr-r { animation: ptr-spin .7s linear infinite; }
+/* ===== Çekip yenile (7, 30.10.2026): sayfa sabit; yuvarlak gösterge üst menünün arkasından çıkıp içeriğin üstüne iner ===== */
+.ptr7 { position: fixed; left: 50%; top: var(--top, 0px); z-index: 15; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  transform: translate(-50%, calc(var(--y, 0px) - 46px)); opacity: min(1, calc(var(--k, 0) * 2.2)); will-change: transform; }
+.ptr7.back, .ptr7.gone { transition: transform .26s cubic-bezier(.3, .7, .3, 1), opacity .2s ease; }
+.ptr7.spin { transition: transform .2s cubic-bezier(.3, .7, .3, 1); }
+.ptr7-c { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--accent);
+  box-shadow: 0 4px 14px -4px rgb(10 20 40 / .32), 0 0 0 .5px rgb(10 20 40 / .08); transition: transform .2s cubic-bezier(.3, 1.4, .4, 1), opacity .2s; }
+.ptr7-c svg { transform: rotate(calc(var(--k, 0) * 300deg)); }
+.ptr7.ready .ptr7-c { transform: scale(1.08); }
+.ptr7.spin .ptr7-c svg { animation: ptr7spin .6s linear infinite; }
+@keyframes ptr7spin { from { transform: rotate(300deg); } to { transform: rotate(660deg); } }
+.ptr7.done .ptr7-c { transform: scale(0); opacity: 0; }
+.ptr7 .ptr-t { font-size: 12.5px; font-weight: 700; color: #fff; background: #c0392b; padding: 4px 10px; border-radius: 9px; white-space: nowrap; }
+.ptr7 .ptr-t:empty { display: none; }

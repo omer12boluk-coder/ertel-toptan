@@ -661,78 +661,63 @@ export function haptic() {
 function setupPull() {
   if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  // Safari'nin kendi çekip yenilesi var; bizimki sadece ana ekran uygulamasında (orada tarayıcı yenilemesi yok)
   const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-  if (!IOS || !STANDALONE) return;
-  // 30.10.2026 (5): tarayıcının esnemesiyle "boşluğu tutmaya" çalışmak takılıyordu → bilerek yapılan çekişi (sayfa zaten en üstte +
-  // parmak aşağı) TAMAMEN biz yönetiriz (o hareketin tarayıcı esnemesi iptal; başka her yerde telefonun kendi esnemesi durur).
-  // Üst menü yerinde kalır; altındaki sayfa lastik gibi iner, açılan boşlukta (menünün hemen altı) gösterge belirir.
-  // Bırakınca eşik geçildiyse boşluk HOLD px açık kalır, gösterge orada döner; iş bitince sayfa yumuşakça yukarı kapanır,
-  // gösterge menünün arkasına girer. Yeni sürüm yoksa sayfa YENİDEN YÜKLENMEZ (veriler canlı) → flaş yok.
-  const TH = 74, HOLD = 56, RUB = 300, EASE = 'cubic-bezier(.22,1,.36,1)';
-  const rubber = (dy) => (1 - 1 / (dy * 0.55 / RUB + 1)) * RUB; // eşik ≈ 160 px parmak (kazara tetiklenmesin)
-  const FIX = '.cart-bar, .cs-fixed, .co-fixed, .side-fixed, .acct-side, .ptr, .botnav';
-  let box = null, on = false, started = false, y0 = 0, x0 = 0, d = 0, ready = false, busy = false, raf = 0, els = null;
+  if (!IOS || !STANDALONE) return; // Safari'nin kendi çekip yenilesi var; bu sadece ana ekran uygulamasında
+  // 30.10.2026 (7) — modern uygulamalardaki (Chrome / Android, Instagram) gibi: SAYFA HİÇ OYNAMAZ. En üstteyken aşağı çekince
+  // yuvarlak gösterge üst menünün arkasından çıkıp parmakla birlikte içeriğin üstüne iner, ok çekişe göre döner.
+  // Eşiği geçip bırakınca kısa bir dönüş (~0,3 sn) ve küçülerek kaybolur; eşikten önce bırakınca yukarı geri kayar.
+  // Yeni sürüm yoksa sayfa yeniden yüklenmez (veriler canlı) → flaş yok.
+  const TH = 92, MAX = 150, RUB = 260;
+  const rubber = (dy) => Math.min(MAX, (1 - 1 / (dy * 0.62 / RUB + 1)) * RUB);
+  let box = null, on = false, started = false, y0 = 0, x0 = 0, d = 0, ready = false, busy = false, raf = 0;
   const ui = () => {
     if (box) return box;
-    box = document.createElement('div'); box.className = 'ptr pull5'; box.setAttribute('aria-hidden', 'true');
-    // mavi yuvarlak ok (kullanıcı bunu beğendi); dönüşü ekran kartında, akıcı
-    box.innerHTML = '<span class="ptr-c"><i class="ptr-r"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i></span><span class="ptr-t"></span>';
+    box = document.createElement('div'); box.className = 'ptr7'; box.setAttribute('aria-hidden', 'true');
+    box.innerHTML = '<span class="ptr7-c"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></span><span class="ptr-t"></span>';
     document.body.appendChild(box); return box;
   };
-  const collect = () => {
-    const out = []; const walk = (e, deep) => {
-      if (e.matches(FIX) || getComputedStyle(e).position === 'fixed') return;
-      if (deep < 4 && e.querySelector(FIX)) { for (const c of e.children) walk(c, deep + 1); return; }
-      out.push(e);
-    };
-    for (const e of document.querySelectorAll('.shell > .main, .shell > .sfoot')) walk(e, 0);
-    return out;
-  };
   const headB = () => { const r = document.querySelector('.topbar')?.getBoundingClientRect(); return r && r.bottom > 0 ? r.bottom : 0; };
-  const draw = (px, anim) => {
-    if (!els) els = collect();
-    for (const e of els) { e.style.transition = anim ? `transform .3s ${EASE}` : 'none'; e.style.willChange = px ? 'transform' : ''; e.style.transform = px ? `translate3d(0,${px}px,0)` : ''; }
+  const draw = (px, cls = '') => {
     const b = ui(); const k = Math.min(1, px / TH);
-    b.style.setProperty('--ptr-top', headB() + 'px'); b.style.setProperty('--ptr', px + 'px'); b.style.setProperty('--ptr-k', busy ? 1 : k);
-    b.className = 'ptr pull5' + (busy ? ' spin' : ready ? ' ready' : '') + (anim ? ' anim' : '');
-    if (!px && anim) { const E = els; els = null; setTimeout(() => E.forEach((e) => { if (!on && !busy) e.style.transition = ''; }), 460); }
+    b.style.setProperty('--top', headB() + 'px'); b.style.setProperty('--y', px + 'px'); b.style.setProperty('--k', k);
+    b.className = 'ptr7' + (ready ? ' ready' : '') + (cls ? ' ' + cls : '');
   };
   const blocked = (t) => !(t instanceof Element) || t.closest('.sheet-bg, .sheet, .lb, .vv, .dz, .ctx-sheet-bg, .ctx, .botnav, input, textarea, select, .hsearch-res, .kf-list, .nc-panel') || document.querySelector('.sheet-bg, .lb, .vv');
   const scrolledParent = (t) => { for (let e = t; e && e !== document.body; e = e.parentElement) { if (e.scrollTop > 0 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)) return true; } return false; };
   addEventListener('touchstart', (ev) => {
     on = false; started = false;
     if (busy || ev.touches.length !== 1 || scrollY > 0 || blocked(ev.target) || scrolledParent(ev.target)) return;
-    on = true; d = 0; ready = false; y0 = ev.touches[0].clientY; x0 = ev.touches[0].clientX; els = null;
+    on = true; d = 0; ready = false; y0 = ev.touches[0].clientY; x0 = ev.touches[0].clientX;
   }, { passive: true });
   addEventListener('touchmove', (ev) => {
     if (!on) return; const p = ev.touches[0]; const dy = p.clientY - y0, dx = p.clientX - x0;
     if (!started) {
-      if (Math.abs(dx) > Math.abs(dy) || dy < 0) { on = false; return; } // yana ya da yukarı: bizim işimiz değil
-      ev.preventDefault(); // iPhone kaydırmaya ilk harekette karar verir → aşağı çekişte tarayıcı esnemesi baştan iptal
-      if (dy < 6) return; started = true;
+      if (Math.abs(dx) > Math.abs(dy) || dy < 0) { on = false; return; } // yana ya da yukarı: normal kaydırma
+      ev.preventDefault(); if (dy < 8) return; started = true;
     }
-    ev.preventDefault(); // bu çekişte tarayıcının esnemesi yok, sadece bizimki
-    const nd = dy > 0 ? rubber(dy) : 0;
-    const r = nd >= TH; if (r && !ready) haptic(); ready = r; d = nd;
-    cancelAnimationFrame(raf); raf = requestAnimationFrame(() => draw(d, false));
+    ev.preventDefault(); // bu çekişte sayfa/esneme oynamaz, sadece gösterge iner
+    d = dy > 0 ? rubber(dy) : 0;
+    const r = d >= TH; if (r && !ready) haptic(); ready = r;
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(() => draw(d, 'drag'));
   }, { passive: false });
-  const say = (t) => { const b = ui(); b.querySelector('.ptr-t').textContent = t; b.classList.add('err'); setTimeout(() => { b.querySelector('.ptr-t').textContent = ''; b.classList.remove('err'); }, 2200); };
   const end = async () => {
     if (!on) return; on = false; cancelAnimationFrame(raf);
     if (!started) return;
-    if (!ready) { d = 0; draw(0, true); return; }
-    ready = false; busy = true; haptic(); draw(HOLD, true);
+    if (!ready) { draw(0, 'back'); return; }
+    ready = false; busy = true; draw(Math.min(d, TH * 0.78), 'spin');
     const t0 = Date.now(); let err = '';
     try {
       if (navigator.onLine === false) throw new Error('İnternet bağlantısı yok');
-      const c = new AbortController(); const tm = setTimeout(() => c.abort(), 7000);
+      const c = new AbortController(); const tm = setTimeout(() => c.abort(), 6000);
       const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store', signal: c.signal }); clearTimeout(tm);
       if (!r.ok) throw new Error('Bağlantı kurulamadı');
       const j = await r.json().catch(() => ({}));
-      if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; } // sadece yeni sürümde gerçek yenileme
+      if (j.v && window.__BUILD && j.v !== window.__BUILD) { location.reload(); return; }
     } catch (e) { err = e.name === 'AbortError' || !e.message ? 'Bağlantı kurulamadı' : e.message; }
-    setTimeout(() => { if (err) say(err); setTimeout(() => { busy = false; d = 0; draw(0, true); }, err ? 1400 : 0); }, Math.max(0, 380 - (Date.now() - t0)));
+    setTimeout(() => {
+      const b = ui(); if (err) { b.querySelector('.ptr-t').textContent = err; b.classList.add('err'); }
+      setTimeout(() => { b.classList.add('done'); setTimeout(() => { busy = false; b.querySelector('.ptr-t').textContent = ''; draw(0, 'gone done'); }, 220); }, err ? 1600 : 0);
+    }, Math.max(0, 260 - (Date.now() - t0)));
   };
   addEventListener('touchend', end, { passive: true });
   addEventListener('touchcancel', end, { passive: true });
