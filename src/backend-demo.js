@@ -185,7 +185,7 @@ export class DemoBackend {
   async authVerifyEmail() {}
   async saveMember(m) { const o = this.mem()[m.uid]; Object.assign(o, m); this.persist(); this.memberCb?.(this.pub(o)); }
   watchMembers(cb, since = 0) { return this.sub(() => cb(Object.values(this.mem()).filter((m) => !since || (m.createdAt || 0) >= since).map((m) => this.pub(m)))); }
-  watchByStatus(col, statuses, cb) { return this.sub(() => cb(Object.values(col === 'orders' ? this.ord() : this.db.requests).filter((x) => statuses.includes(x.status)).map((x) => ({ ...x })))); }
+  watchByStatus(col, statuses, cb) { return this.sub(() => cb(Object.values(col === 'orders' ? this.ord() : col === 'preq' ? this.pq() : col === 'issues' ? this.is_() : this.db.requests).filter((x) => statuses.includes(x.status)).map((x) => ({ ...x })))); }
   watchUserRequests(uid, cb) { return this.sub(() => cb(Object.values(this.db.requests).filter((r) => r.uid === uid).sort((a, b) => b.updatedAt - a.updatedAt).map((r) => ({ ...r })))); }
   async deleteMember(uid) { delete this.mem()[uid]; this.persist(); }
   newOrderId() { return 'o' + rid() + rid(); }

@@ -123,8 +123,6 @@ function startSession(u, A) {
   if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
   if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
   if (admin && A.watchFeed) unsubs.push(A.watchFeed((feed) => store.set({ feed })));
-  if (admin && A.watchPreqs) unsubs.push(A.watchPreqs((preqs) => store.set({ preqs })));
-  if (admin && A.watchIssues) unsubs.push(A.watchIssues((issues) => store.set({ issues })));
   loadCart();
   if (admin) syncNow(false).catch(() => {});
   // mağaza resimlerindeki ürün bağlantılarına yedek adres yoksa bir kez ekle (ürün kapanınca kutu boş kalmasın)

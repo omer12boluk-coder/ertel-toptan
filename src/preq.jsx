@@ -10,6 +10,7 @@ import { Icon, Sheet, Confirm, Empty, Field, Toggle, Thumb, openMenu } from './u
 import { imageBlob, now, norm, fmt } from './utils.js';
 import { waLink } from './route.js';
 import { Lightbox, ProductSheet } from './catalog.jsx';
+import { OlderBtn } from './orders.jsx';
 
 const DAY = 864e5;
 const MAX_PHOTOS = 3, MAX_TEXT = 600;
@@ -244,6 +245,7 @@ export function PreqAdmin() {
           })}
         </ul>
       )}
+      <OlderBtn kind="preqs" what="talepleri" />
       {cur && <PreqSheet q={cur} onClose={() => store.set({ openPreq: null })} onDelete={() => setDel(cur)} />}
       {del && <Confirm title="Talebi sil" text="Talep ve fotoğrafları depodan kalıcı olarak silinir. Müşterinin listesinden de kalkar." okLabel="Sil" tone="danger" onClose={() => setDel(null)}
         onOk={() => { const id = del.id; store.set({ openPreq: null }); store.s.api.deletePreq(id).then(() => toast('Talep ve fotoğrafları silindi')).catch((e) => toast(e.message, 'bad')); }} />}

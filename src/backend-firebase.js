@@ -338,7 +338,7 @@ export class FirebaseBackend {
     this._watchPost('/preq/new', { id }).catch((e) => console.warn('talep bildirimi', e));
   }
   watchMyPreqs(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('preq'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
-  watchPreqs(cb) { return this.F.onSnapshot(this.F.query(this.c('preq'), this.F.orderBy('createdAt', 'desc'), this.F.limit(400)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
+  watchPreqs(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('preq'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 2000 : 400)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
   async updatePreq(id, patch) { await timeout(this.F.updateDoc(this.d('preq', id), patch)); }
   // yönetici yanıtı: kayda eklenir, bekçi üyenin telefonuna bildirir
   async replyPreq(id, patch) { await this.updatePreq(id, patch); this._watchPost('/preq/reply', { id }).catch((e) => console.warn('yanıt bildirimi', e)); }
@@ -360,7 +360,7 @@ export class FirebaseBackend {
   async issueAdminUpload(id, blobs) { const fd = new FormData(); blobs.forEach((b, i) => fd.append('f' + i, b, 'f' + i)); return this._watchPost('/issue/aup?id=' + encodeURIComponent(id), fd, true); }
   async createIssue(id, doc) { await timeout(this.F.setDoc(this.d('issues', id), doc)); this._watchPost('/issue/new', { id }).catch((e) => console.warn('sorun bildirimi', e)); }
   watchMyIssues(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('issues'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
-  watchIssues(cb) { return this.F.onSnapshot(this.F.query(this.c('issues'), this.F.orderBy('createdAt', 'desc'), this.F.limit(400)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
+  watchIssues(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('issues'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 2000 : 400)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
   async updateIssue(id, patch) { await timeout(this.F.updateDoc(this.d('issues', id), patch)); }
   async replyIssue(id, patch) { await this.updateIssue(id, patch); this._watchPost('/issue/reply', { id }).catch((e) => console.warn('yanıt bildirimi', e)); }
   async msgIssue(id, patch) { await this.updateIssue(id, patch); this._watchPost('/issue/msg', { id }).catch((e) => console.warn('mesaj bildirimi', e)); }

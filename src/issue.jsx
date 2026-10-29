@@ -12,6 +12,7 @@ import { Icon, Sheet, Confirm, Empty, Field, Toggle, PhoneInput, openMenu } from
 import { imageBlob, now, norm } from './utils.js';
 import { waLink } from './route.js';
 import { Lightbox } from './catalog.jsx';
+import { OlderBtn } from './orders.jsx';
 
 const DAY = 864e5;
 const MAX_IMG = 4, MAX_TEXT = 1500, MAX_VID = 40e6, MAX_SEC = 90;
@@ -309,6 +310,7 @@ export function IssueAdmin() {
           })}
         </ul>
       )}
+      <OlderBtn kind="issues" what="bildirimleri" />
       {cur && <IssueSheet q={cur} onClose={() => store.set({ openIssue: null })} onDelete={() => setDel(cur)} />}
       {del && <Confirm title="Bildirimi sil" text="Bildirim, müşterinin fotoğrafları / videosu ve sizin eklediğiniz fotoğraflar depodan kalıcı olarak silinir." okLabel="Sil" tone="danger" onClose={() => setDel(null)}
         onOk={() => { const id = del.id; store.set({ openIssue: null }); store.s.api.deleteIssue(id).then(() => toast('Bildirim ve dosyaları silindi')).catch((e) => toast(e.message, 'bad')); }} />}
