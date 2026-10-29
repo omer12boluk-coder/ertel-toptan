@@ -666,9 +666,6 @@ function ProductRow({ p, admin, onOpen, pinned }) {
           </span>
         </div>
       </button>
-      {/* stokta olmayan ürün (mağaza): "Gelince haber ver" fiyat satırında değil, kendi satırında → fiyat her kartta aynı
-          yerde kalır, düğmeye basınca (yazı → çan) hiçbir şey kaymaz. Satır görünümünde düğme eskisi gibi fiyatın yanında. */}
-      {user?.role === 'public' && outOfStock(p) && feat(S).notify && !qty && <div className="prow-nb"><NotifyBtn p={p} /></div>}
       <div className="prow-side">
         {admin ? <AdminCols p={p} /> : <PriceBlock p={p} />}
         {admin ? (

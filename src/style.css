@@ -4415,36 +4415,24 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .ofs-open { flex: none; font-size: 12px; font-weight: 700; color: var(--accent); padding: 0 6px; }
 @media (max-width: 700px) { .ofs-list { grid-template-columns: 1fr; } .oform-saved h2 { font-size: 16px; } }
 
-/* "Gelince haber ver" kutu kartta kendi satırında (fiyatın üstünde, "Stok yok"un altında) — fiyat yerinden oynamaz */
-.prow-nb { display: none; }
-.plist.pgrid .prow-nb { display: flex; padding: 2px 14px 0; }
-.plist.pgrid .prow-side > .notify-btn { display: none; }
-.plist.pgrid .prow-nb .notify-btn { height: 32px; font-size: 12.5px; padding: 0 11px; gap: 6px; }
-.plist.pgrid .prow-nb .notify-btn.on { gap: 0; padding: 0 9px; }
-@media (max-width: 560px) { .plist.pgrid .prow-nb { padding: 2px 10px 0; } .plist.pgrid .prow-nb .notify-btn { font-size: 12px; padding: 0 9px; } .pgrid .prow-nb .notify-btn.on { width: auto; padding: 0 9px; } }
-.prow-nb .notify-btn { transition: padding .32s cubic-bezier(.3, .8, .3, 1), gap .32s, color .15s, background .2s, border-color .2s; }
-.prow-nb .notify-btn span { display: inline-block; max-width: 140px; overflow: hidden; white-space: nowrap; transition: max-width .32s cubic-bezier(.3, .8, .3, 1), opacity .2s; }
-.prow-nb .notify-btn.on span { max-width: 0; opacity: 0; }
 /* stokta olmayan kartta fiyat, yandaki stoktaki kartın fiyatıyla aynı yükseklikte (sepet düğmesinin yeri boş tutulur) */
 .plist.pgrid .prow-side:has(> .notify-btn) { align-items: center; min-height: 62px; }
 @media (max-width: 560px) {
-  .plist.pgrid .prow-side:has(> .notify-btn) { flex-direction: column; align-items: stretch; justify-content: flex-start; min-height: 0; padding-bottom: 52px; }
+  .plist.pgrid .prow-side:has(> .notify-btn) { flex-direction: column; align-items: stretch; min-height: 0; }
 }
 
-/* ödeme adımı: yeni sipariş özeti (29.10.2026; Ayarlar > Online mağaza > "eski sipariş özeti" ile geri alınır):
-   liste 4 ürüne kadar kaydırmasız (ekran kısaysa 3 / 2), onay + Siparişi tamamla kutunun altında, gerekirse ekranın dibine yapışık */
-@media (min-width: 960px) {
-  .co-grid.sum2 .co-side { max-height: none; display: block; }
-  .co-grid.sum2 .co-side .cart-sum { max-height: none; overflow: visible; }
-  .co-grid.sum2 .co-side .co-items { flex: none; max-height: 212px; }
-  .co-grid.sum2 .co-foot { position: sticky; bottom: 0; z-index: 2; margin: 0 -16px -16px; padding: 10px 16px 16px; background: var(--surface); border-radius: 0 0 var(--r) var(--r); display: flex; flex-direction: column; gap: 12px; }
-}
-@media (min-width: 960px) and (max-height: 820px) { .co-grid.sum2 .co-side .co-items { max-height: 158px; } }
-@media (min-width: 960px) and (max-height: 700px) { .co-grid.sum2 .co-side .co-items { max-height: 104px; } }
-.co-foot { display: flex; flex-direction: column; gap: 12px; }
 /* kısa sayfalarda (ör. boş Kalıp bulucu) içerik daralıp ortaya kaymasın: alt bilgi düzeninde main tam genişlik */
 .shell:has(> .sfoot) > main { width: 100%; }
 /* ana sayfa ürün rafları: üstüne gelince kalkan kartın kenarı / gölgesi kırpılmasın */
 .sh-rail { padding: 12px 10px 22px; margin: -12px -10px -22px; scroll-padding-inline: 10px; }
 @media (max-width: 700px) { .sh-rail { margin-inline: -16px; padding: 12px 16px 22px; scroll-padding-inline: 16px; } }
 .sfoot-col h4.sfoot-h2 { margin-top: 22px; }
+
+/* kart "Haber ver" (29.10.2026 son): sepet / adet düğmesinin yerinde ve boyunda — fiyat diğer kartlarla aynı yerde.
+   Takibe alınınca yazı daralıp kaybolur, sadece çan kalır (bilgisayarda); telefonda tam genişlik, ortada çan. */
+.plist.pgrid .prow-side > .notify-btn { height: 42px; padding: 0 14px; font-size: 13.5px; border-radius: 12px; flex: none; margin-left: auto; }
+.plist.pgrid .prow-side > .notify-btn.on { padding: 0 14px; }
+@media (max-width: 560px) {
+  .plist.pgrid .prow-side > .notify-btn { width: 100%; height: 34px; margin-left: 0; justify-content: center; font-size: 13px; border-radius: 10px; }
+  .pgrid .prow-side .notify-btn.on { width: 100%; padding: 0; }
+}

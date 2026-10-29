@@ -131,7 +131,7 @@ export function NotifyBtn({ p, big }) {
     <button type="button" className={'notify-btn' + (on ? ' on' : '') + (big ? ' big' : '')} aria-pressed={on} onClick={click} title={on ? 'Haber verme açık · kapatmak için dokunun' : 'Stoğa girince haber ver'}>
       <Icon key={pop} n="bell" s={big ? 18 : 15} className={pop ? 'fav-pop' : ''} />
       {/* kartta: takibe alınınca yazı yumuşakça kapanır, sadece çan kalır (pencerede yazı hep görünür) */}
-      <span>{on ? (big ? 'Haber vereceğiz' : 'Gelince haber ver') : 'Gelince haber ver'}</span>
+      <span>{big ? (on ? 'Haber vereceğiz' : 'Gelince haber ver') : 'Haber ver'}</span>
     </button>
   );
 }

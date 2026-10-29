@@ -262,7 +262,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         <button className="btn co-back-btn" onClick={onBack}><Icon n="back" s={17} />{single ? 'Vazgeç' : <><Icon n="cart" s={17} />Sepete dön</>}</button>
         <div className="send-t"><b>Siparişi tamamla</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
       </div>
-      <div className={'co-grid' + (O.sumOld ? '' : ' sum2')}>
+      <div className="co-grid">
         <div className="co-main">
           {!member ? (
             <div className="co-who">
@@ -387,10 +387,8 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
               {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
             </div>
             <VatLines by={tot} />
-            <div className="co-foot">
-              <LegalConsent checked={!!f.legal} onChange={(v) => set({ legal: v })} error={err.legal} order={legalFromOrder(draftOrder(), S, tTL != null ? fmtTL(tTL) : '')} />
-              <button className="btn primary big co-go" disabled={busy} onClick={submit}><Icon n="check" /><span><b>{busy ? 'Gönderiliyor…' : 'Siparişi tamamla'}</b></span></button>
-            </div>
+            <LegalConsent checked={!!f.legal} onChange={(v) => set({ legal: v })} error={err.legal} order={legalFromOrder(draftOrder(), S, tTL != null ? fmtTL(tTL) : '')} />
+            <button className="btn primary big co-go" disabled={busy} onClick={submit}><Icon n="check" /><span><b>{busy ? 'Gönderiliyor…' : 'Siparişi tamamla'}</b></span></button>
             {f.method === 'cargo' && O.cargoNote && <p className="fine">{O.cargoNote}</p>}
           </div>
         </aside>
