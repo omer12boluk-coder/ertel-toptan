@@ -1,3 +1,4 @@
+# yeniden: DNS izni verildi 30.10.2026
 # E-posta alan adı kurulumu: Resend'e ertelmarket.com eklenir (gönderen adres siparis@ertelmarket.com olabilsin, spam'e düşmesin),
 # istediği DNS kayıtları (DKIM/SPF, sadece send. alt adı ve resend._domainkey — ana MX'e dokunmaz) + DMARC Cloudflare'e yazılır.
 # Kayıtlar herkese açık DNS bilgisidir, gizli değildir. Anahtarlar günlüğe yazılmaz.
