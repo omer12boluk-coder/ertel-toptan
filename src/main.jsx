@@ -597,17 +597,9 @@ function IntroSplash() {
   useEffect(() => { if (phase === 'out') { const t = setTimeout(() => setPhase('off'), 500); return () => clearTimeout(t); } }, [phase]);
   // arka plan seçeneği (Ayarlar > Genel > Açılış ekranı): navy | light | white | grad
   const sty = SPLASH_STYLES[S.brand.splashStyle] ? S.brand.splashStyle : 'navy';
-  // telefonda saat/şarj şeridi (çentik bölgesi) sayfa zemini renginde kalıyordu → açılış ekranı görünürken o bölge de aynı renk
-  useEffect(() => {
-    if (phase !== 'in') return; // solma başlayınca ('out') zemin hemen eski rengine döner (yoksa site bir an açılış renginde kalıyordu)
-    const c = SPLASH_STYLES[sty].top, h = document.documentElement, b = document.body;
-    const m = document.querySelector('meta[name=theme-color]'); const old = [h.style.background, b.style.background, m?.content];
-    h.style.background = c; b.style.background = c; if (m) m.content = c;
-    return () => { h.style.background = old[0]; b.style.background = old[1]; if (m && old[2] != null) m.content = old[2]; };
-  }, [phase === 'in', sty]);
   if (phase === 'off') return null;
   return (
-    <div className={'intro intro2 sp-' + sty + (phase === 'out' ? ' out' : '')} style={{ '--sp-top': SPLASH_STYLES[sty].top }} onClick={() => setPhase('out')} role="presentation">
+    <div className={'intro intro2 sp-' + sty + (phase === 'out' ? ' out' : '')} onClick={() => setPhase('out')} role="presentation">
       {/* fotoğrafsız açılış (31.10.2026): marka renginde ışıklar + devre kartı deseni, her ekranda tam kaplar, çözünürlükten bağımsız */}
       <i className="i2-glow a" aria-hidden="true" /><i className="i2-glow b" aria-hidden="true" /><i className="i2-glow c" aria-hidden="true" />
       <i className="i2-grid" aria-hidden="true" /><i className="i2-scan" aria-hidden="true" />
