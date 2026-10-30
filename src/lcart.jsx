@@ -5,9 +5,10 @@
 // yönetimde aynı sayfanın altındaki "Linkle gelen sepetler"e düşer. Her açılış SIFIRDAN başlar (cihazda hiçbir şey saklanmaz).
 // Kural (firestore.rules): linki bilen tek belgeyi okur; müşteri sadece açık sepeti bir kez onaylar.
 import { useEffect, useMemo, useState } from 'react';
-import { useStore, api, toast } from './store.js';
+import { useStore, api, toast, store } from './store.js';
 import { Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
-import { fmt, totals, fmtTotals, when } from './utils.js';
+import { fmt, totals, fmtTotals, when, ls } from './utils.js';
+import { pingWatch } from './push.js';
 import { PAY, DELIVERY } from './config.js';
 import { waLink } from './route.js';
 import { useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -83,6 +84,9 @@ export function LinkCarts() {
   const [f, setF] = useState('sent');
   const [open, setOpen] = useState(null);
   useEffect(() => { const A = api(); return A?.watchLcarts ? A.watchLcarts(setList) : setList([]); }, []);
+  // zilden gelince o sepet açılır
+  const want = useStore((s) => s.openLcart);
+  useEffect(() => { if (!want || !list) return; const x = list.find((c) => c.id === want); if (x) { setF(x.status === 'open' ? 'open' : x.status); setOpen(want); } store.set({ openLcart: null }); }, [want, list]);
   const n = (k) => (list || []).filter((c) => c.status === k).length;
   const shown = (list || []).filter((c) => c.status === f);
   const cur = open && (list || []).find((c) => c.id === open);
@@ -173,13 +177,18 @@ function LinkCartSheet({ c, onClose }) {
 
 // ============================================================================================
 // Müşteri: /magaza/k/<id> — her açılışta sıfırdan (hiçbir şey cihazda tutulmaz)
+const ME_KEY = 'lcart-me';
+
 export function LinkCartPage({ id }) {
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const liveRate = useRate();
   const [c, setC] = useState(undefined); // undefined yükleniyor · null bulunamadı
   const [qty, setQty] = useState({}); // ürün → adet (0 = çıkarıldı)
-  const [f, setF] = useState({ name: '', phone: '', method: 'cargo', addr: {}, pay: '', note: '' });
+  // "Bilgilerimi bu cihazda kaydet" (isteğe bağlı): kayıt varsa alanlar dolu ve işaretli gelir
+  const [me0] = useState(() => { const m = ls.get(ME_KEY, null); return m && typeof m === 'object' ? m : null; });
+  const [f, setF] = useState(() => ({ name: me0?.name || '', phone: me0?.phone || '', method: me0?.method || 'cargo', addr: (me0?.addr && typeof me0.addr === 'object') ? me0.addr : {}, pay: me0?.pay || '', note: '' }));
+  const [keep, setKeep] = useState(!!me0);
   const [err, setErr] = useState({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -231,6 +240,9 @@ export function LinkCartPage({ id }) {
         note: f.note.trim().slice(0, 500) || undefined,
       });
       await api().submitLcart(c.id, sub);
+      pingWatch('/notify-lcart', { id: c.id }); // yöneticiye Telegram + e-posta + bildirim (bekçi kaydı okuyup bir kez gönderir)
+      if (keep) ls.set(ME_KEY, { name: f.name.trim(), phone: f.phone, method: f.method, addr: f.method === 'cargo' ? cleanAddr(f.addr) : (me0?.addr || {}), pay: f.pay, at: Date.now() });
+      else ls.del(ME_KEY);
       setDone(true); window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (x) {
       toast(/permission|insufficient/i.test(x.message) ? 'Bu sepet artık açık değil' : 'Gönderilemedi: ' + x.message, 'bad');
@@ -292,6 +304,7 @@ export function LinkCartPage({ id }) {
           )}
           <section className="co-sec">
             <Field label="Not" opt><textarea id="lc-note" rows="2" value={f.note} onChange={(e) => set({ note: e.target.value })} placeholder="Eklemek istediğiniz bir şey varsa" /></Field>
+            <label className="mini-check lc-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />Bilgilerimi bu cihazda kaydet <small className="muted">— bir dahaki sepette hazır gelir</small></label>
             <button className="btn primary big lc-send" disabled={busy || !items.length} onClick={submit}><Icon n="check" s={18} />{busy ? 'Gönderiliyor…' : 'Sepeti onayla'}</button>
             <p className="fine lc-fine">Onayladığınızda sepetiniz bize ulaşır; ödeme ve kargo için sizinle iletişime geçeriz.</p>
           </section>

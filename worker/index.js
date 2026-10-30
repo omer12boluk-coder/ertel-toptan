@@ -67,6 +67,7 @@ export default {
       if (url.pathname === '/push/sub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); const r = await pushSub(env, b); if (r.ok && b.hello && !(await env.KV.get('ph:' + b.id))) { await env.KV.put('ph:' + b.id, '1', { expirationTtl: 60 }); r.test = await pushStatus(env, String(b.id), true).catch((e) => ({ error: e.message })); } return json(r); }
       if (url.pathname === '/push/admin' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminSub(env, b)); }
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
+      if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
       if (url.pathname === '/push/fav' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushFav(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/push/back-admin' && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); return json(await sendBack(env, b)); }
@@ -489,6 +490,32 @@ async function notifyCancel(env, id) {
   const text = `❌ Müşteri siparişi iptal etti #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n\nPanelde aç: ${link}`;
   await adminPush(env, { title: `❌ Sipariş iptal edildi #${o.no}`, body: `${o.contact?.name || ''} · ${tot} · müşteri iptal etti`, url: '/admin/s/' + id, tag: 'ao-' + id }).catch(() => {});
   return notifySend(env, { subject: `İptal: sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, link, replyTo: o.contact?.email });
+}
+// Sepet linki onaylanınca (lcart.jsx): sepet herkese açık tek belge olarak okunur, durumu gerçekten 'sent' mi ve
+// yeni mi (30 dk) bakılır → Telegram + e-posta + yönetici push, sepet başına bir kez (KV nl:, tek yazma).
+async function notifyLcart(env, id) {
+  if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
+  if (await env.KV.get('nl:' + id)) return { ok: true, already: true };
+  const r = await fetch(FS + 'lcarts/' + id);
+  if (!r.ok) return { ok: false, error: 'sepet yok' };
+  const doc = await r.json();
+  const c = Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
+  if (c.status !== 'sent' || !c.sub) return { ok: false, error: 'onaylanmamış' };
+  if (Date.now() - Date.parse(doc.updateTime) > 30 * 60 * 1000) return { ok: false, error: 'eski' };
+  await env.KV.put('nl:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
+  const byId = new Map((c.items || []).map((i) => [i.id, i]));
+  const its = (c.sub.items || []).map((x) => byId.get(x.id) && { ...byId.get(x.id), qty: x.qty }).filter(Boolean);
+  const totBy = {}; for (const i of its) totBy[i.cur || 'USD'] = (totBy[i.cur || 'USD'] || 0) + (Number(i.price) || 0) * (Number(i.qty) || 0);
+  const tot = Object.entries(totBy).map(([cu, v]) => money(v, cu)).join(' + ');
+  const s = c.sub; const a = s.delivery?.addr;
+  const deliv = s.delivery?.method === 'pickup' ? 'Dükkandan teslim' : 'Kargo' + (a ? ` · ${a.district || ''} / ${a.city || ''}` : '');
+  const pay = { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[s.pay] || s.pay || '';
+  const lines = its.map((i) => `• ${i.qty} × ${i.n} (${i.k || ''}) ${money(i.price, i.cur)}`).join('\n');
+  const link = 'https://erteltoptan.web.app/admin/sepet-link';
+  const who = `${s.contact?.name || ''} · ${s.contact?.phone || ''}`;
+  const text = `🔗 Sepet linki onaylandı #${c.no}${c.name ? ' (' + c.name + ')' : ''}\n${who}\n${its.length} ürün · ${tot}\n${deliv}${pay ? ' · ' + pay : ''}${s.note ? '\nNot: ' + s.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
+  await adminPush(env, { title: `🔗 Sepet linki onaylandı #${c.no} · ${tot}`, body: `${s.contact?.name || ''} · ${its.length} ürün · ${deliv}`, url: '/admin/sepet-link', tag: 'al-' + id }).catch(() => {});
+  return notifySend(env, { subject: `Sepet linki onaylandı #${c.no} · ${s.contact?.name || ''} · ${tot}`, text, link, short: `🔗 Sepet linki onaylandı #${c.no}\n${who}\n${its.length} ürün · ${tot}\n${link}` });
 }
 // Bayi yeni talep açınca / mesaj yazınca. Talep, bayinin kendi oturum anahtarıyla okunur (başkası adına bildirim yollanamaz).
 const REQ_TYPE = { order: 'Bayi siparişi', reserve: 'Hazırlayın, geliyorum', quote: 'Fiyat sor', message: 'Mesaj' };

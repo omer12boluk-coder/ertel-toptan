@@ -20,6 +20,8 @@ export function startAdminWatchers(api, u) {
   // 62 gün: Genel bakış'ta "bu ay"ı önceki ayla kıyaslamaya yetsin
   store.set({ win: { orders: t - 62 * DAY, reqs: t - 62 * DAY, preqs: t - 62 * DAY, issues: t - 62 * DAY, reviews: t - 62 * DAY, membersAll: false } });
   watchOrders(); watchReqs(); watchMembers(); watchPreqs(); watchIssues(); watchReviews();
+  // sepet linkleri (zil: "Sepet linki onaylandı")
+  if (A.watchLcarts) un.lcarts = A.watchLcarts((lcarts) => store.set({ lcarts }));
   // tarihine bakmadan açık olanlar da (eski ama hâlâ bekleyen kayıt listeden düşmesin)
   if (A.watchByStatus) {
     if (A.watchOrders) un.ordersOpen = A.watchByStatus('orders', ORDER_OPEN, (l) => { part.ordersOpen = l; mergeOrders(); });

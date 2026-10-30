@@ -14,11 +14,12 @@ import { issueNotifs } from './issue.jsx';
 import { seenWait } from './extras.jsx';
 
 const DAY = 864e5;
+const msOf = (t) => (t?.toMillis ? t.toMillis() : typeof t === 'number' ? t : t?.seconds ? t.seconds * 1000 : 0);
 const KINDS = [['all', 'Tümü'], ['order', 'Siparişler'], ['req', 'Bayi'], ['prod', 'Ürünler'], ['user', 'Üyeler']];
 const seenAt = () => ls.get('notif-seen', 0) || Date.now() - DAY;
 
 function useNotifs() {
-  const { orders, requests, customers, members, feed, preqs, issues = [], reviews = [], byId } = useStore();
+  const { orders, requests, customers, members, feed, preqs, issues = [], reviews = [], lcarts = [], byId } = useStore();
   return useMemo(() => {
     const from = Date.now() - 30 * DAY; const out = [];
     for (const o of orders) {
@@ -36,6 +37,10 @@ function useNotifs() {
     for (const q of preqs || []) if ((q.createdAt || 0) > from) out.push({ id: 'pq' + q.id, at: q.createdAt, g: 'user', ic: 'camera', tone: 'info', t: `Ürün talebi #${q.no} · ${q.name || 'Üye'}`, s: q.text || `${(q.photos || []).length} fotoğraf`, go: () => { ls.set('cust-kind', 'talep'); go('musteriler'); store.set({ openPreq: q.id }); } });
     for (const q of issues) if ((q.createdAt || 0) > from) out.push({ id: 'is' + q.id, at: q.createdAt, g: 'user', ic: 'ask', tone: 'warn', t: `Sorun bildirimi #${q.no} · ${q.name || 'Üye'}`, s: [q.prod, q.text].filter(Boolean).join(' · '), go: () => { ls.set('cust-kind', 'sorun'); go('musteriler'); store.set({ openIssue: q.id }); } });
     for (const r of reviews) if ((r.createdAt || 0) > from) out.push({ id: 'rv' + r.id, at: r.createdAt, g: 'user', ic: 'star', tone: r.status === 'pending' ? 'warn' : 'muted', t: `Yeni yorum · ${'★'.repeat(r.stars || 0)} · ${r.name || ''}`, s: [byId?.get(r.pid)?.n, r.text].filter(Boolean).join(' · '), go: () => { ls.set('cust-kind', 'yorum'); go('musteriler'); } });
+    for (const c of lcarts) {
+      const at = msOf(c.subAt);
+      if (c.status !== 'open' && at > from) out.push({ id: 'lc' + c.id, at, g: 'order', ic: 'cart', tone: 'new', t: `Sepet linki onaylandı #${c.no} · ${c.sub?.contact?.name || c.name || ''}`, s: [(c.sub?.items || []).length + ' ürün', c.sub?.delivery?.method === 'pickup' ? 'Dükkândan' : 'Kargo'].join(' · '), go: () => { go('sepetlink'); store.set({ openLcart: c.id }); } });
+    }
     for (const m of members) if ((m.createdAt || 0) > from) out.push({ id: 'mb' + m.uid, at: m.createdAt, g: 'user', ic: 'user', tone: 'muted', t: `Yeni mağaza üyesi · ${m.name || m.email || ''}`, s: m.email || '', go: () => { ls.set('cust-kind', 'magaza'); go('musteriler'); } });
     for (const [i, x] of (feed || []).entries()) {
       if (x.at <= from) continue;
@@ -43,7 +48,7 @@ function useNotifs() {
       if (P) out.push({ id: 'f' + i + x.at + x.id, at: x.at, g: 'prod', ic: P[0], tone: P[1], t: P[2], s: P[3], go: () => { go('katalog'); store.set({ catalogGo: x.k ? { code: x.k } : { q: x.n || String(x.id) } }); /* stok kodu kendi kutusuna (ad aramasına değil) */ } });
     }
     return out.sort((a, b) => b.at - a.at).slice(0, 300);
-  }, [orders, requests, customers, members, feed, preqs, issues, reviews, byId]);
+  }, [orders, requests, customers, members, feed, preqs, issues, reviews, lcarts, byId]);
 }
 
 // Gezinirken yeni bildirim gelince küçük açılır kart (29.10.2026): sadece sayfa açıldıktan SONRA gelenler;
