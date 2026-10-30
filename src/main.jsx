@@ -589,7 +589,7 @@ function Toast() {
 function IntroSplash() {
   const S = useStore((s) => s.settings);
   const ready = useStore((s) => s.boot !== 'loading');
-  const want = S.brand.splashOn !== false && !!S.brand.splash && !ADMIN_ROUTE && (() => { try { return !sessionStorage.getItem('intro-seen'); } catch { return true; } })();
+  const want = S.brand.splashOn !== false && !ADMIN_ROUTE && (() => { try { return !sessionStorage.getItem('intro-seen'); } catch { return true; } })();
   const [phase, setPhase] = useState(want ? 'in' : 'off');
   const [minDone, setMinDone] = useState(false);
   useEffect(() => { if (!want) return; try { sessionStorage.setItem('intro-seen', '1'); } catch {} const sec = Math.min(8, Math.max(0.5, Number(S.brand.splashSec) || 1.4)); const t = setTimeout(() => setMinDone(true), sec * 1000); const max = setTimeout(() => setPhase('out'), Math.max(sec + 3, 4.5) * 1000); return () => { clearTimeout(t); clearTimeout(max); }; }, []);
@@ -597,12 +597,14 @@ function IntroSplash() {
   useEffect(() => { if (phase === 'out') { const t = setTimeout(() => setPhase('off'), 500); return () => clearTimeout(t); } }, [phase]);
   if (phase === 'off') return null;
   return (
-    <div className={'intro' + (phase === 'out' ? ' out' : '')} onClick={() => setPhase('out')} role="presentation">
-      <img className="intro-bg" src={S.brand.splash} alt="" aria-hidden="true" />
-      <img className="intro-img" src={S.brand.splash} alt="" />
-      <div className="intro-f">
-        <img className="intro-logo" src={S.brand.logo || LOGO_MARK} alt="" />
-        <span><b>{S.brand.appName}</b><small>{ROUTE.shop ? "Online mağaza" : S.brand.tagline}</small></span>
+    <div className={'intro intro2' + (phase === 'out' ? ' out' : '')} onClick={() => setPhase('out')} role="presentation">
+      {/* fotoğrafsız açılış (31.10.2026): marka renginde ışıklar + devre kartı deseni, her ekranda tam kaplar, çözünürlükten bağımsız */}
+      <i className="i2-glow a" aria-hidden="true" /><i className="i2-glow b" aria-hidden="true" /><i className="i2-glow c" aria-hidden="true" />
+      <i className="i2-grid" aria-hidden="true" /><i className="i2-scan" aria-hidden="true" />
+      <div className="i2-c">
+        <span className="i2-mark"><i className="i2-ring" aria-hidden="true" /><i className="i2-ring r2" aria-hidden="true" /><img className="intro-logo" src={S.brand.logo || LOGO_MARK} alt="" /></span>
+        <b className="i2-name">{S.brand.appName}</b>
+        <small className="i2-sub">{ROUTE.shop ? 'Telefon tamir ekipmanları' : S.brand.tagline}</small>
         <span className="intro-bar"><i /></span>
       </div>
     </div>
