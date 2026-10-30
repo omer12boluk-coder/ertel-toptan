@@ -914,8 +914,13 @@ export function Gallery({ p }) {
               {x.t === 'fs' ? <Thumb p={{ ...p, pi: null }} size="lg" />
                 : x.t === 'vid' ? <PlayVideo src={x.u} poster={x.poster} active={i === k} />
                 : bad[k] ? <Thumb p={{ ...p, pi: null, img: null }} size="lg" /> : (
-                <button className="gal-open" onClick={() => setZoom(x.z)} aria-label="Resmi büyüt">
-                  <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} onError={(e) => { if (!fbSkip(e)) setBad((b) => ({ ...b, [k]: 1 })); }} />
+                <button className="gal-open" onClick={() => setZoom(x.z)} aria-label="Resmi büyüt"
+                  style={x.th && x.th !== x.u ? { backgroundImage: `url("${x.th}")` } : undefined}>
+                  {/* büyük resim gelene kadar listede zaten inmiş küçük resim arkada görünür, büyük gelince yumuşakça üstüne biner (flaş yok) */}
+                  <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} className="gal-big"
+                    ref={(el) => { if (el && el.complete && el.naturalWidth) { el.classList.add('in'); el.parentElement.style.backgroundImage = 'none'; } }}
+                    onLoad={(e) => { const im = e.currentTarget; im.classList.add('in'); setTimeout(() => { if (im.parentElement) im.parentElement.style.backgroundImage = 'none'; }, 250); }}
+                    onError={(e) => { if (!fbSkip(e)) setBad((b) => ({ ...b, [k]: 1 })); }} />
                 </button>
               )}
             </div>
