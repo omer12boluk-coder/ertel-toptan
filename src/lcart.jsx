@@ -5,11 +5,11 @@
 // yönetimde aynı sayfanın altındaki "Linkle gelen sepetler"e düşer. Her açılış SIFIRDAN başlar (cihazda hiçbir şey saklanmaz).
 // Kural (firestore.rules): linki bilen tek belgeyi okur; müşteri sadece açık sepeti bir kez onaylar.
 import { useEffect, useMemo, useState } from 'react';
-import { useStore, api, toast, store } from './store.js';
+import { useStore, api, toast, store, go } from './store.js';
 import { Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls } from './utils.js';
 import { pingWatch } from './push.js';
-import { CargoCard } from './orders.jsx';
+import { CargoCard, OrdersSwitch } from './orders.jsx';
 import { PAY, DELIVERY } from './config.js';
 import { waLink } from './route.js';
 import { useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -79,7 +79,21 @@ export function finalItems(c) {
   const byId = new Map((c.items || []).map((it) => [it.id, it]));
   return c.sub.items.map(({ id, qty }) => byId.get(id) && { ...byId.get(id), qty, offer: byId.get(id).price }).filter(Boolean);
 }
-export function LinkCarts() {
+// Yönetim: /admin/sepetler — linkle gelen sepetler ayrı sayfa (Siparişler sekmesinin üstündeki geçişten)
+export function LinkCartsPage() {
+  return (
+    <div className="page lc-page-adm">
+      <div className="page-h">
+        <h1 className="page-t">Linkle gelen sepetler</h1>
+        <span className="row-btns"><button className="btn sm primary" onClick={() => go('sepetlink')}><Icon n="plus" s={15} />Yeni sepet linki</button></span>
+      </div>
+      <OrdersSwitch on="lcarts" />
+      <LinkCarts page />
+    </div>
+  );
+}
+
+export function LinkCarts({ page = false }) {
   const byId = useStore((s) => s.byId);
   const [list, setList] = useState(null);
   const [f, setF] = useState('sent');
@@ -93,7 +107,7 @@ export function LinkCarts() {
   const cur = open && (list || []).find((c) => c.id === open);
   return (
     <section className="oform-saved lc-list">
-      <h2>Linkle gelen sepetler</h2>
+      {!page && <h2>Linkle gelen sepetler</h2>}
       <div className="chips lc-chips">
         {['sent', 'open', 'done'].map((k) => <button key={k} className={'chip' + (f === k ? ' on' : '')} onClick={() => setF(k)}>{ST[k][0]}{n(k) > 0 && <span className="num"> {n(k)}</span>}</button>)}
       </div>

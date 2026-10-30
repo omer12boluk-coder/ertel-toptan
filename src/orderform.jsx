@@ -60,7 +60,7 @@ export function OrderForm({ linkMode = false }) {
     const use = ls.get(USE, {});
     const out = [];
     for (const p of catalog) {
-      if (!p.a || !toks.every((t) => p._s.includes(t) || p._t.includes(t))) continue;
+      if (!p.a || p.so || (linkMode && !(p.s > 0)) || !toks.every((t) => p._s.includes(t) || p._t.includes(t))) continue;
       const nm = norm(p.n || ''); const code = norm(p.k || '');
       let sc = 0;
       if (code === nq) sc += 100;

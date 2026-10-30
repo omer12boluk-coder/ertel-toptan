@@ -91,6 +91,7 @@ export function Orders() {
       <div className="page-h">
         <h1 className="page-t">Mağaza siparişleri{newN > 0 && <span className="muted"> · {newN} yeni</span>}</h1>
       </div>
+      <OrdersSwitch on="orders" />
       {view === 'members' ? <Members /> : <>
         <div className="toolbar">
           <div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
@@ -697,6 +698,17 @@ export function CargoCard({ o, flow, col = 'orders' }) {
         </div>
       </>)}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </div>
+  );
+}
+
+// Siparişler ⇄ Linkle gelen sepetler (ayrı sayfalar; listeler karışmaz). Telefonda Siparişler sekmesinden ulaşılır.
+export function OrdersSwitch({ on }) {
+  const lcNew = useStore((st) => (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length);
+  return (
+    <div className="seg of-seg ord-switch" role="tablist" aria-label="Sayfa">
+      <button type="button" role="tab" aria-selected={on === 'orders'} className={on === 'orders' ? 'on' : ''} onClick={() => on !== 'orders' && go('siparisler')}><Icon n="box" s={15} />Mağaza siparişleri</button>
+      <button type="button" role="tab" aria-selected={on === 'lcarts'} className={on === 'lcarts' ? 'on' : ''} onClick={() => on !== 'lcarts' && go('sepetler')}><Icon n="cart" s={15} />Linkle gelen sepetler{lcNew > 0 && <span className="badge">{lcNew}</span>}</button>
     </div>
   );
 }

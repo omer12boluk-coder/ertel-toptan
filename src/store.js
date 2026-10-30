@@ -90,7 +90,7 @@ export function freshStart() {
 const SLUGS = {
   magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap', urun: 'urun', kalip: 'kalip', talep: 'talep', yasal: 'yasal', sorun: 'sorun' },
   b2b: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', talepler: 'talepler', profil: 'profil' },
-  admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', sepetlink: 'sepet-link', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
+  admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', sepetlink: 'sepet-link', sepetler: 'sepetler', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
 };
 const area = () => { const m = /^\/(magaza|b2b|admin)(\/|$)/.exec(location.pathname); return m ? m[1] : null; };
 export function tabFromPath() { const a = area(); if (!a) return null; const seg = location.pathname.split('/')[2] || ''; if (!seg) return null; const e = Object.entries(SLUGS[a]).find(([, x]) => x === seg); return e ? e[0] : null; }

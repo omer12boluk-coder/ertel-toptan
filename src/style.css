@@ -4918,3 +4918,7 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .of-seg button { display: inline-flex; align-items: center; gap: 6px; }
 .of-seg .badge { position: static; margin-left: 2px; }
 .lc-list + .o-cargo, .sheet .o-cargo { margin-top: 14px; }
+.ord-switch { margin: -4px 0 14px; max-width: 100%; overflow-x: auto; }
+.ord-switch button { white-space: nowrap; }
+.lc-page-adm .lc-list { margin-top: 0; }
+@media (max-width: 560px) { .ord-switch { display: flex; width: 100%; } .ord-switch button { flex: 1; justify-content: center; padding: 8px 8px; font-size: 13px; } }

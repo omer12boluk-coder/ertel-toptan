@@ -511,10 +511,10 @@ async function notifyLcart(env, id) {
   const deliv = s.delivery?.method === 'pickup' ? 'Dükkandan teslim' : 'Kargo' + (a ? ` · ${a.district || ''} / ${a.city || ''}` : '');
   const pay = { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[s.pay] || s.pay || '';
   const lines = its.map((i) => `• ${i.qty} × ${i.n} (${i.k || ''}) ${money(i.price, i.cur)}`).join('\n');
-  const link = 'https://erteltoptan.web.app/admin/sepet-link';
+  const link = 'https://erteltoptan.web.app/admin/sepetler';
   const who = `${s.contact?.name || ''} · ${s.contact?.phone || ''}`;
   const text = `🔗 Sepet linki onaylandı #${c.no}${c.name ? ' (' + c.name + ')' : ''}\n${who}\n${its.length} ürün · ${tot}\n${deliv}${pay ? ' · ' + pay : ''}${s.note ? '\nNot: ' + s.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
-  await adminPush(env, { title: `🔗 Sepet linki onaylandı #${c.no} · ${tot}`, body: `${s.contact?.name || ''} · ${its.length} ürün · ${deliv}`, url: '/admin/sepet-link', tag: 'al-' + id }).catch(() => {});
+  await adminPush(env, { title: `🔗 Sepet linki onaylandı #${c.no} · ${tot}`, body: `${s.contact?.name || ''} · ${its.length} ürün · ${deliv}`, url: '/admin/sepetler', tag: 'al-' + id }).catch(() => {});
   return notifySend(env, { subject: `Sepet linki onaylandı #${c.no} · ${s.contact?.name || ''} · ${tot}`, text, link, short: `🔗 Sepet linki onaylandı #${c.no}\n${who}\n${its.length} ürün · ${tot}\n${link}` });
 }
 // Bayi yeni talep açınca / mesaj yazınca. Talep, bayinin kendi oturum anahtarıyla okunur (başkası adına bildirim yollanamaz).

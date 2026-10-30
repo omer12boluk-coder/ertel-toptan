@@ -39,7 +39,7 @@ function useNotifs() {
     for (const r of reviews) if ((r.createdAt || 0) > from) out.push({ id: 'rv' + r.id, at: r.createdAt, g: 'user', ic: 'star', tone: r.status === 'pending' ? 'warn' : 'muted', t: `Yeni yorum · ${'★'.repeat(r.stars || 0)} · ${r.name || ''}`, s: [byId?.get(r.pid)?.n, r.text].filter(Boolean).join(' · '), go: () => { ls.set('cust-kind', 'yorum'); go('musteriler'); } });
     for (const c of lcarts) {
       const at = msOf(c.subAt);
-      if (c.status !== 'open' && at > from) out.push({ id: 'lc' + c.id, at, g: 'order', ic: 'cart', tone: 'new', t: `Sepet linki onaylandı #${c.no} · ${c.sub?.contact?.name || c.name || ''}`, s: [(c.sub?.items || []).length + ' ürün', c.sub?.delivery?.method === 'pickup' ? 'Dükkândan' : 'Kargo'].join(' · '), go: () => { go('sepetlink'); store.set({ openLcart: c.id }); } });
+      if (c.status !== 'open' && at > from) out.push({ id: 'lc' + c.id, at, g: 'order', ic: 'cart', tone: 'new', t: `Sepet linki onaylandı #${c.no} · ${c.sub?.contact?.name || c.name || ''}`, s: [(c.sub?.items || []).length + ' ürün', c.sub?.delivery?.method === 'pickup' ? 'Dükkândan' : 'Kargo'].join(' · '), go: () => { go('sepetler'); store.set({ openLcart: c.id }); } });
     }
     for (const m of members) if ((m.createdAt || 0) > from) out.push({ id: 'mb' + m.uid, at: m.createdAt, g: 'user', ic: 'user', tone: 'muted', t: `Yeni mağaza üyesi · ${m.name || m.email || ''}`, s: m.email || '', go: () => { ls.set('cust-kind', 'magaza'); go('musteriler'); } });
     for (const [i, x] of (feed || []).entries()) {
