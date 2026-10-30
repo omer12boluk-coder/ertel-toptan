@@ -1,0 +1,28 @@
+# Önizleme: resim-adresi dalına her gönderimde uygulamayı Firebase ÖNİZLEME kanalına yükler (canlı site değişmez).
+name: Önizleme (canlıya dokunmaz)
+on:
+  push:
+    branches: [resim-adresi]
+  workflow_dispatch:
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Önizleme kanalına yükle
+        working-directory: hosting
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          set +e
+          npx -y firebase-tools@13 hosting:channel:deploy resim --expires 7d --project erteltoptan --non-interactive > "$RUNNER_TEMP/out.txt" 2>&1
+          code=$?
+          cat "$RUNNER_TEMP/out.txt"
+          url=$(grep -oE 'https://erteltoptan--[a-z0-9-]+\.web\.app' "$RUNNER_TEMP/out.txt" | head -1)
+          [ -n "$url" ] && echo "::notice title=Önizleme adresi::$url"
+          exit $code

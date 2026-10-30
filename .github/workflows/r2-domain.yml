@@ -3,7 +3,7 @@
 name: Resim adresini bağla (R2)
 on:
   push:
-    branches: [gelistirme]
+    branches: [gelistirme, resim-adresi]
     paths: ['tools/r2-domain.txt']
   workflow_dispatch:
 jobs:

@@ -1,2 +1,2 @@
-# Resim adresi (R2 kutusu "ertel" özel alan adı). Alan adı Cloudflare hesabında ekli olmalı.
-# Aşağıya tek satır yaz (ör. resim.ornek.com), gelistirme dalına gönderince "Resim adresini bağla" işi çalışır.
+# Resim adresi (R2 kutusu "ertel" özel alan adı).
+resim.ertelmarket.com
