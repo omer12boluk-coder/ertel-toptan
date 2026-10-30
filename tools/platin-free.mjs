@@ -62,13 +62,26 @@ function plan(url) {
 }
 
 // --- R2 ---------------------------------------------------------------------------------------------------------
-async function exists(key) {
-  for (let i = 0; i < 3; i++) {
-    const r = await fetch(BASE + enc(key), { method: 'HEAD' }).catch(() => null);
-    if (r && (r.status === 200 || r.status === 404)) return r.status === 200;
-    await sleep(1500 * (i + 1));
-  }
-  return false;
+// Var mı? Dizinlerden bakılır (dışarıdan HEAD isteği Cloudflare korumasına takılabiliyor):
+// platin/_manifest.json (ürün resimleri, r2-mirror), platin/t/_manifest.json (küçükler, r2-thumbs), platin/_free.json (bu iş)
+async function r2Json(key) {
+  const r = await fetch(API + enc(key), { headers: auth });
+  if (r.status === 404) return null;
+  if (!r.ok) { console.log(`::error title=R2 okuma::${key} ${r.status}`); process.exit(1); }
+  try { return JSON.parse(await r.text()); } catch { return null; }
+}
+const manP = (await r2Json('platin/_manifest.json')) || { v: 1, files: {}, fail: {} };
+const manT = (await r2Json('platin/t/_manifest.json')) || { files: {} };
+const manF = (await r2Json('platin/_free.json')) || { files: {} };
+let manPdirty = false;
+function exists(key) {
+  if (key.startsWith('platin/t/')) return !!manT.files[key.slice(9)];
+  if (key.startsWith('platin/s/') || key.startsWith('platin/w/')) return !!manF.files[key];
+  return !!manP.files[key.slice(7)];
+}
+function mark(key, size, type) {
+  if (key.startsWith('platin/s/') || key.startsWith('platin/w/')) manF.files[key] = { s: size, at: Date.now() };
+  else if (!key.startsWith('platin/t/')) { manP.files[key.slice(7)] = { s: size, t: type, at: Date.now() }; manPdirty = true; }
 }
 async function r2Put(key, body, type) {
   for (let i = 0; i < 5; i++) {
@@ -85,14 +98,15 @@ const failed = new Map(); let copied = 0, bytes = 0;
 async function ensure(url) {
   if (resolved.has(url) || failed.has(url)) return;
   const p = plan(url); if (!p) return;
-  if (await exists(p.key)) { resolved.set(url, BASE + enc(p.key)); return; }
-  if (p.alt && await exists(p.alt)) { resolved.set(url, BASE + enc(p.alt)); return; }
+  if (exists(p.key)) { resolved.set(url, BASE + enc(p.key)); return; }
+  if (p.alt && exists(p.alt)) { resolved.set(url, BASE + enc(p.alt)); return; }
   if (!APPLY) { failed.set(url, 'kopyalanacak'); return; }
   try {
     const r = await fetch(p.src, { headers: { 'User-Agent': 'ertel-platin-free' } });
     if (!r.ok) throw new Error('indirme ' + r.status);
     const buf = Buffer.from(await r.arrayBuffer()); if (!buf.length) throw new Error('boş dosya');
-    await r2Put(p.key, buf, r.headers.get('content-type') || 'application/octet-stream');
+    const type = r.headers.get('content-type') || 'application/octet-stream';
+    await r2Put(p.key, buf, type); mark(p.key, buf.length, type);
     resolved.set(url, BASE + enc(p.key)); copied++; bytes += buf.length;
   } catch (e) {
     if (e.fatal) { console.log('::error::' + e.message); process.exit(1); }
@@ -136,6 +150,7 @@ note('Platin adresleri', `${all.size} farklı dosya adresi · ` + Object.entries
 // kopyala (aynı anda 3)
 const q = [...all]; let qi = 0;
 await Promise.all([0, 1, 2].map(async () => { while (qi < q.length) { await ensure(q[qi++]); if (qi % 200 === 0) console.log(`… ${qi}/${q.length}`); } }));
+if (APPLY && copied) { await r2Put('platin/_free.json', JSON.stringify(manF), 'application/json'); if (manPdirty) { manP.at = Date.now(); await r2Put('platin/_manifest.json', JSON.stringify(manP), 'application/json'); } }
 note('Kopyalama', `${resolved.size} adres hazır (bu çalışmada ${copied} yeni dosya, ${(bytes / 1048576).toFixed(1)} MB) · ${failed.size} ${APPLY ? 'kopyalanamadı (adresi değiştirilmedi)' : 'henüz R2\'de yok (deneme)'}`);
 if (failed.size) note('Olmayanlar (ilk 8)', [...failed].slice(0, 8).map(([u, e]) => `${u.replace(/^https?:\/\//, '')} ${e}`).join(' | '));
 if (pageLinks.size) note('Dosya olmayan Platin linkleri (çevrilmedi, ilk 8)', [...pageLinks].slice(0, 8).map((u) => u.replace(/^https?:\/\//, '')).join(' | '));
