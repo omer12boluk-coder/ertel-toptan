@@ -1,0 +1,37 @@
+# DHL'e aktar teşhisi (sadece okur): bekçi + DHL + site sürümü/simgeler. Sonuç notlarda.
+name: DHL teşhis
+on:
+  workflow_dispatch:
+    inputs:
+      order:
+        description: 'Sipariş no (ör. SJUPYU)'
+        default: ''
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: DNS (ertelmarket.com)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          sudo apt-get install -y -qq bind9-dnsutils >/dev/null 2>&1 || true
+          for d in ertelmarket.com www.ertelmarket.com resim.ertelmarket.com; do for s in 1.1.1.1 8.8.8.8 9.9.9.9 208.67.222.222; do
+            echo "::notice title=DNS $d @$s::A=$(dig +short +time=3 +tries=1 A $d @$s | tr '\n' ' ') status=$(dig +time=3 +tries=1 A $d @$s | grep -o 'status: [A-Z]*') AAAA=$(dig +short +time=3 +tries=1 AAAA $d @$s | tr '\n' ' ')"; done; done
+          echo "::notice title=NS::$(dig +short NS ertelmarket.com @1.1.1.1 | tr '\n' ' ') DS=$(dig +short DS ertelmarket.com @1.1.1.1 | tr '\n' ' ') DNSKEY=$(dig +short DNSKEY ertelmarket.com @1.1.1.1 | cut -c1-30 | tr '\n' ' ')"
+          echo "::notice title=CD ile (DNSSEC'siz) 8.8.8.8::$(dig +cd +short A ertelmarket.com @8.8.8.8 | tr '\n' ' ')"
+          cf() { curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$@"; }
+          Z=$(cf "https://api.cloudflare.com/client/v4/zones?name=ertelmarket.com" | jq -r '.result[0].id // empty')
+          echo "::notice title=Zone::$(cf "https://api.cloudflare.com/client/v4/zones?name=ertelmarket.com" | jq -c '.result[0] | {status, name_servers, paused}')"
+          echo "::notice title=Kayıtlar::$(cf "https://api.cloudflare.com/client/v4/zones/$Z/dns_records?per_page=100" | jq -c '[.result[]? | select(.type!="TXT" and .type!="MX") | [.type,.name,.content,.proxied]]' | cut -c1-1500)"
+          echo "::notice title=DNSSEC::$(cf "https://api.cloudflare.com/client/v4/zones/$Z/dnssec" | jq -c '.result // .errors')"
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DHL_USER: ${{ secrets.DHL_USER }}
+          DHL_PASS: ${{ secrets.DHL_PASS }}
+          ORDER_NO: ${{ inputs.order }}
+        run: node tools/dhl-probe.mjs
