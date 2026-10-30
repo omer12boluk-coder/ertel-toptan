@@ -119,6 +119,9 @@ export function r2Base() { const w = typeof window !== 'undefined' ? window : {}
 // (r2-mirror ile birebir kopya; küçükler r2-thumbs ile üretilir). Dosya orada yoksa mediaFallback eski adrese döner.
 const PLATIN = 'https://platincdn.com/3519/pictures/', PLATIN_T = PLATIN + 'thumb/350X-';
 const encF = (f) => String(f).split('/').map(encodeURIComponent).join('/');
+// kendi resim adresimizle şablon (ayarlarda https://resim.ertelmarket.com/platin/{pi}): dosya adı adrese kodlanarak yazılır
+const ownTpl = (t) => typeof window !== 'undefined' && !!window.IMG_BASE && t.startsWith(window.IMG_BASE);
+export const tplPic = (t, f) => (t && f && t.includes('{pi}') ? t.replaceAll('{pi}', ownTpl(t) ? encF(f) : f) : null);
 const platinR2 = () => typeof window !== 'undefined' && !!window.IMG_BASE && window.IMG_PLATIN === true;
 export function picUrl(f, t, big) {
   if (!f) return null;
@@ -128,7 +131,7 @@ export function picUrl(f, t, big) {
     return m ? window.IMG_BASE + 'platin/' + (m[1] ? 't/' : '') + m[2] : f;
   }
   if (platinR2() && t && t.startsWith(PLATIN)) return window.IMG_BASE + 'platin/' + (t.startsWith(PLATIN_T) ? 't/' : '') + encF(f); // varsayılan site şablonuysa
-  return t && t.includes('{pi}') ? t.replaceAll('{pi}', f) : null;
+  return t && t.includes('{pi}') ? t.replaceAll('{pi}', ownTpl(t) ? encF(f) : f) : null;
 }
 // Yeni adresten gelmeyen resim / video için yedek adres (yoksa null): platin/t/x → platincdn küçük, platin/x → platincdn büyük,
 // diğer depo anahtarları → bekçi /p/ (eski yol). main.jsx'te tüm <img>/<video> hataları bununla bir kez yeniden denenir.
@@ -136,6 +139,8 @@ export function mediaFallback(u) {
   const B = typeof window !== 'undefined' && window.IMG_BASE; if (!B || !u || !String(u).startsWith(B)) return null;
   const k = String(u).slice(B.length);
   if (k.startsWith('platin/t/')) return PLATIN_T + k.slice(9);
+  if (k.startsWith('platin/s/')) return 'https://platincdn.com/3519/' + k.slice(9); // açıklama / banner dosyaları (tools/platin-free.mjs)
+  if (k.startsWith('platin/w/')) return 'https://www.ertelgsm.com/' + k.slice(9);
   if (k.startsWith('platin/')) return PLATIN + k.slice(7);
   return window.WATCH_URL ? String(window.WATCH_URL).replace(/\/$/, '') + '/p/' + k : null;
 }

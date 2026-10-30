@@ -65,10 +65,10 @@ export const DEFAULT_SETTINGS = {
     lowStock: 3,
     showInactive: false, // pasif ürünleri bayilere göster
     hideOutOfStock: false,
-    // Ürün resimleri ertelgsm.com (PlatinMarket CDN) üzerinden gösterilir; Firebase'de yer kaplamaz.
+    // Ürün resimleri kendi R2 depomuzdan (resim.ertelmarket.com; PlatinMarket'ten kopyalanır, tools/platin-free.mjs). Firebase'de yer kaplamaz.
     // {pi} = siteden eşlenen resim dosya adı, {kod} = stok kodu, {id} = ürün no
-    imageThumb: 'https://platincdn.com/3519/pictures/thumb/350X-{pi}',
-    imageLarge: 'https://platincdn.com/3519/pictures/{pi}',
+    imageThumb: 'https://resim.ertelmarket.com/platin/t/{pi}',
+    imageLarge: 'https://resim.ertelmarket.com/platin/{pi}',
     siteUrl: 'https://www.ertelgsm.com',
     searchTags: true, // gizli etiketler aramada kullanılsın (müşteri etiketleri görmez)
     showBrand: true, // markayı ürün satırında göster
@@ -212,9 +212,9 @@ export const DEFAULT_SETTINGS = {
       { size: 'sq', color: '#c2410c', tag: '', title: 'Havya uçları', text: 'JBC, Quick, Aixun, Qianli', link: 'q:havya ucu', img: 'prod:2965' },
       { size: 'sq', color: '#0b3b8c', tag: '', title: 'Programlayıcılar', text: 'Luban, JCID, Qianli', link: 'q:programlayıcı', img: 'prod:2853' },
       { size: 'wide', color: '#14532d', tag: 'Stokta', title: 'Ekran ayırma ekipmanları', text: 'Isıtıcılı ayırıcılar, pedler, aparatlar', link: 'q:ayırma', img: 'prod:3037' },
-      { size: 'wide', color: '#111827', tag: '', title: '', text: '', link: 'q:', img: 'https://platincdn.com/3519/dosyalar/images/yeni%20koleksiyon%20(1)(1).jpg' },
-      { size: 'sq', color: '#111827', tag: '', title: '', text: '', link: 'p:319', img: 'https://platincdn.com/3519/dosyalar/images/dw.jpg' },
-      { size: 'sq', color: '#111827', tag: '', title: '', text: '', link: 'p:3', img: 'https://platincdn.com/3519/dosyalar/images/jbcc_298x350.jpg' },
+      { size: 'wide', color: '#111827', tag: '', title: '', text: '', link: 'q:', img: 'https://resim.ertelmarket.com/platin/s/dosyalar/images/yeni%20koleksiyon%20(1)(1).jpg' },
+      { size: 'sq', color: '#111827', tag: '', title: '', text: '', link: 'p:319', img: 'https://resim.ertelmarket.com/platin/s/dosyalar/images/dw.jpg' },
+      { size: 'sq', color: '#111827', tag: '', title: '', text: '', link: 'p:3', img: 'https://resim.ertelmarket.com/platin/s/dosyalar/images/jbcc_298x350.jpg' },
     ],
     sections: [
       { title: 'Yeni gelenler', mode: 'new', limit: 10 },

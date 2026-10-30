@@ -123,7 +123,8 @@ function thumbSrc(it, S) {
   const p = { ...(store.s.byId.get(it.id) || {}), ...it };
   if (p.img && p.img !== 'fs') return p.img;
   if (p.pi && (p.pi.startsWith('r2:') || isAbsImg(p.pi))) return picUrl(p.pi, null, false); // depo CORS'a izin verir
-  const u = p.pi && S.catalog.imageThumb?.includes('{pi}') ? S.catalog.imageThumb.replaceAll('{pi}', p.pi) : null;
+  const u = p.pi ? picUrl(p.pi, S.catalog.imageThumb, false) : null;
+  if (u && window.IMG_BASE && u.startsWith(window.IMG_BASE)) return u; // kendi depomuz CORS'a izin verir
   // site CDN'i başka siteye resim çizdirmiyor; bekçi üzerinden alınır
   return u && window.WATCH_URL ? window.WATCH_URL.replace(/\/$/, '') + '/img?u=' + encodeURIComponent(u) : u;
 }

@@ -1,0 +1,33 @@
+# Platin'den kopma: kayıtlardaki tüm platincdn.com / ertelgsm.com dosya adreslerini R2'ye kopyalayıp resim.ertelmarket.com'a çevirir.
+# Elle: önce "deneme" (hiçbir şey yazmaz, rapor), sonra uygula. Otomatik hâli r2-new.yml'nin son adımı.
+# platin-kopma dalına gönderim = sadece DENEME (rapor).
+name: Platin adreslerini çevir
+on:
+  push:
+    branches: [platin-kopma]
+    paths: ['tools/platin-free.mjs', '.github/workflows/platin-free.yml']
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Uygula (kapalıysa sadece rapor)'
+        type: boolean
+        default: false
+concurrency:
+  group: r2-new
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - name: Çevir
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+        run: node tools/platin-free.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.apply && '--apply' || '' }} --extra tools/platin-extra.txt

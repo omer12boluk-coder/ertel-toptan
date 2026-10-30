@@ -1,6 +1,7 @@
 # Yeni ürün resimleri → resim.ertelmarket.com (R2 "ertel" kutusu, platin/ + küçükleri platin/t/).
 # "Siteyle eşitle" her bittiğinde çalışır: sadece R2'de olmayan resimleri kopyalar (yoksa birkaç saniyede biter),
-# sonra eksik küçük resimleri üretir. Gece de bir kez kontrol eder. Siteye/canlıya dokunmaz.
+# sonra eksik küçük resimleri üretir, en son kayıtlardaki Platin dosya adreslerini (açıklama resmi, banner…) kopyalayıp
+# resim.ertelmarket.com'a çevirir (tools/platin-free.mjs). Gece de bir kez kontrol eder.
 # Not: workflow_run sadece bu dosya main'deyken çalışır. O zamana kadar yeni ürünler eski adresten gelir (otomatik yedek).
 name: Yeni resimleri depoya al (R2)
 on:
@@ -35,3 +36,9 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
         run: node tools/r2-thumbs.mjs --minutes 25
+      - name: Platin adreslerini kendi adresimize çevir
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+        run: node tools/platin-free.mjs --apply
