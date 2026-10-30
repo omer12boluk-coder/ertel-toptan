@@ -48,3 +48,9 @@ jobs:
           u=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' out.txt | head -1); [ -n "$u" ] && echo "::notice title=Adres::$u"
           [ $code -eq 0 ] || echo "::error title=Yükleme hatası::$(tail -n 6 out.txt | tr '\n' ' ' | cut -c1-400)"
           exit $code
+      - name: Alan adı bağlı mı (kontrol)
+        run: |
+          sleep 15
+          d=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains" | jq -r '[.result[]? | select(.service=="ertel-site") | .hostname] | join(" ")')
+          echo "::notice title=Bağlı alan adları::$d"
+          for h in ertelmarket.com www.ertelmarket.com; do echo " $d " | grep -q " $h " || echo "::error title=Alan adı KOPUK::$h siteye bağlı değil — Actions > Alan adı bağlantısı > Kopuksa yeniden bağla"; done
