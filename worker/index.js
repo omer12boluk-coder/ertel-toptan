@@ -182,9 +182,9 @@ export async function check(env, { force = false } = {}) {
   const [lastSig, lastPrices] = await Promise.all([env.KV.get('sig'), env.KV.get('prices', 'json')]);
   const changed = force || sig !== lastSig || priceChanged(lastPrices, items);
   if (!changed) {
-    // sadece kur değiştiyse yeni fiyatları sessizce sakla — en çok yarım saatte bir (ücretsiz KV: günde 1.000 yazma;
+    // sadece kur değiştiyse yeni fiyatları sessizce sakla — en çok 3 saatte bir (30.10.2026: yarım saat → 3 saat) (ücretsiz KV: günde 1.000 yazma;
     // TL fiyatlar kurla her dakika oynarsa her dakika yazıyordu). Karşılaştırma oran (medyan) ile yapıldığı için eski taban da yeter.
-    if (lastPrices && Date.now() - (lastPrices._at || 0) > 30 * 60000 && items.some((x) => lastPrices[x.id] !== x.tl)) await env.KV.put('prices', JSON.stringify({ ...prices, _at: Date.now() }));
+    if (lastPrices && Date.now() - (lastPrices._at || 0) > 180 * 60000 && items.some((x) => lastPrices[x.id] !== x.tl)) await env.KV.put('prices', JSON.stringify({ ...prices, _at: Date.now() }));
     return 'same';
   }
   const last = Number(await env.KV.get('lastDispatch')) || 0;
@@ -1088,14 +1088,14 @@ const r2c = (n) => Math.round(Number(n) * 100) / 100;
 async function placeOrder(req, env, b, ctx) {
   const id = String(b.id || ''); const o = b.order || {};
   if (!/^[A-Za-z0-9]{15,40}$/.test(id)) return { ok: false, error: 'Geçersiz sipariş kimliği' };
-  if (!env.FIREBASE_SA) return { ok: false, code: 'setup', error: 'Sunucu sipariş anahtarı henüz eklenmemiş' };
+  if (!env.FIREBASE_SA && !b.check) return { ok: false, code: 'setup', error: 'Sunucu sipariş anahtarı henüz eklenmemiş' };
   // aşırı kullanım sınırı: aynı bağlantıdan saatte en çok 15 sipariş
   const ip = req.headers.get('CF-Connecting-IP') || 'x'; const kr = 'ord-ip:' + ip + ':' + Math.floor(Date.now() / 3600000);
   const nr = Number(await env.KV.get(kr)) || 0;
   if (nr >= 15) return { ok: false, error: 'Çok fazla sipariş denemesi, biraz sonra tekrar deneyin' };
   // üye siparişi: oturum anahtarı Firestore'a sorularak doğrulanır (anahtar sahte ise üye kaydı okunamaz)
   let uid = null;
-  if (o.uid) {
+  if (o.uid && !b.check) {
     const tok = bearer(req); uid = tokUid(tok);
     if (!uid || uid !== o.uid || !(await fsAuth('members/' + uid, tok))) return { ok: false, code: 'auth', error: 'Oturum doğrulanamadı, yeniden giriş yapın' };
   }
@@ -1111,17 +1111,19 @@ async function placeOrder(req, env, b, ctx) {
     const qty = Math.floor(Number(it?.qty));
     if (!p) { changed.push({ id: it?.id, n: it?.n, gone: true }); continue; }
     if (!(qty >= 1 && qty <= 9999)) return { ok: false, error: 'Adet geçersiz: ' + p.n };
-    const price = Number(p.r) > 0 ? r2c(p.r) : null; const cur = p.cur || 'USD';
+    const price = Number(p.r) > 0 ? Number(p.r) : null; const cur = p.cur || 'USD';
     if (price == null) { changed.push({ id: p.id, n: p.n, gone: true }); continue; }
-    if (r2c(it.price) !== price || (it.cur || 'USD') !== cur) changed.push({ id: p.id, n: p.n, price, cur });
+    if (!(Math.abs(Number(it.price) - price) < 0.005) || (it.cur || 'USD') !== cur) changed.push({ id: p.id, n: p.n, price, cur });
     items.push({ id: p.id, k: p.k, n: p.n, cur, qty, price, ...(p.pi != null ? { pi: p.pi } : {}), ...(p.u ? { u: p.u } : {}) });
-    total[cur] = r2c((total[cur] || 0) + price * qty);
+    total[cur] = (total[cur] || 0) + price * qty;
   }
   if (changed.length) return { ok: false, code: 'price', error: 'Bazı ürünlerin fiyatı değişti', items: changed };
+  if (b.check) return { ok: true, check: true }; // sadece fiyat kontrolü (siparişte üye olurken hesap açmadan önce)
   const t = Date.now(); const rate = await haremRate().catch(() => null);
   const doc = {
     no: /^[A-Z0-9]{4,10}$/.test(String(o.no || '')) ? String(o.no) : Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join(''),
-    uid, member: !!uid, status: 'new', createdAt: t, updatedAt: t, unread: 1, history: [{ s: 'new', at: t }],
+    // kartla ödeme (link gönderilir) siparişi doğrudan 'Onaylandı' başlar (uygulamadaki davranış, 29.10.2026)
+    uid, member: !!uid, status: pay === 'card' ? 'confirmed' : 'new', createdAt: t, updatedAt: t, unread: 1, history: pay === 'card' ? [{ s: 'new', at: t }, { s: 'confirmed', at: t, by: 'card' }] : [{ s: 'new', at: t }],
     items, total, rate: rate?.usd || (Number(o.rate) > 0 ? Number(o.rate) : null), via: 'srv',
   };
   for (const k of ORD_FIELDS) if (o[k] !== undefined && o[k] !== null) doc[k] = o[k];
@@ -1137,7 +1139,7 @@ async function placeOrder(req, env, b, ctx) {
 // Firestore'a servis hesabıyla yazma (kurallara takılmaz). Erişim anahtarı ~55 dk KV'de saklanır (imza her istekte atılmasın).
 const b64uBytes = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const b64uStr = (s) => b64uBytes(new TextEncoder().encode(s));
-async function saToken(env) {
+export async function saToken(env) {
   const hit = await env.KV.get('sa-tok', 'json'); if (hit && hit.exp > Date.now() + 60000) return hit.tok;
   const sa = JSON.parse(env.FIREBASE_SA);
   const now = Math.floor(Date.now() / 1000);
@@ -1159,7 +1161,7 @@ function toFs(v) {
   if (typeof v === 'object') return { mapValue: { fields: Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined).map(([k, x]) => [k, toFs(x)])) } };
   return { nullValue: null };
 }
-async function fsCreate(env, col, id, data) {
+export async function fsCreate(env, col, id, data) {
   const tok = await saToken(env);
   const r = await fetch(FS + col + '?documentId=' + encodeURIComponent(id), { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: toFs(data).mapValue.fields }) });
   if (r.ok) return { ok: true };

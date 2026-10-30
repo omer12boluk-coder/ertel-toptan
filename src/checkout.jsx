@@ -4,7 +4,7 @@
 //   Account    Hesabım: giriş, üye ol, şifre sıfırlama, siparişlerim, adreslerim, bilgilerim
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders } from './store.js';
+import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders, setCatalog } from './store.js';
 import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf } from './config.js';
@@ -240,6 +240,18 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         ? { type: 'company', company: f.inv.company.trim(), taxOffice: f.inv.taxOffice.trim(), taxNo: digits(f.inv.taxNo) }
         : { type: 'person', ...(f.inv.tc ? { tc: digits(f.inv.tc) } : {}) };
       // sipariş verirken üye ol: hesap + bilgiler kaydedilir, doğrulama e-postası gider; sipariş yazılınca oturum kapanır (doğrulayınca giriş yapar)
+      // fiyatı değişen ürün varsa: katalogdaki fiyatı güncelle, müşteri yeni tutarı görüp tekrar onaylasın
+      const srv = A.mode === 'firebase' && !!A.placeOrderSrv;
+      const priceFix = (r) => {
+        const ch = new Map((r.items || []).map((x) => [Number(x.id), x]));
+        setCatalog((store.s.catalog || []).flatMap((p) => { const c = ch.get(Number(p.id)); return !c ? [p] : c.gone ? [] : [{ ...p, r: c.price, cur: c.cur || p.cur }]; }));
+        toast('Bazı ürünlerin fiyatı güncellendi. Yeni tutarı kontrol edip tekrar onaylayın.', 'bad');
+      };
+      const srvItems = items.map(({ id: pid, k, n, cur, qty, offer, pi, u }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u }));
+      if (srv && !member && f.signup) { // hesap açılmadan önce fiyatlar kontrol edilir (sonra oturum kapanıyor)
+        const c = await A.placeOrderSrv({ items: srvItems, pay: f.pay, delivery: { method: f.method } }, 'chk' + rid() + rid() + rid(), true);
+        if (!c.ok) { if (c.code === 'price') priceFix(c); else toast('Sipariş gönderilemedi: ' + (c.error || 'tekrar deneyin'), 'bad'); setBusy(false); return; }
+      }
       let signedUp = false;
       if (!member && f.signup) {
         const addr = f.method === 'cargo' ? [{ ...cleanA(delivAddr), id: rid(), title: 'Adresim' }] : [];
@@ -259,10 +271,12 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         pay: f.pay, note: f.note.trim(),
         legal: { v: LEGAL_V, at: t }, // ön bilgilendirme + mesafeli satış onayı (metinler sipariş sayfasında bu siparişin bilgileriyle görünür)
       });
-      try { await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
-      // dükkan sahibine bildirim (e-posta + WhatsApp, bekçi üzerinden); sipariş zaten kaydedildi, hata olursa önemli değil
+      let res = null;
+      try { if (srv) res = await A.placeOrderSrv(order, id); else await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
+      if (res && !res.ok) { if (res.code === 'price') { priceFix(res); setBusy(false); return; } throw new Error(res.error || 'tekrar deneyin'); }
+      if (res) Object.assign(order, { no: res.no, items: res.items, total: res.total }); // sunucunun kaydettiği hâli
+      // dükkan sahibine bildirimi (Telegram + e-posta) bekçi siparişi yazınca kendisi gönderir
       if (A.mode === 'firebase') autoPush(id);
-      if (window.WATCH_URL && A.mode === 'firebase') fetch(window.WATCH_URL.replace(/\/$/, '') + '/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }), keepalive: true }).catch(() => {});
       // üye: yeni adresi ve fatura bilgisini hesaba kaydet
       if (uid && !signedUp) {
         const m = store.s.member || { uid };
