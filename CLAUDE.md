@@ -7,6 +7,18 @@ Telefon tamir ekipmanı satan ERTEL GSM'in (ertelgsm.com, PlatinMarket altyapıs
 
 ---
 
+## 0. ÇALIŞMA DÜZENİ — HER SOHBETTE ÖNCE OKU (30.10.2026, kullanıcı istedi)
+
+- **İşe başlamadan `git pull`.** Eski kopyadan derleyip yayınlamak, sunucu tarafı siparişten önceki sürümü geri getirir → kurallar kapalı olduğu için müşteriler SİPARİŞ VEREMEZ.
+- **`main` = canlı site** (push = otomatik yayın). Ön yüz / tasarım işleri burada yapılır, her zamanki gibi.
+- **`gelistirme` dalı = bekleyen arka plan işleri. DOKUNMA, `main`'e BİRLEŞTİRME, üstüne yazma.** İçinde (hepsi hazır, YAYINLANMADI):
+  1. Resimlerin bekçisiz Cloudflare R2 adresinden verilmesi (`IMG_BASE` / `IMG_PLATIN` anahtarı + otomatik eski adres yedeği). 7.242 büyük + 7.242 küçük resim R2'de hazır. **Alan adı kararı bekliyor** — ayrıntı o daldaki CLAUDE.md'de ("Resim adresi hazırlığı", "Alan adı kararı BEKLİYOR").
+  2. Bekçi KV dayanıklılığı (günlük KV yazma sınırı dolsa da sipariş geçer, sipariş başına yazma 3 → 1).
+  3. Gece veri yedeği işi (`yedek.yml`; ilk elle yedek alındı → R2 kapalı kutu `ertel-yedek`).
+  Kullanıcı "alan adı / resim adresi işine dönelim" dediğinde bu işler `gelistirme`'den devam eder: dal `main`'in son hâlinin üstüne taşınır, Actions'ta derlenir, önizleme adresinde kullanıcı dener, onaylarsa yayınlanır.
+- **Canlının yedeği:** `canli-30-10-2026` dalı (30.10.2026 çalışan sürüm). Veri yedeği R2 `ertel-yedek` kutusunda.
+- **Aynı anda iki sohbet yayın yapmasın.**
+
 ## 1. Teknolojiler
 
 | Katman | Ne kullanılıyor |
