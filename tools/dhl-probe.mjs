@@ -13,7 +13,8 @@ const KEY = 'AIzaSyAb8Q747XVc1e9f_ffp6Y1uWCc8QXDSXKk';
 const NO = (process.env.ORDER_NO || '').trim();
 const P = process.env.DHL_PASS || '';
 const clean = (s) => (P ? String(s).split(P).join('***') : String(s));
-const note = (t, m) => console.log(`::notice title=${t}::${clean(m).replace(/\n/g, ' ').slice(0, 900)}`);
+const LOG = []; const note = (t, m) => LOG.push(`${t} | ${clean(m).replace(/\n/g, ' ').slice(0, 300)}`);
+const flush = () => { for (let i = 0; i < LOG.length; i += 8) console.log(`::notice title=Tarama ${i / 8 + 1}::${LOG.slice(i, i + 8).join(' ¦¦ ').replace(/%/g, '%25').replace(/\r/g, '').replace(/\n/g, ' ')}`); };
 async function timed(label, fn) {
   const t = Date.now();
   try { const r = await fn(); note(label, `${Date.now() - t} ms · ${r}`); }
@@ -57,4 +58,4 @@ await timed('DHL doğrudan ' + ref, async () => {
   const t = await r.text(); const row = /<Table1\b[^>]*>([\s\S]*?)<\/Table1>/.exec(t);
   return `${r.status} ${row ? 'KAYIT VAR: ' + row[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300) : 'kayıt yok · ' + t.replace(/<xs:schema[\s\S]*?<\/xs:schema>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 200)}`;
 });
-process.exit(0);
+flush(); process.exit(0);
