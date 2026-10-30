@@ -837,7 +837,7 @@ async function pqSettings() { const pub = (await fsDoc('settings/public').catch(
 async function pqMember(tok) {
   const uid = tokUid(tok); if (!uid) return { error: 'Oturum yok, yeniden giriş yapın' };
   const m = await fsAuth('members/' + uid, tok); if (!m) return { error: 'Üyelik doğrulanamadı' };
-  if (!tokClaims(tok).email_verified && !m.byAdmin) return { error: 'Önce e-posta adresinizi doğrulayın' };
+  const tc = tokClaims(tok); if (!tc.email_verified && !['google.com', 'facebook.com'].includes(tc.firebase?.sign_in_provider) && !m.byAdmin) return { error: 'Önce e-posta adresinizi doğrulayın' };
   return { uid, m };
 }
 // POST /preq/up (FormData f0..f2; Authorization: Bearer <üye oturum anahtarı>) → { id, keys: ['pr/<id>/0.webp', …] }

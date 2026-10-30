@@ -60,7 +60,7 @@ service cloud.firestore {
       allow create: if isAdmin() || (signedIn() && request.auth.uid == uid && request.resource.data.uid == uid
         && request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'phone', 'createdAt', 'addresses', 'invoice', 'username', 'legal']));
       // değişiklik için e-posta doğrulanmış olmalı
-      allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && (request.auth.token.email_verified == true || resource.data.get('byAdmin', false) == true) && request.resource.data.uid == uid
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == uid && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider in ['google.com', 'facebook.com'] || resource.data.get('byAdmin', false) == true) && request.resource.data.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'addresses', 'invoice', 'email', 'photo', 'hiddenOrders', 'favs', 'notify', 'notifyHit'])
         && (!('notify' in request.resource.data) || (request.resource.data.notify is list && request.resource.data.notify.size() <= 200))
         && (!('favs' in request.resource.data) || (request.resource.data.favs is list && request.resource.data.favs.size() <= 500))

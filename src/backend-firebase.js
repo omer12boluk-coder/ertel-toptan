@@ -500,17 +500,44 @@ export class FirebaseBackend {
   // Üye olunca doğrulama e-postası gider; e-postasını doğrulamayan giriş yapamaz.
   onMember(cb) {
     this.memberCb = cb;
-    return this.U.onAuthStateChanged(this.auth, async (u) => {
-      if (this.signingUp) return;
+    this._emitMember = async (u) => {
       if (!u) return cb(null);
+      // Google / Facebook ile girenler e-posta doğrulaması beklemez (sağlayıcı doğruladı)
+      const ok = u.emailVerified || u.providerData.some((p) => p.providerId === 'google.com' || p.providerId === 'facebook.com');
       try {
         const s = await timeout(this.F.getDoc(this.d('members', u.uid)));
         const data = s.exists() ? s.data() : {};
         // yönetici panelden açtığı hesaplar e-posta doğrulaması beklemez
-        if (!u.emailVerified && !data.byAdmin) return cb(null);
+        if (!ok && !data.byAdmin) return cb(null);
         cb({ uid: u.uid, email: u.email, ...data });
-      } catch { cb(u.emailVerified ? { uid: u.uid, email: u.email } : null); }
-    });
+      } catch { cb(ok ? { uid: u.uid, email: u.email } : null); }
+    };
+    return this.U.onAuthStateChanged(this.auth, (u) => { if (!this.signingUp) this._emitMember(u); });
+  }
+  // Google / Facebook ile giriş (31.10.2026). İlk girişte üye kaydı (members) açılır. Firebase > Authentication > Sign-in method'da
+  // sağlayıcı açık olmalı; kapalıysa anlaşılır hata döner.
+  async memberSocial(kind, legal) {
+    const P = kind === 'facebook' ? new this.U.FacebookAuthProvider() : new this.U.GoogleAuthProvider();
+    if (kind === 'facebook') P.addScope('email'); else P.setCustomParameters({ prompt: 'select_account' });
+    this.signingUp = true;
+    let cred;
+    try { cred = await this.U.signInWithPopup(this.auth, P); }
+    catch (e) {
+      this.signingUp = false;
+      const c = e.code || '';
+      if (/popup-closed|cancelled-popup/.test(c)) { const x = new Error(''); x.code = 'cancel'; throw x; }
+      throw new Error(/operation-not-allowed/.test(c) ? (kind === 'facebook' ? 'Facebook ile giriş henüz açılmadı.' : 'Google ile giriş henüz açılmadı.')
+        : /account-exists-with-different-credential/.test(c) ? 'Bu e-posta ile zaten üyeliğiniz var. E-posta (ya da diğer hesabınız) ile giriş yapın.'
+        : /popup-blocked/.test(c) ? 'Tarayıcı giriş penceresini engelledi. Açılır pencerelere izin verip tekrar deneyin.'
+        : authMsg(e));
+    }
+    try {
+      const u = cred.user; const ref = this.d('members', u.uid);
+      const s = await timeout(this.F.getDoc(ref));
+      if (!s.exists()) await timeout(this.F.setDoc(ref, { uid: u.uid, email: String(u.email || '').toLowerCase(), name: u.displayName || '', phone: '', createdAt: now(), addresses: [], invoice: { type: 'person' }, ...(legal ? { legal } : {}) }));
+    } catch (e) { console.warn(e); }
+    this.signingUp = false;
+    await this._emitMember?.(this.auth.currentUser);
   }
   actionUrl() { return { url: location.origin + '/' }; }
   async usernameFree(name) { const s = await timeout(this.F.getDoc(this.d('usernames', name))); return !s.exists(); }

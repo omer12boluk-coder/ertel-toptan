@@ -171,6 +171,7 @@ export class DemoBackend {
     this.mem()[uid] = m; this.persist(); return this.pub(m);
   }
   async memberDone() { this.db.shopSession = null; this.persist(); }
+  async memberSocial(kind) { throw new Error((kind === 'facebook' ? 'Facebook' : 'Google') + ' ile giriş sadece canlı sitede çalışır.'); }
   async memberLogin(id, pw) {
     id = String(id).trim().toLowerCase();
     const m = Object.values(this.mem()).find((x) => x.email === id || x.username === id);

@@ -740,6 +740,8 @@ export function Settings() {
             <p className="fine">Kendiniz denemek için: <a href="/?onizleme=1" target="_blank" rel="noopener">/?onizleme=1</a> (bu cihazda “yakında” kalkar; geri almak için <code>?onizleme=0</code>).</p>
           </div>
           <Toggle id="s-osign" label="Müşteriler mağazaya üye olabilsin" hint="Adres ve fatura bilgileri kayıtlı kalır, siparişlerini takip ederler" checked={d.orders.signup !== false} onChange={(v) => set('orders.signup', v)} />
+          <Toggle id="s-lgoogle" label="Google ile giriş" hint="Önce Firebase > Authentication > Sign-in method'da Google açılmalı" checked={d.orders.loginGoogle === true} onChange={(v) => set('orders.loginGoogle', v)} />
+          <Toggle id="s-lfb" label="Facebook ile giriş" hint="Önce Facebook uygulaması kurulup Firebase'de Facebook sağlayıcısı açılmalı" checked={d.orders.loginFacebook === true} onChange={(v) => set('orders.loginFacebook', v)} />
           <h3>Müşteriye bildirim</h3>
           <Toggle id="s-push" label="Sipariş durumu bildirimi" hint="Müşteri sipariş sayfasında “Bildirimleri aç” der; siz durumu değiştirince (Onaylandı, Kargoda…) telefonuna bildirim gider. Android ve bilgisayarda hemen, iPhone’da site ana ekrana eklenince (iOS 16.4+) çalışır." checked={d.orders.push !== false} onChange={(v) => set('orders.push', v)} />
           {d.orders.push !== false && <div className="push-texts">
