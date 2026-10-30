@@ -1,0 +1,27 @@
+# Siteyi Cloudflare'e yükler (ertel-site). cf-site dalı = önizleme (workers.dev); main = canlı (alan adı bağlıysa).
+name: Siteyi Cloudflare'e yayınla
+on:
+  push:
+    branches: [cf-site]
+    paths: ['hosting/public/**', 'site/**', '.github/workflows/site.yml']
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Yükle
+        working-directory: site
+        run: |
+          set +e
+          npx -y wrangler@4 deploy > out.txt 2>&1; code=$?
+          cat out.txt
+          u=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' out.txt | head -1); [ -n "$u" ] && echo "::notice title=Adres::$u"
+          [ $code -eq 0 ] || echo "::error title=Yükleme hatası::$(tail -n 6 out.txt | tr '\n' ' ' | cut -c1-400)"
+          exit $code
