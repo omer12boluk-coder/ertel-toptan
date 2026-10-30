@@ -29,7 +29,7 @@ const note = (t, m) => console.log(`::notice title=${t}::${m}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // --- adres tanıma ---------------------------------------------------------------------------------------------
-const RX = /https?:\/\/(?:www\.)?(?:platincdn\.com\/3519\/|ertelgsm\.com\/)[^"'\s<>\\]+/gi;
+const RX = /https?:\/\/(?:www\.)?(?:platincdn\.com\/3519\/|ertelgsm\.com\/)[^"'\s<>\\|]+/gi;
 // sondaki noktalama ve eşi olmayan ')' adrese dahil değil (ör. "(bkz. https://…/a.jpg)"); dosya adındaki "(1)" korunur
 function split(m) {
   let core = m;
@@ -40,6 +40,8 @@ function split(m) {
   }
   return { core, tail: m.slice(core.length) };
 }
+// Platin ürün sayfası linki (…/<ad>-pmu<no>) → uygulamadaki ürün sayfası (ürün no aynı)
+const PAGE = /https?:\/\/(?:www\.)?ertelgsm\.com\/[a-z0-9-]*-pmu(\d+)\/?(?=["'\s<>\\|#?]|$)/gi;
 const ASSET = /\.(jpe?g|png|gif|webp|svg|avif|bmp|ico|mp4|webm|mov|pdf)$/i;
 const TPL = { 'https://platincdn.com/3519/pictures/{pi}': BASE + 'platin/{pi}', 'https://platincdn.com/3519/pictures/thumb/350X-{pi}': BASE + 'platin/t/{pi}' };
 const dec = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
@@ -120,6 +122,7 @@ const urlsIn = (v, out) => { const s = JSON.stringify(v); for (const m of s.matc
 function rewrite(v) {
   if (typeof v === 'string') {
     if (TPL[v]) return TPL[v];
+    v = v.replace(PAGE, (m, id) => '/magaza/urun/' + id);
     return v.replace(RX, (m) => { const { core, tail } = split(m); const r = resolved.get(core); return r ? r + tail : m; });
   }
   if (Array.isArray(v)) return v.map(rewrite);
@@ -137,9 +140,6 @@ const settings = { app: await get('settings/app'), public: await get('settings/p
 const cat = await chunked('catalog'), pub = await chunked('pubcatalog'), desc = await chunked('desc');
 
 const all = new Set(), pageLinks = new Set(), where = {};
-const ctx = (name, v) => { const s = JSON.stringify(v); let k = 0; for (const m of s.matchAll(/platincdn\.com\/3519\/[^"\s]*\|/g)) { if (k++ > 1) break; note('Örnek ' + name, s.slice(Math.max(0, m.index - 70), m.index + m[0].length + 40).replace(/::/g, ': :')); }
-  k = 0; for (const m of s.matchAll(/ertelgsm\.com\/[^"'\s<>\\]*pmu\d+/g)) { if (k++ > 0) break; note('Link örneği ' + name, s.slice(Math.max(0, m.index - 90), m.index + m[0].length + 20).replace(/::/g, ': :')); } };
-if (process.argv.includes('--ctx')) { ctx('ayarlar', settings); ctx('açıklamalar', desc.parts); }
 const scan = (name, v) => { const s = urlsIn(v, new Set()); let n = 0; for (const u of s) { if (plan(u)) { all.add(u); n++; } else if (!u.includes('{')) pageLinks.add(u); } where[name] = n; };
 scan('ayarlar', settings); scan('katalog', cat.parts); scan('mağaza katalogu', pub.parts); scan('açıklamalar', desc.parts);
 let extra = [];
