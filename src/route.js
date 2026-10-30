@@ -3,6 +3,7 @@
 //   /magaza           herkese açık vitrin (giriş yok): ürünler + listem
 //   /magaza/l/<kod>   vitrin listesi (ürünler linkin içinde, hiçbir yere kaydedilmez)  /admin/l/<kod> yönetici fiyatlar
 //   /magaza/t/<no>    eski vitrin talepleri (sadece görüntüleme)
+//   /magaza/k/<id>    sepet linki: yöneticinin hazırladığı sepet, müşteri adres girip onaylar
 //   /magaza/s/<no>    mağaza siparişi (müşteri takip eder)     /admin/s/<no> yönetici siparişi açar
 //   /b2b              bayi uygulaması             /b2b/t/<no>   bayinin talebi (WhatsApp linki; eski /t/<no> da çalışır)
 //   /admin            yönetim paneli              /admin/t/<no> talep / liste (WhatsApp linki)
@@ -22,7 +23,8 @@ export const ROUTE = {
   listCode: (path.match(/\/l\/([\w-]+)$/) || [])[1] || null, // vitrin listesi (bkz. listcode.js)
   preqId: (path.match(/^\/admin\/u\/([\w-]+)$/) || [])[1] || null, // ürün talebi (Telegram / bildirim linki)
   issueId: (path.match(/^\/admin\/i\/([\w-]+)$/) || [])[1] || null, // sorun bildirimi (Telegram / bildirim linki)
-  orderId: (path.match(/\/s\/([\w-]+)$/) || [])[1] || null, // mağaza siparişi: /magaza/s/<no>, /admin/s/<no>
+  orderId: (path.match(/\/s\/([\w-]+)$/) || [])[1] || null,
+  lcartId: (path.match(/^\/magaza\/k\/([\w-]+)$/) || [])[1] || null, // sepet linki (yönetici hazırlar, müşteri onaylar; lcart.jsx) // mağaza siparişi: /magaza/s/<no>, /admin/s/<no>
   authAction: /\/magaza\/islem\/?$/.test(path), // e-postadaki şifre yenileme / doğrulama bağlantısı
 };
 ROUTE.landing = !ROUTE.admin && !ROUTE.shop && !ROUTE.b2b;

@@ -429,6 +429,14 @@ export class FirebaseBackend {
   newFormId() { return this.F.doc(this.c('oforms')).id; }
   async saveForm(id, data) { await timeout(this.F.setDoc(this.d('oforms', id), data)); }
   async deleteForm(id) { await timeout(this.F.deleteDoc(this.d('oforms', id))); }
+  // Sepet linki (lcarts/{id}): yönetici hazırlar, müşteri linkten açıp bir kez onaylar
+  newLcartId() { return this.F.doc(this.c('lcarts')).id; }
+  async createLcart(id, data) { await timeout(this.F.setDoc(this.d('lcarts', id), data)); }
+  watchLcarts(cb) { return this.F.onSnapshot(this.F.query(this.c('lcarts'), this.F.orderBy('at', 'desc'), this.F.limit(150)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => { console.warn(e); cb([]); }); }
+  async getLcart(id) { const s = await timeout(this.getSafe('lcarts', id)); return s.exists() ? { id, ...s.data() } : null; }
+  async submitLcart(id, sub) { await timeout(this.F.updateDoc(this.d('lcarts', id), { status: 'sent', sub, subAt: this.F.serverTimestamp() })); }
+  async updateLcart(id, patch) { await timeout(this.F.updateDoc(this.d('lcarts', id), patch)); }
+  async deleteLcart(id) { await timeout(this.F.deleteDoc(this.d('lcarts', id))); }
   async syncRevSum(pid) {
     const l = await this.reviewsOf(pid); const n = l.length; const avg = n ? Math.round((l.reduce((a, r) => a + (r.stars || 0), 0) / n) * 10) / 10 : 0;
     await timeout(this.F.setDoc(this.d('revsum', 'main'), { s: { [String(pid)]: n ? [avg, n] : this.F.deleteField() } }, { merge: true }));

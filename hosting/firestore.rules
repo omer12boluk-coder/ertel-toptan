@@ -95,6 +95,17 @@ service cloud.firestore {
     // Popüler ürün verisi (tools/stats.mjs yazar) ve yorum özeti: herkes okur, yönetici yazar
     // Sipariş formu: kaydedilen formlar (sadece yönetici)
     match /oforms/{id} { allow read, write: if isAdmin(); }
+    // Sepet linki (30.10.2026, lcart.jsx): yönetici hazırlar; linki bilen (kimlik tahmin edilemez) tek belgeyi okur, listeleyemez.
+    // Müşteri sadece AÇIK sepeti bir kez onaylar: status open → sent + sub; ürünlere / fiyatlara dokunamaz.
+    match /lcarts/{id} {
+      allow get: if true;
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin() || (resource.data.status == 'open' && request.resource.data.status == 'sent'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'sub', 'subAt'])
+        && request.resource.data.sub is map && request.resource.data.sub.keys().hasOnly(['items', 'contact', 'delivery', 'pay', 'note'])
+        && request.resource.data.sub.items is list && request.resource.data.sub.items.size() <= resource.data.items.size()
+        && request.resource.data.subAt == request.time);
+    }
     match /stats/{d} { allow read: if true; allow write: if isAdmin(); }
     match /revsum/{d} { allow read: if true; allow write: if isAdmin(); }
     // Gelince haber ver: ürün başına bekleyen üyeler (eşitleme okur, bildirim gönderip siler). Üye sadece KENDİ kimliğini ekler / çıkarır.

@@ -247,6 +247,14 @@ export class DemoBackend {
   newFormId() { return 'f' + rid() + rid(); }
   async saveForm(id, data) { this.of_()[id] = data; this.persist(); }
   async deleteForm(id) { delete this.of_()[id]; this.persist(); }
+  lc_() { return (this.db.lcarts = this.db.lcarts || {}); }
+  newLcartId() { return 'k' + rid() + rid() + rid(); }
+  async createLcart(id, data) { this.lc_()[id] = data; this.persist(); }
+  watchLcarts(cb) { return this.sub(() => cb(Object.entries(this.lc_()).map(([id, x]) => ({ id, ...JSON.parse(JSON.stringify(x)) })).sort((a, b) => b.at - a.at))); }
+  async getLcart(id) { const x = this.lc_()[id]; return x ? { id, ...JSON.parse(JSON.stringify(x)) } : null; }
+  async submitLcart(id, sub) { const x = this.lc_()[id]; if (!x || x.status !== 'open') throw new Error('Bu sepet artık açık değil'); Object.assign(x, { status: 'sent', sub, subAt: now() }); this.persist(); }
+  async updateLcart(id, patch) { Object.assign(this.lc_()[id], patch); this.persist(); }
+  async deleteLcart(id) { delete this.lc_()[id]; this.persist(); }
   async syncRevSum() {}
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
   async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => { const kc = stencilKeys({ ...p, t }); return kc ? { ...p, kc } : p; }); }

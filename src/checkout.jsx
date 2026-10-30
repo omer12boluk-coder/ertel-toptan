@@ -56,7 +56,7 @@ const districtsOf = (city) => TR[city]?.d || [];
 const distOk = (a) => (a.dm ? String(a.district || '').trim().length >= 2 : districtsOf(a.city).includes(a.district));
 export const addrOk = (a) => !!(a && TR[a.city] && distOk(a) && String(a.hood || '').trim() && String(a.street || '').trim().length >= 3 && String(a.no || '').trim());
 export const joinAddr = (x) => [String(x.street ?? '').trim(), x.no && 'No:' + String(x.no).trim(), x.door && 'D:' + String(x.door).trim(), String(x.note || '').trim()].filter(Boolean).join(' ');
-function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
+export function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
   const up = (k) => (e) => set({ ...a, [k]: e.target.value });
   const setA = (patch) => { const x = { ...a, street: a.street ?? (a.no ? '' : a.address || ''), ...patch }; set({ ...x, address: joinAddr(x) }); };
   const ds = districtsOf(a.city);
@@ -99,7 +99,7 @@ function AddressFields({ a, set, err = {}, p = 'addr', title, recip }) {
     </div>
   );
 }
-function addrErrors(a, p, recip) {
+export function addrErrors(a, p, recip) {
   const e = {};
   if (recip) {
     if (String(a?.name || '').trim().length < 3) e[p + '.name'] = 'Alıcının adını soyadını yazın';
@@ -113,10 +113,10 @@ function addrErrors(a, p, recip) {
   if (!String(a?.no || '').trim()) e[p + '.no'] = 'Bina no yazın';
   return e;
 }
-const cleanAddr = (a) => { const x = { city: a.city, district: String(a.district || '').trim(), ...(a.dm ? { dm: 1 } : {}), hood: String(a.hood || '').trim(), street: String(a.street ?? '').trim(), no: String(a.no || '').trim(), door: String(a.door || '').trim(), note: String(a.note || '').trim() }; return { ...x, address: joinAddr(x) }; };
+export const cleanAddr = (a) => { const x = { city: a.city, district: String(a.district || '').trim(), ...(a.dm ? { dm: 1 } : {}), hood: String(a.hood || '').trim(), street: String(a.street ?? '').trim(), no: String(a.no || '').trim(), door: String(a.door || '').trim(), note: String(a.note || '').trim() }; return { ...x, address: joinAddr(x) }; };
 
 // Seçenek kartı (radyo)
-function Choice({ on, onClick, title, sub, icon }) {
+export function Choice({ on, onClick, title, sub, icon }) {
   return (
     <button type="button" role="radio" aria-checked={on} className={'seg-card' + (on ? ' on' : '')} onClick={onClick}>
       <span className="radio" aria-hidden="true" />{icon && <Icon n={icon} s={20} />}<span><b>{title}</b>{sub && <small>{sub}</small>}</span>

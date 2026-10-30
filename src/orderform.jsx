@@ -11,6 +11,7 @@ import { fmt, totals, fmtTotals, norm, roundStep, ls, priceFor } from './utils.j
 import { renderListImages, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
 import { encodeList, listLink } from './listcode.js';
 import { printHtml } from './orders.jsx';
+import { LinkMake, LinkCarts } from './lcart.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -19,7 +20,7 @@ const TTL = 12 * 3600e3; // açık form 12 saat sonra kendiliğinden temizlenir
 // imza: formun kaydedilmiş/açılmış hâliyle karşılaştırmak için (değişiklik yoksa Kaydet düğmesi görünmez)
 const sig = (x) => JSON.stringify([(x.name || '').trim(), (x.items || []).map((it) => [it.id, Number(it.qty) || 0, it.price == null || it.price === '' ? null : Number(it.price)])]);
 const blank = () => { const b = { no: newNo(), name: '', items: [] }; b.base = sig(b); return b; };
-const loadDraft = () => { const x = ls.get(KEY, null); if (!(x && x.items && x.at && Date.now() - x.at < TTL)) return blank(); if (x.base == null) x.base = x.sid ? sig(x) : sig({}); return x; };
+const loadDraft = (key = KEY) => { const x = ls.get(key, null); if (!(x && x.items && x.at && Date.now() - x.at < TTL)) return blank(); if (x.base == null) x.base = x.sid ? sig(x) : sig({}); return x; };
 // arama sıralaması için kullanım: bu cihazda forma ekleme sayısı + siparişlerde geçme sayısı
 const USE = 'of-use';
 const bump = (id) => { const u = ls.get(USE, {}); u[id] = (u[id] || 0) + 1; ls.set(USE, u); };
@@ -27,23 +28,26 @@ const wordRe = (t) => new RegExp('(^|[^0-9a-z])' + t.replace(/[.*+?^${}()|[\]\\]
 const when = (t) => { const m = Math.round((Date.now() - t) / 60000); if (m < 1) return 'az önce'; if (m < 60) return m + ' dk önce'; const h = Math.round(m / 60); if (h < 24) return h + ' sa önce'; const d = Math.round(h / 24); return d < 7 ? d + ' gün önce' : new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }); };
 
 
-export function OrderForm() {
+// linkMode: /admin/sepet-link — aynı ürün seçme / fiyat yazma ekranı; sonunda liste resmi yerine müşteriye SEPET LİNKİ
+// oluşturulur (lcart.jsx), altta kayıtlı formlar yerine linkle gelen sepetler listelenir. Taslağı ayrı tutulur.
+export function OrderForm({ linkMode = false }) {
+  const DKEY = linkMode ? 'lcart-draft' : KEY;
   const { catalog, byId, settings: S, orders = [], requests = [] } = useStore();
   const rate = useRate();
-  const [d, setD] = useState(loadDraft); // items: [{ id, qty, price }], sid: kaydedilmiş formdan açıldıysa kimliği
+  const [d, setD] = useState(() => loadDraft(DKEY)); // items: [{ id, qty, price }], sid: kaydedilmiş formdan açıldıysa kimliği
   const [forms, setForms] = useState(null);
   const [ask, setAsk] = useState(null); // açık form doluyken kayıtlı form açma sorusu
   const [del, setDel] = useState(null);
   const [wipe, setWipe] = useState(false); // "Formu temizle" onayı
   const [askNew, setAskNew] = useState(false); // kaydedilmemiş değişiklik varken "Yeni form"
-  useEffect(() => { const A = api(); return A?.watchForms ? A.watchForms(setForms) : setForms([]); }, []);
+  useEffect(() => { if (linkMode) return; const A = api(); return A?.watchForms ? A.watchForms(setForms) : setForms([]); }, []);
   const [q, setQ] = useState('');
   const [imgs, setImgs] = useState(null); // [{ file, url }]
   const [busy, setBusy] = useState(false);
   const [outOpen, setOutOpen] = useState(false); // "Müşteriye gönder" bölümü: kapalı başlar, başlığa basınca açılır
   const [paper, setPaper] = useState(() => ls.get('of-paper', 'a4')); // yazdırma kâğıdı: a4 | a6
   const step = Number(S.pricing.adjustStep) || 1;
-  useEffect(() => { ls.set(KEY, { ...d, at: Date.now() }); }, [d]);
+  useEffect(() => { ls.set(DKEY, { ...d, at: Date.now() }); }, [d]);
 
   // siparişlerde geçme sayısı (mağaza + bayi siparişleri, panelde yüklü olanlar)
   const sold = useMemo(() => { const m = new Map(); for (const o of [...orders, ...requests.filter((r) => r.type === 'order')]) for (const it of o.items || []) m.set(it.id, (m.get(it.id) || 0) + 1); return m; }, [orders, requests]);
@@ -150,10 +154,10 @@ export function OrderForm() {
   return (
     <div className="page oform">
       <div className="page-h">
-        <h1 className="page-t">Sipariş formu <span className="muted">#{d.no}</span></h1>
+        <h1 className="page-t">{linkMode ? 'Sepet linki' : 'Sipariş formu'} <span className="muted">#{d.no}</span></h1>
         <span className="row-btns">
-          {rows.length > 0 && <button className="btn sm wa" onClick={() => { setOutOpen(true); setTimeout(() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }}><Icon n="wa" s={15} />Müşteriye gönder</button>}
-          {dirty && rows.length > 0 && <button className="btn sm primary" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</button>}
+          {!linkMode && rows.length > 0 && <button className="btn sm wa" onClick={() => { setOutOpen(true); setTimeout(() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }}><Icon n="wa" s={15} />Müşteriye gönder</button>}
+          {!linkMode && dirty && rows.length > 0 && <button className="btn sm primary" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</button>}
           {(d.items.length > 0 || d.name) && <button className="btn sm ghost danger" onClick={() => setWipe(true)}><Icon n="trash" s={15} />Formu temizle</button>}
         </span>
       </div>
@@ -184,7 +188,7 @@ export function OrderForm() {
             <button type="button" className="btn sm of-new" onClick={tryNew}><Icon n="plus" s={15} />Yeni form</button>
             {d.sid && <span className={'of-state' + (dirty ? ' dirty' : '')}>{dirty ? 'Kaydedilmemiş değişiklik' : 'Kayıtlı form'}</span>}
           </div>}
-          <label className="field"><span className="field-l">Müşteri <small className="opt">(resimde görünür, isteğe bağlı)</small></span><input id="of-name" value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="ör. Kadıköy GSM – Ahmet" /></label>
+          <label className="field"><span className="field-l">Müşteri <small className="opt">({linkMode ? 'sadece sizin listenizde görünür' : 'resimde görünür'}, isteğe bağlı)</small></span><input id="of-name" value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="ör. Kadıköy GSM – Ahmet" /></label>
           {rows.length === 0 ? <Empty icon="cart" title="Form boş">Soldan ürün arayıp ekleyin.</Empty> : (
             <>
               <table className="itable vle oform-t">
@@ -213,7 +217,8 @@ export function OrderForm() {
             </>
           )}
         </section>
-        {rows.length > 0 && (
+        {linkMode && rows.length > 0 && <LinkMake no={d.no} name={d.name} items={items} total={tot} rate={rate} onDone={() => setD(blank())} />}
+        {!linkMode && rows.length > 0 && (
           <section className={'oform-out' + (outOpen ? ' open' : '')} id="of-out">
             <button type="button" className="oform-out-tg" onClick={() => setOutOpen((v) => !v)} aria-expanded={outOpen}>
               <span className="oot-ic"><Icon n="wa" s={18} /></span>
@@ -257,7 +262,7 @@ export function OrderForm() {
         </div>
       </div>
 
-      <section className="oform-saved">
+      {linkMode ? <LinkCarts /> : <section className="oform-saved">
         <h2>Kaydedilen formlar {forms?.length > 0 && <span className="muted num">{forms.length}</span>}</h2>
         {forms == null ? <div className="spinner sm" /> : forms.length === 0 ? <p className="fine">Henüz kaydedilen form yok. Formu hazırlayıp <b>Kaydet</b>’e basın; burada saklanır, istediğiniz zaman açarsınız.</p> : (
           <ul className="ofs-list">
@@ -273,7 +278,7 @@ export function OrderForm() {
             ); })}
           </ul>
         )}
-      </section>
+      </section>}
 
       {ask && (
         <Sheet title="Kayıtlı formu aç" onClose={() => setAsk(null)} footer={<>
