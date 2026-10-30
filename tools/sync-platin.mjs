@@ -8,7 +8,7 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { cleanText } from '../src/clean.js';
-import { stencilKeys } from '../src/kalip.js';
+import { stencilKeys, packTags, DESC_BK, descBuckets } from '../src/kalip.js';
 
 const FEED = process.env.FEED_URL || 'https://www.ertelgsm.com/xml-cikti/gm';
 const DRY = process.argv.includes('--dry');
@@ -200,7 +200,7 @@ function chunks(arr, max = 650000) {
   if (cur.length) out.push(cur); return out;
 }
 const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man', 't'];
-const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; return o; };
+const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; if (o.t) { const t = packTags(p); if (t) o.t = t; else delete o.t; } return o; };
 async function writeChunked(col, items, key) {
   const ps = chunks(items);
   const b = db.batch();
@@ -240,7 +240,9 @@ if (!DRY) {
   if (Object.keys(newDescs).length) { // açıklamalar (sadece hiç açıklaması olmayan yeni ürünler)
     const all = Object.entries({ ...descMap, ...newDescs }); const dp = chunks(all);
     const b = db.batch(); dp.forEach((part, i) => b.set(db.doc(`desc/c${i}`), { d: Object.fromEntries(part) }));
-    b.set(db.doc('desc/_meta'), { version: now, chunks: dp.length, count: all.length }); await b.commit();
+    // açıklama kovaları (mağazada tek ürün açılınca sadece kendi kovası iner): hepsi yeniden yazılır (yeni ürün seyrek)
+    const bv = {}; descBuckets(Object.fromEntries(all)).forEach((d, i) => { b.set(db.doc(`descb/b${i}`), { v: now, d }); bv[i] = now; });
+    b.set(db.doc('desc/_meta'), { version: now, chunks: dp.length, count: all.length, bk: DESC_BK, bv }); await b.commit();
   }
   // 'Gelince haber ver' artık yönetim panelinde stok açılınca gönderiliyor (stok sadece panelden yönetilir)
   await db.doc('meta/sync').set({ at: now, rate: round2(rate), feed: feed.size, changed, summary, prices: st.price.slice(0, 100), added: st.added.slice(0, 100) });

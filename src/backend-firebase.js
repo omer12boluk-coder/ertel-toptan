@@ -7,7 +7,7 @@ import { EMAIL_DOMAIN } from './config.js';
 import { now, ls } from './utils.js';
 import { chunkBySize } from './cats.js';
 import { idbGet, idbSet } from './idb.js';
-import { stencilKeys } from './kalip.js';
+import { stencilKeys, packTags, DESC_BK, descBucket, descBuckets } from './kalip.js';
 // eski localStorage önbelleklerini temizle (artık IndexedDB'de)
 try { localStorage.removeItem('cat-cache'); localStorage.removeItem('pubcat-cache'); } catch {}
 
@@ -235,19 +235,50 @@ export class FirebaseBackend {
     return this._descs;
   }
   async hasDescs() { return (await timeout(this.F.getDoc(this.d('desc', '_meta')))).exists(); }
-  async getDesc(id) { return (await this.loadDescMap())[id] || ''; }
-  async saveDescs(map) {
+  // Tek ürünün açıklaması: bütün açıklamalar zaten yüklüyse / cihazda güncel kopyası varsa oradan; yoksa sadece ürünün
+  // kovası (descb/b<n>, ~25 KB) okunur. Kova eski ya da yoksa eski yol (bütün açıklamalar) — görünen sonuç aynı.
+  _descMeta() {
+    this._dmP = this._dmP || timeout(this.getSafe('desc', '_meta')).then((s) => (s.exists() ? s.data() : null)).catch((e) => { this._dmP = null; throw e; });
+    return this._dmP;
+  }
+  async getDesc(id) {
+    if (this._descs) return this._descs[id] || '';
+    try {
+      const meta = await this._descMeta();
+      if (!meta) return '';
+      const cached = await idbGet('desc').catch(() => null);
+      if (cached && cached.version === meta.version && cached.d) { this._descs = cached.d; return cached.d[id] || ''; }
+      const bk = meta.bk, n = bk ? descBucket(id, bk) : -1;
+      if (bk && meta.bv?.[n] != null) {
+        this._dbk = this._dbk || {};
+        this._dbk[n] = this._dbk[n] || this.getSafe('descb', 'b' + n).then((s) => (s.exists() && s.data().v === meta.bv[n] ? s.data().d || {} : null)).catch(() => null);
+        const d = await this._dbk[n];
+        if (d) return d[id] || '';
+        delete this._dbk[n];
+      }
+    } catch (e) { console.warn(e); }
+    return (await this.loadDescMap())[id] || '';
+  }
+  // only: sadece bu ürünlerin kovaları yeniden yazılır (tek ürün düzenlemede 64 yerine 1 yazma)
+  async saveDescs(map, only) {
     const parts = chunkBySize(Object.entries(map));
+    const version = now();
+    let bv = {};
+    if (only) { try { const m = (await timeout(this.getSafe('desc', '_meta'))).data() || {}; if (m.bk === DESC_BK && m.bv) bv = { ...m.bv }; else only = null; } catch { only = null; } }
+    const bks = descBuckets(map);
+    const want = only ? new Set(only.map((id) => descBucket(id))) : null;
     const b = this.F.writeBatch(this.db);
     parts.forEach((part, i) => b.set(this.d('desc', 'c' + i), { d: Object.fromEntries(part) }));
-    b.set(this.d('desc', '_meta'), { version: now(), chunks: parts.length, count: Object.keys(map).length });
+    bks.forEach((d, i) => { if (!want || want.has(i)) { b.set(this.d('descb', 'b' + i), { v: version, d }); bv[i] = version; } });
+    b.set(this.d('desc', '_meta'), { version, chunks: parts.length, count: Object.keys(map).length, bk: DESC_BK, bv });
     await b.commit();
-    this._descs = map; idbSet('desc', null);
+    this._descs = map; this._dmP = null; this._dbk = null; idbSet('desc', null);
   }
+  async hasDescBuckets() { const m = await this._descMeta().catch(() => null); return !m || m.bk === DESC_BK; }
   async setDesc(id, html) {
     const m = { ...(await this.loadDescMap()) };
     if (html) m[id] = html; else delete m[id];
-    await this.saveDescs(m);
+    await this.saveDescs(m, [id]);
   }
 
   async getSyncInfo() { const s = await timeout(this.F.getDoc(this.d('meta', 'sync'))); return s.exists() ? s.data() : null; }
@@ -639,6 +670,6 @@ function authMsg(e) {
 }
 
 const PUB_FIELDS = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man', 't'];
-export function publicItem(p) { const o = {}; for (const k of PUB_FIELDS) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; return o; }
+export function publicItem(p) { const o = {}; for (const k of PUB_FIELDS) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; if (o.t) { const t = packTags(p); if (t) o.t = t; else delete o.t; } return o; }
 
 function clean(p) { const o = {}; for (const k in p) if (p[k] !== undefined && !k.startsWith('_')) o[k] = p[k]; return o; }

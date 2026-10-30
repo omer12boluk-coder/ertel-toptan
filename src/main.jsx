@@ -175,6 +175,7 @@ async function loadAll(u, A, background) {
       } catch (e) { console.warn(e); }
     }
     if (fb) A.hasDescs().then((h) => !h && loadSeedDesc().then((d) => A.saveDescs(d))).catch((e) => console.warn(e));
+    if (fb && A.hasDescBuckets) A.hasDescBuckets().then((h) => !h && A.loadDescMap().then((d) => A.saveDescs(d))).catch((e) => console.warn(e)); // açıklama kovaları (tek ürün açılınca az veri)
     if (fb && cat?.length) A.hasPublicCatalog().then((h) => !h && A.savePublicCatalog(cat)).catch((e) => console.warn(e));
   }
   // arka plan yenilemesinde katalog değişmediyse ekranı yeniden çizme

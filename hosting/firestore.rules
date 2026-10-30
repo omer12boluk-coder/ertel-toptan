@@ -29,6 +29,7 @@ service cloud.firestore {
     // mağaza ana sayfası resimleri (banner, marka logosu, kutular)
     match /shopimg/{doc} { allow read: if true; allow write: if isAdmin(); }
     match /desc/{doc} { allow read: if true; allow write: if isAdmin(); }
+    match /descb/{doc} { allow read: if true; allow write: if isAdmin(); } // açıklama kovaları (tek ürün)
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());

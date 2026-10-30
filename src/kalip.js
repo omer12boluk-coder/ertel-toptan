@@ -98,3 +98,26 @@ export function stencilKeys(p) {
   const m = tags.map((x) => nrm(x).replace(/[\s-]+/g, '')).filter((x) => x.length >= 5 && /\d/.test(x) && /[a-z]/.test(x) && !k.includes(x.toUpperCase())).map((x) => 'm:' + x);
   return [...k, ...m].join(' ') || '-';
 }
+
+// Herkese açık katalog için gizli etiketler (30.10.2026): küçük harfe çevrilir, tekrarlar ve başka bir etiketin içinde
+// zaten geçen etiketler atılır → mağaza araması (kelime etiket metninin içinde geçiyor mu) birebir aynı sonucu verir, veri küçülür.
+export function packTags(p) {
+  const list = [...new Set(tagList(p).map((x) => nrm(x).trim()).filter(Boolean))].sort((a, b) => b.length - a.length);
+  const keep = [];
+  for (const t of list) if (!keep.some((x) => x.includes(t))) keep.push(t);
+  return keep.join(',');
+}
+// Ürün açıklaması kovaları (30.10.2026): açıklamalar ayrıca 64 küçük belgeye (descb/b<n>) bölünür; mağazada bir ürün
+// açılınca bütün açıklamalar (~1,5 MB) yerine sadece o ürünün kovası (~25 KB) iner.
+export const DESC_BK = 64;
+export function descBucket(id, bk = DESC_BK) {
+  const n = Number(id);
+  if (Number.isFinite(n)) return Math.abs(Math.trunc(n)) % bk;
+  let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return Math.abs(h) % bk;
+}
+export function descBuckets(map, bk = DESC_BK) {
+  const out = Array.from({ length: bk }, () => ({}));
+  for (const [id, html] of Object.entries(map || {})) if (html) out[descBucket(id, bk)][id] = html;
+  return out;
+}

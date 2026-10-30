@@ -2,7 +2,7 @@
 // Ürün elle eklenmiş sayılır (man: 1) ki site eşitlemesi "sitede yok" diye gizlemesin.
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { stencilKeys } from '../src/kalip.js';
+import { stencilKeys, packTags } from '../src/kalip.js';
 
 const MODE = process.argv[2] || 'ekle';
 if (MODE === 'kontrol') { // canlı linkler gerçekten çalışıyor mu (iPhone'un istediği gibi parça parça)
@@ -61,7 +61,7 @@ function chunks(arr, max = 650000) {
   if (cur.length) out.push(cur); return out;
 }
 const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man', 't'];
-const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; return o; };
+const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; if (o.t) { const t = packTags(p); if (t) o.t = t; else delete o.t; } return o; };
 async function writeChunked(col, items) {
   const old = (await db.doc(`${col}/_meta`).get()).data()?.chunks || 0;
   const ps = chunks(items);
