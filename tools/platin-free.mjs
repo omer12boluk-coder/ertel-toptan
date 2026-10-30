@@ -123,6 +123,9 @@ const settings = { app: await get('settings/app'), public: await get('settings/p
 const cat = await chunked('catalog'), pub = await chunked('pubcatalog'), desc = await chunked('desc');
 
 const all = new Set(), pageLinks = new Set(), where = {};
+const ctx = (name, v) => { const s = JSON.stringify(v); let k = 0; for (const m of s.matchAll(/platincdn\.com\/3519\/[^"\s]*\|/g)) { if (k++ > 1) break; note('Örnek ' + name, s.slice(Math.max(0, m.index - 70), m.index + m[0].length + 40).replace(/::/g, ': :')); }
+  k = 0; for (const m of s.matchAll(/ertelgsm\.com\/[^"'\s<>\\]*pmu\d+/g)) { if (k++ > 0) break; note('Link örneği ' + name, s.slice(Math.max(0, m.index - 90), m.index + m[0].length + 20).replace(/::/g, ': :')); } };
+if (process.argv.includes('--ctx')) { ctx('ayarlar', settings); ctx('açıklamalar', desc.parts); }
 const scan = (name, v) => { const s = urlsIn(v, new Set()); let n = 0; for (const u of s) { if (plan(u)) { all.add(u); n++; } else if (!u.includes('{')) pageLinks.add(u); } where[name] = n; };
 scan('ayarlar', settings); scan('katalog', cat.parts); scan('mağaza katalogu', pub.parts); scan('açıklamalar', desc.parts);
 let extra = [];

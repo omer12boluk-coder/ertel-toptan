@@ -30,4 +30,4 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
-        run: node tools/platin-free.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.apply && '--apply' || '' }} --extra tools/platin-extra.txt
+        run: node tools/platin-free.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.apply && '--apply' || '' }} --extra tools/platin-extra.txt --ctx
