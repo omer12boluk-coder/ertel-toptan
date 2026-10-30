@@ -463,8 +463,15 @@ async function dhlCall(act, body) {
 }
 // takip no geldiyse siparişe yaz (durum Kargoda) ve müşteriye bildir
 // takip no geldiyse: kargo bilgisi + "Kargoda"; teslim edildiyse "Tamamlandı" (müşteriye bildirim gider). Döner: 'shipped' | 'done' | false
-async function dhlApply(o, x) {
+async function dhlApply(o, x, col) {
   if (!x?.found) return false;
+  if (col === 'lcarts') { // sepet linki: sadece kargo bilgisi yazılır (durum/bildirim yok)
+    const dhl = { ...o.dhl, statu: x.statu, text: x.text, checked: now() };
+    if (!x.code || (o.cargo?.code === x.code && (!x.delivered || o.cargo?.delivered))) { if (x.text !== o.dhl?.text) await api().updateLcart(o.id, { dhl }).catch(() => {}); return false; }
+    const cargo = { ...(o.cargo || {}), carrier: 'dhl', company: 'DHL', code: x.code, url: x.url || `https://kargotakip.dhlecommerce.com.tr/?takipNo=${x.code}`, ...(x.delivered ? { delivered: now() } : {}) };
+    await api().updateLcart(o.id, { cargo, dhl });
+    return x.delivered ? 'done' : 'shipped';
+  }
   const dhl = { ...o.dhl, statu: x.statu, text: x.text, checked: now() };
   if (!x.code) { if (x.text !== o.dhl?.text) await api().updateOrder(o.id, { dhl }).catch(() => {}); return false; }
   const t = now(); const hist = [...(o.history || [])];
@@ -553,7 +560,9 @@ export function dhlLabelHtml(o, S) {
 }
 // Kargo kartı (sipariş "Hazırlanıyor" olunca görünür): firma seç (DHL / Yurtiçi) → "aktar" → barkod yazdır.
 // Firma seçmek sadece siparişe firmayı atar; durum değişmez. "Kargoda" ancak şube okutup takip no gelince (ya da elle) olur.
-function CargoCard({ o, flow }) {
+export function CargoCard({ o, flow, col = 'orders' }) {
+  const lc = col === 'lcarts'; // sepet linki: aynı kart, kayıt lcarts'a
+  const save = (x) => (lc ? api().updateLcart(o.id, x) : save(x));
   const S = store.s.settings;
   const pk = (S.orders?.packages?.length ? S.orders.packages : [{ n: 'Poşet', kg: 1, desi: 1 }]);
   const car = o.cargo?.carrier || o.delivery?.carrier || 'dhl';
@@ -573,7 +582,7 @@ function CargoCard({ o, flow }) {
     if (demo || !dhlOpen(o)) return;
     const k = 'dhl-chk-' + o.id;
     try { if (Date.now() - Number(sessionStorage.getItem(k) || 0) < 3 * 60e3) return; sessionStorage.setItem(k, String(Date.now())); } catch {}
-    dhlCall('track', { id: o.id }).then((x) => dhlApply(o, x).then((r) => r && toast(r === 'done' ? 'DHL: teslim edildi' : 'DHL takip no geldi: ' + x.code))).catch(() => {});
+    dhlCall('track', { id: o.id, col }).then((x) => dhlApply(o, x, col).then((r) => r && toast(r === 'done' ? 'DHL: teslim edildi' : 'DHL takip no geldi: ' + x.code))).catch(() => {});
   }, [o.id, live]);
   const pickPkg = (i) => { setPkg(i); if (i >= 0) { setKg(pk[i].kg); setDesi(pk[i].desi); } };
   async function savePk(list) {
@@ -585,7 +594,7 @@ function CargoCard({ o, flow }) {
   async function pickCarrier(k) { // firmayı siparişe ata (durum değişmez)
     if (live && k !== 'dhl') { toast('Önce DHL kaydını iptal edin', 'bad'); return; }
     if (o.cargo?.carrier === k) return;
-    try { await api().updateOrder(o.id, { cargo: { ...(o.cargo || {}), carrier: k, company: CARRIERS[k].company } }); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+    try { await save({ cargo: { ...(o.cargo || {}), carrier: k, company: CARRIERS[k].company } }); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
   }
   async function transfer() {
     if (demo) { toast('DHL sadece canlı sitede çalışır', 'bad'); return; }
@@ -593,10 +602,10 @@ function CargoCard({ o, flow }) {
     if (!a.city || !a.district || !a.address) { setErr('Teslimat adresinde il, ilçe ya da açık adres eksik.'); return; }
     setBusy('send'); setErr('');
     try {
-      const j = await dhlCall('create', { id: o.id, kg, desi, icerik, pay });
+      const j = await dhlCall('create', { id: o.id, col, kg, desi, icerik, pay });
       if (!j?.ok) { setErr('DHL kabul etmedi: ' + (j?.error || 'bilinmeyen cevap')); return; }
       const dhl = { ref: j.ref, at: now(), kg: j.kg, desi: j.desi, icerik: j.icerik, pay, pkg: pkg >= 0 ? pk[pkg]?.n || '' : 'Özel' };
-      await api().updateOrder(o.id, { dhl, cargo: { ...(o.cargo || {}), carrier: 'dhl', company: 'DHL' } });
+      await save({ dhl, cargo: { ...(o.cargo || {}), carrier: 'dhl', company: 'DHL' } });
       toast('DHL’e aktarıldı: ' + j.ref);
     } catch (e) { setErr('Bağlantı hatası: ' + e.message); } finally { setBusy(''); }
   }
@@ -618,23 +627,23 @@ function CargoCard({ o, flow }) {
   };
   async function check() {
     setBusy('check');
-    try { const x = await dhlCall('track', { id: o.id }); const r = await dhlApply(o, x); if (r) toast(r === 'done' ? 'Teslim edildi' : 'Takip no geldi: ' + x.code); else toast(x?.found ? (x.text || 'Henüz şubede okutulmadı') : 'DHL’de kayıt bulunamadı', x?.found ? undefined : 'bad'); }
+    try { const x = await dhlCall('track', { id: o.id, col }); const r = await dhlApply(o, x, col); if (r) toast(r === 'done' ? 'Teslim edildi' : 'Takip no geldi: ' + x.code); else toast(x?.found ? (x.text || 'Henüz şubede okutulmadı') : 'DHL’de kayıt bulunamadı', x?.found ? undefined : 'bad'); }
     catch (e) { toast('Bakılamadı: ' + e.message, 'bad'); } finally { setBusy(''); }
   }
   const cancel = () => setConfirm({ title: 'DHL kaydını iptal et', text: `DHL’deki ${o.dhl?.ref} kaydı silinecek (online şubede Toplu Gönderi Listesi’nden kalkar). Basılmış barkod geçersiz olur.`, okLabel: 'İptal et', tone: 'danger',
-    onOk: async () => { setBusy('cancel'); try { const j = await dhlCall('cancel', { id: o.id }); if (j?.ok) { await api().updateOrder(o.id, { dhl: { ...o.dhl, cancelled: now() } }); toast('DHL kaydı iptal edildi'); } else toast('İptal edilemedi: ' + (j?.fault || j?.error || ''), 'bad'); } finally { setBusy(''); } } });
+    onOk: async () => { setBusy('cancel'); try { const j = await dhlCall('cancel', { id: o.id, col }); if (j?.ok) { await save({ dhl: { ...o.dhl, cancelled: now() } }); toast('DHL kaydı iptal edildi'); } else toast('İptal edilemedi: ' + (j?.fault || j?.error || ''), 'bad'); } finally { setBusy(''); } } });
   const st = o.status === 'done' ? 'Teslim edildi' : o.cargo?.code ? 'Kargoda · ' + (o.dhl?.text || 'yolda') : o.dhl?.text && o.dhl.statu !== '0' ? o.dhl.text : 'DHL’e aktarıldı · şubede okutulmayı bekliyor';
   return (
     <div className="set-card o-cargo">
       <div className="ocg-h"><h3>Kargo</h3>{o.cargo?.code && <span className="ocg-code">Takip no {o.cargo.url ? <a className="num" href={o.cargo.url} target="_blank" rel="noopener">{o.cargo.code}</a> : <b className="num">{o.cargo.code}</b>}</span>}</div>
-      <div className="ocg-car" role="radiogroup" aria-label="Kargo firması">
+      {!lc && <div className="ocg-car" role="radiogroup" aria-label="Kargo firması">
         {Object.values(CARRIERS).map((c) => (
           <button key={c.k} type="button" role="radio" aria-checked={car === c.k} className={'ocg-opt' + (car === c.k ? ' on' : '')} onClick={() => pickCarrier(c.k)}>
             <CarrierMark k={c.k} size="lg" /><span><b>{c.name}</b><small>{!c.live ? 'Entegrasyon yakında' : o.delivery?.carrier === c.k ? 'Müşterinin seçimi' : 'Otomatik barkod'}</small></span>
           </button>
         ))}
-      </div>
-      {car === 'yurtici' ? (
+      </div>}
+      {car === 'yurtici' && !lc ? (
         <p className="fine ocg-soon"><Icon n="clock" s={16} />Yurtiçi Kargo entegrasyonu henüz hazır değil. Şimdilik barkodu Yurtiçi’nin kendi sisteminden alın; takip numarasını <button className="link" onClick={() => flow.openShip(o)}>elle girebilirsiniz</button></p>
       ) : live ? (<>
         <p className="dhl-st"><span className={'dot' + (o.cargo?.code ? ' ok' : '')} />{st}</p>
@@ -650,7 +659,7 @@ function CargoCard({ o, flow }) {
             <p className="fine">Barkod yazdır’a basınca açılan menüden <b>Yazdır</b>’ı seçin.{paper === 'a6' && <> Yazıcıya A6 kâğıt takın; iPhone kâğıt olarak A4 gösterse de etiket A6 kâğıda basılır.</>}</p></div>}
           {dhlOpen(o) && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : o.cargo?.code ? 'Teslim edildi mi?' : 'Takip no geldi mi?'}</button>}
           {!o.cargo?.code && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL kaydını iptal et</button>}
-          {!o.cargo?.code && <button className="link ocg-manual" onClick={() => flow.openShip(o)}>Takip no’yu elle gir</button>}
+          {!o.cargo?.code && !lc && <button className="link ocg-manual" onClick={() => flow.openShip(o)}>Takip no’yu elle gir</button>}
         </div>
       </>) : (<>
         <div className="ocg-grid">

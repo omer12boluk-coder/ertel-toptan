@@ -476,7 +476,8 @@ function ShellFull() {
   const member = useStore((s) => s.member);
   const prevOrders = useRef(newOrders);
   useEffect(() => { if (admin && newOrders > prevOrders.current) toast('Mağazadan yeni sipariş geldi', 'info'); prevOrders.current = newOrders; }, [newOrders]);
-  const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders : 0);
+  const lcNew = useStore((st) => (admin ? (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length : 0));
+  const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders : k === 'siparis' ? lcNew : 0);
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
@@ -487,7 +488,7 @@ function ShellFull() {
           {pub && <span className="pub-id"><b className="pub-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b></span>}
           <nav className="topnav" aria-label="Ana menü">
             {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet') && k !== 'tasarim').map(([k, l, i]) => (
-              <button key={k} className={'topnav-b' + (tab === k ? ' on' : '')} onClick={() => go(k)} title={l}>
+              <button key={k} className={'topnav-b' + (tab === k || (k === 'siparis' && tab === 'sepetlink') ? ' on' : '')} onClick={() => go(k)} title={l}>
                 <Icon n={i} s={18} /><span className="topnav-l">{l}</span>{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}
               </button>
             ))}

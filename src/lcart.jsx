@@ -9,6 +9,7 @@ import { useStore, api, toast, store } from './store.js';
 import { Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls } from './utils.js';
 import { pingWatch } from './push.js';
+import { CargoCard } from './orders.jsx';
 import { PAY, DELIVERY } from './config.js';
 import { waLink } from './route.js';
 import { useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -109,7 +110,7 @@ export function LinkCarts() {
                   <span className="ofs-th">{its.slice(0, 3).map((it) => <Thumb key={it.id} p={byId.get(it.id) || it} size="sm" />)}</span>
                   <span className="ofs-t">
                     <b>{who} <span className="muted num">#{c.no}</span>{c.status === 'sent' && !c.seen && <span className="lc-dot" aria-label="Yeni" />}</b>
-                    <small className="muted">{its.length} ürün · {adet} adet · {fmtTotals(totals(its, 'offer'))} · {when(subTime(c) || c.at)}{c.sub ? ' · ' + (c.sub.delivery?.method === 'pickup' ? 'Dükkândan' : 'Kargo') : ''}</small>
+                    <small className="muted">{its.length} ürün · {adet} adet · {fmtTotals(totals(its, 'offer'))} · {when(subTime(c) || c.at)}{c.sub ? ' · ' + (c.sub.delivery?.method === 'pickup' ? 'Dükkândan' : c.cargo?.code ? 'DHL ' + c.cargo.code : c.dhl?.ref && !c.dhl.cancelled ? 'DHL’e aktarıldı' : 'Kargo') : ''}</small>
                   </span>
                 </button>
                 <span className="lc-st" style={{ '--c': ST[c.status]?.[1] }}>{ST[c.status]?.[0] || c.status}</span>
@@ -170,6 +171,7 @@ function LinkCartSheet({ c, onClose }) {
         ))}
       </ul>
       <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
+      {s && s.delivery?.method !== 'pickup' && <CargoCard col="lcarts" o={{ id: c.id, no: c.no, dhl: c.dhl, cargo: c.cargo, status: c.cargo?.delivered ? 'done' : c.cargo?.code ? 'shipped' : 'preparing', delivery: s.delivery, contact: s.contact }} />}
       {del && <Confirm title="Sepet silinsin mi?" text={`#${c.no} kalıcı olarak silinecek${c.status === 'open' ? '; müşteriye gönderdiğiniz link de çalışmaz' : ''}.`} okLabel="Sil" tone="danger" onClose={() => setDel(false)} onOk={() => api().deleteLcart(c.id).then(() => { toast('Silindi'); onClose(); }).catch((e) => toast(e.message, 'bad'))} />}
     </Sheet>
   );

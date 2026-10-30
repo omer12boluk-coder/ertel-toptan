@@ -4912,3 +4912,9 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .lc-keep { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px; font-size: 14px; flex-wrap: wrap; }
 .lc-keep input { width: 18px; height: 18px; accent-color: var(--accent); }
 .lc-keep small { font-size: 12.5px; flex-basis: 100%; padding-left: 26px; margin-top: -6px; }
+/* Sipariş formu ⇄ Sepet linki sekmesi (30.10.2026) */
+.of-mode { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.of-seg { align-self: flex-start; }
+.of-seg button { display: inline-flex; align-items: center; gap: 6px; }
+.of-seg .badge { position: static; margin-left: 2px; }
+.lc-list + .o-cargo, .sheet .o-cargo { margin-top: 14px; }

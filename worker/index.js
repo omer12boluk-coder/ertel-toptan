@@ -764,8 +764,13 @@ async function dhl(env, act, b) {
     return { ok: true, items: out };
   }
   const id = String(b.id || ''); if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
-  const o = await fsDoc('orders/' + id); if (!o) return { ok: false, error: 'sipariş yok' };
-  const ref = String(o.dhl?.ref || b.ref || ('ERTEL' + o.no)).replace(/[^\w-]/g, '').slice(0, 30); // DHL'deki sipariş (referans) no = müşteri barkodu
+  // sepet linki (lcarts) de aynı yoldan DHL'e aktarılır: müşterinin onayladığı adres/iletişim sipariş gibi okunur
+  const lc = b.col === 'lcarts';
+  let o;
+  if (lc) { const c = await fsDoc('lcarts/' + id); if (!c || !c.sub) return { ok: false, error: 'sepet yok ya da onaylanmamış' }; o = { no: c.no, dhl: c.dhl, delivery: c.sub.delivery || {}, contact: c.sub.contact || {} }; }
+  else o = await fsDoc('orders/' + id);
+  if (!o) return { ok: false, error: 'sipariş yok' };
+  const ref = String(o.dhl?.ref || b.ref || ((lc ? 'ERTELL' : 'ERTEL') + o.no)).replace(/[^\w-]/g, '').slice(0, 30); // DHL'deki sipariş (referans) no = müşteri barkodu
   const U = env.DHL_USER, P = env.DHL_PASS;
   if (act === 'create') {
     const a = o.delivery?.addr || {};

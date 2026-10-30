@@ -4,7 +4,7 @@
 // Açık form (taslak) bu cihazda 12 saat tutulur (yanlışlıkla çıkınca kaybolmaz; günler sonra temiz başlar).
 // "Kaydet" ile form oforms/{id}'e yazılır (yönetici, tüm cihazlarda), alttaki "Kaydedilen formlar"dan açılır / silinir.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, toast, api, store } from './store.js';
+import { useStore, toast, api, store, go } from './store.js';
 import { Icon, Thumb, Stepper, VatLines, Empty, copyText, Sheet, Confirm } from './ui.jsx';
 import { links, waLink } from './route.js';
 import { fmt, totals, fmtTotals, norm, roundStep, ls, priceFor } from './utils.js';
@@ -34,7 +34,8 @@ export function OrderForm({ linkMode = false }) {
   const DKEY = linkMode ? 'lcart-draft' : KEY;
   const { catalog, byId, settings: S, orders = [], requests = [] } = useStore();
   const rate = useRate();
-  const [d, setD] = useState(() => loadDraft(DKEY)); // items: [{ id, qty, price }], sid: kaydedilmiş formdan açıldıysa kimliği
+  const lcNew = useStore((st) => (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length);
+  const [d, setD] = useState(() => (linkMode ? blank() : loadDraft(DKEY))); // sepet linki: her açılışta boş // items: [{ id, qty, price }], sid: kaydedilmiş formdan açıldıysa kimliği
   const [forms, setForms] = useState(null);
   const [ask, setAsk] = useState(null); // açık form doluyken kayıtlı form açma sorusu
   const [del, setDel] = useState(null);
@@ -47,7 +48,7 @@ export function OrderForm({ linkMode = false }) {
   const [outOpen, setOutOpen] = useState(false); // "Müşteriye gönder" bölümü: kapalı başlar, başlığa basınca açılır
   const [paper, setPaper] = useState(() => ls.get('of-paper', 'a4')); // yazdırma kâğıdı: a4 | a6
   const step = Number(S.pricing.adjustStep) || 1;
-  useEffect(() => { ls.set(DKEY, { ...d, at: Date.now() }); }, [d]);
+  useEffect(() => { if (!linkMode) ls.set(DKEY, { ...d, at: Date.now() }); }, [d]);
 
   // siparişlerde geçme sayısı (mağaza + bayi siparişleri, panelde yüklü olanlar)
   const sold = useMemo(() => { const m = new Map(); for (const o of [...orders, ...requests.filter((r) => r.type === 'order')]) for (const it of o.items || []) m.set(it.id, (m.get(it.id) || 0) + 1); return m; }, [orders, requests]);
@@ -154,7 +155,13 @@ export function OrderForm({ linkMode = false }) {
   return (
     <div className="page oform">
       <div className="page-h">
-        <h1 className="page-t">{linkMode ? 'Sepet linki' : 'Sipariş formu'} <span className="muted">#{d.no}</span></h1>
+        <div className="of-mode">
+          <div className="seg of-seg" role="tablist" aria-label="Sayfa">
+            <button type="button" role="tab" aria-selected={!linkMode} className={!linkMode ? 'on' : ''} onClick={() => linkMode && go('siparis')}><Icon n="tag" s={15} />Sipariş formu</button>
+            <button type="button" role="tab" aria-selected={linkMode} className={linkMode ? 'on' : ''} onClick={() => !linkMode && go('sepetlink')}><Icon n="cart" s={15} />Sepet linki{lcNew > 0 && <span className="badge">{lcNew}</span>}</button>
+          </div>
+          <h1 className="page-t">{linkMode ? 'Sepet linki' : 'Sipariş formu'} <span className="muted">#{d.no}</span></h1>
+        </div>
         <span className="row-btns">
           {!linkMode && rows.length > 0 && <button className="btn sm wa" onClick={() => { setOutOpen(true); setTimeout(() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }}><Icon n="wa" s={15} />Müşteriye gönder</button>}
           {!linkMode && dirty && rows.length > 0 && <button className="btn sm primary" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</button>}
