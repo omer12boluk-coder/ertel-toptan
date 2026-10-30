@@ -4,7 +4,8 @@
 // =====================================================================
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyAb8Q747XVc1e9f_ffp6Y1uWCc8QXDSXKk",
-  authDomain: "erteltoptan.firebaseapp.com",
+  // ertelmarket.com'da giriş adresi sitenin kendisi (site/worker.js /__/auth/ geçidi): Google ile giriş Safari'de engellenmesin
+  authDomain: /(^|\.)ertelmarket\.com$/.test(location.hostname) ? location.hostname : "erteltoptan.firebaseapp.com",
   projectId: "erteltoptan",
   storageBucket: "erteltoptan.firebasestorage.app",
   messagingSenderId: "1053773699238",

@@ -229,6 +229,7 @@ async function bootShop(A) {
   store.set({ user: { uid: 'guest', role: 'public', name: 'Ziyaretçi' }, boot: 'loading' });
   // Mağaza üyeliği: giriş yaptıysa bilgileri ve siparişleri
   let unOrders = null, unPreqs = null, unIssues = null, unWait = null;
+  A.onSocialDone = (e) => toast(e ? 'Google ile giriş tamamlanamadı, tekrar deneyin' : 'Giriş yapıldı', e ? 'bad' : undefined);
   A.onMember?.((m) => {
     unOrders?.(); unOrders = null; unPreqs?.(); unPreqs = null; unIssues?.(); unIssues = null; unWait?.(); unWait = null;
     if (m && A.watchMemberWait) unWait = A.watchMemberWait(m.uid, (w) => store.s.member?.uid === m.uid && store.set({ member: { ...store.s.member, ...w } }));

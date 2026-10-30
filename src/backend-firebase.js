@@ -512,7 +512,27 @@ export class FirebaseBackend {
         cb({ uid: u.uid, email: u.email, ...data });
       } catch { cb(ok ? { uid: u.uid, email: u.email } : null); }
     };
+    // telefonda Google'a yönlendirilip geri dönüldüyse sonucu al (üye kaydı ilk girişte açılır)
+    let pend = null; try { pend = sessionStorage.getItem('social-pending'); } catch {}
+    if (pend) this._finishSocial(pend);
     return this.U.onAuthStateChanged(this.auth, (u) => { if (!this.signingUp) this._emitMember(u); });
+  }
+  async _ensureMember(u, legal) {
+    try {
+      const ref = this.d('members', u.uid); const s = await timeout(this.F.getDoc(ref));
+      if (!s.exists()) await timeout(this.F.setDoc(ref, { uid: u.uid, email: String(u.email || '').toLowerCase(), name: u.displayName || '', phone: '', createdAt: now(), addresses: [], invoice: { type: 'person' }, ...(legal ? { legal } : {}) }));
+    } catch (e) { console.warn(e); }
+  }
+  async _finishSocial(pend) {
+    try { sessionStorage.removeItem('social-pending'); } catch {}
+    let p = {}; try { p = JSON.parse(pend) || {}; } catch {}
+    try {
+      const cred = await this.U.getRedirectResult(this.auth, this.U.browserPopupRedirectResolver);
+      if (!cred?.user) return;
+      await this._ensureMember(cred.user, p.legal);
+      await this._emitMember?.(this.auth.currentUser);
+      this.onSocialDone?.();
+    } catch (e) { console.warn('google dönüşü', e); this.socialError = e.code || e.message; this.onSocialDone?.(e); }
   }
   // Google / Facebook ile giriş (31.10.2026). İlk girişte üye kaydı (members) açılır. Firebase > Authentication > Sign-in method'da
   // sağlayıcı açık olmalı; kapalıysa anlaşılır hata döner.
@@ -525,6 +545,13 @@ export class FirebaseBackend {
   async memberSocial(kind, legal) {
     const P = kind === 'facebook' ? new this.U.FacebookAuthProvider() : new this.U.GoogleAuthProvider();
     if (kind === 'facebook') P.addScope('email'); else P.setCustomParameters({ prompt: 'select_account' });
+    // telefon / ana ekran uygulaması: açılır pencere yerine Google'a yönlendir (Safari pencereyi engelliyor); dönüşte _finishSocial
+    const phone = matchMedia('(pointer: coarse)').matches || navigator.standalone === true;
+    if (phone) {
+      try { sessionStorage.setItem('social-pending', JSON.stringify({ kind, legal })); } catch {}
+      await this.U.signInWithRedirect(this.auth, P, this.U.browserPopupRedirectResolver);
+      return new Promise(() => {}); // sayfa Google'a gidiyor
+    }
     this.signingUp = true;
     let cred;
     try { cred = await this.U.signInWithPopup(this.auth, P, this.U.browserPopupRedirectResolver); } // initializeAuth ile kurulduğu için pencere çözücüsü elle verilir (yoksa auth/argument-error)
@@ -537,11 +564,7 @@ export class FirebaseBackend {
         : /popup-blocked/.test(c) ? 'Tarayıcı giriş penceresini engelledi. Açılır pencerelere izin verip tekrar deneyin.'
         : authMsg(e));
     }
-    try {
-      const u = cred.user; const ref = this.d('members', u.uid);
-      const s = await timeout(this.F.getDoc(ref));
-      if (!s.exists()) await timeout(this.F.setDoc(ref, { uid: u.uid, email: String(u.email || '').toLowerCase(), name: u.displayName || '', phone: '', createdAt: now(), addresses: [], invoice: { type: 'person' }, ...(legal ? { legal } : {}) }));
-    } catch (e) { console.warn(e); }
+    await this._ensureMember(cred.user, legal);
     this.signingUp = false;
     await this._emitMember?.(this.auth.currentUser);
   }

@@ -2,14 +2,18 @@
 # Yayın: .github/workflows/site.yml. Adres: ertelmarket.com (+ önizleme ertel-site.<hesap>.workers.dev)
 name = "ertel-site"
 compatibility_date = "2026-10-01"
+main = "worker.js"   # sadece /__/* (Google girişi geçidi) için çalışır; diğer her şey doğrudan dosyalardan
 
-[assets]
-directory = "../hosting/public"
-not_found_handling = "single-page-application"   # /magaza/urun/12 gibi adresler index.html'e düşer (Firebase rewrite ile aynı)
-html_handling = "auto-trailing-slash"
-
-# Canlı adres (30.10.2026). DNS'teki eski Firebase A kaydı site.yml'de silinir; Cloudflare kaydı kendisi ekler.
+# Canlı adres. DİKKAT (31.10.2026): routes [assets] bölümünün ÜSTÜNDE olmalı; altına yazılınca [assets]'e ait sayılıp
+# yok sayılıyordu (alan adı bağlantısının kopmasının muhtemel sebebi).
 routes = [
   { pattern = "ertelmarket.com", custom_domain = true },
   { pattern = "www.ertelmarket.com", custom_domain = true }
 ]
+
+[assets]
+directory = "../hosting/public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"   # /urun/12 gibi adresler index.html'e düşer (Firebase rewrite ile aynı)
+html_handling = "auto-trailing-slash"
+run_worker_first = ["/__/*"]
