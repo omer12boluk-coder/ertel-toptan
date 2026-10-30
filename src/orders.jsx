@@ -565,7 +565,7 @@ export function dhlLabelHtml(o, S) {
 // Firma seçmek sadece siparişe firmayı atar; durum değişmez. "Kargoda" ancak şube okutup takip no gelince (ya da elle) olur.
 export function CargoCard({ o, flow, col = 'orders' }) {
   const lc = col === 'lcarts'; // sepet linki: aynı kart, kayıt lcarts'a
-  const save = (x) => (lc ? api().updateLcart(o.id, x) : save(x));
+  const save = (x) => (lc ? api().updateLcart(o.id, x) : api().updateOrder(o.id, x)); // DİKKAT: kendini çağırmasın (30.10.2026: sonsuz döngü → "Aktarılıyor…"da donma)
   const S = store.s.settings;
   const pk = (S.orders?.packages?.length ? S.orders.packages : [{ n: 'Poşet', kg: 1, desi: 1 }]);
   const car = o.cargo?.carrier || o.delivery?.carrier || 'dhl';
