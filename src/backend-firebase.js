@@ -521,7 +521,7 @@ export class FirebaseBackend {
     if (kind === 'facebook') P.addScope('email'); else P.setCustomParameters({ prompt: 'select_account' });
     this.signingUp = true;
     let cred;
-    try { cred = await this.U.signInWithPopup(this.auth, P); }
+    try { cred = await this.U.signInWithPopup(this.auth, P, this.U.browserPopupRedirectResolver); } // initializeAuth ile kurulduğu için pencere çözücüsü elle verilir (yoksa auth/argument-error)
     catch (e) {
       this.signingUp = false;
       const c = e.code || '';

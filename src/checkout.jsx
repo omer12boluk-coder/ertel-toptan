@@ -771,7 +771,7 @@ function AuthForm({ onDone, compact }) {
       {view === 'login' && canSignup && <p className="fine center auth-sw">Hesabınız yok mu? <button type="button" className="link" onClick={() => go2('signup')}>Üye olun</button></p>}
       {view === 'signup' && <p className="fine center auth-sw">Zaten hesabınız var mı? <button type="button" className="link" onClick={() => go2('login')}>Giriş yapın</button></p>}
       {view === 'bayi' && <p className="fine center auth-sw"><button type="button" className="link" onClick={() => go2('login')}>← Müşteri girişine dön</button></p>}
-      {['login', 'signup'].includes(view) && (social.google || social.facebook) && <p className="fine center auth-legal">Google / Facebook ile devam ederek <a className="link" href="/yasal/uyelik-sozlesmesi" target="_blank" rel="noopener">üyelik sözleşmesini</a> kabul etmiş olursunuz.</p>}
+      {['login', 'signup'].includes(view) && (social.google || social.facebook) && <p className="fine center auth-legal">{[social.google && 'Google', social.facebook && 'Facebook'].filter(Boolean).join(' / ')} ile devam ederek <a className="link" href="/yasal/uyelik-sozlesmesi" target="_blank" rel="noopener">üyelik sözleşmesini</a> kabul etmiş olursunuz.</p>}
       {view === 'login' && !compact && <p className="auth-bayi"><button type="button" onClick={() => go2('bayi')}>Bayi girişi</button></p>}
       </div>
     </form>
