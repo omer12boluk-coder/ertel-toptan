@@ -1,0 +1,37 @@
+# Yeni ürün resimleri → resim.ertelmarket.com (R2 "ertel" kutusu, platin/ + küçükleri platin/t/).
+# "Siteyle eşitle" her bittiğinde çalışır: sadece R2'de olmayan resimleri kopyalar (yoksa birkaç saniyede biter),
+# sonra eksik küçük resimleri üretir. Gece de bir kez kontrol eder. Siteye/canlıya dokunmaz.
+# Not: workflow_run sadece bu dosya main'deyken çalışır. O zamana kadar yeni ürünler eski adresten gelir (otomatik yedek).
+name: Yeni resimleri depoya al (R2)
+on:
+  workflow_run:
+    workflows: ['Siteyle eşitle']
+    types: [completed]
+  schedule:
+    - cron: '23 1 * * *'
+  workflow_dispatch:
+concurrency:
+  group: r2-new
+  cancel-in-progress: false
+jobs:
+  copy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12 sharp@0.33
+      - name: Yeni büyük resimleri kopyala
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+        run: node tools/r2-mirror.mjs --minutes 25
+      - name: Küçük resimlerini üret
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+        run: node tools/r2-thumbs.mjs --minutes 25
