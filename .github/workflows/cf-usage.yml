@@ -15,6 +15,8 @@ jobs:
           echo "::notice title=Worker::$(echo "$W" | jq -c '[.data.viewer.accounts[0].workersInvocationsAdaptive[]? | {s:.dimensions.scriptName, r:.sum.requests, sub:.sum.subrequests, e:.sum.errors}] , .errors')"
           K=$(q "{\"query\":\"{viewer{accounts(filter:{accountTag:\\\"$A\\\"}){kvOperationsAdaptiveGroups(limit:50,filter:{datetime_geq:\\\"$S\\\",datetime_leq:\\\"$E\\\"}){sum{requests} dimensions{actionType}}}}}\"}")
           echo "::notice title=KV::$(echo "$K" | jq -c '[.data.viewer.accounts[0].kvOperationsAdaptiveGroups[]? | {a:.dimensions.actionType, n:.sum.requests}], .errors')"
+          KH=$(q "{\"query\":\"{viewer{accounts(filter:{accountTag:\\\"$A\\\"}){kvOperationsAdaptiveGroups(limit:100,orderBy:[datetimeHour_ASC],filter:{datetime_geq:\\\"$S\\\",datetime_leq:\\\"$E\\\",actionType:\\\"write\\\"}){sum{requests} dimensions{datetimeHour}}}}}\"}")
+          echo "::notice title=KV yazma saatlik::$(echo "$KH" | jq -c '[.data.viewer.accounts[0].kvOperationsAdaptiveGroups[]? | [.dimensions.datetimeHour[11:13], .sum.requests]], .errors')"
           R=$(q "{\"query\":\"{viewer{accounts(filter:{accountTag:\\\"$A\\\"}){r2OperationsAdaptiveGroups(limit:50,filter:{datetime_geq:\\\"$S\\\",datetime_leq:\\\"$E\\\"}){sum{requests} dimensions{actionType}}}}}\"}")
           echo "::notice title=R2::$(echo "$R" | jq -c '[.data.viewer.accounts[0].r2OperationsAdaptiveGroups[]? | {a:.dimensions.actionType, n:.sum.requests}], .errors')"
           H=$(q "{\"query\":\"{viewer{accounts(filter:{accountTag:\\\"$A\\\"}){workersInvocationsAdaptive(limit:30,orderBy:[datetimeHour_ASC],filter:{datetime_geq:\\\"$S\\\",datetime_leq:\\\"$E\\\"}){sum{requests} dimensions{datetimeHour}}}}}\"}")
