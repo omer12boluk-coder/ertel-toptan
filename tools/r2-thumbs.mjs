@@ -26,7 +26,7 @@ async function worker() {
       const out = await sharp(b, { failOn: 'none' }).rotate().resize({ width: 350, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
       await put('platin/t/' + f, out, 'image/webp');
       man.files[f] = out.length; bytes += out.length; done++;
-      if (done % 200 === 0) { await save(); note('İlerleme', `${done} küçük resim`); }
+      if (done % 200 === 0) { await save(); console.log(`ilerleme: ${done}`); } // not değil: GitHub adım başına 10 not gösteriyor
     } catch (e) { fail.push(f + ': ' + String(e.message || e).slice(0, 60)); }
   }
 }
