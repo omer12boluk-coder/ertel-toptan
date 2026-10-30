@@ -723,7 +723,7 @@ const DHL_URL = 'https://service.mngkargo.com.tr/musterikargosiparis/musterikarg
 const xesc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
 async function soap(env, op, inner) {
   const body = `<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><${op} xmlns="http://tempuri.org/">${inner}</${op}></soap:Body></soap:Envelope>`;
-  const r = await fetch(DHL_URL, { method: 'POST', headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: `"http://tempuri.org/${op}"` }, body });
+  const r = await fetch(DHL_URL, { method: 'POST', headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: `"http://tempuri.org/${op}"` }, body, signal: AbortSignal.timeout(30000) });
   let t = await r.text(); if (env.DHL_PASS) t = t.split(env.DHL_PASS).join('***');
   const inside = (t.match(/<soap:Body>([\s\S]*)<\/soap:Body>/) || [, t])[1];
   const fault = (t.match(/<faultstring>([\s\S]*?)<\/faultstring>/) || [])[1];

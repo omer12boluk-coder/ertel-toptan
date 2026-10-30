@@ -458,8 +458,10 @@ function NewMember({ onClose }) {
 // gönderi oluşur, takip no (DHL takip görevi / bu kart açılınca) kendiliğinden siparişe yazılır → "Kargoda" + müşteriye bildirim.
 const dhlW = () => (window.WATCH_URL || '').replace(/\/$/, '');
 async function dhlCall(act, body) {
-  const token = await api().idToken?.();
-  const r = await fetch(dhlW() + '/dhl/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }) });
+  // donup kalmasın: oturum anahtarı 10 sn, DHL cevabı 35 sn içinde gelmezse hata gösterilir
+  const lim = (p, ms, m) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(m)), ms))]);
+  const token = await lim(Promise.resolve(api().idToken?.()), 10000, 'oturum doğrulanamadı, çıkış yapıp tekrar girin');
+  const r = await lim(fetch(dhlW() + '/dhl/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }) }), 35000, 'DHL 35 sn içinde cevap vermedi, biraz sonra tekrar deneyin');
   return r.json();
 }
 // takip no geldiyse siparişe yaz (durum Kargoda) ve müşteriye bildir
