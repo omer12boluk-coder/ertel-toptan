@@ -119,14 +119,14 @@ async function ensure(url) {
 
 // --- veriyi gez / çevir --------------------------------------------------------------------------------------------
 const urlsIn = (v, out) => { const s = JSON.stringify(v); for (const m of s.matchAll(RX)) out.add(split(m[0]).core); return out; };
-function rewrite(v) {
+function rewrite(v, pages = true) {
   if (typeof v === 'string') {
     if (TPL[v]) return TPL[v];
-    v = v.replace(PAGE, (m, id) => '/magaza/urun/' + id);
+    if (pages) v = v.replace(PAGE, (m, id) => '/magaza/urun/' + id); // katalogda değil: ürünün 'u' alanı Platin sayfa yolu olarak kalmalı (eşitleme)
     return v.replace(RX, (m) => { const { core, tail } = split(m); const r = resolved.get(core); return r ? r + tail : m; });
   }
-  if (Array.isArray(v)) return v.map(rewrite);
-  if (v && typeof v === 'object' && v.constructor === Object) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, rewrite(x)]));
+  if (Array.isArray(v)) return v.map((x) => rewrite(x, pages));
+  if (v && typeof v === 'object' && v.constructor === Object) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, rewrite(x, pages)]));
   return v;
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -162,7 +162,7 @@ const newSet = { app: rewrite(settings.app), public: rewrite(settings.public) };
 for (const k of ['app', 'public']) if (settings[k] && !same(settings[k], newSet[k])) { changes.push('settings/' + k); if (APPLY) await db.doc('settings/' + k).set(newSet[k]); }
 for (const [col, c] of [['catalog', cat], ['pubcatalog', pub]]) {
   if (!c.meta) continue; let n = 0; const b = db.batch();
-  c.parts.forEach((part, i) => { if (!part) return; const np = rewrite(part); if (!same(part, np)) { n++; b.set(db.doc(`${col}/c${i}`), np); } });
+  c.parts.forEach((part, i) => { if (!part) return; const np = rewrite(part, false); if (!same(part, np)) { n++; b.set(db.doc(`${col}/c${i}`), np); } });
   if (n) { changes.push(`${col} ${n} parça`); if (APPLY) { b.set(db.doc(col + '/_meta'), { ...c.meta, version: now }); await b.commit(); } }
 }
 if (desc.meta) {
@@ -183,5 +183,5 @@ if (desc.meta) {
 }
 note(APPLY ? 'Çevrildi' : 'Deneme: çevrilecekler', changes.length ? changes.join(' · ') : 'değişiklik yok');
 // kalan (çevrilemeyen) dosya adresi sayısı
-const left = new Set(); urlsIn([newSet, ...cat.parts.map(rewrite), ...pub.parts.map(rewrite), ...desc.parts.map(rewrite)], left);
+const left = new Set(); urlsIn([newSet, ...cat.parts.map((x) => rewrite(x, false)), ...pub.parts.map((x) => rewrite(x, false)), ...desc.parts.map(rewrite)], left);
 note('Kalan Platin dosya adresi', String([...left].filter((u) => plan(u)).length));
