@@ -202,9 +202,9 @@ export class FirebaseBackend {
   async savePublicCatalog(items) {
     const pub = items.filter((p) => p.a).map(publicItem);
     const parts = chunkBySize(pub);
-    await this._writeChunks('pubcatalog', parts, { version: now(), chunks: parts.length, count: pub.length, kc: 3 });
+    await this._writeChunks('pubcatalog', parts, { version: now(), chunks: parts.length, count: pub.length, kc: 4 });
   }
-  async hasPublicCatalog() { const m = await timeout(this.getSafe('pubcatalog', '_meta')); return m.exists() && m.data().kc >= 3; } // kc: kalıp anahtarları eklenmiş sürüm
+  async hasPublicCatalog() { const m = await timeout(this.getSafe('pubcatalog', '_meta')); return m.exists() && m.data().kc >= 4; } // kc: 3 kalıp anahtarları, 4 gizli etiketler (arama) eklenmiş sürüm
   async loadPublicCatalog() {
     const meta = await timeout(this.getSafe('pubcatalog', '_meta'));
     if (!meta.exists()) return [];
@@ -638,7 +638,7 @@ function authMsg(e) {
   return e.message;
 }
 
-const PUB_FIELDS = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man'];
+const PUB_FIELDS = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man', 't'];
 export function publicItem(p) { const o = {}; for (const k of PUB_FIELDS) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; return o; }
 
 function clean(p) { const o = {}; for (const k in p) if (p[k] !== undefined && !k.startsWith('_')) o[k] = p[k]; return o; }

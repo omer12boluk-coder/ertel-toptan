@@ -296,7 +296,9 @@ export function HeaderSearch() {
   }, [mob]);
   const res = useMemo(() => {
     const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return { list: [], n: 0 };
-    const all = catalog.filter((p) => p.a !== 0 && !p.so && t.every((x) => p._s?.includes(x)));
+    const tags = store.s.settings?.catalog?.searchTags !== false; // gizli etiketler de aranır (ad eşleşmeleri önde)
+    const all = catalog.filter((p) => p.a !== 0 && !p.so && t.every((x) => p._s?.includes(x) || (tags && p._t?.includes(x))));
+    all.sort((a, b) => t.filter((x) => b._s?.includes(x)).length - t.filter((x) => a._s?.includes(x)).length);
     return { list: all.slice(0, 6), n: all.length };
   }, [q, catalog]);
   const [closing, setClosing] = useState(false);
