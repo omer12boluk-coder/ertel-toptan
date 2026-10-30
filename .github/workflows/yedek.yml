@@ -28,8 +28,8 @@ jobs:
           cd /tmp/b
           npx -y wrangler@3 r2 bucket create ertel-yedek > mk.txt 2>&1 || true; echo "::notice title=Kutu::$(grep -v '^\s*$' mk.txt | tail -n 3 | tr '\n' ' ' | cut -c1-300)"
           key="db/$(TZ=Europe/Istanbul date +%Y-%m-%d_%H%M).tar.gz"
-          npx -y wrangler@3 r2 object put "ertel-yedek/$key" --file yedek.tar.gz --content-type application/gzip --remote > put.txt 2>&1 || { echo "::error title=Yükleme hatası::$(tail -n 4 put.txt | tr '\n' ' ')"; exit 1; }
-          npx -y wrangler@3 r2 object get "ertel-yedek/$key" --file kontrol.tar.gz --remote > get.txt 2>&1 || { echo "::error title=Kontrol okunamadı::$(tail -n 4 get.txt | tr '\n' ' ')"; exit 1; }
+          npx -y wrangler@3 r2 object put "ertel-yedek/$key" --file yedek.tar.gz --content-type application/gzip > put.txt 2>&1 || { echo "::error title=Yükleme hatası::$(tail -n 4 put.txt | tr '\n' ' ')"; exit 1; }
+          npx -y wrangler@3 r2 object get "ertel-yedek/$key" --file kontrol.tar.gz > get.txt 2>&1 || { echo "::error title=Kontrol okunamadı::$(tail -n 4 get.txt | tr '\n' ' ')"; exit 1; }
           got=$(stat -c %s kontrol.tar.gz); [ "$got" = "$SIZE" ] || { echo "::error title=Boyut tutmadı::$got != $SIZE"; exit 1; }
           echo "::notice title=Yedek yüklendi ve geri okundu::ertel-yedek/$key ($SIZE bayt)"
           rm -rf yedek yedek.tar.gz kontrol.tar.gz
