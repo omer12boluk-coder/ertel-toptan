@@ -26,7 +26,7 @@ jobs:
       - name: R2'ye yükle (özel kutu)
         run: |
           cd /tmp/b
-          npx -y wrangler@3 r2 bucket create ertel-yedek > mk.txt 2>&1; echo "::notice title=Kutu::$(grep -o -i -E 'created|already exists|already owned' mk.txt | head -1)"
+          npx -y wrangler@3 r2 bucket create ertel-yedek > mk.txt 2>&1 || true; echo "::notice title=Kutu::$(grep -v '^\s*$' mk.txt | tail -n 3 | tr '\n' ' ' | cut -c1-300)"
           key="db/$(TZ=Europe/Istanbul date +%Y-%m-%d_%H%M).tar.gz"
           npx -y wrangler@3 r2 object put "ertel-yedek/$key" --file yedek.tar.gz --content-type application/gzip --remote > put.txt 2>&1 || { echo "::error title=Yükleme hatası::$(tail -n 4 put.txt | tr '\n' ' ')"; exit 1; }
           npx -y wrangler@3 r2 object get "ertel-yedek/$key" --file kontrol.tar.gz --remote > get.txt 2>&1 || { echo "::error title=Kontrol okunamadı::$(tail -n 4 get.txt | tr '\n' ' ')"; exit 1; }
