@@ -1,0 +1,35 @@
+# Veri yedeği: Firestore'un tamamı → Cloudflare R2 özel kutusu "ertel-yedek" (herkese açık DEĞİL; GitHub'a veri konmaz)
+name: Veri yedeği
+on:
+  push:
+    branches: [gelistirme]
+    paths: ['.github/workflows/yedek.yml', 'tools/backup.mjs']
+  workflow_dispatch:
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Firestore'u oku
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          mkdir -p /tmp/b && cd /tmp/b && npm init -y >/dev/null && npm i firebase-admin@12 --silent --no-audit --no-fund
+          cp $GITHUB_WORKSPACE/tools/backup.mjs . && node backup.mjs
+          tar czf yedek.tar.gz yedek && echo "SIZE=$(stat -c %s yedek.tar.gz)" >> $GITHUB_ENV
+      - name: R2'ye yükle (özel kutu)
+        run: |
+          cd /tmp/b
+          npx -y wrangler@3 r2 bucket create ertel-yedek > mk.txt 2>&1 || true; echo "::notice title=Kutu::$(grep -v '^\s*$' mk.txt | tail -n 3 | tr '\n' ' ' | cut -c1-300)"
+          key="db/$(TZ=Europe/Istanbul date +%Y-%m-%d_%H%M).tar.gz"
+          npx -y wrangler@3 r2 object put "ertel-yedek/$key" --file yedek.tar.gz --content-type application/gzip > put.txt 2>&1 || { echo "::error title=Yükleme hatası::$(tail -n 4 put.txt | tr '\n' ' ')"; exit 1; }
+          npx -y wrangler@3 r2 object get "ertel-yedek/$key" --file kontrol.tar.gz > get.txt 2>&1 || { echo "::error title=Kontrol okunamadı::$(tail -n 4 get.txt | tr '\n' ' ')"; exit 1; }
+          got=$(stat -c %s kontrol.tar.gz); [ "$got" = "$SIZE" ] || { echo "::error title=Boyut tutmadı::$got != $SIZE"; exit 1; }
+          echo "::notice title=Yedek yüklendi ve geri okundu::ertel-yedek/$key ($SIZE bayt)"
+          rm -rf yedek yedek.tar.gz kontrol.tar.gz
