@@ -824,6 +824,24 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
 // Ürün açılışı (Ayarlar > Ürün kartları): bilgisayar ve telefon ayrı seçilir (productView / productViewM; telefon boşsa bilgisayarınki)
 export const isPhoneUI = () => matchMedia('(max-width: 899px), (hover: none) and (pointer: coarse)').matches;
 export const productViewFor = (S) => { const C = S.cards || {}; return (isPhoneUI() ? C.productViewM || C.productView : C.productView) || 'sheet'; };
+// Telefonda ürün penceresi açıkken geri kaydırma (iPhone kenar hareketi / Android geri tuşu) sadece pencereyi kapatır,
+// önceki sekmeye gitmez (30.10.2026). Açılınca aynı adresle geçmişe bir kayıt eklenir; geri gelince pencere kapanır.
+// Pencere düğmeyle / aşağı çekerek kapanırsa o kayıt geri alınır (history.back) → geçmişte fazladan adım kalmaz.
+function useBackCloses(active, onClose) {
+  const cb = useRef(onClose); cb.current = onClose;
+  useEffect(() => {
+    if (!active || typeof matchMedia === 'undefined' || !matchMedia('(max-width: 899px)').matches) return;
+    const id = 'ps' + Math.random().toString(36).slice(2, 9);
+    try {
+      history.replaceState({ ...(history.state || {}), y: scrollY }, '');
+      history.pushState({ ...(history.state || {}), sheet: id }, '');
+    } catch { return; }
+    let popped = false;
+    const onPop = () => { if (history.state?.sheet === id) return; popped = true; cb.current(); };
+    addEventListener('popstate', onPop);
+    return () => { removeEventListener('popstate', onPop); if (!popped && history.state?.sheet === id) { try { history.back(); } catch {} } };
+  }, [active]);
+}
 export function ProductSheet({ p, onClose, viewOnly = false, forceSheet = false }) {
   const S = useStore((s) => s.settings);
   const pub = useStore((s) => s.user?.role === 'public');
@@ -832,6 +850,7 @@ export function ProductSheet({ p, onClose, viewOnly = false, forceSheet = false 
   const [cur, setCur] = useState(p);
   useEffect(() => setCur(p), [p?.id]);
   useEffect(() => { if (asPage) { onClose(); openProduct(p.id); } }, [asPage]);
+  useBackCloses(!asPage, onClose);
   if (asPage) return null;
   const pick = (x) => { setCur(x); requestAnimationFrame(() => document.querySelector('.sheet-b, .sheet-body')?.scrollTo?.({ top: 0, behavior: 'smooth' })); };
   return (

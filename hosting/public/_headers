@@ -1,0 +1,15 @@
+# Cloudflare önbellek başlıkları (firebase.json headers ile aynı)
+/*
+  Cache-Control: no-cache
+/fb/*
+  Cache-Control: max-age=604800
+/tr/*
+  Cache-Control: max-age=604800
+/brands/*
+  Cache-Control: max-age=86400
+/splash/*
+  Cache-Control: max-age=86400
+/kalip/*
+  Cache-Control: max-age=86400
+/icon-*
+  Cache-Control: max-age=86400
