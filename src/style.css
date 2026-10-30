@@ -5005,3 +5005,6 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .spl-sw.sp-light i, .spl-sw.sp-white i { background: #2f55b0; box-shadow: 0 0 0 3px rgb(47 85 176 / .15); }
 .spl-sw.sp-white { background: #fff; border: 1px solid var(--line); } .spl-sw.sp-white::before { display: none; }
 .spl-sw.sp-grad { background: linear-gradient(150deg, #1e48c8, #2f6bff 45%, #10b3e0); }
+
+/* üst kenar: çentik/saat şeridinin rengiyle (SPLASH_STYLES.top) başlayıp aşağı eriyen katman → şeritle birleşim yeri görünmez */
+.intro.intro2::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: max(90px, 14vh); background: linear-gradient(180deg, var(--sp-top) 0%, var(--sp-top) 18%, transparent 100%); z-index: 1; pointer-events: none; }
