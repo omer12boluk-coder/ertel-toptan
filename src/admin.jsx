@@ -9,7 +9,7 @@ import SETIDX from './setindex.json';
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
 import { ensureAllMembers } from './datawin.js';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls, nextCode, picUrl, imageBlob, imgFiles, mediaOf, isVid, fileHash } from './utils.js';
-import { CATEGORY_NAMES, TYPE, LOGO_MARK } from './config.js';
+import { CATEGORY_NAMES, TYPE, LOGO_MARK, SPLASH_STYLES } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
 import { imageList, CardPreview, saveCatalogLater } from './catalog.jsx';
@@ -615,6 +615,7 @@ export function Settings() {
             </div>
           </Field>
           <Toggle id="s-splash" label="Açılış ekranı" hint="Mağaza ve bayi uygulaması açılırken kısa süre logolu açılış ekranı görünür (oturumda bir kez, dokununca geçer)" checked={d.brand.splashOn !== false} onChange={(v) => set('brand.splashOn', v)} />
+          {d.brand.splashOn !== false && <Field label="Arka plan"><div className="spl-pick">{Object.entries(SPLASH_STYLES).map(([k, v]) => <button type="button" key={k} className={'spl-opt' + ((d.brand.splashStyle || 'navy') === k ? ' on' : '')} onClick={() => set('brand.splashStyle', k)}><span className={'spl-sw sp-' + k}><i /></span>{v.n}</button>)}</div></Field>}
           {d.brand.splashOn !== false && <Field label="Görünme süresi" hint="En az bu kadar görünür; dokununca hemen geçer. Site daha geç yüklenirse en fazla 3 sn daha bekler."><span className="she-scale"><input type="range" min="0.5" max="6" step="0.1" value={Number(d.brand.splashSec) || 1.4} onChange={(e) => set('brand.splashSec', Number(e.target.value))} /><code>{(Number(d.brand.splashSec) || 1.4).toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} sn</code></span></Field>}
           <h3>Özellikler</h3>
           <Toggle id="s-signup" label="Bayiler kendileri üye olabilsin" hint="Giriş ekranında “Bayi olarak üye olun” çıkar; siz onaylayana kadar giriş yapamazlar" checked={d.access.allowSignup} onChange={(v) => set('access.allowSignup', v)} />

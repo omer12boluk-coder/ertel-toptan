@@ -10,7 +10,7 @@ import { linkMember } from './push.js';
 import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath, storeListen } from './store.js';
 import { ROUTE, links } from './route.js';
 import { withDefaults, ls, cleanUsername, mediaFallback } from './utils.js';
-import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS } from './config.js';
+import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS, SPLASH_STYLES } from './config.js';
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
@@ -595,9 +595,19 @@ function IntroSplash() {
   useEffect(() => { if (!want) return; try { sessionStorage.setItem('intro-seen', '1'); } catch {} const sec = Math.min(8, Math.max(0.5, Number(S.brand.splashSec) || 1.4)); const t = setTimeout(() => setMinDone(true), sec * 1000); const max = setTimeout(() => setPhase('out'), Math.max(sec + 3, 4.5) * 1000); return () => { clearTimeout(t); clearTimeout(max); }; }, []);
   useEffect(() => { if (phase === 'in' && minDone && ready) setPhase('out'); }, [minDone, ready, phase]);
   useEffect(() => { if (phase === 'out') { const t = setTimeout(() => setPhase('off'), 500); return () => clearTimeout(t); } }, [phase]);
+  // arka plan seçeneği (Ayarlar > Genel > Açılış ekranı): navy | light | white | grad
+  const sty = SPLASH_STYLES[S.brand.splashStyle] ? S.brand.splashStyle : 'navy';
+  // telefonda saat/şarj şeridi (çentik bölgesi) sayfa zemini renginde kalıyordu → açılış ekranı görünürken o bölge de aynı renk
+  useEffect(() => {
+    if (phase === 'off') return;
+    const c = SPLASH_STYLES[sty].top, h = document.documentElement, b = document.body;
+    const m = document.querySelector('meta[name=theme-color]'); const old = [h.style.background, b.style.background, m?.content];
+    h.style.background = c; b.style.background = c; if (m) m.content = c;
+    return () => { h.style.background = old[0]; b.style.background = old[1]; if (m && old[2] != null) m.content = old[2]; };
+  }, [phase === 'off', sty]);
   if (phase === 'off') return null;
   return (
-    <div className={'intro intro2' + (phase === 'out' ? ' out' : '')} onClick={() => setPhase('out')} role="presentation">
+    <div className={'intro intro2 sp-' + sty + (phase === 'out' ? ' out' : '')} onClick={() => setPhase('out')} role="presentation">
       {/* fotoğrafsız açılış (31.10.2026): marka renginde ışıklar + devre kartı deseni, her ekranda tam kaplar, çözünürlükten bağımsız */}
       <i className="i2-glow a" aria-hidden="true" /><i className="i2-glow b" aria-hidden="true" /><i className="i2-glow c" aria-hidden="true" />
       <i className="i2-grid" aria-hidden="true" /><i className="i2-scan" aria-hidden="true" />
