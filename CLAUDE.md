@@ -1,7 +1,7 @@
 # ERTEL GSM — B2B katalog + online mağaza (Claude için proje notları)
 
 Telefon tamir ekipmanı satan ERTEL GSM'in (ertelgsm.com, PlatinMarket altyapısı, Tahtakale/İstanbul) uygulaması. Üç bölüm:
-**bayilere (toptancılara) özel katalog + talep/teklif**, **herkese açık online mağaza** ve **yönetim paneli**. Canlı: https://erteltoptan.web.app
+**bayilere (toptancılara) özel katalog + talep/teklif**, **herkese açık online mağaza** ve **yönetim paneli**. Canlı: **https://ertelmarket.com** (Cloudflare Workers `ertel-site`) + eski adres https://erteltoptan.web.app (Firebase Hosting, aynı kod)
 
 **Kullanıcıyla Türkçe konuş, teknik olmayan dille anlat.** Kullanıcı tasarıma çok önem veriyor; küçük görsel kusurları fark eder. Bir ekran için istenen değişikliği başka ekranlara (ör. telefon isteği → masaüstü) yaymadan yap; yayman gerekiyorsa önce söyle.
 
@@ -26,7 +26,15 @@ Aşağıdaki iki madde tarihçe:
 
 **Kapasite (kullanıcıya anlatıldı):** asıl darboğaz Firebase Hosting Spark günlük ~360 MB indirme (ilk açılış ~650 KB → ~500-550 yeni cihaz/gün; her yayında herkes yeniden indirir). Cloudflare'e taşınınca kalkar. Firestore okuma 50k/gün (~3-5k ziyaret), yazma 20k/gün rahat.
 
-**Sıradaki plan (önerilen sıra):** 1) `eposta` + `cf-site` yayını ve ertelmarket.com'a geçiş 2) iyzico kart ödemesi (kullanıcı başvuracak) 3) yasal uyum: ETBİS kaydı, mesafeli satış/ön bilgilendirme metninin siparişte müşteriye e-postayla gönderilmesi + kaydın saklanması, KVKK (aydınlatma, saklama-imha, erişim kayıtları), e-arşiv fatura, ticari ileti (İYS) — hukukçu/mali müşavirle teyit 4) Yurtiçi Kargo, DHL ilk gerçek okutma testi 5) küçük işler (Bölüm 11).
+**YOL HARİTASI (31.10.2026 gece, tarama sonrası; eskisinin yerine):**
+Tarama sonucu: ertelmarket.com/www/resim DNS + dosyalar + derin linkler + bekçi (/rate, /push/key, CORS, /dhl/*) + DHL SOAP + iki sitede aynı sürüm → hepsi SAĞLAM. Cloudflare son 24 saat: Worker ~20 bin istek (sınır 100 bin), KV yazma 170/1000, R2 rahat. Son 40 Actions işi başarılı.
+- **A. Hemen (bu hafta):** (1) Kök adres `/` → doğrudan mağaza (kullanıcı ayrıntılı mesaj hazırlıyor; seçenekler: kısa adresler /urunler,/sepet… + eski /magaza linkleri otomatik çevrilir, ya da sadece / → /magaza yönlendirme). (2) Cloudflare 2FA. (3) DHL ilk gerçek okutma: SJUPYU şubede okutulunca takip no + "Kargoda" otomatik geliyor mu bak. (4) **Veri yedeği OTOMATİK DEĞİL** (`yedek.yml` sadece elle) → gece zamanlaması eklenecek. (5) Tek adres: web.app → ertelmarket.com ve www → kök yönlendirme (oturum/ana ekran/sepet ikiye bölünmesin; müşteriye duyurmadan önce).
+- **B. E-posta:** Resend 'verified' kontrolü; Firebase Auth e-posta alan adı Verify + gönderen noreply@ertelmarket.com (spam sorunu çözülür); destek@ + alt bilgi + Gmail 'farklı adresten gönder'.
+- **C. Satışa hazırlık:** iyzico kart ödemesi → yasal uyum (ETBİS, mesafeli satış/ön bilgilendirme e-postası + saklama, KVKK, e-arşiv, İYS; hukukçu/mali müşavir) → Yurtiçi Kargo.
+- **D. Bekleyen kararlar (kullanıcı):** ödeme özeti 2 üründe kayıyor (çözüm önerildi); elde kalan mal için dürüst raf/rozet seçenekleri; ana sayfa 'imza' etkileşimi; Ürün talebi / Sorun bildir menüye konacak mı; sepet linki → siparişe çevirme + yasal onay; WhatsApp resimli önizleme (OG) — DNS artık Cloudflare'de, yapılabilir; tartışılacaklar tuvali.
+- **E. Küçük işler:** banner videosu (Santral Center dosyası), logosu olmayan markalar, Qianli gece rengi, sipariş formu uzun ad; Platin'e kalan bağlar (`u`, "Sitede aç", XML eşitleme).
+- **F. Bakım:** eski dallar silinebilir (kullanıcı GitHub'dan: cf-site, eposta, resim-adresi, platin-kopma, sunucu-siparis, peek-out, mng-probe, tr-data, kalip-data, kalip-bulucu; `gelistirme`'deki yedek dışında her şey main'de); Actions Node 20 → 24 / ubuntu-latest geçiş uyarıları; alan adı kopması tekrar olursa `site.yml` kırmızı verir → "Alan adı bağlantısı" (fix).
+- **G. Uzun vade:** başka sektörlere şablon olarak satış, App Store.
 
 ## 0. ÇALIŞMA DÜZENİ — HER SOHBETTE ÖNCE OKU (30.10.2026, kullanıcı istedi)
 
