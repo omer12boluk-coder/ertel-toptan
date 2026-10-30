@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, store, api, go, toast, openProduct, setQty } from './store.js';
 import { Icon, Empty, Toggle, openMenu, copyText } from './ui.jsx';
-import { fmt, priceFor, picUrl } from './utils.js';
+import { fmt, priceFor, picUrl, mediaFallback } from './utils.js';
 import { waLink } from './route.js';
 import { pushState } from './push.js';
 import { queueSave } from './saveq.js';
@@ -47,8 +47,10 @@ const act = (p) => p && p.a !== 0 && !p.so;
 async function imgFile(p, S) {
   const f = (p.pi && !String(p.pi).startsWith('v:') ? p.pi : (p.im || []).find((x) => !String(x).startsWith('v:'))) || null; if (!f) return null;
   let u = picUrl(f, S.catalog.imageLarge || S.catalog.imageThumb, true); if (!u) return null;
-  if (/platincdn\.com/.test(u) && window.WATCH_URL) u = window.WATCH_URL.replace(/\/$/, '') + '/img?u=' + encodeURIComponent(u); // site CDN'i başka siteye resim vermiyor
-  const r = await fetch(u); if (!r.ok) return null;
+  const viaW = (x) => (/platincdn\.com/.test(x) && window.WATCH_URL ? window.WATCH_URL.replace(/\/$/, '') + '/img?u=' + encodeURIComponent(x) : x); // site CDN'i başka siteye resim vermiyor
+  let r = await fetch(viaW(u)).catch(() => null);
+  if (!r?.ok && mediaFallback(u)) r = await fetch(viaW(mediaFallback(u))).catch(() => null); // yeni adreste yoksa eski yer
+  if (!r?.ok) return null;
   const b = await r.blob(); if (!/^image\//.test(b.type)) return null;
   return new File([b], 'urun-' + p.id + (b.type.includes('png') ? '.png' : b.type.includes('webp') ? '.webp' : '.jpg'), { type: b.type });
 }

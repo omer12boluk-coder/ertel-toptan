@@ -12,3 +12,8 @@ window.FIREBASE_CONFIG = {
 };
 // Site bekçisinin (Cloudflare) adresi: dolar kuru ve "Şimdi eşitle" butonu bunu kullanır
 window.WATCH_URL = "https://ertel-b2b-watch.omer-12boluk.workers.dev";
+// Resim/video adresi (Cloudflare R2 özel alan adı; bekçiden geçmez). Boşsa eski yol: yüklenenler bekçi /p/, ürün resimleri PlatinMarket.
+// Doldurunca ör. "https://resim.ornek.com/" (sonunda / olmalı). IMG_PLATIN: PlatinMarket ürün resimleri de bu adresten (platin/…).
+// Yeni adreste bulunamayan dosya kendiliğinden eski adresten denenir (main.jsx setupMediaFallback).
+window.IMG_BASE = "";
+window.IMG_PLATIN = false;

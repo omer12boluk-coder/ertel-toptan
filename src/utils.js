@@ -114,11 +114,30 @@ export function fmtTotals(by) {
 // çıplak dosya adı = sitenin (PlatinMarket) resim şablonu {pi}. Depo kapısı: window.IMG_BASE (ileride resim.ertelgsm.com) yoksa bekçi /p/.
 export const isAbsImg = (f) => /^(https?:)?\/\/|^\/|^data:|^blob:/.test(f || '');
 export function r2Base() { const w = typeof window !== 'undefined' ? window : {}; return w.IMG_BASE || String(w.WATCH_URL || '').replace(/\/$/, '') + '/p/'; }
+// Resim adresi (R2 özel alan adı, bekçisiz): hosting/public/config.js → window.IMG_BASE = 'https://resim.<alan>/'.
+// window.IMG_PLATIN = true ise PlatinMarket ürün resimleri de oradan: büyük platin/<dosya>, küçük platin/t/<dosya>
+// (r2-mirror ile birebir kopya; küçükler r2-thumbs ile üretilir). Dosya orada yoksa mediaFallback eski adrese döner.
+const PLATIN = 'https://platincdn.com/3519/pictures/', PLATIN_T = PLATIN + 'thumb/350X-';
+const encF = (f) => String(f).split('/').map(encodeURIComponent).join('/');
+const platinR2 = () => typeof window !== 'undefined' && !!window.IMG_BASE && window.IMG_PLATIN === true;
 export function picUrl(f, t, big) {
   if (!f) return null;
   if (f.startsWith('r2:')) { const k = f.slice(3); return r2Base() + (big ? k : k.replace(/\.(\w+)$/, '_t.$1')); }
-  if (isAbsImg(f)) return f;
+  if (isAbsImg(f)) {
+    const m = platinR2() && /^https:\/\/platincdn\.com\/3519\/pictures\/(thumb\/350X-)?([^?#]+)$/.exec(f); // tam adresle kayıtlı platin resmi
+    return m ? window.IMG_BASE + 'platin/' + (m[1] ? 't/' : '') + m[2] : f;
+  }
+  if (platinR2() && t && t.startsWith(PLATIN)) return window.IMG_BASE + 'platin/' + (t.startsWith(PLATIN_T) ? 't/' : '') + encF(f); // varsayılan site şablonuysa
   return t && t.includes('{pi}') ? t.replaceAll('{pi}', f) : null;
+}
+// Yeni adresten gelmeyen resim / video için yedek adres (yoksa null): platin/t/x → platincdn küçük, platin/x → platincdn büyük,
+// diğer depo anahtarları → bekçi /p/ (eski yol). main.jsx'te tüm <img>/<video> hataları bununla bir kez yeniden denenir.
+export function mediaFallback(u) {
+  const B = typeof window !== 'undefined' && window.IMG_BASE; if (!B || !u || !String(u).startsWith(B)) return null;
+  const k = String(u).slice(B.length);
+  if (k.startsWith('platin/t/')) return PLATIN_T + k.slice(9);
+  if (k.startsWith('platin/')) return PLATIN + k.slice(7);
+  return window.WATCH_URL ? String(window.WATCH_URL).replace(/\/$/, '') + '/p/' + k : null;
 }
 // Ürün medyası tek sırada: pi + im; 'v:<adres>' = video (adres 'r2:…' ya da https). pi her zaman resimdir (kapak).
 // Eski tek video alanı vd (+ vdp kapak): sırada video yoksa 2. sıraya konur.

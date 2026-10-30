@@ -943,6 +943,7 @@ const frameCache = new Map();
 export function mediaUrl(u) {
   if (String(u || '').startsWith('r2:')) return picUrl(u, null, true); // depoya yüklenen video / resim
   const m = /^https?:\/\/pub-([0-9a-f]{32})\.r2\.dev\/(.+)$/.exec(String(u || '').trim());
+  if (m && window.IMG_BASE) return window.IMG_BASE + m[2]; // aynı kutu, özel alan adından (bekçisiz)
   return m && window.WATCH_URL ? `${window.WATCH_URL}/r2/${m[1]}/${m[2]}` : u;
 }
 export function useVideoFrame(src0, given) {

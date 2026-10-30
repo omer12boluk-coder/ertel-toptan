@@ -1,0 +1,39 @@
+# R2 kutusu "ertel"e özel alan adı bağlar (tools/r2-domain.txt'teki adres) + CORS (resim/video her siteden GET/HEAD/Range).
+# Siteye bağlamaz: uygulama ancak hosting/public/config.js IMG_BASE doldurulunca bu adresi kullanır.
+name: Resim adresini bağla (R2)
+on:
+  push:
+    branches: [gelistirme]
+    paths: ['tools/r2-domain.txt']
+  workflow_dispatch:
+jobs:
+  domain:
+    runs-on: ubuntu-latest
+    env:
+      T: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      A: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bağla ve dene
+        run: |
+          D=$(grep -v '^#' tools/r2-domain.txt | tr -d ' \r' | grep . | head -1)
+          [ -n "$D" ] || { echo "::warning title=Alan adı yok::tools/r2-domain.txt boş"; exit 0; }
+          api() { curl -s -H "Authorization: Bearer $T" -H 'Content-Type: application/json' "$@"; }
+          Z=""; n=$D
+          while [ -z "$Z" ] && [ "$(echo $n | tr -cd . | wc -c)" -ge 1 ]; do
+            Z=$(api "https://api.cloudflare.com/client/v4/zones?name=$n" | jq -r '.result[0].id // empty'); [ -n "$Z" ] || n=${n#*.}
+          done
+          [ -n "$Z" ] || { echo "::error title=Alan adı Cloudflare'de bulunamadı::$D — Cloudflare'e eklenmemiş ya da anahtarın 'Zone: Read' izni yok"; exit 1; }
+          echo "::notice title=Alan::$n (zone bulundu)"
+          r=$(api -X POST "https://api.cloudflare.com/client/v4/accounts/$A/r2/buckets/ertel/domains/custom" --data "{\"domain\":\"$D\",\"zoneId\":\"$Z\",\"enabled\":true,\"minTLS\":\"1.2\"}")
+          echo "::notice title=Bağlama::$(echo "$r" | jq -c '{success, errors: [.errors[]?.message]}')"
+          c=$(api -X PUT "https://api.cloudflare.com/client/v4/accounts/$A/r2/buckets/ertel/cors" --data '{"rules":[{"allowed":{"origins":["*"],"methods":["GET","HEAD"],"headers":["Range"]},"exposeHeaders":["Content-Length","Content-Range","Content-Type","Accept-Ranges"],"maxAgeSeconds":86400}]}')
+          echo "::notice title=CORS::$(echo "$c" | jq -c '{success, errors: [.errors[]?.message]}')"
+          for i in $(seq 1 30); do
+            s=$(curl -s -o /dev/null -m 15 -w "%{http_code}" "https://$D/platin/_ping.txt" || true)
+            [ "$s" = "200" ] && break; sleep 20
+          done
+          echo "::notice title=Deneme::https://$D/platin/_ping.txt → HTTP $s"
+          f=$(curl -s -m 20 "https://$D/platin/t/_manifest.json" | jq -r '.files | keys[0] // empty' 2>/dev/null)
+          [ -n "$f" ] && echo "::notice title=Küçük resim::$(curl -s -o /dev/null -m 20 -w '%{http_code} %{content_type} %{size_download}B' "https://$D/platin/t/$(jq -rn --arg f "$f" '$f|@uri')")"
+          [ "$s" = "200" ] || { echo "::error title=Adres henüz açılmadı::SSL birkaç dakika sürebilir; işi tekrar çalıştır"; exit 1; }
