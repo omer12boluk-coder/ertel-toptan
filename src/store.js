@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { withDefaults, ls, norm, now, cleanText } from './utils.js';
+import { lpath } from './route.js';
 
 const subs = new Set();
 export const store = {
@@ -92,19 +93,19 @@ const SLUGS = {
   b2b: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', talepler: 'talepler', profil: 'profil' },
   admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', sepetlink: 'sepet-link', sepetler: 'sepetler', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
 };
-const area = () => { const m = /^\/(magaza|b2b|admin)(\/|$)/.exec(location.pathname); return m ? m[1] : null; };
-export function tabFromPath() { const a = area(); if (!a) return null; const seg = location.pathname.split('/')[2] || ''; if (!seg) return null; const e = Object.entries(SLUGS[a]).find(([, x]) => x === seg); return e ? e[0] : null; }
+const area = () => { const m = /^\/(magaza|b2b|admin)(\/|$)/.exec(lpath()); return m ? m[1] : null; };
+export function tabFromPath() { const a = area(); if (!a) return null; const seg = lpath().split('/')[2] || ''; if (!seg) return null; const e = Object.entries(SLUGS[a]).find(([, x]) => x === seg); return e ? e[0] : null; }
 function pushTab(tab) {
   const a = area(); if (!a || !(tab in SLUGS[a])) return;
   const url = '/' + a + (SLUGS[a][tab] ? '/' + SLUGS[a][tab] : '');
   try {
     history.replaceState({ ...(history.state || {}), tab: store.s.tab, openOrder: store.s.openOrder || null, openReq: store.s.openReq || null, y: scrollY }, '');
-    if (location.pathname !== url || store.s.tab !== tab) history.pushState({ tab }, '', url);
+    if (lpath() !== url || store.s.tab !== tab) history.pushState({ tab }, '', url);
   } catch {}
 }
 // Hesabım alt sayfaları: /magaza/hesap/<bölüm> (telefonda geri kaydırınca Hesabım'a döner)
 export const ACCT = { orders: 'siparisler', addr: 'adresler', info: 'profil', inv: 'fatura', favs: 'favoriler', wait: 'haber-beklenenler', notif: 'bildirimler', pay: 'odeme' };
-export function acctFromPath() { const m = /^\/magaza\/hesap\/([\w-]+)/.exec(location.pathname); const slug = m && (m[1] === 'haber-bekleyenler' ? 'haber-beklenenler' : m[1]); /* eski bildirim linki */ const e = m && Object.entries(ACCT).find(([, x]) => x === slug); return e ? e[0] : null; }
+export function acctFromPath() { const m = /^\/magaza\/hesap\/([\w-]+)/.exec(lpath()); const slug = m && (m[1] === 'haber-bekleyenler' ? 'haber-beklenenler' : m[1]); /* eski bildirim linki */ const e = m && Object.entries(ACCT).find(([, x]) => x === slug); return e ? e[0] : null; }
 export function openAcct(v) {
   try {
     history.replaceState({ ...(history.state || {}), tab: 'hesap', acct: store.s.acct || null, y: scrollY }, '');
@@ -119,7 +120,7 @@ export function openAcct(v) {
   if (scrollY > target) window.scrollTo(0, target);
 }
 // Ürün sayfası (Ayarlar > Ürün kartları > Ürün açılışı: sayfa): /magaza/urun/<no>
-export function pidFromPath() { const m = /^\/magaza\/urun\/(\d+)/.exec(location.pathname); return m ? Number(m[1]) : null; }
+export function pidFromPath() { const m = /^\/magaza\/urun\/(\d+)/.exec(lpath()); return m ? Number(m[1]) : null; }
 export function openProduct(id) {
   try {
     history.replaceState({ ...(history.state || {}), tab: store.s.tab, acct: store.s.acct || null, pid: store.s.pid || null, y: scrollY }, '');

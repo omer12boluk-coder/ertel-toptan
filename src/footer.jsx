@@ -59,8 +59,8 @@ export function ShopFooter({ compact = false }) {
           </>}
           <h4 className={pages.length ? 'sfoot-h2' : ''}>Yardım</h4>
           <ul className="sfoot-links">
-            <li><a href="/magaza/talep" onClick={goTab('talep')}>Ürün talebi<Icon n="chev" s={15} /></a></li>
-            <li><a href="/magaza/sorun" onClick={goTab('sorun')}>Sorun bildir<Icon n="chev" s={15} /></a></li>
+            <li><a href="/talep" onClick={goTab('talep')}>Ürün talebi<Icon n="chev" s={15} /></a></li>
+            <li><a href="/sorun" onClick={goTab('sorun')}>Sorun bildir<Icon n="chev" s={15} /></a></li>
           </ul>
         </div>
         <div className="sfoot-col">

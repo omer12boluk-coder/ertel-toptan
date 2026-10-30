@@ -453,7 +453,7 @@ async function pushStatus(env, id, test) {
   const custom = O.pushTexts?.[st] === 'Siparişiniz onaylandı, hazırlanıyor.' ? '' : O.pushTexts?.[st]; // eski varsayılan metin ("hazırlanıyor" artık ayrı adım)
   let body = test ? 'Bildirimler açık. Siparişinizin durumu değişince buradan haber vereceğiz.' : (custom || PUSH_TEXTS[st] || 'Siparişinizin durumu güncellendi.');
   if (!test && st === 'shipped' && o.cargo?.code) body += ` ${o.cargo.company || 'Kargo'} takip no: ${o.cargo.code}`;
-  const data = { title: `${shop} · Sipariş #${o.no}`, body, url: '/magaza/s/' + id, tag: 'o-' + id };
+  const data = { title: `${shop} · Sipariş #${o.no}`, body, url: '/s/' + id, tag: 'o-' + id };
   const keep = []; let sent = 0; const codes = [];
   for (const s of list) { const code = await pushOne(env, s, data).catch(() => 0); codes.push(code); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
   if (keep.length !== list.length) {
@@ -678,8 +678,8 @@ async function pushFav(env, key, b) {
     const subs = (await env.KV.get('pm:' + uid, 'json')) || []; if (!subs.length) continue; users++;
     const it = items[0]; const m = (v) => '$' + Number(v).toFixed(2).replace(/\.00$/, '');
     const data = items.length === 1
-      ? { title: '💸 Favorinizdeki ürünün fiyatı düştü', body: `${it.n}: ${m(it.from)} → ${m(it.to)}`, url: '/magaza/urun/' + it.id, tag: 'fav-' + it.id }
-      : { title: `💸 ${items.length} favori ürününüzün fiyatı düştü`, body: items.slice(0, 3).map((x) => `${String(x.n).slice(0, 40)}: ${m(x.to)}`).join(' · '), url: '/magaza/urunler', tag: 'fav' };
+      ? { title: '💸 Favorinizdeki ürünün fiyatı düştü', body: `${it.n}: ${m(it.from)} → ${m(it.to)}`, url: '/urun/' + it.id, tag: 'fav-' + it.id }
+      : { title: `💸 ${items.length} favori ürününüzün fiyatı düştü`, body: items.slice(0, 3).map((x) => `${String(x.n).slice(0, 40)}: ${m(x.to)}`).join(' · '), url: '/urunler', tag: 'fav' };
     const keep = [];
     for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
     if (keep.length !== subs.length) await env.KV.put('pm:' + uid, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 365 });
@@ -911,7 +911,7 @@ async function preqReply(req, env, b) {
   const S = await pqSettings();
   const head = r.k === 'eta' ? `Ürününüz ${r.d ? trDate(r.d) + ' civarında' : 'yakında'} gelecek.` : r.k === 'have' ? 'Aradığınız ürün mağazamızda.' : r.k === 'no' ? 'Maalesef bu ürünü temin edemiyoruz.' : '';
   const body = [head, r.t].filter(Boolean).join(' ').slice(0, 200) || 'Talebiniz yanıtlandı.';
-  const data = { title: `${S.shop} · Ürün talebiniz`, body, url: r.k === 'have' && r.p ? '/magaza/urun/' + r.p : '/magaza/talep', tag: 'pq-' + id };
+  const data = { title: `${S.shop} · Ürün talebiniz`, body, url: r.k === 'have' && r.p ? '/urun/' + r.p : '/talep', tag: 'pq-' + id };
   const keep = []; let sent = 0;
   for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
   if (keep.length !== subs.length) await env.KV.put('pm:' + d.uid, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 365 });
@@ -1043,7 +1043,7 @@ async function issueReply(req, env, b) {
   const subs = (await env.KV.get('pm:' + d.uid, 'json')) || []; if (!subs.length) return { ok: true, sent: 0, subs: 0 };
   const S = await isSettings();
   const body = [r.s && IS_ST[r.s] ? IS_ST[r.s] + '.' : '', r.t].filter(Boolean).join(' ').slice(0, 200) || 'Sorun bildiriminiz yanıtlandı.';
-  const data = { title: `${S.shop} · Sorun bildiriminiz #${d.no || ''}`, body, url: '/magaza/sorun', tag: 'is-' + id };
+  const data = { title: `${S.shop} · Sorun bildiriminiz #${d.no || ''}`, body, url: '/sorun', tag: 'is-' + id };
   const keep = []; let sent = 0;
   for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
   if (keep.length !== subs.length) await env.KV.put('pm:' + d.uid, JSON.stringify(keep), { expirationTtl: 60 * 60 * 24 * 365 });
@@ -1095,8 +1095,8 @@ async function sendBack(env, b) {
     const subs = (await env.KV.get('pm:' + uid, 'json')) || []; if (!subs.length) continue; users++;
     const it = items[0];
     const data = items.length === 1
-      ? { title: '🔔 Beklediğiniz ürün geldi', body: `${String(it.n).slice(0, 120)} tekrar stokta. Dokunun, hemen sepete ekleyin.`, url: '/magaza/urun/' + it.id + '?hb=1', tag: 'back-' + it.id }
-      : { title: `🔔 Beklediğiniz ${items.length} ürün geldi`, body: items.slice(0, 3).map((x) => String(x.n).slice(0, 40)).join(' · '), url: '/magaza/hesap/haber-beklenenler', tag: 'back' };
+      ? { title: '🔔 Beklediğiniz ürün geldi', body: `${String(it.n).slice(0, 120)} tekrar stokta. Dokunun, hemen sepete ekleyin.`, url: '/urun/' + it.id + '?hb=1', tag: 'back-' + it.id }
+      : { title: `🔔 Beklediğiniz ${items.length} ürün geldi`, body: items.slice(0, 3).map((x) => String(x.n).slice(0, 40)).join(' · '), url: '/hesap/haber-beklenenler', tag: 'back' };
     data.title = data.title + ' · ' + shop;
     const keep = [];
     for (const s of subs) { const code = await pushOne(env, s, data).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }

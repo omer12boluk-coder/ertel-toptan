@@ -2,6 +2,7 @@
 // siparişteki onay kutusu (LegalConsent) ve sipariş → sözleşme alanları (legalFromOrder).
 import { useEffect, useState } from 'react';
 import { useStore, store } from './store.js';
+import { lpath } from './route.js';
 import { Icon, Sheet } from './ui.jsx';
 import { RichText } from './footer.jsx';
 import { LEGAL_DOCS, legalDoc, legalText, fillLegal } from './legal.js';
@@ -55,7 +56,7 @@ export function LegalSheet({ k, keys, order, onClose, S }) {
 
 // /magaza/yasal/<slug>: solda metin listesi, sağda metin (telefonda üstte açılır seçim)
 export function LegalPage() {
-  const slug = (/^\/magaza\/yasal\/([\w-]+)/.exec(location.pathname) || [])[1];
+  const slug = (/^\/magaza\/yasal\/([\w-]+)/.exec(lpath()) || [])[1];
   const key = useStore((s) => s.legalKey);
   const [cur, setCur] = useState(legalDoc(slug)?.k || key || 'kvkk');
   useEffect(() => { if (key) setCur(key); }, [key]);

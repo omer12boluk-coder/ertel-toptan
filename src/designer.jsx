@@ -126,7 +126,7 @@ export function ShopDesigner() {
           <button className={width === 'phone' ? 'on' : ''} onClick={() => setWidth('phone')} title="Telefon genişliği (yaklaşık)"><Icon n="mobile" s={16} /></button>
         </span>}
         <button className="btn sm ghost" onClick={undo} disabled={!hist.current.list.length} title="Geri al (Ctrl+Z)"><Icon n="undo" s={15} />Geri al</button>
-        <a className="btn sm ghost" href="/magaza" target="_blank" rel="noopener"><Icon n="ext" s={15} />Mağazayı aç</a>
+        <a className="btn sm ghost" href="/" target="_blank" rel="noopener"><Icon n="ext" s={15} />Mağazayı aç</a>
         {dirty && <button className="btn sm ghost" onClick={discard}>Vazgeç</button>}
         <button className="btn sm primary" onClick={save} disabled={busy || !dirty}><Icon n="check" s={15} />{busy ? 'Kaydediliyor…' : dirty ? 'Kaydet' : 'Kaydedildi'}</button>
       </div>

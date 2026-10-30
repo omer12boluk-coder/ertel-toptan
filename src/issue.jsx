@@ -289,7 +289,7 @@ export function IssueAdmin() {
     <>
       <div className="search"><Icon n="search" s={18} /><input id="is-search" type="search" placeholder="Müşteri, telefon, ürün, açıklama…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       <div className="chips scroll">{FILTERS.map(([k, l]) => <button key={k} className={'chip' + (f === k ? ' on' : '')} onClick={() => setF(k)}>{l}{counts[k] ? <b>{counts[k]}</b> : null}</button>)}</div>
-      {list.length === 0 ? <Empty icon="ask" title={f === 'open' ? 'Açık sorun bildirimi yok' : 'Bu filtrede bildirim yok'}><p>Müşteriler <b>/magaza/sorun</b> sayfasından fotoğraf / video ve açıklamayla sorun bildirir; burada yanıtlarsınız.</p></Empty> : (
+      {list.length === 0 ? <Empty icon="ask" title={f === 'open' ? 'Açık sorun bildirimi yok' : 'Bu filtrede bildirim yok'}><p>Müşteriler <b>{location.host}/sorun</b> sayfasından fotoğraf / video ve açıklamayla sorun bildirir; burada yanıtlarsınız.</p></Empty> : (
         <ul className="pq-alist">
           {list.map((x) => {
             const s = stOf(x.status); const th = (x.files || []).find((y) => y.t === 'i'); const nv = (x.files || []).filter((y) => y.t === 'v').length; const last = (x.replies || []).slice(-1)[0];
@@ -384,7 +384,7 @@ function IssueSheet({ q, onClose, onDelete }) {
 // Ayarlar > Sorun bildirimi
 export function IssueSettings({ d, set }) {
   return <>
-    <p className="fine">Mağaza üyeleri <b>/magaza/sorun</b> adresinden sorunlu ürünün fotoğraflarını (en çok {MAX_IMG}) ve kısa videosunu (en çok 40 MB) açıklamayla gönderir. Bildirimler <b>Müşteriler › Sorun bildirimleri</b>’ne düşer; Telegram ve telefon bildirimi gelir. Kötüye kullanıma karşı: sadece e-postasını doğrulamış üyeler, aynı internet bağlantısından saatte en çok 6 gönderim, mağazaya günde en çok 150 bildirim. Sayfa şu an menüde yok.</p>
+    <p className="fine">Mağaza üyeleri <b>{location.host}/sorun</b> adresinden sorunlu ürünün fotoğraflarını (en çok {MAX_IMG}) ve kısa videosunu (en çok 40 MB) açıklamayla gönderir. Bildirimler <b>Müşteriler › Sorun bildirimleri</b>’ne düşer; Telegram ve telefon bildirimi gelir. Kötüye kullanıma karşı: sadece e-postasını doğrulamış üyeler, aynı internet bağlantısından saatte en çok 6 gönderim, mağazaya günde en çok 150 bildirim. Sayfa şu an menüde yok.</p>
     <Toggle id="s-is" label="Sorun bildirimi açık" checked={d.issue?.on !== false} onChange={(v) => set('issue.on', v)} />
     <div className="row2">
       <Field label="Bir üye günde en çok kaç bildirim gönderebilir"><input id="s-is-day" type="number" min="1" max="20" value={d.issue?.perDay ?? 3} onChange={(e) => set('issue.perDay', Math.max(1, Math.min(20, Number(e.target.value) || 1)))} /></Field>

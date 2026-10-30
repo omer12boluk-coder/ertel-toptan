@@ -89,7 +89,7 @@ export function AdminHome() {
           ['gear', 'Ayarlar', () => go('ayarlar')],
           ['copy', 'Mağaza linki', () => copyText(links.shop(), 'Mağaza linki kopyalandı')],
         ].map(([ic, l, on, n]) => <button key={l} className="dash-q" onClick={on}><Icon n={ic} s={18} />{l}{n > 0 && <span className="badge">{n}</span>}</button>)}
-        <a className="dash-q" href="/magaza" target="_blank" rel="noopener"><Icon n="ext" s={18} />Mağazayı aç</a>
+        <a className="dash-q" href="/" target="_blank" rel="noopener"><Icon n="ext" s={18} />Mağazayı aç</a>
       </section>
 
       <div className="dash-grid">

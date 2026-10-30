@@ -109,7 +109,7 @@ export function Orders() {
         )}
         {list.length === 0 ? (
           <Empty icon="box" title={orders.length ? 'Bu filtrede sipariş yok' : 'Henüz mağaza siparişi yok'}>
-            {!orders.length && <p>Müşteriler <b>/magaza</b>’da sepeti onaylayıp siparişi tamamlayınca burada görünür.</p>}
+            {!orders.length && <p>Müşteriler mağazada sepeti onaylayıp siparişi tamamlayınca burada görünür.</p>}
           </Empty>
         ) : (
           <div className={'otable' + (sel ? ' selecting' : '')}>

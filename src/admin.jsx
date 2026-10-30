@@ -728,7 +728,7 @@ export function Settings() {
         {sec === 'ozellik' && <FeatSettings d={d} set={set} />}
 
         {sec === 'magaza' && <>
-          <p className="fine">Herkese açık mağaza: <b>{location.host}/magaza</b>. Müşteri ürünleri sepete ekler, <b>Sepeti onayla</b> ile teslimat, fatura ve ödeme bilgilerini girip siparişi tamamlar; sipariş <b>Siparişler</b>’e düşer. İsterse üye olur (bilgileri bir dahakine hazır gelir), isterse misafir devam eder. Ayrıca sepeti sadece link olarak WhatsApp’tan da gönderebilir (o liste hiçbir yere kaydedilmez).</p>
+          <p className="fine">Herkese açık mağaza: <b>{location.host}</b>. Müşteri ürünleri sepete ekler, <b>Sepeti onayla</b> ile teslimat, fatura ve ödeme bilgilerini girip siparişi tamamlar; sipariş <b>Siparişler</b>’e düşer. İsterse üye olur (bilgileri bir dahakine hazır gelir), isterse misafir devam eder. Ayrıca sepeti sadece link olarak WhatsApp’tan da gönderebilir (o liste hiçbir yere kaydedilmez).</p>
           <Toggle id="s-pub" label="Online mağaza açık" checked={d.access.publicShop} onChange={(v) => set('access.publicShop', v)} />
           <div className="input-btn"><input id="s-publink" readOnly value={links.shop()} /><button type="button" className="btn sm outline" onClick={() => copyText(links.shop(), 'Mağaza linki kopyalandı')}>Kopyala</button></div>
           <ShopInvite />
@@ -737,7 +737,7 @@ export function Settings() {
           <div className="soon-admin">
             <Toggle id="s-csoon" label="Online sipariş: “Çok yakında” göster" hint="Açıkken müşteri sepette “Sepeti onayla”yı pasif görür, sadece WhatsApp’tan gönderir. Sistemi açmak için kapatın." checked={d.orders.checkoutSoon !== false} onChange={(v) => set('orders.checkoutSoon', v)} />
             <Toggle id="s-asoon" label="Üyelik / Hesabım: “Çok yakında” göster" hint="Açıkken Hesabım sayfasında “Çok yakında hizmetinizde” yazar." checked={d.orders.accountsSoon !== false} onChange={(v) => set('orders.accountsSoon', v)} />
-            <p className="fine">Kendiniz denemek için: <a href="/magaza?onizleme=1" target="_blank" rel="noopener">/magaza?onizleme=1</a> (bu cihazda “yakında” kalkar; geri almak için <code>?onizleme=0</code>).</p>
+            <p className="fine">Kendiniz denemek için: <a href="/?onizleme=1" target="_blank" rel="noopener">/?onizleme=1</a> (bu cihazda “yakında” kalkar; geri almak için <code>?onizleme=0</code>).</p>
           </div>
           <Toggle id="s-osign" label="Müşteriler mağazaya üye olabilsin" hint="Adres ve fatura bilgileri kayıtlı kalır, siparişlerini takip ederler" checked={d.orders.signup !== false} onChange={(v) => set('orders.signup', v)} />
           <h3>Müşteriye bildirim</h3>

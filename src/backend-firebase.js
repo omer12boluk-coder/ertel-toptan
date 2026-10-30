@@ -512,7 +512,7 @@ export class FirebaseBackend {
       } catch { cb(u.emailVerified ? { uid: u.uid, email: u.email } : null); }
     });
   }
-  actionUrl() { return { url: location.origin + '/magaza' }; }
+  actionUrl() { return { url: location.origin + '/' }; }
   async usernameFree(name) { const s = await timeout(this.F.getDoc(this.d('usernames', name))); return !s.exists(); }
   // keep: true → sipariş adımında üye olunca sipariş yazılana kadar oturum açık kalır; sonra memberDone() çağrılır
   async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' }, legal }, keep) {

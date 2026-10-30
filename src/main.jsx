@@ -387,7 +387,7 @@ function Login() {
             ? <p className="fine center">Hesabınız yok mu? <button type="button" className="link" onClick={() => { setErr(''); setView('signup'); }}>Bayi olarak üye olun</button></p>
             : <p className="fine center">Hesabınız yok mu? {S.shop.name} ile iletişime geçin{S.shop.phone ? ': ' + S.shop.phone : '.'}</p>)}
           {view === 'signup' && <p className="fine center"><button type="button" className="link" onClick={() => { setErr(''); setView('login'); }}>Zaten hesabım var, giriş yap</button></p>}
-          {!adminPage && <p className="fine center"><a className="link" href="/">← Giriş sayfasına dön</a></p>}
+          {!adminPage && <p className="fine center"><a className="link" href="/">← Mağazaya dön</a></p>}
         </form>
       )}
     </div>
@@ -418,7 +418,7 @@ function pageMenu(e, role) {
     admin && { label: 'Yeni ürün ekle', icon: 'plus', onClick: () => { go('katalog'); store.set({ intent: 'newProduct' }); } },
     admin && { label: 'Yeni müşteri ekle', icon: 'users', onClick: () => { go('musteriler'); store.set({ intent: 'newCustomer' }); } },
     admin && { label: 'Mağaza tasarımı', icon: 'brush', onClick: () => go('tasarim') },
-    admin && { label: 'Vitrin linkini kopyala', icon: 'copy', hint: '/magaza', onClick: () => copyText(links.shop(), 'Vitrin linki kopyalandı') },
+    admin && { label: 'Vitrin linkini kopyala', icon: 'copy', hint: location.host, onClick: () => copyText(links.shop(), 'Vitrin linki kopyalandı') },
     '-',
     { label: 'Temayı değiştir', icon: 'moon', onClick: () => document.querySelector('[data-theme-btn]')?.click() },
     { label: 'Yenile', icon: 'refresh', onClick: () => location.reload() },
@@ -499,7 +499,7 @@ function ShellFull() {
           {pub && <HeaderSearch />}
           {pub && <ShopBell />}
           {!admin && <HeaderCart on={tab === 'sepet'} />}
-          {!admin && <a className="icon-btn to-landing" href="/" title="Giriş sayfasına dön (Mağaza / Bayi girişi)" aria-label="Giriş sayfasına dön"><Icon n="home" s={19} /></a>}
+          {!admin && !pub && <a className="icon-btn to-landing" href="/" title="Mağazaya git" aria-label="Mağazaya git"><Icon n="store" s={19} /></a>}
           {admin && <NotifBell />}
           <ThemeButton />
           {pub && (member

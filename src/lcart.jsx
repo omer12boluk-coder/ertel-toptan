@@ -16,7 +16,7 @@ import { useRate, toTL, fmtTL } from './listsheet.jsx';
 import { AddressFields, addrErrors, cleanAddr, Choice, addrLine } from './checkout.jsx';
 
 const strip = (o) => JSON.parse(JSON.stringify(o, (k, v) => (v === undefined ? undefined : v)));
-export const lcartLink = (id) => `${location.origin}/magaza/k/${id}`;
+export const lcartLink = (id) => `${location.origin}/k/${id}`;
 const withOffer = (items) => items.map((it) => ({ ...it, offer: it.price }));
 
 // ============================================================================================

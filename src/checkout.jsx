@@ -17,6 +17,7 @@ import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPus
 import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
 import { LegalConsent, SignupConsent, legalFromOrder, OrderLegalLink } from './legalui.jsx';
 import { LEGAL_V } from './legal.js';
+import { FirebaseBackend } from './backend-firebase.js';
 import { feat } from './extras.jsx';
 import { OrderRate, useRateable } from './reviews.jsx';
 
@@ -657,6 +658,14 @@ function PayChip({ o }) {
 
 // =============================================================================================
 // Giriş / üye ol (Hesabım sayfasında ve sipariş adımında pencere olarak)
+// Bayi girişi mağazanın giriş ekranından (31.10.2026; eski giriş sayfası kalktı): bayi oturumu ayrı Firebase örneğinde
+// (varsayılan uygulama) açılır, sonra /b2b'ye geçilir. Mağaza üyesi oturumuna dokunmaz.
+let bayiB = null;
+async function bayiLogin(A, u, pw) {
+  if (A.mode !== 'firebase') return A.login(u, pw); // demo: bayi ve mağaza aynı oturum anahtarını kullanır
+  if (!bayiB) { bayiB = new FirebaseBackend(window.FIREBASE_CONFIG); await bayiB.init(); }
+  await bayiB.login(u, pw, true);
+}
 function AuthForm({ onDone, compact }) {
   const { api: A, settings: S } = useStore();
   const [view, setView] = useState('login'); // login | signup | reset | resetSent | verifySent | unverified
@@ -671,6 +680,12 @@ function AuthForm({ onDone, compact }) {
     e.preventDefault(); setErr('');
     setBusy(true);
     try {
+      if (view === 'bayi') {
+        const u = cleanUsername(f.bu || '');
+        if (!u || !f.bpw) throw new Error('Kullanıcı adınızı ve şifrenizi yazın.');
+        await bayiLogin(A, u, f.bpw);
+        location.assign('/b2b'); return;
+      }
       if (view === 'login') {
         if (!f.id.trim()) throw new Error('E-posta ya da kullanıcı adınızı yazın.');
         await A.memberLogin(f.id, f.pw); toast('Giriş yapıldı'); onDone?.();
@@ -710,12 +725,18 @@ function AuthForm({ onDone, compact }) {
   );
   return (
     <form className="auth-form" onSubmit={submit}>
-      {['login', 'signup'].includes(view) && canSignup && (
+      {['login', 'signup', 'bayi'].includes(view) && (canSignup || !compact) && (
         <div className="tabs auth-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={view === 'login'} className={'tab' + (view === 'login' ? ' on' : '')} onClick={() => go2('login')}>Giriş yap</button>
-          <button type="button" role="tab" aria-selected={view === 'signup'} className={'tab' + (view === 'signup' ? ' on' : '')} onClick={() => go2('signup')}>Üye ol</button>
+          {canSignup && <button type="button" role="tab" aria-selected={view === 'signup'} className={'tab' + (view === 'signup' ? ' on' : '')} onClick={() => go2('signup')}>Üye ol</button>}
+          {!compact && <button type="button" role="tab" aria-selected={view === 'bayi'} className={'tab' + (view === 'bayi' ? ' on' : '')} onClick={() => go2('bayi')}>Bayi girişi</button>}
         </div>
       )}
+      {view === 'bayi' && <>
+        <p className="fine">Toptan fiyatlar için size verilen bayi kullanıcı adı ve şifresiyle girin.</p>
+        <Field label="Kullanıcı adı"><input id="b-user" autoComplete="username" autoCapitalize="none" value={f.bu || ''} onChange={set('bu')} required /></Field>
+        <Field label="Şifre"><PasswordInput id="b-pw" autoComplete="current-password" value={f.bpw || ''} onChange={set('bpw')} required /></Field>
+      </>}
       {view === 'reset' && <p className="fine">E-posta adresinizi ya da kullanıcı adınızı yazın; şifre yenileme bağlantısı gönderelim.</p>}
       {view === 'signup' && <>
         <Field label="Ad soyad"><input id="m-name" autoComplete="name" value={f.name} onChange={set('name')} /></Field>
@@ -725,14 +746,15 @@ function AuthForm({ onDone, compact }) {
           <Field label="Cep telefonu"><PhoneInput id="m-phone" value={f.phone} onChange={set('phone')} /></Field>
         </div>
       </>}
-      {view !== 'signup' && <Field label="E-posta ya da kullanıcı adı"><input id="m-id" autoComplete="username" autoCapitalize="none" value={f.id} onChange={set('id')} required /></Field>}
-      {view !== 'reset' && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}
+      {!['signup', 'bayi'].includes(view) && <Field label="E-posta ya da kullanıcı adı"><input id="m-id" autoComplete="username" autoCapitalize="none" value={f.id} onChange={set('id')} required /></Field>}
+      {!['reset', 'bayi'].includes(view) && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}
       {view === 'signup' && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}
       {view === 'signup' && <SignupConsent checked={!!f.legal} onChange={(v) => setF((x) => ({ ...x, legal: v }))} />}
       {err && <p className="err">{err}</p>}
       {view === 'unverified'
         ? <button type="button" className="btn primary big center-btn" disabled={busy} onClick={resend}>{busy ? 'Bekleyin…' : 'Doğrulama e-postasını tekrar gönder'}</button>
-        : <button className="btn primary big center-btn" disabled={busy}>{busy ? 'Bekleyin…' : view === 'signup' ? 'Üye ol' : view === 'reset' ? 'Bağlantı gönder' : 'Giriş yap'}</button>}
+        : <button className="btn primary big center-btn" disabled={busy}>{busy ? 'Bekleyin…' : view === 'signup' ? 'Üye ol' : view === 'reset' ? 'Bağlantı gönder' : view === 'bayi' ? 'Bayi olarak giriş yap' : 'Giriş yap'}</button>}
+      {view === 'bayi' && <p className="fine center">Bayi değil misiniz? <a className="link" href="/b2b">Bayilik başvurusu</a></p>}
       {view === 'login' && <button type="button" className="link center" onClick={() => go2('reset')}>Şifremi unuttum</button>}
       {['reset', 'unverified'].includes(view) && <button type="button" className="link center" onClick={() => go2('login')}>← Girişe dön</button>}
       {view === 'signup' && <p className="fine center">Üye olunca e-postanıza bir doğrulama bağlantısı gelir; ona tıklayınca üyeliğiniz açılır.</p>}

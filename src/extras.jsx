@@ -56,7 +56,7 @@ async function imgFile(p, S) {
 }
 // Paylaş menüsü (ürün penceresi düğmesi + kart sağ tık menüsü ortak)
 export function shareMenu(e, p, S, onImg) {
-  const url = location.origin + '/magaza/urun/' + p.id;
+  const url = location.origin + '/urun/' + p.id;
   const pr = priceFor(p, S, { role: 'public' }, null).mine;
   const text = p.n + (pr != null ? ' · ' + fmt(pr, p.cur) + (S.pricing?.showVat !== false ? ' + KDV' : '') : '') + ' — ' + (S.brand?.appName || '');
   const shareLink = async () => { try { await navigator.share({ title: p.n, text, url }); } catch (x) { if (x?.name !== 'AbortError') copyText(url, 'Ürün linki kopyalandı'); } };
@@ -73,7 +73,7 @@ export function ShareBtn({ p, big }) {
   const S = useStore((s) => s.settings);
   const [busy, setBusy] = useState(false);
   if (!feat(S).share || !p) return null;
-  const url = location.origin + '/magaza/urun/' + p.id;
+  const url = location.origin + '/urun/' + p.id;
   const pr = priceFor(p, S, { role: 'public' }, null).mine;
   const text = p.n + (pr != null ? ' · ' + fmt(pr, p.cur) + (S.pricing?.showVat !== false ? ' + KDV' : '') : '') + ' — ' + (S.brand?.appName || '');
   const shareLink = async () => { try { await navigator.share({ title: p.n, text, url }); } catch (x) { if (x?.name !== 'AbortError') copyText(url, 'Ürün linki kopyalandı'); } };

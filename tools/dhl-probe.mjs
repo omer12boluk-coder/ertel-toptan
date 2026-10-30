@@ -23,7 +23,7 @@ async function timed(label, fn) {
 
 // 1) site dosyaları
 const M = 'https://ertelmarket.com';
-const urls = ['/version.json', '/admin', '/magaza/urun/3114', '/config.js', '/sw.js', '/manifest-admin.webmanifest', '/icon-admin-180.png', '/icon-192.png', '/splash/dukkan.jpg', '/fb/firebase-app.js', '/tr/34.json', '/kalip/phones.json', '/brands/2uul.png'].map((x) => M + x)
+const urls = ['/version.json', '/admin', '/magaza/urun/3114', '/kalip', '/urunler', '/urun/3114', '/hesap/siparisler', '/config.js', '/sw.js', '/manifest-admin.webmanifest', '/icon-admin-180.png', '/icon-192.png', '/splash/dukkan.jpg', '/fb/firebase-app.js', '/tr/34.json', '/kalip/phones.json', '/brands/2uul.png'].map((x) => M + x)
   .concat(['https://www.ertelmarket.com/', 'https://erteltoptan.web.app/version.json', 'https://resim.ertelmarket.com/platin/_free.json', W + '/rate', W + '/push/key', W + '/']);
 for (const u of urls)
   await timed('Site ' + u.replace('https://', ''), async () => { const r = await fetch(u, { signal: AbortSignal.timeout(15000) }); const ct = r.headers.get('content-type'); const b = ct?.includes('json') || ct?.includes('javascript') ? (await r.text()).slice(0, 80) : ''; const len = r.headers.get('content-length') || ''; return `${r.status} ${ct} ${len} ${r.redirected ? '→ ' + r.url : ''} ${b}`; });

@@ -27,7 +27,7 @@ self.addEventListener('push', (e) => {
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const url = new URL(e.notification.data?.url || '/magaza', self.location.origin).href;
+  const url = new URL(e.notification.data?.url || '/', self.location.origin).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
     for (const c of cs) if (c.url.startsWith(self.location.origin) && 'navigate' in c) return c.focus().then(() => c.navigate(url));
     return self.clients.openWindow(url);

@@ -542,7 +542,7 @@ export function OpenVitrinList({ onClose }) {
   return (
     <Sheet title="Vitrin listesi aç" sub="Müşterinin WhatsApp’tan gönderdiği linki yapıştırın" onClose={onClose}
       footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn primary" disabled={!c} onClick={() => setCode(c)}>Aç</button></>}>
-      <input autoFocus value={t} onChange={(e) => setT(e.target.value)} placeholder="https://erteltoptan.web.app/magaza/l/…" />
+      <input autoFocus value={t} onChange={(e) => setT(e.target.value)} placeholder="https://ertelmarket.com/l/…" />
       {t && !c && <p className="err">Bu bir vitrin listesi linki gibi görünmüyor.</p>}
     </Sheet>
   );
