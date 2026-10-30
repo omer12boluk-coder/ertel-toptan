@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, go, toast } from './store.js';
 import { Icon, Sheet, Confirm, Empty, Field, Toggle, Thumb, openMenu } from './ui.jsx';
-import { imageBlob, now, norm, fmt } from './utils.js';
+import { imageBlob, now, norm, fmt, fbSkip } from './utils.js';
 import { waLink } from './route.js';
 import { Lightbox, ProductSheet } from './catalog.jsx';
 import { OlderBtn } from './orders.jsx';
@@ -41,7 +41,7 @@ const keepDays = (S) => Math.min(365, Math.max(1, Number(S.preq?.days) || 30));
 function PqImg({ k, onClick, cls = '' }) {
   const [bad, setBad] = useState(false);
   if (bad) return <span className={'pq-img gone ' + cls} title="Fotoğrafın saklama süresi doldu"><Icon n="camera" s={18} /><small>Süresi doldu</small></span>;
-  return <button type="button" className={'pq-img ' + cls} onClick={onClick}><img src={pic(k)} alt="" loading="lazy" onError={() => setBad(true)} /></button>;
+  return <button type="button" className={'pq-img ' + cls} onClick={onClick}><img src={pic(k)} alt="" loading="lazy" onError={(e) => { if (!fbSkip(e)) setBad(true); }} /></button>;
 }
 function Photos({ q, size = 'md' }) {
   const [lb, setLb] = useState(null);
@@ -232,7 +232,7 @@ export function PreqAdmin() {
             return (
               <li key={x.id}>
                 <button className={'pq-arow' + (x.seenAdmin === false ? ' fresh' : '')} onClick={() => store.set({ openPreq: x.id })} onContextMenu={(e) => menu(e, x)}>
-                  <span className="pq-arow-img">{x.photos?.[0] ? <img src={pic(x.photos[0])} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} /> : <Icon n="ask" s={22} />}{(x.photos || []).length > 1 && <i>{x.photos.length}</i>}</span>
+                  <span className="pq-arow-img">{x.photos?.[0] ? <img src={pic(x.photos[0])} alt="" loading="lazy" onError={(e) => { if (!fbSkip(e)) e.currentTarget.style.visibility = 'hidden'; }} /> : <Icon n="ask" s={22} />}{(x.photos || []).length > 1 && <i>{x.photos.length}</i>}</span>
                   <span className="pq-arow-b">
                     <span className="pq-arow-t"><b>{x.name || x.email || 'Üye'}</b><small className="muted">#{x.no} · {dShort(x.createdAt)}</small></span>
                     <span className="pq-arow-x">{x.text || <i className="muted">Açıklama yok · {(x.photos || []).length} fotoğraf</i>}</span>

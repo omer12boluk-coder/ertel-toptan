@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, api, store, toast } from './store.js';
-import { initials, hue, vatOf, fmtTotals, picUrl, isAbsImg } from './utils.js';
+import { initials, hue, vatOf, fmtTotals, picUrl, isAbsImg, fbSkip } from './utils.js';
 import { STATUS } from './config.js';
 
 const P = {
@@ -219,7 +219,7 @@ export function Thumb({ p, size = 'md' }) {
   const brand = (p?.n || '?').split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '').slice(0, 6);
   return (
     <div className={'thumb thumb-' + size} style={{ '--h': hue(brand) }}>
-      {src && !bad ? <img src={src} alt="" loading="lazy" onError={() => setBad(true)} /> : <span className="thumb-ph">{brand || '—'}</span>}
+      {src && !bad ? <img src={src} alt="" loading="lazy" onError={(e) => { if (!fbSkip(e)) setBad(true); }} /> : <span className="thumb-ph">{brand || '—'}</span>}
     </div>
   );
 }

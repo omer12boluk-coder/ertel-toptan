@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, go, toast } from './store.js';
 import { Icon, Sheet, Confirm, Empty, Field, Toggle, PhoneInput, openMenu } from './ui.jsx';
-import { imageBlob, now, norm } from './utils.js';
+import { imageBlob, now, norm, fbSkip } from './utils.js';
 import { waLink } from './route.js';
 import { Lightbox } from './catalog.jsx';
 import { OlderBtn } from './orders.jsx';
@@ -49,12 +49,12 @@ function Files({ files, size = 'md' }) {
 function IsImg({ k, onClick }) {
   const [bad, setBad] = useState(false);
   if (bad) return <span className="pq-img gone" title="Saklama süresi doldu"><Icon n="camera" s={18} /><small>Süresi doldu</small></span>;
-  return <button type="button" className="pq-img" onClick={onClick}><img src={pic(k)} alt="" loading="lazy" onError={() => setBad(true)} /></button>;
+  return <button type="button" className="pq-img" onClick={onClick}><img src={pic(k)} alt="" loading="lazy" onError={(e) => { if (!fbSkip(e)) setBad(true); }} /></button>;
 }
 function IsVid({ k }) {
   const [bad, setBad] = useState(false);
   if (bad) return <span className="pq-img is-vid gone"><Icon n="play" s={18} /><small>Süresi doldu</small></span>;
-  return <video className="is-vid" src={pic(k)} controls playsInline preload="metadata" onError={() => setBad(true)} />;
+  return <video className="is-vid" src={pic(k)} controls playsInline preload="metadata" onError={(e) => { if (!fbSkip(e)) setBad(true); }} />;
 }
 
 function Reply({ r, admin }) {
@@ -296,7 +296,7 @@ export function IssueAdmin() {
             return (
               <li key={x.id}>
                 <button className={'pq-arow' + (x.seenAdmin === false ? ' fresh' : '')} onClick={() => store.set({ openIssue: x.id })} onContextMenu={(e) => menu(e, x)}>
-                  <span className="pq-arow-img">{th ? <img src={pic(th.k)} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} /> : <Icon n={nv ? 'play' : 'ask'} s={22} />}{(x.files || []).length > 1 && <i>{(x.files || []).length}</i>}</span>
+                  <span className="pq-arow-img">{th ? <img src={pic(th.k)} alt="" loading="lazy" onError={(e) => { if (!fbSkip(e)) e.currentTarget.style.visibility = 'hidden'; }} /> : <Icon n={nv ? 'play' : 'ask'} s={22} />}{(x.files || []).length > 1 && <i>{(x.files || []).length}</i>}</span>
                   <span className="pq-arow-b">
                     <span className="pq-arow-t"><b>{x.name || x.email || 'Üye'}</b><small className="muted">#{x.no} · {dShort(x.createdAt)}{x.order ? ' · sipariş #' + x.order : ''}</small></span>
                     <span className="pq-arow-x">{x.prod ? <b>{x.prod} · </b> : null}{x.text}</span>

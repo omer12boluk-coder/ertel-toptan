@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { flushSync } from 'react-dom';
 import { useStore, store, setQty, go, api, toast } from './store.js';
 import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
-import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg } from './utils.js';
+import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg, fbSkip } from './utils.js';
 import { waLink } from './route.js';
 import { ProductSheet, useTree, PlayVideo } from './catalog.jsx';
 import { currentRate } from './listsheet.jsx';
@@ -79,7 +79,7 @@ export function ShopImg({ v, className, alt = '' }) {
     if (/logo/.test(className || '') && isInk(i)) i.classList.add('ink');
   };
   const onError = (e) => { // yedek adres de açılmadıysa aynı kategoriden bir ürünün resmi
-    if (!isProdImg(v)) return; const { id, c } = prodParts(v); const alt2 = catAlt(c || store.s.byId.get(id)?.c, id);
+    if (fbSkip(e) || !isProdImg(v)) return; const { id, c } = prodParts(v); const alt2 = catAlt(c || store.s.byId.get(id)?.c, id);
     if (alt2 && e.currentTarget.src !== alt2) e.currentTarget.src = alt2;
   };
   return src ? <img className={className} src={src} alt={alt} loading="lazy" onLoad={onLoad} onError={onError} /> : null;

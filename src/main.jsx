@@ -697,7 +697,7 @@ function setupMediaFallback() {
   document.addEventListener('error', (e) => {
     const el = e.target; if (!el || !/^(IMG|VIDEO|SOURCE)$/.test(el.tagName) || el.dataset.fb) return;
     const alt = mediaFallback(el.currentSrc || el.src); if (!alt) return;
-    el.dataset.fb = '1'; el.src = alt; if (el.tagName === 'SOURCE') el.parentElement?.load?.();
+    el.dataset.fb = '1'; e._fb = 1; el.src = alt; if (el.tagName === 'SOURCE') el.parentElement?.load?.();
   }, true);
 }
 function setupCrispBack() {

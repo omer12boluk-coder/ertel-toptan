@@ -139,6 +139,8 @@ export function mediaFallback(u) {
   if (k.startsWith('platin/')) return PLATIN + k.slice(7);
   return window.WATCH_URL ? String(window.WATCH_URL).replace(/\/$/, '') + '/p/' + k : null;
 }
+// Bileşenlerin onError'u: yedek adres bu hatada devreye girdiyse (setupMediaFallback) resmi bozuk sayma.
+export const fbSkip = (e) => !!(e && (e.nativeEvent || e)._fb);
 // Ürün medyası tek sırada: pi + im; 'v:<adres>' = video (adres 'r2:…' ya da https). pi her zaman resimdir (kapak).
 // Eski tek video alanı vd (+ vdp kapak): sırada video yoksa 2. sıraya konur.
 export function isVid(f) { return typeof f === 'string' && f.startsWith('v:'); }

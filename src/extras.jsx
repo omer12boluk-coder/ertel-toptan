@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, store, api, go, toast, openProduct, setQty } from './store.js';
 import { Icon, Empty, Toggle, openMenu, copyText } from './ui.jsx';
-import { fmt, priceFor, picUrl, mediaFallback } from './utils.js';
+import { fmt, priceFor, picUrl, mediaFallback, fbSkip } from './utils.js';
 import { waLink } from './route.js';
 import { pushState } from './push.js';
 import { queueSave } from './saveq.js';
@@ -183,7 +183,7 @@ export function WaitList() {
 function WaitThumb({ p }) {
   const S = useStore((s) => s.settings);
   const f = p.pi || (p.im || [])[0]; const u = f ? picUrl(f, S.catalog.imageThumb, false) : null;
-  return <span className="wait-th">{u && <img src={u} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />}</span>;
+  return <span className="wait-th">{u && <img src={u} alt="" loading="lazy" onError={(e) => { if (!fbSkip(e)) e.currentTarget.style.visibility = 'hidden'; }} />}</span>;
 }
 
 // =====================================================================================================
@@ -209,7 +209,7 @@ function MiniCard({ p, onOpen }) {
   const qty = cart[p.id] || 0;
   return (
     <div className="mini-card">
-      <button className="mini-img" onClick={onOpen} aria-label={p.n}>{u && <img src={u} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />}</button>
+      <button className="mini-img" onClick={onOpen} aria-label={p.n}>{u && <img src={u} alt="" loading="lazy" onError={(e) => { if (!fbSkip(e)) e.currentTarget.style.visibility = 'hidden'; }} />}</button>
       <button className="mini-n" onClick={onOpen}>{p.n}</button>
       <div className="mini-f">
         <b>{pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur)}</b>

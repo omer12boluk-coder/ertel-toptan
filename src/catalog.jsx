@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm } from './ui.jsx';
-import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid } from './utils.js';
+import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid, fbSkip } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -915,7 +915,7 @@ export function Gallery({ p }) {
                 : x.t === 'vid' ? <PlayVideo src={x.u} poster={x.poster} active={i === k} />
                 : bad[k] ? <Thumb p={{ ...p, pi: null, img: null }} size="lg" /> : (
                 <button className="gal-open" onClick={() => setZoom(x.z)} aria-label="Resmi büyüt">
-                  <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} onError={() => setBad((b) => ({ ...b, [k]: 1 }))} />
+                  <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} onError={(e) => { if (!fbSkip(e)) setBad((b) => ({ ...b, [k]: 1 })); }} />
                 </button>
               )}
             </div>
@@ -1014,7 +1014,7 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   return (
     <div className={'gal-vid' + (playing ? ' playing' : '') + ' ' + className}>
       <video ref={v} src={live ? src : undefined} poster={pst} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
-        style={{ objectFit: fit }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => setErr(true)}
+        style={{ objectFit: fit }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={(e) => { if (!fbSkip(e)) setErr(true); }}
         onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); }} onClick={() => !big && toggle()} />
       {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={28} /></button>}
       <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>
