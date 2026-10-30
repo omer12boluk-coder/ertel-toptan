@@ -79,9 +79,7 @@ service cloud.firestore {
       function own() { return signedIn() && resource.data.uid == request.auth.uid; }
       allow get: if true;
       allow list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-      // 30.10.2026: mağaza siparişi SADECE bekçiden (POST /order; fiyat ve toplam sunucuda katalogdan hesaplanır) yazılır.
-      // Müşteri doğrudan yazamaz (eskiden tarayıcıdan fiyat değiştirilerek ucuza sipariş yazılabiliyordu).
-      allow create: if isAdmin() && (request.resource.data.status == 'new' || (request.resource.data.status == 'confirmed' && request.resource.data.pay == 'card'))
+      allow create: if (request.resource.data.status == 'new' || (request.resource.data.status == 'confirmed' && request.resource.data.pay == 'card'))
         && (request.resource.data.uid == null || (signedIn() && request.resource.data.uid == request.auth.uid))
         && request.resource.data.items is list && request.resource.data.items.size() > 0 && request.resource.data.items.size() <= 300
         && request.resource.data.keys().hasOnly(['no', 'uid', 'member', 'status', 'createdAt', 'updatedAt', 'unread', 'history', 'items', 'total', 'rate', 'contact', 'delivery', 'invoice', 'pay', 'note', 'legal']);
