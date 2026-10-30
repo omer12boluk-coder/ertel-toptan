@@ -679,6 +679,7 @@ function AuthForm({ onDone, compact }) {
   const [dir, setDir] = useState('');
   const go2 = (v) => { setErr(''); setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
   const social = { google: S.orders?.loginGoogle === true, facebook: S.orders?.loginFacebook === true };
+  useEffect(() => { if (social.google || social.facebook) A.prepSocial?.(); }, [social.google, social.facebook]);
   async function socialIn(kind) {
     setErr(''); setBusy(true);
     try { await A.memberSocial(kind, { v: LEGAL_V, at: now(), via: kind }); toast('Giriş yapıldı'); onDone?.(); }

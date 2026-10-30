@@ -516,6 +516,12 @@ export class FirebaseBackend {
   }
   // Google / Facebook ile giriş (31.10.2026). İlk girişte üye kaydı (members) açılır. Firebase > Authentication > Sign-in method'da
   // sağlayıcı açık olmalı; kapalıysa anlaşılır hata döner.
+  // Google penceresi hazırlığı: giriş kutusu açılınca çağrılır. Firebase'in pencere bağlantısı (gizli iframe) önceden kurulur;
+  // yoksa düğmeye basınca önce bu kurulur, pencere geç açılır ve Safari "açılır pencere" diye ENGELLER (31.10.2026).
+  prepSocial() {
+    if (!this._socialPrep) this._socialPrep = this.U.getRedirectResult(this.auth, this.U.browserPopupRedirectResolver).catch(() => null);
+    return this._socialPrep;
+  }
   async memberSocial(kind, legal) {
     const P = kind === 'facebook' ? new this.U.FacebookAuthProvider() : new this.U.GoogleAuthProvider();
     if (kind === 'facebook') P.addScope('email'); else P.setCustomParameters({ prompt: 'select_account' });
