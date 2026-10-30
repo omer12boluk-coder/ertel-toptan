@@ -4,7 +4,7 @@
 //  - Resimler: küçültülüp Firestore'da (img/{id}) saklanır; Storage (ücretli plan) gerekmez
 import { pingWatch } from './push.js';
 import { EMAIL_DOMAIN } from './config.js';
-import { now, ls } from './utils.js';
+import { now, ls, r2Base } from './utils.js';
 import { chunkBySize } from './cats.js';
 import { idbGet, idbSet } from './idb.js';
 import { stencilKeys, packTags, DESC_BK, descBucket, descBuckets } from './kalip.js';
@@ -472,7 +472,7 @@ export class FirebaseBackend {
     const l = await this.reviewsOf(pid); const n = l.length; const avg = n ? Math.round((l.reduce((a, r) => a + (r.stars || 0), 0) / n) * 10) / 10 : 0;
     await timeout(this.F.setDoc(this.d('revsum', 'main'), { s: { [String(pid)]: n ? [avg, n] : this.F.deleteField() } }, { merge: true }));
   }
-  preqPic(key) { return /^(data:|blob:|https?:)/.test(key) ? key : String(window.WATCH_URL || '').replace(/\/$/, '') + '/p/' + key; }
+  preqPic(key) { return /^(data:|blob:|https?:)/.test(key) ? key : r2Base() + key; } // IMG_BASE varsa doğrudan depo adresi, yoksa bekçi /p/
   async _pingReq(id, msg) { const token = await this.idToken(); if (token) pingWatch('/notify-req', { id, token, msg }); }
   watchRequest(id, cb) {
     return this.F.onSnapshot(this.d('requests', id), (s) => cb(s.exists() ? { id: s.id, ...s.data() } : null), () => cb(null));

@@ -9,7 +9,7 @@ import { loadFavs, mergeFavs } from './store.js';
 import { linkMember } from './push.js';
 import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath, storeListen } from './store.js';
 import { ROUTE, links } from './route.js';
-import { withDefaults, ls, cleanUsername } from './utils.js';
+import { withDefaults, ls, cleanUsername, mediaFallback } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS } from './config.js';
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
@@ -633,6 +633,7 @@ function App() {
 if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => { if (!e.target.closest?.('.lb')) e.preventDefault(); }, { passive: false });
   setupLongPress();
+  setupMediaFallback();
   // setupPress(); — 29.10.2026: telefonda basma animasyonları KALDIRILDI (App Store sonrasına)
   touchHoverToActive();
   setupTapHover(); // 30.10.2026: SADECE öne çıkan ürün kutularında eğik resmin düzelmesi (kaydırırken çıkmaz)
@@ -689,6 +690,16 @@ export function haptic() {
 // Geri düğmelerinde keskin basma hissi (30.10.2026): sepet / ödeme gibi ağır sayfalara dönerken yeni sayfanın çizimi
 // basılı görünümü ekrana hiç çıkarmıyordu. Telefonda geri düğmesine dokununca düğme önce en az ~70 ms basılı görünür (.tap),
 // ancak o kare ekrana çıktıktan sonra asıl tıklama işlenir → Hesabım'daki gibi net bir 'tık'.
+// Yeni resim adresinden (IMG_BASE) açılamayan resim/video bir kez eski adresten denenir (dosya henüz kopyalanmadıysa ya da
+// alan adı geçici sorunluysa site resimsiz kalmasın). Yakalama aşamasında tek dinleyici: React'in çizdiği her <img>/<video>.
+function setupMediaFallback() {
+  if (!window.IMG_BASE) return;
+  document.addEventListener('error', (e) => {
+    const el = e.target; if (!el || !/^(IMG|VIDEO|SOURCE)$/.test(el.tagName) || el.dataset.fb) return;
+    const alt = mediaFallback(el.currentSrc || el.src); if (!alt) return;
+    el.dataset.fb = '1'; el.src = alt; if (el.tagName === 'SOURCE') el.parentElement?.load?.();
+  }, true);
+}
 function setupCrispBack() {
   let pass = false, downAt = 0;
   // basılı görünüm parmak değdiği anda .tap ile açılır ve tıklama işlenene kadar KESİNTİSİZ kalır. (Önceden :active parmak

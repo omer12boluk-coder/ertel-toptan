@@ -1,0 +1,24 @@
+# PlatinMarket ürün resimlerinin küçük hâllerini R2'de üretir (platin/t/). Siteye bağlamaz. Kaldığı yerden devam eder.
+name: Küçük resimleri üret (R2)
+on:
+  push:
+    branches: [gelistirme]
+    paths: ['tools/r2-thumbs.mjs', '.github/workflows/r2-thumbs.yml']
+  workflow_dispatch:
+concurrency:
+  group: r2-thumbs
+jobs:
+  thumbs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock sharp@0.33
+      - name: Küçük resimler
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+        run: node tools/r2-thumbs.mjs --minutes 110
