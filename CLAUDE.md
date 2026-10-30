@@ -7,6 +7,22 @@ Telefon tamir ekipmanı satan ERTEL GSM'in (ertelgsm.com, PlatinMarket altyapıs
 
 ---
 
+## ★ DEVİR NOTU — 30.10.2026 gece (kullanıcı başka Claude hesabıyla devam edebilir; ÖNCE BUNU OKU)
+
+**Bugün yayına alınanlar (main, canlı):** resimler resim.ertelmarket.com'dan (R2), Platin'den kopma (tüm dosya adresleri R2'ye kopyalanıp çevrildi, `platin-free`), yeni ürün resimleri eşitleme sonrası otomatik (`r2-new.yml`), ürün sayfası resim flaşı düzeltmesi, veri yedeği işi (`yedek.yml`, elle).
+**Alan adı:** ertelmarket.com (Cloudflare Registrar, kullanıcının; DNSSEC açık). `resim.ertelmarket.com` = R2 `ertel` kutusu. Kök A 199.36.158.100 + TXT `hosting-site=erteltoptan` = Firebase Hosting özel alan adı (doğrulama/SSL bekliyordu; Cloudflare'e taşınınca SİLİNECEK). TXT `firebase=erteltoptan` + `firebase1/2._domainkey` CNAME = Firebase Auth e-posta alan adı (KALACAK). Kök SPF tek kayıt: `v=spf1 include:_spf.mx.cloudflare.net include:_spf.firebasemail.com ~all`. Resend kayıtları: `resend._domainkey`, `send` MX/TXT, `rsend` CNAME. `_dmarc` p=none.
+**Cloudflare API anahtarı** (GitHub secret CLOUDFLARE_API_TOKEN, adı "Edit Cloudflare Workers"): 30.10'da kullanıcı **Zone: DNS Edit + Workers Routes Edit (All zones)** ekledi → DNS kayıtları ve Workers özel alan adı Actions'tan yapılabilir.
+**E-posta:** Cloudflare Email Routing açık: `info@ertelmarket.com` → omer.12boluk@gmail.com (çalışıyor, ilk test maili Gmail spam'ine düştü). Kullanıcı ileride destek@ açacak, alt bilgiye yazacak, Gmail "Farklı adresten gönder" (Resend SMTP) kurulacak — hatırlat.
+
+**YAYINLANMAYI BEKLEYEN DALLAR (kullanıcı onayı şart, ikisi de main'in üstünde):**
+1. `cf-site` — (a) telefonda ürün penceresi (ProductSheet) açıkken geri kaydırma pencereyi kapatır (`useBackCloses`, catalog.jsx; Playwright ile denendi), (b) site Cloudflare Workers static assets'ten: `site/wrangler.toml` (ertel-site, SPA), `hosting/public/_headers`, `.github/workflows/site.yml`. Önizleme: https://ertel-site.omer-12boluk.workers.dev (kullanıcı henüz denemedi). Canlıya alma adımları: main'e birleştir → `site.yml`'a `branches: [main]` ekle → `site/wrangler.toml`'a `routes = [{ pattern = "ertelmarket.com", custom_domain = true }, { pattern = "www.ertelmarket.com", custom_domain = true }]` → önce DNS'ten kök A + `hosting-site` TXT silinir (Firebase Hosting'deki ertelmarket.com özel alanı da konsoldan kaldırılır) → Firebase Auth > Settings > Authorized domains'e ertelmarket.com (+www) → deploy. Müşteri etkisi (kullanıcıya söylendi): yeni adreste bir kez yeniden giriş, ana ekrana yeniden ekleme, push iznini yeniden verme, misafir sepeti sıfırlanır. erteltoptan.web.app bir süre açık kalsın / sonra yönlendirme. Sabit "erteltoptan.web.app" geçen yerler (worker bildirim linkleri vb.) yeni adrese çevrilmeli.
+2. `eposta` — `.github/workflows/email-setup.yml` (Resend alan adı + DNS + Firebase Auth kayıtları; ÇALIŞTI, kayıtlar eklendi) ve **worker/index.js**: sipariş e-postası `siparis@ertelmarket.com`'dan (`env.MAIL_FROM` ile değişir), Resend 403/422 verirse eski `onboarding@resend.dev`. main'e birleşince `worker.yml` bekçiyi yayınlar. Resend doğrulaması 30.10 23:40'ta "pending"di (DKIM/SPF yayılıyor) — yayından önce Resend'de "verified" olduğunu kontrol et.
+**Firebase Auth e-postaları:** kullanıcı Authentication > Templates > Customize domain'de ertelmarket.com ekledi, DNS kayıtları eklendi; "Verify" bekliyor. Doğrulanınca: Sender name "ERTEL GSM", From `noreply@ertelmarket.com`.
+
+**Kapasite (kullanıcıya anlatıldı):** asıl darboğaz Firebase Hosting Spark günlük ~360 MB indirme (ilk açılış ~650 KB → ~500-550 yeni cihaz/gün; her yayında herkes yeniden indirir). Cloudflare'e taşınınca kalkar. Firestore okuma 50k/gün (~3-5k ziyaret), yazma 20k/gün rahat.
+
+**Sıradaki plan (önerilen sıra):** 1) `eposta` + `cf-site` yayını ve ertelmarket.com'a geçiş 2) iyzico kart ödemesi (kullanıcı başvuracak) 3) yasal uyum: ETBİS kaydı, mesafeli satış/ön bilgilendirme metninin siparişte müşteriye e-postayla gönderilmesi + kaydın saklanması, KVKK (aydınlatma, saklama-imha, erişim kayıtları), e-arşiv fatura, ticari ileti (İYS) — hukukçu/mali müşavirle teyit 4) Yurtiçi Kargo, DHL ilk gerçek okutma testi 5) küçük işler (Bölüm 11).
+
 ## 0. ÇALIŞMA DÜZENİ — HER SOHBETTE ÖNCE OKU (30.10.2026, kullanıcı istedi)
 
 - **İşe başlamadan `git pull`.** Eski kopyadan derleyip yayınlamak, sunucu tarafı siparişten önceki sürümü geri getirir → kurallar kapalı olduğu için müşteriler SİPARİŞ VEREMEZ.
