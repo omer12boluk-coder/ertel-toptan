@@ -7,3 +7,9 @@ compatibility_date = "2026-10-01"
 directory = "../hosting/public"
 not_found_handling = "single-page-application"   # /magaza/urun/12 gibi adresler index.html'e düşer (Firebase rewrite ile aynı)
 html_handling = "auto-trailing-slash"
+
+# Canlı adres (30.10.2026). DNS'teki eski Firebase A kaydı site.yml'de silinir; Cloudflare kaydı kendisi ekler.
+routes = [
+  { pattern = "ertelmarket.com", custom_domain = true },
+  { pattern = "www.ertelmarket.com", custom_domain = true }
+]

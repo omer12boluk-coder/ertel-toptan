@@ -243,7 +243,7 @@ async function notifyOrder(env, id, internal) {
   const lines = (o.items || []).map((i) => `• ${i.qty} × ${i.n} (${i.k || ''}) ${i.price != null ? money(i.price, i.cur) : ''}`).join('\n');
   const deliv = o.delivery?.method === 'pickup' ? 'Dükkandan teslim' : 'Kargo' + (o.delivery?.addr ? ` · ${o.delivery.addr.district || ''} / ${o.delivery.addr.city || ''}` : '');
   const pay = { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[o.pay] || o.pay;
-  const link = `https://erteltoptan.web.app/admin/s/${id}`;
+  const link = `https://ertelmarket.com/admin/s/${id}`;
   const text = `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n${deliv} · ${pay}${o.note ? '\nNot: ' + o.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
   await adminPush(env, { title: `🛒 Yeni sipariş #${o.no} · ${tot}`, body: `${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${deliv}`, url: '/admin/s/' + id, tag: 'ao-' + id }).catch(() => {});
   return notifySend(env, { subject: `Yeni sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, link, short: `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${tot}\n${deliv}\nPanelde aç: ${link}`, replyTo: o.contact?.email });
@@ -503,7 +503,7 @@ async function notifyCancel(env, id) {
   if (last.by !== 'customer') return { ok: true, skip: 'yönetici iptali' };
   await env.KV.put('nc:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
   const tot = Object.entries(o.total || {}).map(([c, v]) => money(v, c)).join(' + ');
-  const link = `https://erteltoptan.web.app/admin/s/${id}`;
+  const link = `https://ertelmarket.com/admin/s/${id}`;
   const text = `❌ Müşteri siparişi iptal etti #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n\nPanelde aç: ${link}`;
   await adminPush(env, { title: `❌ Sipariş iptal edildi #${o.no}`, body: `${o.contact?.name || ''} · ${tot} · müşteri iptal etti`, url: '/admin/s/' + id, tag: 'ao-' + id }).catch(() => {});
   return notifySend(env, { subject: `İptal: sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, link, replyTo: o.contact?.email });
@@ -528,7 +528,7 @@ async function notifyLcart(env, id) {
   const deliv = s.delivery?.method === 'pickup' ? 'Dükkandan teslim' : 'Kargo' + (a ? ` · ${a.district || ''} / ${a.city || ''}` : '');
   const pay = { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[s.pay] || s.pay || '';
   const lines = its.map((i) => `• ${i.qty} × ${i.n} (${i.k || ''}) ${money(i.price, i.cur)}`).join('\n');
-  const link = 'https://erteltoptan.web.app/admin/sepetler';
+  const link = 'https://ertelmarket.com/admin/sepetler';
   const who = `${s.contact?.name || ''} · ${s.contact?.phone || ''}`;
   const text = `🔗 Sepet linki onaylandı #${c.no}${c.name ? ' (' + c.name + ')' : ''}\n${who}\n${its.length} ürün · ${tot}\n${deliv}${pay ? ' · ' + pay : ''}${s.note ? '\nNot: ' + s.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
   await adminPush(env, { title: `🔗 Sepet linki onaylandı #${c.no} · ${tot}`, body: `${s.contact?.name || ''} · ${its.length} ürün · ${deliv}`, url: '/admin/sepetler', tag: 'al-' + id }).catch(() => {});
@@ -545,7 +545,7 @@ async function notifyReq(env, b) {
   if (!r || r.uid !== uid) return { ok: false, error: 'talep yok' };
   await env.KV.put(key, '1', { expirationTtl: msg ? 120 : 60 * 60 * 24 * 30 }); // mesajlar 2 dakikada en çok bir bildirim
   const who = (r.userName || '') + (r.shop ? ` (${r.shop})` : '');
-  const link = `https://erteltoptan.web.app/admin/t/${id}`;
+  const link = `https://ertelmarket.com/admin/t/${id}`;
   if (msg) { await adminPush(env, { title: `💬 ${who}`, body: String(r.lastMsg || 'Yeni mesaj').slice(0, 140), url: '/admin/t/' + id, tag: 'ar-' + id }); return { ok: true }; }
   const n = (r.items || []).length;
   const lines = (r.items || []).slice(0, 30).map((i) => `• ${i.qty || 1} × ${i.n || ''}${i.k ? ` (${i.k})` : ''}`).join('\n');
@@ -707,7 +707,7 @@ async function notifySync(env, key, b) {
   const mw = items.filter((x) => x.t === 'price' && x.w != null).length;
   const parts = [[c('price'), 'fiyat değişti'], [mw, 'elle toptanlı ürün kontrol bekliyor'], [c('new'), 'yeni ürün'], [c('name'), 'adı değişti'], [c('hidden'), 'sitede pasife alındı'], [c('deleted'), 'siteden silindi'], [c('shown'), 'geri satışta']].filter(([x]) => x).map(([x, l]) => `${x} ${l}`).join(' · ');
   const line = (x) => x.t === 'price' ? `💲 ${x.k} ${x.n}: $${x.from} → $${x.to}${x.w != null ? ` · ⚠️ elle toptan $${x.w}, kontrol edin` : ''}` : x.t === 'new' ? `🆕 ${x.k} ${x.n}` : x.t === 'name' ? `✏️ ${x.k}: ${x.from} → ${x.n}` : x.t === 'hidden' ? `⏸️ pasif: ${x.k} ${x.n}` : x.t === 'deleted' ? `🗑️ silindi: ${x.k} ${x.n}` : `✅ ${x.k} ${x.n}`;
-  const link = 'https://erteltoptan.web.app/admin';
+  const link = 'https://ertelmarket.com/admin';
   await adminPush(env, { title: `🔄 Siteden ${n} değişiklik`, body: parts || 'Ürün bilgileri güncellendi', url: '/admin', tag: 'sync' }).catch(() => {});
   const text = `${parts}\n\n${items.map(line).join('\n')}${n > items.length ? `\n… ve ${n - items.length} değişiklik daha` : ''}\n\nPanelde aç: ${link}`;
   return notifySend(env, { subject: `🔄 PlatinMarket: ${n} ürün değişikliği`, text, link, noEmail: true });
@@ -892,7 +892,7 @@ async function preqNew(req, env, b, origin) {
   const d = await fsAuth('preq/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'talep yok' };
   await env.KV.put('nq:' + id, '1', { expirationTtl: 60 * 60 * 24 * 7 });
   const who = [d.name, d.phone].filter(Boolean).join(' · ');
-  const link = `https://erteltoptan.web.app/admin/u/${id}`;
+  const link = `https://ertelmarket.com/admin/u/${id}`;
   const n = (d.photos || []).length;
   const pics = (d.photos || []).map((k) => origin + '/p/' + k);
   await adminPush(env, { title: `📷 Ürün talebi · ${d.name || 'Üye'}`, body: (String(d.text || '') || `${n} fotoğraf`).slice(0, 160), url: '/admin/u/' + id, tag: 'aq-' + id }).catch(() => {});
@@ -1025,7 +1025,7 @@ async function issueNew(req, env, b, origin) {
   const d = await fsAuth('issues/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'kayıt yok' };
   await env.KV.put('ni:' + id, '1', { expirationTtl: 60 * 60 * 24 * 7 });
   const who = [d.name, d.phone].filter(Boolean).join(' · ');
-  const link = `https://erteltoptan.web.app/admin/i/${id}`;
+  const link = `https://ertelmarket.com/admin/i/${id}`;
   const fl = d.files || []; const pics = fl.filter((x) => x.t === 'i').map((x) => origin + '/p/' + x.k); const vids = fl.filter((x) => x.t === 'v').map((x) => origin + '/p/' + x.k);
   await adminPush(env, { title: `🛠️ Sorun bildirimi · ${d.name || 'Üye'}`, body: [d.prod, d.text].filter(Boolean).join(' · ').slice(0, 160) || `${fl.length} dosya`, url: '/admin/i/' + id, tag: 'ai-' + id }).catch(() => {});
   const text = `🛠️ Yeni sorun bildirimi #${d.no || ''}\n${who}${d.email ? '\n' + d.email : ''}${d.order ? '\nSipariş: #' + d.order : ''}${d.prod ? '\nÜrün: ' + d.prod : ''}\n\n${d.text || '(açıklama yok)'}${pics.length ? `\n\n${pics.length} fotoğraf:\n` + pics.join('\n') : ''}${vids.length ? '\n\nVideo:\n' + vids.join('\n') : ''}\n\nPanelde yanıtla: ${link}`;

@@ -1,8 +1,8 @@
-# Siteyi Cloudflare'e yükler (ertel-site). cf-site dalı = önizleme (workers.dev); main = canlı (alan adı bağlıysa).
+# Siteyi Cloudflare'e yükler (ertel-site → ertelmarket.com + www; workers.dev de açık). main'e her gönderimde.
 name: Siteyi Cloudflare'e yayınla
 on:
   push:
-    branches: [cf-site]
+    branches: [main]
     paths: ['hosting/public/**', 'site/**', '.github/workflows/site.yml']
   workflow_dispatch:
 jobs:
@@ -16,6 +16,29 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Eski Firebase adres kaydını kaldır (ertelmarket.com artık Cloudflare sitesi)
+        run: |
+          cf() { curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' "$@"; }
+          Z=$(cf "https://api.cloudflare.com/client/v4/zones?name=ertelmarket.com" | jq -r '.result[0].id // empty')
+          for n in ertelmarket.com www.ertelmarket.com; do
+            for t in A AAAA CNAME; do
+              cf "https://api.cloudflare.com/client/v4/zones/$Z/dns_records?type=$t&name=$n" | jq -r '.result[]? | select(.content=="199.36.158.100" or (.type=="CNAME" and (.content|test("web.app|firebaseapp")))) | .id' | while read -r id; do
+                echo "::notice title=DNS silindi::$t $n $(cf -X DELETE "https://api.cloudflare.com/client/v4/zones/$Z/dns_records/$id" | jq -c .success)"; done
+            done
+          done
+      - name: Firebase girişine yeni adresi tanıt (Authorized domains)
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" >/dev/null 2>&1
+          TK=$(gcloud auth print-access-token); U="https://identitytoolkit.googleapis.com/admin/v2/projects/erteltoptan/config"
+          cur=$(curl -s -H "Authorization: Bearer $TK" -H "x-goog-user-project: erteltoptan" "$U" | jq -c '.authorizedDomains // []')
+          new=$(echo "$cur" | jq -c '. + ["ertelmarket.com","www.ertelmarket.com"] | unique')
+          if [ "$cur" = "$new" ]; then echo "::notice title=Firebase::zaten ekli"; else
+            r=$(curl -s -X PATCH -H "Authorization: Bearer $TK" -H "x-goog-user-project: erteltoptan" -H 'Content-Type: application/json' "$U?updateMask=authorizedDomains" -d "{\"authorizedDomains\":$new}")
+            echo "::notice title=Firebase Authorized domains::$(echo "$r" | jq -c '.authorizedDomains // .error.message')"; fi
+          rm -f "$RUNNER_TEMP/sa.json"
       - name: Yükle
         working-directory: site
         run: |
