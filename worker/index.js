@@ -257,7 +257,7 @@ function mailHtml(subject, text, link) {
 }
 // ---- bildirim kanalları ----
 // Telegram: TELEGRAM_TOKEN (BotFather) + KV 'tg-chat' (panelden kodla bağlanır)
-// E-posta: RESEND_KEY varsa Resend (onboarding@resend.dev → hesap sahibinin e-postası), yoksa FormSubmit
+// E-posta: RESEND_KEY varsa Resend (siparis@ertelmarket.com, olmazsa onboarding@resend.dev → hesap sahibinin e-postası), yoksa FormSubmit
 const TG = (env, m) => 'https://api.telegram.org/bot' + env.TELEGRAM_TOKEN + '/' + m;
 async function tgBot(env) {
   if (!env.TELEGRAM_TOKEN) return null;
@@ -301,10 +301,13 @@ async function notifySend(env, { subject, text, short, replyTo, link, noEmail, p
   if (noEmail) out.email = 'yok';
   else if (env.NOTIFY_EMAIL && env.RESEND_KEY) {
     try {
-      const r = await fetch('https://api.resend.com/emails', {
+      // Gönderen: kendi alan adımız (ertelmarket.com Resend'de doğrulandı → spam'e düşmez). Alan adı sorunu olursa eski adres.
+      const send = (from) => fetch('https://api.resend.com/emails', {
         method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: 'ERTEL GSM <onboarding@resend.dev>', to: [env.NOTIFY_EMAIL], subject, text, html: mailHtml(subject, text, link), ...(replyTo ? { reply_to: replyTo } : {}) }),
+        body: JSON.stringify({ from, to: [env.NOTIFY_EMAIL], subject, text, html: mailHtml(subject, text, link), ...(replyTo ? { reply_to: replyTo } : {}) }),
       });
+      let r = await send(env.MAIL_FROM || 'ERTEL GSM <siparis@ertelmarket.com>');
+      if (!r.ok && (r.status === 403 || r.status === 422)) r = await send('ERTEL GSM <onboarding@resend.dev>');
       const j = await r.json().catch(() => ({})); out.email = r.ok ? 'gönderildi' : 'hata: ' + (j.message || r.status);
     } catch (e) { out.email = 'hata: ' + e; }
   } else if (env.NOTIFY_EMAIL) {
