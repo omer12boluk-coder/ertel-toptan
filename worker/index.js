@@ -10,14 +10,26 @@
 //   POST /notify mağazada sipariş verilince: dükkan sahibine Telegram + e-posta (Resend) bildirimi
 //   GET  /push/key, POST /push/sub {id, sub}, POST /push/status {id}  müşteriye sipariş durumu bildirimi (web push)
 //   POST /tg-link {code} Telegram botuna yazılan kodu bulup o sohbeti bildirim alıcısı yapar (sadece ilk bağlantı)
+// Ücretsiz KV günde 1.000 yazma: dolarsa put/delete HATA ATAR → sipariş, bildirim vb. dursun istemeyiz.
+// Yazma hatası günlüğe düşer, iş devam eder (okumalar dokunulmadan; ör. vapid anahtarı okunamazsa yeniden üretilmesin).
+function safeEnv(env) {
+  if (!env.KV || env.KV.__safe) return env;
+  const kv = env.KV;
+  const KV = { __safe: true, get: (...a) => kv.get(...a), list: (...a) => kv.list(...a), getWithMetadata: (...a) => kv.getWithMetadata(...a),
+    put: (...a) => kv.put(...a).catch((e) => console.log('KV yazma atlandı', a[0], String(e.message || e))),
+    delete: (...a) => kv.delete(...a).catch((e) => console.log('KV silme atlandı', a[0], String(e.message || e))) };
+  return { ...env, KV };
+}
 export default {
   async scheduled(event, env, ctx) {
+    env = safeEnv(env);
     ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message)));
     // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 17) ctx.waitUntil(preqSweep(env).catch((e) => console.log('preqSweep', e.message)));
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 37) ctx.waitUntil(issueSweep(env).catch((e) => console.log('issueSweep', e.message)));
   },
   async fetch(req, env, ctx) {
+    env = safeEnv(env);
     const url = new URL(req.url);
     const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hash' };
     const json = (o, st = 200, extra = {}) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
@@ -215,15 +227,17 @@ function fsVal(v) {
   return null;
 }
 const money = (n, c = 'USD') => (c === 'USD' ? '$' : '') + Number(n || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + (c === 'USD' ? '' : ' ' + c);
-async function notifyOrder(env, id) {
+async function notifyOrder(env, id, internal) {
   if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
-  if (await env.KV.get('n:' + id)) return { ok: true, already: true };
+  if (!internal && await env.KV.get('n:' + id)) return { ok: true, already: true };
   const r = await fetch(FS + 'orders/' + id);
   if (!r.ok) return { ok: false, error: 'sipariş yok' };
   const doc = await r.json();
   const o = Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
   if (Date.now() - Date.parse(doc.createTime) > 30 * 60 * 1000) return { ok: false, error: 'eski sipariş' };
-  await env.KV.put('n:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
+  // bekçinin yazdığı sipariş (via 'srv') yazılır yazılmaz bildirildi: dışarıdan /notify ile tekrar bildirilemez, KV yazması da gerekmez
+  if (!internal && o.via === 'srv') return { ok: true, already: true };
+  if (!internal) await env.KV.put('n:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
   const tot = Object.entries(o.total || {}).map(([c, v]) => money(v, c)).join(' + ');
   const lines = (o.items || []).map((i) => `• ${i.qty} × ${i.n} (${i.k || ''}) ${i.price != null ? money(i.price, i.cur) : ''}`).join('\n');
   const deliv = o.delivery?.method === 'pickup' ? 'Dükkandan teslim' : 'Kargo' + (o.delivery?.addr ? ` · ${o.delivery.addr.district || ''} / ${o.delivery.addr.city || ''}` : '');
@@ -1132,15 +1146,17 @@ async function placeOrder(req, env, b, ctx) {
   const w = await fsCreate(env, 'orders', id, doc);
   if (!w.ok) return { ok: false, error: w.exists ? 'Bu sipariş zaten kayıtlı' : 'Sipariş kaydedilemedi, tekrar deneyin' };
   await env.KV.put(kr, String(nr + 1), { expirationTtl: 7200 });
-  ctx.waitUntil(notifyOrder(env, id).catch((e) => console.log('notify', e.message)));
+  ctx.waitUntil(notifyOrder(env, id, true).catch((e) => console.log('notify', e.message)));
   return { ok: true, id, no: doc.no, total, items };
 }
 
 // Firestore'a servis hesabıyla yazma (kurallara takılmaz). Erişim anahtarı ~55 dk KV'de saklanır (imza her istekte atılmasın).
 const b64uBytes = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const b64uStr = (s) => b64uBytes(new TextEncoder().encode(s));
+let saMem = null;
 export async function saToken(env) {
-  const hit = await env.KV.get('sa-tok', 'json'); if (hit && hit.exp > Date.now() + 60000) return hit.tok;
+  if (saMem && saMem.exp > Date.now() + 60000) return saMem.tok;
+  const hit = await env.KV.get('sa-tok', 'json').catch(() => null); if (hit && hit.exp > Date.now() + 60000) { saMem = hit; return hit.tok; }
   const sa = JSON.parse(env.FIREBASE_SA);
   const now = Math.floor(Date.now() / 1000);
   const unsigned = b64uStr(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + b64uStr(JSON.stringify({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 }));
@@ -1149,7 +1165,8 @@ export async function saToken(env) {
   const sig = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned)));
   const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + unsigned + '.' + b64uBytes(sig) });
   const j = await r.json().catch(() => ({})); if (!j.access_token) throw new Error('Servis anahtarı alınamadı');
-  await env.KV.put('sa-tok', JSON.stringify({ tok: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 - 300000 }), { expirationTtl: 3300 });
+  saMem = { tok: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 - 300000 };
+  await env.KV.put('sa-tok', JSON.stringify(saMem), { expirationTtl: 3300 }).catch(() => {});
   return j.access_token;
 }
 function toFs(v) {
