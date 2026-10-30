@@ -1,0 +1,49 @@
+# E-posta alan adı kurulumu: Resend'e ertelmarket.com eklenir (gönderen adres siparis@ertelmarket.com olabilsin, spam'e düşmesin),
+# istediği DNS kayıtları (DKIM/SPF, sadece send. alt adı ve resend._domainkey — ana MX'e dokunmaz) + DMARC Cloudflare'e yazılır.
+# Kayıtlar herkese açık DNS bilgisidir, gizli değildir. Anahtarlar günlüğe yazılmaz.
+name: E-posta alan adı kurulumu
+on:
+  push:
+    branches: [eposta]
+    paths: ['.github/workflows/email-setup.yml']
+  workflow_dispatch:
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    env:
+      RK: ${{ secrets.RESEND_KEY }}
+      T: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      D: ertelmarket.com
+    steps:
+      - name: Kur
+        run: |
+          rs() { curl -s -H "Authorization: Bearer $RK" -H 'Content-Type: application/json' "$@"; }
+          cf() { curl -s -H "Authorization: Bearer $T" -H 'Content-Type: application/json' "$@"; }
+          id=$(rs https://api.resend.com/domains | jq -r --arg d "$D" '.data[]? | select(.name==$d) | .id' | head -1)
+          if [ -z "$id" ]; then
+            r=$(rs -X POST https://api.resend.com/domains -d "{\"name\":\"$D\",\"region\":\"eu-west-1\"}")
+            id=$(echo "$r" | jq -r '.id // empty')
+            [ -n "$id" ] || { echo "::error title=Resend alan adı eklenemedi::$(echo "$r" | jq -c '{name,message,statusCode}')"; exit 1; }
+            echo "::notice title=Resend::alan adı eklendi"
+          else echo "::notice title=Resend::alan adı zaten ekli"; fi
+          dom=$(rs https://api.resend.com/domains/$id)
+          echo "::notice title=Resend durum::$(echo "$dom" | jq -r '.status')"
+          Z=$(cf "https://api.cloudflare.com/client/v4/zones?name=$D" | jq -r '.result[0].id // empty')
+          [ -n "$Z" ] || { echo "::error title=Cloudflare::zone bulunamadı"; exit 1; }
+          add() { # tip ad içerik [öncelik]
+            ex=$(cf "https://api.cloudflare.com/client/v4/zones/$Z/dns_records?type=$1&name=$2" | jq -r --arg c "$3" '[.result[]? | select(.content==$c or .content==("\"" + $c + "\""))] | length')
+            if [ "$ex" != "0" ]; then echo "::notice title=DNS var::$1 $2"; return; fi
+            body=$(jq -nc --arg t "$1" --arg n "$2" --arg c "$3" --arg p "${4:-}" '{type:$t,name:$n,content:$c,ttl:1,proxied:false} + (if $p != "" then {priority:($p|tonumber)} else {} end)')
+            r=$(cf -X POST "https://api.cloudflare.com/client/v4/zones/$Z/dns_records" -d "$body")
+            echo "::notice title=DNS $1 $2::$(echo "$r" | jq -c '{success, errors:[.errors[]?.message]}')"
+          }
+          echo "$dom" | jq -c '.records[]' | while read -r x; do
+            t=$(echo "$x" | jq -r .type); n=$(echo "$x" | jq -r .name); v=$(echo "$x" | jq -r .value); p=$(echo "$x" | jq -r '.priority // empty')
+            case "$n" in *"$D") fq="$n";; *) fq="$n.$D";; esac
+            add "$t" "$fq" "$v" "$p"
+          done
+          add TXT "_dmarc.$D" "v=DMARC1; p=none; rua=mailto:dmarc@$D"
+          sleep 20
+          v=$(rs -X POST https://api.resend.com/domains/$id/verify)
+          sleep 30
+          echo "::notice title=Resend sonuç::$(rs https://api.resend.com/domains/$id | jq -c '{status, records:[.records[]|{name,type,status}]}')"
