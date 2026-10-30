@@ -1084,13 +1084,39 @@ export function VideoViewer({ el, onClose }) {
     };
   }, []);
   const fmtT = (x) => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
-  // telefonda aşağı kaydırınca kapanır
-  const sw = useRef(null);
+  // Telefonda: videoyu parmakla yukarı / aşağı çekince (resim görüntüleyicideki gibi) video parmağı izler ve küçülür,
+  // arka plan açılır; yeterince çekip bırakınca kapanır, az çekince yerine döner. Sarma çubuğu ve düğmelerde çalışmaz.
+  const sw = useRef(null); const root = useRef(null);
+  const dragMove = (e) => {
+    const d = sw.current; if (!d) return;
+    const dx = e.touches[0].clientX - d.x, dy = e.touches[0].clientY - d.y;
+    if (!d.on) {
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) { sw.current = null; return; }
+      if (Math.abs(dy) < 8) return;
+      d.on = true; root.current?.classList.add('vv-drag'); setUi(false);
+    }
+    d.dy = dy; const k = Math.min(1, Math.abs(dy) / 420);
+    if (slot.current) slot.current.style.transform = `translate3d(0, ${dy}px, 0) scale(${1 - k * 0.15})`;
+    root.current?.style.setProperty('--vvk', String(1 - k * 0.9));
+  };
+  const dragEnd = () => {
+    const d = sw.current; sw.current = null; if (!d || !d.on) return;
+    const el2 = root.current, sl = slot.current; el2?.classList.remove('vv-drag'); el2?.classList.add('vv-rel');
+    const fast = Math.abs(d.dy) / Math.max(1, Date.now() - d.t) > 0.5;
+    if (Math.abs(d.dy) > 120 || (fast && Math.abs(d.dy) > 40)) {
+      if (sl) sl.style.transform = `translate3d(0, ${d.dy > 0 ? innerHeight : -innerHeight}px, 0) scale(.82)`;
+      el2?.style.setProperty('--vvk', '0'); el2?.classList.add('vv-gone');
+      setTimeout(onClose, 230);
+    } else {
+      if (sl) sl.style.transform = ''; el2?.style.setProperty('--vvk', '1');
+      setTimeout(() => el2?.classList.remove('vv-rel'), 260); poke();
+    }
+  };
   return createPortal(
-    <div className={'vv' + (ui ? ' ui' : '') + (out ? ' out' : '')} role="dialog" aria-modal="true" aria-label="Video"
-      onTouchStart={(e) => { e.stopPropagation(); sw.current = e.target.closest('.vv-bar') ? null : { y: e.touches[0].clientY, x: e.touches[0].clientX }; }}
-      onTouchMove={(e) => e.stopPropagation()} onTouchCancel={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); }}
-      onTouchEnd={(e) => { e.stopPropagation(); const s0 = sw.current; sw.current = null; const p = e.changedTouches[0]; if (s0 && p.clientY - s0.y > 110 && Math.abs(p.clientX - s0.x) < 80) close(); }}>
+    <div ref={root} className={'vv' + (ui ? ' ui' : '') + (out ? ' out' : '')} role="dialog" aria-modal="true" aria-label="Video"
+      onTouchStart={(e) => { e.stopPropagation(); sw.current = e.target.closest('.vv-bar, .vv-x, .vv-pp') ? null : { y: e.touches[0].clientY, x: e.touches[0].clientX, t: Date.now(), on: false, dy: 0 }; }}
+      onTouchMove={(e) => { e.stopPropagation(); dragMove(e); }} onTouchCancel={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      onTouchEnd={(e) => { e.stopPropagation(); dragEnd(); }}>
       <div ref={slot} className="vv-slot" />
       <div className="vv-tap" onClick={() => (ui ? (playing ? setUi(false) : toggle()) : poke())} />
       <button className="vv-x" onClick={close} aria-label="Kapat"><Icon n="x" s={22} /></button>

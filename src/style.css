@@ -4849,3 +4849,11 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .lb.lb-rel { transition: background-color .24s ease; }
 .lb.lb-rel .lb-track { transition: transform .24s cubic-bezier(.2,.8,.2,1); }
 .lb.lb-drag .lb-track { transition: none; }
+
+/* Tam ekran video: yukarı / aşağı çekerek kapatma (VideoViewer) — arka plan --vvk ile açılır */
+.vv { background-color: rgb(0 0 0 / var(--vvk, 1)); }
+.vv-slot video { background: transparent; }
+.vv.vv-drag .vv-slot, .vv.vv-gone .vv-slot { will-change: transform; }
+.vv.vv-rel { transition: background-color .24s ease; }
+.vv.vv-rel .vv-slot { transition: transform .24s cubic-bezier(.2,.8,.2,1); }
+.vv.vv-gone { animation: none; }
