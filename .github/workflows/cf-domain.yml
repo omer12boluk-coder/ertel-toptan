@@ -1,0 +1,35 @@
+# ertelmarket.com (+www) ↔ ertel-site bağlantısını kontrol eder; fix açıksa Workers özel alan adını yeniden bağlar.
+name: Alan adı bağlantısı
+on:
+  workflow_dispatch:
+    inputs:
+      fix:
+        description: 'Kopuksa yeniden bağla'
+        type: boolean
+        default: false
+jobs:
+  domain:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      A: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Durum
+        run: |
+          cf() { curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' "$@"; }
+          Z=$(cf "https://api.cloudflare.com/client/v4/zones?name=ertelmarket.com" | jq -r '.result[0].id // empty'); echo "Z=$Z" >> $GITHUB_ENV
+          echo "::notice title=Zone::$(cf "https://api.cloudflare.com/client/v4/zones/$Z" | jq -c '.result | {status, paused, name_servers}')"
+          echo "::notice title=Worker alan adları::$(cf "https://api.cloudflare.com/client/v4/accounts/$A/workers/domains" | jq -c '[.result[]? | [.hostname,.service,.environment]] , .errors' | cut -c1-900)"
+          echo "::notice title=Kayıtlar (A/AAAA/CNAME)::$(cf "https://api.cloudflare.com/client/v4/zones/$Z/dns_records?per_page=100" | jq -c '[.result[]? | select(.type=="A" or .type=="AAAA" or .type=="CNAME") | [.type,.name,.content,.proxied,(.meta.read_only // false)]]' | cut -c1-1500)"
+          echo "::notice title=DNSSEC::$(cf "https://api.cloudflare.com/client/v4/zones/$Z/dnssec" | jq -c '{s: .result.status, e: .errors}')"
+          echo "::notice title=Worker rotaları::$(cf "https://api.cloudflare.com/client/v4/zones/$Z/workers/routes" | jq -c '[.result[]? | [.pattern,.script]], .errors' | cut -c1-600)"
+      - name: Yeniden bağla
+        if: ${{ inputs.fix }}
+        run: |
+          cf() { curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' "$@"; }
+          for h in ertelmarket.com www.ertelmarket.com; do
+            echo "::notice title=Bağla $h::$(cf -X PUT "https://api.cloudflare.com/client/v4/accounts/$A/workers/domains" -d "{\"hostname\":\"$h\",\"service\":\"ertel-site\",\"environment\":\"production\",\"zone_id\":\"$Z\"}" | jq -c '{ok: .success, r: .result.hostname, e: .errors}')"
+          done
+          sleep 20
+          echo "::notice title=Sonra kayıtlar::$(cf "https://api.cloudflare.com/client/v4/zones/$Z/dns_records?per_page=100" | jq -c '[.result[]? | select(.type=="A" or .type=="AAAA" or .type=="CNAME") | [.type,.name,.content]]' | cut -c1-1200)"
+          echo "::notice title=DNS 1.1.1.1::$(dig +short A ertelmarket.com @1.1.1.1 | tr '\n' ' ') www=$(dig +short A www.ertelmarket.com @1.1.1.1 | tr '\n' ' ')"
