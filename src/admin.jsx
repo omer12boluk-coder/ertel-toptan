@@ -236,6 +236,8 @@ export function Customers() {
   const openIssue = useStore((s) => s.openIssue);
   useEffect(() => { if (openIssue && kind !== 'sorun') setKind('sorun'); }, [openIssue]);
   const setKind = (k) => { setKind0(k); ls.set('cust-kind', k); };
+  const ck = useStore((s) => s.custKind); // üst menüdeki açılır menüden
+  useEffect(() => { if (ck) { setKind(ck); store.set({ custKind: null }); } }, [ck]);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [add, setAdd] = useState(false);

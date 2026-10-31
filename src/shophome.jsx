@@ -1,6 +1,7 @@
 // Online mağaza ana sayfası (/magaza → Ana sayfa): büyük reklam alanı, avantajlar, marka kutuları,
 // kare reklam kutuları (bento), ürün rafları ve alt WhatsApp bandı. İçerik: Ayarlar > Mağaza ana sayfası (settings.shopHome).
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { SetRail } from './sets.jsx';
 import { flushSync } from 'react-dom';
 import { useStore, store, setQty, go, api, toast } from './store.js';
 import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
@@ -135,12 +136,12 @@ const spot = (e) => { const r = e.currentTarget.getBoundingClientRect(); e.curre
 // Tasarım modu: ShopHome bu bağlamla sarılınca bölümler seçilebilir / sürüklenebilir olur (designer.jsx)
 export const DesignCtx = createContext(null);
 export const rid = () => Math.random().toString(36).slice(2, 8);
-export const FIXED = { hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', fav: 'Herkesin favorisi (otomatik raf)', cta: 'Alt bant' };
+export const FIXED = { hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', fav: 'Herkesin favorisi (otomatik raf)', sets: 'Setler (otomatik raf)', cta: 'Alt bant' };
 const railKey = (r, i) => 'rail:' + (r.id || i);
 // Bölüm sırası: kayıtlı sıra + sonradan eklenenler; silinmiş olanlara ait kayıtlar atılır
 export function layoutOf(H) {
   const rails = H.sections || [];
-  const valid = ['hero', 'usps', 'marquee', 'brands', 'promos', 'fav', ...rails.map(railKey), ...Object.keys(H.blocks || {}).map((id) => 'b:' + id), 'cta'];
+  const valid = ['hero', 'usps', 'marquee', 'brands', 'promos', 'fav', 'sets', ...rails.map(railKey), ...Object.keys(H.blocks || {}).map((id) => 'b:' + id), 'cta'];
   const L = (Array.isArray(H.layout) ? H.layout : []).filter((k) => valid.includes(k));
   for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
   return L;
@@ -239,6 +240,7 @@ export function ShopHome({ S: Sover }) {
         </div>
       </section>
     );
+    if (k === 'sets') return <SetRail edit={!!E} />;
     if (k === 'fav') return <FavRail onProduct={E ? () => E.select(k) : setProduct} edit={!!E} S={S} />;
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
     if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; const up = E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null;

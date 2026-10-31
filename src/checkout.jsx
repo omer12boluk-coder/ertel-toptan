@@ -248,7 +248,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         setCatalog((store.s.catalog || []).flatMap((p) => { const c = ch.get(Number(p.id)); return !c ? [p] : c.gone ? [] : [{ ...p, r: c.price, cur: c.cur || p.cur }]; }));
         toast('Bazı ürünlerin fiyatı güncellendi. Yeni tutarı kontrol edip tekrar onaylayın.', 'bad');
       };
-      const srvItems = items.map(({ id: pid, k, n, cur, qty, offer, pi, u }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u }));
+      const srvItems = items.map(({ id: pid, k, n, cur, qty, offer, pi, u, set }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u, ...(set ? { set } : {}) }));
       if (srv && !member && f.signup) { // hesap açılmadan önce fiyatlar kontrol edilir (sonra oturum kapanıyor)
         const c = await A.placeOrderSrv({ items: srvItems, pay: f.pay, delivery: { method: f.method } }, 'chk' + rid() + rid() + rid(), true);
         if (!c.ok) { if (c.code === 'price') priceFix(c); else toast('Sipariş gönderilemedi: ' + (c.error || 'tekrar deneyin'), 'bad'); setBusy(false); return; }
@@ -263,7 +263,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       const order = strip({
         // kredi kartıyla ödenen sipariş beklemez: doğrudan "Onaylandı" (29.10.2026, kullanıcı)
         no, uid, member: !!uid, status: f.pay === 'card' ? 'confirmed' : 'new', createdAt: t, updatedAt: t, unread: 1, history: f.pay === 'card' ? [{ s: 'new', at: t }, { s: 'confirmed', at: t, by: 'card' }] : [{ s: 'new', at: t }],
-        items: items.map(({ id: pid, k, n, cur, qty, offer, pi, u }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u })),
+        items: items.map(({ id: pid, k, n, cur, qty, offer, pi, u, set }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u, ...(set ? { set } : {}) })),
         total: tot, rate: rate?.usd || null,
         contact: { ...contactOut(), email },
         delivery: { method: f.method, addr: f.method === 'cargo' ? cleanA(delivAddr) : null, ...(f.method === 'cargo' ? { carrier: f.carrier || 'dhl' } : {}) },

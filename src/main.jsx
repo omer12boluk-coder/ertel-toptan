@@ -4,6 +4,8 @@ import { StoreDecor } from './decor.jsx';
 import { RatePrompt } from './reviews.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ProductsDrop, AdminDrop, ProfileDrop } from './navdrop.jsx';
+import { SetPage, SetsAdmin, setIdFromPath } from './sets.jsx';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
 import { loadFavs, mergeFavs } from './store.js';
 import { linkMember } from './push.js';
@@ -249,6 +251,7 @@ async function bootShop(A) {
   const firstTab = ROUTE.listCode ? 'liste' : tabFromPath() || shopFirst();
   if (firstTab === 'hesap') store.set({ acct: acctFromPath() });
   if (firstTab === 'urun') store.set({ pid: pidFromPath() });
+  if (firstTab === 'set') store.set({ setId: setIdFromPath() });
   if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
   if (cached) setCatalog(cached.items);
   const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId || ROUTE.authAction || ROUTE.lcartId;
@@ -398,7 +401,7 @@ function Login() {
 // [sekme, ad, ikon, telefondaki kısa ad]
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Siparişlerim', 'box', 'Siparişler'], ['profil', 'Hesabım', 'user']];
 const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
-const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['kalip', 'Kalıp bulucu', 'chip', 'Kalıp'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
+const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Ürünler', 'grid', 'Ürünler'], ['kalip', 'Kalıp bulucu', 'chip', 'Kalıp'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 const shopFirst = () => (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa');
 
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
@@ -457,7 +460,7 @@ function PPLayer({ pid }) {
   return <div className="pp-layer" ref={ref}><ProductPage id={pid} /></div>;
 }
 function ShellFull() {
-  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom, urunLayer } = useStore();
+  const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom, urunLayer, setId } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
   // telefonda: ana sayfa ve Tüm ürünler bir kez açılınca arkada gizli açık kalır → geri dönünce anında, filtreler ve kaydırma yerinde
@@ -480,7 +483,7 @@ function ShellFull() {
   useEffect(() => { if (admin && newOrders > prevOrders.current) toast('Mağazadan yeni sipariş geldi', 'info'); prevOrders.current = newOrders; }, [newOrders]);
   const lcNew = useStore((st) => (admin ? (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length : 0));
   const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders + lcNew : 0);
-  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab; // alt sayfalar menüde ana sekmesini yakar
+  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' || tab === 'setler' ? 'siparis' : tab; // alt sayfalar menüde ana sekmesini yakar
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
@@ -490,11 +493,15 @@ function ShellFull() {
           {admin && <span className="admin-badge" title="Yönetim paneli"><Icon n="shield" s={14} /><span className="badge-t">Yönetim paneli</span></span>}
           {pub && <span className="pub-id"><b className="pub-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b></span>}
           <nav className="topnav" aria-label="Ana menü">
-            {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet') && k !== 'tasarim').map(([k, l, i]) => (
-              <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}>
-                <Icon n={i} s={18} /><span className="topnav-l">{l}</span>{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}
-              </button>
-            ))}
+            {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet') && k !== 'tasarim').map(([k, l, i]) => {
+              const drop = (pub && k === 'katalog') || (admin && ['siparisler', 'siparis', 'musteriler'].includes(k));
+              const b = (
+                <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}>
+                  <Icon n={i} s={18} /><span className="topnav-l">{l}</span>{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}{drop && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}
+                </button>
+              );
+              return !drop ? b : pub ? <ProductsDrop key={k}>{b}</ProductsDrop> : <AdminDrop key={k} k={k}>{b}</AdminDrop>;
+            })}
           </nav>
           <span className="top-sp" />
           {pub && <HeaderSearch />}
@@ -504,7 +511,7 @@ function ShellFull() {
           {admin && <NotifBell />}
           <ThemeButton />
           {pub && (member
-            ? <button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button>
+            ? <ProfileDrop><button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button></ProfileDrop>
             : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Giriş yap"><Icon n="user" s={16} /><span className="me-login-l">Giriş yap</span><span className="me-login-s">Giriş yap</span></button>)}
           {!pub && (
             <button className="me" onClick={() => go(admin ? 'ayarlar' : 'profil')} aria-label="Profil">
@@ -540,6 +547,8 @@ function ShellFull() {
         {tab === 'hesap' && pub && <Account />}
         {tab === 'urun' && pub && (urunLayer ? <PPLayer pid={pid} /> : <ProductPage id={pid} />)}
         {tab === 'kalip' && pub && <KalipFinder />}
+        {tab === 'set' && pub && <SetPage id={setId} />}
+        {tab === 'setler' && admin && <SetsAdmin />}
         {tab === 'talep' && pub && <PreqPage />}
         {tab === 'yasal' && pub && <LegalPage />}
         {tab === 'sorun' && pub && <IssuePage />}

@@ -1134,6 +1134,14 @@ async function pubPrices() {
   return map;
 }
 const r2c = (n) => Math.round(Number(n) * 100) / 100;
+// Setler (31.10.2026): tanımlar settings/public.sets; set kalemi fiyatı katalogdan değil setin paket fiyatından (pp) doğrulanır
+let setCache = null;
+async function pubSets() {
+  if (setCache && setCache.at > Date.now() - 60000) return setCache.map;
+  const d = await fsDoc('settings/public'); const map = new Map();
+  for (const x of Array.isArray(d?.sets) ? d.sets : []) if (x && x.on && x.id) map.set(String(x.id), x);
+  setCache = { at: Date.now(), map }; return map;
+}
 async function placeOrder(req, env, b, ctx) {
   const id = String(b.id || ''); const o = b.order || {};
   if (!/^[A-Za-z0-9]{15,40}$/.test(id)) return { ok: false, error: 'Geçersiz sipariş kimliği' };
@@ -1155,11 +1163,31 @@ async function placeOrder(req, env, b, ctx) {
   if (!['cargo', 'pickup'].includes(o.delivery?.method)) return { ok: false, error: 'Teslimat yöntemi geçersiz' };
   const cat = await pubPrices();
   const items = [], changed = [], total = {};
+  // set kalemleri: set yayında olmalı, ürün sette olmalı, fiyat = paket fiyatı, adet = set adedi × setteki adet, en az min(3, set boyu) ürün
+  const sets = list.some((it) => it?.set) ? await pubSets() : null; const groups = new Map();
+  for (const it of list) {
+    if (!it?.set) continue;
+    const def = sets.get(String(it.set.id)); const di = def && (def.items || []).find((x) => String(x.id) === String(it.id));
+    if (!def || !di) return { ok: false, code: 'set', error: 'Sepetteki set değişti, sepeti yenileyip tekrar deneyin' };
+    const k = String(it.set.k || it.set.id); const g = groups.get(k) || { def, n: 0, mult: null }; groups.set(k, g);
+    const m = Math.floor(Number(it.qty)) / Math.max(1, Math.floor(di.qty) || 1);
+    if (!(m >= 1) || m !== Math.floor(m) || (g.mult != null && g.mult !== m)) return { ok: false, code: 'set', error: 'Set adetleri tutmuyor, sepeti yenileyin' };
+    g.mult = m; g.n++;
+    it._pp = r2c(di.pp);
+  }
+  for (const g of groups.values()) { const all = (g.def.items || []).length; if (g.n < Math.min(3, all) || (g.def.rm === false && g.def.stock !== 'skip' && g.n < all)) return { ok: false, code: 'set', error: 'Set eksik, sepeti yenileyin' }; }
   for (const it of list) {
     const p = cat.get(String(it?.id));
     const qty = Math.floor(Number(it?.qty));
     if (!p) { changed.push({ id: it?.id, n: it?.n, gone: true }); continue; }
     if (!(qty >= 1 && qty <= 9999)) return { ok: false, error: 'Adet geçersiz: ' + p.n };
+    if (it.set) { // paket fiyatı
+      const cur = p.cur || 'USD'; const price = it._pp;
+      if (!(Math.abs(Number(it.price) - price) < 0.005)) return { ok: false, code: 'set', error: 'Set fiyatı güncellendi, sepeti yenileyin' };
+      items.push({ id: p.id, k: p.k, n: p.n, cur, qty, price, set: { id: String(it.set.id), n: String(it.set.n || '').slice(0, 120), k: String(it.set.k || '').slice(0, 300) }, ...(p.r > 0 ? { list: Number(p.r) } : {}), ...(p.pi != null ? { pi: p.pi } : {}), ...(p.u ? { u: p.u } : {}) });
+      total[cur] = (total[cur] || 0) + price * qty;
+      continue;
+    }
     const price = Number(p.r) > 0 ? Number(p.r) : null; const cur = p.cur || 'USD';
     if (price == null) { changed.push({ id: p.id, n: p.n, gone: true }); continue; }
     if (!(Math.abs(Number(it.price) - price) < 0.005) || (it.cur || 'USD') !== cur) changed.push({ id: p.id, n: p.n, price, cur });

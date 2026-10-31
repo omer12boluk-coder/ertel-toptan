@@ -11,6 +11,7 @@ import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
 import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
+import { SetGrid, InSets, liveSets } from './sets.jsx';
 
 export function useTree() {
   const { catalog, settings: S } = useStore();
@@ -339,6 +340,7 @@ export function Catalog({ admin }) {
   const [newOnly, setNewOnly] = useState(false);
   const [imgOnly, setImgOnly] = useState(false);
   const [favOnly, setFavOnly] = useState(false);
+  const [setsOnly, setSetsOnly] = useState(false);
   const [asort, setAsort] = useState({ k: null, d: null }); // yönetici tablosu başlık sıralaması
   const sortBy = (k) => setAsort((s) => (s.k !== k ? { k, d: k === 'code' || k === 'name' ? 'asc' : 'desc' } : s.d === (k === 'code' || k === 'name' ? 'asc' : 'desc') ? { k, d: k === 'code' || k === 'name' ? 'desc' : 'asc' } : { k: null, d: null }));
   const favs = useStore((s) => s.favs);
@@ -362,7 +364,7 @@ export function Catalog({ admin }) {
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
   // useLayoutEffect: marka / kategori linkinden gelince süzme EKRANA ÇİZİLMEDEN uygulanır (önce eski liste görünüp 'patlamasın')
-  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   const changedN = useMemo(() => (admin ? all.filter(needsCheck).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);
@@ -432,7 +434,7 @@ export function Catalog({ admin }) {
   const moreOutside = globalList && !widened ? globalList.length - scopedList.length : 0;
   const catIds = useMemo(() => (cat == null ? [] : all.filter((p) => pcats.get(p.id)?.has(cat)).map((p) => p.id)), [all, pcats, cat]);
   const scopeName = [cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : null, brand || null].filter(Boolean).join(' · ');
-  const clearAll = () => { setQ(''); setQk(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setFavOnly(false); };
+  const clearAll = () => { setQ(''); setQk(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setFavOnly(false); setSetsOnly(false); };
   const actives = [
     q.trim() && ['“' + q.trim() + '”', () => setQ('')],
     qk.trim() && ['Stok kodu: ' + qk.trim(), () => setQk('')],
@@ -443,6 +445,7 @@ export function Catalog({ admin }) {
     newOnly && ['Yeni gelenler', () => setNewOnly(false)],
     imgOnly && ['Resimli', () => setImgOnly(false)],
     favOnly && ['Favorilerim', () => setFavOnly(false)],
+    setsOnly && ['Setler', () => setSetsOnly(false)],
   ].filter(Boolean);
 
   useLayoutEffect(() => setLimit(S.catalog.pageSize), [q, qk, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
@@ -450,6 +453,7 @@ export function Catalog({ admin }) {
   const sentinel = useInfinite(more);
   const shown = list.slice(0, limit);
   const cartCount = Object.keys(cart).length;
+  const setN = useStore((st) => (st.user?.role === 'public' ? liveSets(st.settings).length : 0));
 
   return (
     <div className="catalog">
@@ -482,6 +486,7 @@ export function Catalog({ admin }) {
             <div className="chips" role="tablist" aria-label="Kategori">
               <button className="chip only-m" onClick={() => setCatSheet(true)}><Icon n="filter" s={15} />{cat == null ? 'Kategoriler' : tree.nodes.get(cat)?.name || catName(S, cat)}</button>
               {cat != null && <button className="chip on only-m" onClick={() => setCat(null)}>Tümü <Icon n="x" s={14} /></button>}
+              {user?.role === 'public' && setN > 0 && <button className={'chip set-chip' + (setsOnly ? ' on' : '')} onClick={() => setSetsOnly(!setsOnly)}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
               {user?.role === 'public' && (favs.length > 0 || favOnly) && <button className={'chip fav-chip' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
               {!admin && <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>}
               {!admin && <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>}
@@ -558,7 +563,7 @@ export function Catalog({ admin }) {
           </div>
 
           {!admin && user?.role === 'public' && cat != null && !q.trim() && <CatTop ids={catIds} onOpen={setOpen} />}
-          {shown.length === 0 && favOnly && actives.length === 1 ? (
+          {setsOnly && user?.role === 'public' ? <SetGrid /> : shown.length === 0 && favOnly && actives.length === 1 ? (
             <Empty icon="heart" title="Henüz favoriniz yok"><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p></Empty>
           ) : shown.length === 0 ? (
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
@@ -816,6 +821,7 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
       </div>
     </div>
     {S.catalog.showDescription && <Description id={p.id} />}
+    {pub && !viewOnly && <InSets p={p} />}
     {pub && !viewOnly && <PairRail p={p} onPick={onPick} />}
     {pub && <Reviews p={p} />}
     <div className="pd-end" aria-hidden="true" />

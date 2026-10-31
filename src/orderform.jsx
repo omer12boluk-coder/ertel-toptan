@@ -159,6 +159,7 @@ export function OrderForm({ linkMode = false }) {
           <div className="seg of-seg" role="tablist" aria-label="Sayfa">
             <button type="button" role="tab" aria-selected={!linkMode} className={!linkMode ? 'on' : ''} onClick={() => linkMode && go('siparis')}><Icon n="tag" s={15} />Sipariş formu</button>
             <button type="button" role="tab" aria-selected={linkMode} className={linkMode ? 'on' : ''} onClick={() => !linkMode && go('sepetlink')}><Icon n="cart" s={15} />Sepet linki{lcNew > 0 && <span className="badge">{lcNew}</span>}</button>
+            <button type="button" role="tab" aria-selected={false} onClick={() => go('setler')}><Icon n="box" s={15} />Setler</button>
           </div>
           <h1 className="page-t">{linkMode ? 'Sepet linki' : 'Sipariş formu'} <span className="muted">#{d.no}</span></h1>
         </div>

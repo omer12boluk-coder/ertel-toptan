@@ -13,6 +13,9 @@ import { ProductSheet, Lightbox, imageList } from './catalog.jsx';
 import { renderListImages, currentRate, ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { Checkout } from './checkout.jsx';
 
+import { setCartItems, lineCount, SetCartLine } from './sets.jsx';
+// sepet satırları: set kalemleri tek satırda toplanır
+const groupLines = (items) => { const out = [], seen = new Map(); for (const it of items) { if (!it.sk) { out.push(it); continue; } let g = seen.get(it.sk); if (!g) { g = { set: it.set, sk: it.sk, sq: it.sq, items: [] }; seen.set(it.sk, g); out.push(g); } g.items.push(it); } return out; };
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 export const newNo = (n = 4) => Array.from({ length: n }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
 const isPhone = () => matchMedia('(hover: none) and (pointer: coarse)').matches;
@@ -21,12 +24,12 @@ const isPhone = () => matchMedia('(hover: none) and (pointer: coarse)').matches;
 export function useCartItems(override) {
   const { cart: cart0, byId, settings: S, user, userPrices } = useStore();
   const cart = override || cart0;
-  return useMemo(() => Object.entries(cart).map(([id, qty]) => byId.get(Number(id)) && { p: byId.get(Number(id)), qty }).filter(Boolean).map(({ p, qty }) => {
+  return useMemo(() => Object.entries(cart).filter(([id]) => !String(id).startsWith('s:')).map(([id, qty]) => byId.get(Number(id)) && { p: byId.get(Number(id)), qty }).filter(Boolean).map(({ p, qty }) => {
     const pr = priceFor(p, S, user, userPrices);
     const it = { id: p.id, k: p.k, n: p.n, cur: p.cur || 'USD', qty, list: p.r > 0 ? p.r : null, asked: pr.mine, offer: pr.mine };
     if (p.pi) it.pi = p.pi; if (p.u) it.u = p.u; if (p.img) it.img = p.img;
     return it;
-  }), [cart, byId, S.pricing, user, userPrices]);
+  }).concat(user?.role === 'public' ? setCartItems(cart, S, byId) : []), [cart, byId, S.pricing, S.sets, user, userPrices]);
 }
 
 export function Cart() {
@@ -141,6 +144,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
   const reset = () => { pub ? freshStart() : clearCart(); go('katalog'); toast('Sepet temizlendi'); };
   const [ask, setAsk] = useState(false);
   const nQty = items.reduce((a, it) => a + (it.qty || 0), 0);
+  const setSave = Math.round(items.filter((i) => i.sk && i.list > i.offer).reduce((a, i) => a + (i.list - i.offer) * i.qty, 0) * 100) / 100;
   const sideRef = useRef(null), boxRef = useRef(null);
   useFixedCartSum(sideRef, boxRef);
   const menu = (e, it) => openMenu(e, [
@@ -157,13 +161,17 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
     <div className="page cart-page">
       <button type="button" className="back-btn cart-back" onClick={() => go('katalog')}><Icon n="back" s={16} />Alışverişe devam et</button>
       <div className="cart-head">
-        <h1 className="page-t">Sepet <span className="muted">· {items.length} ürün</span></h1>
+        <h1 className="page-t">Sepet <span className="muted">· {lineCount(items)} ürün</span></h1>
         <button type="button" className="cart-clear cc-m" onClick={() => setAsk(true)}><Icon n="trash" s={14} />Sepeti temizle</button>
       </div>
       <div className="cart-grid">
         <ul className="clist gclist">
           <li className="gline gline-h" aria-hidden="true"><span>Ürün</span><span className="gline-ctl"><span className="r">Birim fiyat</span><span className="c">Adet</span><span className="r">Toplam</span><span /></span></li>
-          {items.map((it) => (
+          {groupLines(items).map((g) => g.set ? (
+            <SwipeLine key={g.sk} id={g.sk} open={swOpen} setOpen={setSwOpen} onDelete={() => setQty(g.sk, 0)} className="set-line">
+              <SetCartLine group={g} />
+            </SwipeLine>
+          ) : ((it) => (
             <SwipeLine key={it.id} id={it.id} open={swOpen} setOpen={setSwOpen} onDelete={() => setQty(it.id, 0)} onContextMenu={(e) => menu(e, it)}>
               <div className="gline-p">
                 <button type="button" className="gline-img" onClick={() => openImg(it)} aria-label="Resmi büyüt"><Thumb p={it} size="sm" /></button>
@@ -179,16 +187,17 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
                 <button className="icon-btn sm" onClick={() => setQty(it.id, 0)} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
               </div>
             </SwipeLine>
-          ))}
+          ))(g))}
         </ul>
         <div className="cart-side" ref={sideRef}><aside className="cart-sum" ref={boxRef}>
           <div className="cs-head">
-            <div className="cs-head-t"><b>Sepetiniz</b><small>{items.length} ürün · {nQty} adet</small></div>
+            <div className="cs-head-t"><b>Sepetiniz</b><small>{lineCount(items)} ürün · {nQty} adet</small></div>
             <button type="button" className="cart-clear" onClick={() => setAsk(true)} title="Sepetteki tüm ürünleri çıkar"><Icon n="trash" s={14} />Temizle</button>
           </div>
           <div className="sum-rows">
             {!pub && S.pricing.showRetail && saving.length > 0 && <div><span>Liste toplamı</span><span className="num strike">{fmtTotals(tList)}</span></div>}
             {!pub && S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
+            {pub && setSave > 0 && <div className="sum-save"><span>Set indirimi</span><span className="num">−{fmt(setSave, items.find((i) => i.sk)?.cur || 'USD')}</span></div>}
             <div className="sum-total"><span>{pub ? 'Toplam' : 'Toptan toplam'}</span><b className="num">{fmtTotals(tot)}</b></div>
             {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
           </div>
@@ -210,7 +219,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
           <p className="fine cs-note">{coming ? 'Şimdilik siparişinizi WhatsApp’tan gönderin, hemen dönüş yapalım.' : pub ? S.orders?.cargoNote || '' : S.shop.pickupNote}</p>
         </aside></div>
       </div>
-      {ask && <Confirm title="Sepet temizlensin mi?" text={`Sepetteki ${items.length} ürün çıkarılacak.`} okLabel="Temizle" tone="danger" onOk={reset} onClose={() => setAsk(false)} />}
+      {ask && <Confirm title="Sepet temizlensin mi?" text={`Sepetteki ${lineCount(items)} ürün çıkarılacak.`} okLabel="Temizle" tone="danger" onOk={reset} onClose={() => setAsk(false)} />}
       {(orders || !pub) && <div className="cart-bar" aria-hidden="false">
         <span className="cart-bar-t"><small>{pub ? 'Toplam' : 'Toptan toplam'}</small><b className="num">{fmtTotals(tot)}</b></span>
         <button className="btn primary" onClick={onConfirm}><Icon n="check" s={18} />Sepeti onayla</button>

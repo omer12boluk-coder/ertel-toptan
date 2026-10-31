@@ -89,9 +89,9 @@ export function freshStart() {
 // Sekmeler adres çubuğuna da yazılır (/magaza/urunler, /magaza/sepet…): telefonda geri kaydırınca bir önceki ekrana döner,
 // sayfa yeniden yüklenmez (pushState). Geri dönünce kaldığınız yere kaydırılır.
 const SLUGS = {
-  magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap', urun: 'urun', kalip: 'kalip', talep: 'talep', yasal: 'yasal', sorun: 'sorun' },
+  magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap', urun: 'urun', kalip: 'kalip', talep: 'talep', yasal: 'yasal', sorun: 'sorun', set: 'set' },
   b2b: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', talepler: 'talepler', profil: 'profil' },
-  admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', sepetlink: 'sepet-link', sepetler: 'sepetler', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
+  admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', sepetlink: 'sepet-link', sepetler: 'sepetler', setler: 'setler', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
 };
 const area = () => { const m = /^\/(magaza|b2b|admin)(\/|$)/.exec(lpath()); return m ? m[1] : null; };
 export function tabFromPath() { const a = area(); if (!a) return null; const seg = lpath().split('/')[2] || ''; if (!seg) return null; const e = Object.entries(SLUGS[a]).find(([, x]) => x === seg); return e ? e[0] : null; }
@@ -139,7 +139,7 @@ export function startHistory(defTab) {
   addEventListener('popstate', (e) => {
     const st = e.state || {};
     const tab = st.tab || tabFromPath() || defTab();
-    store.set({ urunLayer: tab === 'urun' ? store.s.urunLayer : false, tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
+    store.set({ urunLayer: tab === 'urun' ? store.s.urunLayer : false, tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, setId: tab === 'set' ? st.setId ?? (/\/set\/([\w-]+)/.exec(lpath()) || [])[1] ?? null : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
     // ilk karede (React çizdikten hemen sonra) yerine kaydır → üstte bir kare görünüp zıplamaz; içerik geç uzarsa bir kez daha
     requestAnimationFrame(() => { window.scrollTo(0, st.y || 0); requestAnimationFrame(() => { if (Math.abs(scrollY - (st.y || 0)) > 2) window.scrollTo(0, st.y || 0); }); });
   });
