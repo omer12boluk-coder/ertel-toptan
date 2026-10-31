@@ -756,13 +756,13 @@ function setupNavAnim() {
   addEventListener('popstate', () => mark('back'), true);
   addEventListener('pointerdown', (e) => {
     const t = e.target instanceof Element ? e.target : null; if (!t) return;
-    if (t.closest('.back-btn')) mark('back'); else if (t.closest('.botnav')) mark('tab');
+    if (t.closest('.back-btn, .oa-back')) mark('back'); else if (t.closest('.botnav')) mark('tab');
   }, { capture: true, passive: true });
   // sayfa içi geçişler (sepet → ödeme, sipariş detayı, adımlar…): adres değişmese de tıklanan düğme kaybolup yerine büyük bir bölüm gelirse
   addEventListener('click', (e) => {
     const t = e.target instanceof Element ? e.target : null; if (!t || !t.closest('.shell > .main')) return;
     const btn = t.closest('button, a, [role="button"]') || t;
-    click = { el: btn, at: Date.now(), back: !!t.closest('.back-btn') };
+    click = { el: btn, at: Date.now(), back: !!t.closest('.back-btn, .oa-back') }; // .oa-back: sipariş / linkle gelen sipariş geri düğmesi (31.10.2026: dönüş sağdan geliyordu)
   }, { capture: true, passive: true });
   // Solma içeriğin kendisine DEĞİL, üstüne serilen sayfa renginde tek bir örtüye (.nav-cover) uygulanır: koca bir sayfayı
   // (ana sayfa: bulanık ışıklar, buzlu cam reklam…) saydamlıkla çizmek iPhone'da çok ağır, 'flaş' yapıyordu; örtüyü soldurmak
@@ -813,10 +813,11 @@ function setupNavAnim() {
   const onMut = (muts) => {
     if (pend || key(store.s) !== last) return;
     const c = click; if (!c || Date.now() - c.at > 450 || c.el.isConnected || !mob()) return;
+    if (Date.now() - hintAt < 600 && hint === 'back') c.back = true; // geri hareketiyle (popstate) gelen sayfa içi dönüş de soldan gelir
     const min = innerHeight * 0.45, added = [];
     for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1 && !n.closest('.sheet, .sheet-bg, .ctx-sheet-bg') && n.offsetHeight > min && !n.matches(FIX)) added.push(n);
     const top = added.filter((n) => !added.some((o) => o !== n && o.contains(n)));
-    if (!top.length) return;
+    if (!top.length || top.some((n) => n.classList.contains('no-anim') || n.querySelector('.no-anim'))) return; // animasyonsuz dönüş isteyen sayfa
     click = null;
     const els = []; for (const n of top) { if (n.classList.contains('page') || n.querySelector(FIX)) els.push(...pageTargets({ children: [n] })); else els.push(n); }
     play(els, c.back ? 'back' : 'fwd', 300);

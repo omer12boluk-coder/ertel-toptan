@@ -96,8 +96,11 @@ export function LinkCarts({ page = false }) {
   useEffect(() => { if (!want || !list) return; const x = list.find((c) => c.id === want); if (x) { setF(x.status === 'open' ? 'open' : x.status); show(want); } store.set({ openLcart: null }); }, [want, list]);
   // sipariş tam sayfa açılır (mağaza siparişi gibi); telefonda geri kaydırma / Geri listeye döner
   const show = (id) => { try { history.pushState({ ...(history.state || {}), lcOpen: id, y: scrollY }, ''); } catch {} setOpen(id); window.scrollTo(0, 0); };
-  useEffect(() => { const h = (e) => setOpen(e.state?.lcOpen || null); addEventListener('popstate', h); return () => removeEventListener('popstate', h); }, []);
-  const hide = () => { if (history.state?.lcOpen) history.back(); else setOpen(null); };
+  useEffect(() => { const h = (e) => { if (!e.state?.lcOpen) setCalm(true); setOpen(e.state?.lcOpen || null); }; addEventListener('popstate', h); return () => removeEventListener('popstate', h); }, []);
+  // detaydan dönünce liste animasyonsuz, olduğu yerde görünür (31.10.2026: kutular gecikmeli oturuyordu)
+  const [calm, setCalm] = useState(false);
+  useEffect(() => { if (!calm) return; const t = setTimeout(() => setCalm(false), 500); return () => clearTimeout(t); }, [calm]);
+  const hide = () => { setCalm(true); if (history.state?.lcOpen) history.back(); else setOpen(null); };
   // tarih aralığı seçiliyse liste o aralığın kayıtları (canlı listedeki güncel hâl önce)
   const base = useMemo(() => {
     if (!range) return list;
@@ -191,7 +194,7 @@ export function LinkCarts({ page = false }) {
   );
   if (!page) return sec;
   return (
-    <div className="page lc-page-adm adm-sub">
+    <div className={'page lc-page-adm adm-sub' + (calm ? ' no-anim' : '')}>
       <PageHead cls="ord-head" title="Siparişler" newLabel="Yeni sepet linki" onNew={() => go('sepetlink')} />
       <OrdersSwitch on="lcarts" />
       {sec}

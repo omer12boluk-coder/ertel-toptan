@@ -848,14 +848,14 @@ function useBackCloses(active, onClose) {
   useEffect(() => {
     if (!active || typeof matchMedia === 'undefined' || !matchMedia('(max-width: 899px)').matches) return;
     const id = 'ps' + Math.random().toString(36).slice(2, 9);
-    try {
-      history.replaceState({ ...(history.state || {}), y: scrollY }, '');
-      history.pushState({ ...(history.state || {}), sheet: id }, '');
-    } catch { return; }
-    let popped = false;
+    // geçmiş kaydı pencere çizildikten SONRA (iPhone'da pushState yavaş; dokunuşu geciktirmesin — 31.10.2026)
+    let popped = false, on = false;
     const onPop = () => { if (history.state?.sheet === id) return; popped = true; cb.current(); };
-    addEventListener('popstate', onPop);
-    return () => { removeEventListener('popstate', onPop); if (!popped && history.state?.sheet === id) { try { history.back(); } catch {} } };
+    const t = setTimeout(() => {
+      try { history.replaceState({ ...(history.state || {}), y: scrollY }, ''); history.pushState({ ...(history.state || {}), sheet: id }, ''); } catch { return; }
+      on = true; addEventListener('popstate', onPop);
+    }, 60);
+    return () => { clearTimeout(t); if (!on) return; removeEventListener('popstate', onPop); if (!popped && history.state?.sheet === id) { try { history.back(); } catch {} } };
   }, [active]);
 }
 export function ProductSheet({ p, onClose, viewOnly = false, forceSheet = false }) {
@@ -952,7 +952,7 @@ export function Gallery({ p }) {
                 <button className="gal-open" onClick={() => setZoom(x.z)} aria-label="Resmi büyüt"
                   style={x.th && x.th !== x.u ? { backgroundImage: `url("${x.th}")` } : undefined}>
                   {/* büyük resim gelene kadar listede zaten inmiş küçük resim arkada görünür, büyük gelince yumuşakça üstüne biner (flaş yok) */}
-                  <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} className="gal-big"
+                  <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} decoding="async" className="gal-big"
                     ref={(el) => { if (el && el.complete && el.naturalWidth) { el.classList.add('in'); el.parentElement.style.backgroundImage = 'none'; } }}
                     onLoad={(e) => { const im = e.currentTarget; im.classList.add('in'); setTimeout(() => { if (im.parentElement) im.parentElement.style.backgroundImage = 'none'; }, 250); }}
                     onError={(e) => { if (!fbSkip(e)) setBad((b) => ({ ...b, [k]: 1 })); }} />

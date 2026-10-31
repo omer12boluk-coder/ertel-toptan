@@ -177,12 +177,8 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls
   }, []);
   // açılış kayması ilk (bazen ağır: büyük form) kare ekrana çıkana kadar başlangıçta bekler, sonra baştan sona oynar
   // → ağır pencerede kayma yarıdan başlayıp 'takılmış' görünmez
-  useLayoutEffect(() => {
-    const as = [bg.current, ref.current].flatMap((e) => (e?.getAnimations ? e.getAnimations() : []));
-    as.forEach((a) => a.pause());
-    const r = requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
-    return () => cancelAnimationFrame(r);
-  }, []);
+  // (31.10.2026: içerik zaten bir kare sonra çizildiği için açılış karesi hafif; eskiden burada animasyon duraklatılıyordu,
+  // getAnimations() stil hesabını zorlayıp dokunuşu ~10 ms geciktiriyordu → kaldırıldı)
   // Telefonda: pencereyi tutup aşağı çekince kapanır (üst kısımdan ya da içerik en üstteyken her yerden)
   const drag = useRef(null);
   // 31.10.2026: her yerden çekilir — parmağın altındaki kaydırılabilir alan en üstteyse (ya da hiç yoksa) aşağı çekmek pencereyi
