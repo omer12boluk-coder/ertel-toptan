@@ -24,7 +24,7 @@ export const MENU = {
   nisan: true,  // 3) Alt kategorilere çapraz giderken yoldaki başlık değişmez; düz gezerken başlık anında değişir
   burada: true, // 4) Şu an açık olan sayfanın menüsü fareyle açılmaz (sayfada aynı seçenekler zaten var); ok ile ve başka menü açıkken yandakine geçişte açılır
 };
-const DUR = 170;  // niyet: fare bu kadar ms (neredeyse) kıpırdamazsa menü açılır
+const DUR = 110;  // niyet: fare bu kadar ms (neredeyse) kıpırdamazsa menü açılır
 const TITRE = 6;  // niyet: bu kadar px'ten az kıpırdama "durdu" sayılır
 let active = null; // açık olan menü { id, close } (bir menüden diğerine geçince beklemeden geçsin)
 
@@ -186,7 +186,7 @@ function MegaCats({ cats, close }) {
   const enter = (n, el) => {
     clearTimeout(t.current); const y = el.offsetTop; const go1 = () => { setHov(n.id); setTop(y); };
     if (!MENU.nisan) { t.current = setTimeout(go1, hov == null ? DELAY : 220); return; } // eski: sabit gecikme
-    if (hov == null) { t.current = setTimeout(go1, 140); return; } // ilk açılış: üstten inerken satırlar yanıp sönmesin
+    if (hov == null) { t.current = setTimeout(go1, 100); return; } // ilk açılış: üstten inerken satırlar yanıp sönmesin
     const tryGo = () => { const d = aim(); if (d) t.current = setTimeout(tryGo, d); else go1(); };
     tryGo();
   };
