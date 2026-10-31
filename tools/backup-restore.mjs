@@ -11,7 +11,7 @@ const DIR = process.env.DIR; const COL = (process.env.COL || 'orders').trim(); c
 const back = (v) => (Array.isArray(v) ? v.map(back) : v && typeof v === 'object' ? ('_ts' in v && Object.keys(v).length === 1 ? Timestamp.fromMillis(v._ts) : '_ref' in v && Object.keys(v).length === 1 ? db.doc(v._ref) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, back(x)]))) : v);
 const info = JSON.parse(fs.readFileSync(`${DIR}/_bilgi.json`));
 console.log(`::notice title=Yedek::${info.at} · ${info.total} belge`);
-const files = fs.readdirSync(DIR).filter((f) => f.endsWith('.json') && f !== '_bilgi.json' && (COL === 'hepsi' || f.split('__')[0] === COL));
+const files = fs.readdirSync(DIR).filter((f) => f.endsWith('.json') && f !== '_bilgi.json' && (COL === 'hepsi' || f.slice(0, -5).split('__')[0] === COL));
 if (!files.length) { console.log(`::error title=Bulunamadı::Yedekte '${COL}' yok. Var olanlar: ${Object.keys(info.counts).join(', ')}`); process.exit(1); }
 let add = 0, over = 0, same = 0; let batch = db.batch(), n = 0;
 const flush = async () => { if (n) { await batch.commit(); batch = db.batch(); n = 0; } };
