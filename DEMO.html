@@ -5454,8 +5454,8 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 }
 
 /* Ürünler: arama satırı yapışınca üstündeki boşluk daralmasın (31.10.2026) — dururken ve yapışıkken aynı boşluk */
-.cat-main > .toolbar:first-child { padding-top: 8px; margin-top: -8px; } /* durunca 14px boşluk, yapışınca en az 8px (kullanıcı: biraz kaysın ama fazla daralmasın) */
-@media (min-width: 900px) { .cat-main > .toolbar:first-child { padding-top: 12px; margin-top: -12px; } }
+.cat-main > .toolbar:first-child { padding-top: 14px; margin-top: -14px; } /* boşluk dururken ve yapışıkken AYNI (kullanıcı son kararı 31.10.2026: kaymasın) */
+@media (min-width: 900px) { .cat-main > .toolbar:first-child { padding-top: 22px; margin-top: -22px; } }
 /* Setler / Favorilerim sayısı yazıyla aynı hizada ve boyda (31.10.2026) */
 .chip.set-chip b, .chip.fav-chip b { font: inherit; font-weight: 700; line-height: inherit; color: var(--muted); opacity: 1; margin-left: 0; font-variant-numeric: tabular-nums; }
 .chip.set-chip.on b, .chip.fav-chip.on b { color: inherit; opacity: .8; }
