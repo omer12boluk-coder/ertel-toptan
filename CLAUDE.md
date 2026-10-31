@@ -47,6 +47,9 @@ Claude'un yapacakları:
 14. Sepet linkinden gelen siparişi normal siparişe çevirme + yasal onay kutusu + üye adres önerisi.
 Karar bekleyen (kullanıcı):
 15. Ödeme özeti 2 üründe kayıyor (çözüm önerildi) · elde kalan mal için dürüst raf/rozet seçeneği · ana sayfa 'imza' etkileşimi · Ürün talebi / Sorun bildir menüye konacak mı · SMS (Netgsm) belki · Ürünler ve Bayi siparişleri sayfaları da ortak PageHead/SubNav düzenine alınsın mı.
+Tartışılacaklar (kesin değil, kullanıcıyla konuşulacak):
+15b. Blaze sonrası: sipariş/talep açılış süresini 14 → 30 gün (bir hafta okuma sayısını izle) → sorun yoksa 62; mağaza üyeleri 62 → 120; Genel bakış 'bu ay' kıyası düzelir.
+15c. Workers Paid sonrası: DHL kargodaki sipariş sorgusu 30 dk → 5 dk; kur/fiyat kaydı 3 saatten daha sık; KV günlük sınır endişesi kalkar.
 Küçük işler / bakım:
 16. Banner videosu (Santral Center dosyası), logosu olmayan markalar, Qianli gece rengi, sipariş formu uzun ad, Platin'e kalan bağlar (`u`, 'Sitede aç', XML eşitleme).
 17. Eski GitHub dallarını sil (cf-site, eposta, resim-adresi, platin-kopma, sunucu-siparis, peek-out, mng-probe, tr-data, kalip-data, kalip-bulucu, linkli-siparis, blaze-hazirlik), Actions Node 20 → 24 uyarıları.
