@@ -708,10 +708,33 @@ export const fxTransform = (f) => f ? `translate(calc(${f.x || 0}px * var(--fxk,
 // Reklam düzenleri: split yazı+görsel · reverse görsel+yazı · center ortalı · plain sade (süssüz) · cover tam resim · glass resim + yazı kutusu
 export const SLIDE_LAYOUTS = { split: 'Yazı + görsel', reverse: 'Görsel + yazı', center: 'Ortalı', plain: 'Sade (süssüz)', cover: 'Tam resim (banner)', glass: 'Resim + yazı kutusu' };
 const COVER_LY = ['cover', 'glass'];
+// Görsel stili (31.10.2026, reklam başına; varsayılan düz): depth = fare gezdikçe resim/yazı katmanlı eğilir (telefonda sabit),
+// pop = ürün arkasındaki sahneden yukarı taşar (yazı+görsel düzenlerinde; dekupe/şeffaf resimle en iyi)
+export const IMG_STYLES = { flat: 'Düz', depth: 'Derinlik', pop: 'Taşma' };
+// Tam resim düzenlerinde resmin ölçeği (s.im): f cover|contain, z yakınlaştırma, x/y odak (%); zm/xm/ym telefon (yoksa bilgisayarınki)
+const imVars = (im) => {
+  if (!im) return undefined;
+  const v = {}; const set = (k, x, f) => { if (x != null && x !== '') v[k] = f(x); };
+  set('--imx', im.x, (x) => x + '%'); set('--imy', im.y, (x) => x + '%'); set('--imz', im.z, Number);
+  set('--imxm', im.xm, (x) => x + '%'); set('--imym', im.ym, (x) => x + '%'); set('--imzm', im.zm, Number);
+  return v;
+};
+const TOUCH_DEV = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
 function Slide({ s, on, play, open, logo, k }) {
   const E = useContext(DesignCtx);
   const ly = SLIDE_LAYOUTS[s.layout] ? s.layout : 'split';
   const cover = COVER_LY.includes(ly) && s.img;
+  const st = IMG_STYLES[s.ist] && !(s.ist === 'pop' && cover) ? s.ist : 'flat';
+  const fit = cover && s.im?.f === 'contain' ? 'contain' : 'cover';
+  const art = useRef(null); const raf = useRef(0);
+  // derinlik: fare konumu -1..1 → CSS değişkenleri (React yeniden çizmeden)
+  const tilt = st === 'depth' && !TOUCH_DEV ? {
+    onPointerMove: (e) => { const el = e.currentTarget; const r = el.getBoundingClientRect(); const mx = ((e.clientX - r.left) / r.width) * 2 - 1, my = ((e.clientY - r.top) / r.height) * 2 - 1;
+      cancelAnimationFrame(raf.current); raf.current = requestAnimationFrame(() => { el.style.setProperty('--mx', mx.toFixed(3)); el.style.setProperty('--my', my.toFixed(3)); }); },
+    onPointerLeave: (e) => { cancelAnimationFrame(raf.current); e.currentTarget.style.setProperty('--mx', 0); e.currentTarget.style.setProperty('--my', 0); },
+  } : {};
+  // tasarım modu (bilgisayar): tam resimde boş yeri tutup sürükleyince resmin görünen kısmı kayar
+  const imDown = E && !E.mobile && cover && E.imDrag ? (e) => { if (e.button > 0 || e.target.closest('.dz-fx, button, a, .sh-slide-t > *')) return; E.imDrag(e, k); } : undefined;
   const fx = (el, cls = '') => {
     const f = s.fx?.[el]; const style = f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
     if (!E || E.mobile) return { className: cls || undefined, style };
@@ -720,8 +743,8 @@ function Slide({ s, on, play, open, logo, k }) {
   };
   const tt = titleStyle(s.tc); const tf = fx('title', tt.className || '');
   return (
-    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover' : '') + (on ? ' on' : '') + (play ? ' play' : '')} onClick={cover && s.link && !s.cta ? open(s.link) : undefined}>
-      {cover ? <ShopImg v={s.img} className="sh-slide-bg" /> : ly !== 'plain' && <>
+    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (imDown ? ' dz-imdrag' : '')} style={cover ? imVars(s.im) : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
+      {cover ? <>{fit === 'contain' && <ShopImg v={s.img} className="sh-slide-bg sh-bg-blur" />}<ShopImg v={s.img} className="sh-slide-bg sh-bg-main" /></> : ly !== 'plain' && <>
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}
       <div className="sh-slide-t">
@@ -730,7 +753,7 @@ function Slide({ s, on, play, open, logo, k }) {
         {s.text && <p {...fx('text')}>{s.text}</p>}
         {s.cta && s.link && <span {...fx('cta', 'sh-cta-wrap')}><button className="sh-cta-btn" onClick={(e) => { e.stopPropagation(); open(s.link)(); }}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button></span>}
       </div>
-      {!cover && s.img && <div {...fx('art', 'sh-slide-art')}><span className="sh-halo" aria-hidden="true" />{isProdImg(s.img) ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</div>}
+      {!cover && s.img && <div ref={art} {...fx('art', 'sh-slide-art')}>{st === 'pop' ? <span className="sh-stage" aria-hidden="true" /> : <span className="sh-halo" aria-hidden="true" />}<span className="sh-depth">{isProdImg(s.img) && st !== 'pop' ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</span></div>}
       {!cover && !s.img && ly !== 'center' && <div className="sh-slide-art word" aria-hidden="true"><b>{(s.tag || s.title || '').split(' ')[0]}</b></div>}
     </article>
   );
@@ -941,7 +964,7 @@ function LogoPick({ s, up }) {
     </div>}
   </Field>;
 }
-export function SlideFields({ s, up }) {
+export function SlideFields({ s, up, phone }) {
   const ly = SLIDE_LAYOUTS[s.layout] ? s.layout : 'split';
   return <>
     <Field label="Düzen"><span className="ly-pick">{Object.entries(SLIDE_LAYOUTS).map(([k, l]) => <button key={k} type="button" className={'ly-' + k + (ly === k ? ' on' : '')} onClick={() => up({ layout: k })}><i aria-hidden="true"><b /><em /></i>{l}</button>)}</span></Field>
@@ -958,7 +981,38 @@ export function SlideFields({ s, up }) {
       <LinkPick v={s.link} onChange={(link) => up({ link })} />
     </div>
     <ImgPick v={s.img} onChange={(img) => up({ img })} alpha={!COVER_LY.includes(ly)} max={COVER_LY.includes(ly) ? 1800 : 1000} hint={COVER_LY.includes(ly) ? 'Yatay banner resmi (ör. 1600×640)' : 'Saydam arka planlı ürün resmi en iyisi; ürünün kendi resmi beyaz kart içinde görünür'} prodOk />
+    {s.img && <ImgLook s={s} up={up} cover={COVER_LY.includes(ly)} phone={phone} />}
   </>;
+}
+// reklam resminin stili + (tam resim düzenlerinde) ölçeği; hepsi isteğe bağlı, varsayılan eskisi gibi
+function ImgLook({ s, up, cover, phone }) {
+  const [dev, setDev] = useState(phone ? 'm' : 'pc');
+  useEffect(() => { setDev(phone ? 'm' : 'pc'); }, [phone]);
+  const im = s.im || {}; const m = dev === 'm';
+  const g = (k, def) => (m ? im[k + 'm'] ?? im[k] : im[k]) ?? def;
+  const U = (p) => up({ im: { ...im, ...Object.fromEntries(Object.entries(p).map(([k, v]) => [m ? k + 'm' : k, v])) } });
+  const ist = IMG_STYLES[s.ist] ? s.ist : 'flat';
+  const R = (label, k, min, max, step, def, fmt) => <Field label={label}><span className="she-scale"><input type="range" min={min} max={max} step={step} value={g(k, def)} onChange={(e) => U({ [k]: Number(e.target.value) })} /><code>{fmt(g(k, def))}</code></span></Field>;
+  const changed = m ? ['zm', 'xm', 'ym'].some((k) => im[k] != null) : ['z', 'x', 'y'].some((k) => im[k] != null);
+  return <div className="im-look">
+    <Field label="Görsel stili" hint={ist === 'depth' ? 'Fare reklamın üstünde gezerken resim ve yazı katmanlı olarak hafifçe eğilir. Telefonda sabit durur.' : ist === 'pop' ? 'Ürün arkasındaki sahneden yukarı taşar. En iyi sonuç dekupe (arka planı şeffaf) PNG ile: Windows\'ta Paint › "Arka planı kaldır", iPhone\'da fotoğrafa basılı tutup "Konuyu kopyala".' : cover ? '"Taşma" yazı + görsel düzenlerinde olur (tam resimde resim zaten arka plan).' : undefined}>
+      <span className="seg">{Object.entries(IMG_STYLES).map(([k, l]) => <button key={k} type="button" className={ist === k ? 'on' : ''} disabled={k === 'pop' && cover} onClick={() => up({ ist: k })}>{l}</button>)}</span>
+    </Field>
+    {cover && <>
+      <Field label="Resim kutuya" hint={(im.f || 'cover') === 'cover' ? 'Kutuyu doldurur, taşan kenarlar kırpılır' : 'Resmin tamamı görünür, boşluklar resmin bulanık hâliyle dolar'}>
+        <span className="seg">{[['cover', 'Doldur'], ['contain', 'Sığdır']].map(([k, l]) => <button key={k} type="button" className={(im.f || 'cover') === k ? 'on' : ''} onClick={() => up({ im: { ...im, f: k } })}>{l}</button>)}</span>
+      </Field>
+      <div className="im-dev"><span className="seg sm">{[['pc', 'Bilgisayar'], ['m', 'Telefon']].map(([k, l]) => <button key={k} type="button" className={dev === k ? 'on' : ''} onClick={() => setDev(k)}><Icon n={k === 'm' ? 'mobile' : 'monitor'} s={14} />{l}</button>)}</span>
+        {changed && <button type="button" className="linkish" onClick={() => up({ im: { ...im, ...(m ? { zm: null, xm: null, ym: null } : { z: null, x: null, y: null }) } })}>sıfırla</button>}</div>
+      {m && im.zm == null && im.xm == null && im.ym == null && <p className="fine">Telefonda şu an bilgisayardaki ayar kullanılıyor; burada değiştirirseniz telefona özel olur.</p>}
+      {R('Yakınlaştır', 'z', 1, 3, 0.05, 1, (v) => '%' + Math.round(v * 100))}
+      <div className="row2">
+        {R('Yatay odak', 'x', 0, 100, 1, 50, (v) => v <= 5 ? 'sol' : v >= 95 ? 'sağ' : Math.round(v))}
+        {R('Dikey odak', 'y', 0, 100, 1, 50, (v) => v <= 5 ? 'üst' : v >= 95 ? 'alt' : Math.round(v))}
+      </div>
+      <p className="fine">Tasarım modunda resmi reklamın üstünde boş bir yerden tutup sürükleyerek de kaydırabilirsiniz{phone ? ' (telefon görünümündeyken telefon ayarı değişir)' : ' (telefon görünümüne geçince telefon ayarı değişir)'}.</p>
+    </>}
+  </div>;
 }
 export function UspFields({ u, up }) {
   return <div className="row3">

@@ -114,7 +114,34 @@ export function ShopDesigner() {
     const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); document.body.classList.remove('dz-dragging'); if (!moved) setSel({ kind: 'fx', slide, el }); };
     addEventListener('pointermove', mv); addEventListener('pointerup', up);
   };
-  const E = { H, L, get, fxDrag, mobile, sel: mobile ? pick : sel, tapBlock, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, Block: DzBlock, HeroTools: DzHeroTools };
+  // tam resim reklamında resmi sürükleyerek odak noktasını kaydır (telefon görünümünde telefon ayarı)
+  const imDrag = (e, slide) => {
+    const box = e.currentTarget; const img = box.querySelector('.sh-bg-main');
+    const x0 = e.clientX, y0 = e.clientY; const phone = width === 'phone'; const sfx = phone ? 'm' : '';
+    const im0 = get('slides')[slide]?.im || {};
+    const v0 = (k, d) => Number((phone ? im0[k + 'm'] ?? im0[k] : im0[k]) ?? d);
+    const z = v0('z', 1), px = v0('x', 50), py = v0('y', 50);
+    const r = box.getBoundingClientRect(); const nw = img?.naturalWidth || r.width, nh = img?.naturalHeight || r.height;
+    const sc = (im0.f === 'contain' ? Math.min : Math.max)(r.width / nw, r.height / nh);
+    // görünen kayma = odak% × (kutu − z × resim): sürüklenen piksel kadar kaysın
+    const kx = r.width - z * nw * sc, ky = r.height - z * nh * sc;
+    let moved = false;
+    const mv = (ev) => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!moved && Math.hypot(dx, dy) < 5) return;
+      if (!moved) { moved = true; document.body.classList.add('dz-dragging'); }
+      const nx = Math.abs(kx) > 8 ? Math.min(100, Math.max(0, px + (dx / kx) * 100)) : px;
+      const ny = Math.abs(ky) > 8 ? Math.min(100, Math.max(0, py + (dy / ky) * 100)) : py;
+      const sl = get('slides');
+      set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, im: { ...(x.im || {}), ['x' + sfx]: Math.round(nx), ['y' + sfx]: Math.round(ny), ...(phone && (x.im || {}).zm == null ? { zm: z } : {}) } } : x)));
+    };
+    const up = () => {
+      removeEventListener('pointermove', mv); removeEventListener('pointerup', up); document.body.classList.remove('dz-dragging');
+      if (moved) addEventListener('click', (ev) => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true });
+    };
+    addEventListener('pointermove', mv); addEventListener('pointerup', up);
+  };
+  const E = { H, L, get, fxDrag, imDrag, mobile, sel: mobile ? pick : sel, tapBlock, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, Block: DzBlock, HeroTools: DzHeroTools };
   const view = useMemo(() => withDefaults(d), [d]);
 
   return (
@@ -138,7 +165,7 @@ export function ShopDesigner() {
         </DesignCtx.Provider>
       </div>
       {mobile && pick && !sel && <MobileBar pick={pick} setPick={setPick} H={H} d={d} set={set} setSel={setSel} L={L} setL={setL} toggleHide={toggleHide} removeBlock={removeBlock} addBlock={addBlock} />}
-      {sel && <Panel sel={sel} d={d} H={H} set={set} close={() => setSel(null)} heroI={heroI.current} removeBlock={removeBlock} setSel={setSel} />}
+      {sel && <Panel sel={sel} d={d} H={H} set={set} close={() => setSel(null)} heroI={heroI.current} removeBlock={removeBlock} setSel={setSel} phone={width === 'phone'} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
@@ -277,7 +304,7 @@ function AddBetween({ onAdd, top }) {
 }
 
 // sağdaki ayar paneli: seçilen bölümün / kutunun alanları
-function Panel({ sel, d, H, set, close, heroI, removeBlock, setSel }) {
+function Panel({ sel, d, H, set, close, heroI, removeBlock, setSel, phone }) {
   const S = (k, v) => set('shopHome.' + k, v);
   let title = '', body = null;
   if (sel.kind === 'brand') {
@@ -314,7 +341,7 @@ function Panel({ sel, d, H, set, close, heroI, removeBlock, setSel }) {
     title = blockLabel(k, H);
     if (k === 'hero') body = <>
       <Field label="Yükseklik" hint="Reklam alanının alt kenarındaki tutamaçla da çekebilirsiniz. 0 = otomatik"><span className="she-scale"><input type="range" min="0" max="760" step="10" value={Number(H.heroH) || 0} onChange={(e) => S('heroH', Number(e.target.value) < 260 ? 0 : Number(e.target.value))} /><code>{Number(H.heroH) ? H.heroH + ' px' : 'otomatik'}</code></span></Field>
-      <Rows list={H.slides || []} set={(v) => S('slides', v)} max={8} sub="Reklam ekle" openIdx={heroI} title={(s, i) => `${i + 1}. ${s.title || 'Reklam'}`} add={() => S('slides', [...(H.slides || []), NEW.slide()])} render={(s, up) => <SlideFields s={s} up={up} />} />
+      <Rows list={H.slides || []} set={(v) => S('slides', v)} max={8} sub="Reklam ekle" openIdx={heroI} title={(s, i) => `${i + 1}. ${s.title || 'Reklam'}`} add={() => S('slides', [...(H.slides || []), NEW.slide()])} render={(s, up) => <SlideFields s={s} up={up} phone={phone} />} />
     </>;
     else if (k === 'usps') body = <Rows list={H.usps || []} set={(v) => S('usps', v)} max={4} sub="Avantaj ekle" openIdx={0} title={(u, i) => u.title || `${i + 1}. avantaj`} add={() => S('usps', [...(H.usps || []), NEW.usp()])} render={(u, up) => <UspFields u={u} up={up} />} />;
     else if (k === 'marquee') body = <>

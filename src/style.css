@@ -1300,6 +1300,37 @@ a.btn { text-decoration: none; }
 .sh-slide.cover { grid-template-columns: 1fr; align-items: end; background: #000; }
 .sh-slide-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; transform: scale(1.04); transition: transform 6s ease; }
 .sh-slide.cover.on .sh-slide-bg { transform: scale(1); }
+/* ---- Reklam resmi: ölçek + odak (31.10.2026; s.im). --ix/--iy/--iz son değerler; telefonda telefona özel olan (yoksa bilgisayarınki) */
+.sh-slide.cover { --ix: var(--imx, 50%); --iy: var(--imy, 50%); --iz: var(--imz, 1); }
+@media (max-width: 700px) { .sh-slide.cover { --ix: var(--imxm, var(--imx, 50%)); --iy: var(--imym, var(--imy, 50%)); --iz: var(--imzm, var(--imz, 1)); } }
+.dz-canvas.w-phone .sh-slide.cover { --ix: var(--imxm, var(--imx, 50%)); --iy: var(--imym, var(--imy, 50%)); --iz: var(--imzm, var(--imz, 1)); }
+/* yakınlaştırma (transform) hızlı tepki verir; reklam gelince yavaş 'nefes' efekti ayrı (scale) */
+.sh-slide.cover .sh-bg-main { object-position: var(--ix) var(--iy); transform-origin: var(--ix) var(--iy); transform: scale(var(--iz)); scale: 1.04; transition: scale 6s ease, transform .3s ease, object-position .3s ease, translate .45s cubic-bezier(.2, .8, .2, 1); }
+.sh-slide.cover.on .sh-bg-main { transform: scale(var(--iz)); scale: 1; }
+.sh-slide.fit-contain .sh-bg-main { object-fit: contain; }
+.sh-slide.fit-contain .sh-bg-blur { transform: scale(1.15); filter: blur(28px) saturate(1.1) brightness(.85); z-index: -2; transition: none; }
+.dz-imdrag { cursor: grab; } body.dz-dragging .dz-imdrag { cursor: grabbing; }
+body.dz-dragging .sh-bg-main { transition: scale 6s ease !important; }
+/* ---- Görsel stili: Derinlik (fare ile katmanlı eğilme; --mx/--my -1..1) */
+.sh-depth { position: relative; display: grid; place-items: center; width: 100%; }
+.sh-slide.st-depth .sh-slide-t { translate: calc(var(--mx, 0) * 10px) calc(var(--my, 0) * 7px); transition: translate .45s cubic-bezier(.2, .8, .2, 1); }
+.sh-slide.st-depth .sh-depth { transform: perspective(1000px) translate3d(calc(var(--mx, 0) * 16px), calc(var(--my, 0) * 12px), 0) rotateY(calc(var(--mx, 0) * 12deg)) rotateX(calc(var(--my, 0) * -9deg)); transition: transform .45s cubic-bezier(.2, .8, .2, 1); }
+.sh-slide.st-depth .sh-float { filter: drop-shadow(calc(var(--mx, 0) * -18px) calc(30px - var(--my, 0) * 12px) 34px rgb(0 0 0 / .5)); }
+.sh-slide.st-depth.cover .sh-bg-main, .sh-slide.st-depth.cover.on .sh-bg-main { translate: calc(var(--mx, 0) * -20px) calc(var(--my, 0) * -14px); transform: scale(calc(var(--iz) * 1.07)); }
+/* ---- Görsel stili: Taşma (ürün arkasındaki sahneden yukarı taşar) */
+.sh-slide.st-pop .sh-slide-art { align-self: stretch; min-height: 300px; }
+.sh-stage { position: absolute; left: 4%; right: 4%; bottom: 6%; height: 56%; border-radius: 30px; background: linear-gradient(160deg, color-mix(in oklab, var(--g1) 55%, var(--bg)), color-mix(in oklab, var(--g2) 35%, var(--bg)) 90%); box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), inset 0 0 0 1px rgb(255 255 255 / .1), 0 34px 60px -30px rgb(0 0 0 / .85); }
+.sh-stage::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 12%; height: 9%; border-radius: 50%; background: radial-gradient(closest-side, rgb(0 0 0 / .55), transparent); filter: blur(4px); }
+.sh-slide.st-pop .sh-depth { position: absolute; left: 8%; right: 8%; bottom: 13%; height: 86%; display: flex; align-items: flex-end; justify-content: center; }
+.sh-slide.st-pop .sh-float { max-width: 100%; max-height: 100%; animation: none; filter: drop-shadow(0 28px 24px rgb(0 0 0 / .55)) drop-shadow(0 4px 6px rgb(0 0 0 / .3)); }
+.sh-slide.st-pop.on .sh-float { animation: popIn .9s cubic-bezier(.2, .9, .25, 1.15) both; }
+@keyframes popIn { from { transform: translateY(30px) scale(.92); opacity: 0; } }
+@media (max-width: 900px) { .sh-slide.st-pop .sh-slide-art { aspect-ratio: 1; min-height: 0; opacity: 1; right: 3%; bottom: 3%; width: 50%; } }
+@container (max-width: 760px) { .sh-slide.st-pop .sh-slide-art { min-height: 240px; } }
+@media (prefers-reduced-motion: reduce) { .sh-slide.st-depth .sh-depth, .sh-slide.st-depth .sh-slide-t, .sh-slide.st-depth .sh-bg-main { transform: none; translate: none; } .sh-slide.st-pop.on .sh-float { animation: none; } }
+.im-look { display: grid; gap: 10px; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
+.im-dev { display: flex; align-items: center; gap: 12px; }
+.im-dev .seg button { display: inline-flex; align-items: center; gap: 6px; }
 .sh-slide.cover::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg, rgb(0 0 0 / .65), transparent 60%); }
 .sh-slide.play .sh-slide-t > * { animation: rise .7s var(--ease) backwards; }
 /* telefon: parmakla kaydırırken gelen reklamın yazısı gizli, yerine oturunca .play ile yeniden dökülür */
@@ -1694,6 +1725,7 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .seg { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); gap: 2px; }
 .seg button { border: 0; background: none; padding: 7px 14px; border-radius: 9px; font: 600 13.5px/1 var(--f-body); color: var(--muted); cursor: pointer; }
 .seg button.on { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
+.seg button:disabled { opacity: .38; cursor: not-allowed; }
 .dz-cta { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: linear-gradient(120deg, color-mix(in oklab, var(--accent) 12%, var(--surface)), var(--surface)); border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--line)); }
 .dz-cta span { flex: 1; display: flex; flex-direction: column; gap: 2px; } .dz-cta small { color: var(--muted); font-size: 13px; }
 
