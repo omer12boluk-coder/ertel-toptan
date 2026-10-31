@@ -663,16 +663,18 @@ function Hero({ slides, open, brands, heroH }) {
   }
   // parmakla kaydırma: gelen reklamın yazısı kaydırırken gizli (CSS), reklam yerine OTURUNCA (parmak kalkmış + kayma 140 ms
   // durmuş) yazılar yeniden dökülür. Yarı yolda değil — eskiden ortada kaybolup yeniden beliriyordu.
-  const touching = useRef(false); const settleT = useRef(0);
+  const touching = useRef(false); const settleT = useRef(0); const playRef = useRef(play); playRef.current = play;
   const settle = () => {
     clearTimeout(settleT.current);
-    settleT.current = setTimeout(() => { const el = track.current; if (!el || touching.current) return; setPlay(Math.round(el.scrollLeft / step(el))); }, 140);
+    settleT.current = setTimeout(() => { const el = track.current; if (!el || touching.current) return; setPlay(Math.round(el.scrollLeft / step(el))); }, 60);
   };
   useEffect(() => () => { clearTimeout(settleT.current); clearTimeout(targetT.current); }, []);
   const onScroll = (e) => {
     const el = e.currentTarget; const s = step(el);
     if (target.current != null) { if (Math.abs(el.scrollLeft - target.current * s) < 2) target.current = null; return; }
     const k = Math.round(el.scrollLeft / s); if (k !== i) setI(k);
+    // parmak kalktıysa ve reklam yerine %70 yaklaştıysa hemen dök (iPhone'un oturma kayması bitene kadar BEKLEME — 1-2 sn boş kalıyordu)
+    if (!touching.current && Math.abs(el.scrollLeft - k * s) < s * 0.3) { clearTimeout(settleT.current); if (k !== playRef.current) setPlay(k); return; }
     settle();
   };
   const grab = () => { target.current = null; clearTimeout(targetT.current); touching.current = true; clearTimeout(settleT.current); };
