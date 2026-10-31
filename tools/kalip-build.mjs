@@ -3,7 +3,8 @@
 //                            (Kaggle GSMArena 2019 + bytecharts/device_specs_gsmarena; tools/kalip-update.mjs günceller)
 //   tools/kalip/extra.json — elle / Claude'un araştırıp eklediği modeller [{n, c, src, d}]; aynı adda base'in önüne geçer
 // → hosting/public/kalip/phones.json  { v, p: [[telefon adı, işlemci, "KOD KOD"]] }
-// Kullanım: node tools/kalip-build.mjs
+// Kullanım: node tools/kalip-build.mjs          (sürüm aynı kalır — aylık otomatik iş)
+//          node tools/kalip-build.mjs --bump   (Claude yeni model ekleyince: sürüm 1.0.x → 1.0.x+1, tools/kalip/version.json)
 import fs from 'node:fs';
 import { phoneCodes } from '../src/kalip.js';
 const read = (f) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : []);
@@ -39,5 +40,8 @@ for (const ph of byName.values()) {
 }
 out.sort((a, b) => a[0].localeCompare(b[0]));
 fs.mkdirSync('hosting/public/kalip', { recursive: true });
-fs.writeFileSync('hosting/public/kalip/phones.json', JSON.stringify({ v: Date.now(), p: out }));
-console.log(out.length, 'telefon;', out.filter((x) => !x[2]).length, 'kodsuz;', extra.length, 'elle eklenen');
+const VF = 'tools/kalip/version.json';
+const vj = fs.existsSync(VF) ? JSON.parse(fs.readFileSync(VF, 'utf8')) : { ver: '1.0.0' };
+if (process.argv.includes('--bump')) { const [a, b, c] = String(vj.ver).split('.').map(Number); vj.ver = `${a}.${b}.${(c || 0) + 1}`; vj.at = new Date().toISOString().slice(0, 10); fs.writeFileSync(VF, JSON.stringify(vj, null, 2) + '\n'); }
+fs.writeFileSync('hosting/public/kalip/phones.json', JSON.stringify({ v: Date.now(), ver: vj.ver, p: out }));
+console.log('sürüm', vj.ver + ';', out.length, 'telefon;', out.filter((x) => !x[2]).length, 'kodsuz;', extra.length, 'elle eklenen');

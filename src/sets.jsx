@@ -10,6 +10,16 @@ import { queueSave } from './saveq.js';
 import { ShareBtn } from './extras.jsx';
 import { PriceBlock, cardAdd } from './catalog.jsx';
 
+// Yönetim: Ürünler ⇄ Setler (31.10.2026, kullanıcı: Setler Ürünler'in içinde; Siparişler'deki seçicinin aynısı)
+export function ProductsSwitch({ on }) {
+  const nP = useStore((st) => st.catalog.length);
+  const nS = useStore((st) => (st.settings.sets || []).length);
+  return <SubNav label="Ürünler" items={[
+    { k: 'products', icon: 'grid', label: 'Ürünler', count: nP, on: on === 'products', onClick: () => go('katalog') },
+    { k: 'sets', icon: 'box', label: 'Setler', count: nS, on: on === 'sets', onClick: () => go('setler') },
+  ]} />;
+}
+
 const r2 = (n) => Math.round(Number(n) * 100) / 100;
 export const setsOf = (S) => (Array.isArray(S?.sets) ? S.sets : []);
 export const liveSets = (S) => setsOf(S).filter((x) => x.on && (x.items || []).length);
@@ -149,7 +159,7 @@ function SetRailCard({ set, i }) {
 export function SetRail({ edit }) {
   const S = useStore((s) => s.settings);
   const sets = liveSets(S);
-  if (!sets.length) return edit ? <div className="dz-empty">Setler rafı: yayında set yok (Yönetim › Sipariş formu › Setler)</div> : null;
+  if (!sets.length) return edit ? <div className="dz-empty">Setler rafı: yayında set yok (Yönetim › Ürünler › Setler)</div> : null;
   return (
     <section className="sh-sec rv set-rail">
       <div className="sh-head"><div><h2>Setler</h2><p>Birlikte daha uygun, tek tıkla sepette</p></div>
@@ -286,11 +296,7 @@ export function SetsAdmin() {
   return (
     <div className="page sets-admin adm-sub">
       <PageHead title="Setler" extra={<span className="muted"> · {sets.length}</span>} newLabel="Yeni set" onNew={() => setEdit({})} />
-      <SubNav label="Sipariş formu" items={[
-        { k: 'form', icon: 'tag', label: 'Sipariş formu', on: false, onClick: () => go('siparis') },
-        { k: 'link', icon: 'cart', label: 'Sepet linki', on: false, onClick: () => go('sepetlink') },
-        { k: 'set', icon: 'box', label: 'Setler', on: true, onClick: () => {} },
-      ]} />
+      <ProductsSwitch on="sets" />
       <p className="muted sa-hint">Birkaç ürünü tek pakette satın. Her ürüne pakete özel fiyat yazabilirsiniz; set fiyatı bu fiyatların toplamıdır. Yayındaki setler mağazada Ürünler › Setler'de, ana sayfadaki Setler rafında ve ürün sayfasında görünür.</p>
       {!sets.length ? <Empty icon="box" title="Henüz set yok"><button className="btn primary" onClick={() => setEdit({})}><Icon n="plus" s={16} />İlk seti oluştur</button></Empty> : (
         <div className="sa-list">

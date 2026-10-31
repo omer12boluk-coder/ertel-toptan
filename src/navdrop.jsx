@@ -122,9 +122,12 @@ export function AdminDrop({ k, children }) {
     </>)}>{children}</HoverDrop>;
   }
   if (k === 'siparis') return <HoverDrop panel={(c) => (<>
-    <Item close={c} icon="tag" label="Sipariş formu" sub="Liste resmi + fiyatlı link" onClick={() => go('siparis')} />
+    <Item close={c} icon="tag" label="Form oluştur" sub="Liste resmi + fiyatlı link" onClick={() => go('siparis')} />
     <Item close={c} icon="cart" label="Sepet linki" sub="Müşteri tek tıkla onaylar" onClick={() => go('sepetlink')} />
-    <Item close={c} icon="box" label="Setler" sub="Ürün paketleri oluşturun" onClick={() => go('setler')} />
+  </>)}>{children}</HoverDrop>;
+  if (k === 'katalog') return <HoverDrop panel={(c) => (<>
+    <Item close={c} icon="grid" label="Ürünler" sub="Katalog, fiyat, stok" onClick={() => go('katalog')} />
+    <Item close={c} icon="box" label="Setler" sub="Ürün paketleri oluşturun" pill={(s.settings.sets || []).length ? String((s.settings.sets || []).length) : ''} onClick={() => go('setler')} />
   </>)}>{children}</HoverDrop>;
   if (k === 'musteriler') {
     const pend = s.customers.filter((u) => u.pending).length;
