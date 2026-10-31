@@ -34,6 +34,7 @@ Senin (kullanıcının) yapacakları:
 3. Cloudflare hesabında 2FA.
 4. Telefonda web.app'ten eklenmiş ana ekran uygulamalarını silip ertelmarket.com'dan (mağaza) ve ertelmarket.com/admin'den (yönetim) yeniden ekle.
 5. Yasal kontrol (avukat + mali müşavir): ETBİS'e ertelmarket.com, mesafeli sözleşme/ön bilgilendirme e-postası, KVKK metinleri ve yurt dışı aktarım, TL + KDV dahil fiyat gösterimi, e-Arşiv, İYS.
+5b. **Kart ödemesi için İş Bankası sanal POS (31.10.2026):** kullanıcının PlatinMarket'te İş Bankası sanal POS'u var. Bankaya sorulacak: 'Sanal POS'umu yeni sitem ertelmarket.com'da 3D Pay Hosting (bankanın ödeme sayfası) ile kullanmak istiyorum; mağaza numaram (client id), kullanıcı/şifre ve 3D anahtarım (store key) nedir, site adresimi tanımlar mısınız?' POS PlatinMarket'in anlaşmasıyla açıldıysa kendi üye işyeri bilgileri istenecek. Banka siteyi inceleyebilir → yasal metinler (mesafeli satış, iade, iletişim, KVKK) ÖNCE hazır olmalı. Teknik (Claude): bankanın ödeme sayfası, kart bilgisi siteye hiç gelmez; hash/doğrulama bekçide (gizli anahtar secret); bilgiler gelince birkaç saatlik iş.
 6. Google Cloud › Credentials'a https://ertelmarket.com/__/auth/handler (+www) ekle (Google ile giriş için); Facebook girişi için Meta doğrulaması (ertelendi).
 Claude'un yapacakları:
 7. Blaze günü: sahte harcama denemesi düğmesi, Firebase App Check, hızlı kota bekçisi (5-10 dk'da okuma sayısı, eşik aşılırsa haber + durdurma), gerekirse Cloudflare hız sınırı.
