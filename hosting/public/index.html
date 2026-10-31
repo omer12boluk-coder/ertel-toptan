@@ -5990,9 +5990,14 @@ html.dz2-open .sheet-bg { z-index: 960; }
   .sh-slide.has-fxa .sh-slide-t h1 { font-size: min(56px, calc((100vw - 32px) * .1117)); }
   .sh-slide.has-fxa .sh-slide-t p { font-size: min(20px, calc((100vw - 32px) * .0419)); }
 }
+/* oranlı yerleşimde yazı kutusu konum referansı olmasın (Derinlik kaydırması / cam kutu bulanıklığı öğeleri kutuya hapsediyordu) */
+@media (max-width: 700px) {
+  .sh-slide.has-fxa .sh-slide-t { position: static !important; translate: none !important; transform: none !important; filter: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; contain: none !important; will-change: auto !important; }
+  .sh-slide.has-fxa.ly-glass .sh-slide-t { background: transparent; box-shadow: none; padding: 0; }
+}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'd90bde6cbb';</script>
+<script>window.__BUILD = 'f1941df13a';</script>
 </head>
 <body>
 <div id="root"></div>
