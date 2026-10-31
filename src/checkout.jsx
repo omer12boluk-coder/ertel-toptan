@@ -117,10 +117,11 @@ export function addrErrors(a, p, recip) {
 export const cleanAddr = (a) => { const x = { city: a.city, district: String(a.district || '').trim(), ...(a.dm ? { dm: 1 } : {}), hood: String(a.hood || '').trim(), street: String(a.street ?? '').trim(), no: String(a.no || '').trim(), door: String(a.door || '').trim(), note: String(a.note || '').trim() }; return { ...x, address: joinAddr(x) }; };
 
 // Seçenek kartı (radyo)
-export function Choice({ on, onClick, title, sub, icon }) {
+// soon: seçilemez, "Yakında" etiketi (ör. kart ödemesi hazır olana kadar)
+export function Choice({ on, onClick, title, sub, icon, soon }) {
   return (
-    <button type="button" role="radio" aria-checked={on} className={'seg-card' + (on ? ' on' : '')} onClick={onClick}>
-      <span className="radio" aria-hidden="true" />{icon && <Icon n={icon} s={20} />}<span><b>{title}</b>{sub && <small>{sub}</small>}</span>
+    <button type="button" role="radio" aria-checked={!soon && on} aria-disabled={soon || undefined} disabled={soon} className={'seg-card' + (on && !soon ? ' on' : '') + (soon ? ' is-soon' : '')} onClick={soon ? undefined : onClick}>
+      <span className="radio" aria-hidden="true" />{icon && <Icon n={icon} s={20} />}<span><b>{title}{soon && <span className="soon-tag sm">Yakında</span>}</b>{sub && <small>{sub}</small>}</span>
     </button>
   );
 }
@@ -180,7 +181,9 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   const setI = (k) => (e) => set({ inv: { ...f.inv, [k]: e.target.value } });
   const saved = member?.addresses || [];
   const pays = [O.payHavale !== false && 'havale', O.payCard !== false && 'card', O.payShop !== false && f.method === 'pickup' && 'shop'].filter(Boolean);
-  useEffect(() => { if (!pays.includes(f.pay)) set({ pay: pays[0] || 'havale' }); }, [f.method]);
+  const cardSoon = O.cardSoon !== false; // kart "Yakında": görünür, seçilemez
+  const payable = pays.filter((k) => k !== 'card' || !cardSoon);
+  useEffect(() => { if (!payable.includes(f.pay)) set({ pay: payable[0] || 'havale' }); }, [f.method, cardSoon]);
   const tot = totals(items, 'offer');
   const tried = useRef(false);
   useEffect(() => { if (tried.current) setErr(validate()); }, [f]);
@@ -398,7 +401,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
             <h2><span className="co-n">3</span>Ödeme</h2>
             <div className="seg-cards col" role="radiogroup" aria-label="Ödeme şekli">
               {pays.includes('havale') && <Choice on={f.pay === 'havale'} onClick={() => set({ pay: 'havale' })} title={PAY.havale} sub="Banka bilgileri sipariş sonrası gösterilir" />}
-              {pays.includes('card') && <Choice on={f.pay === 'card'} onClick={() => set({ pay: 'card' })} title={PAY.card} sub="Sipariş onaylanınca güvenli ödeme linki gönderilir" />}
+              {pays.includes('card') && <Choice soon={cardSoon} on={f.pay === 'card'} onClick={() => set({ pay: 'card' })} title={PAY.card} sub={cardSoon ? 'Kartla ödeme çok yakında' : 'Sipariş onaylanınca güvenli ödeme linki gönderilir'} />}
               {pays.includes('shop') && <Choice on={f.pay === 'shop'} onClick={() => set({ pay: 'shop' })} title={PAY.shop} sub="Teslim alırken nakit ya da kartla" />}
             </div>
             <Field label="Sipariş notu" opt><textarea id="co-note" rows="2" placeholder="ör. Faturayı ürünle birlikte gönderin" value={f.note} onChange={(e) => set({ note: e.target.value })} /></Field>

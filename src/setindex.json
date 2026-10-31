@@ -193,9 +193,14 @@
 "Takip sayfası adresi",
 "Kargo firmaları"
 ],
+"sepetlink": [
+"Onaylanmayan link kaç saat açık kalsın",
+"Yeni sepet linki"
+],
 "odeme": [
 "Havale / EFT",
 "Kredi kartı (ödeme linki gönderilir)",
+"Kredi kartı: “Yakında” (seçilemez)",
 "Dükkanda ödeme",
 "Havale / EFT bilgisi"
 ],

@@ -27,6 +27,8 @@ export default {
     // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 17) ctx.waitUntil(preqSweep(env).catch((e) => console.log('preqSweep', e.message)));
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 37) ctx.waitUntil(issueSweep(env).catch((e) => console.log('issueSweep', e.message)));
+    // sepet linki: süresi dolup onaylanmayan (status 'open') linkler 10 dakikada bir silinir (Ayarlar › Sepet linki)
+    if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() % 10 === 4) ctx.waitUntil(lcartSweep(env).catch((e) => console.log('lcartSweep', e.message)));
   },
   async fetch(req, env, ctx) {
     env = safeEnv(env);
@@ -524,6 +526,50 @@ async function notifyCancel(env, id) {
 }
 // Sepet linki onaylanınca (lcart.jsx): sepet herkese açık tek belge olarak okunur, durumu gerçekten 'sent' mi ve
 // yeni mi (30 dk) bakılır → Telegram + e-posta + yönetici push, sepet başına bir kez (KV nl:, tek yazma).
+// Sepet linki yardımcıları (31.10.2026 akşam). Müşterinin adetleri sub.q = { "<ürün id>": adet }; yoksa (adet izni kapalı)
+// yöneticinin listesi aynen; 31.10 öncesi kayıtlar sub.items [{id, qty}].
+function lcItems(c) {
+  const q = c.sub?.q;
+  if (q && typeof q === 'object') return (c.items || []).filter((i) => q[String(i.id)] > 0).map((i) => ({ ...i, qty: q[String(i.id)] }));
+  if (!c.sub?.items) return c.items || [];
+  const byId = new Map((c.items || []).map((i) => [i.id, i]));
+  return c.sub.items.map((x) => byId.get(x.id) && { ...byId.get(x.id), qty: x.qty }).filter(Boolean);
+}
+function waUrl(phone, text) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (d.startsWith('0')) d = '90' + d.slice(1); else if (d.length === 10) d = '90' + d;
+  return `https://wa.me/${d}?text=${encodeURIComponent(text)}`;
+}
+// Telegram'daki tek dokunuşluk WhatsApp mesajı kısa tutulur (link uzunluğu); ürünlerin tamamı müşterinin sipariş sayfasında.
+// Uzun özet (ürün ürün) yönetim panelindeki "WhatsApp'tan özet gönder" düğmesinde (src/lcart.jsx lcSummary).
+function lcWaShort(c, its, id) {
+  const totBy = {}; for (const i of its) totBy[i.cur || 'USD'] = (totBy[i.cur || 'USD'] || 0) + (Number(i.price) || 0) * (Number(i.qty) || 0);
+  const pct = Number(c.vat ?? 20) || 0;
+  const tot = Object.entries(totBy).map(([cu, v]) => money(v, cu)).join(' + ');
+  const inc = Object.entries(totBy).map(([cu, v]) => money(v * (1 + pct / 100), cu)).join(' + ');
+  const s = c.sub || {};
+  const at = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  return [`Merhaba ${s.contact?.name || ''}, ERTEL GSM siparişiniz bize ulaştı ✅`, `Sipariş #${c.no} · Onay: ${at}`, `${its.length} ürün · Toplam: ${tot}${pct ? ` + KDV %${pct} = ${inc}` : ''}`,
+    s.delivery?.method === 'pickup' ? 'Teslimat: Dükkandan teslim' : 'Teslimat: Kargo', '', `Siparişinizin tamamı ve kargo takibi: https://ertelmarket.com/k/${id}`].join('\n');
+}
+// Süresi dolan, onaylanmamış sepet linklerini sil. Sadece 'open' olanlar sorgulanır (az sayıda); exp yoksa oluşturma + 12 saat.
+async function lcartSweep(env) {
+  if (!env.FIREBASE_SA) return 0;
+  const tok = await saToken(env);
+  const r = await fetch(FS.replace(/\/documents\/$/, '/documents') + ':runQuery', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'lcarts' }], where: { fieldFilter: { field: { fieldPath: 'status' }, op: 'EQUAL', value: { stringValue: 'open' } } }, limit: 500 } }) });
+  if (!r.ok) throw new Error('sorgu ' + r.status);
+  const rows = (await r.json().catch(() => [])).filter((x) => x.document);
+  let gone = 0;
+  for (const x of rows) {
+    const f = x.document.fields || {}; const at = fsVal(f.at) || 0; const exp = fsVal(f.exp) || at + 12 * 3600e3;
+    if (Date.now() < exp) continue;
+    const d = await fetch('https://firestore.googleapis.com/v1/' + x.document.name + '?currentDocument.updateTime=' + encodeURIComponent(x.document.updateTime), { method: 'DELETE', headers: { Authorization: 'Bearer ' + tok } }); // bu arada onaylandıysa silinmez
+    if (d.ok) gone++;
+  }
+  if (gone) console.log('lcartSweep: silinen', gone);
+  return gone;
+}
 async function notifyLcart(env, id) {
   if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
   if (await env.KV.get('nl:' + id)) return { ok: true, already: true };
@@ -534,8 +580,7 @@ async function notifyLcart(env, id) {
   if (c.status !== 'sent' || !c.sub) return { ok: false, error: 'onaylanmamış' };
   if (Date.now() - Date.parse(doc.updateTime) > 30 * 60 * 1000) return { ok: false, error: 'eski' };
   await env.KV.put('nl:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
-  const byId = new Map((c.items || []).map((i) => [i.id, i]));
-  const its = (c.sub.items || []).map((x) => byId.get(x.id) && { ...byId.get(x.id), qty: x.qty }).filter(Boolean);
+  const its = lcItems(c);
   const totBy = {}; for (const i of its) totBy[i.cur || 'USD'] = (totBy[i.cur || 'USD'] || 0) + (Number(i.price) || 0) * (Number(i.qty) || 0);
   const tot = Object.entries(totBy).map(([cu, v]) => money(v, cu)).join(' + ');
   const s = c.sub; const a = s.delivery?.addr;
@@ -544,7 +589,8 @@ async function notifyLcart(env, id) {
   const lines = its.map((i) => `• ${i.qty} × ${i.n} (${i.k || ''}) ${money(i.price, i.cur)}`).join('\n');
   const link = 'https://ertelmarket.com/admin/sepetler';
   const who = `${s.contact?.name || ''} · ${s.contact?.phone || ''}`;
-  const text = `🔗 Sepet linki onaylandı #${c.no}${c.name ? ' (' + c.name + ')' : ''}\n${who}\n${its.length} ürün · ${tot}\n${deliv}${pay ? ' · ' + pay : ''}${s.note ? '\nNot: ' + s.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
+  const wa = s.contact?.phone ? waUrl(s.contact.phone, lcWaShort(c, its, id)) : '';
+  const text = `🔗 Sepet linki onaylandı #${c.no}${c.name ? ' (' + c.name + ')' : ''}\n${who}\n${its.length} ürün · ${tot}\n${deliv}${pay ? ' · ' + pay : ''}${s.note ? '\nNot: ' + s.note : ''}\n\n${lines}${wa ? '\n\n💬 Müşteriye WhatsApp özeti (dokunun, Gönder\'e basın):\n' + wa : ''}\n\nPanelde aç: ${link}`;
   await adminPush(env, { title: `🔗 Sepet linki onaylandı #${c.no} · ${tot}`, body: `${s.contact?.name || ''} · ${its.length} ürün · ${deliv}`, url: '/admin/sepetler', tag: 'al-' + id }).catch(() => {});
   return notifySend(env, { subject: `Sepet linki onaylandı #${c.no} · ${s.contact?.name || ''} · ${tot}`, text, link, short: `🔗 Sepet linki onaylandı #${c.no}\n${who}\n${its.length} ürün · ${tot}\n${link}` });
 }

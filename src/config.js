@@ -134,6 +134,8 @@ export const DEFAULT_SETTINGS = {
     pickup: true, // dükkandan teslim al
     payHavale: true, // havale / EFT
     payCard: true, // kredi kartı (ödeme linki gönderilir)
+    cardSoon: true, // kredi kartı "Yakında": görünür ama seçilemez (31.10.2026; Ayarlar > Ödeme seçenekleri'nden tek dokunuşla açılır)
+    lcartHours: 12, // sepet linki: müşteri bu kadar saat içinde onaylamazsa link kapanır ve kayıt silinir (Ayarlar > Sepet linki)
     payShop: true, // dükkanda ödeme (sadece dükkandan teslimde)
     signup: true, // mağazada üye olunabilsin
     // "Çok yakında": sistem hazır ama müşteriye henüz açılmadı (Ayarlar > Online mağaza'dan tek tıkla açılır)

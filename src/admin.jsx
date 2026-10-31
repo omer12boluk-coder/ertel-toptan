@@ -529,6 +529,7 @@ const SECTIONS = [
   ['fiyat', 'Fiyat, KDV ve kur', 'Toptan indirimi, yuvarlama, KDV oranı, elle kur', 'tag', 'satis'],
   ['siparis', 'Sipariş ve üyelik', 'Mağaza açık / kapalı, “çok yakında”, üyelik, Google ile giriş', 'login', 'satis'],
   ['teslimat', 'Teslimat ve kargo', 'Kargo, dükkandan teslim, kargo notu, kargo firmaları', 'truck', 'satis'],
+  ['sepetlink', 'Sepet linki', 'Müşteriye gönderilen sepet linkinin süresi · onaylanmazsa kendiliğinden silinir', 'share', 'satis'],
   ['odeme', 'Ödeme seçenekleri', 'Havale / EFT bilgisi, kredi kartı, dükkanda ödeme', 'card', 'satis'],
   ['bildirim', 'Bildirimler', 'Müşteriye sipariş durumu, yönetici bildirimleri (Telegram, e-posta), sipariş alındı mesajı', 'bell', 'satis'],
   ['anasayfa', 'Bayi ana sayfası', 'Bayilerin giriş yapınca gördüğü sayfa: duyurular, bannerlar', 'home', 'bayi'],
@@ -562,7 +563,8 @@ const SEC_KEYS = {
   dukkan: ['shop.name', 'shop.hours', 'shop.address', 'shop.phone', 'shop.whatsapp', 'shop.pickupNote'],
   siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook'],
   teslimat: ['orders.cargo', 'orders.pickup', 'orders.cargoNote', 'orders.carriers', 'orders.carrierDef'],
-  odeme: ['orders.payHavale', 'orders.payCard', 'orders.payShop', 'shop.payInfo'],
+  odeme: ['orders.payHavale', 'orders.payCard', 'orders.cardSoon', 'orders.payShop', 'shop.payInfo'],
+  sepetlink: ['orders.lcartHours'],
   bildirim: ['orders.push', 'orders.pushTexts', 'orders.doneNote'],
   dokunma: ['shop.touch'], bayiuye: ['access.allowSignup', 'features'],
   kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'], kota: ['quota'],
@@ -861,9 +863,16 @@ export function Settings() {
           <CarrierSettings d={d} set={set} />
         </>}
 
+        {sec === 'sepetlink' && <>
+          <p className="fine">Siparişler › <b>Yeni sepet linki</b> ile hazırladığınız linki müşteri bu süre içinde onaylamazsa link kapanır ve kayıt kendiliğinden silinir (10 dakika içinde). Onaylanan siparişler siz silene kadar durur; müşteri aynı linkten siparişini, adresini ve kargo takibini görür. Yeni süre, bundan sonra oluşturulan linklere uygulanır.</p>
+          <Field label="Onaylanmayan link kaç saat açık kalsın" hint="1 ile 720 saat (30 gün) arası"><input id="s-lch" type="number" min="1" max="720" value={d.orders.lcartHours ?? 12} onChange={(e) => set('orders.lcartHours', Math.max(1, Math.min(720, Math.round(Number(e.target.value)) || 1)))} /></Field>
+          <div className="row-btns">{[6, 12, 24, 48, 72].map((h) => <button key={h} type="button" className={'chip' + ((d.orders.lcartHours ?? 12) === h ? ' on' : '')} onClick={() => set('orders.lcartHours', h)}>{h} saat</button>)}</div>
+        </>}
+
         {sec === 'odeme' && <>
           <Toggle id="s-ohav" label="Havale / EFT" checked={d.orders.payHavale !== false} onChange={(v) => set('orders.payHavale', v)} />
           <Toggle id="s-ocard" label="Kredi kartı (ödeme linki gönderilir)" hint="Siparişi onaylayınca müşteriye ödeme linkini siz gönderirsiniz" checked={d.orders.payCard !== false} onChange={(v) => set('orders.payCard', v)} />
+          {d.orders.payCard !== false && <Toggle id="s-ocsoon" label="Kredi kartı: “Yakında” (seçilemez)" hint="Açıkken kart seçeneği mağaza sepetinde ve sepet linkinde görünür ama seçilemez, yanında “Yakında” yazar. Kart ödemesi hazır olunca bunu kapatın." checked={d.orders.cardSoon !== false} onChange={(v) => set('orders.cardSoon', v)} />}
           <Toggle id="s-oshop" label="Dükkanda ödeme" hint="Sadece dükkandan teslim alırken" checked={d.orders.payShop !== false} onChange={(v) => set('orders.payShop', v)} />
           <Field label="Havale / EFT bilgisi" hint="Sipariş verilince müşterinin sipariş sayfasında görünür. IBAN, alıcı adı vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00'} /></Field>
         </>}

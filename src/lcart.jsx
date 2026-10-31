@@ -1,42 +1,63 @@
 // Sepet linki (30.10.2026)
 // Müşteri WhatsApp'tan ürün atar → yönetici /admin/sepet-link'te (sipariş formuyla aynı ekran) sepeti hazırlar, fiyatları yazar,
-// "Sepet linki oluştur" → lcarts/{id} kaydı + link /magaza/k/<id>. Müşteri linki açar: ürünleri kontrol eder (adet değiştirir /
-// çıkarır, ekleyemez, fiyata dokunamaz), adını, telefonunu, teslimat ve ödeme seçimini girip onaylar → kayıt 'sent' olur ve
-// yönetimde aynı sayfanın altındaki "Linkle gelen sepetler"e düşer. Her açılış SIFIRDAN başlar (cihazda hiçbir şey saklanmaz).
-// Kural (firestore.rules): linki bilen tek belgeyi okur; müşteri sadece açık sepeti bir kez onaylar.
+// "Sepet linki oluştur" → lcarts/{id} kaydı + link /magaza/k/<id>. Müşteri linki açar: ürünleri kontrol eder, adını,
+// telefonunu, teslimat ve ödeme seçimini girip onaylar → kayıt 'sent' olur ve yönetimde "Linkle gelen siparişler"e düşer.
+// 31.10.2026 akşam (kullanıcı isteği):
+//  - Adet izni LİNK BAŞINA (`edit`, varsayılan KAPALI): kapalıyken müşteri hiçbir şeyi değiştiremez, sadece görür + onaylar
+//    (`sub` içinde ürün yok → finalItems orijinal listeyi kullanır). Açıkken sadece − / + (Stepper lock, 1–999) ve çıkarma;
+//    ekleyemez, fiyata dokunamaz. Müşterinin adetleri `sub.q` = { "<ürün id>": adet } (harita → aynı ürün iki kez yazılamaz).
+//  - Süre: `exp` (ms) = oluşturma + Ayarlar › Sepet linki saat (orders.lcartHours, varsayılan 12). Süre dolunca kurallar
+//    okumayı/onayı kapatır, bekçi (worker lcartSweep, 10 dakikada bir) açık kalan kaydı SİLER. Onaylanan kayıt siz silene kadar durur.
+//  - Onaylanınca: yöneticiye giden Telegram/e-postada müşteriye "tek dokunuşla WhatsApp özeti" linki; sipariş sayfasında
+//    "WhatsApp'tan özet gönder" + özet resmi (paylaş / indir). Gönderim zamanı `waAt`.
+// Kural (firestore.rules): linki bilen tek belgeyi okur; müşteri sadece açık + süresi dolmamış sepeti bir kez onaylar.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, toast, store, go, openLcart } from './store.js';
-import { PageHead, Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
-import { fmt, totals, fmtTotals, when, ls } from './utils.js';
+import { PageHead, Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText, Toggle } from './ui.jsx';
+import { fmt, totals, fmtTotals, when, ls, vatOf } from './utils.js';
 import { pingWatch } from './push.js';
 import { CargoCard, OrdersSwitch, OlderBtn, OrderThumbs, ago2, fullDate, useDateRange, RangeSheet, rangeLabel } from './orders.jsx';
 import { PAY, DELIVERY } from './config.js';
 import { waLink } from './route.js';
-import { useRate, toTL, fmtTL } from './listsheet.jsx';
+import { useRate, toTL, fmtTL, ExportBar } from './listsheet.jsx';
 import { AddressFields, addrErrors, cleanAddr, Choice, addrLine } from './checkout.jsx';
 
 const strip = (o) => JSON.parse(JSON.stringify(o, (k, v) => (v === undefined ? undefined : v)));
 export const lcartLink = (id) => `${location.origin}/k/${id}`;
 const withOffer = (items) => items.map((it) => ({ ...it, offer: it.price }));
+export const LC_MAX_EDIT = 40; // adet izni en çok bu kadar ürünlü sepette (kural tek tek kontrol ediyor)
+export const LC_MAX_QTY = 999;
+const lcHours = (S) => Math.max(1, Math.min(720, Number(S?.orders?.lcartHours) || 12));
+export const lcExp = (c) => (c.exp ? c.exp : (c.at || 0) + 12 * 3600e3); // eski kayıtlar: oluşturma + 12 saat
+export const lcExpired = (c) => c.status === 'open' && Date.now() >= lcExp(c);
+const hm = (t) => new Date(t).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+const left = (t) => { const m = Math.max(0, Math.round((t - Date.now()) / 60000)); return m >= 120 ? Math.round(m / 60) + ' saat' : m >= 60 ? '1 saat ' + (m - 60) + ' dk' : m + ' dk'; };
 
 // ============================================================================================
 // Yönetim: formun altındaki "Sepet linki oluştur" bölümü
 export function LinkMake({ no, name, items, total, rate, onDone }) {
-  const [made, setMade] = useState(null); // { id, link, sig }
+  const S = useStore((s) => s.settings);
+  const [made, setMade] = useState(null); // { id, link, sig, exp }
   const [busy, setBusy] = useState(false);
-  const sig = JSON.stringify(items.map((it) => [it.id, it.qty, it.offer]));
+  const [edit, setEdit] = useState(false); // müşteri adetleri değiştirebilsin mi (her yeni linkte KAPALI başlar)
+  const canEdit = items.length <= LC_MAX_EDIT;
+  const sig = JSON.stringify([edit && canEdit, items.map((it) => [it.id, it.qty, it.offer])]);
   const missing = items.filter((it) => it.offer == null || it.offer === '' || !(Number(it.offer) > 0)).length;
   async function make() {
     if (missing) return toast(`${missing} ürünün fiyatı boş`, 'warn');
     setBusy(true);
     try {
       const A = api(); const id = A.newLcartId();
+      const at = Date.now(); const hours = lcHours(S);
+      const P = S.pricing || {};
       const data = strip({
-        no, name: (name || '').trim(), status: 'open', at: Date.now(), rate: rate?.usd || null, total,
-        items: items.map((it) => ({ id: it.id, k: it.k || '', n: it.n, cur: it.cur || 'USD', qty: Number(it.qty) || 1, price: Number(it.offer), list: it.list ?? null, pi: it.pi, img: it.img && it.img !== 'fs' ? it.img : undefined })),
+        no, name: (name || '').trim(), status: 'open', at, exp: at + hours * 3600e3, hours, rate: rate?.usd || null, total,
+        edit: !!(edit && canEdit), ids: items.map((it) => String(it.id)),
+        vat: P.showVat === false ? 0 : Number(P.vatPct ?? 20), // müşterinin gördüğü KDV oranı (özet bununla yazılır)
+        items: items.map((it) => ({ id: it.id, k: it.k || '', n: it.n, cur: it.cur || 'USD', qty: Math.max(1, Math.round(Number(it.qty) || 1)), price: Number(it.offer), list: it.list ?? null, pi: it.pi, img: it.img && it.img !== 'fs' ? it.img : undefined })),
       });
       await A.createLcart(id, data);
-      setMade({ id, link: lcartLink(id), sig });
+      setMade({ id, link: lcartLink(id), sig, exp: data.exp });
       toast('Sepet linki hazır');
     } catch (e) { toast('Oluşturulamadı: ' + e.message, 'bad'); }
     setBusy(false);
@@ -51,12 +72,17 @@ export function LinkMake({ no, name, items, total, rate, onDone }) {
       {!made || stale ? (
         <>
           {stale && <p className="fine lc-stale">Sepeti değiştirdiniz. Önceki link eski hâliyle duruyor; yeni hâli için yeniden oluşturun.</p>}
+          <div className="lc-edit-t">
+            <Toggle id="lc-edit" label="Müşteri adetleri değiştirebilsin" hint={canEdit ? (edit ? 'Müşteri sadece − / + ile adet değiştirip ürün çıkarabilir. Ürün ekleyemez, fiyat değişmez.' : 'Kapalı: müşteri hiçbir şeyi değiştiremez, sadece kontrol edip onaylar.') : `${LC_MAX_EDIT} üründen fazla sepette açılamaz.`} checked={edit && canEdit} onChange={(v) => setEdit(v && canEdit)} />
+          </div>
+          <p className="fine lc-dur"><Icon n="clock" s={14} /> Link {lcHours(S)} saat açık kalır; müşteri onaylamazsa kendiliğinden silinir (Ayarlar › Sepet linki).</p>
           <button className="btn primary lc-make-btn" disabled={busy || !items.length} onClick={make}><Icon n="send" s={16} />{busy ? 'Hazırlanıyor…' : 'Sepet linki oluştur'}</button>
           {missing > 0 && <p className="fine lc-warn">{missing} ürünün fiyatı boş; önce fiyat yazın.</p>}
         </>
       ) : (
         <div className="lc-made">
           <div className="lc-url"><code>{made.link}</code></div>
+          <p className="fine lc-dur"><Icon n="clock" s={14} /> {hm(made.exp)}’e kadar açık{edit && canEdit ? ' · müşteri adetleri değiştirebilir' : ' · müşteri hiçbir şeyi değiştiremez'}</p>
           <div className="row-btns">
             <a className="btn sm wa" href={waLink('', `Sepetiniz hazır, buradan kontrol edip onaylayabilirsiniz:\n${made.link}`)} target="_blank" rel="noopener"><Icon n="wa" s={15} />WhatsApp’ta gönder</a>
             <button className="btn sm outline" onClick={() => copyText(made.link, 'Link kopyalandı')}><Icon n="copy" s={15} />Linki kopyala</button>
@@ -75,9 +101,35 @@ const ST = { sent: ['Onaylandı', 'var(--c-confirmed, #c9772b)'], open: ['Müşt
 const subTime = (c) => (c.subAt?.toMillis ? c.subAt.toMillis() : typeof c.subAt === 'number' ? c.subAt : null);
 // müşterinin onayladığı ürünler (adet değiştirmiş / çıkarmış olabilir); fiyat her zaman yöneticinin yazdığı
 export function finalItems(c) {
-  if (!c.sub?.items) return withOffer(c.items || []);
+  const q = c.sub?.q;
+  if (q && typeof q === 'object') return (c.items || []).filter((it) => q[String(it.id)] > 0).map((it) => ({ ...it, qty: q[String(it.id)], offer: it.price }));
+  if (!c.sub?.items) return withOffer(c.items || []); // adet izni kapalı ya da henüz onaylanmadı: yöneticinin listesi aynen
   const byId = new Map((c.items || []).map((it) => [it.id, it]));
-  return c.sub.items.map(({ id, qty }) => byId.get(id) && { ...byId.get(id), qty, offer: byId.get(id).price }).filter(Boolean);
+  return c.sub.items.map(({ id, qty }) => byId.get(id) && { ...byId.get(id), qty, offer: byId.get(id).price }).filter(Boolean); // 31.10 öncesi kayıtlar
+}
+
+// Müşteriye WhatsApp özeti (yönetici kendi WhatsApp'ından tek dokunuşla gönderir). Bekçideki (worker lcSummary) ile aynı metin.
+export function lcSummary(c, S) {
+  const its = finalItems(c); const s = c.sub || {};
+  const tot = totals(its, 'offer');
+  const pct = c.vat ?? (S?.pricing?.showVat === false ? 0 : (S?.pricing?.vatPct ?? 20));
+  const v = vatOf(tot, pct);
+  const ts = subTime(c) || c.at;
+  const a = s.delivery?.addr;
+  const shop = S?.brand?.appName || 'ERTEL GSM';
+  return [
+    `Merhaba ${s.contact?.name || ''}, ${shop} siparişiniz bize ulaştı ✅`,
+    `Sipariş #${c.no} · Onay: ${when(ts)}`,
+    '',
+    ...its.map((it) => `• ${it.qty} × ${it.n}${it.k ? ' (' + it.k + ')' : ''} — ${fmt(it.price * it.qty, it.cur)}`),
+    '',
+    `Toplam: ${fmtTotals(tot)}` + (v.pct ? ` + KDV %${v.pct} = ${fmtTotals(v.inc)}` : ''),
+    s.delivery?.method === 'pickup' ? `Teslimat: ${DELIVERY.pickup}` : `Teslimat: ${DELIVERY.cargo}${a ? ' — ' + addrLine(a) : ''}`,
+    s.pay ? `Ödeme: ${PAY[s.pay] || s.pay}` : null,
+    s.note ? `Notunuz: ${s.note}` : null,
+    '',
+    `Siparişinizin kaydı ve kargo takibi: ${lcartLink(c.id)}`,
+  ].filter((x) => x !== null).join('\n');
 }
 // Yönetim: /admin/sepetler — linkle gelen sepetler ayrı sayfa (Siparişler sekmesinin üstündeki geçişten)
 export function LinkCartsPage() { return <LinkCarts page />; }
@@ -172,7 +224,7 @@ export function LinkCarts({ page = false }) {
                     <span className="or-no">{isNew ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{c.no}</b></span>
                     <span className="or-who"><b>{who}</b><small>{c.sub?.contact?.phone || (c.name && c.sub ? c.name : '')}</small></span>
                     <span className="or-thd"><OrderThumbs o={o} /></span>
-                    <span className="or-tags">{c.sub?.pay && <span className="or-pay">{PAY_SHORT[c.sub.pay] || PAY[c.sub.pay] || c.sub.pay}</span>}{deliv}{!c.sub && <span className="muted">Müşteri bekleniyor</span>}</span>
+                    <span className="or-tags">{c.sub?.pay && <span className="or-pay">{PAY_SHORT[c.sub.pay] || PAY[c.sub.pay] || c.sub.pay}</span>}{deliv}{!c.sub && <span className="muted">{lcExpired(c) ? 'Süresi doldu' : 'Bekleniyor · ' + left(lcExp(c))}</span>}</span>
                     <span className="or-sum">{tl != null ? <><b className="num">{fmtTL(tl)}</b><small className="num">{fmtTotals(tot)} · {its.length} ürün</small></> : <><b className="num">{fmtTotals(tot)}</b><small>{its.length} ürün</small></>}</span>
                     <span className="or-date"><span>{fullDate(ts)}</span><small className="or-ago">{ago2(ts)}</small></span>
                     <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{who}</b><span className="num or-mob-s">{tl != null ? fmtTL(tl) : fmtTotals(tot)} <small>· {ago2(ts)}</small></span></span></span>
@@ -207,7 +259,12 @@ function LinkCartAdmin({ c, onBack }) {
   const its = finalItems(c);
   const tot = totals(its, 'offer');
   const s = c.sub;
-  const changed = s && ((c.items || []).length !== s.items.length || s.items.some((x) => (c.items || []).find((it) => it.id === x.id)?.qty !== x.qty));
+  const changed = s && ((c.items || []).length !== its.length || its.some((x) => (c.items || []).find((it) => it.id === x.id)?.qty !== x.qty));
+  const S = useStore((st) => st.settings);
+  const live = useRate();
+  const rate = c.rate ? { usd: c.rate } : live;
+  const summary = s ? lcSummary(c, S) : '';
+  const sendWa = () => { if (!c.waAt) api().updateLcart(c.id, { waAt: Date.now() }).catch(() => {}); };
   const a = s?.delivery?.addr;
   const addrText = a ? [s.contact?.name, s.contact?.phone, addrLine(a)].filter(Boolean).join('\n') : '';
   const link = lcartLink(c.id);
@@ -218,7 +275,7 @@ function LinkCartAdmin({ c, onBack }) {
     <div className="page order-page admin-order lc-adm">
       <div className="send-bar">
         <button className="btn sm ghost oa-back" onClick={onBack} aria-label="Linkle gelen siparişler"><Icon n="back" s={16} /><span>Siparişler</span></button>
-        <div className="send-t"><b>Sipariş #{c.no}</b><span className="muted">{c.status === 'open' ? 'Müşteri henüz onaylamadı · ' + when(c.at) : 'Onay: ' + when(subTime(c) || c.at)} · {its.length} ürün · {fmtTotals(tot)}</span>
+        <div className="send-t"><b>Sipariş #{c.no}</b><span className="muted">{c.status === 'open' ? (lcExpired(c) ? 'Süresi doldu · birazdan silinir' : 'Müşteri henüz onaylamadı · ' + left(lcExp(c)) + ' kaldı') : 'Onay: ' + when(subTime(c) || c.at)} · {its.length} ürün · {fmtTotals(tot)}</span>
           <span className="oa-who"><span className="oa-who-g">{who}{c.name && s?.contact?.name && c.name !== s.contact.name ? ' · ' + c.name : ''}</span></span></div>
         <span className="lc-st-pill" style={{ '--t': stl[1] }}>{stl[0]}</span>
         <button className="icon-btn oa-del" onClick={() => setDel(true)} aria-label="Siparişi sil" title="Siparişi sil"><Icon n="trash" s={17} /></button>
@@ -239,7 +296,24 @@ function LinkCartAdmin({ c, onBack }) {
           {s.note && <div className="o-card lc-note"><h3>Not</h3><p>{s.note}</p></div>}
         </div>
       ) : (
-        <div className="banner"><Icon n="clock" /><div><b>Müşteri henüz onaylamadı.</b> Linki gönderdiyseniz onaylayınca burada adres ve iletişim bilgisi görünür.</div></div>
+        <div className="banner"><Icon n="clock" /><div>{lcExpired(c)
+          ? <><b>Linkin süresi doldu.</b> Müşteri onaylamadı; kayıt birkaç dakika içinde kendiliğinden silinir. Gerekirse yeni link oluşturun.</>
+          : <><b>Müşteri henüz onaylamadı.</b> Link {hm(lcExp(c))}’e kadar açık ({left(lcExp(c))} kaldı); onaylanmazsa kendiliğinden silinir. Onaylayınca burada adres ve iletişim bilgisi görünür.</>}
+          <br /><small className="muted">{c.edit ? 'Müşteri adetleri − / + ile değiştirebilir.' : 'Müşteri hiçbir şeyi değiştiremez, sadece onaylar.'}</small></div></div>
+      )}
+
+      {s && (
+        <div className="lc-st-box lc-wa">
+          <h3>Müşteriye özet {c.waAt ? <span className="muted lc-wa-ok"><Icon n="check" s={14} /> {when(c.waAt)} gönderildi</span> : null}</h3>
+          <p className="fine">Onayladığı siparişin özeti müşterinin yazdığı numaraya ({s.contact?.phone}) sizin WhatsApp’ınızdan gider; iki tarafta da kalıcı kayıt olur. Mesajda müşterinin sipariş sayfasının linki de var.</p>
+          <div className="row-btns">
+            <a className="btn wa" href={waLink(s.contact?.phone, summary)} target="_blank" rel="noopener" onClick={sendWa}><Icon n="wa" s={16} />WhatsApp’tan özet gönder</a>
+            <button className="btn sm ghost" onClick={() => copyText(summary, 'Özet kopyalandı')}><Icon n="copy" s={15} />Metni kopyala</button>
+          </div>
+          <details className="lc-wa-more"><summary>Özet resmi (paylaş / indir)</summary>
+            <ExportBar r={{ no: c.no, status: 'sent', createdAt: subTime(c) || c.at, gname: s.contact?.name }} items={its} rate={rate} shareText={summary} />
+          </details>
+        </div>
       )}
 
       {s && s.delivery?.method !== 'pickup' && <CargoCard col="lcarts" o={{ id: c.id, no: c.no, dhl: c.dhl, cargo: c.cargo, status: c.cargo?.delivered ? 'done' : c.cargo?.code ? 'shipped' : 'preparing', delivery: s.delivery, contact: s.contact }} />}
@@ -299,8 +373,11 @@ export function LinkCartPage({ id }) {
   const O = S.orders || {};
   const methods = [O.cargo !== false && 'cargo', O.pickup !== false && 'pickup'].filter(Boolean);
   const pays = [O.payHavale !== false && 'havale', O.payCard !== false && 'card', O.payShop !== false && f.method === 'pickup' && 'shop'].filter(Boolean);
+  const cardSoon = O.cardSoon !== false; // kart "Yakında": görünür, seçilemez
+  const payable = pays.filter((k) => k !== 'card' || !cardSoon);
   useEffect(() => { if (methods.length && !methods.includes(f.method)) setF((x) => ({ ...x, method: methods[0] })); }, [methods.join()]);
-  useEffect(() => { if (f.pay && !pays.includes(f.pay)) setF((x) => ({ ...x, pay: '' })); }, [pays.join()]);
+  useEffect(() => { if (f.pay && !payable.includes(f.pay)) setF((x) => ({ ...x, pay: '' })); }, [payable.join()]);
+  const canEdit = !!c?.edit; // yönetici bu linkte adet değişikliğine izin verdi mi
   const set = (p) => setF((x) => ({ ...x, ...p }));
   const items = useMemo(() => (c?.items || []).filter((it) => qty[it.id] > 0).map((it) => ({ ...it, qty: qty[it.id], offer: it.price })), [c, qty]);
   const tot = totals(items, 'offer');
@@ -308,8 +385,9 @@ export function LinkCartPage({ id }) {
   const tTL = rate ? toTL(tot, rate) : null;
 
   if (c === undefined) return <div className="page narrow lc-page"><div className="list-wait"><div className="spinner" /></div></div>;
-  if (c === null) return <div className="page narrow lc-page"><Empty icon="cart" title="Sepet bulunamadı">Link hatalı ya da sepet kaldırılmış olabilir. Lütfen bize WhatsApp’tan yazın.</Empty></div>;
+  if (c === null) return <div className="page narrow lc-page"><Empty icon="cart" title="Sepet bulunamadı">Linkin süresi dolmuş, link hatalı ya da sepet kaldırılmış olabilir. Lütfen bize WhatsApp’tan yazın; yeni link gönderelim.</Empty></div>;
   if (done || c.status !== 'open') return <LinkCartStatus c={c} justDone={done} S={S} byId={byId} />;
+  if (lcExpired(c)) return <div className="page narrow lc-page"><Empty icon="clock" title="Linkin süresi doldu">Bu sepet onaylanmadığı için kapandı. Lütfen bize WhatsApp’tan yazın; yeni link gönderelim.</Empty></div>;
 
   async function submit() {
     const e = {};
@@ -317,13 +395,15 @@ export function LinkCartPage({ id }) {
     if (f.name.trim().length < 3) e.name = 'Adınızı soyadınızı yazın';
     if (phoneDigits(f.phone).length !== 11) e.phone = 'Telefonunuzu yazın (0 5xx xxx xx xx)';
     if (f.method === 'cargo') Object.assign(e, addrErrors(f.addr, 'addr'));
-    if (pays.length && !f.pay) e.pay = 'Ödeme şeklini seçin';
+    if (payable.length && !payable.includes(f.pay)) e.pay = 'Ödeme şeklini seçin';
+    if (lcExpired(c)) { toast('Linkin süresi doldu; bize WhatsApp’tan yazın', 'bad'); return; }
     setErr(e);
     if (Object.keys(e).length) { toast('Eksik bilgileri tamamlayın', 'warn'); setTimeout(() => document.querySelector('.lc-page .field-err, .lc-page .error, .lc-page [aria-invalid="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50); return; }
     setBusy(true);
     try {
       const sub = strip({
-        items: items.map((it) => ({ id: it.id, qty: it.qty })),
+        // adet izni yoksa ürün hiç gönderilmez (kayıttaki liste aynen geçerli); varsa sadece { ürün: adet }
+        q: canEdit ? Object.fromEntries(items.map((it) => [String(it.id), Math.min(LC_MAX_QTY, Math.max(1, Math.round(it.qty)))])) : undefined,
         contact: { name: f.name.trim(), phone: f.phone },
         delivery: f.method === 'cargo' ? { method: 'cargo', addr: cleanAddr(f.addr) } : { method: 'pickup' },
         pay: f.pay || undefined,
@@ -336,7 +416,7 @@ export function LinkCartPage({ id }) {
       setDone(true); window.scrollTo({ top: 0, behavior: 'smooth' });
       api().getLcart(c.id).then((x) => x && setC(x)).catch(() => {});
     } catch (x) {
-      toast(/permission|insufficient/i.test(x.message) ? 'Bu sepet artık açık değil' : 'Gönderilemedi: ' + x.message, 'bad');
+      toast(/permission|insufficient/i.test(x.message) ? 'Bu sepet artık açık değil ya da süresi doldu' : 'Gönderilemedi: ' + x.message, 'bad');
     }
     setBusy(false);
   }
@@ -345,7 +425,8 @@ export function LinkCartPage({ id }) {
     <div className="page lc-page">
       <div className="lc-head">
         <h1 className="page-t">Sepetiniz hazır <span className="muted num">#{c.no}</span></h1>
-        <p className="muted">Ürünleri kontrol edin, bilgilerinizi yazıp onaylayın. Adetleri değiştirebilir, istemediğiniz ürünü çıkarabilirsiniz.</p>
+        <p className="muted">Ürünleri kontrol edin, bilgilerinizi yazıp onaylayın.{canEdit ? ' Adetleri − / + ile değiştirebilir, istemediğiniz ürünü çıkarabilirsiniz.' : ''}</p>
+        <p className="fine lc-dur"><Icon n="clock" s={14} /> Bu link {hm(lcExp(c))}’e kadar açık ({left(lcExp(c))} kaldı).</p>
       </div>
       <div className="lc-grid">
         <section className="co-sec lc-cart">
@@ -356,7 +437,9 @@ export function LinkCartPage({ id }) {
                 <li key={it.id}>
                   <Thumb p={byId.get(it.id) || it} size="sm" />
                   <span className="lc-n"><b>{it.n}</b><span className="muted num">{fmt(it.price, it.cur)} / adet</span></span>
-                  <Stepper small min={1} value={it.qty} onChange={(v) => setQty((q) => ({ ...q, [it.id]: v }))} onRemove={() => setQty((q) => ({ ...q, [it.id]: 0 }))} />
+                  {canEdit
+                    ? <Stepper small lock min={1} max={LC_MAX_QTY} value={it.qty} onChange={(v) => setQty((q) => ({ ...q, [it.id]: Math.min(LC_MAX_QTY, Math.max(1, v)) }))} onRemove={items.length > 1 ? () => setQty((q) => ({ ...q, [it.id]: 0 })) : undefined} />
+                    : <span className="lc-q num">{it.qty} adet</span>}
                   <b className="lc-sum num">{fmt(it.price * it.qty, it.cur)}</b>
                 </li>
               ))}
@@ -388,7 +471,7 @@ export function LinkCartPage({ id }) {
             <section className="co-sec">
               <h2><span className="co-n">3</span>Ödeme</h2>
               <div className="seg-cards" role="radiogroup" aria-label="Ödeme şekli">
-                {pays.map((k) => <Choice key={k} on={f.pay === k} onClick={() => set({ pay: k })} title={PAY[k]} sub={k === 'havale' ? 'Banka bilgilerini size ileteceğiz' : k === 'card' ? 'Size güvenli ödeme linki göndereceğiz' : 'Teslim alırken nakit ya da kartla'} />)}
+                {pays.map((k) => <Choice key={k} soon={k === 'card' && cardSoon} on={f.pay === k} onClick={() => set({ pay: k })} title={PAY[k]} sub={k === 'havale' ? 'Banka bilgilerini size ileteceğiz' : k === 'card' ? (cardSoon ? 'Kartla ödeme çok yakında' : 'Size güvenli ödeme linki göndereceğiz') : 'Teslim alırken nakit ya da kartla'} />)}
               </div>
               {err.pay && <p className="field-err">{err.pay}</p>}
             </section>

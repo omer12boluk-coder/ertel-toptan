@@ -98,14 +98,27 @@ service cloud.firestore {
     // Sipariş formu: kaydedilen formlar (sadece yönetici)
     match /oforms/{id} { allow read, write: if isAdmin(); }
     // Sepet linki (30.10.2026, lcart.jsx): yönetici hazırlar; linki bilen (kimlik tahmin edilemez) tek belgeyi okur, listeleyemez.
-    // Müşteri sadece AÇIK sepeti bir kez onaylar: status open → sent + sub; ürünlere / fiyatlara dokunamaz.
+    // 31.10.2026 akşam: süre (exp, ms) dolunca AÇIK sepet okunamaz ve onaylanamaz (bekçi 10 dk'da bir siler). Onaylanan herkese
+    // (linki bilene) açık kalır. Müşteri sadece AÇIK sepeti bir kez onaylar: status open → sent + sub; ürünlere / fiyatlara dokunamaz.
+    // Adetler sadece yönetici linkte izin verdiyse (edit == true): sub.q = { "<ürün id>": 1–999 tam sayı }, sadece sepetteki ürünler.
+    function lcLive(c) { return c.status != 'open' || !('exp' in c) || request.time.toMillis() < c.exp; }
+    function lcQ(v, i) { return v.size() <= i || (v[i] is int && v[i] >= 1 && v[i] <= 999); }
+    function lcQs(v) { return v.size() >= 1 && v.size() <= 40 && lcQ(v, 0) && lcQ(v, 1) && lcQ(v, 2) && lcQ(v, 3) && lcQ(v, 4) && lcQ(v, 5) && lcQ(v, 6) && lcQ(v, 7) && lcQ(v, 8) && lcQ(v, 9) && lcQ(v, 10) && lcQ(v, 11) && lcQ(v, 12) && lcQ(v, 13) && lcQ(v, 14) && lcQ(v, 15) && lcQ(v, 16) && lcQ(v, 17) && lcQ(v, 18) && lcQ(v, 19) && lcQ(v, 20) && lcQ(v, 21) && lcQ(v, 22) && lcQ(v, 23) && lcQ(v, 24) && lcQ(v, 25) && lcQ(v, 26) && lcQ(v, 27) && lcQ(v, 28) && lcQ(v, 29) && lcQ(v, 30) && lcQ(v, 31) && lcQ(v, 32) && lcQ(v, 33) && lcQ(v, 34) && lcQ(v, 35) && lcQ(v, 36) && lcQ(v, 37) && lcQ(v, 38) && lcQ(v, 39); }
+    function lcStr(m, k, n) { return !(k in m) || (m[k] is string && m[k].size() <= n); }
+    function lcSub(s, c) {
+      return s is map && s.keys().hasOnly(['q', 'contact', 'delivery', 'pay', 'note'])
+        && (!('q' in s) || (c.get('edit', false) == true && s.q is map && s.q.keys().hasOnly(c.ids) && lcQs(s.q.values())))
+        && s.contact is map && s.contact.keys().hasOnly(['name', 'phone']) && lcStr(s.contact, 'name', 80) && lcStr(s.contact, 'phone', 24)
+        && s.delivery is map && s.delivery.keys().hasOnly(['method', 'addr']) && (s.delivery.method == 'cargo' || s.delivery.method == 'pickup')
+        && (!('addr' in s.delivery) || (s.delivery.addr is map && s.delivery.addr.size() <= 20))
+        && lcStr(s, 'pay', 12) && lcStr(s, 'note', 500);
+    }
     match /lcarts/{id} {
-      allow get: if true;
+      allow get: if lcLive(resource.data) || isAdmin();
       allow list, create, delete: if isAdmin();
-      allow update: if isAdmin() || (resource.data.status == 'open' && request.resource.data.status == 'sent'
+      allow update: if isAdmin() || (resource.data.status == 'open' && lcLive(resource.data) && request.resource.data.status == 'sent'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'sub', 'subAt'])
-        && request.resource.data.sub is map && request.resource.data.sub.keys().hasOnly(['items', 'contact', 'delivery', 'pay', 'note'])
-        && request.resource.data.sub.items is list && request.resource.data.sub.items.size() <= resource.data.items.size()
+        && lcSub(request.resource.data.sub, resource.data)
         && request.resource.data.subAt == request.time);
     }
     match /stats/{d} { allow read: if true; allow write: if isAdmin(); }

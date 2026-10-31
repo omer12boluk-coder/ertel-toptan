@@ -259,8 +259,8 @@ export class DemoBackend {
   newLcartId() { return 'k' + rid() + rid() + rid(); }
   async createLcart(id, data) { this.lc_()[id] = data; this.persist(); }
   watchLcarts(cb, since = 0) { return this.sub(() => cb(Object.entries(this.lc_()).map(([id, x]) => ({ id, ...JSON.parse(JSON.stringify(x)) })).filter((x) => !since || (x.at || 0) >= since).sort((a, b) => b.at - a.at))); }
-  async getLcart(id) { const x = this.lc_()[id]; return x ? { id, ...JSON.parse(JSON.stringify(x)) } : null; }
-  async submitLcart(id, sub) { const x = this.lc_()[id]; if (!x || x.status !== 'open') throw new Error('Bu sepet artık açık değil'); Object.assign(x, { status: 'sent', sub, subAt: now() }); this.persist(); }
+  async getLcart(id) { const x = this.lc_()[id]; return x && !(x.status === 'open' && x.exp && now() >= x.exp) ? { id, ...JSON.parse(JSON.stringify(x)) } : null; }
+  async submitLcart(id, sub) { const x = this.lc_()[id]; if (!x || x.status !== 'open' || (x.exp && now() >= x.exp)) throw new Error('permission: Bu sepet artık açık değil'); Object.assign(x, { status: 'sent', sub, subAt: now() }); this.persist(); }
   async updateLcart(id, patch) { Object.assign(this.lc_()[id], patch); this.persist(); }
   async deleteLcart(id) { delete this.lc_()[id]; this.persist(); }
   async deleteLcarts(ids) { for (const id of ids) delete this.lc_()[id]; this.persist(); }

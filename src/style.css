@@ -1060,6 +1060,9 @@ a.btn { text-decoration: none; }
 .seg-card > span:last-child, .addr-card > span:first-of-type:not(.radio), .addr-card > span:nth-child(2) { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .seg-card small, .addr-card small { color: var(--muted); font-size: 13px; line-height: 1.35; }
 .seg-card > .ic { color: var(--accent); flex: none; margin-top: 1px; }
+.seg-card.is-soon { cursor: not-allowed; opacity: .62; border-style: dashed; }
+.seg-card.is-soon:hover { border-color: var(--line); }
+.seg-card.is-soon b { display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
 .radio { flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); transition: border .15s; }
 .on > .radio { border: 6px solid var(--accent); }
 .addr-cards { display: grid; gap: 10px; }
@@ -5497,3 +5500,15 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
   .set-top-ic { width: 38px; height: 38px; }
   .set-row { padding: 13px 14px; }
 }
+
+/* Sepet linki: adet izni, süre, WhatsApp özeti (31.10.2026 akşam) */
+.lc-edit-t { margin: 4px 0 2px; }
+.lc-dur { display: flex; align-items: center; gap: 6px; color: var(--muted); margin: 6px 0 10px; }
+.lc-dur .ic, .lc-dur svg { flex: none; }
+.lc-items .lc-q { white-space: nowrap; }
+.lc-wa h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lc-wa-ok { display: inline-flex; align-items: center; gap: 4px; font: 500 13px/1.2 var(--f-body); color: var(--c-done, #1f6b47); }
+.lc-wa .row-btns { margin: 10px 0 4px; }
+.lc-wa-more { margin-top: 10px; }
+.lc-wa-more > summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 6px 0; }
+.lc-wa-more .export-bar { margin-top: 8px; }
