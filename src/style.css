@@ -3178,7 +3178,6 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 @media (hover: none) and (max-width: 960px) { .orow:hover, .orows > li:nth-child(even) .orow:hover { background: var(--surface); } }
 /* sipariş açıkken alt menü aşağı kayıp gizlenir, listeye dönünce yaylanarak geri gelir */
 .botnav { transition: transform .38s cubic-bezier(.2, .9, .3, 1.1); }
-html.od-open .botnav { transform: translateY(115%); transition: transform .26s ease-in; }
 
 /* ---- 27.10.2026 (5) ---- */
 /* menüde renkli durum noktası; seçili durum o renkte yazı */
@@ -5450,3 +5449,7 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 @media (hover: none) and (pointer: coarse) {
   .nc-scrim { display: block; position: fixed; inset: 0; z-index: 79; background: rgb(8 16 13 / .18); touch-action: none; animation: fade .15s ease; -webkit-tap-highlight-color: transparent; }
 }
+
+/* Ürünler: arama satırı yapışınca üstündeki boşluk daralmasın (31.10.2026) — dururken ve yapışıkken aynı boşluk */
+.cat-main > .toolbar:first-child { padding-top: 14px; margin-top: -14px; }
+@media (min-width: 900px) { .cat-main > .toolbar:first-child { padding-top: 22px; margin-top: -22px; } }

@@ -93,7 +93,9 @@ export function PageHead({ title, extra, newLabel, onNew, children, cls = '' }) 
 export function SubNav({ items, label = 'Sayfa' }) {
   const ref = useRef(null);
   const onK = items.findIndex((x) => x.on);
-  useEffect(() => { const el = ref.current?.children[onK]; const w = ref.current; if (el && w && w.scrollWidth > w.clientWidth) w.scrollTo({ left: el.offsetLeft - 12, behavior: 'smooth' }); }, [onK]);
+  // ilk açılışta seçili düğme ANINDA yerinde (eskiden kayarak geliyordu: sayfaya dönünce çubuk 1 sn sağdan kayıyordu); sonra yumuşak
+  const first = useRef(true);
+  useEffect(() => { const el = ref.current?.children[onK]; const w = ref.current; if (el && w && w.scrollWidth > w.clientWidth) w.scrollTo({ left: el.offsetLeft - 12, behavior: first.current ? 'auto' : 'smooth' }); first.current = false; }, [onK]);
   return (
     <div className="subnav" role="tablist" aria-label={label} ref={ref}>
       {items.map((it) => (

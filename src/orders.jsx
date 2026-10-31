@@ -370,7 +370,6 @@ function OrderDetail({ id }) {
   // listede yoksa (eski sipariş / linkten gelindi) tek başına getir
   useEffect(() => { if (fromList) return; const un = api().watchOrder(id, setOne); return () => un && un(); }, [id, !!fromList]);
   // sipariş açıkken telefondaki alt menü kayarak gizlenir, listeye dönünce geri gelir
-  useEffect(() => { const h = document.documentElement; h.classList.add('od-open'); return () => h.classList.remove('od-open'); }, []);
   useEffect(() => { if (o?.unread) api().updateOrder(o.id, { unread: 0 }).catch(() => {}); }, [o?.id, o?.unread]);
   useEffect(() => { if (o && note == null) setNote(o.adminNote || ''); }, [o?.id]);
   const back = () => store.set({ openOrder: null });
