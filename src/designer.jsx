@@ -39,6 +39,21 @@ const setPath = (obj, path, v) => { const n = structuredClone(obj); const ks = p
 const PATH_NAMES = { slides: 'Büyük reklam', heroH: 'Reklam yüksekliği', usps: 'Avantaj şeridi', brands: 'Marka kutuları', promos: 'Kare kutular', sections: 'Ürün rafları', blocks: 'Eklenen bölümler', layout: 'Bölüm sırası', hidden: 'Gizli bölümler', geo: 'Genişlik ve yer', marquee: 'Kayan şerit', mqSpeed: 'Şerit hızı', mqSpeedM: 'Şerit hızı (telefon)', brandSize: 'Marka kutusu boyu', brandLogoScale: 'Logo boyutu', brandsTitle: 'Markalar başlığı', brandsSub: 'Markalar alt yazısı', promosTitle: 'Kutular başlığı', cta: 'Alt bant', gap: 'Bölüm arası boşluk', brandCta: '“Ürünleri gör” yazısı', enabled: 'Ana sayfa açık/kapalı' };
 const nameOf = (path) => { const k = path.split('.'); if (k[0] === 'look') return k[1] === 'pack' || k[1] === 'myPacks' ? 'Tema Stüdyosu' : 'Sayfa renkleri'; if (k[0] === 'brandLogos') return 'Marka logoları'; return PATH_NAMES[k[1]] || 'Tasarım'; };
 const VERS_KEY = 'dz-versions';
+// telefon çerçevesindeki bir reklamın yazı öğelerinin şu anki yerini kutuya oranla ölç → fxm {el: {ax, ay, s, r, rx, ry}}
+const FX_KEY = Object.fromEntries(Object.entries(FX_NAMES).map(([k, v]) => [v, k]));
+function phoneAbs(art, s) {
+  const R = art.getBoundingClientRect(); const out = { ...(s.fxm || {}) };
+  art.querySelectorAll('.sh-slide-t > [data-fx-name]').forEach((n) => {
+    const el = FX_KEY[n.dataset.fxName]; if (!el) return;
+    const old = out[el] || {}; if (old.ax != null) return;
+    const r = n.getBoundingClientRect(); const cx = r.left + r.width / 2 - R.left, cy = r.top + r.height / 2 - R.top;
+    const f = s.fxm?.[el] || s.fx?.[el] || {};
+    // ortalı yazılar ortasından, diğerleri sol kenarından tutturulur (genişlik telefonla değişse de hizası bozulmasın)
+    const c = n.ownerDocument.defaultView.getComputedStyle(n).textAlign === 'center';
+    out[el] = { s: f.s, r: f.r, rx: f.rx, ry: f.ry, ...(c ? { c: 1 } : {}), ax: Math.round(((c ? cx : cx - n.offsetWidth / 2) / R.width) * 10000) / 10000, ay: Math.round(((cy - n.offsetHeight / 2) / R.height) * 10000) / 10000 };
+  });
+  return out;
+}
 // Firebase önizleme adresi (erteltoptan--kanal-….web.app): veriler canlıyla ortak olduğu için orada Yayınla kapalı
 const PREVIEW = typeof location !== 'undefined' && /--/.test(location.hostname);
 
@@ -149,6 +164,7 @@ export function ShopDesigner() {
     if (e.button > 0) return;
     e.stopPropagation(); e.preventDefault();
     const node = e.currentTarget; const art = node.closest('.sh-slide'); const w = winOf(e);
+    if (w.innerWidth <= 700) return fxDragPhone(e, slide, el, node, art, w);
     const fk = parseFloat(w.getComputedStyle(art).getPropertyValue('--fxk')) || 1;
     const R = art.getBoundingClientRect(); const r0 = node.getBoundingClientRect();
     // telefon çerçevesinde sürüklenince telefona özel konum (fxm) yazılır; bilgisayardaki yerinden bağımsız
@@ -172,6 +188,26 @@ export function ShopDesigner() {
       const sl = get('slides'); if (!sl[slide]) return;
       set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, [key]: { ...(x[key] || {}), [el]: { ...f0, x: Math.round((f0.x || 0) + dx / k), y: Math.round((f0.y || 0) + dy / k) } } } : x)));
     }, () => { setGuide(null); if (!moved) setSel({ kind: 'fx', slide, el, dev }); });
+  };
+  // telefonda: reklamdaki yazı öğelerinin hepsi kutuya oranla (%) yerleştirilir, sürüklenen öğe taşınır → her telefon boyunda aynı düzen
+  const fxDragPhone = (e, slide, el, node, art, w) => {
+    const R = art.getBoundingClientRect(); const r0 = node.getBoundingClientRect();
+    const base = phoneAbs(art, get('slides')[slide] || {});
+    const ow = node.offsetWidth, oh = node.offsetHeight;
+    const cx = r0.left + r0.width / 2 - R.left, cy = r0.top + r0.height / 2 - R.top;
+    const x0 = e.clientX, y0 = e.clientY; let moved = false;
+    onDrag(e, (ev) => {
+      let dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!moved && Math.hypot(dx, dy) < 5) return;
+      if (!moved) { moved = true; w.document.body.classList.add('dz-dragging'); setSel({ kind: 'fx', slide, el, dev: 'm' }); }
+      const gv = [], gh = [];
+      if (!ev.altKey) { if (Math.abs(cx + dx - R.width / 2) < 8) { dx = R.width / 2 - cx; gv.push(Math.round(R.width / 2)); } if (Math.abs(cy + dy - R.height / 2) < 8) { dy = R.height / 2 - cy; gh.push(Math.round(R.height / 2)); } }
+      setGuide(gv.length || gh.length ? { k: slide, v: gv, h: gh } : null);
+      const cc = base[el]?.c;
+      const ax = Math.min(0.97, Math.max(-0.1, (cx + dx - (cc ? 0 : ow / 2)) / R.width)), ay = Math.min(0.97, Math.max(-0.1, (cy + dy - oh / 2) / R.height));
+      const sl = get('slides'); if (!sl[slide]) return;
+      set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, fxm: { ...base, [el]: { ...(base[el] || {}), ax: Math.round(ax * 10000) / 10000, ay: Math.round(ay * 10000) / 10000 } } } : x)));
+    }, () => { setGuide(null); if (!moved) setSel({ kind: 'fx', slide, el, dev: 'm' }); });
   };
   // tam resim reklamında resmi sürükleyerek odak noktasını kaydır (telefon çerçevesinde telefon ayarı)
   const imDrag = (e, slide) => {
@@ -227,6 +263,8 @@ export function ShopDesigner() {
     if (mod && k === 'd' && s.kind === 'blk') { e.preventDefault(); dupBlock(s.k); return; }
     if (s.kind === 'fx' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
       e.preventDefault(); const st = e.shiftKey ? 10 : 1; const sl = get('slides'); const key = s.dev === 'm' ? 'fxm' : 'fx';
+      const am = sl[s.slide]?.fxm?.[s.el];
+      if (key === 'fxm' && am?.ax != null) { const ddx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, ddy = e.key === 'ArrowUp' ? -st : e.key === 'ArrowDown' ? st : 0; set('shopHome.slides', sl.map((x, j) => (j === s.slide ? { ...x, fxm: { ...x.fxm, [s.el]: { ...am, ax: Math.round((am.ax + ddx / 358) * 10000) / 10000, ay: Math.round((am.ay + ddy / 470) * 10000) / 10000 } } } : x))); return; }
       const fd = sl[s.slide]?.fx?.[s.el] || {}; const f = key === 'fxm' ? (sl[s.slide]?.fxm?.[s.el] || { ...fd, x: Math.round((fd.x || 0) * 0.5), y: Math.round((fd.y || 0) * 0.5) }) : fd;
       const dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, dy = e.key === 'ArrowUp' ? -st : e.key === 'ArrowDown' ? st : 0;
       set('shopHome.slides', sl.map((x, j) => (j === s.slide ? { ...x, [key]: { ...(x[key] || {}), [s.el]: { ...f, x: (f.x || 0) + dx, y: (f.y || 0) + dy } } } : x)));
@@ -234,7 +272,17 @@ export function ShopDesigner() {
   };
   useEffect(() => { const k = (e) => keyRef.current(e); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, []);
   useEffect(() => { if (!dirty) return; const h = (e) => { e.preventDefault(); e.returnValue = ''; }; addEventListener('beforeunload', h); return () => removeEventListener('beforeunload', h); }, [dirty]);
-  const onFrame = (name) => (w) => { wins.current[name] = w; w.addEventListener('keydown', (e) => keyRef.current(e)); };
+  // eski (piksel) telefon yerleşimlerini otomatik orana çevir: telefon çerçevesi hazır olunca ölç ve taslağa yaz
+  const migrate = (w) => {
+    const sl = get('slides') || []; const need = sl.map((x, i) => (x.fxm && Object.entries(x.fxm).some(([k, v]) => v && v.ax == null && k !== 'art') ? i : -1)).filter((i) => i >= 0);
+    if (!need.length) return;
+    const arts = w.document.querySelectorAll('.sh-hero .sh-slide'); if (!arts.length) return;
+    const n = sl.map((x, i) => (need.includes(i) && arts[i] ? { ...x, fxm: phoneAbs(arts[i], x) } : x));
+    set('shopHome.slides', n); toast('Telefondaki yerleşim her telefon boyuna uyacak şekilde çevrildi. Kontrol edip Yayınla deyin.');
+  };
+  const onFrame = (name) => (w) => { wins.current[name] = w; w.addEventListener('keydown', (e) => keyRef.current(e)); if (name === 'phone') setTimeout(() => migrate(w), 1200); };
+  // eski yerleşim varsa telefon görünümü açılsın (çevirme telefonda ölçülerek yapılır)
+  useEffect(() => { if (mobile) return; const sl = (store.s.designDraft || prepare(store.s.settings)).shopHome.slides || []; if (dev === 'desk' && sl.some((x) => x.fxm && Object.entries(x.fxm).some(([k, v]) => v && v.ax == null && k !== 'art'))) setDev('both'); }, []);
   useEffect(() => { document.documentElement.classList.toggle('dz2-open', !mobile); return () => document.documentElement.classList.remove('dz2-open'); }, [mobile]);
 
   // tema stüdyosu tasarımda tarihten bağımsız önizlenir
@@ -695,7 +743,11 @@ function FxPanel({ H, set, s, i, el, setSel, sel }) {
     {el === 'logo' && <><Field label="Küçük etiket" opt><input value={s.tag || ''} onChange={(e) => up({ tag: e.target.value })} /></Field><LogoPick s={s} up={up} />{size}</>}
     {el === 'art' && <><ImgPick v={s.img} onChange={(img) => up({ img })} alpha max={1000} label="Görsel" prodOk />{size}</>}
     <p className="fine">Sayfada öğeyi tutup sürükleyin: ortaya ve ilk yerine kendiliğinden yapışır (Alt tuşu basılıyken serbest). Ok tuşlarıyla 1 px, Shift ile 10 px kayar.</p>
-    <More label={'Konum, döndürme ve 3B · ' + (dev === 'm' ? 'telefon' : 'bilgisayar')}><FxFields f={f} up={upF} reset={reset} /></More>
+    {dev === 'm' && own?.ax != null ? <More label="Konum ve döndürme · telefon">
+      <Field label="Soldan" hint="Reklam kutusunun genişliğine göre; her telefonda aynı oranda"><span className="she-scale"><input type="range" min="-5" max="95" step="0.5" value={Math.round(own.ax * 1000) / 10} onChange={(e) => upF({ ax: Number(e.target.value) / 100 })} /><code>%{Math.round(own.ax * 100)}</code></span></Field>
+      <Field label="Üstten" hint="Reklam kutusunun yüksekliğine göre"><span className="she-scale"><input type="range" min="-5" max="95" step="0.5" value={Math.round(own.ay * 1000) / 10} onChange={(e) => upF({ ay: Number(e.target.value) / 100 })} /><code>%{Math.round(own.ay * 100)}</code></span></Field>
+      <Field label="Döndür"><span className="she-scale"><input type="range" min="-45" max="45" step="1" value={own.r || 0} onChange={(e) => upF({ r: Number(e.target.value) })} /><code>{own.r || 0}°</code></span></Field>
+    </More> : <More label={'Konum, döndürme ve 3B · ' + (dev === 'm' ? 'telefon' : 'bilgisayar')}><FxFields f={f} up={upF} reset={reset} /></More>}
     <div className="dz2-acts"><button className="btn sm outline" onClick={() => setSel({ kind: 'blk', k: 'hero' })}><Icon n="edit" s={15} />Reklamın tüm ayarları</button></div>
   </>;
 }

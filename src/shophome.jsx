@@ -299,7 +299,7 @@ export function ShopHome({ S: Sover }) {
     if (!node || !geoOk(k)) return node;
     const g = geoOf(H, k);
     if (!E && g.W >= 100) return node;
-    return <WideBox W={g.W} pos={g.pos} selOnly className="geo" up={E && !E.mobile ? (p) => E.set('shopHome.geo', { ...(H.geo || {}), [k]: p }) : null}>{node}</WideBox>;
+    return <WideBox W={g.W} pos={g.pos} selOnly className={'geo' + (g.W >= 100 ? ' full' : '')} up={E && !E.mobile ? (p) => E.set('shopHome.geo', { ...(H.geo || {}), [k]: p }) : null}>{node}</WideBox>;
   };
   return (
     <div className={'sh' + (E ? ' dz' : '')} ref={ref} style={H.gap ? { gap: H.gap + 'px' } : undefined}>
@@ -769,9 +769,11 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
   const imDown = E && !E.mobile && cover && E.imDrag ? (e) => { if (e.button > 0 || e.target.closest('.dz-fx, button, a, .sh-slide-t > *')) return; E.imDrag(e, k); } : undefined;
   const fx = (el, cls = '') => {
     // telefona özel konum (s.fxm) varsa telefonda o, yoksa bilgisayardaki konum küçültülerek (--fxk)
-    const f = s.fx?.[el]; const fm = s.fxm?.[el];
-    const style = fm ? { '--fxt': f ? fxTransform(f) : 'none', '--fxtm': fxTransform(fm, '1'), transform: 'var(--fxc)', transformOrigin: 'center' } : f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
-    if (fm) cls = (cls ? cls + ' ' : '') + 'fx-m';
+    // ax/ay varsa (1.11.2026): telefonda öğenin sol-üst köşesi reklam kutusunun %'si → her telefon boyunda aynı yerde
+    const f = s.fx?.[el]; const fm = s.fxm?.[el]; const abs = fm && fm.ax != null;
+    const style = abs ? { '--fxt': f ? fxTransform(f) : 'none', '--fxax': (fm.ax * 100).toFixed(2) + '%', '--fxay': (fm.ay * 100).toFixed(2) + '%', '--fxtm': `perspective(900px) rotateX(${fm.rx || 0}deg) rotateY(${fm.ry || 0}deg) rotate(${fm.r || 0}deg) scale(${fm.s || 1})`, transform: 'var(--fxc)', transformOrigin: 'center' }
+      : fm ? { '--fxt': f ? fxTransform(f) : 'none', '--fxtm': fxTransform(fm, '1'), transform: 'var(--fxc)', transformOrigin: 'center' } : f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
+    if (fm) cls = (cls ? cls + ' ' : '') + 'fx-m' + (abs ? ' fx-a' + (fm.c ? ' fx-c' : '') : '');
     if (!E || E.mobile) return { className: cls || undefined, style };
     const selOn = E.sel?.kind === 'fx' && E.sel.slide === k && E.sel.el === el;
     return { className: (cls ? cls + ' ' : '') + 'dz-fx' + (selOn ? ' on' : ''), style, 'data-fx-name': FX_NAMES[el], onClick: (e) => e.stopPropagation(), onPointerDown: (e) => E.fxDrag(e, k, el) };
@@ -788,7 +790,7 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
   const mf = cover && ['whole', 'stack'].includes(s.mfit) ? ' m-' + s.mfit : '';
   const ink = bgp ? (bgp.ink === 'l' ? ' ink-dark' : ' ink-light') : '';
   return (
-    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (imDown ? ' dz-imdrag' : '') + (bgp ? ' has-bgp' : '') + ink + btn + (shrunk ? ' fill-' + fill : '') + mf + (cover && s.imgM ? ' has-mimg' : '')} style={Object.keys(vars).length ? vars : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
+    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (imDown ? ' dz-imdrag' : '') + (bgp ? ' has-bgp' : '') + ink + btn + (shrunk ? ' fill-' + fill : '') + mf + (cover && s.imgM ? ' has-mimg' : '') + (s.fxm && Object.values(s.fxm).some((v) => v?.ax != null) ? ' has-fxa' : '')} style={Object.keys(vars).length ? vars : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
       {cover ? <>{((shrunk && fill === 'blur') || s.mfit === 'whole') && <ShopImg v={s.img} className={'sh-slide-bg sh-bg-blur' + (shrunk && fill === 'blur' ? '' : ' m-only')} />}<ShopImg v={s.img} className="sh-slide-bg sh-bg-main pc-img" />{s.imgM && <ShopImg v={s.imgM} className="sh-slide-bg sh-bg-main m-img" />}</> : bgp ? <span className="sh-bgp" aria-hidden="true" /> : ly !== 'plain' && <>
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}

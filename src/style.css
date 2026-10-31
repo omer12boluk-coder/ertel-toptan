@@ -5958,3 +5958,17 @@ html.dz2-open .sheet-bg { z-index: 960; }
 .dz2-bcol code { font-size: 11px; color: var(--muted); }
 .dz2-sl[data-dz] { touch-action: none; cursor: grab; user-select: none; }
 .dz2-sl.dz-lifted { transform: scale(1.06); }
+
+/* reklam öğesi: telefonda kutuya oranla konum (fxm ax/ay) — her telefon boyunda aynı yer */
+@media (max-width: 700px) {
+  .sh-slide.has-fxa .sh-slide-t { position: static; }
+  .sh-slide .fx-a { position: absolute !important; left: var(--fxax); top: var(--fxay); margin: 0 !important; width: max-content; max-width: calc(100% - var(--fxax) - 14px); z-index: 2; }
+}
+@media (max-width: 700px) { .sh-slide .fx-a.fx-c { translate: -50% 0; max-width: calc(100% - 28px); text-align: center; } }
+/* tasarım modunda tam genişlikteki bölüm kutusu "dar kutu" sayılmasın (önizleme mağazayla birebir: başlık puntosu, iç boşluk) */
+.wbox-row.geo.full > .wbox-in { container-type: normal; }
+/* oranla yerleştirilen reklamda yazılar telefon genişliğiyle ölçeklenir (390 px'teki görünüm her telefonda aynı oranda) */
+@media (max-width: 700px) {
+  .sh-slide.has-fxa .sh-slide-t h1 { font-size: min(56px, calc((100vw - 32px) * .1117)); }
+  .sh-slide.has-fxa .sh-slide-t p { font-size: min(20px, calc((100vw - 32px) * .0419)); }
+}
