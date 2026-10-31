@@ -5,7 +5,7 @@
 // "Kaydet" ile form oforms/{id}'e yazılır (yönetici, tüm cihazlarda), alttaki "Kaydedilen formlar"dan açılır / silinir.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, toast, api, store, go } from './store.js';
-import { Icon, Thumb, Stepper, VatLines, Empty, copyText, Sheet, Confirm } from './ui.jsx';
+import { PageHead, SubNav, Icon, Thumb, Stepper, VatLines, Empty, copyText, Sheet, Confirm } from './ui.jsx';
 import { links, waLink } from './route.js';
 import { fmt, totals, fmtTotals, norm, roundStep, ls, priceFor } from './utils.js';
 import { renderListImages, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
@@ -155,22 +155,17 @@ export function OrderForm({ linkMode = false }) {
   }
 
   return (
-    <div className="page oform">
-      <div className="page-h">
-        <div className="of-mode">
-          <div className="seg of-seg" role="tablist" aria-label="Sayfa">
-            <button type="button" role="tab" aria-selected={!linkMode} className={!linkMode ? 'on' : ''} onClick={() => linkMode && go('siparis')}><Icon n="tag" s={15} />Sipariş formu</button>
-            <button type="button" role="tab" aria-selected={linkMode} className={linkMode ? 'on' : ''} onClick={() => !linkMode && go('sepetlink')}><Icon n="cart" s={15} />Sepet linki{lcNew > 0 && <span className="badge">{lcNew}</span>}</button>
-            <button type="button" role="tab" aria-selected={false} onClick={() => go('setler')}><Icon n="box" s={15} />Setler</button>
-          </div>
-          <h1 className="page-t">{linkMode ? 'Sepet linki' : 'Sipariş formu'} <span className="muted">#{d.no}</span></h1>
-        </div>
-        <span className="row-btns">
-          {!linkMode && rows.length > 0 && <button className="btn sm wa" onClick={() => { setOutOpen(true); setTimeout(() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }}><Icon n="wa" s={15} />Müşteriye gönder</button>}
-          {!linkMode && dirty && rows.length > 0 && <button className="btn sm primary" onClick={() => saveForm()}><Icon n="check" s={15} />{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</button>}
-          {(d.items.length > 0 || d.name) && <button className="btn sm ghost danger" onClick={() => setWipe(true)}><Icon n="trash" s={15} />Formu temizle</button>}
-        </span>
-      </div>
+    <div className="page oform adm-sub">
+      <PageHead title={linkMode ? 'Sepet linki' : 'Sipariş formu'} extra={<span className="muted"> #{d.no}</span>} newLabel={(d.sid || d.items.length > 0 || d.name) ? (linkMode ? 'Yeni sepet' : 'Yeni form') : undefined} onNew={(d.sid || d.items.length > 0 || d.name) ? tryNew : undefined}>
+        {!linkMode && rows.length > 0 && <button className="btn sm wa ph-sec" onClick={() => { setOutOpen(true); setTimeout(() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }} aria-label="Müşteriye gönder"><Icon n="wa" s={15} /><span>Müşteriye gönder</span></button>}
+        {!linkMode && dirty && rows.length > 0 && <button className="btn sm outline ph-sec" onClick={() => saveForm()} aria-label="Kaydet"><Icon n="check" s={15} /><span>{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</span></button>}
+        {(d.items.length > 0 || d.name) && <button className="btn sm ghost danger ph-sec" onClick={() => setWipe(true)} aria-label="Formu temizle"><Icon n="trash" s={15} /><span>Temizle</span></button>}
+      </PageHead>
+      <SubNav label="Sipariş formu" items={[
+        { k: 'form', icon: 'tag', label: 'Sipariş formu', on: !linkMode, onClick: () => go('siparis') },
+        { k: 'link', icon: 'cart', label: 'Sepet linki', badge: lcNew, on: linkMode, onClick: () => go('sepetlink') },
+        { k: 'set', icon: 'box', label: 'Setler', on: false, onClick: () => go('setler') },
+      ]} />
 
       <div className="oform-grid">
         <section className="oform-pick">
@@ -195,7 +190,6 @@ export function OrderForm({ linkMode = false }) {
         <div className="oform-right">
         <section className="oform-cart">
           {(d.sid || d.items.length > 0 || d.name) && <div className="of-title">
-            <button type="button" className="btn sm of-new" onClick={tryNew}><Icon n="plus" s={15} />Yeni form</button>
             {d.sid && <span className={'of-state' + (dirty ? ' dirty' : '')}>{dirty ? 'Kaydedilmemiş değişiklik' : 'Kayıtlı form'}</span>}
           </div>}
           <label className="field"><span className="field-l">Müşteri <small className="opt">({linkMode ? 'sadece sizin listenizde görünür' : 'resimde görünür'}, isteğe bağlı)</small></span><input id="of-name" value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="ör. Kadıköy GSM – Ahmet" /></label>

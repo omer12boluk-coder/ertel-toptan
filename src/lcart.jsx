@@ -6,7 +6,7 @@
 // Kural (firestore.rules): linki bilen tek belgeyi okur; müşteri sadece açık sepeti bir kez onaylar.
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, toast, store, go } from './store.js';
-import { Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
+import { PageHead, Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls } from './utils.js';
 import { pingWatch } from './push.js';
 import { CargoCard, OrdersSwitch, OlderBtn, OrderThumbs, ago2, fullDate, useDateRange, RangeSheet, rangeLabel } from './orders.jsx';
@@ -191,11 +191,8 @@ export function LinkCarts({ page = false }) {
   );
   if (!page) return sec;
   return (
-    <div className="page lc-page-adm">
-      <div className="page-h ord-head">
-        <h1 className="page-t">Linkle gelen siparişler</h1>
-        <button className="btn sm primary lc-newbtn" onClick={() => go('sepetlink')} aria-label="Yeni sepet linki"><Icon n="plus" s={15} /><span>Yeni sepet linki</span></button>
-      </div>
+    <div className="page lc-page-adm adm-sub">
+      <PageHead cls="ord-head" title="Siparişler" newLabel="Yeni sepet linki" onNew={() => go('sepetlink')} />
       <OrdersSwitch on="lcarts" />
       {sec}
     </div>

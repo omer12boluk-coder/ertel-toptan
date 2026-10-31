@@ -75,8 +75,34 @@ const P = {
 export function CarrierMark({ k, size = 'md', name }) {
   if (k === 'dhl') return <span className={'cmark dhl ' + size} aria-label="DHL eCommerce"><b>DHL</b><small>eCommerce</small></span>;
   if (k === 'yurtici') return <span className={'cmark yurtici ' + size} aria-label="Yurtiçi Kargo"><b>Yurtiçi</b><small>Kargo</small></span>;
+  if (k === 'other') return <span className={'cmark other ' + size} aria-label="Başka kargo"><Icon n="box" s={16} /><small>Başka</small></span>;
   if (name) return <span className={'cmark other ' + size} aria-label={name}><b>{name.replace(/\s*kargo\s*$/i, '')}</b><small>Kargo</small></span>;
   return null;
+}
+// Yönetim sayfalarının ortak başlığı (31.10.2026): solda başlık, sağda işlemler; "Yeni …" düğmesi HER SAYFADA en sağda aynı boyda
+// (telefonda yuvarlak +). Alt sayfa çubuğu (SubNav) başlığın hemen altında.
+export function PageHead({ title, extra, newLabel, onNew, children, cls = '' }) {
+  return (
+    <div className={'page-h ph ' + cls}>
+      <h1 className="page-t">{title}{extra}</h1>
+      {(children || onNew) && <span className="ph-act">{children}{onNew && <button type="button" className="btn sm primary ph-new" onClick={onNew} aria-label={newLabel} title={newLabel}><Icon n="plus" s={15} /><span>{newLabel}</span></button>}</span>}
+    </div>
+  );
+}
+// Alt sayfa çubuğu: sadece yana kayar (aşağı-yukarı oynamaz), seçili düğme görünür yere kayar
+export function SubNav({ items, label = 'Sayfa' }) {
+  const ref = useRef(null);
+  const onK = items.findIndex((x) => x.on);
+  useEffect(() => { const el = ref.current?.children[onK]; const w = ref.current; if (el && w && w.scrollWidth > w.clientWidth) w.scrollTo({ left: el.offsetLeft - 12, behavior: 'smooth' }); }, [onK]);
+  return (
+    <div className="subnav" role="tablist" aria-label={label} ref={ref}>
+      {items.map((it) => (
+        <button key={it.k} type="button" role="tab" aria-selected={!!it.on} className={it.on ? 'on' : ''} onClick={() => !it.on && it.onClick()}>
+          {it.icon && <Icon n={it.icon} s={15} />}<span>{it.label}</span>{it.count != null && <span className="sn-n">{it.count}</span>}{it.badge > 0 && <span className="badge">{it.badge}</span>}
+        </button>
+      ))}
+    </div>
+  );
 }
 export function Icon({ n, s = 20, className = '' }) {
   return (

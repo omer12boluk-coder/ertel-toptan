@@ -2,7 +2,7 @@
 // Sipariş: durum adımları (Onayla → Kargoya ver / Teslime hazır → Tamamlandı), müşteriye WhatsApp, kargo takip no, iç not.
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, openOrder, go } from './store.js';
-import { CarrierMark, Thumb, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
+import { CarrierMark, PageHead, SubNav, Thumb, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, now, norm, ls } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf, carrierList, carrierInfo, carrierDef, trackLink } from './config.js';
 import { links, waLink } from './route.js';
@@ -181,10 +181,8 @@ export function Orders() {
   ], '#' + o.no);
 
   return (
-    <div className="page orders-page">
-      <div className="page-h ord-head">
-        <h1 className="page-t">Mağaza siparişleri{newN > 0 && <span className="muted"> · {newN} yeni</span>}</h1>
-      </div>
+    <div className="page orders-page adm-sub">
+      <PageHead cls="ord-head" title="Siparişler" extra={newN > 0 && <span className="muted"> · {newN} yeni</span>} />
       <OrdersSwitch on="orders" />
       {view === 'members' ? <Members /> : <>
         <div className="toolbar">
@@ -295,7 +293,7 @@ function useStatusFlow(S) {
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
-  const openShip = (o) => { const k = o.cargo?.carrier || o.delivery?.carrier || carrierDef(S); setShip({ o, k: carrierInfo(S, k) ? k : carrierDef(S), code: o.cargo?.code || '' }); };
+  const openShip = (o) => { const k = o.cargo?.carrier || o.delivery?.carrier || carrierDef(S); setShip({ o, k: carrierInfo(S, k) ? k : carrierDef(S), code: o.cargo?.code || '', co: k === 'other' ? o.cargo?.company || '' : '' }); };
   function ask(o, k) {
     if (k === 'shipped') return openShip(o);
     if (o.status === k) return;
@@ -304,7 +302,8 @@ function useStatusFlow(S) {
   }
   async function saveShip() {
     const { o } = ship; const info = carrierInfo(S, ship.k) || CARRIERS.dhl; const code = ship.code.trim();
-    const c = { ...(o.cargo || {}), carrier: info.k, company: info.company || info.name, code };
+    if (info.other && !String(ship.co || '').trim()) { toast('Kargo firmasının adını yazın', 'warn'); return; }
+    const c = { ...(o.cargo || {}), carrier: info.k, company: info.other ? ship.co.trim() : info.company || info.name, code };
     const u = trackLink(info, code); if (u && !(o.dhl?.ref && !o.dhl.cancelled && o.cargo?.url)) c.url = u; if (!code) delete c.url;
     setShip(null);
     if (o.status !== 'shipped') return setStatus(o, 'shipped', { cargo: c });
@@ -322,6 +321,7 @@ function useStatusFlow(S) {
         <div className="form-col">
           <div className="field"><span className="field-l">Kargo firması</span>
             <div className="cargo-pick">{carrierList(S, ship.k).map((c) => <button key={c.k} type="button" className={'chip' + (ship.k === c.k ? ' on' : '')} onClick={() => setShip({ ...ship, k: c.k })}>{c.name}</button>)}</div>
+            {ship.k === 'other' && <input value={ship.co || ''} placeholder="Kargo firmasının adı" onChange={(e) => setShip({ ...ship, co: e.target.value })} />}
             <span className="field-h">Firmaları Ayarlar &gt; Online mağaza &gt; Kargo firmaları’ndan açıp kapatabilirsiniz.</span>
           </div>
           <Field label="Takip numarası" opt hint={ship.code.trim() ? undefined : 'Şimdi bilmiyorsanız boş bırakın; sonra listede “Takip no yok” yazar, oradan ekleyebilirsiniz.'}><input id="ship-code" inputMode="text" value={ship.code} onChange={(e) => setShip({ ...ship, code: e.target.value })} /></Field>
@@ -474,13 +474,15 @@ function MemberSheet({ m: open, onClose, onDelete }) {
   );
 }
 
-export function Members() {
+export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
   const { members, orders } = useStore();
   useEffect(() => { ensureAllMembers(); }, []);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [confirm, setConfirm] = useState(null);
-  const [newOpen, setNewOpen] = useState(false);
+  const [newOpen0, setNewOpen0] = useState(false);
+  const outer = !!sNO; // Müşteriler sayfası: "Yeni üye" başlıkta
+  const newOpen = outer ? nO : newOpen0; const setNewOpen = outer ? sNO : setNewOpen0;
   const want = useStore((st) => st.openMember);
   useEffect(() => { if (!want) return; const m = members.find((x) => x.uid === want); if (m) { setOpen(m); store.set({ openMember: null }); } }, [want, members.length]);
   const count = useMemo(() => { const m = {}; for (const o of orders) if (o.uid) m[o.uid] = (m[o.uid] || 0) + 1; return m; }, [orders]);
@@ -491,7 +493,7 @@ export function Members() {
     <>
       <div className="mem-bar">
         <div className="search"><Icon n="search" s={18} /><input id="mem-search" type="search" placeholder="Ad, e-posta, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <button className="btn primary" onClick={() => setNewOpen(true)}><Icon n="plus" s={16} />Yeni üye</button>
+        {!outer && <button className="btn primary" onClick={() => setNewOpen(true)}><Icon n="plus" s={16} />Yeni üye</button>}
       </div>
       {list.length === 0 ? <Empty icon="users" title={members.length ? 'Eşleşen üye yok' : 'Henüz mağaza üyesi yok'}>{!members.length && <p>Müşteriler mağazada <b>Hesabım</b>’dan ya da sipariş verirken üye olabilir.</p>}</Empty> : (
         <ul className="olist">
@@ -672,6 +674,7 @@ export function CargoCard({ o, flow, col = 'orders' }) {
   const car = o.cargo?.carrier || o.delivery?.carrier || carrierDef(S);
   const list = carrierList(S, car);
   const info = carrierInfo(S, car) || { k: car, name: o.cargo?.company || car, company: o.cargo?.company || car, live: false };
+  if (info.other && o.cargo?.company) info.cname = o.cargo.company; // Başka: yazılan firma adı
   const live = !!(o.dhl?.ref && !o.dhl.cancelled);
   const [man, setMan] = useState(false); // DHL'de takip no'yu elle girme
   const manualCode = !!o.cargo?.code && !live; // takip no elle girilmiş
@@ -704,14 +707,16 @@ export function CargoCard({ o, flow, col = 'orders' }) {
     if (k === car) return;
     if (live) { toast('Önce DHL kaydını iptal edin', 'bad'); return; }
     const c = carrierInfo(S, k); if (!c) return;
-    const put = async () => { try { setMan(false); await save({ cargo: { carrier: k, company: c.company || c.name } }); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); } };
+    const put = async () => { try { setMan(false); await save({ cargo: { carrier: k, company: c.other ? '' : c.company || c.name } }); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); } };
     if (o.cargo?.code) setConfirm({ title: 'Kargo firması değişsin mi?', text: `Girilen takip no (${o.cargo.code}) silinecek; ${c.name} için yeniden girersiniz.`, okLabel: 'Değiştir', onOk: put });
     else put();
   }
   // elle takip no: siparişte "Kargoya verildi"ye geçirir (müşteriye bildirim), sepet linkinde sadece yazar
-  async function saveManual(code) {
+  async function saveManual(code, extra = {}) {
     const k = String(code || '').trim();
-    const cargo = { carrier: info.k, company: info.company || info.name, ...(k ? { code: k, url: trackLink(info, k) } : {}) };
+    const company = info.other ? String(extra.company || '').trim() : info.company || info.name;
+    const url = info.other ? String(extra.url || '').trim() : trackLink(info, k);
+    const cargo = { carrier: info.k, company, ...(k ? { code: k, ...(url ? { url } : {}) } : {}) };
     setBusy('man');
     try {
       if (lc) await save({ cargo });
@@ -764,7 +769,7 @@ export function CargoCard({ o, flow, col = 'orders' }) {
       {list.length > 1 && <div className="ocg-car" role="radiogroup" aria-label="Kargo firması">
         {list.map((c) => (
           <button key={c.k} type="button" role="radio" aria-checked={car === c.k} className={'ocg-opt' + (car === c.k ? ' on' : '')} onClick={() => pickCarrier(c.k)}>
-            <CarrierMark k={c.k} name={c.name} size="lg" /><span><b>{c.name}</b><small>{o.delivery?.carrier === c.k ? 'Müşterinin seçimi' : c.live ? 'Otomatik barkod' : 'Takip no elle'}</small></span>
+            <CarrierMark k={c.k} name={c.name} size="sm" /><span><b>{c.other ? (car === 'other' && o.cargo?.company) || 'Başka kargo' : c.short || c.name}</b><small>{o.delivery?.carrier === c.k ? 'Müşterinin seçimi' : c.live ? 'Otomatik barkod' : c.other ? 'Firma adını yazın' : 'Takip no elle'}</small></span>
           </button>
         ))}
       </div>}
@@ -832,7 +837,11 @@ function ManualTrack({ o, info, busy, canBack, onBack, onSave }) {
   const has = !!o.cargo?.code;
   const [edit, setEdit] = useState(!has);
   const [code, setCode] = useState(o.cargo?.code || '');
-  useEffect(() => { setCode(o.cargo?.code || ''); setEdit(!o.cargo?.code); }, [o.cargo?.code]);
+  const [co, setCo] = useState(info.other ? o.cargo?.company || '' : ''); // Başka: firma adı
+  const [url, setUrl] = useState(info.other ? o.cargo?.url || '' : '');
+  useEffect(() => { setCode(o.cargo?.code || ''); setEdit(!o.cargo?.code); setCo(info.other ? o.cargo?.company || '' : ''); setUrl(info.other ? o.cargo?.url || '' : ''); }, [o.cargo?.code, info.k]);
+  const go = () => { if (info.other && !co.trim()) { toast('Kargo firmasının adını yazın', 'warn'); return; } onSave(code, { company: co, url }); };
+  const same = code.trim() === (o.cargo?.code || '') && (!info.other || (co.trim() === (o.cargo?.company || '') && url.trim() === (o.cargo?.url || '')));
   if (has && !edit) return (<>
     <div className="ship-card adm"><span className="sc-ic"><Icon n="box" s={19} /></span><span className="ss-t"><small>Takip no · {o.cargo.company || info.name}</small><b className="num">{o.cargo.code}</b></span>
       <span className="sc-act">{o.cargo.url && <a className="icon-btn" href={o.cargo.url} target="_blank" rel="noopener" title="Takip sayfası" aria-label="Takip sayfası"><Icon n="ext" s={16} /></a>}<button className="btn sm outline" onClick={() => setEdit(true)}>Değiştir</button></span></div>
@@ -840,11 +849,13 @@ function ManualTrack({ o, info, busy, canBack, onBack, onSave }) {
   </>);
   return (
     <div className="ocg-man">
-      <p className="fine">{info.live ? 'Takip numarasını elle girin.' : `${info.name} entegrasyonu yok: barkodu ${info.name}’nin kendi sisteminden alın, takip numarasını buraya yazın.`}</p>
+      <p className="fine">{info.other ? 'Listede olmayan bir kargoyla gönderdiyseniz firmanın adını ve takip numarasını yazın.' : info.live ? 'Takip numarasını elle girin.' : `${info.name} entegrasyonu yok: barkodu ${info.name}’nin kendi sisteminden alın, takip numarasını buraya yazın.`}</p>
+      {info.other && <Field label="Kargo firması"><input autoComplete="off" value={co} placeholder="ör. Aras Kargo" onChange={(e) => setCo(e.target.value)} /></Field>}
       <div className="ocg-man-row">
-        <Field label={`${info.name} takip no`}><input inputMode="text" autoComplete="off" enterKeyHint="done" value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && code.trim() && onSave(code)} /></Field>
-        <button className="btn primary" disabled={busy || !code.trim() || code.trim() === (o.cargo?.code || '')} onClick={() => onSave(code)}><Icon n="check" s={16} />{busy ? 'Kaydediliyor…' : 'Kaydet'}</button>
+        <Field label={info.other ? 'Takip no' : `${info.name} takip no`}><input inputMode="text" autoComplete="off" enterKeyHint="done" value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && code.trim() && go()} /></Field>
+        <button className="btn primary" disabled={busy || !code.trim() || same} onClick={go}><Icon n="check" s={16} />{busy ? 'Kaydediliyor…' : 'Kaydet'}</button>
       </div>
+      {info.other && <Field label="Takip linki" opt hint="Firmanın takip sayfası adresi; müşteri “Kargom nerede?” ile oraya gider."><input inputMode="url" autoComplete="off" value={url} placeholder="https://…" onChange={(e) => setUrl(e.target.value)} /></Field>}
       <div className="row-btns">
         {has && <button className="btn sm ghost" onClick={() => { setCode(o.cargo.code); setEdit(false); }}>Vazgeç</button>}
         {has && <button className="btn sm ghost danger" disabled={busy} onClick={() => onSave('')}>Takip no’yu kaldır</button>}
@@ -857,10 +868,8 @@ function ManualTrack({ o, info, busy, canBack, onBack, onSave }) {
 // Siparişler ⇄ Linkle gelen sepetler (ayrı sayfalar; listeler karışmaz). Telefonda Siparişler sekmesinden ulaşılır.
 export function OrdersSwitch({ on }) {
   const lcNew = useStore((st) => (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length);
-  return (
-    <div className="seg of-seg ord-switch" role="tablist" aria-label="Sayfa">
-      <button type="button" role="tab" aria-selected={on === 'orders'} className={on === 'orders' ? 'on' : ''} onClick={() => on !== 'orders' && go('siparisler')}><Icon n="box" s={15} />Mağaza siparişleri</button>
-      <button type="button" role="tab" aria-selected={on === 'lcarts'} className={on === 'lcarts' ? 'on' : ''} onClick={() => on !== 'lcarts' && go('sepetler')}><Icon n="cart" s={15} />Linkle gelen siparişler{lcNew > 0 && <span className="badge">{lcNew}</span>}</button>
-    </div>
-  );
+  return <SubNav label="Siparişler" items={[
+    { k: 'orders', icon: 'box', label: 'Mağaza siparişleri', on: on === 'orders', onClick: () => go('siparisler') },
+    { k: 'lcarts', icon: 'cart', label: 'Linkle gelen siparişler', badge: lcNew, on: on === 'lcarts', onClick: () => go('sepetler') },
+  ]} />;
 }

@@ -4,7 +4,7 @@
 // Siparişte ürünler tek tek yazılır, her kalemde set: { id, n, k } (bekçi fiyatı setin tanımından doğrular).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, go, setQty, toast, api, openProduct } from './store.js';
-import { Icon, Thumb, Stepper, Sheet, Empty, Toggle, Confirm, openMenu } from './ui.jsx';
+import { PageHead, SubNav, Icon, Thumb, Stepper, Sheet, Empty, Toggle, Confirm, openMenu } from './ui.jsx';
 import { fmt, norm, now } from './utils.js';
 import { queueSave } from './saveq.js';
 import { ShareBtn } from './extras.jsx';
@@ -284,15 +284,13 @@ export function SetsAdmin() {
     { label: 'Sil', icon: 'trash', danger: true, onClick: () => setDel(x) },
   ], x.name);
   return (
-    <div className="page sets-admin">
-      <div className="page-h"><div className="of-mode">
-        <div className="seg of-seg" role="tablist" aria-label="Sayfa">
-          <button type="button" role="tab" aria-selected={false} onClick={() => go('siparis')}><Icon n="tag" s={15} />Sipariş formu</button>
-          <button type="button" role="tab" aria-selected={false} onClick={() => go('sepetlink')}><Icon n="cart" s={15} />Sepet linki</button>
-          <button type="button" role="tab" aria-selected className="on"><Icon n="box" s={15} />Setler</button>
-        </div>
-        <h1 className="page-t">Setler <span className="muted">· {sets.length}</span></h1></div>
-        <button type="button" className="btn primary" onClick={() => setEdit({})}><Icon n="plus" s={17} />Yeni set</button></div>
+    <div className="page sets-admin adm-sub">
+      <PageHead title="Setler" extra={<span className="muted"> · {sets.length}</span>} newLabel="Yeni set" onNew={() => setEdit({})} />
+      <SubNav label="Sipariş formu" items={[
+        { k: 'form', icon: 'tag', label: 'Sipariş formu', on: false, onClick: () => go('siparis') },
+        { k: 'link', icon: 'cart', label: 'Sepet linki', on: false, onClick: () => go('sepetlink') },
+        { k: 'set', icon: 'box', label: 'Setler', on: true, onClick: () => {} },
+      ]} />
       <p className="muted sa-hint">Birkaç ürünü tek pakette satın. Her ürüne pakete özel fiyat yazabilirsiniz; set fiyatı bu fiyatların toplamıdır. Yayındaki setler mağazada Ürünler › Setler'de, ana sayfadaki Setler rafında ve ürün sayfasında görünür.</p>
       {!sets.length ? <Empty icon="box" title="Henüz set yok"><button className="btn primary" onClick={() => setEdit({})}><Icon n="plus" s={16} />İlk seti oluştur</button></Empty> : (
         <div className="sa-list">

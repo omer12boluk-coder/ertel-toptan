@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders, setCatalog } from './store.js';
 import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
-import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf, carrierList, carrierInfo, carrierDef, pickCar } from './config.js';
+import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf, carrierPublic, carrierInfo, carrierDef, pickCar } from './config.js';
 import TR from './tr-ilce.json';
 import { SwipeLine } from './cart.jsx';
 import { FavGrid, WaitGrid } from './catalog.jsx';
@@ -331,8 +331,8 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
               </div>
             )}
             {f.method === 'cargo' && <>
-              {carrierList(S).length > 1 && <div className="carrier-pick" role="radiogroup" aria-label="Kargo firması">
-                {carrierList(S).map((c) => (
+              {carrierPublic(S).length > 1 && <div className="carrier-pick" role="radiogroup" aria-label="Kargo firması">
+                {carrierPublic(S).map((c) => (
                   <button key={c.k} type="button" role="radio" aria-checked={pickCar(S, f.carrier) === c.k} className={'carrier-opt' + (pickCar(S, f.carrier) === c.k ? ' on' : '')} onClick={() => set({ carrier: c.k })}>
                     <span className="radio" aria-hidden="true" /><CarrierMark k={c.k} name={c.name} /><span className="co-car-t"><b>{c.name}</b><small>{c.k === carrierDef(S) ? 'Anlaşmalı kargomuz' : 'İsterseniz'}</small></span>
                   </button>

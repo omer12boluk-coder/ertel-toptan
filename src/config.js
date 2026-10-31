@@ -143,7 +143,7 @@ export const DEFAULT_SETTINGS = {
     cargoCompanies: ['Yurtiçi Kargo', 'Aras Kargo', 'MNG Kargo', 'PTT Kargo', 'Sürat Kargo', 'HepsiJet', 'Kolay Gelsin', 'UPS', 'DHL'], // ESKİ (31.10.2026'dan beri kullanılmıyor → carriers)
     // kargo firmaları (31.10.2026): Ayarlar > Online mağaza > Kargo firmaları. Yerleşikler (dhl, yurtici) silinmez, kapatılır;
     // eklenen firma { k: 'c…', name, track } elle takip no ile çalışır. carrierDef = müşteriye ilk seçili gelen
-    carriers: [{ k: 'dhl', on: true }, { k: 'yurtici', on: true }],
+    carriers: [{ k: 'dhl', on: true }, { k: 'yurtici', on: true }, { k: 'other', on: true }],
     carrierDef: 'dhl',
     // kargo kartındaki paket tipleri (ilki varsayılan); yönetici karttan ekleyip silebilir
     packages: [{ n: 'Poşet', kg: 1, desi: 1 }, { n: 'Küçük koli', kg: 2, desi: 3 }, { n: 'Orta koli', kg: 5, desi: 8 }],
@@ -356,18 +356,22 @@ export const DELIVERY = { cargo: 'Kargo ile gönderim', pickup: 'Dükkandan tesl
 export const CARRIERS = {
   dhl: { k: 'dhl', name: 'DHL eCommerce', short: 'DHL Kargo', company: 'DHL', live: true, track: 'https://kargotakip.dhlecommerce.com.tr/?takipNo={no}' },
   yurtici: { k: 'yurtici', name: 'Yurtiçi Kargo', short: 'Yurtiçi Kargo', company: 'Yurtiçi Kargo', live: false, track: 'https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code={no}' },
+  // "Başka": sadece yönetimde; firma adı + takip no + isteğe bağlı takip linki siparişe elle yazılır (müşteri seçemez)
+  other: { k: 'other', name: 'Başka', short: 'Başka', company: '', live: false, track: '', other: true },
 };
 // ayardaki tüm firmalar (yerleşik + eklenen), sırasıyla; { ...bilgi, on }
 export function carrierAll(S) {
-  const cfg = Array.isArray(S?.orders?.carriers) && S.orders.carriers.length ? S.orders.carriers : [{ k: 'dhl', on: true }, { k: 'yurtici', on: true }];
+  const cfg = Array.isArray(S?.orders?.carriers) && S.orders.carriers.length ? S.orders.carriers : [{ k: 'dhl', on: true }, { k: 'yurtici', on: true }, { k: 'other', on: true }];
   const out = cfg.map((x) => (CARRIERS[x.k] ? { ...CARRIERS[x.k], ...(x.track ? { track: x.track } : {}), on: x.on !== false } : x.name ? { k: x.k, name: x.name, short: x.name, company: x.name, live: false, track: x.track || '', on: x.on !== false, custom: true } : null)).filter(Boolean);
-  for (const k of Object.keys(CARRIERS)) if (!out.some((x) => x.k === k)) out.push({ ...CARRIERS[k], on: false });
+  for (const k of Object.keys(CARRIERS)) if (!out.some((x) => x.k === k)) out.push({ ...CARRIERS[k], on: k === 'other' }); // Başka sonradan eklendi: varsayılan açık
   return out;
 }
 // açık firmalar; cur (siparişin firması) kapalı olsa da listede kalır (eski sipariş bozulmasın)
 export const carrierList = (S, cur) => carrierAll(S).filter((x) => x.on || x.k === cur);
+// müşterinin seçebildikleri (Başka hariç)
+export const carrierPublic = (S) => carrierAll(S).filter((x) => x.on && !x.other);
 export const carrierInfo = (S, k) => carrierAll(S).find((x) => x.k === k) || null;
-export function carrierDef(S) { const l = carrierList(S); return (l.find((x) => x.k === S?.orders?.carrierDef) || l[0] || CARRIERS.dhl).k; }
+export function carrierDef(S) { const l = carrierPublic(S); return (l.find((x) => x.k === S?.orders?.carrierDef) || l[0] || CARRIERS.dhl).k; }
 export const trackLink = (car, code) => (car?.track && String(code || '').trim() ? car.track.replace('{no}', encodeURIComponent(String(code).trim())) : '');
 // siparişin kargo firması: yöneticinin atadığı (cargo.carrier) > müşterinin seçtiği (delivery.carrier) > elle yazılan firma adı
 export const carrierOf = (o) => {
@@ -389,4 +393,4 @@ export const SPLASH_STYLES = {
   grad: { n: 'Renk geçişli', top: '#2453db' },
 };
 // seçili firma kapatılmışsa varsayılana düşer
-export const pickCar = (S, k) => (carrierList(S).some((x) => x.k === k) ? k : carrierDef(S));
+export const pickCar = (S, k) => (carrierPublic(S).some((x) => x.k === k) ? k : carrierDef(S));

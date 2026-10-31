@@ -3,7 +3,7 @@ import { QuotaSettings } from './quota.jsx';
 import { RichText as PageText } from './footer.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
-import { CarrierMark, Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
+import { CarrierMark, PageHead, SubNav, Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { stencilCodes } from './kalip.js';
 import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
@@ -264,51 +264,48 @@ export function Customers() {
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
   const openCount = (uid) => requests.filter((r) => r.uid === uid && ['new', 'offered', 'accepted', 'ready'].includes(r.status)).length;
   const kindTabs = (
-    <div className="tabs" role="tablist">
-      <button role="tab" aria-selected={kind === 'bayi'} className={'tab' + (kind === 'bayi' ? ' on' : '')} onClick={() => setKind('bayi')}>Bayiler ({customers.length - pending.length}){pending.length > 0 && <span className="badge">{pending.length}</span>}</button>
-      <button role="tab" aria-selected={kind === 'magaza'} className={'tab' + (kind === 'magaza' ? ' on' : '')} onClick={() => setKind('magaza')}>Mağaza müşterileri{win?.membersAll !== false ? ` (${members.length})` : ''}</button>
-      <button role="tab" aria-selected={kind === 'talep'} className={'tab' + (kind === 'talep' ? ' on' : '')} onClick={() => setKind('talep')}>Ürün talepleri{pqNew > 0 && <span className="badge">{pqNew}</span>}</button>
-      <button role="tab" aria-selected={kind === 'sorun'} className={'tab' + (kind === 'sorun' ? ' on' : '')} onClick={() => setKind('sorun')}>Sorun bildirimleri{isNew > 0 && <span className="badge">{isNew}</span>}</button>
-      <button role="tab" aria-selected={kind === 'yorum'} className={'tab' + (kind === 'yorum' ? ' on' : '')} onClick={() => setKind('yorum')}>Yorumlar{rvNew > 0 && <span className="badge">{rvNew}</span>}</button>
-    </div>
+    <SubNav label="Müşteriler" items={[
+      { k: 'bayi', icon: 'users', label: 'Bayiler', count: customers.length - pending.length, badge: pending.length, on: kind === 'bayi', onClick: () => setKind('bayi') },
+      { k: 'magaza', icon: 'user', label: 'Mağaza müşterileri', count: win?.membersAll !== false ? members.length : null, on: kind === 'magaza', onClick: () => setKind('magaza') },
+      { k: 'talep', icon: 'chat', label: 'Ürün talepleri', badge: pqNew, on: kind === 'talep', onClick: () => setKind('talep') },
+      { k: 'sorun', icon: 'ask', label: 'Sorun bildirimleri', badge: isNew, on: kind === 'sorun', onClick: () => setKind('sorun') },
+      { k: 'yorum', icon: 'star', label: 'Yorumlar', badge: rvNew, on: kind === 'yorum', onClick: () => setKind('yorum') },
+    ]} />
   );
+  const [memNew, setMemNew] = useState(false);
   if (kind === 'talep') return (
-    <div className="page">
-      <div className="page-h fixh"><h1 className="page-t">Müşteriler</h1></div>
+    <div className="page adm-sub">
+      <PageHead title="Müşteriler" />
       {kindTabs}
       <PreqAdmin />
     </div>
   );
   if (kind === 'yorum') return (
-    <div className="page">
-      <div className="page-h fixh"><h1 className="page-t">Müşteriler</h1></div>
+    <div className="page adm-sub">
+      <PageHead title="Müşteriler" />
       {kindTabs}
       <ReviewAdmin />
     </div>
   );
   if (kind === 'sorun') return (
-    <div className="page">
-      <div className="page-h fixh"><h1 className="page-t">Müşteriler</h1></div>
+    <div className="page adm-sub">
+      <PageHead title="Müşteriler" />
       {kindTabs}
       <IssueAdmin />
     </div>
   );
   if (kind === 'magaza') return (
-    <div className="page">
-      <div className="page-h fixh"><h1 className="page-t">Müşteriler</h1></div>
+    <div className="page adm-sub">
+      <PageHead title="Müşteriler" newLabel="Yeni üye" onNew={() => setMemNew(true)} />
       {kindTabs}
-      <Members />
+      <Members newOpen={memNew} setNewOpen={setMemNew} />
     </div>
   );
   return (
-    <div className="page">
-      <div className="page-h fixh">
-        <h1 className="page-t">Müşteriler</h1>
-        <span className="row-btns">
-          <button className="btn outline" onClick={() => { store.set({ intent: 'sec:fiyat' }); go('ayarlar'); }}><Icon n="tag" s={16} />Fiyat kuralları</button>
-          <button className="btn primary" onClick={() => setAdd(true)}><Icon n="plus" s={16} />Yeni bayi</button>
-        </span>
-      </div>
+    <div className="page adm-sub">
+      <PageHead title="Müşteriler" newLabel="Yeni bayi" onNew={() => setAdd(true)}>
+        <button className="btn sm outline ph-sec" onClick={() => { store.set({ intent: 'sec:fiyat' }); go('ayarlar'); }} aria-label="Fiyat kuralları"><Icon n="tag" s={15} /><span>Fiyat kuralları</span></button>
+      </PageHead>
       {kindTabs}
       {pending.length > 0 && <PendingList list={pending} />}
       <div className="search"><Icon n="search" s={18} /><input id="cust-search" type="search" placeholder="İsim, dükkan, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
@@ -1596,8 +1593,8 @@ function CarrierSettings({ d, set }) {
         {all.map((c) => (
           <li key={c.k} className={'car-row' + (c.on ? '' : ' off')}>
             <CarrierMark k={c.k} name={c.name} />
-            <span className="car-t"><b>{c.name}</b><small>{c.live ? 'Entegrasyonlu: barkod ve takip no kendiliğinden' : 'Takip no elle girilir'}{c.on && def === c.k ? ' · müşteriye ilk seçili' : ''}</small></span>
-            {c.on && def !== c.k && <button type="button" className="btn sm ghost" onClick={() => set('orders.carrierDef', c.k)}>Varsayılan yap</button>}
+            <span className="car-t"><b>{c.name}</b><small>{c.other ? 'Sadece yönetimde: firma adını siparişe yazarsınız' : c.live ? 'Entegrasyonlu: barkod ve takip no kendiliğinden' : 'Takip no elle girilir'}{c.on && def === c.k ? ' · müşteriye ilk seçili' : ''}</small></span>
+            {c.on && def !== c.k && !c.other && <button type="button" className="btn sm ghost" onClick={() => set('orders.carrierDef', c.k)}>Varsayılan yap</button>}
             {c.custom && <button type="button" className="icon-btn sm" aria-label={c.name + ' sil'} onClick={() => put(all.filter((x) => x.k !== c.k))}><Icon n="trash" s={15} /></button>}
             <Toggle id={'car-' + c.k} label="" checked={c.on} onChange={(v) => toggle(c.k, v)} />
           </li>
