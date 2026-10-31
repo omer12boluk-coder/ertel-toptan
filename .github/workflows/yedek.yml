@@ -1,9 +1,11 @@
 # Veri yedeği: Firestore'un tamamı → Cloudflare R2 özel kutusu "ertel-yedek" (herkese açık DEĞİL; GitHub'a veri konmaz)
+# 31.10.2026: HER GECE 03:17 (TR). db/gunluk/<tarih>.tar.gz 30 gün saklanır (sonra kendiliğinden silinir); her ayın 1'inde
+# ayrıca db/aylik/'e kopya (silinmez). Elle de çalıştırılabilir. Hata olursa Telegram'a haber gider.
+# Yedekler: Yönetim › Ayarlar › Veri ve kota › Yedekler (liste + indir). Geri yükleme: Actions › "Yedekten geri yükle".
 name: Veri yedeği
 on:
-  push:
-    branches: [gelistirme]
-    paths: ['.github/workflows/yedek.yml', 'tools/backup.mjs']
+  schedule:
+    - cron: '17 0 * * *'
   workflow_dispatch:
 jobs:
   backup:
@@ -27,9 +29,24 @@ jobs:
         run: |
           cd /tmp/b
           npx -y wrangler@3 r2 bucket create ertel-yedek > mk.txt 2>&1 || true; echo "::notice title=Kutu::$(grep -v '^\s*$' mk.txt | tail -n 3 | tr '\n' ' ' | cut -c1-300)"
-          key="db/$(TZ=Europe/Istanbul date +%Y-%m-%d_%H%M).tar.gz"
+          key="db/gunluk/$(TZ=Europe/Istanbul date +%Y-%m-%d_%H%M).tar.gz"
           npx -y wrangler@3 r2 object put "ertel-yedek/$key" --file yedek.tar.gz --content-type application/gzip > put.txt 2>&1 || { echo "::error title=Yükleme hatası::$(tail -n 4 put.txt | tr '\n' ' ')"; exit 1; }
           npx -y wrangler@3 r2 object get "ertel-yedek/$key" --file kontrol.tar.gz > get.txt 2>&1 || { echo "::error title=Kontrol okunamadı::$(tail -n 4 get.txt | tr '\n' ' ')"; exit 1; }
           got=$(stat -c %s kontrol.tar.gz); [ "$got" = "$SIZE" ] || { echo "::error title=Boyut tutmadı::$got != $SIZE"; exit 1; }
           echo "::notice title=Yedek yüklendi ve geri okundu::ertel-yedek/$key ($SIZE bayt)"
+          if [ "$(TZ=Europe/Istanbul date +%d)" = "01" ]; then
+            npx -y wrangler@3 r2 object put "ertel-yedek/db/aylik/$(TZ=Europe/Istanbul date +%Y-%m).tar.gz" --file kontrol.tar.gz --content-type application/gzip >/dev/null 2>&1 && echo "::notice title=Aylık kopya::db/aylik/$(TZ=Europe/Istanbul date +%Y-%m).tar.gz"
+          fi
           rm -rf yedek yedek.tar.gz kontrol.tar.gz
+      - name: Günlük yedekler 30 gün sonra silinsin (aylıklar kalır)
+        run: |
+          curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/r2/buckets/ertel-yedek/lifecycle" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+            --data '{"rules":[{"id":"gunluk-30","enabled":true,"conditions":{"prefix":"db/gunluk/"},"deleteObjectsTransition":{"condition":{"type":"Age","maxAge":2592000}}}]}' | jq -c '{success, errors}' | sed 's/^/::notice title=Saklama kuralı::/'
+      - name: Hata olursa Telegram
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        run: |
+          key=$(printf 'sync:%s' "$TELEGRAM_TOKEN" | sha256sum | cut -d' ' -f1)
+          curl -s -X POST https://ertel-b2b-watch.omer-12boluk.workers.dev/notify-usage -H "Content-Type: application/json" -H "X-Key: $key" --data '{"text":"⚠️ Gece veri yedeği ALINAMADI. GitHub › Actions › Veri yedeği’ne bakın ya da Claude’a söyleyin."}' >/dev/null
+

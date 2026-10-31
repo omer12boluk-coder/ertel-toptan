@@ -1,0 +1,54 @@
+# Yedekten geri yükle — önce "dene" ile çalıştırın (hiçbir şey yazmaz), sonuca bakıp gerekirse "eksik" ya da "uzerine".
+name: Yedekten geri yükle
+on:
+  workflow_dispatch:
+    inputs:
+      yedek:
+        description: "Yedek adı (Ayarlar › Veri ve kota › Yedekler'den kopyalayın, ör. db/gunluk/2026-11-02_0317.tar.gz) ya da 'son'"
+        default: 'son'
+      koleksiyon:
+        description: 'Ne geri gelsin: orders (siparişler), members (üyeler), requests (bayi talepleri), lcarts (linkli siparişler), catalog, settings … ya da hepsi'
+        default: 'orders'
+      mod:
+        description: 'dene = sadece say (güvenli) · eksik = silinenleri geri koy · uzerine = yedekteki hâline döndür'
+        type: choice
+        options: [dene, eksik, uzerine]
+        default: dene
+      onay:
+        description: "'uzerine' için buraya EVET yazın"
+        default: ''
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Kontrol
+        if: inputs.mod == 'uzerine' && inputs.onay != 'EVET'
+        run: echo "::error title=Onay yok::'uzerine' için onay kutusuna EVET yazın" && exit 1
+      - name: Yedeği indir
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          Y: ${{ inputs.yedek }}
+        run: |
+          mkdir -p /tmp/r && cd /tmp/r
+          if [ "$Y" = "son" ] || [ -z "$Y" ]; then
+            key=$(printf 'sync:%s' "$TELEGRAM_TOKEN" | sha256sum | cut -d' ' -f1)
+            Y=$(curl -s -X POST https://ertel-b2b-watch.omer-12boluk.workers.dev/backup/latest -H "X-Key: $key" | jq -r '.key // empty')
+          fi
+          echo "$Y" | grep -Eq '^db/[A-Za-z0-9_./-]+\.tar\.gz$' || { echo "::error title=Yedek adı geçersiz::$Y"; exit 1; }
+          echo "::notice title=Kullanılan yedek::$Y"
+          npx -y wrangler@3 r2 object get "ertel-yedek/$Y" --file y.tar.gz > get.txt 2>&1 || { echo "::error title=İndirilemedi::$(tail -n 3 get.txt | tr '\n' ' ')"; exit 1; }
+          tar xzf y.tar.gz
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DIR: /tmp/r/yedek
+          COL: ${{ inputs.koleksiyon }}
+          MODE: ${{ inputs.mod }}
+        run: node tools/backup-restore.mjs

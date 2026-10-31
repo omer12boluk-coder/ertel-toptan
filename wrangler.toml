@@ -17,6 +17,11 @@ crons = ["* * * * *"]
 binding = "R2"
 bucket_name = "ertel"
 
+# Veri yedekleri (özel kutu, herkese açık değil): yönetici panelden listeler / indirir (31.10.2026)
+[[r2_buckets]]
+binding = "R2Y"
+bucket_name = "ertel-yedek"
+
 [[kv_namespaces]]
 binding = "KV"
 id = "__KV_ID__"

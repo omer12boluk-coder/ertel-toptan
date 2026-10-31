@@ -1,10 +1,14 @@
 // Çevrimdışı kabuk: önce sunucudan en yeni sürümü ister; ağ 6 sn içinde cevap vermezse ya da internet yoksa
 // kayıtlı son sürümü gösterir (WhatsApp'tan açılan linklerin sonsuza kadar dönmemesi için).
-const C = 'ertel-toptan-v4';
+const C = 'ertel-toptan-v5';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
+// Tek adres (31.10.2026): eski adresler (erteltoptan.web.app, firebaseapp.com, www) sayfa açılınca ertelmarket.com'a gider.
+// Bildirimler eski adreste açılan aboneliklerle gelmeye devam eder; tıklanınca da yeni adrese geçilir.
+const OLD = /(^|\.)erteltoptan\.(web\.app|firebaseapp\.com)$|^www\.ertelmarket\.com$/.test(self.location.hostname);
 self.addEventListener('fetch', (e) => {
   const u = new URL(e.request.url);
+  if (OLD && e.request.mode === 'navigate' && u.origin === location.origin && !u.pathname.startsWith('/__/')) { e.respondWith(Response.redirect('https://ertelmarket.com' + u.pathname + u.search + u.hash, 301)); return; }
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
   const key = e.request.mode === 'navigate' ? '/index.html' : e.request;
   const keep = e.request.mode === 'navigate' || /\.(js|png|webmanifest)$/.test(u.pathname);

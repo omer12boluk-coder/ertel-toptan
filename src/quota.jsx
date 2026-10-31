@@ -38,6 +38,7 @@ export function QuotaSettings({ d, set }) {
     <p className="fine">Site ücretsiz Firebase planında: veritabanından <b>günde 50.000 okuma</b> ve 20.000 yazma hakkı var. Dolarsa site o günün sonuna kadar ürün gösteremez, sipariş alamaz. Müşteriler çok az okuma yapar; en büyük yük <b>bu yönetim paneli</b>: panel açılınca aşağıda seçtiğiniz kadar günün siparişlerini ve taleplerini yükler (yarım saatten uzun kapalı kaldıysa baştan okur).</p>
 
     <BillCard />
+    <BackupCard />
 
     <h4 className="qt-h">Son 24 saat</h4>
     {u === undefined ? <p className="fine">Yükleniyor…</p> : !u ? <p className="fine">Henüz rapor yok. Her gece 23:47'de hazırlanır.</p> : <div className="qt-box">
@@ -100,6 +101,46 @@ function BillCard() {
       {s?.log?.length > 0 && <ul className="bill-log">{s.log.slice(0, 5).map((x, i) => <li key={i}><span>{when(x.at)}</span>{x.title}</li>)}</ul>}
       {!on && st.stopped && <p className="fine">Geri açmak için: Firebase › Kullanım ve faturalandırma › <b>Blaze planına geç</b> (aynı kartı seçin). Açınca bu kart yeniden harcamayı göstermeye başlar.</p>}
       {ask && <Confirm title="Ücretli kullanım durdurulsun mu?" text="Projenin kartla bağlantısı kesilir, site ücretsiz plan sınırlarına döner. Veriler SİLİNMEZ; sadece günlük ücretsiz hak dolarsa o gün sipariş/ürün okunamaz. Sonra Firebase'den tekrar Blaze'e geçerek açabilirsiniz." okLabel="Evet, durdur" tone="danger" onClose={() => setAsk(false)} onOk={() => run('stop', () => bill('stop'), 'Ücretli kullanım durduruldu')} />}
+    </div>
+  );
+}
+
+// ---- Yedekler (31.10.2026): her gece 03:17'de veritabanının tamamı özel kutuya; 30 gün günlük + her ay bir aylık kopya ----
+async function bk(act, body = {}) {
+  const tok = await api().idToken?.(); if (!tok) throw new Error('Oturum bulunamadı');
+  return fetch(W() + '/backup/' + act, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) });
+}
+const size = (b) => (b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB');
+function BackupCard() {
+  const [l, setL] = useState(undefined);
+  const [busy, setBusy] = useState('');
+  const [all, setAll] = useState(false);
+  useEffect(() => {
+    if (api().mode !== 'firebase') { setL({ err: 'Deneme sitesinde çalışmaz' }); return; }
+    bk('list').then((r) => r.json()).then((j) => setL(j.ok ? j.list : { err: j.error })).catch((e) => setL({ err: e.message }));
+  }, []);
+  async function get(key) {
+    setBusy(key);
+    try {
+      const r = await bk('get', { key }); if (!r.ok) throw new Error('İndirilemedi');
+      const b = await r.blob(); const u = URL.createObjectURL(b); const a = document.createElement('a');
+      a.href = u; a.download = 'ertel-yedek-' + key.split('/').pop(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000);
+    } catch (e) { toast(e.message, 'bad'); }
+    setBusy('');
+  }
+  const list = Array.isArray(l) ? l : [];
+  const shown = all ? list : list.slice(0, 6);
+  const kind = (k) => (k.startsWith('db/aylik/') ? 'Aylık' : k.startsWith('db/gunluk/') ? 'Günlük' : 'Elle');
+  return (
+    <div className="qt-box bk">
+      <div className="bill-h"><Icon n="shield" s={18} /><b>Yedekler</b><span className="bill-plan">{list[0] ? 'Son: ' + when(list[0].at) : l?.err || (l === undefined ? 'Yükleniyor…' : 'Henüz yok')}</span></div>
+      <p className="fine">Her gece 03:17'de sitenin <b>bütün verisi</b> (siparişler, üyeler, bayiler, talepler, ürünler, ayarlar) kapalı bir kutuya yedeklenir. Günlükler 30 gün, her ayın 1'indeki yedek süresiz saklanır. Yedek alınamazsa Telegram'a haber gelir. Geri yükleme: GitHub › Actions › <b>“Yedekten geri yükle”</b> (önce “dene” seçin; Claude'la birlikte yapın).</p>
+      {list.length > 0 && <ul className="bk-list">{shown.map((x) => (
+        <li key={x.key}><span className="bk-k">{kind(x.key)}</span><span className="bk-t">{when(x.at)}<small>{size(x.size)}</small></span>
+          <button className="icon-btn sm" title="Yedek adını kopyala" aria-label="Yedek adını kopyala" onClick={() => navigator.clipboard?.writeText(x.key).then(() => toast('Yedek adı kopyalandı'))}><Icon n="copy" s={15} /></button>
+          <button className="btn sm ghost" disabled={!!busy} onClick={() => get(x.key)}><Icon n="down" s={15} />{busy === x.key ? 'İniyor…' : 'İndir'}</button></li>
+      ))}</ul>}
+      {list.length > 6 && <button className="btn sm ghost" onClick={() => setAll(!all)}>{all ? 'Daha az göster' : `Tümünü göster (${list.length})`}</button>}
     </div>
   );
 }
