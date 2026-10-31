@@ -62,8 +62,8 @@ const dIn = (ts) => { const d = new Date(ts); const p = (n) => String(n).padStar
 const dOut = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
 const DAY = 864e5;
 const RANGE_CACHE = new Map();
-const rangeLabel = (r) => { const f = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }); const a = f(r.from), b = f(r.to - 1); return a === b ? a : a + ' – ' + b; };
-function RangeSheet({ cur, onPick, onClose }) {
+export const rangeLabel = (r) => { const f = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }); const a = f(r.from), b = f(r.to - 1); return a === b ? a : a + ' – ' + b; };
+export function RangeSheet({ cur, onPick, onClose, unit = 'sipariş' }) {
   const t0 = new Date(); t0.setHours(0, 0, 0, 0);
   const [a, setA] = useState(dIn(cur?.from ?? t0.getTime() - 30 * DAY));
   const [b, setB] = useState(dIn(cur ? cur.to - 1 : t0.getTime()));
@@ -77,15 +77,36 @@ function RangeSheet({ cur, onPick, onClose }) {
   ];
   const ok = a && b && dOut(a) <= dOut(b);
   return (
-    <Sheet title="Tarih aralığı" onClose={onClose} footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn primary" disabled={!ok} onClick={() => onPick(dOut(a), dOut(b) + DAY)}>Siparişleri göster</button></>}>
+    <Sheet title="Tarih aralığı" onClose={onClose} footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn primary" disabled={!ok} onClick={() => onPick(dOut(a), dOut(b) + DAY)}>Göster</button></>}>
       <div className="chips range-pre">{presets.map(([l, f, t]) => <button key={l} className="chip" onClick={() => onPick(f, t)}>{l}</button>)}</div>
       <div className="row2">
         <Field label="Başlangıç"><input type="date" value={a} max={b || undefined} onChange={(e) => setA(e.target.value)} /></Field>
         <Field label="Bitiş"><input type="date" value={b} min={a || undefined} onChange={(e) => setB(e.target.value)} /></Field>
       </div>
-      <p className="fine">Aralıktaki her sipariş 1 okuma sayılır (100 siparişlik ay ≈ 100 okuma). Sadece bastığınızda bir kez okunur, açık kalsa da okuma harcamaz; aynı aralığa yarım saat içinde tekrar bakmak bedava. Uzun aralıkta sipariş çoksa önce sorulur.</p>
+      <p className="fine">Aralıktaki her {unit} 1 okuma sayılır (100 {unit}lık ay ≈ 100 okuma). Sadece bastığınızda bir kez okunur, açık kalsa da okuma harcamaz; aynı aralığa yarım saat içinde tekrar bakmak bedava. Uzun aralıkta kayıt çoksa önce sorulur.</p>
     </Sheet>
   );
+}
+
+// Tarih aralığı (siparişler + linkle gelen sepetler ortak).
+// Koruma: aralık BİR KEZ okunur (canlı dinlenmez → açık unutulsa da okuma harcamaz); aynı aralık 30 dk cihaz belleğinde
+// tutulur (tekrar basınca yeniden okunmaz); 45 günden uzun aralıkta önce sadece SAYI sorulur (1 okuma), 300'den fazlaysa onay istenir.
+export function useDateRange({ col, unit, setConfirm, onStart }) {
+  const [range, setRange] = useState(null); // {from, to, items|null}
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const runRange = async (from, to, sure) => {
+    setRangeOpen(false); onStart?.();
+    const key = col + ':' + from + '-' + to; const hit = RANGE_CACHE.get(key);
+    if (hit && Date.now() - hit.at < 30 * 60e3) { setRange({ from, to, items: hit.items }); return; }
+    if (!sure && to - from > 45 * DAY && api().countRange) {
+      let n = null; try { n = await api().countRange(col, from, to); } catch {}
+      if (n != null && n > 300) { setConfirm({ title: `${n.toLocaleString('tr-TR')} ${unit} yüklenecek`, text: `${rangeLabel({ from, to })} arasında ${n.toLocaleString('tr-TR')} ${unit} var. Yüklemek yaklaşık ${n.toLocaleString('tr-TR')} okuma harcar (günlük hak 50.000). Daha kısa bir aralık seçmek daha hafif olur.`, okLabel: 'Yine de yükle', onOk: () => runRange(from, to, true) }); return; }
+      if (n === 0) { setRange({ from, to, items: [] }); RANGE_CACHE.set(key, { at: Date.now(), items: [] }); return; }
+    }
+    setRange({ from, to, items: null });
+    api().findRange(col, from, to).then((l) => { RANGE_CACHE.set(key, { at: Date.now(), items: l || [] }); setRange({ from, to, items: l || [] }); }, (e) => { toast('Yüklenemedi: ' + e.message, 'bad'); setRange(null); });
+  };
+  return { range, setRange, rangeOpen, setRangeOpen, runRange };
 }
 
 export function Orders() {
@@ -113,22 +134,7 @@ export function Orders() {
     return () => clearTimeout(t);
   }, [q, orders]);
   // tarih aralığı: seçilince o aralığın siparişleri bir kez okunur; liste sadece onları gösterir
-  const [range, setRange] = useState(null); // {from, to, items|null}
-  const [rangeOpen, setRangeOpen] = useState(false);
-  // Koruma: aralık BİR KEZ okunur (canlı dinlenmez → açık unutulsa da okuma harcamaz); aynı aralık 30 dk cihaz belleğinde
-  // tutulur (tekrar basınca yeniden okunmaz); 45 günden uzun aralıkta önce sadece SAYI sorulur (1 okuma), 300'den fazlaysa onay istenir.
-  const runRange = async (from, to, sure) => {
-    setRangeOpen(false); setFilter('all');
-    const key = from + '-' + to; const hit = RANGE_CACHE.get(key);
-    if (hit && Date.now() - hit.at < 30 * 60e3) { setRange({ from, to, items: hit.items }); return; }
-    if (!sure && to - from > 45 * DAY && api().countOrdersRange) {
-      let n = null; try { n = await api().countOrdersRange(from, to); } catch {}
-      if (n != null && n > 300) { setConfirm({ title: `${n.toLocaleString('tr-TR')} sipariş yüklenecek`, text: `${rangeLabel({ from, to })} arasında ${n.toLocaleString('tr-TR')} sipariş var. Yüklemek yaklaşık ${n.toLocaleString('tr-TR')} okuma harcar (günlük hak 50.000). Daha kısa bir aralık seçmek daha hafif olur.`, okLabel: 'Yine de yükle', onOk: () => runRange(from, to, true) }); return; }
-      if (n === 0) { setRange({ from, to, items: [] }); RANGE_CACHE.set(key, { at: Date.now(), items: [] }); return; }
-    }
-    setRange({ from, to, items: null });
-    api().findOrdersRange(from, to).then((l) => { RANGE_CACHE.set(key, { at: Date.now(), items: l || [] }); setRange({ from, to, items: l || [] }); }, (e) => { toast('Yüklenemedi: ' + e.message, 'bad'); setRange(null); });
-  };
+  const { range, setRange, rangeOpen, setRangeOpen, runRange } = useDateRange({ col: 'orders', unit: 'sipariş', setConfirm, onStart: () => setFilter('all') });
   const list = useMemo(() => {
     let base = orders;
     if (range) { // canlı listedeki güncel hâl önce gelir
@@ -195,7 +201,7 @@ export function Orders() {
             <button className="icon-btn" aria-label="Tarih aralığını kapat" onClick={() => setRange(null)}><Icon n="x" s={16} /></button>
           </div>
         )}
-        {rangeOpen && <RangeSheet cur={range} onPick={runRange} onClose={() => setRangeOpen(false)} />}
+        {rangeOpen && <RangeSheet unit="sipariş" cur={range} onPick={runRange} onClose={() => setRangeOpen(false)} />}
         {sel && (
           <div className="sel-bar">
             <label className="mini-check"><input type="checkbox" checked={list.length > 0 && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : new Set())} />Tümü ({list.length})</label>

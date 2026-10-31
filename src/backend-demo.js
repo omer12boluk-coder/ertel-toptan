@@ -196,6 +196,9 @@ export class DemoBackend {
   watchFeed(cb) { return this.sub(() => cb(this.db.feed || [])); }
   async findOrderByNo(no) { return Object.values(this.ord()).filter((o) => String(o.no).toUpperCase() === String(no).toUpperCase()).map((o) => ({ ...o })); }
   async findOrdersRange(from, to) { return Object.values(this.ord()).filter((o) => (o.createdAt || 0) >= from && (o.createdAt || 0) < to).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })); }
+  _rng(col, from, to) { const k = col === 'lcarts' ? 'at' : 'createdAt'; const src = col === 'lcarts' ? Object.entries(this.lc_()).map(([id, x]) => ({ id, ...x })) : Object.values(this.ord()); return src.filter((o) => (o[k] || 0) >= from && (o[k] || 0) < to).sort((a, b) => b[k] - a[k]).map((o) => JSON.parse(JSON.stringify(o))); }
+  async findRange(col, from, to) { return this._rng(col, from, to); }
+  async countRange(col, from, to) { return this._rng(col, from, to).length; }
   async countOrdersRange(from, to) { return Object.values(this.ord()).filter((o) => (o.createdAt || 0) >= from && (o.createdAt || 0) < to).length; }
   async getUsage() { return { at: Date.now(), read: 1234, write: 210, cfReq: 8000, kvWrite: 120 }; }
   watchOrders(cb, since = 0) { return this.sub(() => cb(Object.values(this.ord()).filter((o) => !since || (o.createdAt || 0) >= since).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
