@@ -188,23 +188,76 @@ export function bgTone(css) {
 // img: hangi resim gerekli ('prod' saydam ürün resmi · 'wide' yatay banner fotoğrafı · '' resimsiz)
 export const SLIDE_TEMPLATES = [
   { id: 'urun', n: 'Ürün vitrini', d: 'Solda yazı, sağda ürün', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
-    s: { layout: 'split', bg: 'g-night', tag: 'Yeni ürün', title: 'Ürün adını yazın', text: 'Tek cümlelik kısa açıklama: ne işe yarar, neden iyi?', cta: 'Ürünü incele', bs: 'light', mfit: '' } },
+    s: { layout: 'split', bg: 'g-night', tag: 'Yeni ürün', title: 'Ürün adını yazın', text: 'Tek cümlelik kısa açıklama: ne işe yarar, neden iyi?', cta: 'Ürünü incele', btn: { st: 'white' }, mfit: '' } },
   { id: 'urun-acik', n: 'Ürün · açık zemin', d: 'Ferah, beyaz-gri zemin', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
-    s: { layout: 'split', bg: 'l-mist', tag: 'Stokta', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'İncele', bs: 'dark' } },
+    s: { layout: 'split', bg: 'l-mist', tag: 'Stokta', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'İncele', btn: { st: 'dark' } } },
   { id: 'premium', n: 'Siyah altın', d: 'Pahalı ürünler için', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
-    s: { layout: 'reverse', bg: 'a-gold', tag: 'Profesyonel seri', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'Hemen incele', bs: 'accent', tc: 'g:gold' } },
+    s: { layout: 'reverse', bg: 'a-gold', tag: 'Profesyonel seri', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'Hemen incele', btn: { st: 'accent' }, tc: 'g:gold' } },
   { id: 'atolye', n: 'Atölye / teknik', d: 'Devre kartı zemini', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
-    s: { layout: 'split', bg: 'k-grid', tag: 'Ustalar için', title: 'Ürün adını yazın', text: 'Teknik özellik ya da kısa açıklama', cta: 'Özellikleri gör', bs: 'glass' } },
+    s: { layout: 'split', bg: 'k-grid', tag: 'Ustalar için', title: 'Ürün adını yazın', text: 'Teknik özellik ya da kısa açıklama', cta: 'Özellikleri gör', btn: { st: 'glass' } } },
   { id: 'kampanya', n: 'Kampanya / indirim', d: 'Ortalı, büyük başlık', img: '', size: 'Resim gerekmez',
-    s: { layout: 'center', bg: 'a-lava', tag: '%20 İNDİRİM', title: 'Kampanya başlığı', text: 'Kampanyanın kısa açıklaması ve son tarihi', cta: 'Fırsatları gör', bs: 'light' } },
+    s: { layout: 'center', bg: 'a-lava', tag: '%20 İNDİRİM', title: 'Kampanya başlığı', text: 'Kampanyanın kısa açıklaması ve son tarihi', cta: 'Fırsatları gör', btn: { st: 'white' } } },
   { id: 'duyuru', n: 'Duyuru', d: 'Sade, resimsiz', img: '', size: 'Resim gerekmez',
-    s: { layout: 'center', bg: 'g-royal', tag: 'Duyuru', title: 'Duyuru başlığı', text: 'Kısa bilgi: çalışma saatleri, kargo, yeni gelenler…', cta: '', bs: 'light' } },
+    s: { layout: 'center', bg: 'g-royal', tag: 'Duyuru', title: 'Duyuru başlığı', text: 'Kısa bilgi: çalışma saatleri, kargo, yeni gelenler…', cta: '', btn: { st: 'white' } } },
   { id: 'foto', n: 'Tam fotoğraf', d: 'Fotoğraf her yeri kaplar, yazı altta', img: 'wide', size: 'Yatay fotoğraf 1800×780 · telefona ayrı dikey resim önerilir (900×1180)',
-    s: { layout: 'cover', title: 'Başlık', text: 'Kısa açıklama', cta: 'İncele', bs: 'light', mfit: 'stack', xc: '#ffffff' } },
+    s: { layout: 'cover', title: 'Başlık', text: 'Kısa açıklama', cta: 'İncele', btn: { st: 'white' }, mfit: 'stack', xc: '#ffffff' } },
   { id: 'foto-kutu', n: 'Fotoğraf + yazı kutusu', d: 'Yazı buzlu cam kutuda', img: 'wide', size: 'Yatay fotoğraf 1800×780 · ürün sağda dursun (yazı solda kalır)',
-    s: { layout: 'glass', title: 'Başlık', text: 'Kısa açıklama', cta: 'İncele', bs: 'light', mfit: 'stack', xc: '#ffffff' } },
+    s: { layout: 'glass', title: 'Başlık', text: 'Kısa açıklama', cta: 'İncele', btn: { st: 'white' }, mfit: 'stack', xc: '#ffffff' } },
   { id: 'hazir', n: 'Hazır banner resmi', d: 'Yazısı resmin içinde olan banner', img: 'wide', size: 'Bilgisayar 1800×780 + telefon 900×1180 (iki ayrı resim)',
     s: { layout: 'cover', title: '', text: '', cta: '', tag: '', logo: 'none', mfit: 'whole' } },
   { id: 'sade', n: 'Sade beyaz', d: 'Süssüz, beyaz zemin', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
-    s: { layout: 'split', bg: 'l-white', tag: '', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'İncele', bs: 'dark' } },
+    s: { layout: 'split', bg: 'l-white', tag: '', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'İncele', btn: { st: 'dark' } } },
 ];
+
+// ---- Reklam butonu (slides[i].btn = {st, ar, sz, sh, bg, fg, bd, ac, ab}). st: stil, ar: ok simgesi, sz: boyut, sh: şekil;
+// bg/fg/bd/ac/ab: elle seçilen zemin / yazı / çerçeve / ok / ok zemini renkleri (boşsa stilinki).
+// v: CSS değişkenleri (--b-*): bg zemin, fg yazı, bd çerçeve rengi, bw çerçeve kalınlığı, sh gölge, blur cam, ab ok zemini, af ok rengi
+const GG = 'linear-gradient(135deg, var(--g1), var(--g2))';
+const GOLD = 'linear-gradient(135deg, #a16207, #fde68a 45%, #ca8a04 70%, #fef3c7)';
+export const BTN_STYLES = [
+  { id: 'white', n: 'Beyaz', g: 'Sade', v: { bg: '#ffffff', fg: '#0b1430', ab: GG, af: '#ffffff', sh: '0 10px 30px -10px rgb(0 0 0 / .45)' } },
+  { id: 'dark', n: 'Lacivert', g: 'Sade', v: { bg: '#0b1430', fg: '#ffffff', ab: '#ffffff', af: '#0b1430', sh: '0 10px 30px -12px rgb(0 0 0 / .6)' } },
+  { id: 'black', n: 'Siyah', g: 'Sade', v: { bg: '#000000', fg: '#ffffff', bd: 'rgb(255 255 255 / .22)', bw: '1px', ab: '#ffffff', af: '#000000' } },
+  { id: 'brand', n: 'Mağaza rengi', g: 'Sade', v: { bg: 'var(--accent)', fg: '#ffffff', ab: 'rgb(255 255 255 / .22)', af: '#ffffff', sh: '0 10px 26px -12px var(--accent)' } },
+  { id: 'soft', n: 'Yumuşak', g: 'Sade', v: { bg: 'rgb(255 255 255 / .16)', fg: '#ffffff', ab: 'rgb(255 255 255 / .24)', af: '#ffffff' } },
+  { id: 'outline', n: 'Beyaz çerçeve', g: 'Çerçeveli', v: { bg: 'transparent', fg: '#ffffff', bd: '#ffffff', bw: '2px', ab: '#ffffff', af: '#0b1430' } },
+  { id: 'outline-dark', n: 'Koyu çerçeve', g: 'Çerçeveli', v: { bg: 'transparent', fg: '#0b1430', bd: '#0b1430', bw: '2px', ab: '#0b1430', af: '#ffffff' } },
+  { id: 'glass', n: 'Buzlu cam', g: 'Çerçeveli', v: { bg: 'rgb(255 255 255 / .14)', fg: '#ffffff', bd: 'rgb(255 255 255 / .4)', bw: '1px', blur: 'blur(12px) saturate(1.3)', ab: 'rgb(255 255 255 / .92)', af: '#0b1430' } },
+  { id: 'neon', n: 'Neon', g: 'Çerçeveli', v: { bg: '#05060f', fg: '#e0f2fe', bd: '#22d3ee', bw: '1.5px', sh: '0 0 18px rgb(34 211 238 / .55)', ab: 'transparent', af: '#22d3ee' } },
+  { id: 'accent', n: 'Tema renkli', g: 'Renkli', v: { bg: GG, fg: '#ffffff', ab: 'rgb(255 255 255 / .22)', af: '#ffffff', sh: '0 10px 30px -10px var(--g1)' } },
+  { id: 'sunset', n: 'Gün batımı', g: 'Renkli', v: { bg: 'linear-gradient(135deg, #7c3aed, #ec4899 55%, #f59e0b)', fg: '#ffffff', ab: 'rgb(255 255 255 / .25)', af: '#ffffff', sh: '0 10px 30px -10px #ec4899' } },
+  { id: 'ocean', n: 'Okyanus', g: 'Renkli', v: { bg: 'linear-gradient(135deg, #0ea5e9, #2563eb)', fg: '#ffffff', ab: 'rgb(255 255 255 / .25)', af: '#ffffff', sh: '0 10px 30px -10px #2563eb' } },
+  { id: 'sale', n: 'Kampanya kırmızı', g: 'Renkli', v: { bg: 'linear-gradient(135deg, #dc2626, #f97316)', fg: '#ffffff', ab: '#ffffff', af: '#dc2626', sh: '0 10px 30px -10px #dc2626' } },
+  { id: 'green', n: 'Yeşil', g: 'Renkli', v: { bg: '#16a34a', fg: '#ffffff', ab: '#ffffff', af: '#16a34a', sh: '0 10px 26px -12px #16a34a' } },
+  { id: 'gold', n: 'Altın', g: 'Lüks', v: { bg: GOLD, fg: '#3b2a05', ab: '#1c1407', af: '#fcd34d', sh: '0 10px 30px -10px rgb(202 138 4 / .7)' } },
+  { id: 'black-gold', n: 'Siyah altın', g: 'Lüks', v: { bg: '#0a0a0b', fg: '#f5c542', bd: '#f5c542', bw: '1.5px', ab: GOLD, af: '#0a0a0b' } },
+  { id: 'chrome', n: 'Krom', g: 'Lüks', v: { bg: 'linear-gradient(180deg, #f8fafc, #cbd5e1 48%, #94a3b8 52%, #e2e8f0)', fg: '#0f172a', ab: '#0f172a', af: '#ffffff', sh: '0 8px 22px -10px rgb(0 0 0 / .5)' } },
+  { id: 'rose-gold', n: 'Rose gold', g: 'Lüks', v: { bg: 'linear-gradient(135deg, #b76e79, #f4c2c2 50%, #b76e79)', fg: '#3b1219', ab: '#3b1219', af: '#f4c2c2' } },
+  { id: 'link', n: 'Sadece yazı', g: 'Sade', v: { bg: 'transparent', fg: '#ffffff', ab: 'transparent', af: 'currentColor', sh: 'none' } },
+];
+export const BTN_BY = Object.fromEntries(BTN_STYLES.map((x) => [x.id, x]));
+// eski buton seçimi (s.bs) → yeni stil
+export const BS_TO_BTN = { light: 'white', dark: 'dark', accent: 'accent', outline: 'outline', glass: 'glass' };
+// Ok simgesi: ic (simge), v (--a-*: bg zemin, fg renk, r köşe, bw/bd halka, sh gölge). 'auto' stilin kendi ok renkleri
+export const ARROWS = [
+  { id: 'auto', n: 'Stile uygun', ic: 'arrow', v: {} },
+  { id: 'grad', n: 'Renkli daire', ic: 'arrow', v: { bg: GG, fg: '#ffffff' } },
+  { id: 'white', n: 'Beyaz daire', ic: 'arrow', v: { bg: '#ffffff', fg: '#0b1430' } },
+  { id: 'dark', n: 'Koyu daire', ic: 'arrow', v: { bg: '#0b1430', fg: '#ffffff' } },
+  { id: 'brand', n: 'Mağaza rengi', ic: 'arrow', v: { bg: 'var(--accent)', fg: '#ffffff' } },
+  { id: 'gold', n: 'Altın', ic: 'arrow', v: { bg: GOLD, fg: '#3b2a05', sh: '0 4px 12px -4px rgb(202 138 4 / .8)' } },
+  { id: 'ring', n: 'Halka', ic: 'arrow', v: { bg: 'transparent', fg: 'currentColor', bw: '1.5px', bd: 'currentColor' } },
+  { id: 'glass', n: 'Cam', ic: 'arrow', v: { bg: 'rgb(255 255 255 / .22)', fg: '#ffffff', bw: '1px', bd: 'rgb(255 255 255 / .45)' } },
+  { id: 'square', n: 'Kare', ic: 'arrow', v: { r: '10px' } },
+  { id: 'ne', n: 'Çapraz ok ↗', ic: 'ne', v: {} },
+  { id: 'long', n: 'Uzun ok', ic: 'long', v: { bg: 'transparent', fg: 'currentColor', w: '34px' } },
+  { id: 'plain', n: 'Sade ok', ic: 'arrow', v: { bg: 'transparent', fg: 'currentColor' } },
+  { id: 'chev', n: 'İnce ok ›', ic: 'chev', v: { bg: 'transparent', fg: 'currentColor' } },
+  { id: 'dbl', n: 'Çift ok »', ic: 'dbl', v: { bg: 'transparent', fg: 'currentColor' } },
+  { id: 'cart', n: 'Sepet', ic: 'cart', v: {} },
+  { id: 'play', n: 'Oynat', ic: 'play', v: {} },
+  { id: 'wa', n: 'WhatsApp', ic: 'wa', v: { bg: '#25d366', fg: '#ffffff' } },
+  { id: 'neon', n: 'Neon', ic: 'arrow', v: { bg: 'transparent', fg: '#22d3ee', bw: '1.5px', bd: '#22d3ee', sh: '0 0 12px rgb(34 211 238 / .7)' } },
+  { id: 'none', n: 'Oksuz', ic: '', v: {} },
+];
+export const ARROW_BY = Object.fromEntries(ARROWS.map((x) => [x.id, x]));

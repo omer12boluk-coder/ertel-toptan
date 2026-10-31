@@ -10,10 +10,10 @@ import { Icon, Field, Toggle, Confirm, openMenu } from './ui.jsx';
 import { withDefaults, norm, ls } from './utils.js';
 import {
   ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, UspFields, PromoFields, RailFields, BrandFields, BlockFields,
-  ScaleField, MQ_STYLES, ShopImg, useShopImg, GeoFields, geoOf, withProdFallback, THEMES, SLIDE_LAYOUTS, COVER_LY, ColorPick, LinkPick, LogoPick, ImgPick, ImgLook, Rows,
+  ScaleField, MQ_STYLES, ShopImg, useShopImg, CtaButton, btnStyleOf, GeoFields, geoOf, withProdFallback, THEMES, SLIDE_LAYOUTS, COVER_LY, ColorPick, LinkPick, LogoPick, ImgPick, ImgLook, Rows,
 } from './shophome.jsx';
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
-import { SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone } from './presets.js';
+import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone } from './presets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 
 // raflara kalıcı kimlik ver, eski sıra kayıtlarını (rail:0) kimliğe çevir.
@@ -481,9 +481,8 @@ function useFocusField(sel) {
 }
 
 // ---- Büyük reklam paneli ---------------------------------------------------------------------------------------------------
-const BTN_STYLES = { light: 'Beyaz', dark: 'Koyu', accent: 'Renkli', outline: 'Çerçeveli', glass: 'Cam' };
 let styleClip = null; // stil kopyala / yapıştır (oturum boyunca)
-const STYLE_KEYS = ['theme', 'bg', 'layout', 'tc', 'xc', 'bs', 'ist'];
+const STYLE_KEYS = ['theme', 'bg', 'layout', 'tc', 'xc', 'bs', 'btn', 'ist'];
 const THEME_BG = { night: '#070c1d', ember: '#1a0a02', volt: '#031510', violet: '#100828', carbon: '#0b0b0d', ice: '#eef3ff', sand: '#f7f1e6', mint: '#ecfbf4', rose: '#2a0716', ocean: '#031a2e' };
 const THEME_SW = { night: ['#070c1d', '#2f6bff', '#ff6a1a'], ember: ['#1a0a02', '#ff5a1f', '#ffb020'], volt: ['#031510', '#10e39a', '#2f6bff'], violet: ['#100828', '#8b5cf6', '#ff3d9a'], carbon: ['#0b0b0d', '#e5e7eb', '#ff6a1a'], ice: ['#eef3ff', '#7aa2ff', '#ffb36b'], sand: ['#f7f1e6', '#c2410c', '#ca8a04'], rose: ['#2a0716', '#fb7185', '#f59e0b'], ocean: ['#031a2e', '#22d3ee', '#3b82f6'], mint: ['#ecfbf4', '#059669', '#0ea5e9'] };
 function HeroPanel(P) {
@@ -508,7 +507,7 @@ function HeroPanel(P) {
   const bad = bgHex ? [['tc', 'Başlık'], ['xc', 'Açıklama']].filter(([k]) => s[k] && !s[k].startsWith('g:') && (contrast(s[k], bgHex) ?? 9) < 2.6) : [];
   const fixC = contrast('#ffffff', bgHex || '#000') > contrast('#0f172a', bgHex || '#000') ? '#ffffff' : '#0f172a';
   const addFromTpl = (t) => { const n = [...slides, { ...NEW.slide(), ...structuredClone(t.s), img: '' }]; S('slides', n); setTimeout(() => pick(n.length - 1), 60); setTpl(false); toast('“' + t.n + '” şablonuyla yeni reklam eklendi. Yazıları değiştirip resmini seçin.'); };
-  const applyTpl = (t) => { const k = ['layout', 'bg', 'theme', 'bs', 'tc', 'xc', 'mfit']; up({ ...Object.fromEntries(k.map((x) => [x, t.s[x] ?? ''])), fx: {}, fxm: {} }); setTpl(false); toast('Şablonun görünümü bu reklama uygulandı (yazılar ve resim aynı kaldı)'); };
+  const applyTpl = (t) => { const k = ['layout', 'bg', 'theme', 'bs', 'btn', 'tc', 'xc', 'mfit']; up({ ...Object.fromEntries(k.map((x) => [x, t.s[x] ?? ''])), fx: {}, fxm: {} }); setTpl(false); toast('Şablonun görünümü bu reklama uygulandı (yazılar ve resim aynı kaldı)'); };
   return <>
     <button type="button" className={'dz2-tplbtn' + (tpl ? ' on' : '')} onClick={() => setTpl(!tpl)}><Icon n="sparkle" s={16} /><span><b>Hazır şablonlar</b><small>{SLIDE_TEMPLATES.length} şablon · hangi resmin gerektiği yazar</small></span><Icon n="chev" s={16} className="fold-chev" /></button>
     {tpl && <div className="dz2-tpls">{SLIDE_TEMPLATES.map((t) => (
@@ -536,7 +535,7 @@ function HeroPanel(P) {
       <Field label="Buton yazısı" opt><input value={s.cta || ''} onChange={(e) => up({ cta: e.target.value })} placeholder="ör. Hemen incele" /></Field>
       <LinkPick v={s.link} onChange={(link) => up({ link })} />
     </div>
-    {s.cta && <div data-f="bs"><Field label="Buton görünümü"><span className="seg seg-wrap">{Object.entries(BTN_STYLES).map(([k, l]) => <button key={k} type="button" className={(s.bs || 'light') === k ? 'on' : ''} onClick={() => up({ bs: k })} onMouseEnter={() => peekP({ bs: k })} onMouseLeave={() => peekP(null)}>{l}</button>)}</span></Field></div>}
+    {s.cta && <div data-f="bs"><ButtonStudio s={s} up={up} peekP={peekP} pack={pack} /></div>}
     <div data-f="img"><ImgPick v={s.img} onChange={(img) => up({ img })} alpha={!cover} max={cover ? 1800 : 1000} label={cover ? 'Banner resmi' : 'Görsel'} hint={cover ? 'Yatay banner resmi (ör. 1600×640). Sayfada resmi tutup sürükleyerek kaydırabilirsiniz.' : 'Saydam arka planlı ürün resmi en iyisi'} prodOk /></div>
     {cover && <div data-f="mfit"><Field label="Telefonda nasıl görünsün?" hint={{ stack: 'Resim telefonda kesilmeden üstte, yazılar altında. Yatay banner için en temiz sonuç.', whole: 'Resmin tamamı görünür, kenarlar resmin bulanık hâliyle dolar.' }[s.mfit] || 'Resim telefonun dikey kutusunu doldurur; yanları kesilir. Ölçü rehberinde nereden kesildiğini görün.'}>
       <span className="dz2-mfits">{[['', 'Kırp', 'doldurur'], ['whole', 'Resmin tamamı', 'bulanık kenar'], ['stack', 'Resim üstte', 'yazı altta']].map(([k, l, h]) => <button key={k} type="button" className={'dz2-mfit mf-' + (k || 'crop') + ((s.mfit || '') === k ? ' on' : '')} onClick={() => up({ mfit: k })}><i aria-hidden="true"><b /><em /></i><span>{l}</span><small>{h}</small></button>)}</span>
@@ -608,6 +607,44 @@ function SizeGuide({ s, i, measure, H }) {
     {warns.map((w) => <p key={w} className="dz2-warn sm"><Icon n="eye" s={14} /><span>{w}</span></p>)}
   </div>;
 }
+// ---- Buton stüdyosu: hazır stil kartları (gerçek butonla önizleme), ok simgesi, renkler, şekil, boyut
+function ButtonStudio({ s, up, peekP, pack }) {
+  const B = s.btn || { st: btnStyleOf(s) };
+  const set = (p) => up({ btn: { ...B, ...p }, bs: '' });
+  const peek = (p) => peekP?.(p ? { btn: { ...B, ...p }, bs: '' } : null);
+  const sw = THEME_SW[s.theme || 'night'] || THEME_SW.night;
+  const bgk = pack?.hero || s.bg; const bg = BG_BY[bgk]?.bg || `radial-gradient(60% 80% at 15% 10%, ${sw[1]}66, transparent 60%), ${sw[0]}`;
+  const tile = { '--g1': sw[1], '--g2': sw[2], '--accent': 'var(--accent-user, #2f55b0)', background: bg };
+  const groups = [...new Set(BTN_STYLES.map((x) => x.g))];
+  const C = (k, label) => <span className="dz2-bcol"><small>{label}</small><span className="she-color"><input type="color" value={/^#/.test(B[k] || '') ? B[k] : '#ffffff'} onChange={(e) => set({ [k]: e.target.value })} aria-label={label} />{B[k] ? <button type="button" className="linkish" onClick={() => set({ [k]: '' })}>oto</button> : <code>oto</code>}</span></span>;
+  return <div className="dz2-bstudio">
+    <span className="field-l">Buton stili</span>
+    {groups.map((g) => <div key={g} className="dz2-bgrp"><small>{g}</small><div className="dz2-bgrid">
+      {BTN_STYLES.filter((x) => x.g === g).map((x) => (
+        <button key={x.id} type="button" className={'dz2-bcard' + (B.st === x.id ? ' on' : '')} onClick={() => set({ st: x.id })} onMouseEnter={() => peek({ st: x.id })} onMouseLeave={() => peek(null)} title={x.n}>
+          <span className="dz2-bprev" style={tile}><CtaButton s={{ cta: 'İncele', btn: { ...B, st: x.id, bg: '', fg: '', bd: '', sz: 'sm' } }} onClick={() => {}} /></span>
+          <small>{x.n}</small>
+        </button>
+      ))}
+    </div></div>)}
+    <span className="field-l">Ok simgesi</span>
+    <div className="dz2-agrid">
+      {ARROWS.map((a) => (
+        <button key={a.id} type="button" className={'dz2-acard' + ((B.ar || 'auto') === a.id ? ' on' : '')} onClick={() => set({ ar: a.id })} onMouseEnter={() => peek({ ar: a.id })} onMouseLeave={() => peek(null)} title={a.n}>
+          <span className="dz2-bprev" style={tile}><CtaButton s={{ cta: '', btn: { ...B, ar: a.id, sz: 'sm' } }} onClick={() => {}} /></span>
+          <small>{a.n}</small>
+        </button>
+      ))}
+    </div>
+    <div className="dz2-brow">
+      <Field label="Şekil"><span className="seg">{[['pill', 'Hap'], ['round', 'Yuvarlak köşe'], ['square', 'Köşeli']].map(([k, l]) => <button key={k} type="button" className={(B.sh || 'pill') === k ? 'on' : ''} onClick={() => set({ sh: k })}>{l}</button>)}</span></Field>
+      <Field label="Boyut"><span className="seg">{[['sm', 'Küçük'], ['md', 'Orta'], ['lg', 'Büyük']].map(([k, l]) => <button key={k} type="button" className={(B.sz || 'md') === k ? 'on' : ''} onClick={() => set({ sz: k })}>{l}</button>)}</span></Field>
+    </div>
+    <div className="field"><span className="field-l">Renkleri değiştir <small className="opt">(oto = stilin kendi rengi)</small></span>
+      <div className="dz2-bcols">{C('bg', 'Zemin')}{C('fg', 'Yazı')}{C('bd', 'Çerçeve')}{C('ac', 'Ok')}{C('ab', 'Ok zemini')}</div>
+    </div>
+  </div>;
+}
 // arka plan seçici: ışıklı temalar + hazır arka planlar; üzerine gelince sayfada denenir
 function BgPicker({ s, up, peekP, packOn }) {
   const [cat, setCat] = useState(() => (s.bg && BG_BY[s.bg] ? BG_BY[s.bg].cat : 'theme'));
@@ -653,7 +690,7 @@ function FxPanel({ H, set, s, i, el, setSel, sel }) {
     {el === 'title' && <><Field label="Başlık"><input value={s.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field><ColorPick v={s.tc || ''} onChange={(tc) => up({ tc })} />{size}</>}
     {el === 'text' && <><Field label="Açıklama"><textarea rows={3} value={s.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field><ColorPick v={s.xc || ''} onChange={(xc) => up({ xc })} label="Açıklama rengi" grads={false} />{size}</>}
     {el === 'cta' && <><Field label="Buton yazısı"><input value={s.cta || ''} onChange={(e) => up({ cta: e.target.value })} /></Field><LinkPick v={s.link} onChange={(link) => up({ link })} />
-      <Field label="Buton görünümü"><span className="seg seg-wrap">{Object.entries(BTN_STYLES).map(([k, l]) => <button key={k} type="button" className={(s.bs || 'light') === k ? 'on' : ''} onClick={() => up({ bs: k })}>{l}</button>)}</span></Field>{size}</>}
+      <ButtonStudio s={s} up={up} />{size}</>}
     {el === 'logo' && <><Field label="Küçük etiket" opt><input value={s.tag || ''} onChange={(e) => up({ tag: e.target.value })} /></Field><LogoPick s={s} up={up} />{size}</>}
     {el === 'art' && <><ImgPick v={s.img} onChange={(img) => up({ img })} alpha max={1000} label="Görsel" prodOk />{size}</>}
     <p className="fine">Sayfada öğeyi tutup sürükleyin: ortaya ve ilk yerine kendiliğinden yapışır (Alt tuşu basılıyken serbest). Ok tuşlarıyla 1 px, Shift ile 10 px kayar.</p>

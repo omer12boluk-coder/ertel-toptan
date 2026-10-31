@@ -5915,3 +5915,44 @@ html.dz2-open .sheet-bg { z-index: 960; }
 .vup-btn { position: relative; overflow: hidden; }
 .vup-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); transition: width .2s; }
 .vup-ok { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ok); font-weight: 600; }
+
+/* ---- Reklam butonu 2 (slides[i].btn): stil değişkenleri --b-*, ok --a-*, elle renkler --u*. Tema kurallarını ezer ---- */
+:is(.sh-slide .sh-slide-t, .dz2-bprev) .sh-cta-btn.cbx {
+  height: var(--b-h, 54px); padding: 0 var(--b-pr, 8px) 0 var(--b-pl, 24px); gap: 14px; font-size: var(--b-fs, 16px);
+  border-radius: var(--b-r, 999px); background: var(--ub, var(--b-bg, #fff)); color: var(--uf, var(--b-fg, #0b1430));
+  box-shadow: inset 0 0 0 var(--b-bw, 0px) var(--ubd, var(--b-bd, transparent)), var(--b-sh, 0 10px 30px -10px rgb(0 0 0 / .45));
+  -webkit-backdrop-filter: var(--b-blur, none); backdrop-filter: var(--b-blur, none);
+}
+:is(.sh-slide .sh-slide-t, .dz2-bprev) .sh-cta-btn.cbx:hover { box-shadow: inset 0 0 0 var(--b-bw, 0px) var(--ubd, var(--b-bd, transparent)), var(--b-sh, 0 16px 36px -12px rgb(0 0 0 / .5)); filter: brightness(1.06); }
+:is(.sh-slide .sh-slide-t, .dz2-bprev) .sh-cta-btn.cbx > .sh-cta-ar {
+  width: var(--a-w, var(--a-s, 40px)); height: var(--a-s, 40px); border-radius: var(--a-r, 999px); display: grid; place-items: center; flex: none;
+  background: var(--uab, var(--a-bg, var(--b-ab))); color: var(--ua, var(--a-fg, var(--b-af)));
+  box-shadow: inset 0 0 0 var(--a-bw, 0px) var(--a-bd, transparent), var(--a-sh, none);
+}
+:is(.sh-slide .sh-slide-t, .dz2-bprev) .sh-cta-btn.cbx.no-ar { padding-right: var(--b-pl, 24px); }
+:is(.sh-slide .sh-slide-t, .dz2-bprev) .sh-cta-btn.cbx.cb-link { padding: 0; height: auto; box-shadow: none; text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }
+.cbx.bz-sm { --b-h: 44px; --b-fs: 14px; --a-s: 32px; --b-pl: 18px; --b-pr: 6px; }
+.cbx.bz-lg { --b-h: 64px; --b-fs: 18px; --a-s: 50px; --b-pl: 30px; --b-pr: 7px; }
+.cbx.br-round { --b-r: 14px; } .cbx.br-round > .sh-cta-ar { --a-r: 10px; }
+.cbx.br-square { --b-r: 4px; } .cbx.br-square > .sh-cta-ar { --a-r: 3px; }
+.cbx.ca-square > .sh-cta-ar { --a-r: 10px; }
+/* Buton stüdyosu (panel) */
+.dz2-bstudio { display: flex; flex-direction: column; gap: 10px; }
+.dz2-bgrp > small { display: block; font: 600 11px/1 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 2px 0 6px; }
+.dz2-bgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.dz2-agrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.dz2-bcard, .dz2-acard { display: flex; flex-direction: column; gap: 4px; padding: 4px; border-radius: 11px; border: 1px solid var(--line-2); text-align: center; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.dz2-bcard:hover, .dz2-acard:hover { transform: translateY(-1px); border-color: var(--line); }
+.dz2-bcard.on, .dz2-acard.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dz2-bcard small, .dz2-acard small { font-size: 11.5px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dz2-bcard.on small, .dz2-acard.on small { color: var(--fg); }
+.dz2-bprev { display: grid; place-items: center; height: 62px; border-radius: 8px; overflow: hidden; pointer-events: none; padding: 0 6px; }
+.dz2-acard .dz2-bprev { height: 54px; }
+.dz2-bprev .sh-cta-btn { margin: 0 !important; align-self: center; transform: none !important; max-width: 100%; white-space: nowrap; }
+.dz2-acard .sh-cta-btn.cbx { --b-pl: 6px; gap: 0; }
+.dz2-brow { display: grid; gap: 10px; }
+.dz2-bcols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.dz2-bcol { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dz2-bcol small { font-size: 12px; color: var(--muted); }
+.dz2-bcol .she-color { gap: 4px; }
+.dz2-bcol code { font-size: 11px; color: var(--muted); }

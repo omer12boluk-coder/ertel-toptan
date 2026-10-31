@@ -11,7 +11,7 @@ import { ProductSheet, useTree, PlayVideo, mediaUrl } from './catalog.jsx';
 import { currentRate } from './listsheet.jsx';
 import { feat, useStats } from './extras.jsx';
 import { useWin, winOf, onDrag } from './dzframe.jsx';
-import { BG_BY, activePack } from './presets.js';
+import { BG_BY, activePack, BTN_BY, ARROW_BY } from './presets.js';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
@@ -797,12 +797,35 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
         {logo ? <span {...fx('logo', 'sh-slide-logo')}><ShopImg v={logo} alt={s.tag || ''} /></span> : s.tag && <span {...fx('logo', 'sh-tag glow')}>{s.tag}</span>}
         {s.title && <h1 {...tf} style={{ ...(tf.style || {}), ...(tt.style || {}) }}>{s.title}</h1>}
         {s.text && (() => { const xf = fx('text'); return <p {...xf} style={s.xc ? { ...(xf.style || {}), color: s.xc, opacity: 1 } : xf.style}>{s.text}</p>; })()}
-        {s.cta && s.link && <span {...fx('cta', 'sh-cta-wrap')}><button className="sh-cta-btn" onClick={(e) => { e.stopPropagation(); open(s.link)(); }}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button></span>}
+        {s.cta && s.link && <span {...fx('cta', 'sh-cta-wrap')}><CtaButton s={s} onClick={(e) => { e.stopPropagation(); open(s.link)(); }} /></span>}
       </div>
       {!cover && s.img && <div ref={art} {...fx('art', 'sh-slide-art')}>{st === 'pop' ? <span className="sh-stage" aria-hidden="true" /> : <span className="sh-halo" aria-hidden="true" />}<span className="sh-depth">{isProdImg(s.img) && st !== 'pop' ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</span></div>}
       {!cover && !s.img && ly !== 'center' && <div className="sh-slide-art word" aria-hidden="true"><b>{(s.tag || s.title || '').split(' ')[0]}</b></div>}
     </article>
   );
+}
+
+// ---- reklam butonu: s.btn yoksa eski görünüm (birebir aynı); varsa stil + ok simgesi + elle renkler (presets.js BTN_STYLES / ARROWS)
+const ArrowIc = ({ ic }) => ic === 'ne' ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+  : ic === 'long' ? <svg width="30" height="14" viewBox="0 0 30 14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 7h27M22 1l6 6-6 6" /></svg>
+  : ic === 'chev' ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+  : ic === 'dbl' ? <svg width="20" height="18" viewBox="0 0 26 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 6 6 6-6 6M14 6l6 6-6 6" /></svg>
+  : ic === 'cart' ? <Icon n="cart" s={17} /> : ic === 'play' ? <Icon n="play" s={16} /> : ic === 'wa' ? <Icon n="wa" s={18} /> : <Icon n="back" s={18} className="flip" />;
+export function btnStyleOf(s) { return s.btn?.st ? s.btn.st : BS_MAP[s.bs || 'light'] || 'white'; }
+const BS_MAP = { light: 'white', dark: 'dark', accent: 'accent', outline: 'outline', glass: 'glass' };
+export function CtaButton({ s, onClick }) {
+  const B = s.btn;
+  if (!B) return <button className="sh-cta-btn" onClick={onClick}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button>;
+  const st = BTN_BY[B.st] || BTN_BY.white; const ar = ARROW_BY[B.ar || 'auto'] || ARROW_BY.auto;
+  const v = {};
+  for (const [k, x] of Object.entries(st.v)) v['--b-' + k] = x;
+  for (const [k, x] of Object.entries(ar.v)) v['--a-' + k] = x;
+  if (B.bg) v['--ub'] = B.bg; if (B.fg) v['--uf'] = B.fg; if (B.ac) v['--ua'] = B.ac; if (B.ab) v['--uab'] = B.ab;
+  if (B.bd) { v['--ubd'] = B.bd; if (!st.v.bw) v['--b-bw'] = '2px'; }
+  const none = ar.id === 'none';
+  return <button className={'sh-cta-btn cbx cb-' + st.id + ' ca-' + ar.id + ' bz-' + (B.sz || 'md') + ' br-' + (B.sh || 'pill') + (none ? ' no-ar' : '')} style={v} onClick={onClick}>
+    {s.cta}{!none && <span className="sh-cta-ar"><ArrowIc ic={ar.ic} /></span>}
+  </button>;
 }
 
 // ---- ürün rafı -------------------------------------------------------------------------------------
