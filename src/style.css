@@ -5224,3 +5224,11 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 @media (max-width: 700px) { .shell > .main .sh { margin-inline: -16px; padding-inline: 16px; } }
 /* avantaj şeridi telefonda 16px kaydırılmış başlıyordu (yaslanma kenarı iç boşluğu saymıyordu) → ilk kart tam görünür */
 @media (max-width: 700px) { .sh-usps { scroll-padding-inline: 16px; } }
+
+/* telefonda banner (31.10.2026, kullanıcı: kaydırırken düz kenar kötü görünüyordu): her reklam kendi yuvarlak köşeli kartı,
+   aralarında 10px boşluk; bilgisayar değişmedi */
+@media (max-width: 700px) {
+  .sh-hero { overflow: hidden; box-shadow: none; }
+  .sh-hero-track { gap: 10px; }
+  .sh-hero .sh-slide { border-radius: 22px; }
+}

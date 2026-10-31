@@ -647,8 +647,10 @@ function Hero({ slides, open, brands, heroH }) {
     const t = setTimeout(() => goTo((i + 1) % n), Math.max(300, left.current));
     return () => { clearTimeout(t); left.current -= Date.now() - since.current; };
   }, [i, paused, n]);
-  function goTo(k) { const el = track.current; if (!el) return; el.scrollTo({ left: k * el.clientWidth, behavior: 'smooth' }); setI(k); }
-  const onScroll = (e) => { const el = e.currentTarget; const k = Math.round(el.scrollLeft / el.clientWidth); if (k !== i) setI(k); };
+  // telefonda reklamlar arasında boşluk var (ayrık kartlar) → bir adım = genişlik + boşluk
+  const step = (el) => el.clientWidth + (parseFloat(getComputedStyle(el).columnGap) || 0);
+  function goTo(k) { const el = track.current; if (!el) return; el.scrollTo({ left: k * step(el), behavior: 'smooth' }); setI(k); }
+  const onScroll = (e) => { const el = e.currentTarget; const k = Math.round(el.scrollLeft / step(el)); if (k !== i) setI(k); };
   return (
     <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => setPaused(false)}>
