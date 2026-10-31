@@ -5265,3 +5265,10 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 .range-pre { margin-bottom: 12px; flex-wrap: wrap; }
 @media (max-width: 560px) { .orders-page .chips .chip-date { padding: 6px 9px; } .chip-date .chip-sel-t { display: none; } }
 .range-bar { flex-wrap: nowrap; } .range-bar > span { min-width: 0; }
+
+/* Daha eski yükleme (31.10.2026) */
+.older-row .btn .spin { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+.older-last { flex-basis: 100%; font-size: 12.5px; color: var(--ok, #1f6b47); font-weight: 600; }
+.older-row > .muted { flex-basis: 100%; }
+li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
+@keyframes ofresh { 0%, 35% { background: color-mix(in srgb, var(--accent) 16%, var(--card, #fff)); box-shadow: inset 3px 0 0 var(--accent); } 100% { background: inherit; box-shadow: none; } }

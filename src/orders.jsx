@@ -8,7 +8,7 @@ import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf } from './
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushStatus } from './push.js';
-import { ensureAllMembers, loadOlder, winLabel } from './datawin.js';
+import { ensureAllMembers, loadOlder, olderStep } from './datawin.js';
 import { code128svg } from './barcode.js';
 import { labelPdf, needsPdfPrint } from './labelpdf.js';
 import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
@@ -30,45 +30,30 @@ const custMsg = (o, S) => {
   return `Merhaba ${o.contact?.name || ''}, ${S.shop.name} · #${o.no} numaralı siparişiniz: ${st}.${cargo}\n${links.order(o.id)}`;
 };
 
-// Liste sonunda: panel siparişleri / talepleri son 60 günle açar; daha eskisi bu düğmeyle 60'ar gün geriye yüklenir
-export function OlderBtn({ kind, what = 'siparişleri' }) {
+// Liste sonunda (siparişlerde sadece SON sayfada): panel açılışta son N günü yükler; bu düğme 30 gün daha geriye açar.
+// Basınca: düğmede "Yükleniyor…", bitince hangi tarihlerden kaç kayıt geldiği yazılır, yeni gelenler onDone ile işaretlenir.
+const dShort = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+export function OlderBtn({ kind, what = 'siparişleri', unit = 'sipariş', onDone }) {
   const since = useStore((st) => st.win?.[kind]);
+  const [busy, setBusy] = useState(false);
+  const [last, setLast] = useState(null);
   if (!since) return null;
+  const days = Math.round((Date.now() - since) / 864e5);
+  const run = () => {
+    setBusy(true);
+    loadOlder(kind).then((r) => {
+      setBusy(false); if (!r) { toast('Yüklenemedi, tekrar deneyin', 'bad'); return; }
+      setLast(r);
+      toast(r.added.length ? `${dShort(r.from)} – ${dShort(r.to)} arası: ${r.added.length} ${unit} eklendi` : `${dShort(r.from)} – ${dShort(r.to)} arasında ${unit} yok`);
+      onDone?.(r);
+    });
+  };
   return (
     <div className="older-row">
-      <span className="muted">{winLabel(since)} tarihinden bu yana gösteriliyor</span>
-      <button className="btn sm ghost" onClick={() => loadOlder(kind)}><Icon n="clock" s={15} />Daha eski {what} göster</button>
+      <span className="muted">Son <b>{days} günün</b> {what} gösteriliyor ({dShort(since)} ve sonrası)</span>
+      {last && <span className="older-last">{dShort(last.from)} – {dShort(last.to)}: {last.added.length ? last.added.length + ' ' + unit + ' eklendi' : unit + ' yok'}</span>}
+      <button className="btn sm" disabled={busy} onClick={run}>{busy ? <><span className="spin" aria-hidden="true" />Yükleniyor…</> : <><Icon n="clock" s={15} />{olderStep()} gün daha eskisini yükle</>}</button>
     </div>
-  );
-}
-
-// ---- Tarih aralığı penceresi ----
-const dIn = (ts) => { const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
-const dOut = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
-const DAY = 864e5;
-const rangeLabel = (r) => { const f = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }); const a = f(r.from), b = f(r.to - 1); return a === b ? a : a + ' – ' + b; };
-function RangeSheet({ cur, onPick, onClose }) {
-  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
-  const [a, setA] = useState(dIn(cur?.from ?? t0.getTime() - 30 * DAY));
-  const [b, setB] = useState(dIn(cur ? cur.to - 1 : t0.getTime()));
-  const y = t0.getFullYear(), m = t0.getMonth();
-  const presets = [
-    ['Bu ay', new Date(y, m, 1).getTime(), t0.getTime() + DAY],
-    ['Geçen ay', new Date(y, m - 1, 1).getTime(), new Date(y, m, 1).getTime()],
-    ['Son 3 ay', new Date(y, m - 2, 1).getTime(), t0.getTime() + DAY],
-    ['Bu yıl', new Date(y, 0, 1).getTime(), t0.getTime() + DAY],
-    ['Geçen yıl', new Date(y - 1, 0, 1).getTime(), new Date(y, 0, 1).getTime()],
-  ];
-  const ok = a && b && dOut(a) <= dOut(b);
-  return (
-    <Sheet title="Tarih aralığı" onClose={onClose} footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn" disabled={!ok} onClick={() => onPick(dOut(a), dOut(b) + DAY)}>Siparişleri göster</button></>}>
-      <div className="chips range-pre">{presets.map(([l, f, t]) => <button key={l} className="chip" onClick={() => onPick(f, t)}>{l}</button>)}</div>
-      <div className="row2">
-        <Field label="Başlangıç"><input type="date" value={a} max={b || undefined} onChange={(e) => setA(e.target.value)} /></Field>
-        <Field label="Bitiş"><input type="date" value={b} min={a || undefined} onChange={(e) => setB(e.target.value)} /></Field>
-      </div>
-      <p className="fine">Seçilen aralıktaki siparişler bir kez yüklenir; her sipariş 1 okuma sayılır (100 siparişlik ay ≈ 100 okuma). Durum filtresi ve arama bu siparişlerin içinde çalışır.</p>
-    </Sheet>
   );
 }
 
@@ -124,6 +109,17 @@ export function Orders() {
   const pg = Math.min(page, pages - 1);
   const shown = list.slice(pg * PAGE, pg * PAGE + PAGE);
   const goPage = (n) => { setPage(n); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  // eskiler gelince: ilk yeni siparişin sayfasına geç, ona kaydır, yeni gelenler kısa süre vurgulu
+  const [fresh, setFresh] = useState(null);
+  const onOlder = (r) => { if (!r.added.length) return; setFresh({ ids: new Set(r.added), first: r.added[0] }); };
+  useEffect(() => {
+    if (!fresh?.first) return;
+    const i = list.findIndex((o) => o.id === fresh.first); if (i < 0) return;
+    const np = Math.floor(i / PAGE); if (np !== pg) { setPage(np); return; }
+    const id = fresh.first; setFresh((f) => f && { ...f, first: null });
+    requestAnimationFrame(() => document.querySelector(`[data-oid="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    const t = setTimeout(() => setFresh(null), 4000); return () => clearTimeout(t);
+  }, [fresh, list, pg]);
   if (openId) return <OrderDetail id={openId} />;
   const toggle = (id) => setSel((x) => { const n = new Set(x || []); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const delMany = () => { const ids = [...sel]; setConfirm({ title: `${ids.length} siparişi sil`, text: 'Seçilen siparişler tamamen silinecek. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteOrders(ids).then(() => { toast(ids.length + ' sipariş silindi'); setSel(null); }, (e) => toast('Silinemedi: ' + e.message, 'bad')) }); };
@@ -182,7 +178,7 @@ export function Orders() {
                 const noCode = o.status === 'shipped' && o.delivery?.method !== 'pickup' && !o.cargo?.code;
                 const car = carrierOf(o);
                 return (
-                  <li key={o.id} onContextMenu={(e) => menu(e, o)}>
+                  <li key={o.id} data-oid={o.id} className={fresh?.ids.has(o.id) ? 'o-fresh' : undefined} onContextMenu={(e) => menu(e, o)}>
                     <div role="button" tabIndex={0} className={'orow st-' + o.status + (flow.flash === o.id ? ' flash' : '') + (o.unread ? ' unread' : '') + (sel?.has(o.id) ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))} onKeyDown={(e) => e.key === 'Enter' && (sel ? toggle(o.id) : openOrder(o.id))}>
                       {sel && <label className="oc-box" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={'#' + o.no + ' seç'} checked={sel.has(o.id)} onChange={() => toggle(o.id)} /></label>}
                       <span className="or-no">{o.unread ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{o.no}</b></span>
@@ -215,7 +211,7 @@ export function Orders() {
             )}
           </div>
         )}
-        {!range && <OlderBtn kind="orders" />}
+        {!range && pg >= pages - 1 && <OlderBtn kind="orders" onDone={onOlder} />}
       </>}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
       {flow.sheets}

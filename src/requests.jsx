@@ -89,7 +89,7 @@ function RequestsInner() {
             {list.map((r) => <ReqCard key={r.id} r={r} admin={admin} on={openReq === r.id} sel={sel} onToggle={toggle} onDelete={(id) => askDelete([id])} onSelect={(id) => setSel(new Set([id]))} />)}
           </ul>
         )}
-        {admin && <OlderBtn kind="reqs" what="kayıtları" />}
+        {admin && <OlderBtn kind="reqs" what="kayıtları" unit="kayıt" />}
       </section>
       <section className="req-detail">
         {openReq ? <RequestDetail key={openReq} id={openReq} /> : <div className="req-placeholder"><Empty icon="box" title="Bir sipariş seçin">Soldaki listeden bir kayda dokunun.</Empty></div>}

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { api } from './store.js';
 import { Toggle } from './ui.jsx';
 
-const DAYS = [[14, '14 gün', 'En hafif'], [30, '30 gün', 'Dengeli'], [62, '62 gün', 'Şu anki'], [120, '120 gün', 'En ağır']];
+const DAYS = [[7, '7 gün', 'En hafif'], [14, '14 gün', 'Önerilen'], [30, '30 gün', 'Dengeli'], [62, '62 gün', 'Ağır']];
+const MDAYS = [[14, '14 gün', 'En hafif'], [30, '30 gün', 'Dengeli'], [62, '62 gün', 'Önerilen'], [120, '120 gün', 'En ağır']];
 const fmtN = (n) => (n == null ? '—' : Number(n).toLocaleString('tr-TR'));
 const Bar = ({ l, v, lim }) => {
   const p = v == null ? 0 : Math.min(100, Math.round((v / lim) * 100));
@@ -29,7 +30,7 @@ function Pick({ value, onChange, opts }) {
 
 export function QuotaSettings({ d, set }) {
   const Q = d.quota || {};
-  const days = [14, 30, 62, 120].includes(Number(Q.days)) ? Number(Q.days) : 62;
+  const days = [7, 14, 30, 62, 120].includes(Number(Q.win)) ? Number(Q.win) : 14;
   const mem = [14, 30, 62, 120].includes(Number(Q.members)) ? Number(Q.members) : 62;
   const [u, setU] = useState(undefined);
   useEffect(() => { api().getUsage?.().then((x) => setU(x || null)).catch(() => setU(null)); }, []);
@@ -46,13 +47,13 @@ export function QuotaSettings({ d, set }) {
     </div>}
 
     <h4 className="qt-h">Siparişler ve talepler kaç günlük açılsın</h4>
-    <p className="fine">Mağaza siparişleri, bayi siparişleri/talepleri, ürün talepleri, sorun bildirimleri ve yorumlar. <b>Bekleyen / hazırlanan / kargodaki</b> kayıtlar tarihine bakmadan HER ZAMAN yüklenir; daha eskiler listenin altındaki <b>“Daha eski … göster”</b> ile gelir. Sipariş numarasını aramaya yazarsanız sipariş ne kadar eski olursa olsun bulunur. Müşteri penceresinde müşterinin bütün siparişleri her zaman tam görünür. Genel bakış'taki “bu ay / önceki ay” karşılaştırması 62 günden kısa seçilirse eksik hesaplanır.</p>
-    <Pick value={days} onChange={(v) => set('quota.days', v)} opts={DAYS} />
+    <p className="fine">Mağaza siparişleri, bayi siparişleri/talepleri, ürün talepleri, sorun bildirimleri ve yorumlar. <b>Bekleyen / hazırlanan / kargodaki</b> kayıtlar tarihine bakmadan HER ZAMAN yüklenir; daha eskiler listenin son sayfasının altındaki <b>“30 gün daha eskisini yükle”</b> düğmesiyle ya da Siparişler'deki <b>Tarih</b> düğmesiyle gelir. Sipariş numarasını aramaya yazarsanız sipariş ne kadar eski olursa olsun bulunur. Müşteri penceresinde müşterinin bütün siparişleri her zaman tam görünür. Not: Genel bakış'taki “bu ay” sayıları da yüklenen günlerden hesaplanır; 14 gün seçiliyken “bu ay” ve önceki dönemle karşılaştırma eksik çıkabilir.</p>
+    <Pick value={days} onChange={(v) => set('quota.win', v)} opts={DAYS} />
     <p className="fine qt-est">Günde 100 siparişte panelin her açılışı yaklaşık <b>{fmtN(days * 100 + 300)}</b> okuma (şu an sipariş az, gerçek sayı çok daha düşük).</p>
 
     <h4 className="qt-h">Mağaza üyeleri kaç günlük açılsın</h4>
     <p className="fine">Genel bakış'taki “yeni üye” sayısı ve bildirimler için. <b>Müşteriler › Mağaza müşterileri</b> açılınca bütün üyeler yine yüklenir.</p>
-    <Pick value={mem} onChange={(v) => set('quota.members', v)} opts={DAYS} />
+    <Pick value={mem} onChange={(v) => set('quota.members', v)} opts={MDAYS} />
 
     <h4 className="qt-h">Günlük rapor</h4>
     <Toggle id="s-q-rep" label="Her gece kullanım raporu Telegram'a gelsin" hint="Sınırın %70'ini geçen satırda ⚠️ olur" checked={Q.report !== false} onChange={(v) => set('quota.report', v)} />

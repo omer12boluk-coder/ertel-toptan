@@ -310,7 +310,7 @@ export function IssueAdmin() {
           })}
         </ul>
       )}
-      <OlderBtn kind="issues" what="bildirimleri" />
+      <OlderBtn kind="issues" what="bildirimleri" unit="bildirim" />
       {cur && <IssueSheet q={cur} onClose={() => store.set({ openIssue: null })} onDelete={() => setDel(cur)} />}
       {del && <Confirm title="Bildirimi sil" text="Bildirim, müşterinin fotoğrafları / videosu ve sizin eklediğiniz fotoğraflar depodan kalıcı olarak silinir." okLabel="Sil" tone="danger" onClose={() => setDel(null)}
         onOk={() => { const id = del.id; store.set({ openIssue: null }); store.s.api.deleteIssue(id).then(() => toast('Bildirim ve dosyaları silindi')).catch((e) => toast(e.message, 'bad')); }} />}

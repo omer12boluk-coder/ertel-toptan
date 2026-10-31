@@ -241,7 +241,7 @@ export function ReviewAdmin() {
           ); })}
         </ul>
       )}
-      <OlderBtn kind="reviews" what="yorumları" />
+      <OlderBtn kind="reviews" what="yorumları" unit="yorum" />
       {rep && (
         <Sheet title="Yoruma yanıt" onClose={() => setRep(null)} footer={<><button className="btn ghost" onClick={() => setRep(null)}>Vazgeç</button><button className="btn primary" onClick={async () => { try { await store.s.api.updateReview(rep.r.id, { reply: rep.t.trim().slice(0, 600), updatedAt: now() }); toast('Yanıt kaydedildi'); setRep(null); } catch (e) { toast(e.message, 'bad'); } }}><Icon n="check" s={16} />Kaydet</button></>}>
           <p className="rv-t">“{rep.r.text || 'Sadece yıldız'}” — {rep.r.name}</p>

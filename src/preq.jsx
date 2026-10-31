@@ -245,7 +245,7 @@ export function PreqAdmin() {
           })}
         </ul>
       )}
-      <OlderBtn kind="preqs" what="talepleri" />
+      <OlderBtn kind="preqs" what="talepleri" unit="talep" />
       {cur && <PreqSheet q={cur} onClose={() => store.set({ openPreq: null })} onDelete={() => setDel(cur)} />}
       {del && <Confirm title="Talebi sil" text="Talep ve fotoğrafları depodan kalıcı olarak silinir. Müşterinin listesinden de kalkar." okLabel="Sil" tone="danger" onClose={() => setDel(null)}
         onOk={() => { const id = del.id; store.set({ openPreq: null }); store.s.api.deletePreq(id).then(() => toast('Talep ve fotoğrafları silindi')).catch((e) => toast(e.message, 'bad')); }} />}

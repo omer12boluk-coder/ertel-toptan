@@ -9,7 +9,7 @@ import { autoSum } from './reviews.jsx';
 
 const DAY = 86400000;
 // yükleme penceresi (Ayarlar > Veri ve kota): siparişler/talepler ve üyeler kaç günlük açılsın
-const wd = () => { const n = Number(store.s.settings?.quota?.days); return [14, 30, 62, 120].includes(n) ? n : 62; };
+const wd = () => { const n = Number(store.s.settings?.quota?.win); return [7, 14, 30, 62, 120].includes(n) ? n : 14; };
 const wm = () => { const n = Number(store.s.settings?.quota?.members); return [14, 30, 62, 120].includes(n) ? n : 62; };
 let A = null, user = null;
 const un = {};
@@ -41,26 +41,38 @@ const part = { orders: [], ordersOpen: [], reqs: [], reqsOpen: [], preqs: [], pr
 const PQ_OPEN = ['new', 'answered'];
 const IS_OPEN = ['new', 'received', 'review', 'action', 'shipping'];
 const merge = (a, b, key) => { const m = new Map(); for (const x of [...b, ...a]) m.set(x.id, x); return [...m.values()].sort((x, y) => (y[key] || 0) - (x[key] || 0)); };
+const hook = {}; // loadOlder: yeni pencerenin ilk cevabı gelince haber ver
+const fire = (k) => { const f = hook[k]; if (f) { delete hook[k]; f(); } };
 const mergeOrders = () => store.set({ orders: merge(part.orders, part.ordersOpen, 'createdAt') });
 const mergeReqs = () => store.set({ requests: merge(part.reqs, part.reqsOpen, 'updatedAt') });
 const mergePreqs = () => store.set({ preqs: merge(part.preqs, part.preqsOpen, 'createdAt') });
 const mergeIssues = () => store.set({ issues: merge(part.issues, part.issuesOpen, 'createdAt') });
-function watchPreqs() { stop('preqs'); if (A?.watchPreqs) un.preqs = A.watchPreqs((l) => { part.preqs = l; mergePreqs(); }, store.s.win.preqs); }
+function watchPreqs() { stop('preqs'); if (A?.watchPreqs) un.preqs = A.watchPreqs((l) => { part.preqs = l; mergePreqs(); fire('preqs'); }, store.s.win.preqs); }
 const mergeReviews = () => { const reviews = merge(part.reviews, part.reviewsOpen, 'createdAt'); store.set({ reviews }); autoSum(reviews); };
-function watchReviews() { stop('reviews'); if (A?.watchReviews) un.reviews = A.watchReviews((l) => { part.reviews = l; mergeReviews(); }, store.s.win.reviews); }
-function watchIssues() { stop('issues'); if (A?.watchIssues) un.issues = A.watchIssues((l) => { part.issues = l; mergeIssues(); }, store.s.win.issues); }
-function watchOrders() { stop('orders'); if (A?.watchOrders) un.orders = A.watchOrders((l) => { part.orders = l; mergeOrders(); }, store.s.win.orders); }
-function watchReqs() { stop('reqs'); un.reqs = A.watchRequests(user, (l) => { part.reqs = l; mergeReqs(); }, store.s.win.reqs); }
+function watchReviews() { stop('reviews'); if (A?.watchReviews) un.reviews = A.watchReviews((l) => { part.reviews = l; mergeReviews(); fire('reviews'); }, store.s.win.reviews); }
+function watchIssues() { stop('issues'); if (A?.watchIssues) un.issues = A.watchIssues((l) => { part.issues = l; mergeIssues(); fire('issues'); }, store.s.win.issues); }
+function watchOrders() { stop('orders'); if (A?.watchOrders) un.orders = A.watchOrders((l) => { part.orders = l; mergeOrders(); fire('orders'); }, store.s.win.orders); }
+function watchReqs() { stop('reqs'); un.reqs = A.watchRequests(user, (l) => { part.reqs = l; mergeReqs(); fire('reqs'); }, store.s.win.reqs); }
 function watchMembers() {
   stop('members'); if (!A?.watchMembers) return;
   un.members = A.watchMembers((members) => store.set({ members }), store.s.win.membersAll ? 0 : Date.now() - wm() * DAY);
 }
 
 // "Daha eski siparişleri göster" / "Daha eski talepleri göster": pencereyi 60 gün geriye açar
+// Söz verir: { from, to, added: [yeni gelen kimlikler] }
+const LIST = { orders: 'orders', reqs: 'requests', preqs: 'preqs', issues: 'issues', reviews: 'reviews' };
+export const olderStep = () => Math.max(30, wd());
 export function loadOlder(kind) {
-  if (!A) return;
-  const w = { ...store.s.win }; w[kind] -= Math.max(30, wd()) * DAY; store.set({ win: w });
-  ({ orders: watchOrders, reqs: watchReqs, preqs: watchPreqs, issues: watchIssues, reviews: watchReviews })[kind]?.();
+  if (!A) return Promise.resolve(null);
+  const before = new Set((store.s[LIST[kind]] || []).map((x) => x.id));
+  const to = store.s.win[kind];
+  const w = { ...store.s.win }; w[kind] = to - olderStep() * DAY;
+  return new Promise((res) => {
+    const t = setTimeout(() => { delete hook[kind]; res(null); }, 15000);
+    hook[kind] = () => { clearTimeout(t); res({ from: w[kind], to, added: (store.s[LIST[kind]] || []).filter((x) => !before.has(x.id)).map((x) => x.id) }); };
+    store.set({ win: w });
+    ({ orders: watchOrders, reqs: watchReqs, preqs: watchPreqs, issues: watchIssues, reviews: watchReviews })[kind]?.();
+  });
 }
 // Tüm mağaza üyeleri (Müşteriler > Mağaza müşterileri, üye penceresi)
 export function ensureAllMembers() {

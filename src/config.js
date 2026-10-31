@@ -115,7 +115,7 @@ export const DEFAULT_SETTINGS = {
   legal: { email: '', taxOffice: '', taxNo: '', mersis: '', docs: {} },
   // Mağaza özellikleri (extras.jsx, reviews.jsx; Ayarlar > Mağaza özellikleri): her biri tek anahtarla kapanır
   sets: [], // ürün setleri (sets.jsx)
-  quota: { days: 62, members: 62, report: true }, // Ayarlar > Veri ve kota (quota.jsx)
+  quota: { win: 14, members: 62, report: true }, // win: panel açılınca kaç günlük sipariş/talep (31.10.2026: 62 → 14; eski 'days' alanı kullanılmıyor) // Ayarlar > Veri ve kota (quota.jsx)
   feat: { share: true, notify: true, pop: { on: true, fav: true, pair: true, cat: true }, rev: { on: true, moderate: true } },
   // Sorun bildirimi (/magaza/sorun, issue.jsx): günde üye başına en çok perDay bildirim, ekler days gün sonra silinir
   issue: { on: true, perDay: 3, days: 45 },
