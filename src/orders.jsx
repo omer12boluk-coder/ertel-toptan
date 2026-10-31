@@ -180,7 +180,7 @@ function OrderThumbs({ o }) {
   return <span className="or-th">{show.map((it, i) => <span key={i} className="or-th-i"><Thumb p={{ ...(byId.get(it.id) || {}), ...it }} size="sm" /></span>)}{its.length > 3 && <span className="or-th-i more num">+{its.length - 3}</span>}</span>;
 }
 // "3 saat önce" (75 saat önce gibi; 1 saatten azsa dakika)
-const ago2 = (ts) => { if (!ts) return ''; const m = Math.max(0, Math.round((Date.now() - ts) / 6e4)); return m < 1 ? 'az önce' : m < 60 ? m + ' dk önce' : Math.round(m / 60) + ' saat önce'; };
+const ago2 = (ts) => { if (!ts) return ''; const m = Math.max(0, Math.round((Date.now() - ts) / 6e4)); return m < 1 ? 'az önce' : m < 60 ? m + ' dk önce' : m < 1440 ? Math.round(m / 60) + ' saat önce' : m < 2880 ? 'dün' : m < 43200 ? Math.round(m / 1440) + ' gün önce' : m < 525600 ? Math.round(m / 43200) + ' ay önce' : Math.round(m / 525600) + ' yıl önce'; };
 const PAGE = 25; // listede sayfa başına sipariş
 // tarih: 26.10.2026 17:32
 const fullDate = (ts) => { if (!ts) return ''; const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
