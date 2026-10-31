@@ -15,6 +15,7 @@ function useDesk() {
   return on;
 }
 
+const DELAY = 380; // fare durunca açılma gecikmesi (ms)
 let active = null; // açık olan menü { id, close } (bir menüden diğerine geçince beklemeden geçsin)
 
 export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
@@ -53,9 +54,9 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     if (open) return;
     const mine = { id: myId.current, close: () => me.current() };
     if (active && active.id !== myId.current) { active.close(); active = mine; setOpen(true); return; }
-    t.current = setTimeout(() => { if (active && active.id !== myId.current) active.close(); active = mine; setOpen(true); }, 380);
+    t.current = setTimeout(() => { if (active && active.id !== myId.current) active.close(); active = mine; setOpen(true); }, DELAY);
   };
-  const leave = () => { clearTimeout(t.current); if (open) t.current = setTimeout(close, 300); };
+  const leave = () => { clearTimeout(t.current); if (open) t.current = setTimeout(close, 400); };
   return (
     <div ref={wrap} className={'hd' + (open ? ' open' : '') + (cls ? ' ' + cls : '')} onMouseEnter={enter} onMouseLeave={leave} onClickCapture={() => { clearTimeout(t.current); }}>
       {children}
@@ -124,7 +125,6 @@ export function ProductsDrop({ children }) {
         <Item close={c} icon="grid" label="Tüm ürünler" onClick={() => { store.set({ catalogGo: {} }); go('katalog'); }} />
         {hasSets && <Item close={c} icon="box" label="Setler" pill="Yeni" tone="green" onClick={() => { store.set({ catalogGo: { sets: true } }); go('katalog'); }} />}
         <Item close={c} icon="heart" label="Favorilerim" onClick={() => { store.set({ catalogGo: { fav: true } }); go('katalog'); }} />
-        <p className="hd-note">Aradığınızı bulamadınız mı? <a href="/talep" onClick={(e) => { e.preventDefault(); c(); go('talep'); }}>Ürün talebi bırakın</a></p>
       </div>
       <MegaCats cats={cats} close={c} />
     </div>
@@ -134,17 +134,28 @@ export function ProductsDrop({ children }) {
 // büyük başlıklar tek sütun (kaydırma yok); üstüne gelince alt başlıklar yanda açılır
 function MegaCats({ cats, close }) {
   const [hov, setHov] = useState(null); const [top, setTop] = useState(0);
-  const pick = (id) => { close(); store.set({ catalogGo: { cat: id } }); go('katalog'); };
+  const t = useRef(0); const fly = useRef(null);
+  useEffect(() => () => clearTimeout(t.current), []);
+  // alt başlıklar da üst menüdeki gibi gecikmeli açılır (fare listede gezinirken her satırda açılıp kapanmasın)
+  const enter = (n, el) => { clearTimeout(t.current); const y = el.offsetTop; t.current = setTimeout(() => { setHov(n.id); setTop(y); }, hov == null ? DELAY : 220); };
+  const pick = (id) => { clearTimeout(t.current); close(); store.set({ catalogGo: { cat: id } }); go('katalog'); };
   const cur = cats.find((x) => x.n.id === hov);
+  // ekrandan taşmasın: alt kenar ekranın altını geçiyorsa yukarı kaydır
+  useLayoutEffect(() => {
+    const el = fly.current; if (!el) return;
+    el.style.top = Math.max(0, top - 9) + 'px';
+    const r = el.getBoundingClientRect(); const over = r.bottom - (innerHeight - 12);
+    if (over > 0) el.style.top = Math.max(-(r.top - 12 - Math.max(0, top - 9)), Math.max(0, top - 9) - over) + 'px';
+  }, [hov, top]);
   return (
-    <div className="hd-cats">
+    <div className="hd-cats" onMouseLeave={() => clearTimeout(t.current)}>
       {cats.map(({ n, subs }) => (
-        <button key={n.id} type="button" className={'hd-ct' + (hov === n.id ? ' on' : '')} onMouseEnter={(e) => { setHov(n.id); setTop(e.currentTarget.offsetTop); }} onFocus={(e) => { setHov(n.id); setTop(e.currentTarget.offsetTop); }} onClick={() => pick(n.id)}>
+        <button key={n.id} type="button" className={'hd-ct' + (hov === n.id ? ' on' : '')} onMouseEnter={(e) => enter(n, e.currentTarget)} onMouseLeave={() => clearTimeout(t.current)} onFocus={(e) => { setHov(n.id); setTop(e.currentTarget.offsetTop); }} onClick={() => pick(n.id)}>
           <span>{n.name}</span>{subs.length > 0 && <Icon n="back" s={14} className="flip" />}
         </button>
       ))}
       {cur && cur.subs.length > 0 && (
-        <div key={cur.n.id} className={'hd-fly' + (cur.subs.length > 10 ? ' two' : '')} style={{ top: Math.max(0, top - 9) }} onMouseLeave={() => setHov(null)}>
+        <div ref={fly} key={cur.n.id} className={'hd-fly' + (cur.subs.length > 9 ? ' two' : '')} onMouseEnter={() => clearTimeout(t.current)}>
           <div className="hd-fly-l">{cur.subs.map((x) => <button key={x.id} type="button" className="hd-cs" onClick={() => pick(x.id)}>{x.name}</button>)}</div>
         </div>
       )}

@@ -4641,7 +4641,7 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .back-btn:hover { background: var(--surface-2); border-color: color-mix(in oklab, var(--accent) 25%, var(--line)); }
 .back-btn:hover > svg { transform: translateX(-2px); }
 .back-btn:active { background: var(--surface-2); }
-.cart-back.back-btn { margin-bottom: -4px; }
+.cart-back.back-btn { margin-bottom: 8px; }
 .acct-back.back-btn { margin-left: 0; }
 /* Ayarlar: arama düğmesi başlığın hemen yanında, yazılı ve belirgin */
 .set-find-btn { margin-left: 4px !important; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px 0 10px; border-radius: 999px;
@@ -5204,3 +5204,21 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 
 .hd-fly .hd-cs { padding: 8px 10px; border-radius: 9px; color: var(--fg); font-size: 14px; } .hd-fly .hd-cs:hover { background: var(--accent-soft); color: var(--accent); }
 .hd-fly.two { width: 440px; }
+
+/* alt başlık kutusu 2 (31.10.2026): sitenin yazısı, satırlar kırılmaz, ekrana sığar */
+.hd-fly .hd-cs { font: 500 14.5px/1.25 var(--f-body); color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 8px 12px; }
+.hd-fly.two { width: auto; max-width: none; }
+.hd-fly.two .hd-fly-l { grid-template-columns: repeat(2, max-content); }
+.hd-ct span { font-weight: 600; }
+
+/* set kartı 2 (31.10.2026): sepete ekle düğmesi, kazanç ince yazı */
+.set-card { cursor: pointer; }
+.set-card-sv { display: flex; align-items: baseline; gap: 8px; min-height: 18px; font-size: 13px; }
+.set-card-sv s { color: var(--muted); } .set-card-sv em { font-style: normal; color: #1f6b47; font-weight: 600; } .set-card-sv small { color: var(--muted); }
+.set-card-f { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 42px; }
+.set-card-pr { color: var(--price, var(--accent)); font: 800 24px/1 var(--f-display); }
+.set-card .set-card-p { display: none; }
+.set-th { display: flex; align-items: flex-start; gap: 12px; width: 100%; } .set-th .set-t { flex: 1; } .set-th .share-btn { flex: none; margin-top: 4px; }
+/* iPhone Safari: dönen/3B ürün kartı yuvarlak köşeden taşıyordu (overflow + radius dönüşlü çocuğu kırpmıyor) → clip-path ile kesin kırpma (31.10.2026) */
+@media (hover: none) { .sh-hero { clip-path: inset(0 round 28px); } }
+@media (max-width: 700px) { .sh-hero { clip-path: inset(0 round 22px); } }

@@ -43,52 +43,21 @@ export function useStats(on = true) {
 const act = (p) => p && p.a !== 0 && !p.so;
 
 // =====================================================================================================
-// Ürün paylaşma: telefonda kendi paylaş menüsü (link ya da resim + link), bilgisayarda link kopyala / WhatsApp
-async function imgFile(p, S) {
-  const f = (p.pi && !String(p.pi).startsWith('v:') ? p.pi : (p.im || []).find((x) => !String(x).startsWith('v:'))) || null; if (!f) return null;
-  let u = picUrl(f, S.catalog.imageLarge || S.catalog.imageThumb, true); if (!u) return null;
-  const viaW = (x) => (/platincdn\.com/.test(x) && window.WATCH_URL ? window.WATCH_URL.replace(/\/$/, '') + '/img?u=' + encodeURIComponent(x) : x); // site CDN'i başka siteye resim vermiyor
-  let r = await fetch(viaW(u)).catch(() => null);
-  if (!r?.ok && mediaFallback(u)) r = await fetch(viaW(mediaFallback(u))).catch(() => null); // yeni adreste yoksa eski yer
-  if (!r?.ok) return null;
-  const b = await r.blob(); if (!/^image\//.test(b.type)) return null;
-  return new File([b], 'urun-' + p.id + (b.type.includes('png') ? '.png' : b.type.includes('webp') ? '.webp' : '.jpg'), { type: b.type });
+// Paylaş (31.10.2026, kullanıcı): menü YOK, doğrudan telefonun / bilgisayarın paylaş penceresi; sadece başlık + link
+// (fiyat yazılmaz). WhatsApp vb. resimli önizlemeyi linkten kendisi çeker (site/worker.js OG etiketleri).
+export async function shareUrl(url, title) {
+  if (typeof navigator.share === 'function') {
+    try { await navigator.share({ title, url }); return; } catch (x) { if (x?.name === 'AbortError') return; }
+  }
+  copyText(url, 'Link kopyalandı');
 }
-// Paylaş menüsü (ürün penceresi düğmesi + kart sağ tık menüsü ortak)
-export function shareMenu(e, p, S, onImg) {
-  const url = location.origin + '/urun/' + p.id;
-  const pr = priceFor(p, S, { role: 'public' }, null).mine;
-  const text = p.n + (pr != null ? ' · ' + fmt(pr, p.cur) + (S.pricing?.showVat !== false ? ' + KDV' : '') : '') + ' — ' + (S.brand?.appName || '');
-  const shareLink = async () => { try { await navigator.share({ title: p.n, text, url }); } catch (x) { if (x?.name !== 'AbortError') copyText(url, 'Ürün linki kopyalandı'); } };
-  const shareImg = onImg || (async () => { try { const f = await imgFile(p, S); if (f && navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f], text: text + '\n' + url }); else await shareLink(); } catch (x) { if (x?.name !== 'AbortError') shareLink(); } });
-  const can = typeof navigator.share === 'function';
-  openMenu(e, [
-    can && { label: 'Paylaş…', icon: 'share', hint: 'WhatsApp, Instagram, mesaj', onClick: shareLink },
-    can && { label: 'Resmiyle paylaş', icon: 'camera', hint: 'Fotoğraf + link', onClick: shareImg },
-    { label: "WhatsApp'ta gönder", icon: 'wa', onClick: () => window.open(waLink('', text + '\n' + url), '_blank', 'noopener') },
-    { label: 'Linki kopyala', icon: 'copy', onClick: () => copyText(url, 'Ürün linki kopyalandı') },
-  ], 'Ürünü paylaş');
-}
-export function ShareBtn({ p, big }) {
+export function shareMenu(e, p) { e?.stopPropagation?.(); shareUrl(location.origin + '/urun/' + p.id, p.n); }
+export function ShareBtn({ p, big, url, title, label = 'Ürünü paylaş' }) {
   const S = useStore((s) => s.settings);
-  const [busy, setBusy] = useState(false);
-  if (!feat(S).share || !p) return null;
-  const url = location.origin + '/urun/' + p.id;
-  const pr = priceFor(p, S, { role: 'public' }, null).mine;
-  const text = p.n + (pr != null ? ' · ' + fmt(pr, p.cur) + (S.pricing?.showVat !== false ? ' + KDV' : '') : '') + ' — ' + (S.brand?.appName || '');
-  const shareLink = async () => { try { await navigator.share({ title: p.n, text, url }); } catch (x) { if (x?.name !== 'AbortError') copyText(url, 'Ürün linki kopyalandı'); } };
-  const shareImg = async () => {
-    setBusy(true);
-    try {
-      const f = await imgFile(p, S);
-      if (f && navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f], text: text + '\n' + url }); }
-      else await shareLink();
-    } catch (x) { if (x?.name !== 'AbortError') toast('Resim paylaşılamadı, link paylaşılıyor', 'warn'), shareLink(); }
-    setBusy(false);
-  };
-  const open = (e) => { e.stopPropagation(); shareMenu(e, p, S, shareImg); };
+  if (!feat(S).share || !(p || url)) return null;
+  const go = (e) => { e.stopPropagation(); shareUrl(url || location.origin + '/urun/' + p.id, title || p.n); };
   return (
-    <button type="button" className={'share-btn' + (big ? ' big' : '') + (busy ? ' busy' : '')} onClick={open} aria-label="Ürünü paylaş" title="Paylaş">
+    <button type="button" className={'share-btn' + (big ? ' big' : '')} onClick={go} aria-label={label} title="Paylaş">
       <Icon n="share" s={big ? 19 : 17} />
     </button>
   );

@@ -7,6 +7,7 @@ import { useStore, store, go, setQty, toast, api, openProduct } from './store.js
 import { Icon, Thumb, Stepper, Sheet, Empty, Toggle, Confirm, openMenu } from './ui.jsx';
 import { fmt, norm, now } from './utils.js';
 import { queueSave } from './saveq.js';
+import { ShareBtn } from './extras.jsx';
 
 const r2 = (n) => Math.round(Number(n) * 100) / 100;
 export const setsOf = (S) => (Array.isArray(S?.sets) ? S.sets : []);
@@ -77,20 +78,25 @@ export function SetCover({ v, n }) {
 
 export function SetCard({ set }) {
   const byId = useStore((s) => s.byId);
+  const k = setKey(set.id);
+  const qty = useStore((s) => s.cart[k] || 0);
+  const ordersOn = useStore((s) => s.settings.orders?.enabled !== false);
   const v = useMemo(() => setView(set, byId), [set, byId]);
+  const open = () => openSet(set.id);
   return (
-    <button type="button" className="set-card" onClick={() => openSet(set.id)}>
+    <div className="set-card" role="link" tabIndex={0} onClick={(e) => { if (!e.target.closest('button, .stepper')) open(); }} onKeyDown={(e) => e.key === 'Enter' && open()}>
       <SetCover v={v} />
       <span className="set-card-b">
         <b className="set-card-n">{set.name}</b>
-        <span className="set-card-p">
-          {v.save > 0 && <s>{fmt(v.list, v.cur)}</s>}
-          <b>{fmt(v.price, v.cur)}</b>
-          {v.save > 0 && <em>{fmt(v.save, v.cur)} kazanç</em>}
+        <span className="set-card-sv">{v.save > 0 ? <><s>{fmt(v.list, v.cur)}</s><em>{fmt(v.save, v.cur)} kazanç</em></> : <small>{v.active.length} ürün bir arada</small>}</span>
+        <span className="set-card-f">
+          <b className="set-card-pr">{fmt(v.price, v.cur)}</b>
+          {!v.ok ? <small className="set-card-x">Stokta değil</small>
+            : qty > 0 ? <Stepper small min={0} value={qty} onChange={(x) => setQty(k, x)} onRemove={() => setQty(k, 0)} />
+            : ordersOn && <button type="button" className="sh-add set-card-add" onClick={() => { setQty(k, 1); toast('Set sepete eklendi'); }} aria-label="Seti sepete ekle" title="Seti sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
         </span>
-        {!v.ok && <small className="set-card-x">Şu an stokta değil</small>}
       </span>
-    </button>
+    </div>
   );
 }
 export function SetGrid() {
@@ -152,7 +158,7 @@ export function SetPage({ id }) {
       <div className="set-top">
         <div className="set-top-cov"><SetCover v={v} /></div>
         <div className="set-top-i">
-          <h1 className="set-t">{set.name}</h1>
+          <div className="set-th"><h1 className="set-t">{set.name}</h1><ShareBtn big url={location.origin + '/set/' + set.id} title={set.name} label="Seti paylaş" /></div>
           {set.desc && <p className="set-d">{set.desc}</p>}
           <div className="set-price">
             {v.save > 0 && <span className="set-pl"><small>Ayrı ayrı</small><s>{fmt(v.list, v.cur)}</s></span>}

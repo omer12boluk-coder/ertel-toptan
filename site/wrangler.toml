@@ -2,7 +2,7 @@
 # Yayın: .github/workflows/site.yml. Adres: ertelmarket.com (+ önizleme ertel-site.<hesap>.workers.dev)
 name = "ertel-site"
 compatibility_date = "2026-10-01"
-main = "worker.js"   # sadece /__/* (Google girişi geçidi) için çalışır; diğer her şey doğrudan dosyalardan
+main = "worker.js"   # /__/* (Google girişi geçidi) + /urun/*, /set/* (link önizlemesi); diğer her şey doğrudan dosyalardan
 
 # Canlı adres. DİKKAT (31.10.2026): routes [assets] bölümünün ÜSTÜNDE olmalı; altına yazılınca [assets]'e ait sayılıp
 # yok sayılıyordu (alan adı bağlantısının kopmasının muhtemel sebebi).
@@ -16,4 +16,4 @@ directory = "../hosting/public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"   # /urun/12 gibi adresler index.html'e düşer (Firebase rewrite ile aynı)
 html_handling = "auto-trailing-slash"
-run_worker_first = ["/__/*"]
+run_worker_first = ["/__/*", "/urun/*", "/set/*", "/magaza/urun/*", "/magaza/set/*"]

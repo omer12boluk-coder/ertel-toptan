@@ -556,7 +556,7 @@ function ShellFull() {
         {tab === 'ayarlar' && admin && <Settings />}
         {tab === 'tasarim' && admin && <ShopDesigner />}
       </main>
-      {pub && !['katalog', 'sepet', 'hesap'].includes(tab) && <ShopFooter compact={tab !== 'anasayfa'} />}
+      {pub && !['katalog', 'sepet', 'hesap', 'kalip'].includes(tab) && <ShopFooter compact={tab !== 'anasayfa'} />}
       {!admin && tab !== 'lsepet' && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}

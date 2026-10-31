@@ -330,6 +330,7 @@ export function Catalog({ admin }) {
   const [cat, setCat] = useState(null);
   const [sort, setSort] = useState('default');
   const [stockOnly, setStockOnly] = useState(false);
+  const [showOos, setShowOos] = useState(false); // mağaza: stokta olmayanlar varsayılan gizli (31.10.2026)
   const [limit, setLimit] = useState(S.catalog.pageSize);
   const [open, setOpen] = useState(null);
   const [edit, setEdit] = useState(null);
@@ -382,6 +383,7 @@ export function Catalog({ admin }) {
   const PR = { u10: [0, 10], '10-50': [10, 50], '50-200': [50, 200], '200+': [200, Infinity] };
   const newest = useMemo(() => { const ids = all.filter((p) => p.nw).map((p) => p.id); return new Set(ids.length >= 20 ? ids : [...all].sort((a, b) => b.id - a.id).slice(0, 120).map((p) => p.id)); }, [all]);
   // scoped: kategori + marka da uygulanır; false: sadece arama ve diğer filtreler (kategoride bulunamazsa tüm ürünlerden göstermek için)
+  const hideOos = user?.role === 'public' && !showOos && !favOnly; // mağazada stokta olmayanlar sadece çiple görünür
   const filterList = (scoped) => {
     const toks = norm(q).split(/\s+/).filter(Boolean);
     const kq = admin ? norm(qk).replace(/\s+/g, '') : '';
@@ -389,7 +391,7 @@ export function Catalog({ admin }) {
     // yönetici: ad kutusu stok koduna bakmaz (stok kodu ayrı kutuda); mağaza/bayi tek kutuda ikisini de arar
     const hay = admin ? nameHay : (p) => p._s;
     const [lo, hi] = PR[price] || [0, Infinity];
-    let r = all.filter((p) => (!scoped || cat == null || pcats.get(p.id)?.has(cat)) && (!scoped || !brand || p.b === brand) && (!stockOnly || p.s > 0)
+    let r = all.filter((p) => (!scoped || cat == null || pcats.get(p.id)?.has(cat)) && (!scoped || !brand || p.b === brand) && (!stockOnly || p.s > 0) && (!hideOos || p.s > 0)
       && (!price || (p.r >= lo && p.r < hi)) && (!newOnly || newest.has(p.id)) && (!imgOnly || p.pi || p.img) && (!favOnly || favSet.has(p.id))
       && (!kq || norm(p.k || '').replace(/\s+/g, '').includes(kq)) && toks.every((t) => hay(p).includes(t) || (useTags && p._t.includes(t))));
     if (toks.length) r = [...r].sort((a, b) => toks.filter((t) => hay(b).includes(t)).length - toks.filter((t) => hay(a).includes(t)).length);
@@ -423,7 +425,7 @@ export function Catalog({ admin }) {
     }
     return r;
   };
-  const deps = [all, q, qk, cat, sort, stockOnly, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet, asort, S.feat];
+  const deps = [all, q, qk, cat, sort, stockOnly, showOos, adminFilter, admin, brand, pcats, S.catalog.searchTags, price, newOnly, imgOnly, newest, favOnly, favSet, asort, S.feat];
   const pinShow = !admin && cat != null && sort === 'default' && !q.trim() ? new Set(feat(S).pins) : null;
   const scopedList = useMemo(() => filterList(true), deps);
   const scoped = cat != null || !!brand;
@@ -434,21 +436,21 @@ export function Catalog({ admin }) {
   const moreOutside = globalList && !widened ? globalList.length - scopedList.length : 0;
   const catIds = useMemo(() => (cat == null ? [] : all.filter((p) => pcats.get(p.id)?.has(cat)).map((p) => p.id)), [all, pcats, cat]);
   const scopeName = [cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : null, brand || null].filter(Boolean).join(' · ');
-  const clearAll = () => { setQ(''); setQk(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setFavOnly(false); setSetsOnly(false); };
+  const clearAll = () => { setQ(''); setQk(''); setCat(null); setBrand(''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setFavOnly(false); setSetsOnly(false); setShowOos(false); };
   const actives = [
     q.trim() && ['“' + q.trim() + '”', () => setQ('')],
     qk.trim() && ['Stok kodu: ' + qk.trim(), () => setQk('')],
     cat != null && [tree.nodes.get(cat)?.name || catName(S, cat), () => setCat(null)],
     brand && [brand, () => setBrand('')],
     stockOnly && ['Stoktakiler', () => setStockOnly(false)],
+    showOos && ['Stokta olmayanlar da', () => setShowOos(false)],
     price && [{ u10: '$10 altı', '10-50': '$10–50', '50-200': '$50–200', '200+': '$200 üstü' }[price], () => setPrice('')],
     newOnly && ['Yeni gelenler', () => setNewOnly(false)],
-    imgOnly && ['Resimli', () => setImgOnly(false)],
     favOnly && ['Favorilerim', () => setFavOnly(false)],
     setsOnly && ['Setler', () => setSetsOnly(false)],
   ].filter(Boolean);
 
-  useLayoutEffect(() => setLimit(S.catalog.pageSize), [q, qk, cat, sort, stockOnly, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
+  useLayoutEffect(() => setLimit(S.catalog.pageSize), [q, qk, cat, sort, stockOnly, showOos, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
   const more = useCallback(() => setLimit((l) => l + S.catalog.pageSize), [S.catalog.pageSize]);
   const sentinel = useInfinite(more);
   const shown = list.slice(0, limit);
@@ -488,7 +490,8 @@ export function Catalog({ admin }) {
               {cat != null && <button className="chip on only-m" onClick={() => setCat(null)}>Tümü <Icon n="x" s={14} /></button>}
               {user?.role === 'public' && setN > 0 && <button className={'chip set-chip' + (setsOnly ? ' on' : '')} onClick={() => setSetsOnly(!setsOnly)}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
               {user?.role === 'public' && (favs.length > 0 || favOnly) && <button className={'chip fav-chip' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
-              {!admin && <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>}
+              {!admin && user?.role === 'public' && <button className={'chip' + (showOos ? ' on' : '')} onClick={() => setShowOos(!showOos)}>Stokta olmayanları göster</button>}
+              {!admin && user?.role !== 'public' && <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>}
               {!admin && <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>}
               <label className={'chip select' + (price ? ' on' : '')}>
                 <Icon n="tag" s={14} />
@@ -496,7 +499,6 @@ export function Catalog({ admin }) {
                   <option value="">Tüm fiyatlar</option><option value="u10">$10 altı</option><option value="10-50">$10 – $50</option><option value="50-200">$50 – $200</option><option value="200+">$200 üstü</option>
                 </select>
               </label>
-              {!admin && <button className={'chip' + (imgOnly ? ' on' : '')} onClick={() => setImgOnly(!imgOnly)}><Icon n="camera" s={14} />Resimli</button>}
               {brands.length > 1 && (
                 <label className={'chip select' + (brand ? ' on' : '')}>
                   <select id="cat-brand" value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="Marka">
@@ -649,7 +651,7 @@ function ProductRow({ p, admin, onOpen, pinned }) {
     user?.role === 'public' && { label: store.s.favs.includes(p.id) ? 'Favorilerden çıkar' : 'Favorilere ekle', icon: 'heart', onClick: () => toast(toggleFav(p.id) ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı') },
     user?.role !== 'public' && S.requests.allowQuote && { label: 'Bu ürünü sor', icon: 'chat', onClick: () => askAbout(p, Math.max(1, qty)) },
     '-',
-    user?.role === 'public' && feat(S).share && { label: 'Ürünü paylaş', icon: 'share', onClick: () => setTimeout(() => shareMenu(e, p, S), 0) },
+    user?.role === 'public' && feat(S).share && { label: 'Ürünü paylaş', icon: 'share', onClick: () => shareMenu(null, p) },
     { label: 'Ürün adını kopyala', icon: 'copy', onClick: () => copyText(p.n, 'Ürün adı kopyalandı') },
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: p.k, onClick: () => copyText(p.k) },
     site && user?.role !== 'public' && { label: 'Sitede aç', icon: 'ext', onClick: () => window.open(site, '_blank', 'noopener') },
