@@ -5222,14 +5222,6 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 .set-card-pr { color: var(--price, var(--accent)); font: 800 24px/1 var(--f-display); }
 .set-card .set-card-p { display: none; }
 .set-th { display: flex; align-items: flex-start; gap: 12px; width: 100%; } .set-th .set-t { flex: 1; } .set-th .share-btn { flex: none; margin-top: 4px; }
-/* iPhone Safari: dönen/3B ürün kartı yuvarlak köşeden taşıyordu (overflow + radius dönüşlü çocuğu kırpmıyor) → clip-path ile kesin kırpma (31.10.2026) */
-@media (hover: none) { .sh-hero { clip-path: inset(0 round 28px); } }
-@media (max-width: 700px) { .sh-hero { clip-path: inset(0 round 22px); } }
-/* iPhone 2 (31.10.2026): kayan şerit içindeki her reklam da kendi köşesinden kırpılır (Safari'nin kaydırılan katmanları kırpmama hatası) */
-@media (hover: none) {
-  .sh-hero-track, .sh-hero .sh-slide { border-radius: inherit; -webkit-mask-image: -webkit-radial-gradient(white, black); mask-image: radial-gradient(white, black); }
-  .sh-hero { -webkit-mask-image: -webkit-radial-gradient(white, black); }
-}
 /* telefonda bannerın yuvarlak köşeleri ve avantaj şeridinin kartları yanlardan kesiliyordu: .sh (overflow-x: clip) içeriğin
    kenara taşan kısmını sayfa boşluğunda kırpıyordu → .sh telefonda ekran kenarına kadar uzar, iç boşlukla aynı yerde kalır (31.10.2026) */
 @media (max-width: 700px) { .shell > .main .sh { margin-inline: -16px; padding-inline: 16px; } }
