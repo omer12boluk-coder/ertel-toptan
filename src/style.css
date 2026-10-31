@@ -5312,3 +5312,20 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 @media (max-width: 560px) { .ord-head .lc-newbtn { width: 36px; padding: 0; justify-content: center; border-radius: 50%; } .ord-head .lc-newbtn span { display: none; } }
 .lc-list.lc-list-page { display: flex; flex-direction: column; gap: 14px; }
 .lc-list.lc-list-page > .lc-tool { margin-bottom: 0; }
+
+/* sepet linki: yönetimde link satırı + müşteri takip sayfası */
+.lc-linkrow { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); font-size: 13px; }
+.lc-linkrow code { flex: 1; min-width: 0; color: var(--ink); }
+.lc-st { box-sizing: border-box; width: 100%; margin: 20px auto 14px; }
+.lc-steps { list-style: none; display: flex; gap: 6px; padding: 0; margin: 6px 0 4px; width: 100%; }
+.lc-steps li { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.lc-steps li i { width: 100%; height: 5px; border-radius: 3px; background: var(--line); }
+.lc-steps li.on { color: var(--ink); font-weight: 600; }
+.lc-steps li.on i { background: var(--accent); }
+.lc-track { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; justify-content: center; padding: 12px; border-radius: 14px; background: color-mix(in oklab, var(--accent) 7%, var(--surface)); font-size: 13px; }
+.lc-track b { font-size: 17px; letter-spacing: .02em; }
+.lc-track-btns { display: inline-flex; align-items: center; gap: 6px; }
+.lc-st-box { box-sizing: border-box; width: 100%; max-width: 480px; margin: 0 auto 12px; padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.lc-st-box h3 { margin: 0 0 8px; font-size: 14px; }
+.lc-st-box p { margin: 0 0 6px; }
+.lc-st-wa { display: flex; width: fit-content; margin: 6px auto 30px; }

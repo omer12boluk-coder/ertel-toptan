@@ -214,6 +214,9 @@ function LinkCartSheet({ c, onClose }) {
       ) : (
         <div className="banner"><Icon n="clock" /><div><b>Müşteri henüz onaylamadı.</b> Link: <code className="lc-code">{link}</code></div></div>
       )}
+      {s && <div className="lc-linkrow"><Icon n="share" s={15} /><code className="lc-code">{link}</code>
+        <button className="icon-btn sm" onClick={() => copyText(link, 'Link kopyalandı')} aria-label="Linki kopyala"><Icon n="copy" s={15} /></button>
+        <a className="icon-btn sm" href={link} target="_blank" rel="noopener" aria-label="Linki aç"><Icon n="ext" s={15} /></a></div>}
       {changed && <p className="fine lc-changed">Müşteri adetleri değiştirdi ya da bazı ürünleri çıkardı; aşağıda onayladığı hâli var.</p>}
       <ul className="lc-items">
         {its.map((it) => (
@@ -267,16 +270,7 @@ export function LinkCartPage({ id }) {
 
   if (c === undefined) return <div className="page narrow lc-page"><div className="list-wait"><div className="spinner" /></div></div>;
   if (c === null) return <div className="page narrow lc-page"><Empty icon="cart" title="Sepet bulunamadı">Link hatalı ya da sepet kaldırılmış olabilir. Lütfen bize WhatsApp’tan yazın.</Empty></div>;
-  if (done || c.status !== 'open') return (
-    <div className="page narrow lc-page">
-      <div className="lc-ok">
-        <span className="lc-ok-ic"><Icon n="check" s={30} /></span>
-        <h1>{done ? 'Sepetiniz onaylandı' : 'Bu sepet daha önce onaylandı'}</h1>
-        <p className="muted">#{c.no} · Siparişiniz bize ulaştı. En kısa sürede sizinle iletişime geçeceğiz.</p>
-        {S.shop?.whatsapp && <a className="btn wa" href={waLink(S.shop.whatsapp, `Merhaba, #${c.no} numaralı sepetimle ilgili yazıyorum.`)} target="_blank" rel="noopener"><Icon n="wa" s={17} />WhatsApp’tan yazın</a>}
-      </div>
-    </div>
-  );
+  if (done || c.status !== 'open') return <LinkCartStatus c={c} justDone={done} S={S} byId={byId} />;
 
   async function submit() {
     const e = {};
@@ -301,6 +295,7 @@ export function LinkCartPage({ id }) {
       if (keep) ls.set(ME_KEY, { name: f.name.trim(), phone: f.phone, method: f.method, addr: f.method === 'cargo' ? cleanAddr(f.addr) : (me0?.addr || {}), pay: f.pay, at: Date.now() });
       else ls.del(ME_KEY);
       setDone(true); window.scrollTo({ top: 0, behavior: 'smooth' });
+      api().getLcart(c.id).then((x) => x && setC(x)).catch(() => {});
     } catch (x) {
       toast(/permission|insufficient/i.test(x.message) ? 'Bu sepet artık açık değil' : 'Gönderilemedi: ' + x.message, 'bad');
     }
@@ -367,6 +362,61 @@ export function LinkCartPage({ id }) {
           </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Müşteri: onaylanmış sepet linki = sipariş takip sayfası (durum, onaylanan ürünler, teslimat, kargo takibi)
+function LinkCartStatus({ c, justDone, S, byId }) {
+  const its = finalItems(c);
+  const tot = totals(its, 'offer');
+  const sub = c.sub || {};
+  const pickup = sub.delivery?.method === 'pickup';
+  const cg = c.cargo || {};
+  const delivered = c.status === 'done' || !!cg.delivered;
+  const shipped = delivered || !!cg.code;
+  const steps = [['Onaylandı', true], [pickup ? 'Hazırlanıyor' : 'Kargoya verildi', shipped || (pickup && delivered)], [pickup ? 'Teslim edildi' : 'Teslim edildi', delivered]];
+  const head = delivered ? 'Siparişiniz tamamlandı' : shipped ? 'Siparişiniz kargoda' : justDone ? 'Sepetiniz onaylandı' : 'Siparişiniz hazırlanıyor';
+  const a = sub.delivery?.addr;
+  return (
+    <div className="page narrow lc-page">
+      <div className="lc-ok lc-st">
+        <span className="lc-ok-ic"><Icon n={shipped && !delivered ? 'box' : 'check'} s={30} /></span>
+        <h1>{head}</h1>
+        <p className="muted">#{c.no}{c.subAt || c.at ? ' · ' + when(subTime(c) || c.at) : ''}</p>
+        <ol className="lc-steps">{steps.map(([t, on], i) => <li key={i} className={on ? 'on' : ''}><i />{t}</li>)}</ol>
+        {!pickup && cg.code && (
+          <div className="lc-track">
+            <span>{cg.company || 'Kargo'} takip no</span>
+            <b className="num">{cg.code}</b>
+            <span className="lc-track-btns">
+              <button className="icon-btn sm" onClick={() => copyText(cg.code, 'Takip no kopyalandı')} aria-label="Takip no kopyala"><Icon n="copy" s={15} /></button>
+              {cg.url && <a className="btn sm primary" href={cg.url} target="_blank" rel="noopener">Kargom nerede?</a>}
+            </span>
+          </div>
+        )}
+        {!pickup && !cg.code && !delivered && <p className="fine">Kargoya verilince takip numarası bu sayfada görünecek.</p>}
+      </div>
+      <div className="lc-st-box">
+        <h3>Ürünler</h3>
+        <ul className="lc-items">
+          {its.map((it) => (
+            <li key={it.id}>
+              <Thumb p={byId.get(it.id) || it} size="sm" />
+              <span className="lc-n"><b>{it.n}</b></span>
+              <span className="lc-q num">{it.qty} × {fmt(it.price, it.cur)}</span>
+              <b className="lc-sum num">{fmt(it.price * it.qty, it.cur)}</b>
+            </li>
+          ))}
+        </ul>
+        <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
+      </div>
+      {c.sub && <div className="lc-st-box">
+        <h3>Teslimat</h3>
+        <p>{pickup ? DELIVERY.pickup : <>{DELIVERY.cargo}<br />{a ? addrLine(a) : ''}</>}</p>
+        {sub.pay && <p className="muted">Ödeme: {PAY[sub.pay] || sub.pay}</p>}
+      </div>}
+      {S.shop?.whatsapp && <a className="btn wa lc-st-wa" href={waLink(S.shop.whatsapp, `Merhaba, #${c.no} numaralı siparişimle ilgili yazıyorum.`)} target="_blank" rel="noopener"><Icon n="wa" s={17} />WhatsApp’tan yazın</a>}
     </div>
   );
 }
