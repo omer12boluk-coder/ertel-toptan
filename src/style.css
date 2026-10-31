@@ -1425,7 +1425,7 @@ a.btn { text-decoration: none; }
 }
 @media (max-width: 700px) {
   .sh { gap: 30px; --gap: 12px; }
-  .sh-hero { border-radius: 22px; margin-inline: -4px; }
+  .sh-hero { border-radius: 22px; }
   .sh-slide { min-height: 470px; align-content: start; padding-top: 34px; }
   .sh-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: calc((100cqw - var(--gap)) / 2); }
   .sh-box { border-radius: 20px; }
@@ -5227,3 +5227,8 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
   .sh-hero-track, .sh-hero .sh-slide { border-radius: inherit; -webkit-mask-image: -webkit-radial-gradient(white, black); mask-image: radial-gradient(white, black); }
   .sh-hero { -webkit-mask-image: -webkit-radial-gradient(white, black); }
 }
+/* telefonda bannerın yuvarlak köşeleri ve avantaj şeridinin kartları yanlardan kesiliyordu: .sh (overflow-x: clip) içeriğin
+   kenara taşan kısmını sayfa boşluğunda kırpıyordu → .sh telefonda ekran kenarına kadar uzar, iç boşlukla aynı yerde kalır (31.10.2026) */
+@media (max-width: 700px) { .shell > .main .sh { margin-inline: -16px; padding-inline: 16px; } }
+/* avantaj şeridi telefonda 16px kaydırılmış başlıyordu (yaslanma kenarı iç boşluğu saymıyordu) → ilk kart tam görünür */
+@media (max-width: 700px) { .sh-usps { scroll-padding-inline: 16px; } }
