@@ -159,7 +159,18 @@ export function go(tab) {
   window.scrollTo(0, 0);
   if (y) requestAnimationFrame(() => window.scrollTo(0, y)); // gizli sayfa görünür olduktan sonra (React çizdikten sonraki ilk kare)
 }
-export function openOrder(id, just) { store.set({ tab: store.s.user?.role === 'admin' ? 'siparisler' : 'siparis', openOrder: id, orderJust: just || false }); window.scrollTo(0, 0); }
+// sipariş açılınca adres de değişir (31.10.2026): eskiden adres eski sayfada kalıyordu (mağazada /sepet, yönetimde /admin/urunler)
+// → yenileyince / uygulamayı kapatıp açınca oraya dönüyordu
+export function openOrder(id, just) {
+  const admin = store.s.user?.role === 'admin';
+  const tab = admin ? 'siparisler' : 'siparis';
+  const url = admin ? '/admin/siparisler' : '/magaza/s/' + id;
+  try {
+    if (lpath() === url) history.replaceState({ ...(history.state || {}), tab, openOrder: id }, '');
+    else { history.replaceState({ ...(history.state || {}), tab: store.s.tab, openOrder: store.s.openOrder || null, acct: store.s.acct || null, y: scrollY }, ''); history.pushState({ tab, openOrder: id }, '', url); }
+  } catch {}
+  store.set({ tab, openOrder: id, orderJust: just || false, acct: null }); window.scrollTo(0, 0);
+}
 export const home = () => go(store.s.user?.role === 'admin' ? 'anasayfa' : store.s.user?.role === 'public' ? (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa') : 'anasayfa');
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }
 

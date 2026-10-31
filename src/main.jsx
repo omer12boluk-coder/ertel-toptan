@@ -137,7 +137,7 @@ function startSession(u, A) {
   if (admin && ROUTE.preqId) { ls.set('cust-kind', 'talep'); store.set({ tab: 'musteriler', openPreq: ROUTE.preqId }); history.replaceState(null, '', '/admin/musteriler'); }
   if (admin && ROUTE.issueId) { ls.set('cust-kind', 'sorun'); store.set({ tab: 'musteriler', openIssue: ROUTE.issueId }); history.replaceState(null, '', '/admin/musteriler'); }
   if (admin && ROUTE.listCode) { store.set({ vitrinCode: ROUTE.listCode }); history.replaceState(null, '', '/admin'); }
-  if (admin && ROUTE.orderId) { openOrder(ROUTE.orderId); history.replaceState(null, '', '/admin'); }
+  if (admin && ROUTE.orderId) { history.replaceState(null, '', '/admin/siparisler'); openOrder(ROUTE.orderId); }
 }
 
 // Ayarlar, katalog ve özel fiyatlar aynı anda indirilir (sırayla değil)
@@ -1018,7 +1018,9 @@ function BotNav({ items, tab, badge }) {
       if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x - 32}px)`; // aktif sekmeye yumuşakça döner
       if (s && s.i != null && go_) go(live.current.items[s.i][0]);
     };
-    const start = (e) => { const t = e.touches[0]; if (!t || e.touches.length > 1) return; st.current = { i: null }; el.classList.add('pressing'); track(t.clientX); };
+    // iPhone'da ekranın altındaki çizgiden yukarı kaydırma (uygulamadan çıkma / uygulama değiştirici) menünün alt boşluğundan başlar:
+    // oradan başlayan dokunuş sekme değiştirmez (31.10.2026: uygulama arka plana giderken Kalıp/Sepet sekmesine geçiyordu)
+    const start = (e) => { const t = e.touches[0]; if (!t || e.touches.length > 1) return; const b = el.querySelector('.botnav-b')?.getBoundingClientRect(); if (b && t.clientY > b.bottom - 2) return; st.current = { i: null }; el.classList.add('pressing'); track(t.clientX); };
     const move = (e) => { if (!st.current) return; e.preventDefault(); el.classList.add('dragging'); const t = e.touches[0]; if (t) track(t.clientX); };
     const end = (e) => {
       if (!st.current) return;
@@ -1027,7 +1029,7 @@ function BotNav({ items, tab, badge }) {
       e.preventDefault(); // tıklama tekrar tetiklenmesin
       finish(!away);
     };
-    const cancel = () => finish(true); // sistem hareketi dokunuşu aldı: son gösterilen sekmeye geç
+    const cancel = () => finish(!!st.current?.moved); // sistem dokunuşu aldı: sadece parmakla sekmeler üstünde gezinmişse geç, yoksa hiçbir şey yapma
     el.addEventListener('touchstart', start, { passive: true });
     el.addEventListener('touchmove', move, { passive: false });
     el.addEventListener('touchend', end, { passive: false });
