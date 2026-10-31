@@ -1,5 +1,8 @@
 name: Cloudflare kullanım raporu
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: [cf-rapor]
 jobs:
   usage:
     runs-on: ubuntu-latest
