@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, openRequest, toast, go } from './store.js';
 import { Icon, Avatar, StatusPill, Empty, Sheet, Stepper, Confirm, openMenu, copyText, VatLines, Thumb } from './ui.jsx';
 import { waLink, links } from './route.js';
@@ -39,8 +39,12 @@ function RequestsInner() {
   const [newMsg, setNewMsg] = useState(false);
   const [sel, setSel] = useState(null); // çoklu seçim: null = kapalı, Set = seçili talepler
   const [confirm, setConfirm] = useState(null);
-  const askDelete = (ids) => setConfirm({ title: ids.length > 1 ? `${ids.length} talebi sil` : 'Talebi sil', text: 'Talep ve tüm mesajları kalıcı olarak silinir. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => deleteRequests(ids, () => setSel(null)) });
-  const toggle = (id) => setSel((s0) => { const s = new Set(s0 || []); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  const askDeleteRef = useRef(null);
+  const askDelete = askDeleteRef.current = (ids) => setConfirm({ title: ids.length > 1 ? `${ids.length} talebi sil` : 'Talebi sil', text: 'Talep ve tüm mesajları kalıcı olarak silinir. Geri alınamaz.', okLabel: 'Sil', tone: 'danger', onOk: () => deleteRequests(ids, () => setSel(null)) });
+  // satırlar ayrı (memo): talep açılınca bütün liste yeniden çizilmesin → dokunuş anında karşılık verir (31.10.2026)
+  const toggle = useCallback((id) => setSel((s0) => { const s = new Set(s0 || []); s.has(id) ? s.delete(id) : s.add(id); return s; }), []);
+  const delOne = useCallback((id) => askDeleteRef.current?.([id]), []);
+  const selOne = useCallback((id) => setSel(new Set([id])), []);
   const list = useMemo(() => requests.filter((r) => {
     if (f === 'open' && !OPEN_STATUSES.includes(r.status)) return false;
     if (f === 'closed' && OPEN_STATUSES.includes(r.status)) return false;
@@ -86,7 +90,7 @@ function RequestsInner() {
           </Empty>
         ) : (
           <ul className="rlist">
-            {list.map((r) => <ReqCard key={r.id} r={r} admin={admin} on={openReq === r.id} sel={sel} onToggle={toggle} onDelete={(id) => askDelete([id])} onSelect={(id) => setSel(new Set([id]))} />)}
+            {list.map((r) => <ReqCard key={r.id} r={r} admin={admin} on={openReq === r.id} sel={sel} onToggle={toggle} onDelete={delOne} onSelect={selOne} />)}
           </ul>
         )}
         {admin && <OlderBtn kind="reqs" what="kayıtları" unit="kayıt" />}
@@ -100,7 +104,7 @@ function RequestsInner() {
   );
 }
 
-function ReqCard({ r, admin, on, sel, onToggle, onDelete, onSelect }) {
+const ReqCard = memo(function ReqCard({ r, admin, on, sel, onToggle, onDelete, onSelect }) {
   const unread = admin ? r.unreadAdmin : r.unreadUser;
   const n = (r.items || []).length;
   const phone = r.guest ? r.gphone : store.s.customers.find((c) => c.uid === r.uid)?.phone;
@@ -140,7 +144,7 @@ function ReqCard({ r, admin, on, sel, onToggle, onDelete, onSelect }) {
       </button>
     </li>
   );
-}
+});
 
 export function NewMessage({ onClose }) {
   const { user } = useStore();
@@ -194,16 +198,28 @@ export function RequestDetail({ id }) {
   const endRef = useRef(null);
 
   useEffect(() => api().watchMessages(id, setMsgs), [id]);
-  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [msgs.length]);
+  // telefonda talep açılınca sayfa en alta zıplamasın (eskiden açılır açılmaz ve mesajlar gelince iki kez aşağı atlıyordu);
+  // sonradan YENİ mesaj gelince yumuşakça aşağı kayar. Bilgisayarda eskisi gibi son mesaj görünür.
+  const firstMsgs = useRef(true);
+  useEffect(() => {
+    if (!msgs.length) return;
+    const phone = matchMedia('(max-width: 899px)').matches;
+    if (firstMsgs.current) { firstMsgs.current = false; if (!phone) endRef.current?.scrollIntoView({ block: 'end' }); return; }
+    endRef.current?.scrollIntoView({ block: 'end', behavior: phone ? 'smooth' : 'auto' });
+  }, [msgs.length]);
   useEffect(() => {
     if (!r) return;
     if (admin && r.unreadAdmin) api().updateRequest(id, { unreadAdmin: 0 });
     if (!admin && r.unreadUser) api().updateRequest(id, { unreadUser: 0 });
   }, [r?.unreadAdmin, r?.unreadUser, msgs.length]);
+  const [ready, setReady] = useState(false);
+  useEffect(() => { const t = requestAnimationFrame(() => setReady(true)); return () => cancelAnimationFrame(t); }, []);
   const itemsKey = JSON.stringify(r?.items || []);
   useEffect(() => { setDraft(r ? structuredClone(r.items || []) : null); }, [itemsKey]);
 
   if (!r) return <div className="req-placeholder"><Empty title="Talep bulunamadı" /></div>;
+  // ağır içerik bir kare sonra (dokunuş anında karşılık versin, telefonda geçiş takılmasın)
+  if (!ready) return <div className="rd rd-wait"><header className="rd-h"><button className="icon-btn only-m" onClick={() => store.set({ openReq: null })} aria-label="Geri"><Icon n="back" /></button><div className="rd-title"><h2>{TYPE[r.type]} <span className="muted">#{r.no}</span></h2></div><StatusPill status={r.status} label={stLabel(r)} /></header></div>;
   const c = customers.find((x) => x.uid === r.uid);
   const editable = admin && ['new', 'offered', 'accepted'].includes(r.status);
   const items = editable && draft ? draft : r.items || [];

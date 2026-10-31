@@ -456,6 +456,16 @@ export function Catalog({ admin }) {
   const shown = list.slice(0, limit);
   const cartCount = Object.keys(cart).length;
   const setN = useStore((st) => (st.user?.role === 'public' ? liveSets(st.settings).length : 0));
+  // 31.10.2026: ürün listesi ayrı tutulur → ürüne dokunup pencere açılınca (setOpen / setEdit) bütün liste yeniden çizilmez
+  // (telefonda dokunuşu 'takılmış' hissettiren asıl sebep buydu). Satırlar sepet/favori gibi değişiklikleri kendileri izler.
+  const addCls = cardAdd(S, user?.role);
+  const pinKey = pinShow ? [...pinShow].join(',') : '';
+  const listEl = useMemo(() => (
+    <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + addCls}>
+      {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
+        : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} pinned={!!pinShow?.has(p.id)} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
+    </ul>
+  ), [list, limit, view, admin, addCls, asort, pinKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="catalog">
@@ -570,10 +580,7 @@ export function Catalog({ admin }) {
           ) : shown.length === 0 ? (
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
           ) : (
-            <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + cardAdd(S, user?.role)}>
-              {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
-                : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} pinned={!!pinShow?.has(p.id)} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
-            </ul>
+            listEl
           )}
           {!(setsOnly && user?.role === 'public') && limit < list.length && <div ref={sentinel} className="more"><button className="btn ghost" onClick={more}>Daha fazla göster ({list.length - limit})</button></div>}
         </section>
@@ -624,8 +631,9 @@ function InlineQty({ qty, onChange, icon }) {
 }
 
 function ProductRow({ p, admin, onOpen, pinned }) {
-  const { settings: S, cart, user } = useStore();
-  const qty = cart[p.id] || 0;
+  // sadece ilgili parçaları izler (31.10.2026): başka bir şey değişince (bildirim, sipariş, pencere) 60 satırın hepsi yeniden çizilmesin
+  const S = useStore((st) => st.settings); const user = useStore((st) => st.user);
+  const qty = useStore((st) => st.cart[p.id] || 0);
   // sepete ekle ⇄ adet seçici geçişi yaylanarak (sadece bu kartta değişince; sayfa açılışında oynamaz)
   const prevQ = useRef(qty); const [morph, setMorph] = useState('');
   useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);

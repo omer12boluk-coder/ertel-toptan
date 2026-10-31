@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import { withDefaults, ls, norm, now, cleanText } from './utils.js';
 import { lpath } from './route.js';
 
@@ -47,7 +47,32 @@ export const store = {
 };
 const subscribe = (f) => { subs.add(f); return () => subs.delete(f); };
 export const storeListen = subscribe; // React dışı dinleyiciler (telefonda sayfa geçişi)
-export function useStore(sel = (s) => s) { return useSyncExternalStore(subscribe, () => sel(store.s)); }
+// useStore(seçici): sadece seçilen değer değişince yeniden çizer.
+// useStore() (seçicisiz, 31.10.2026): bileşenin çizim sırasında OKUDUĞU alanları izler; sadece onlar değişince yeniden çizer.
+// Eskiden her store.set'te seçicisiz kullanan ~70 bileşenin hepsi yeniden çiziliyordu (talep/sipariş açmak, bildirim, toast…)
+// → telefonda dokunuşlar 'takılıyordu'. Değerler her zaman güncel durumdan okunur (eski değer dönmez).
+export function useStore(sel) {
+  const r = useRef(null);
+  if (!r.current) r.current = { keys: new Set(), last: store.s, tok: {}, all: false };
+  const R = r.current;
+  const v = useSyncExternalStore(subscribe, sel ? () => sel(store.s) : () => {
+    const cur = store.s;
+    if (cur !== R.last) {
+      let ch = R.all;
+      if (!ch) for (const k of R.keys) if (cur[k] !== R.last[k]) { ch = true; break; }
+      R.last = cur; if (ch) R.tok = {};
+    }
+    return R.tok;
+  });
+  if (sel) return v;
+  R.keys = new Set(); R.all = false;
+  return new Proxy(store.s, {
+    get: (_, k) => { if (typeof k === 'string') R.keys.add(k); return store.s[k]; },
+    has: (_, k) => k in store.s,
+    ownKeys: () => { R.all = true; return Reflect.ownKeys(store.s); },
+    getOwnPropertyDescriptor: (_, k) => { R.all = true; const d = Object.getOwnPropertyDescriptor(store.s, k); return d && { ...d, configurable: true }; },
+  });
+}
 
 export const api = () => store.s.api;
 export const isAdmin = () => store.s.user?.role === 'admin';

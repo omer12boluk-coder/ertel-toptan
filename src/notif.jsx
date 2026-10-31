@@ -103,6 +103,7 @@ export function NotifBell() {
       <button className={'icon-btn nc-bell' + (open ? ' on' : '')} onClick={() => (open ? close() : setOpen(true))} aria-label={`Bildirimler${unread ? ` (${unread} yeni)` : ''}`} title="Bildirimler">
         <Icon n="bell" s={19} />{unread > 0 && <span key={unread} className="badge">{unread > 99 ? '99+' : unread}</span>}
       </button>
+      {open && <div className="nc-scrim" aria-hidden="true" onClick={close} />}
       {open && (
         <div className="nc-panel" role="dialog" aria-label="Bildirimler">
           <div className="nc-h">
@@ -260,6 +261,7 @@ export function ShopBell() {
       <button className={'icon-btn nc-bell' + (open ? ' on' : '')} onClick={() => (open ? close() : setOpen(true))} aria-label={`Bildirimler${unread ? ` (${unread} yeni)` : ''}`} title="Bildirimler">
         <Icon n="bell" s={19} />{unread > 0 && <span key={unread} className="badge">{unread > 9 ? '9+' : unread}</span>}
       </button>
+      {open && <div className="nc-scrim" aria-hidden="true" onClick={close} />}
       {open && (
         <div className="nc-panel" role="dialog" aria-label="Bildirimler">
           <div className="nc-h">

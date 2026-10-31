@@ -150,6 +150,10 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls
   // arka plana tıklama sanıp kendini kapatıyordu → açıldıktan sonraki 500 ms arka plan tıklaması yok sayılır
   const born = useRef(Date.now());
   const bg = useRef(null);
+  // 31.10.2026: içerik bir kare SONRA çizilir → dokununca pencere anında kayarak açılmaya başlar (kayma ekran kartında
+  // yürür), ağır içerik (ürün, düzenleme, talep) bu sırada yerleşir. Eskiden ağır içerik yüzünden dokunuş 'takılıyordu'.
+  const [ready, setReady] = useState(false);
+  useEffect(() => { const r = requestAnimationFrame(() => setReady(true)); return () => cancelAnimationFrame(r); }, []);
   useEffect(() => {
     const k = (e) => e.key === 'Escape' && !sticky && onClose();
     window.addEventListener('keydown', k);
@@ -179,18 +183,23 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls
   }, []);
   // Telefonda: pencereyi tutup aşağı çekince kapanır (üst kısımdan ya da içerik en üstteyken her yerden)
   const drag = useRef(null);
+  // 31.10.2026: her yerden çekilir — parmağın altındaki kaydırılabilir alan en üstteyse (ya da hiç yoksa) aşağı çekmek pencereyi
+  // kapatır; yana hareket (resim şeridi) pencereyi oynatmaz. Eskiden sadece ana gövde en üstteyse ve resim şeridi dışından
+  // çekiliyordu → bazı pencereler sadece tutamaçtan çekiliyordu.
   const onTouchStart = (e) => {
     if (!matchMedia('(max-width: 700px)').matches || e.touches.length !== 1) return;
-    const body = ref.current.querySelector('.sheet-b');
     const fromTop = e.target.closest('.sheet-h, .sheet-grab');
-    if (!fromTop && e.target.closest('.md-t, .md-grid')) return; // resim sıralarken pencere kaymasın
-    if (!fromTop && (!body || body.scrollTop > 0 || e.target.closest('input, textarea, select, .gal-track, .gal-thumbs'))) return;
-    drag.current = { y0: e.touches[0].clientY, t0: Date.now(), dy: 0, on: false };
+    if (!fromTop && e.target.closest('.md-t, .md-grid, input, textarea, select, [contenteditable="true"]')) return; // resim sıralama / yazı alanı
+    if (!fromTop) for (let el = e.target; el && el !== ref.current; el = el.parentElement) {
+      const cs = getComputedStyle(el);
+      if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1 && el.scrollTop > 1) return; // içerik aşağı kaydırılmış: önce yukarı kaysın
+    }
+    drag.current = { x0: e.touches[0].clientX, y0: e.touches[0].clientY, t0: Date.now(), dy: 0, on: false };
   };
   const onTouchMove = (e) => {
     const d = drag.current; if (!d) return;
-    const dy = e.touches[0].clientY - d.y0;
-    if (!d.on) { if (dy < 6) { if (dy < -6) drag.current = null; return; } d.on = true; ref.current.style.transition = 'none'; }
+    const dy = e.touches[0].clientY - d.y0; const dx = e.touches[0].clientX - d.x0;
+    if (!d.on) { if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { drag.current = null; return; } if (dy < 6) { if (dy < -6) drag.current = null; return; } d.on = true; d.t0 = Date.now(); d.y0 = e.touches[0].clientY - 6; ref.current.style.transition = 'none'; }
     d.dy = Math.max(0, dy);
     ref.current.style.transform = `translateY(${d.dy}px)`;
     if (bg.current) bg.current.style.background = `rgb(8 16 13 / ${Math.max(0, 0.45 * (1 - d.dy / 500)).toFixed(3)})`;
@@ -215,7 +224,7 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls
           <div className="sheet-title"><h2>{title}</h2>{sub && <p>{sub}</p>}</div>
           <button className="icon-btn" onClick={onClose} aria-label="Kapat"><Icon n="x" /></button>
         </header>
-        <div className="sheet-b">{children}</div>
+        <div className="sheet-b">{ready ? children : <div className="sheet-wait" aria-hidden="true" />}</div>
         {footer && <footer className="sheet-f">{footer}</footer>}
       </div>
     </div>,
