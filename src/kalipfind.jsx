@@ -20,9 +20,11 @@ export function mergePhones(base, over) {
   for (const [n, c] of Object.entries(over)) { const key = n.toLowerCase(); if (!c) { m.delete(key); continue; } if (c === '?') continue; /* '?' = işlemci henüz seçilmedi */ m.set(key, { ...mk(n, c, [...phoneCodes(c)]), own: 1 }); }
   return [...m.values()];
 }
+// Telefon listesi sürümü (1.0.x): Claude 'güncelle' komutunda artırır (kalip-build.mjs --bump); sayfanın altında küçük yazı
+let phonesVer = '';
 export function loadPhones() {
   phonesP = phonesP || fetch('/kalip/phones.json').then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
-    .then((d) => d.p.map(([n, c, k]) => mk(n, c, k ? k.split(' ') : [])))
+    .then((d) => { phonesVer = d.ver || ''; return d.p.map(([n, c, k]) => mk(n, c, k ? k.split(' ') : [])); })
     .catch((e) => { phonesP = null; throw e; });
   return phonesP;
 }
@@ -231,6 +233,7 @@ export function KalipFinder() {
       )}
       {/* yönetimden yazılan bilgi / sorumluluk notu (Ayarlar > Kalıp bulucu); kapalı ya da boşsa hiç çizilmez */}
       {S.kalip?.noteOn !== false && String(S.kalip?.note || '').trim() && <p className="kf-note"><Icon n="ask" s={15} /><span>{String(S.kalip.note).trim()}</span></p>}
+      {phones && phonesVer && <p className="kf-ver">Telefon listesi sürüm {phonesVer}</p>}
       {/* kalıp bulucudan açılan ürün her zaman pencerede (mağaza ayarından bağımsız) */}
       {prod && <ProductSheet p={prod} forceSheet onClose={() => setProd(null)} />}
     </div>

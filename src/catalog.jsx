@@ -13,7 +13,7 @@ import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
 import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
-import { SetGrid, InSets, liveSets } from './sets.jsx';
+import { SetGrid, InSets, liveSets, ProductsSwitch } from './sets.jsx';
 
 export function useTree() {
   const { catalog, settings: S } = useStore();
@@ -480,6 +480,7 @@ export function Catalog({ admin }) {
 
   return (
     <div className="catalog">
+      {admin && <div className="prod-switch"><ProductsSwitch on="products" /></div>}
       <div className={'cat-layout' + (admin ? ' resizable' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
         <aside className="cat-side" aria-label="Kategoriler">
           <h3 className="eyebrow">Kategoriler</h3>

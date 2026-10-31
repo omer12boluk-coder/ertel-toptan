@@ -7,7 +7,7 @@ import { Icon, Empty, Thumb, Sheet, Stepper, VatLines, copyText } from './ui.jsx
 import { decodeList, encodeList, listItems, listRecord, listLink } from './listcode.js';
 import { Lightbox, imageList, ProductSheet } from './catalog.jsx';
 import { links, waLink } from './route.js';
-import { fmt, totals, fmtTotals, when, ls, roundStep, vatOf, picUrl, isAbsImg } from './utils.js';
+import { fmt, totals, fmtTotals, when, ls, roundStep, vatOf, picUrl, isAbsImg, mediaFallback } from './utils.js';
 import { LOGO_MARK } from './config.js';
 
 // ---- Kur (1 USD kaç TL) ------------------------------------------------------
@@ -117,6 +117,15 @@ function B2bGain({ items }) {
 }
 
 // ---- Resim (PNG) çizimi -------------------------------------------------------
+// Tabloya çizilen resim AYRI adresle istenir (?cv=1): sayfada aynı resim izinsiz (CORS'suz) gösterildiği için tarayıcı/Cloudflare önbelleğindeki
+// kopyada izin başlığı yok → tuval resmi reddedip kutuyu boş bırakıyordu (resimler resim.ertelmarket.com'a taşınınca başladı, 31.10.2026).
+const WATCH = () => (window.WATCH_URL ? String(window.WATCH_URL).replace(/\/$/, '') : '');
+const corsUrl = (u) => (!u || /^(data:|blob:)/.test(u) || (WATCH() && u.startsWith(WATCH())) ? u : u + (u.includes('?') ? '&' : '?') + 'cv=1');
+async function loadPic(src) {
+  const i = await loadImg(corsUrl(src), true); if (i || !src) return i;
+  const fb = mediaFallback(src); // depoda yoksa eski site resmi, bekçi üzerinden
+  return fb && /^https:\/\/platincdn\.com\/3519\//.test(fb) && WATCH() ? loadImg(WATCH() + '/img?u=' + encodeURIComponent(fb), true) : null;
+}
 function loadImg(src, cors) { return new Promise((res) => { if (!src) return res(null); const i = new Image(); if (cors) i.crossOrigin = 'anonymous'; const t = setTimeout(() => res(null), 5000); i.onload = () => { clearTimeout(t); res(i); }; i.onerror = () => { clearTimeout(t); res(null); }; i.src = src; }); }
 // Ürün küçük resmi (site CDN'i izin verirse resme çizilir, vermezse boş kutu kalır)
 function thumbSrc(it, S) {
@@ -149,8 +158,8 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
   const items = itemsIn || r.items || [];
   const tl = (tlIn ?? r.tl ?? true) && !!rate;
   try { await Promise.all(['700 40px "Barlow Condensed"', '600 24px Barlow', '500 18px "JetBrains Mono"', '400 20px Barlow'].map((f) => document.fonts.load(f))); } catch {}
-  const logo = await loadImg(S.brand.logo || LOGO_MARK);
-  const pics = await Promise.all(items.map((it) => loadImg(thumbSrc(it, S), true)));
+  const logo = (S.brand.logo && await loadPic(S.brand.logo)) || await loadImg(LOGO_MARK); // dış adresli logo da izinli yüklenir (tuvali kirletmesin)
+  const pics = await Promise.all(items.map((it) => loadPic(thumbSrc(it, S))));
   const W = 1080, P = 40, TW = W - 2 * P, PAD = 18; // tablo kutusu iç boşluğu
   const priceC = S.brand.priceAccent || '#c2410c', ink = '#111827', mute = '#6b7280', soft = '#9ca3af', line = '#e5e7eb';
   // sütunlar (tablo kutusunun içinde)

@@ -412,7 +412,7 @@ function Login() {
 
 // [sekme, ad, ikon, telefondaki kısa ad]
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Siparişlerim', 'box', 'Siparişler'], ['profil', 'Hesabım', 'user']];
-const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Form oluştur', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Ürünler', 'grid', 'Ürünler'], ['kalip', 'Kalıp bulucu', 'chip', 'Kalıp'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 // Sayfa bulunamadı (tanınmayan mağaza adresi; Google'a noindex boot'ta eklenir)
 function NotFound() {
@@ -459,13 +459,13 @@ function pageMenu(e, role) {
 // /siparisformu: menüsüz, tek sayfa sipariş formu (yönetim panelinin oturumunu kullanır)
 function FormOnlyShell() {
   const { user, api: A } = useStore();
-  useEffect(() => { document.title = 'Sipariş formu'; const m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex, nofollow'; document.head.appendChild(m); }, []);
+  useEffect(() => { document.title = 'Form oluştur'; const m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex, nofollow'; document.head.appendChild(m); }, []);
   return (
     <div className="shell admin form-only tab-siparis">
       <header className="topbar">
         <div className="topbar-in">
           <Brand small />
-          <span className="admin-badge"><Icon n="tag" s={14} />Sipariş formu</span>
+          <span className="admin-badge"><Icon n="tag" s={14} />Form oluştur</span>
           <span className="top-sp" />
           <ThemeButton />
           <button className="icon-btn logout-btn" onClick={() => A.logout()} aria-label="Çıkış yap" title="Çıkış yap"><Icon n="out" s={18} /></button>
@@ -514,7 +514,7 @@ function ShellFull() {
   useEffect(() => { if (admin && newOrders > prevOrders.current) toast('Mağazadan yeni sipariş geldi', 'info'); prevOrders.current = newOrders; }, [newOrders]);
   const lcNew = useStore((st) => (admin ? (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length : 0));
   const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders + lcNew : 0);
-  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' || tab === 'setler' ? 'siparis' : tab; // alt sayfalar menüde ana sekmesini yakar
+  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
@@ -525,7 +525,7 @@ function ShellFull() {
           {pub && <span className="pub-id"><b className="pub-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b></span>}
           <nav className="topnav" aria-label="Ana menü">
             {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet') && k !== 'tasarim').map(([k, l, i]) => {
-              const drop = (pub && k === 'katalog') || (admin && ['siparisler', 'siparis', 'musteriler'].includes(k));
+              const drop = (pub && k === 'katalog') || (admin && ['siparisler', 'siparis', 'katalog', 'musteriler'].includes(k));
               const b = (
                 <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}>
                   <Icon n={i} s={18} /><span className="topnav-l">{l}</span>{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}{drop && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}

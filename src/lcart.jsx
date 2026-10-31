@@ -19,7 +19,7 @@ import { pingWatch } from './push.js';
 import { CargoCard, OrdersSwitch, OlderBtn, OrderThumbs, ago2, fullDate, useDateRange, RangeSheet, rangeLabel } from './orders.jsx';
 import { PAY, DELIVERY } from './config.js';
 import { waLink } from './route.js';
-import { useRate, toTL, fmtTL, ExportBar } from './listsheet.jsx';
+import { useRate, toTL, fmtTL, ExportBar, ListPaper } from './listsheet.jsx';
 import { AddressFields, addrErrors, cleanAddr, Choice, addrLine } from './checkout.jsx';
 
 const strip = (o) => JSON.parse(JSON.stringify(o, (k, v) => (v === undefined ? undefined : v)));
@@ -256,6 +256,7 @@ const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda
 function LinkCartAdmin({ c, onBack }) {
   const byId = useStore((st) => st.byId);
   const [del, setDel] = useState(false);
+  const [pic, setPic] = useState(false);
   const its = finalItems(c);
   const tot = totals(its, 'offer');
   const s = c.sub;
@@ -281,8 +282,11 @@ function LinkCartAdmin({ c, onBack }) {
         <button className="icon-btn oa-del" onClick={() => setDel(true)} aria-label="Siparişi sil" title="Siparişi sil"><Icon n="trash" s={17} /></button>
       </div>
 
+      {changed && <p className="fine lc-changed">Müşteri adetleri değiştirdi ya da bazı ürünleri çıkardı; aşağıda onayladığı hâli var.</p>}
+      <ListPaper r={{ no: c.no, gname: s?.contact?.name || c.name, items: its, status: 'priced', createdAt: subTime(c) || c.at, updatedAt: subTime(c) || c.at, rate: c.rate ? { usd: c.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
+
       {s ? (
-        <div className="o-info">
+        <div className="o-info lc-info3">
           <div className="o-card">
             <h3>Müşteri</h3>
             <p><b>{s.contact?.name}</b><br /><span className="num">{s.contact?.phone}</span></p>
@@ -292,8 +296,17 @@ function LinkCartAdmin({ c, onBack }) {
             <h3>Teslimat{a && <button className="oc-copy" onClick={() => copyText(addrText, 'Adres kopyalandı')} aria-label="Adresi kopyala"><Icon n="copy" s={14} /></button>}</h3>
             {s.delivery?.method === 'pickup' ? <p>{DELIVERY.pickup}</p> : <p>{DELIVERY.cargo}<br />{a ? addrLine(a) : '—'}</p>}
             {s.pay && <p className="muted">Ödeme: {PAY[s.pay] || s.pay}</p>}
+            {s.note && <p className="lc-note-in"><b>Not:</b> {s.note}</p>}
           </div>
-          {s.note && <div className="o-card lc-note"><h3>Not</h3><p>{s.note}</p></div>}
+          <div className="o-card lc-wa">
+            <h3>Müşteriye özet</h3>
+            <p className="muted lc-wa-st">{c.waAt ? <><Icon n="check" s={13} /> {when(c.waAt)} gönderildi</> : 'Henüz gönderilmedi'}</p>
+            <div className="lc-wa-btns">
+              <a className="btn sm wa" href={waLink(s.contact?.phone, summary)} target="_blank" rel="noopener" onClick={sendWa}><Icon n="wa" s={15} />Özeti gönder</a>
+              <button className="icon-btn sm" onClick={() => copyText(summary, 'Özet kopyalandı')} aria-label="Özet metnini kopyala" title="Metni kopyala"><Icon n="copy" s={15} /></button>
+              <button className={'icon-btn sm' + (pic ? ' on' : '')} onClick={() => setPic((x) => !x)} aria-label="Özet resmi" title="Özet resmi (paylaş / indir)"><Icon n="image" s={15} /></button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="banner"><Icon n="clock" /><div>{lcExpired(c)
@@ -301,42 +314,13 @@ function LinkCartAdmin({ c, onBack }) {
           : <><b>Müşteri henüz onaylamadı.</b> Link {hm(lcExp(c))}’e kadar açık ({left(lcExp(c))} kaldı); onaylanmazsa kendiliğinden silinir. Onaylayınca burada adres ve iletişim bilgisi görünür.</>}
           <br /><small className="muted">{c.edit ? 'Müşteri adetleri − / + ile değiştirebilir.' : 'Müşteri hiçbir şeyi değiştiremez, sadece onaylar.'}</small></div></div>
       )}
-
-      {s && (
-        <div className="lc-st-box lc-wa">
-          <h3>Müşteriye özet {c.waAt ? <span className="muted lc-wa-ok"><Icon n="check" s={14} /> {when(c.waAt)} gönderildi</span> : null}</h3>
-          <p className="fine">Onayladığı siparişin özeti müşterinin yazdığı numaraya ({s.contact?.phone}) sizin WhatsApp’ınızdan gider; iki tarafta da kalıcı kayıt olur. Mesajda müşterinin sipariş sayfasının linki de var.</p>
-          <div className="row-btns">
-            <a className="btn wa" href={waLink(s.contact?.phone, summary)} target="_blank" rel="noopener" onClick={sendWa}><Icon n="wa" s={16} />WhatsApp’tan özet gönder</a>
-            <button className="btn sm ghost" onClick={() => copyText(summary, 'Özet kopyalandı')}><Icon n="copy" s={15} />Metni kopyala</button>
-          </div>
-          <details className="lc-wa-more"><summary>Özet resmi (paylaş / indir)</summary>
-            <ExportBar r={{ no: c.no, status: 'sent', createdAt: subTime(c) || c.at, gname: s.contact?.name }} items={its} rate={rate} shareText={summary} />
-          </details>
-        </div>
-      )}
+      {s && pic && <div className="lc-pic"><ExportBar r={{ no: c.no, status: 'sent', createdAt: subTime(c) || c.at, gname: s.contact?.name }} items={its} rate={rate} shareText={summary} /></div>}
 
       {s && s.delivery?.method !== 'pickup' && <CargoCard col="lcarts" o={{ id: c.id, no: c.no, dhl: c.dhl, cargo: c.cargo, status: c.cargo?.delivered ? 'done' : c.cargo?.code ? 'shipped' : 'preparing', delivery: s.delivery, contact: s.contact }} />}
 
       <div className="lc-linkrow"><Icon n="share" s={15} /><code className="lc-code">{link}</code>
         <button className="icon-btn sm" onClick={() => copyText(link, 'Link kopyalandı')} aria-label="Linki kopyala"><Icon n="copy" s={15} /></button>
         <a className="icon-btn sm" href={link} target="_blank" rel="noopener" aria-label="Linki aç"><Icon n="ext" s={15} /></a></div>
-
-      <div className="lc-st-box lc-adm-items">
-        <h3>Ürünler</h3>
-        {changed && <p className="fine lc-changed">Müşteri adetleri değiştirdi ya da bazı ürünleri çıkardı; aşağıda onayladığı hâli var.</p>}
-        <ul className="lc-items">
-          {its.map((it) => (
-            <li key={it.id}>
-              <Thumb p={byId.get(it.id) || it} size="sm" />
-              <span className="lc-n"><b>{it.n}</b><code>{it.k}</code></span>
-              <span className="lc-q num">{it.qty} × {fmt(it.price, it.cur)}</span>
-              <b className="lc-sum num">{fmt(it.price * it.qty, it.cur)}</b>
-            </li>
-          ))}
-        </ul>
-        <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
-      </div>
 
       <div className="row-btns lc-adm-act">
         {c.status === 'sent' && <button className="btn primary" onClick={() => setSt('done')}><Icon n="check" s={16} />Tamamlandı</button>}

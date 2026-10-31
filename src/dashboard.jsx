@@ -81,7 +81,7 @@ export function AdminHome() {
 
       <section className="dash-quick">
         {[
-          ['tag', 'Sipariş formu', () => go('siparis')],
+          ['tag', 'Form oluştur', () => go('siparis')],
           ['box', 'Siparişler', () => go('siparisler'), st.open],
           ['grid', 'Ürünler', () => go('katalog'), st.priceChanged],
           ['users', 'Müşteriler', () => go('musteriler'), st.pending],

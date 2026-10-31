@@ -5814,3 +5814,21 @@ html.dz2-open .sheet-bg { z-index: 960; }
 /* sayfa içindeki "Bölüm ekle" menüsü: üstteki bölümün önünde, tam opak, açılırken hafif kayar */
 .dz-add-between.open { z-index: 40; }
 .dz-add-between .dz-add-menu { z-index: 41; animation: dz2-pop .16s var(--ease); }
+/* Linkle gelen sipariş (yönetim, 31.10.2026 gece): ürünler üstte (mağaza siparişi gibi), altında Müşteri | Teslimat | Müşteriye özet yan yana */
+.lc-adm .lc-changed { margin: 0 0 8px; color: var(--c-confirmed, #c9772b); }
+.lc-adm .lc-info3 .o-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.lc-adm .lc-info3 .o-card p { margin: 0; }
+.lc-adm .lc-note-in { white-space: pre-wrap; }
+.lc-adm .lc-wa h3 { margin-bottom: 0; }
+.lc-adm .lc-wa-st { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.lc-adm .lc-wa-st .ic, .lc-adm .lc-wa-st svg { color: var(--c-done, #1f6b47); }
+.lc-adm .lc-wa-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 2px; }
+.lc-adm .lc-info3 .o-card h3 { display: flex; align-items: center; gap: 6px; height: 20px; margin: 0 0 2px; }
+.lc-adm .lc-info3 .o-card h3 .oc-copy { margin: -6px 0; }
+.lc-adm .lc-wa-btns .icon-btn.on { background: color-mix(in oklab, var(--accent) 12%, var(--surface)); color: var(--accent); }
+.lc-adm .lc-pic { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r, 14px); background: var(--surface); }
+/* Kalıp bulucu: telefon listesi sürümü (31.10.2026) */
+.kf-ver { margin: 4px 0 0; text-align: center; font-size: 11.5px; color: var(--muted); opacity: .75; font-variant-numeric: tabular-nums; }
+/* Yönetim Ürünler: üstte Ürünler | Setler seçici (31.10.2026) */
+.prod-switch { display: flex; margin: 0 0 12px; }
+.prod-switch .subnav { margin: 0; }

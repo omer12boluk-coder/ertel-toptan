@@ -11,7 +11,7 @@ import { fmt, totals, fmtTotals, norm, roundStep, ls, priceFor } from './utils.j
 import { renderListImages, useRate, toTL, fmtTL, rateLabel } from './listsheet.jsx';
 import { encodeList, listLink } from './listcode.js';
 import { printHtml } from './orders.jsx';
-import { LinkMake, LinkCarts } from './lcart.jsx';
+import { LinkMake } from './lcart.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -156,15 +156,14 @@ export function OrderForm({ linkMode = false }) {
 
   return (
     <div className="page oform adm-sub">
-      <PageHead title={linkMode ? 'Sepet linki' : 'Sipariş formu'} extra={<span className="muted"> #{d.no}</span>} newLabel={(d.sid || d.items.length > 0 || d.name) ? (linkMode ? 'Yeni sepet' : 'Yeni form') : undefined} onNew={(d.sid || d.items.length > 0 || d.name) ? tryNew : undefined}>
+      <PageHead title={linkMode ? 'Sepet linki' : 'Form oluştur'} extra={<span className="muted"> #{d.no}</span>} newLabel={(d.sid || d.items.length > 0 || d.name) ? (linkMode ? 'Yeni sepet' : 'Yeni form') : undefined} onNew={(d.sid || d.items.length > 0 || d.name) ? tryNew : undefined}>
         {!linkMode && rows.length > 0 && <button className="btn sm wa ph-sec" onClick={() => { setOutOpen(true); setTimeout(() => document.getElementById('of-out')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }} aria-label="Müşteriye gönder"><Icon n="wa" s={15} /><span>Müşteriye gönder</span></button>}
         {!linkMode && dirty && rows.length > 0 && <button className="btn sm outline ph-sec" onClick={() => saveForm()} aria-label="Kaydet"><Icon n="check" s={15} /><span>{d.sid ? 'Değişiklikleri kaydet' : 'Kaydet'}</span></button>}
         {(d.items.length > 0 || d.name) && <button className="btn sm ghost danger ph-sec" onClick={() => setWipe(true)} aria-label="Formu temizle"><Icon n="trash" s={15} /><span>Temizle</span></button>}
       </PageHead>
-      <SubNav label="Sipariş formu" items={[
-        { k: 'form', icon: 'tag', label: 'Sipariş formu', on: !linkMode, onClick: () => go('siparis') },
+      <SubNav label="Form oluştur" items={[
+        { k: 'form', icon: 'tag', label: 'Form oluştur', on: !linkMode, onClick: () => go('siparis') },
         { k: 'link', icon: 'cart', label: 'Sepet linki', badge: lcNew, on: linkMode, onClick: () => go('sepetlink') },
-        { k: 'set', icon: 'box', label: 'Setler', on: false, onClick: () => go('setler') },
       ]} />
 
       <div className="oform-grid">
@@ -266,7 +265,7 @@ export function OrderForm({ linkMode = false }) {
         </div>
       </div>
 
-      {linkMode ? <LinkCarts /> : <section className="oform-saved">
+      {linkMode ? null : <section className="oform-saved">
         <h2>Kaydedilen formlar {forms?.length > 0 && <span className="muted num">{forms.length}</span>}</h2>
         {forms == null ? <div className="spinner sm" /> : forms.length === 0 ? <p className="fine">Henüz kaydedilen form yok. Formu hazırlayıp <b>Kaydet</b>’e basın; burada saklanır, istediğiniz zaman açarsınız.</p> : (
           <ul className="ofs-list">
