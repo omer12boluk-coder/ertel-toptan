@@ -4,7 +4,7 @@
 // çıkarır, ekleyemez, fiyata dokunamaz), adını, telefonunu, teslimat ve ödeme seçimini girip onaylar → kayıt 'sent' olur ve
 // yönetimde aynı sayfanın altındaki "Linkle gelen sepetler"e düşer. Her açılış SIFIRDAN başlar (cihazda hiçbir şey saklanmaz).
 // Kural (firestore.rules): linki bilen tek belgeyi okur; müşteri sadece açık sepeti bir kez onaylar.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, toast, store, go } from './store.js';
 import { PageHead, Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls } from './utils.js';
@@ -95,7 +95,12 @@ export function LinkCarts({ page = false }) {
   const want = useStore((s) => s.openLcart);
   useEffect(() => { if (!want || !list) return; const x = list.find((c) => c.id === want); if (x) { setF(x.status === 'open' ? 'open' : x.status); show(want); } store.set({ openLcart: null }); }, [want, list]);
   // sipariş tam sayfa açılır (mağaza siparişi gibi); telefonda geri kaydırma / Geri listeye döner
-  const show = (id) => { try { history.pushState({ ...(history.state || {}), lcOpen: id, y: scrollY }, ''); } catch {} setOpen(id); window.scrollTo(0, 0); };
+  // liste açık kalır (gizlenir), detay üstüne gelir → dönünce liste yeniden kurulmaz, resimler yeniden yüklenmez, kaydırma yeri
+  // aynı karede geri konur (31.10.2026: dönüşte 'F5 atılmış gibi' oynuyordu)
+  const listY = useRef(0);
+  const show = (id) => { listY.current = scrollY; try { history.replaceState({ ...(history.state || {}), y: scrollY }, ''); history.pushState({ ...(history.state || {}), lcOpen: id, y: 0 }, ''); } catch {} setOpen(id); window.scrollTo(0, 0); };
+  const wasOpen = useRef(false);
+  useLayoutEffect(() => { if (wasOpen.current && !open) window.scrollTo(0, listY.current); wasOpen.current = !!open; }, [open]);
   useEffect(() => { const h = (e) => { if (!e.state?.lcOpen) setCalm(true); setOpen(e.state?.lcOpen || null); }; addEventListener('popstate', h); return () => removeEventListener('popstate', h); }, []);
   // detaydan dönünce liste animasyonsuz, olduğu yerde görünür (31.10.2026: kutular gecikmeli oturuyordu)
   const [calm, setCalm] = useState(false);
@@ -121,7 +126,6 @@ export function LinkCarts({ page = false }) {
       onOk: () => api().deleteLcarts(ids).then(() => { toast(ids.length + ' sipariş silindi'); setSel(null); }, (e) => toast('Silinemedi: ' + e.message, 'bad')) });
   };
   const pick = (c) => { show(c.id); if (c.status === 'sent' && !c.seen) api().updateLcart(c.id, { seen: true }).catch(() => {}); };
-  if (cur && page) return <LinkCartAdmin c={cur} onBack={hide} />;
   const sec = (
     <section className={'lc-list' + (page ? ' lc-list-page' : ' oform-saved')}>
       {!page && <h2>Linkle gelen siparişler</h2>}
@@ -193,13 +197,14 @@ export function LinkCarts({ page = false }) {
     </section>
   );
   if (!page) return sec;
-  return (
-    <div className={'page lc-page-adm adm-sub' + (calm ? ' no-anim' : '')}>
+  return <>
+    {cur && <LinkCartAdmin c={cur} onBack={hide} />}
+    <div className={'page lc-page-adm adm-sub' + (calm ? ' no-anim' : '')} style={cur ? { display: 'none' } : undefined}>
       <PageHead cls="ord-head" title="Siparişler" newLabel="Yeni sepet linki" onNew={() => go('sepetlink')} />
       <OrdersSwitch on="lcarts" />
       {sec}
     </div>
-  );
+  </>;
 }
 const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda' };
 
