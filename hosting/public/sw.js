@@ -27,7 +27,8 @@ self.addEventListener('push', (e) => {
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const url = new URL(e.notification.data?.url || '/', self.location.origin).href;
+  const u0 = new URL(e.notification.data?.url || '/', self.location.origin); u0.searchParams.set('n', '1'); // bildirimden açıldı: uygulama 'kaldığı yer'e atlamasın
+  const url = u0.href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
     for (const c of cs) if (c.url.startsWith(self.location.origin) && 'navigate' in c) return c.focus().then(() => c.navigate(url));
     return self.clients.openWindow(url);
