@@ -78,7 +78,11 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     if (a && Math.hypot(e.clientX - a.x, e.clientY - a.y) < TITRE) return;
     anc.current = { x: e.clientX, y: e.clientY }; clearTimeout(t.current); t.current = setTimeout(show, DUR);
   };
-  const leave = () => { clearTimeout(t.current); mute.current = false; if (open) t.current = setTimeout(close, 400); };
+  // kapanmadan önce farenin GERÇEKTEN dışarıda olduğunu sor: tarayıcı bazen yanlış 'çıktı' bildirimi veriyor
+  // (fare menüde, satırın üstünde durma izi var ama menü kapanıyordu). Hâlâ üstündeyse kapanmaz, fare çıkınca kapanır.
+  const inside = () => !!(wrap.current?.matches(':hover') || pane.current?.matches(':hover'));
+  const later = () => { t.current = setTimeout(() => (inside() ? later() : close()), 400); };
+  const leave = () => { clearTimeout(t.current); mute.current = false; if (open) later(); };
   // ok: oka tıklamak sayfaya gitmez, menüyü açar/kapatır
   const click = (e) => {
     clearTimeout(t.current);
