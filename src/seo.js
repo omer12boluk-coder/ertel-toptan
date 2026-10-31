@@ -35,3 +35,13 @@ export function seoRoute(path) {
   const m = /^(?:\/magaza)?\/(marka|kategori)\/([a-z0-9-]+)\/?$/.exec(path || '');
   return m ? { t: m[1], slug: m[2] } : null;
 }
+
+// Ürün adresi: /urun/<ürün adı>-<no> (31.10.2026, eski sitedeki "ad-pmu<no>" gibi; numara sonda). Ad değişse de numaradan açılır.
+export function prodSlug(p) {
+  let s = slugify(p?.n);
+  if (s.length > 70) s = s.slice(0, 70).replace(/-[^-]*$/, '');
+  return (s ? s + '-' : '') + p.id;
+}
+export const prodPath = (p) => '/urun/' + prodSlug(p);
+// /urun/<no> ya da /urun/<herhangi-ad>-<no> → no
+export function prodIdOf(path) { const m = /^(?:\/magaza)?\/urun\/(?:[a-z0-9-]*-)?(\d+)\/?$/.exec(path || ''); return m ? m[1] : null; }

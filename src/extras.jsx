@@ -6,6 +6,7 @@ import { useStore, store, api, go, toast, openProduct, setQty } from './store.js
 import { Icon, Empty, Toggle, openMenu, copyText } from './ui.jsx';
 import { fmt, priceFor, picUrl, mediaFallback, fbSkip } from './utils.js';
 import { waLink } from './route.js';
+import { prodPath } from './seo.js';
 import { pushState } from './push.js';
 import { queueSave } from './saveq.js';
 
@@ -51,11 +52,11 @@ export async function shareUrl(url, title) {
   }
   copyText(url, 'Link kopyalandı');
 }
-export function shareMenu(e, p) { e?.stopPropagation?.(); shareUrl(location.origin + '/urun/' + p.id, p.n); }
+export function shareMenu(e, p) { e?.stopPropagation?.(); shareUrl(location.origin + prodPath(p), p.n); }
 export function ShareBtn({ p, big, url, title, label = 'Ürünü paylaş' }) {
   const S = useStore((s) => s.settings);
   if (!feat(S).share || !(p || url)) return null;
-  const go = (e) => { e.stopPropagation(); shareUrl(url || location.origin + '/urun/' + p.id, title || p.n); };
+  const go = (e) => { e.stopPropagation(); shareUrl(url || location.origin + prodPath(p), title || p.n); };
   return (
     <button type="button" className={'share-btn' + (big ? ' big' : '')} onClick={go} aria-label={label} title="Paylaş">
       <Icon n="share" s={big ? 19 : 17} />

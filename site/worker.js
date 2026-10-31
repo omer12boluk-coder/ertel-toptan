@@ -14,7 +14,7 @@
 //    Veri: Firestore'un herkese açık kayıtları (pubcatalog, settings/public, desc/descb). Toplu dizin her veri
 //    merkezinde 6 saat önbellekte (caches.default — KV DEĞİL, günlük yazma sınırına dokunmaz), sayfa başına sonuç 1 gün.
 //    Hata olursa sayfa hiç dokunulmadan döner (site asla bozulmaz).
-import { slugify, catSlugs } from '../src/seo.js';
+import { slugify, catSlugs, prodPath, prodIdOf } from '../src/seo.js';
 import CAT_TREE from '../src/categories.json';
 
 const FB = 'https://erteltoptan.firebaseapp.com';
@@ -22,7 +22,7 @@ const FS = 'https://firestore.googleapis.com/v1/projects/erteltoptan/databases/(
 const IMG = 'https://resim.ertelmarket.com/';
 const SITE = 'https://ertelmarket.com';
 const NAME = 'ERTEL GSM';
-const VER = 'v2'; // önbellek anahtarı: sayfa düzeni değişince artır
+const VER = 'v3'; // önbellek anahtarı: sayfa düzeni değişince artır
 const BOT = /bot\b|bot\/|crawl|spider|slurp|google|bing|yandex|baidu|duckduck|facebookexternalhit|facebot|whatsapp|telegram|slack|linkedin|discord|pinterest|skypeuripreview|vkshare|embedly|viber|snapchat|petal|applebot|preview/i;
 
 // ---- Firestore REST (herkese açık okuma)
@@ -122,7 +122,7 @@ const A = (href, text) => `<a href="${esc(href)}">${esc(text)}</a>`;
 function prodList(I, ids, max = 240) {
   const list = ids.map((id) => I.byId.get(id)).filter(Boolean);
   list.sort((a, b) => (b.s > 0) - (a.s > 0) || a.n.localeCompare(b.n, 'tr'));
-  return '<ul>' + list.slice(0, max).map((p) => `<li>${A('/urun/' + p.id, p.n)}${p.b ? ' · ' + esc(p.b) : ''}${p.r ? ' · ' + usd(p.r) + ' +KDV' : ''}${p.s > 0 ? '' : ' · stokta yok'}</li>`).join('') + '</ul>' + (list.length > max ? `<p>… ve ${list.length - max} ürün daha.</p>` : '');
+  return '<ul>' + list.slice(0, max).map((p) => `<li>${A(prodPath(p), p.n)}${p.b ? ' · ' + esc(p.b) : ''}${p.r ? ' · ' + usd(p.r) + ' +KDV' : ''}${p.s > 0 ? '' : ' · stokta yok'}</li>`).join('') + '</ul>' + (list.length > max ? `<p>… ve ${list.length - max} ürün daha.</p>` : '');
 }
 const brandLinks = (I) => '<ul>' + [...I.brands.values()].sort((a, b) => b.ids.length - a.ids.length).map((b) => `<li>${A('/marka/' + b.slug, b.name + ' ürünleri')} (${b.ids.length})</li>`).join('') + '</ul>';
 const catLinks = (I, list) => '<ul>' + list.map((c) => `<li>${A('/kategori/' + c.slug, c.name)} (${c.ids.length})</li>`).join('') + '</ul>';
@@ -175,18 +175,19 @@ async function seoFor(path, I) {
       img: imgUrl(I.byId.get(c.ids[0])?.img),
       body: `<p>${trail.map((x) => A('/kategori/' + I.catById.get(x.id).slug, x.name)).join(' › ')}</p><h1>${esc(c.name)}</h1>${subs.length ? '<h2>Alt kategoriler</h2>' + catLinks(I, subs) : ''}<h2>Ürünler</h2>${prodList(I, c.ids)}` };
   }
-  m = /^\/urun\/(\d+)$/.exec(path);
-  if (m) {
-    const p = I.byId.get(m[1]); if (!p) return null;
+  const pid = prodIdOf(path);
+  if (pid) {
+    const p = I.byId.get(pid); if (!p) return null;
+    const pp = prodPath(p);
     const d = await descOf(p.id);
     const b = p.b ? I.brands.get(slugify(p.b)) : null; const c = I.catById.get(p.c) || I.catById.get(p.c2);
     const trail = c ? c.path.filter((x) => I.catById.has(x.id)) : [];
     const desc = cut(d, 155) || `${p.n}${p.b ? ' · ' + p.b : ''}${c ? ' · ' + c.name : ''}. ${NAME} online mağaza, Tahtakale İstanbul.`;
-    const offer = p.r ? { '@type': 'Offer', url: SITE + '/urun/' + p.id, price: Number(p.r).toFixed(2), priceCurrency: 'USD', availability: 'https://schema.org/' + (p.s > 0 ? 'InStock' : 'OutOfStock'), itemCondition: 'https://schema.org/NewCondition',
+    const offer = p.r ? { '@type': 'Offer', url: SITE + pp, price: Number(p.r).toFixed(2), priceCurrency: 'USD', availability: 'https://schema.org/' + (p.s > 0 ? 'InStock' : 'OutOfStock'), itemCondition: 'https://schema.org/NewCondition',
       priceSpecification: { '@type': 'UnitPriceSpecification', price: Number(p.r).toFixed(2), priceCurrency: 'USD', valueAddedTaxIncluded: false }, seller: { '@type': 'Organization', name: NAME } } : undefined;
-    return { title: `${cut(p.n, 70)} | ${NAME}`, desc, type: 'product', img: imgUrl(p.img),
+    return { path: pp, title: `${cut(p.n, 70)} | ${NAME}`, desc, type: 'product', img: imgUrl(p.img),
       ld: [{ '@type': 'Product', name: p.n, image: [imgUrl(p.img)], ...(p.k ? { sku: p.k } : {}), ...(p.b ? { brand: { '@type': 'Brand', name: p.b } } : {}), ...(d ? { description: cut(d, 1000) } : {}), ...(c ? { category: c.name } : {}), ...(offer ? { offers: offer } : {}) },
-        crumbs([[NAME, '/'], ...trail.map((x) => [x.name, '/kategori/' + I.catById.get(x.id).slug]), [p.n, '/urun/' + p.id]])],
+        crumbs([[NAME, '/'], ...trail.map((x) => [x.name, '/kategori/' + I.catById.get(x.id).slug]), [p.n, pp]])],
       body: `<p>${trail.map((x) => A('/kategori/' + I.catById.get(x.id).slug, x.name)).join(' › ')}</p><h1>${esc(p.n)}</h1><img src="${esc(imgUrl(p.img))}" alt="${esc(p.n)}" width="400">`
         + `<p>${b ? 'Marka: ' + A('/marka/' + b.slug, b.name) + ' · ' : ''}${p.k ? 'Stok kodu: ' + esc(p.k) + ' · ' : ''}${p.r ? 'Fiyat: ' + usd(p.r) + ' +KDV · ' : ''}${p.s > 0 ? 'Stokta' : 'Stokta yok'}</p>`
         + (d ? `<div>${esc(cut(d, 4000)).replace(/\n/g, '<br>')}</div>` : '') + (b ? `<h2>Diğer ${esc(b.name)} ürünleri</h2>${prodList(I, b.ids.filter((x) => x !== p.id), 24)}` : '') };
@@ -227,7 +228,7 @@ async function sitemap(ctx) {
     ...[...I.brands.values()].map((b) => ['/marka/' + b.slug, '0.8']),
     ...[...I.cats.values()].map((c) => ['/kategori/' + c.slug, '0.8']),
     ...I.sets.map((s) => ['/set/' + s.id, '0.6']),
-    ...I.P.map((p) => ['/urun/' + p.id, p.s > 0 ? '0.7' : '0.4'])];
+    ...I.P.map((p) => [prodPath(p), p.s > 0 ? '0.7' : '0.4'])];
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     + urls.map(([u, pr]) => `<url><loc>${SITE}${esc(u)}</loc><priority>${pr}</priority></url>`).join('\n') + '\n</urlset>\n';
   ctx.waitUntil(caches.default.put(key, new Response(xml, { headers: { 'Cache-Control': 'max-age=21600' } })).catch(() => {}));
@@ -249,8 +250,10 @@ export default {
     let o = null;
     try { o = await pageSeo(path, ctx); } catch { return page; }
     if (!o) return page;
+    // ürünün asıl adresi /urun/<ad>-<no>: eski /urun/<no>, /magaza/urun/… ya da adı değişmiş link → kalıcı yönlendirme (Google tek adres öğrenir)
+    if (o.path && o.path !== url.pathname) return Response.redirect(SITE + o.path + url.search, 301);
     const bot = BOT.test(req.headers.get('user-agent') || '');
-    const canon = SITE + path;
+    const canon = SITE + (o.path || path);
     const rw = new HTMLRewriter()
       // etiketler <title>'ın HEMEN ARKASINA: sayfa ~1,6 MB, WhatsApp sadece ilk kısmını okuyor
       .on('title', { element(e) { e.setInnerContent(o.title); e.after(headTags(o, canon), { html: true }); } });

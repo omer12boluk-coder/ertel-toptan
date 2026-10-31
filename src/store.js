@@ -1,6 +1,7 @@
 import { useRef, useSyncExternalStore } from 'react';
 import { withDefaults, ls, norm, now, cleanText } from './utils.js';
 import { lpath } from './route.js';
+import { prodPath, prodIdOf } from './seo.js';
 
 const subs = new Set();
 export const store = {
@@ -145,11 +146,12 @@ export function openAcct(v) {
   if (scrollY > target) window.scrollTo(0, target);
 }
 // Ürün sayfası (Ayarlar > Ürün kartları > Ürün açılışı: sayfa): /magaza/urun/<no>
-export function pidFromPath() { const m = /^\/magaza\/urun\/(\d+)/.exec(lpath()); return m ? Number(m[1]) : null; }
+export function pidFromPath() { const id = prodIdOf(lpath()); return id ? Number(id) : null; }
 export function openProduct(id) {
   try {
     history.replaceState({ ...(history.state || {}), tab: store.s.tab, acct: store.s.acct || null, pid: store.s.pid || null, y: scrollY }, '');
-    history.pushState({ tab: 'urun', pid: id }, '', '/magaza/urun/' + id);
+    const p = store.s.byId?.get(id) || store.s.byId?.get(Number(id)) || store.s.byId?.get(String(id));
+    history.pushState({ tab: 'urun', pid: id }, '', p ? '/magaza' + prodPath(p) : '/magaza/urun/' + id);
   } catch {}
   // geldiği sayfa (Tüm ürünler / ana sayfa) arkada gizli açık kalır → geri dönünce filtreler, yüklenen ürünler ve kaydırma yerinde
   const from = store.s.tab === 'urun' ? store.s.urunFrom : store.s.tab;
