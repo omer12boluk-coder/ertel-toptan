@@ -5810,3 +5810,7 @@ html.dz2-open .toast { z-index: 1002; top: auto; bottom: 24px; }
 html.dz2-open .ctx { z-index: 1001; }
 html.dz2-open .ctx-catch { z-index: 1000; }
 html.dz2-open .sheet-bg { z-index: 960; }
+
+/* sayfa içindeki "Bölüm ekle" menüsü: üstteki bölümün önünde, tam opak, açılırken hafif kayar */
+.dz-add-between.open { z-index: 40; }
+.dz-add-between .dz-add-menu { z-index: 41; animation: dz2-pop .16s var(--ease); }

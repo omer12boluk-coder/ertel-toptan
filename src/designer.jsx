@@ -353,15 +353,15 @@ function Layers({ get, H, L, setL, sel, setSel, toggleHide, reveal, addBlock, bl
       </div>
       <div className="dz2-addw">
         <button className="dz2-add" onClick={() => setAdding(!adding)}><Icon n={adding ? 'x' : 'plus'} s={15} />{adding ? 'Kapat' : 'Bölüm ekle'}</button>
-        {adding && <AddMenu onAdd={(t) => { const at = sel?.kind === 'blk' ? L.indexOf(sel.k) + 1 : L.indexOf('cta') >= 0 ? L.indexOf('cta') : L.length; addBlock(at, t); setAdding(false); }} />}
+        {adding && <AddMenu side onAdd={(t) => { const at = sel?.kind === 'blk' ? L.indexOf(sel.k) + 1 : L.indexOf('cta') >= 0 ? L.indexOf('cta') : L.length; addBlock(at, t); setAdding(false); }} />}
       </div>
       <p className="dz2-tip">Sağ tık: hızlı işlemler<br />Ctrl K: ayar ara · Ctrl Z: geri al</p>
     </aside>
   );
 }
 const ADD_TYPES = [['head', 'Başlık', 'Büyük başlık + alt yazı'], ['rail', 'Ürün rafı', 'Yeni gelenler, marka, kategori…'], ['banner', 'Görsel bant', 'Tam genişlik resim, tıklanabilir'], ['video', 'Video', 'Yatay, kare ya da dikey'], ['rate', 'Kur kutusu', 'Güncel dolar kuru']];
-function AddMenu({ onAdd }) {
-  return <div className="dz-add-menu dz2-addm">{ADD_TYPES.map(([t, l, h]) => <button key={t} onClick={() => onAdd(t)}><b>{l}</b><small>{h}</small></button>)}</div>;
+function AddMenu({ onAdd, side }) {
+  return <div className={'dz-add-menu' + (side ? ' dz2-addm' : '')}>{ADD_TYPES.map(([t, l, h]) => <button key={t} onClick={() => onAdd(t)}><b>{l}</b><small>{h}</small></button>)}</div>;
 }
 
 // ---- Sağ: ayar paneli (seçilen şeye göre) ---------------------------------------------------------------------------------
