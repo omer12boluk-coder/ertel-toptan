@@ -5,10 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for id in 9000001 3114 2000; do
-            u="https://ertelmarket.com/urun/$id"
-            h=$(curl -s -A "WhatsApp/2.23.20.0 A" "$u" | grep -o '<meta property="og:[a-z]*" content="[^"]*"' | tr '\n' ' ')
-            echo "::notice title=OG $id::$h"
-            img=$(echo "$h" | grep -o 'og:image" content="[^"]*"' | sed 's/.*content="//;s/"$//')
-            if [ -n "$img" ]; then r=$(curl -s -o /dev/null -w '%{http_code} %{content_type} %{size_download}' -A "WhatsApp/2.23.20.0 A" "$img"); echo "::notice title=IMG $id::$img → $r"; fi
+          for u in "https://resim.ertelmarket.com/platin/HENJQFLJSL9272024104728_catalog-kapak-e2a379f0-03b4-4b0c-8fdf-a367237d9030.jpeg" \
+                   "https://ertelmarket.com/cdn-cgi/image/format=jpeg,width=600/https://resim.ertelmarket.com/up/h/c287a4b3de5eb5294794488c.webp" \
+                   "https://resim.ertelmarket.com/cdn-cgi/image/format=jpeg,width=600/up/h/c287a4b3de5eb5294794488c.webp"; do
+            r=$(curl -s -o /tmp/x -w '%{http_code} %{content_type} %{size_download}' "$u"); echo "::notice title=IMG::$u → $r $(file -b /tmp/x | cut -c1-60)"
           done
