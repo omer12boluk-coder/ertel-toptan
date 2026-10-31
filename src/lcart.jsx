@@ -5,7 +5,7 @@
 // yönetimde aynı sayfanın altındaki "Linkle gelen sepetler"e düşer. Her açılış SIFIRDAN başlar (cihazda hiçbir şey saklanmaz).
 // Kural (firestore.rules): linki bilen tek belgeyi okur; müşteri sadece açık sepeti bir kez onaylar.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useStore, api, toast, store, go } from './store.js';
+import { useStore, api, toast, store, go, openLcart } from './store.js';
 import { PageHead, Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls } from './utils.js';
 import { pingWatch } from './push.js';
@@ -87,25 +87,17 @@ export function LinkCarts({ page = false }) {
   const live = useRate();
   const [f, setF] = useState('sent');
   const [q, setQ] = useState('');
-  const [open, setOpen] = useState(null);
+  const open = useStore((st) => st.lcOpen || null); // mağaza siparişi gibi store'da (geri = sayfa geçişi animasyonu)
   const [confirm, setConfirm] = useState(null);
   const [sel, setSel] = useState(null); // çoklu seçim (Set) ya da kapalı
   const { range, setRange, rangeOpen, setRangeOpen, runRange } = useDateRange({ col: 'lcarts', unit: 'sipariş', setConfirm, onStart: () => setF('all') });
   // zilden gelince o sepet açılır
   const want = useStore((s) => s.openLcart);
   useEffect(() => { if (!want || !list) return; const x = list.find((c) => c.id === want); if (x) { setF(x.status === 'open' ? 'open' : x.status); show(want); } store.set({ openLcart: null }); }, [want, list]);
-  // sipariş tam sayfa açılır (mağaza siparişi gibi); telefonda geri kaydırma / Geri listeye döner
-  // liste açık kalır (gizlenir), detay üstüne gelir → dönünce liste yeniden kurulmaz, resimler yeniden yüklenmez, kaydırma yeri
-  // aynı karede geri konur (31.10.2026: dönüşte 'F5 atılmış gibi' oynuyordu)
-  const listY = useRef(0);
-  const show = (id) => { listY.current = scrollY; try { history.replaceState({ ...(history.state || {}), y: scrollY }, ''); history.pushState({ ...(history.state || {}), lcOpen: id, y: 0 }, ''); } catch {} setOpen(id); window.scrollTo(0, 0); };
-  const wasOpen = useRef(false);
-  useLayoutEffect(() => { if (wasOpen.current && !open) window.scrollTo(0, listY.current); wasOpen.current = !!open; }, [open]);
-  useEffect(() => { const h = (e) => { if (!e.state?.lcOpen) setCalm(true); setOpen(e.state?.lcOpen || null); }; addEventListener('popstate', h); return () => removeEventListener('popstate', h); }, []);
-  // detaydan dönünce liste animasyonsuz, olduğu yerde görünür (31.10.2026: kutular gecikmeli oturuyordu)
-  const [calm, setCalm] = useState(false);
-  useEffect(() => { if (!calm) return; const t = setTimeout(() => setCalm(false), 500); return () => clearTimeout(t); }, [calm]);
-  const hide = () => { setCalm(true); if (history.state?.lcOpen) history.back(); else setOpen(null); };
+  // Mağaza siparişlerinin birebir aynısı (31.10.2026): açık sipariş store'da (lcOpen), adres geçmişine kayıt; liste yerine detay
+  // sayfası gelir, geri dönünce sayfa geçişi animasyonu (soldan) ile liste gelir.
+  const show = (id) => openLcart(id);
+  const hide = () => store.set({ lcOpen: null }); // mağaza siparişindeki geri düğmesiyle aynı
   // tarih aralığı seçiliyse liste o aralığın kayıtları (canlı listedeki güncel hâl önce)
   const base = useMemo(() => {
     if (!range) return list;
@@ -197,14 +189,14 @@ export function LinkCarts({ page = false }) {
     </section>
   );
   if (!page) return sec;
-  return <>
-    {cur && <LinkCartAdmin c={cur} onBack={hide} />}
-    <div className={'page lc-page-adm adm-sub' + (calm ? ' no-anim' : '')} style={cur ? { display: 'none' } : undefined}>
+  if (cur) return <LinkCartAdmin c={cur} onBack={hide} />;
+  return (
+    <div className="page lc-page-adm adm-sub">
       <PageHead cls="ord-head" title="Siparişler" newLabel="Yeni sepet linki" onNew={() => go('sepetlink')} />
       <OrdersSwitch on="lcarts" />
       {sec}
     </div>
-  </>;
+  );
 }
 const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda' };
 

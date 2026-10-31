@@ -124,7 +124,7 @@ function pushTab(tab) {
   const a = area(); if (!a || !(tab in SLUGS[a])) return;
   const url = '/' + a + (SLUGS[a][tab] ? '/' + SLUGS[a][tab] : '');
   try {
-    history.replaceState({ ...(history.state || {}), tab: store.s.tab, openOrder: store.s.openOrder || null, openReq: store.s.openReq || null, y: scrollY }, '');
+    history.replaceState({ ...(history.state || {}), tab: store.s.tab, openOrder: store.s.openOrder || null, openReq: store.s.openReq || null, lcOpen: store.s.lcOpen || null, y: scrollY }, '');
     if (lpath() !== url || store.s.tab !== tab) history.pushState({ tab }, '', url);
   } catch {}
 }
@@ -164,7 +164,7 @@ export function startHistory(defTab) {
   addEventListener('popstate', (e) => {
     const st = e.state || {};
     const tab = st.tab || tabFromPath() || defTab();
-    store.set({ urunLayer: tab === 'urun' ? store.s.urunLayer : false, tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, setId: tab === 'set' ? st.setId ?? (/\/set\/([\w-]+)/.exec(lpath()) || [])[1] ?? null : null, openOrder: st.openOrder || null, openReq: st.openReq || null, orderJust: false });
+    store.set({ urunLayer: tab === 'urun' ? store.s.urunLayer : false, tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, setId: tab === 'set' ? st.setId ?? (/\/set\/([\w-]+)/.exec(lpath()) || [])[1] ?? null : null, openOrder: st.openOrder || null, openReq: st.openReq || null, lcOpen: st.lcOpen || null, orderJust: false });
     // ilk karede (React çizdikten hemen sonra) yerine kaydır → üstte bir kare görünüp zıplamaz; içerik geç uzarsa bir kez daha
     requestAnimationFrame(() => { window.scrollTo(0, st.y || 0); requestAnimationFrame(() => { if (Math.abs(scrollY - (st.y || 0)) > 2) window.scrollTo(0, st.y || 0); }); });
   });
@@ -175,11 +175,11 @@ const KEEP = ['anasayfa', 'katalog'];
 export function go(tab) {
   const from = store.s.tab;
   if (KEEP.includes(from) && !store.s.acct && !store.s.openOrder) tabY[from] = scrollY;
-  if (tab !== from || store.s.openOrder || store.s.openReq || store.s.acct) pushTab(tab);
+  if (tab !== from || store.s.openOrder || store.s.openReq || store.s.acct || store.s.lcOpen) pushTab(tab);
   const y = tab !== from && (store.s.user?.role === 'public' || (store.s.user?.role === 'admin' && tab === 'katalog')) && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
   // zaten o sayfadaysak (alt menüde aynı sekmeye tekrar basmak) en üste ŞAK diye atlamak yerine yumuşakça kayarak çıkılır
-  const same = tab === from && !store.s.openOrder && !store.s.openReq && !store.s.acct;
-  store.set({ urunFrom: null, urunLayer: false, tab, acct: null, openReq: null, openOrder: null, orderJust: false });
+  const same = tab === from && !store.s.openOrder && !store.s.openReq && !store.s.acct && !store.s.lcOpen;
+  store.set({ urunFrom: null, urunLayer: false, tab, acct: null, openReq: null, openOrder: null, lcOpen: null, orderJust: false });
   if (same && !store.s.catalogGo) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   window.scrollTo(0, 0);
   if (y) requestAnimationFrame(() => window.scrollTo(0, y)); // gizli sayfa görünür olduktan sonra (React çizdikten sonraki ilk kare)
@@ -197,6 +197,11 @@ export function openOrder(id, just) {
   store.set({ tab, openOrder: id, orderJust: just || false, acct: null }); window.scrollTo(0, 0);
 }
 export const home = () => go(store.s.user?.role === 'admin' ? 'anasayfa' : store.s.user?.role === 'public' ? (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa') : 'anasayfa');
+// linkle gelen sipariş: mağaza siparişi gibi (adres aynı kalır, geçmişe kayıt; geri = soldan kayarak liste)
+export function openLcart(id) {
+  try { history.replaceState({ ...(history.state || {}), tab: store.s.tab, y: scrollY }, ''); history.pushState({ tab: store.s.tab, lcOpen: id }, ''); } catch {}
+  store.set({ lcOpen: id }); window.scrollTo(0, 0);
+}
 export function openRequest(id) { store.set({ tab: 'talepler', openReq: id }); window.scrollTo(0, 0); }
 
 // Müşterinin siparişlerinde görülmemiş güncellemeler (durum değişti, henüz açmadı): cihazda {siparişId: son görülen updatedAt}

@@ -749,7 +749,7 @@ function setupNavAnim() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
   const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar';
   const EASE = 'cubic-bezier(.2,.7,.2,1)';
-  const key = (s) => [s.tab, s.acct || '', s.pid || '', s.openOrder || '', s.openReq || ''].join('|');
+  const key = (s) => [s.tab, s.acct || '', s.pid || '', s.openOrder || '', s.openReq || '', s.lcOpen || ''].join('|');
   let last = key(store.s), hint = '', hintAt = 0, click = null, mo = null, watched = null;
   const mark = (h) => { hint = h; hintAt = Date.now(); };
   const mob = () => matchMedia('(max-width: 899px)').matches;
