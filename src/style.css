@@ -5244,3 +5244,16 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 .set-new { display: inline-flex; align-items: center; gap: 4px; background: #10204a !important; }
 .set-shcard .sh-card-brand s { color: var(--muted); } .set-shcard .sh-card-brand { color: #1f6b47; }
 .plist.pgrid .prow-main .set-cov .thumb, .set-cov .thumb { width: 100%; height: 100%; aspect-ratio: auto; padding: 4px; border: 0; border-radius: 8px; background: #fff; }
+
+/* Ayarlar > Veri ve kota */
+.qt-h { margin: 18px 0 6px; font-size: 15px; }
+.qt-box { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.qt-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13.5px; }
+.qt-bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; } .qt-bar i { display: block; height: 100%; border-radius: inherit; }
+.qt-v { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; } .qt-v b { color: var(--fg); margin-left: 4px; }
+.qt-pick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.qt-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; color: var(--fg); }
+.qt-opt small { color: var(--muted); font-size: 12px; }
+.qt-opt.on { border-color: var(--accent); background: var(--accent-soft); } .qt-opt.on b { color: var(--accent); }
+.qt-est { margin-top: 6px; }
+@media (max-width: 560px) { .qt-pick { grid-template-columns: 1fr 1fr; } .qt-row { grid-template-columns: 1fr auto; } .qt-row .qt-bar { grid-column: 1 / -1; grid-row: 2; } }

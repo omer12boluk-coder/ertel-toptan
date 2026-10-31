@@ -1,0 +1,21 @@
+name: Deneme siparişleri
+on:
+  workflow_dispatch:
+    inputs:
+      islem:
+        description: 'ekle ya da sil'
+        type: choice
+        options: [ekle, sil]
+        default: ekle
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node tools/test-orders.mjs ${{ inputs.islem }}

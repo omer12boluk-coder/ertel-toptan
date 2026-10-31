@@ -58,14 +58,23 @@ export function Orders() {
   const quick = (e, o) => openMenu({ preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation(), clientX: e.clientX, clientY: e.clientY, lp: isPhone() },
     [...['new', 'confirmed', 'preparing', o.delivery?.method === 'pickup' ? 'ready' : 'shipped', 'done'].map((k) => ({ label: ADMIN_ST[k] + (k === 'shipped' && o.status === 'shipped' ? ' · takip no düzenle' : ''), color: ST_COLOR[k], on: o.status === k, hint: o.status === k ? '✓' : undefined, onClick: () => flow.ask(o, k) })),
       '-', { label: 'İptal et', icon: 'x', danger: true, onClick: () => flow.ask(o, 'cancelled') }], '#' + o.no + ' · durum');
+  // sipariş no yazıldıysa ve yüklü listede yoksa (eski sipariş) doğrudan veritabanına sorulur (tek okuma)
+  const [found, setFound] = useState([]);
+  useEffect(() => {
+    const no = q.trim().replace(/^#/, '').toUpperCase(); setFound([]);
+    if (!/^[A-Z0-9]{4,10}$/.test(no) || orders.some((o) => String(o.no).toUpperCase() === no)) return;
+    const t = setTimeout(() => api().findOrderByNo?.(no).then((l) => setFound(l || [])).catch(() => {}), 450);
+    return () => clearTimeout(t);
+  }, [q, orders]);
   const list = useMemo(() => {
-    let r = orders;
+    let r = found.length ? [...orders, ...found.filter((f) => !orders.some((o) => o.id === f.id))] : orders;
+    if (found.length) return r.filter((o) => found.some((f) => f.id === o.id)); // eski sipariş bulundu: sadece o
     if (filter === 'open') r = r.filter((o) => ORDER_OPEN.includes(o.status));
     else if (filter !== 'all') r = r.filter((o) => o.status === filter);
     const t = norm(q.trim());
     if (t) r = r.filter((o) => norm([o.no, o.contact?.name, o.contact?.phone, o.contact?.email, o.invoice?.company].join(' ')).includes(t) || String(o.contact?.phone || '').replace(/\D/g, '').includes(t.replace(/\D/g, '') || '#'));
     return [...r].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // geliş sırası: en yeni üstte
-  }, [orders, filter, q]);
+  }, [orders, filter, q, found]);
 
   const [page, setPage] = useState(0);
   useEffect(() => setPage(0), [filter, q]);

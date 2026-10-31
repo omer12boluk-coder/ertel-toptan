@@ -7,7 +7,10 @@ import { store } from './store.js';
 import { ORDER_OPEN, OPEN_STATUSES } from './config.js';
 import { autoSum } from './reviews.jsx';
 
-const DAY = 86400000, STEP = 60 * DAY;
+const DAY = 86400000;
+// yükleme penceresi (Ayarlar > Veri ve kota): siparişler/talepler ve üyeler kaç günlük açılsın
+const wd = () => { const n = Number(store.s.settings?.quota?.days); return [14, 30, 62, 120].includes(n) ? n : 62; };
+const wm = () => { const n = Number(store.s.settings?.quota?.members); return [14, 30, 62, 120].includes(n) ? n : 62; };
 let A = null, user = null;
 const un = {};
 const stop = (k) => { try { un[k]?.(); } catch {} delete un[k]; };
@@ -18,7 +21,8 @@ export function startAdminWatchers(api, u) {
   stopAdminWatchers(); A = api; user = u;
   const t = Date.now();
   // 62 gün: Genel bakış'ta "bu ay"ı önceki ayla kıyaslamaya yetsin
-  store.set({ win: { orders: t - 62 * DAY, reqs: t - 62 * DAY, preqs: t - 62 * DAY, issues: t - 62 * DAY, reviews: t - 62 * DAY, membersAll: false } });
+  const D = wd() * DAY;
+  store.set({ win: { orders: t - D, reqs: t - D, preqs: t - D, issues: t - D, reviews: t - D, membersAll: false } });
   watchOrders(); watchReqs(); watchMembers(); watchPreqs(); watchIssues(); watchReviews();
   // sepet linkleri (zil: "Sepet linki onaylandı")
   if (A.watchLcarts) un.lcarts = A.watchLcarts((lcarts) => store.set({ lcarts }));
@@ -49,13 +53,13 @@ function watchOrders() { stop('orders'); if (A?.watchOrders) un.orders = A.watch
 function watchReqs() { stop('reqs'); un.reqs = A.watchRequests(user, (l) => { part.reqs = l; mergeReqs(); }, store.s.win.reqs); }
 function watchMembers() {
   stop('members'); if (!A?.watchMembers) return;
-  un.members = A.watchMembers((members) => store.set({ members }), store.s.win.membersAll ? 0 : Date.now() - 62 * DAY);
+  un.members = A.watchMembers((members) => store.set({ members }), store.s.win.membersAll ? 0 : Date.now() - wm() * DAY);
 }
 
 // "Daha eski siparişleri göster" / "Daha eski talepleri göster": pencereyi 60 gün geriye açar
 export function loadOlder(kind) {
   if (!A) return;
-  const w = { ...store.s.win }; w[kind] -= STEP; store.set({ win: w });
+  const w = { ...store.s.win }; w[kind] -= Math.max(30, wd()) * DAY; store.set({ win: w });
   ({ orders: watchOrders, reqs: watchReqs, preqs: watchPreqs, issues: watchIssues, reviews: watchReviews })[kind]?.();
 }
 // Tüm mağaza üyeleri (Müşteriler > Mağaza müşterileri, üye penceresi)

@@ -1,4 +1,5 @@
 import { ShopHomeEditor, BrandLogosEditor, ImgPick, Rows, withProdFallback } from './shophome.jsx';
+import { QuotaSettings } from './quota.jsx';
 import { RichText as PageText } from './footer.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
@@ -529,11 +530,12 @@ const SECTIONS = [
   ['talep', 'Talepler', 'Bayi talepleri ve mesajlar', 'chat'],
   ['dukkan', 'Dükkan', 'Adres, telefon, WhatsApp, erişim', 'phone'],
   ['kategori', 'Kategoriler', 'Kategori adları ve sırası', 'list'],
+  ['kota', 'Veri ve kota', 'Ücretsiz plan sınırları, günlük kullanım, panelin kaç günlük kayıt yüklediği', 'clock'],
   ['veri', 'Veri', 'Excel içe / dışa aktarma, yedek', 'upload'],
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
 ];
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'] };
+const SEC_KEYS = { tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'], kota: ['quota'] };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -726,6 +728,7 @@ export function Settings() {
         {sec === 'altbilgi' && <FooterSettings d={d} set={set} />}
         {sec === 'kalip' && <KalipSettings d={d} set={set} />}
         {sec === 'urtalep' && <PreqSettings d={d} set={set} />}
+        {sec === 'kota' && <QuotaSettings d={d} set={set} />}
         {sec === 'sorun' && <IssueSettings d={d} set={set} />}
         {sec === 'ozellik' && <FeatSettings d={d} set={set} />}
 

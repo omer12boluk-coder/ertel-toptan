@@ -86,6 +86,7 @@ export default {
       if (url.pathname === '/push/back' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushBack(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/rev/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await revNew(req, env, b)); }
       if (url.pathname === '/push/member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushMember(env, b)); }
+      if (url.pathname === '/notify-usage' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyUsage(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/notify-sync' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifySync(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname.startsWith('/dhl/') && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await dhl(env, url.pathname.slice(5), b)); }
       if (url.pathname === '/push/status' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushStatus(env, String(b.id || ''))); }
@@ -697,6 +698,13 @@ async function pushMember(env, b) {
 }
 
 // PlatinMarket eşitlemesinde değişen ürünler (GitHub Actions'taki eşitleme bildirir; anahtar: sha256('sync:' + TELEGRAM_TOKEN))
+// Günlük kullanım raporu (tools/usage-report.mjs): sadece Telegram, aynı anahtarla
+async function notifyUsage(env, key, b) {
+  if (!env.TELEGRAM_TOKEN) return { ok: false, error: 'anahtar yok' };
+  const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('sync:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if (key !== want) return { ok: false, error: 'yetki' };
+  return notifySend(env, { subject: '📊 Günlük kullanım', text: String(b.text || '').slice(0, 3000), link: 'https://ertelmarket.com/admin/ayarlar', noEmail: true });
+}
 async function notifySync(env, key, b) {
   if (!env.TELEGRAM_TOKEN) return { ok: false, error: 'anahtar yok' };
   const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('sync:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('');

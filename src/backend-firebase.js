@@ -693,6 +693,9 @@ export class FirebaseBackend {
   }
   watchMyOrders(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
   watchFeed(cb) { return this.F.onSnapshot(this.d('meta', 'feed'), (s) => cb(s.exists() ? s.data().items || [] : []), () => cb([])); }
+  // sipariş numarasıyla (yüklü pencerede olmayan eski sipariş): tek okuma
+  async findOrderByNo(no) { const s = await this.F.getDocs(this.F.query(this.c('orders'), this.F.where('no', '==', String(no).toUpperCase()), this.F.limit(3))); return s.docs.map((x) => ({ id: x.id, ...x.data() })); }
+  async getUsage() { const s = await this.F.getDoc(this.d('meta', 'usage')); return s.exists() ? s.data() : null; }
   watchOrders(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('orders'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 3000 : 300)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
   async updateOrder(id, patch) { await timeout(this.F.updateDoc(this.d('orders', id), patch)); }
   async deleteOrders(ids) { const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('orders', id))); await b.commit(); }
