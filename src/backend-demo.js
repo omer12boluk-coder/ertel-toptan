@@ -195,6 +195,7 @@ export class DemoBackend {
   watchMyOrders(uid, cb) { return this.sub(() => cb(Object.values(this.ord()).filter((o) => o.uid === uid).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
   watchFeed(cb) { return this.sub(() => cb(this.db.feed || [])); }
   async findOrderByNo(no) { return Object.values(this.ord()).filter((o) => String(o.no).toUpperCase() === String(no).toUpperCase()).map((o) => ({ ...o })); }
+  async findOrdersRange(from, to) { return Object.values(this.ord()).filter((o) => (o.createdAt || 0) >= from && (o.createdAt || 0) < to).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })); }
   async getUsage() { return { at: Date.now(), read: 1234, write: 210, cfReq: 8000, kvWrite: 120 }; }
   watchOrders(cb, since = 0) { return this.sub(() => cb(Object.values(this.ord()).filter((o) => !since || (o.createdAt || 0) >= since).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
   async updateOrder(id, patch) { Object.assign(this.ord()[id], patch); this.persist(); }

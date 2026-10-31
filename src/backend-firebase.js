@@ -695,6 +695,8 @@ export class FirebaseBackend {
   watchFeed(cb) { return this.F.onSnapshot(this.d('meta', 'feed'), (s) => cb(s.exists() ? s.data().items || [] : []), () => cb([])); }
   // sipariş numarasıyla (yüklü pencerede olmayan eski sipariş): tek okuma
   async findOrderByNo(no) { const s = await this.F.getDocs(this.F.query(this.c('orders'), this.F.where('no', '==', String(no).toUpperCase()), this.F.limit(3))); return s.docs.map((x) => ({ id: x.id, ...x.data() })); }
+  // tarih aralığı araması (Siparişler > Tarih): aralıktaki sipariş sayısı kadar okuma, tek seferlik (canlı dinlemez)
+  async findOrdersRange(from, to) { const s = await this.F.getDocs(this.F.query(this.c('orders'), this.F.where('createdAt', '>=', from), this.F.where('createdAt', '<', to), this.F.orderBy('createdAt', 'desc'), this.F.limit(1500))); return s.docs.map((x) => ({ id: x.id, ...x.data() })); }
   async getUsage() { const s = await this.F.getDoc(this.d('meta', 'usage')); return s.exists() ? s.data() : null; }
   watchOrders(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('orders'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 3000 : 300)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
   async updateOrder(id, patch) { await timeout(this.F.updateDoc(this.d('orders', id), patch)); }

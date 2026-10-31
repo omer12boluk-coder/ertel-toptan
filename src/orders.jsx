@@ -42,6 +42,36 @@ export function OlderBtn({ kind, what = 'siparişleri' }) {
   );
 }
 
+// ---- Tarih aralığı penceresi ----
+const dIn = (ts) => { const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+const dOut = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+const DAY = 864e5;
+const rangeLabel = (r) => { const f = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }); const a = f(r.from), b = f(r.to - 1); return a === b ? a : a + ' – ' + b; };
+function RangeSheet({ cur, onPick, onClose }) {
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const [a, setA] = useState(dIn(cur?.from ?? t0.getTime() - 30 * DAY));
+  const [b, setB] = useState(dIn(cur ? cur.to - 1 : t0.getTime()));
+  const y = t0.getFullYear(), m = t0.getMonth();
+  const presets = [
+    ['Bu ay', new Date(y, m, 1).getTime(), t0.getTime() + DAY],
+    ['Geçen ay', new Date(y, m - 1, 1).getTime(), new Date(y, m, 1).getTime()],
+    ['Son 3 ay', new Date(y, m - 2, 1).getTime(), t0.getTime() + DAY],
+    ['Bu yıl', new Date(y, 0, 1).getTime(), t0.getTime() + DAY],
+    ['Geçen yıl', new Date(y - 1, 0, 1).getTime(), new Date(y, 0, 1).getTime()],
+  ];
+  const ok = a && b && dOut(a) <= dOut(b);
+  return (
+    <Sheet title="Tarih aralığı" onClose={onClose} footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn" disabled={!ok} onClick={() => onPick(dOut(a), dOut(b) + DAY)}>Siparişleri göster</button></>}>
+      <div className="chips range-pre">{presets.map(([l, f, t]) => <button key={l} className="chip" onClick={() => onPick(f, t)}>{l}</button>)}</div>
+      <div className="row2">
+        <Field label="Başlangıç"><input type="date" value={a} max={b || undefined} onChange={(e) => setA(e.target.value)} /></Field>
+        <Field label="Bitiş"><input type="date" value={b} min={a || undefined} onChange={(e) => setB(e.target.value)} /></Field>
+      </div>
+      <p className="fine">Seçilen aralıktaki siparişler bir kez yüklenir; her sipariş 1 okuma sayılır (100 siparişlik ay ≈ 100 okuma). Durum filtresi ve arama bu siparişlerin içinde çalışır.</p>
+    </Sheet>
+  );
+}
+
 export function Orders() {
   const { orders, members, openOrder: openId, settings: S } = useStore();
   const [view, setView] = useState('orders');
@@ -66,18 +96,30 @@ export function Orders() {
     const t = setTimeout(() => api().findOrderByNo?.(no).then((l) => setFound(l || [])).catch(() => {}), 450);
     return () => clearTimeout(t);
   }, [q, orders]);
+  // tarih aralığı: seçilince o aralığın siparişleri bir kez okunur; liste sadece onları gösterir
+  const [range, setRange] = useState(null); // {from, to, items|null}
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const runRange = (from, to) => {
+    setRangeOpen(false); setFilter('all'); setRange({ from, to, items: null });
+    api().findOrdersRange(from, to).then((l) => setRange({ from, to, items: l || [] }), (e) => { toast('Yüklenemedi: ' + e.message, 'bad'); setRange(null); });
+  };
   const list = useMemo(() => {
-    let r = found.length ? [...orders, ...found.filter((f) => !orders.some((o) => o.id === f.id))] : orders;
+    let base = orders;
+    if (range) { // canlı listedeki güncel hâl önce gelir
+      const live2 = new Map(orders.map((o) => [o.id, o]));
+      base = (range.items || []).map((o) => live2.get(o.id) || o).concat(orders.filter((o) => (o.createdAt || 0) >= range.from && (o.createdAt || 0) < range.to && !(range.items || []).some((x) => x.id === o.id)));
+    }
+    let r = found.length ? [...base, ...found.filter((f) => !base.some((o) => o.id === f.id))] : base;
     if (found.length) return r.filter((o) => found.some((f) => f.id === o.id)); // eski sipariş bulundu: sadece o
     if (filter === 'open') r = r.filter((o) => ORDER_OPEN.includes(o.status));
     else if (filter !== 'all') r = r.filter((o) => o.status === filter);
     const t = norm(q.trim());
     if (t) r = r.filter((o) => norm([o.no, o.contact?.name, o.contact?.phone, o.contact?.email, o.invoice?.company].join(' ')).includes(t) || String(o.contact?.phone || '').replace(/\D/g, '').includes(t.replace(/\D/g, '') || '#'));
     return [...r].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // geliş sırası: en yeni üstte
-  }, [orders, filter, q, found]);
+  }, [orders, filter, q, found, range]);
 
   const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [filter, q]);
+  useEffect(() => setPage(0), [filter, q, range]);
   const pages = Math.max(1, Math.ceil(list.length / PAGE));
   const pg = Math.min(page, pages - 1);
   const shown = list.slice(pg * PAGE, pg * PAGE + PAGE);
@@ -106,9 +148,18 @@ export function Orders() {
           <div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <div className="chips">
             {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'open' ? ` (${cnt.open})` : ''}</button>)}
+            <button className={'chip chip-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Tarih aralığı"><Icon n="clock" s={14} /><span className="chip-sel-t">{range ? rangeLabel(range) : 'Tarih'}</span></button>
             {orders.length > 0 && <button className={'chip chip-sel' + (sel ? ' on' : '')} onClick={() => setSel(sel ? null : new Set())}><Icon n={sel ? 'x' : 'check'} s={14} /><span className="chip-sel-t">{sel ? 'Seçimi kapat' : 'Seç'}</span></button>}
           </div>
         </div>
+        {range && (
+          <div className="range-bar">
+            <Icon n="clock" s={15} /><span><b>{rangeLabel(range)}</b> · {range.items ? list.length + ' sipariş' : 'yükleniyor…'}</span>
+            <button className="btn sm ghost" onClick={() => setRangeOpen(true)}>Değiştir</button>
+            <button className="icon-btn" aria-label="Tarih aralığını kapat" onClick={() => setRange(null)}><Icon n="x" s={16} /></button>
+          </div>
+        )}
+        {rangeOpen && <RangeSheet cur={range} onPick={runRange} onClose={() => setRangeOpen(false)} />}
         {sel && (
           <div className="sel-bar">
             <label className="mini-check"><input type="checkbox" checked={list.length > 0 && list.every((o) => sel.has(o.id))} onChange={(e) => setSel(e.target.checked ? new Set(list.map((o) => o.id)) : new Set())} />Tümü ({list.length})</label>
@@ -117,8 +168,8 @@ export function Orders() {
           </div>
         )}
         {list.length === 0 ? (
-          <Empty icon="box" title={orders.length ? 'Bu filtrede sipariş yok' : 'Henüz mağaza siparişi yok'}>
-            {!orders.length && <p>Müşteriler mağazada sepeti onaylayıp siparişi tamamlayınca burada görünür.</p>}
+          <Empty icon="box" title={range ? (range.items ? 'Bu tarihlerde sipariş yok' : 'Yükleniyor…') : orders.length ? 'Bu filtrede sipariş yok' : 'Henüz mağaza siparişi yok'}>
+            {!orders.length && !range && <p>Müşteriler mağazada sepeti onaylayıp siparişi tamamlayınca burada görünür.</p>}
           </Empty>
         ) : (
           <div className={'otable' + (sel ? ' selecting' : '')}>
@@ -164,7 +215,7 @@ export function Orders() {
             )}
           </div>
         )}
-        <OlderBtn kind="orders" />
+        {!range && <OlderBtn kind="orders" />}
       </>}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
       {flow.sheets}
