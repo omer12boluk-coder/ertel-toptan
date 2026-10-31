@@ -22,6 +22,7 @@ export const MENU = {
   niyet: true,  // 1) Fare başlıkta gerçekten DURUNCA açılır (üstünden geçerken açılmaz); durunca eskisinden hızlı açılır
   ok: true,     // 2) Başlıktaki küçük ok (˅) tıklanınca sadece menüyü açar/kapatır; yazıya tıklamak yine sayfaya gider. Dışarı tıklayınca kapanır
   nisan: true,  // 3) Alt kategorilere çapraz giderken yoldaki başlık değişmez; düz gezerken başlık anında değişir
+  burada: true, // 4) Şu an açık olan sayfanın menüsü fareyle açılmaz (sayfada aynı seçenekler zaten var); ok ile ve başka menü açıkken yandakine geçişte açılır
 };
 const DUR = 170;  // niyet: fare bu kadar ms (neredeyse) kıpırdamazsa menü açılır
 const TITRE = 6;  // niyet: bu kadar px'ten az kıpırdama "durdu" sayılır
@@ -63,17 +64,19 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   }, [open]);
   useEffect(() => () => clearTimeout(t.current), []);
   if (!desk) return children;
+  const here = () => MENU.burada && !!wrap.current?.firstElementChild?.classList.contains('on'); // başlık düğmesi 'on' = bu sayfadayız
   const show = () => { clearTimeout(t.current); if (active && active.id !== myId.current) active.close(); active = { id: myId.current, close: () => me.current() }; setOpen(true); };
   const enter = (e) => {
     clearTimeout(t.current);
     if (open || mute.current) return;
     if (active && active.id !== myId.current) { show(); return; } // başka menü açıkken yandakine geçiş: beklemeden
+    if (here()) return;
     if (MENU.niyet && e) { anc.current = { x: e.clientX, y: e.clientY }; t.current = setTimeout(show, DUR); return; }
     t.current = setTimeout(show, DELAY);
   };
   // niyet: fare belirgin kıpırdadıkça sayaç baştan başlar → sadece durunca açılır
   const move = (e) => {
-    if (open || !MENU.niyet || mute.current) return;
+    if (open || !MENU.niyet || mute.current || here()) return;
     const a = anc.current;
     if (a && Math.hypot(e.clientX - a.x, e.clientY - a.y) < TITRE) return;
     anc.current = { x: e.clientX, y: e.clientY }; clearTimeout(t.current); t.current = setTimeout(show, DUR);
