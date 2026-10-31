@@ -263,6 +263,7 @@ export class DemoBackend {
   async submitLcart(id, sub) { const x = this.lc_()[id]; if (!x || x.status !== 'open') throw new Error('Bu sepet artık açık değil'); Object.assign(x, { status: 'sent', sub, subAt: now() }); this.persist(); }
   async updateLcart(id, patch) { Object.assign(this.lc_()[id], patch); this.persist(); }
   async deleteLcart(id) { delete this.lc_()[id]; this.persist(); }
+  async deleteLcarts(ids) { for (const id of ids) delete this.lc_()[id]; this.persist(); }
   async syncRevSum() {}
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }
   async loadPublicCatalog() { return this.db.catalog.filter((p) => p.a).map(({ w, t, ...p }) => { const kc = stencilKeys({ ...p, t }); return kc ? { ...p, kc } : p; }); }

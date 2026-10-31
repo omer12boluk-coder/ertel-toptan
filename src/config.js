@@ -352,6 +352,17 @@ export const CARRIERS = {
   dhl: { k: 'dhl', name: 'DHL eCommerce', short: 'DHL Kargo', company: 'DHL', live: true },
   yurtici: { k: 'yurtici', name: 'Yurtiçi Kargo', short: 'Yurtiçi Kargo', company: 'Yurtiçi Kargo', live: false },
 };
+// elle girilen takip no için firmanın takip sayfası (bilinmeyen firmada boş)
+export function trackUrl(company, code) {
+  const c = String(company || '').toLocaleLowerCase('tr-TR'); const k = encodeURIComponent(String(code || '').trim());
+  if (!k) return '';
+  if (/dhl|mng/.test(c)) return `https://kargotakip.dhlecommerce.com.tr/?takipNo=${k}`;
+  if (/yurt/.test(c)) return `https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code=${k}`;
+  if (/aras/.test(c)) return `https://kargotakip.araskargo.com.tr/mainpage.aspx?code=${k}`;
+  if (/ptt/.test(c)) return `https://gonderitakip.ptt.gov.tr/Track/Verify?q=${k}`;
+  if (/ups/.test(c)) return `https://www.ups.com/track?tracknum=${k}`;
+  return '';
+}
 // siparişin kargo firması: yöneticinin atadığı (cargo.carrier) > müşterinin seçtiği (delivery.carrier) > elle yazılan firma adı
 export const carrierOf = (o) => {
   if (CARRIERS[o?.cargo?.carrier]) return CARRIERS[o.cargo.carrier];

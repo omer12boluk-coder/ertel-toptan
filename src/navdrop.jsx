@@ -83,7 +83,7 @@ export function AdminDrop({ k, children }) {
     const bayi = s.requests.filter((r) => r.type === 'order' && r.status === 'new').length;
     return <HoverDrop panel={(c) => (<>
       <Item close={c} icon="box" label="Mağaza siparişleri" sub="Online mağazadan gelenler" pill={n ? n + ' yeni' : ''} tone="red" onClick={() => go('siparisler')} />
-      <Item close={c} icon="share" label="Linkle gelen sepetler" sub="Gönderdiğiniz sepet linkleri" pill={lc ? lc + ' onaylandı' : ''} onClick={() => go('sepetler')} />
+      <Item close={c} icon="share" label="Linkle gelen siparişler" sub="Gönderdiğiniz sepet linkleri" pill={lc ? lc + ' onaylandı' : ''} onClick={() => go('sepetler')} />
       <Item close={c} icon="chat" label="Bayi siparişleri" sub="Bayilerin sepet onayları" pill={bayi ? bayi + ' onay bekliyor' : ''} tone="red" onClick={() => go('talepler')} />
     </>)}>{children}</HoverDrop>;
   }

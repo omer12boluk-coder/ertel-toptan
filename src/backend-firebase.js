@@ -468,6 +468,7 @@ export class FirebaseBackend {
   async submitLcart(id, sub) { await timeout(this.F.updateDoc(this.d('lcarts', id), { status: 'sent', sub, subAt: this.F.serverTimestamp() })); }
   async updateLcart(id, patch) { await timeout(this.F.updateDoc(this.d('lcarts', id), patch)); }
   async deleteLcart(id) { await timeout(this.F.deleteDoc(this.d('lcarts', id))); }
+  async deleteLcarts(ids) { const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('lcarts', id))); await timeout(b.commit()); }
   async syncRevSum(pid) {
     const l = await this.reviewsOf(pid); const n = l.length; const avg = n ? Math.round((l.reduce((a, r) => a + (r.stars || 0), 0) / n) * 10) / 10 : 0;
     await timeout(this.F.setDoc(this.d('revsum', 'main'), { s: { [String(pid)]: n ? [avg, n] : this.F.deleteField() } }, { merge: true }));

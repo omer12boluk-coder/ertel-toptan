@@ -10,7 +10,7 @@ import { Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, 
 import { fmt, totals, fmtTotals, when, ls } from './utils.js';
 import { pingWatch } from './push.js';
 import { CargoCard, OrdersSwitch, OlderBtn, OrderThumbs, ago2, fullDate, useDateRange, RangeSheet, rangeLabel } from './orders.jsx';
-import { PAY, DELIVERY } from './config.js';
+import { PAY, DELIVERY, trackUrl } from './config.js';
 import { waLink } from './route.js';
 import { useRate, toTL, fmtTL } from './listsheet.jsx';
 import { AddressFields, addrErrors, cleanAddr, Choice, addrLine } from './checkout.jsx';
@@ -84,7 +84,7 @@ export function LinkCartsPage() {
   return (
     <div className="page lc-page-adm">
       <div className="page-h ord-head">
-        <h1 className="page-t">Linkle gelen sepetler</h1>
+        <h1 className="page-t">Linkle gelen siparişler</h1>
         <button className="btn sm primary lc-newbtn" onClick={() => go('sepetlink')} aria-label="Yeni sepet linki"><Icon n="plus" s={15} /><span>Yeni sepet linki</span></button>
       </div>
       <OrdersSwitch on="lcarts" />
@@ -100,7 +100,8 @@ export function LinkCarts({ page = false }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
   const [confirm, setConfirm] = useState(null);
-  const { range, setRange, rangeOpen, setRangeOpen, runRange } = useDateRange({ col: 'lcarts', unit: 'sepet', setConfirm, onStart: () => setF('all') });
+  const [sel, setSel] = useState(null); // çoklu seçim (Set) ya da kapalı
+  const { range, setRange, rangeOpen, setRangeOpen, runRange } = useDateRange({ col: 'lcarts', unit: 'sipariş', setConfirm, onStart: () => setF('all') });
   // zilden gelince o sepet açılır
   const want = useStore((s) => s.openLcart);
   useEffect(() => { if (!want || !list) return; const x = list.find((c) => c.id === want); if (x) { setF(x.status === 'open' ? 'open' : x.status); setOpen(want); } store.set({ openLcart: null }); }, [want, list]);
@@ -115,33 +116,50 @@ export function LinkCarts({ page = false }) {
   const t = q.trim().toLocaleLowerCase('tr');
   const shown = (base || []).filter((c) => (f === 'all' || c.status === f) && (!t || [c.no, c.name, c.sub?.contact?.name, c.sub?.contact?.phone].join(' ').toLocaleLowerCase('tr').includes(t)));
   const cur = open && (list || []).find((c) => c.id === open);
+  const toggle = (id) => setSel((x) => { const m = new Set(x || []); m.has(id) ? m.delete(id) : m.add(id); return m; });
+  const allOn = shown.length > 0 && !!sel && shown.every((c) => sel.has(c.id));
+  const setAll = (on) => setSel(on ? new Set(shown.map((c) => c.id)) : new Set());
+  const delMany = () => {
+    const ids = [...sel]; const openN = (list || []).filter((c) => sel.has(c.id) && c.status === 'open').length;
+    setConfirm({ title: `${ids.length} siparişi sil`, text: 'Seçilen siparişler tamamen silinecek. Geri alınamaz.' + (openN ? ` ${openN} tanesi müşteri bekliyor; onların linki de çalışmaz.` : ''), okLabel: 'Sil', tone: 'danger',
+      onOk: () => api().deleteLcarts(ids).then(() => { toast(ids.length + ' sipariş silindi'); setSel(null); }, (e) => toast('Silinemedi: ' + e.message, 'bad')) });
+  };
   const pick = (c) => { setOpen(c.id); if (c.status === 'sent' && !c.seen) api().updateLcart(c.id, { seen: true }).catch(() => {}); };
   return (
     <section className={'lc-list' + (page ? ' lc-list-page' : ' oform-saved')}>
-      {!page && <h2>Linkle gelen sepetler</h2>}
+      {!page && <h2>Linkle gelen siparişler</h2>}
       <div className="toolbar lc-tool">
-        {page && <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Sepet no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div><button type="button" className={'o-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Tarih aralığı" aria-label="Tarih aralığı"><Icon n="clock" s={18} /><span>Tarih</span></button></div>}
+        {page && <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div><button type="button" className={'o-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Tarih aralığı" aria-label="Tarih aralığı"><Icon n="clock" s={18} /><span>Tarih</span></button></div>}
         <div className="chips lc-chips">
           {[['sent', 'Onaylandı'], ['open', 'Bekleyen'], ['done', 'Tamamlanan'], ...(range || f === 'all' ? [['all', 'Tümü']] : [])].map(([k, l]) => <button key={k} className={'chip' + (f === k ? ' on' : '')} onClick={() => setF(k)}>{l}{n(k) > 0 && (k === 'sent' || k === 'open') && <span className="num"> ({n(k)})</span>}</button>)}
+          {page && (list || []).length > 0 && <button className={'chip chip-sel' + (sel ? ' on' : '')} onClick={() => setSel(sel ? null : new Set())}><Icon n={sel ? 'x' : 'check'} s={14} /><span className="chip-sel-t">{sel ? 'Seçimi kapat' : 'Seç'}</span></button>}
         </div>
+        {sel && (
+          <div className="sel-bar">
+            <label className="mini-check"><input type="checkbox" checked={allOn} onChange={(e) => setAll(e.target.checked)} />Tümü ({shown.length})</label>
+            <span className="muted">{sel.size} seçili</span>
+            <button className="btn sm danger" disabled={!sel.size} onClick={delMany}><Icon n="trash" s={15} />Seçilenleri sil</button>
+          </div>
+        )}
       </div>
       {range && (
         <div className="range-bar">
-          <Icon n="clock" s={15} /><span><b>{rangeLabel(range)}</b> · {range.items ? shown.length + ' sepet' : 'yükleniyor…'}</span>
+          <Icon n="clock" s={15} /><span><b>{rangeLabel(range)}</b> · {range.items ? shown.length + ' sipariş' : 'yükleniyor…'}</span>
           <button className="btn sm ghost" onClick={() => setRangeOpen(true)}>Değiştir</button>
           <button className="icon-btn" aria-label="Tarih aralığını kapat" onClick={() => setRange(null)}><Icon n="x" s={16} /></button>
         </div>
       )}
-      {rangeOpen && <RangeSheet unit="sepet" cur={range} onPick={runRange} onClose={() => setRangeOpen(false)} />}
+      {rangeOpen && <RangeSheet unit="sipariş" cur={range} onPick={runRange} onClose={() => setRangeOpen(false)} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
       {list == null ? <div className="spinner sm" /> : shown.length === 0 ? (
-        <Empty icon="cart" title={t ? 'Aramaya uyan sepet yok' : range ? 'Bu tarihlerde sepet yok' : f === 'sent' ? 'Onaylanan sepet yok' : f === 'open' ? 'Bekleyen sepet yok' : f === 'all' ? 'Sepet yok' : 'Tamamlanan sepet yok'}>
-          {!t && !range && f !== 'all' && <p>{f === 'sent' ? 'Müşteri linkten onaylayınca burada görünür.' : f === 'open' ? 'Müşteriye gönderilip henüz onaylanmamış sepetler burada durur.' : 'Tamamlandı olarak işaretlediğiniz sepetler.'}</p>}
+        <Empty icon="cart" title={t ? 'Aramaya uyan sipariş yok' : range ? 'Bu tarihlerde sipariş yok' : f === 'sent' ? 'Onaylanan sipariş yok' : f === 'open' ? 'Bekleyen sipariş yok' : f === 'all' ? 'Sipariş yok' : 'Tamamlanan sipariş yok'}>
+          {!t && !range && f !== 'all' && <p>{f === 'sent' ? 'Müşteri linkten onaylayınca burada görünür.' : f === 'open' ? 'Müşteriye link olarak gönderilip henüz onaylanmamış siparişler burada durur.' : 'Tamamlandı olarak işaretlediğiniz siparişler.'}</p>}
         </Empty>
       ) : (
-        <div className="otable lc-table">
-          <div className="otable-h" aria-hidden="true">
-            <span>Sepet no</span><span>Müşteri</span><span className="oh-th">Ürünler</span><span>Teslimat / ödeme</span><span className="oh-sum">Tutar</span><span>Tarih</span><span />
+        <div className={'otable lc-table' + (sel ? ' selecting' : '')}>
+          <div className="otable-h">
+            {sel && <label className="oc-box" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label="Tümünü seç" checked={allOn} onChange={(e) => setAll(e.target.checked)} /></label>}
+            <span>Sipariş no</span><span>Müşteri</span><span className="oh-th">Ürünler</span><span>Teslimat / ödeme</span><span className="oh-sum">Tutar</span><span>Tarih</span><span />
           </div>
           <ul className="olist orows">
             {shown.map((c) => {
@@ -156,7 +174,8 @@ export function LinkCarts({ page = false }) {
               const deliv = !c.sub ? null : c.sub.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (c.cargo?.code || c.dhl?.ref ? 'dhl' : 'none')}>{c.cargo?.code || (c.dhl?.ref && !c.dhl.cancelled) ? 'DHL' : 'Kargo'}</span>;
               return (
                 <li key={c.id}>
-                  <div role="button" tabIndex={0} className={'orow st-' + stK + (isNew ? ' unread' : '')} onClick={() => pick(c)} onKeyDown={(e) => e.key === 'Enter' && pick(c)}>
+                  <div role="button" tabIndex={0} className={'orow st-' + stK + (isNew ? ' unread' : '') + (sel?.has(c.id) ? ' picked' : '')} onClick={() => (sel ? toggle(c.id) : pick(c))} onKeyDown={(e) => e.key === 'Enter' && (sel ? toggle(c.id) : pick(c))}>
+                    {sel && <label className="oc-box" onClick={(e) => e.stopPropagation()}><input type="checkbox" aria-label={'#' + c.no + ' seç'} checked={sel.has(c.id)} onChange={() => toggle(c.id)} /></label>}
                     <span className="or-no">{isNew ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{c.no}</b></span>
                     <span className="or-who"><b>{who}</b><small>{c.sub?.contact?.phone || (c.name && c.sub ? c.name : '')}</small></span>
                     <span className="or-thd"><OrderThumbs o={o} /></span>
@@ -172,7 +191,7 @@ export function LinkCarts({ page = false }) {
           </ul>
         </div>
       )}
-      {page && !range && (f === 'done' || f === 'all') && <OlderBtn kind="lcarts" what="sepetleri" unit="sepet" />}
+      {page && !range && (f === 'done' || f === 'all') && <OlderBtn kind="lcarts" what="siparişleri" unit="sipariş" />}
       {cur && <LinkCartSheet c={cur} onClose={() => setOpen(null)} />}
     </section>
   );
@@ -182,6 +201,7 @@ const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda
 function LinkCartSheet({ c, onClose }) {
   const byId = useStore((s) => s.byId);
   const [del, setDel] = useState(false);
+  const [ship, setShip] = useState(false);
   const its = finalItems(c);
   const tot = totals(its, 'offer');
   const s = c.sub;
@@ -191,7 +211,7 @@ function LinkCartSheet({ c, onClose }) {
   const link = lcartLink(c.id);
   const setSt = (status) => api().updateLcart(c.id, { status }).then(() => toast(status === 'done' ? 'Tamamlandı olarak işaretlendi' : 'Geri alındı')).catch((e) => toast(e.message, 'bad'));
   return (
-    <Sheet wide title={(s?.contact?.name || c.name || 'Sepet') + ' · #' + c.no} sub={(c.name ? c.name + ' · ' : '') + (c.status === 'open' ? 'Müşteri henüz onaylamadı · ' + when(c.at) : 'Onay: ' + when(subTime(c) || c.at))} onClose={onClose} footer={<>
+    <Sheet wide title={(s?.contact?.name || c.name || 'Sipariş') + ' · #' + c.no} sub={(c.name ? c.name + ' · ' : '') + (c.status === 'open' ? 'Müşteri henüz onaylamadı · ' + when(c.at) : 'Onay: ' + when(subTime(c) || c.at))} onClose={onClose} footer={<>
       <button className="btn ghost danger" onClick={() => setDel(true)}><Icon n="trash" s={16} />Sil</button>
       {c.status === 'sent' && <button className="btn primary" onClick={() => setSt('done')}><Icon n="check" s={16} />Tamamlandı</button>}
       {c.status === 'done' && <button className="btn outline" onClick={() => setSt('sent')}>Geri al</button>}
@@ -229,8 +249,51 @@ function LinkCartSheet({ c, onClose }) {
         ))}
       </ul>
       <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
-      {s && s.delivery?.method !== 'pickup' && <CargoCard col="lcarts" o={{ id: c.id, no: c.no, dhl: c.dhl, cargo: c.cargo, status: c.cargo?.delivered ? 'done' : c.cargo?.code ? 'shipped' : 'preparing', delivery: s.delivery, contact: s.contact }} />}
-      {del && <Confirm title="Sepet silinsin mi?" text={`#${c.no} kalıcı olarak silinecek${c.status === 'open' ? '; müşteriye gönderdiğiniz link de çalışmaz' : ''}.`} okLabel="Sil" tone="danger" onClose={() => setDel(false)} onOk={() => api().deleteLcart(c.id).then(() => { toast('Silindi'); onClose(); }).catch((e) => toast(e.message, 'bad'))} />}
+      {s && s.delivery?.method !== 'pickup' && (c.cargo?.code && !(c.dhl?.ref && !c.dhl.cancelled) ? (
+        // elle girilen kargo bilgisi (DHL dışı ya da DHL'i online şubeden kendisi girdiyse)
+        <div className="set-card o-cargo lc-mcargo">
+          <div className="ocg-h"><h3>Kargo</h3><span className="pill">Elle girildi</span></div>
+          <div className="ship-card adm"><span className="sc-ic"><Icon n="box" s={19} /></span><span className="ss-t"><small>Takip no · {c.cargo.company || 'Kargo'}</small><b className="num">{c.cargo.code}</b></span>
+            <span className="sc-act">{c.cargo.url && <a className="icon-btn" href={c.cargo.url} target="_blank" rel="noopener" title="Takip sayfası" aria-label="Takip sayfası"><Icon n="ext" s={16} /></a>}<button className="btn sm outline" onClick={() => setShip(true)}>Değiştir</button></span></div>
+          <p className="fine">Müşteri aynı linki açınca “Kargoya verildi”, firma ve takip numarasını görür{c.cargo.url ? '; “Kargom nerede?” düğmesi takip sayfasını açar' : ''}.</p>
+        </div>
+      ) : <CargoCard col="lcarts" flow={{ openShip: () => setShip(true) }} o={{ id: c.id, no: c.no, dhl: c.dhl, cargo: c.cargo, status: c.cargo?.delivered ? 'done' : c.cargo?.code ? 'shipped' : 'preparing', delivery: s.delivery, contact: s.contact }} />)}
+      {ship && <LcShipSheet c={c} onClose={() => setShip(false)} />}
+      {del && <Confirm title="Sipariş silinsin mi?" text={`#${c.no} kalıcı olarak silinecek${c.status === 'open' ? '; müşteriye gönderdiğiniz link de çalışmaz' : ''}.`} okLabel="Sil" tone="danger" onClose={() => setDel(false)} onOk={() => api().deleteLcart(c.id).then(() => { toast('Silindi'); onClose(); }).catch((e) => toast(e.message, 'bad'))} />}
+    </Sheet>
+  );
+}
+
+// Linkle gelen sipariş: kargo bilgisini elle gir (firma + takip no; bilinen firmalarda takip linki kendiliğinden)
+function LcShipSheet({ c, onClose }) {
+  const S = useStore((s) => s.settings);
+  const list = S.orders?.cargoCompanies || [];
+  const [company, setCompany] = useState(c.cargo?.company || list[0] || '');
+  const [code, setCode] = useState(c.cargo?.code || '');
+  const [url, setUrl] = useState(c.cargo?.url && c.cargo.url !== trackUrl(c.cargo.company, c.cargo.code) ? c.cargo.url : '');
+  const [busy, setBusy] = useState(false);
+  const auto = trackUrl(company, code.trim());
+  async function save() {
+    const co = company.trim(); const k = code.trim();
+    if (k && !co) return toast('Kargo firmasını seçin', 'warn');
+    const low = co.toLocaleLowerCase('tr-TR');
+    const cargo = { company: co, code: k, url: k ? (url.trim() || auto) : '', manual: Date.now() };
+    if (/dhl|mng/.test(low)) cargo.carrier = 'dhl'; else if (/yurt/.test(low)) cargo.carrier = 'yurtici';
+    setBusy(true);
+    try { await api().updateLcart(c.id, { cargo: strip(cargo) }); toast(k ? 'Kargo bilgisi kaydedildi' : 'Takip no kaldırıldı'); onClose(); }
+    catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); setBusy(false); }
+  }
+  return (
+    <Sheet title="Kargo bilgisi" sub={`#${c.no} · müşteri aynı linkte görür`} onClose={onClose}
+      footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn primary" disabled={busy} onClick={save}><Icon n="check" s={16} />{busy ? 'Kaydediliyor…' : 'Kaydet'}</button></>}>
+      <div className="form-col">
+        <div className="field"><span className="field-l">Kargo firması</span>
+          <div className="cargo-pick">{list.map((x) => <button key={x} type="button" className={'chip' + (company === x ? ' on' : '')} onClick={() => setCompany(x)}>{x}</button>)}</div>
+          <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Listede yoksa yazın" />
+        </div>
+        <Field label="Takip numarası" hint={c.cargo?.code ? 'Silip kaydederseniz müşteri sayfasından takip no kalkar.' : undefined}><input autoFocus inputMode="text" value={code} onChange={(e) => setCode(e.target.value)} /></Field>
+        <Field label="Takip linki" opt hint={auto ? 'Boş bırakırsanız bu firmanın takip sayfası kendiliğinden kullanılır.' : 'Bu firma için hazır link yok; isterseniz takip sayfasının adresini yapıştırın. Boşsa müşteri sadece numarayı görür.'}><input inputMode="url" value={url} placeholder={auto || 'https://…'} onChange={(e) => setUrl(e.target.value)} /></Field>
+      </div>
     </Sheet>
   );
 }

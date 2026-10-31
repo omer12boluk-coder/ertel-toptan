@@ -764,7 +764,7 @@ export function CargoCard({ o, flow, col = 'orders' }) {
             <p className="fine">Barkod yazdır’a basınca açılan menüden <b>Yazdır</b>’ı seçin.{paper === 'a6' && <> Yazıcıya A6 kâğıt takın; iPhone kâğıt olarak A4 gösterse de etiket A6 kâğıda basılır.</>}</p></div>}
           {dhlOpen(o) && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : o.cargo?.code ? 'Teslim edildi mi?' : 'Takip no geldi mi?'}</button>}
           {!o.cargo?.code && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL kaydını iptal et</button>}
-          {!o.cargo?.code && !lc && <button className="link ocg-manual" onClick={() => flow.openShip(o)}>Takip no’yu elle gir</button>}
+          {!o.cargo?.code && (!lc || flow) && <button className="link ocg-manual" onClick={() => flow.openShip(o)}>Takip no’yu elle gir</button>}
         </div>
       </>) : (<>
         <div className="ocg-grid">
@@ -800,6 +800,7 @@ export function CargoCard({ o, flow, col = 'orders' }) {
           <button className="btn primary" disabled={!!busy} onClick={transfer}><Icon n="send" s={16} />{busy === 'send' ? 'Aktarılıyor…' : 'DHL’e aktar'}</button>
           <span className="fine">Aktarınca barkod yazdırma açılır. Şube okutunca takip no siparişe kendiliğinden gelir.</span>
         </div>
+        {lc && flow && <p className="fine ocg-other">Başka kargoyla mı gönderdiniz? <button className="link" onClick={() => flow.openShip(o)}>Takip no’yu elle girin</button></p>}
       </>)}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
@@ -812,7 +813,7 @@ export function OrdersSwitch({ on }) {
   return (
     <div className="seg of-seg ord-switch" role="tablist" aria-label="Sayfa">
       <button type="button" role="tab" aria-selected={on === 'orders'} className={on === 'orders' ? 'on' : ''} onClick={() => on !== 'orders' && go('siparisler')}><Icon n="box" s={15} />Mağaza siparişleri</button>
-      <button type="button" role="tab" aria-selected={on === 'lcarts'} className={on === 'lcarts' ? 'on' : ''} onClick={() => on !== 'lcarts' && go('sepetler')}><Icon n="cart" s={15} />Linkle gelen sepetler{lcNew > 0 && <span className="badge">{lcNew}</span>}</button>
+      <button type="button" role="tab" aria-selected={on === 'lcarts'} className={on === 'lcarts' ? 'on' : ''} onClick={() => on !== 'lcarts' && go('sepetler')}><Icon n="cart" s={15} />Linkle gelen siparişler{lcNew > 0 && <span className="badge">{lcNew}</span>}</button>
     </div>
   );
 }

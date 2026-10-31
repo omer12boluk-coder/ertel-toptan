@@ -5329,3 +5329,19 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 .lc-st-box h3 { margin: 0 0 8px; font-size: 14px; }
 .lc-st-box p { margin: 0 0 6px; }
 .lc-st-wa { display: flex; width: fit-content; margin: 6px auto 30px; }
+
+/* Linkle gelen siparişler (31.10.2026 2): toplu seçim sütunu + elle kargo bilgisi */
+@media (min-width: 961px) { .otable.lc-table.selecting .orow, .otable.lc-table.selecting .otable-h { grid-template-columns: 34px 110px minmax(150px, 1.3fr) 140px minmax(150px, 1fr) 150px 170px 8px; } }
+@media (min-width: 961px) and (max-width: 1150px) { .otable.lc-table.selecting .orow, .otable.lc-table.selecting .otable-h { grid-template-columns: 30px 84px minmax(120px, 1.2fr) 120px minmax(120px, 1fr) 118px 140px 8px; } }
+.lc-list-page .sel-bar { margin: 0; }
+.o-cargo .ocg-other { margin: 10px 0 0; padding-top: 10px; border-top: 1px dashed var(--line); }
+.lc-mcargo .ocg-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lc-mcargo .ship-card { margin: 4px 0 8px; }
+.lc-mcargo .fine { margin: 0; }
+.lc-mcargo .pill { --t: var(--muted); }
+.lc-list-page .chips .chip-sel { border-style: solid; color: var(--fg); background: var(--surface); margin-left: auto; }
+.lc-list-page .chips .chip-sel.on { color: var(--accent); border-color: var(--accent); }
+.lc-list-page .chips .chip-sel svg { color: var(--muted); } .lc-list-page .chips .chip-sel.on svg { color: currentColor; }
+@media (max-width: 560px) { .lc-list-page .chips .chip-sel { padding: 6px 10px; } .lc-list-page .chips .chip-sel .chip-sel-t { display: none; } }
+@media (max-width: 560px) { .lc-list-page .lc-tool .lc-chips { gap: 6px; } .lc-list-page .lc-tool .lc-chips .chip { padding: 6px 10px; } }
+@media (max-width: 400px) { .lc-list-page .lc-tool .lc-chips .chip { padding: 6px 9px; font-size: 12.5px; } .lc-list-page .chips .chip-sel { padding: 6px 8px; } }
