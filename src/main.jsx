@@ -250,6 +250,10 @@ async function bootShop(A) {
   if (ROUTE.reqId && !ROUTE.orderId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
   // Google'dan gelen marka / kategori sayfası (/marka/jbc, /kategori/havya-istasyonu): Ürünler o süzgeçle açılır (çözümü Catalog yapar)
+  if (ROUTE.notFound) {
+    try { const m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex'; document.head.appendChild(m); history.replaceState(null, '', '/'); } catch {}
+    setTimeout(() => toast('Bu adreste bir sayfa yok, ana sayfayı açtık'), 900);
+  }
   const seo = ROUTE.listCode ? null : seoRoute(lpath());
   if (seo) store.set({ seoGo: seo });
   const firstTab = ROUTE.listCode ? 'liste' : seo ? 'katalog' : tabFromPath() || shopFirst();

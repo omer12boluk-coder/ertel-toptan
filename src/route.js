@@ -29,6 +29,16 @@ try {
   const short = toShort(location.pathname + location.search + location.hash);
   if (short !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', short);
 } catch {}
+// Büyük harfle / Türkçe İ ile yazılan adres (/ADMİN, /Urunler, /marka/JBC) küçük harfe çevrilir (31.10.2026).
+// Kimlik taşıyan parçalar (sipariş /s/<id>, sepet /k/<id>, liste /l/<kod>, talep /t/<id>, /u/, /i/, /set/<id>) büyük-küçük harfe duyarlı → dokunulmaz.
+const ID_AFTER = new Set(['s', 'k', 'l', 't', 'u', 'i', 'set']);
+const trLow = (x) => x.replace(/[İIı]/g, 'i').toLowerCase().replace(/i\u0307/g, 'i');
+try {
+  let raw = location.pathname; try { raw = decodeURIComponent(raw); } catch {}
+  const seg = raw.split('/'); let prev = '';
+  const out = seg.map((x) => { const r = ID_AFTER.has(prev) ? x : trLow(x); prev = r; return r; }).join('/');
+  if (out !== raw) history.replaceState(history.state, '', out + location.search + location.hash);
+} catch {}
 export const shopUrl = (p = '') => location.origin + (p ? (p[0] === '/' ? p : '/' + p) : '/'); // müşteriye verilen linkler
 const path = lpath();
 const hash = location.hash.slice(1);
@@ -49,7 +59,11 @@ export const ROUTE = {
   lcartId: (path.match(/^\/magaza\/k\/([\w-]+)$/) || [])[1] || null, // sepet linki (yönetici hazırlar, müşteri onaylar; lcart.jsx) // mağaza siparişi: /magaza/s/<no>, /admin/s/<no>
   authAction: /\/magaza\/islem\/?$/.test(path), // e-postadaki şifre yenileme / doğrulama bağlantısı
 };
-ROUTE.landing = false; // giriş sayfası kalktı (31.10.2026): kök adres = mağaza
+ROUTE.landing = false;
+// Mağazada tanınmayan adres (/xyz, /urunlerr…): ana sayfa açılır, adres düzeltilir, "sayfa bulunamadı" denir ve
+// Google'a bu adres "dizine ekleme" (noindex) olarak bildirilir (yoksa her yanlış adres ana sayfanın kopyası sayılır).
+const SHOP_SEGS = new Set(['', 'urunler', 'sepet', 'hesap', 'urun', 'kalip', 'talep', 'yasal', 'sorun', 'set', 'marka', 'kategori', 's', 'l', 'k', 't', 'islem']);
+ROUTE.notFound = ROUTE.shop && !hash && !SHOP_SEGS.has(path.split('/')[2] || ''); // giriş sayfası kalktı (31.10.2026): kök adres = mağaza
 
 export const links = {
   adminRequest: (id) => `${location.origin}/admin/t/${id}`,
