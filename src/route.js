@@ -25,12 +25,7 @@ export function lpath() {
   return p === '/' ? '/magaza' : '/magaza' + p;
 }
 try {
-  // ana ekran uygulaması kapatılıp açılınca kaldığı yerden devam etsin: son adres bölüme göre saklanır (index.html başındaki betik okur)
-  const area = (p) => (/^\/admin(\/|$)/.test(p) ? 'admin' : /^\/(b2b|t)(\/|$)/.test(p) ? 'b2b' : /^\/siparisformu/.test(p) ? 'form' : 'shop');
-  const saveLast = () => { try { const p = location.pathname; localStorage.setItem('last-route-' + area(p), JSON.stringify({ p, t: Date.now() })); } catch {} };
-  for (const k of ['pushState', 'replaceState']) { const o = history[k].bind(history); history[k] = (s, t, u) => { const r = o(s, t, u == null ? u : toShort(u)); saveLast(); return r; }; }
-  addEventListener('popstate', saveLast);
-  saveLast();
+  for (const k of ['pushState', 'replaceState']) { const o = history[k].bind(history); history[k] = (s, t, u) => o(s, t, u == null ? u : toShort(u)); }
   const short = toShort(location.pathname + location.search + location.hash);
   if (short !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', short);
 } catch {}
