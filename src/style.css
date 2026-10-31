@@ -5272,3 +5272,18 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 .older-row > .muted { flex-basis: 100%; }
 li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 @keyframes ofresh { 0%, 35% { background: color-mix(in srgb, var(--accent) 16%, var(--card, #fff)); box-shadow: inset 3px 0 0 var(--accent); } 100% { background: inherit; box-shadow: none; } }
+
+/* Tarih + Seç düğmeleri: diğer çiplerle aynı görünüm (kesikli çerçeve kalktı), ikisi sağda yan yana */
+.orders-page .chips .chip-sel { border-style: solid; color: var(--fg); background: var(--surface); margin-left: 0; }
+.orders-page .chips .chip-sel.on { color: var(--accent); border-color: var(--accent); }
+.orders-page .chips .chip-sel { margin-left: auto; }
+.orders-page .chips .chip-sel svg { color: var(--muted); }
+.o-sr { display: flex; gap: 8px; align-items: stretch; flex: 1; min-width: 0; }
+.o-sr > .search { flex: 1; min-width: 0; }
+.o-date { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
+.o-date svg { color: var(--muted); }
+.o-date:hover { background: var(--surface-2); }
+.o-date.on { border-color: var(--accent); color: var(--accent); background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+.o-date.on svg { color: currentColor; }
+@media (max-width: 560px) { .o-date { padding: 0 12px; } .o-date span { display: none; } }
+.orders-page .chips .chip.on svg { color: currentColor; }

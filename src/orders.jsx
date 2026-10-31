@@ -57,6 +57,35 @@ export function OlderBtn({ kind, what = 'siparişleri', unit = 'sipariş', onDon
   );
 }
 
+// ---- Tarih aralığı penceresi ----
+const dIn = (ts) => { const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+const dOut = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+const DAY = 864e5;
+const rangeLabel = (r) => { const f = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }); const a = f(r.from), b = f(r.to - 1); return a === b ? a : a + ' – ' + b; };
+function RangeSheet({ cur, onPick, onClose }) {
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const [a, setA] = useState(dIn(cur?.from ?? t0.getTime() - 30 * DAY));
+  const [b, setB] = useState(dIn(cur ? cur.to - 1 : t0.getTime()));
+  const y = t0.getFullYear(), m = t0.getMonth();
+  const presets = [
+    ['Son 30 gün', t0.getTime() - 29 * DAY, t0.getTime() + DAY],
+    ['Bu ay', new Date(y, m, 1).getTime(), t0.getTime() + DAY],
+    ['Geçen ay', new Date(y, m - 1, 1).getTime(), new Date(y, m, 1).getTime()],
+    ['Son 3 ay', new Date(y, m - 2, 1).getTime(), t0.getTime() + DAY],
+  ];
+  const ok = a && b && dOut(a) <= dOut(b);
+  return (
+    <Sheet title="Tarih aralığı" onClose={onClose} footer={<><button className="btn ghost" onClick={onClose}>Vazgeç</button><button className="btn primary" disabled={!ok} onClick={() => onPick(dOut(a), dOut(b) + DAY)}>Siparişleri göster</button></>}>
+      <div className="chips range-pre">{presets.map(([l, f, t]) => <button key={l} className="chip" onClick={() => onPick(f, t)}>{l}</button>)}</div>
+      <div className="row2">
+        <Field label="Başlangıç"><input type="date" value={a} max={b || undefined} onChange={(e) => setA(e.target.value)} /></Field>
+        <Field label="Bitiş"><input type="date" value={b} min={a || undefined} onChange={(e) => setB(e.target.value)} /></Field>
+      </div>
+      <p className="fine">Aralıktaki her sipariş 1 okuma sayılır (100 siparişlik ay ≈ 100 okuma); sadece bastığınızda, bir kez.</p>
+    </Sheet>
+  );
+}
+
 export function Orders() {
   const { orders, members, openOrder: openId, settings: S } = useStore();
   const [view, setView] = useState('orders');
@@ -141,10 +170,9 @@ export function Orders() {
       <OrdersSwitch on="orders" />
       {view === 'members' ? <Members /> : <>
         <div className="toolbar">
-          <div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+          <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div><button type="button" className={'o-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Tarih aralığı" aria-label="Tarih aralığı"><Icon n="clock" s={18} /><span>Tarih</span></button></div>
           <div className="chips">
             {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'open' ? ` (${cnt.open})` : ''}</button>)}
-            <button className={'chip chip-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Tarih aralığı"><Icon n="clock" s={14} /><span className="chip-sel-t">{range ? rangeLabel(range) : 'Tarih'}</span></button>
             {orders.length > 0 && <button className={'chip chip-sel' + (sel ? ' on' : '')} onClick={() => setSel(sel ? null : new Set())}><Icon n={sel ? 'x' : 'check'} s={14} /><span className="chip-sel-t">{sel ? 'Seçimi kapat' : 'Seç'}</span></button>}
           </div>
         </div>
