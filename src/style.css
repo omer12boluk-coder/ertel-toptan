@@ -5901,3 +5901,11 @@ html.dz2-open .sheet-bg { z-index: 960; }
 .cr-d { border-color: #2563eb !important; box-shadow: inset 0 0 0 999px rgb(37 99 235 / .08); } .cr-d em { background: #2563eb; }
 .cr-p { border-color: #f97316 !important; border-style: dashed !important; } .cr-p em { background: #f97316; top: auto !important; bottom: 3px; }
 .dz2-warn.sm { padding: 8px 10px; font-size: 12.5px; margin: 0; align-items: flex-start; }
+
+/* reklam öğesi: telefona özel konum (s.fxm) */
+.fx-m { --fxc: var(--fxt); }
+@media (max-width: 700px) { .fx-m { --fxc: var(--fxtm); } }
+.dz2-fxdev { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 10px; background: var(--surface-2); }
+.dz2-fxdev .seg button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.dz2-fxdev small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.dz2-fxdev .linkish { align-self: flex-start; font-size: 12.5px; }

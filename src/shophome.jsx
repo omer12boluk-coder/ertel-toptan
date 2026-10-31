@@ -736,7 +736,7 @@ function slideLogo(s, brands) {
 // reklamın içindeki öğeler (logo, başlık, yazı, buton, görsel) tasarım modunda tutulup taşınır, döndürülür, 3B eğilir
 export const FX_NAMES = { logo: 'Logo / etiket', title: 'Başlık', text: 'Açıklama', cta: 'Buton', art: 'Görsel' };
 // konum telefonda orantılı küçülür (--fxk)
-export const fxTransform = (f) => f ? `translate(calc(${f.x || 0}px * var(--fxk, 1)), calc(${f.y || 0}px * var(--fxk, 1))) perspective(900px) rotateX(${f.rx || 0}deg) rotateY(${f.ry || 0}deg) rotate(${f.r || 0}deg) scale(${f.s || 1})` : undefined;
+export const fxTransform = (f, k = 'var(--fxk, 1)') => f ? `translate(calc(${f.x || 0}px * ${k}), calc(${f.y || 0}px * ${k})) perspective(900px) rotateX(${f.rx || 0}deg) rotateY(${f.ry || 0}deg) rotate(${f.r || 0}deg) scale(${f.s || 1})` : undefined;
 // Reklam düzenleri: split yazı+görsel · reverse görsel+yazı · center ortalı · plain sade (süssüz) · cover tam resim · glass resim + yazı kutusu
 export const SLIDE_LAYOUTS = { split: 'Yazı + görsel', reverse: 'Görsel + yazı', center: 'Ortalı', plain: 'Sade (süssüz)', cover: 'Tam resim (banner)', glass: 'Resim + yazı kutusu' };
 export const COVER_LY = ['cover', 'glass'];
@@ -768,7 +768,10 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
   // tasarım modu (bilgisayar): tam resimde boş yeri tutup sürükleyince resmin görünen kısmı kayar
   const imDown = E && !E.mobile && cover && E.imDrag ? (e) => { if (e.button > 0 || e.target.closest('.dz-fx, button, a, .sh-slide-t > *')) return; E.imDrag(e, k); } : undefined;
   const fx = (el, cls = '') => {
-    const f = s.fx?.[el]; const style = f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
+    // telefona özel konum (s.fxm) varsa telefonda o, yoksa bilgisayardaki konum küçültülerek (--fxk)
+    const f = s.fx?.[el]; const fm = s.fxm?.[el];
+    const style = fm ? { '--fxt': f ? fxTransform(f) : 'none', '--fxtm': fxTransform(fm, '1'), transform: 'var(--fxc)', transformOrigin: 'center' } : f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
+    if (fm) cls = (cls ? cls + ' ' : '') + 'fx-m';
     if (!E || E.mobile) return { className: cls || undefined, style };
     const selOn = E.sel?.kind === 'fx' && E.sel.slide === k && E.sel.el === el;
     return { className: (cls ? cls + ' ' : '') + 'dz-fx' + (selOn ? ' on' : ''), style, 'data-fx-name': FX_NAMES[el], onClick: (e) => e.stopPropagation(), onPointerDown: (e) => E.fxDrag(e, k, el) };
