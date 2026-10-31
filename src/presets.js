@@ -183,3 +183,28 @@ export function bgTone(css) {
   const a = rs.reduce((s, r) => [s[0] + r[0], s[1] + r[1], s[2] + r[2]], [0, 0, 0]).map((v) => Math.round(v / rs.length));
   return '#' + a.map((v) => v.toString(16).padStart(2, '0')).join('');
 }
+
+// ---- Hazır reklam şablonları: düzen + arka plan + renkler + telefonda görünüm + örnek yazılar + resim ölçüsü önerisi
+// img: hangi resim gerekli ('prod' saydam ürün resmi · 'wide' yatay banner fotoğrafı · '' resimsiz)
+export const SLIDE_TEMPLATES = [
+  { id: 'urun', n: 'Ürün vitrini', d: 'Solda yazı, sağda ürün', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
+    s: { layout: 'split', bg: 'g-night', tag: 'Yeni ürün', title: 'Ürün adını yazın', text: 'Tek cümlelik kısa açıklama: ne işe yarar, neden iyi?', cta: 'Ürünü incele', bs: 'light', mfit: '' } },
+  { id: 'urun-acik', n: 'Ürün · açık zemin', d: 'Ferah, beyaz-gri zemin', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
+    s: { layout: 'split', bg: 'l-mist', tag: 'Stokta', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'İncele', bs: 'dark' } },
+  { id: 'premium', n: 'Siyah altın', d: 'Pahalı ürünler için', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
+    s: { layout: 'reverse', bg: 'a-gold', tag: 'Profesyonel seri', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'Hemen incele', bs: 'accent', tc: 'g:gold' } },
+  { id: 'atolye', n: 'Atölye / teknik', d: 'Devre kartı zemini', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
+    s: { layout: 'split', bg: 'k-grid', tag: 'Ustalar için', title: 'Ürün adını yazın', text: 'Teknik özellik ya da kısa açıklama', cta: 'Özellikleri gör', bs: 'glass' } },
+  { id: 'kampanya', n: 'Kampanya / indirim', d: 'Ortalı, büyük başlık', img: '', size: 'Resim gerekmez',
+    s: { layout: 'center', bg: 'a-lava', tag: '%20 İNDİRİM', title: 'Kampanya başlığı', text: 'Kampanyanın kısa açıklaması ve son tarihi', cta: 'Fırsatları gör', bs: 'light' } },
+  { id: 'duyuru', n: 'Duyuru', d: 'Sade, resimsiz', img: '', size: 'Resim gerekmez',
+    s: { layout: 'center', bg: 'g-royal', tag: 'Duyuru', title: 'Duyuru başlığı', text: 'Kısa bilgi: çalışma saatleri, kargo, yeni gelenler…', cta: '', bs: 'light' } },
+  { id: 'foto', n: 'Tam fotoğraf', d: 'Fotoğraf her yeri kaplar, yazı altta', img: 'wide', size: 'Yatay fotoğraf 1800×780 · telefona ayrı dikey resim önerilir (900×1180)',
+    s: { layout: 'cover', title: 'Başlık', text: 'Kısa açıklama', cta: 'İncele', bs: 'light', mfit: 'stack', xc: '#ffffff' } },
+  { id: 'foto-kutu', n: 'Fotoğraf + yazı kutusu', d: 'Yazı buzlu cam kutuda', img: 'wide', size: 'Yatay fotoğraf 1800×780 · ürün sağda dursun (yazı solda kalır)',
+    s: { layout: 'glass', title: 'Başlık', text: 'Kısa açıklama', cta: 'İncele', bs: 'light', mfit: 'stack', xc: '#ffffff' } },
+  { id: 'hazir', n: 'Hazır banner resmi', d: 'Yazısı resmin içinde olan banner', img: 'wide', size: 'Bilgisayar 1800×780 + telefon 900×1180 (iki ayrı resim)',
+    s: { layout: 'cover', title: '', text: '', cta: '', tag: '', logo: 'none', mfit: 'whole' } },
+  { id: 'sade', n: 'Sade beyaz', d: 'Süssüz, beyaz zemin', img: 'prod', size: 'Saydam arka planlı PNG, kare, en az 1000×1000',
+    s: { layout: 'split', bg: 'l-white', tag: '', title: 'Ürün adını yazın', text: 'Kısa açıklama', cta: 'İncele', bs: 'dark' } },
+];

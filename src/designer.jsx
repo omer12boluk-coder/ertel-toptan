@@ -10,10 +10,10 @@ import { Icon, Field, Toggle, Confirm, openMenu } from './ui.jsx';
 import { withDefaults, norm, ls } from './utils.js';
 import {
   ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, UspFields, PromoFields, RailFields, BrandFields, BlockFields,
-  ScaleField, MQ_STYLES, ShopImg, GeoFields, geoOf, withProdFallback, THEMES, SLIDE_LAYOUTS, COVER_LY, ColorPick, LinkPick, LogoPick, ImgPick, ImgLook, Rows,
+  ScaleField, MQ_STYLES, ShopImg, useShopImg, GeoFields, geoOf, withProdFallback, THEMES, SLIDE_LAYOUTS, COVER_LY, ColorPick, LinkPick, LogoPick, ImgPick, ImgLook, Rows,
 } from './shophome.jsx';
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
-import { BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone } from './presets.js';
+import { SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone } from './presets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 
 // raflara kalıcı kimlik ver, eski sıra kayıtlarını (rail:0) kimliğe çevir.
@@ -140,6 +140,8 @@ export function ShopDesigner() {
   }
   const toggleHide = (k) => { const h = new Set(get('hidden') || []); h.has(k) ? h.delete(k) : h.add(k); set('shopHome.hidden', [...h]); };
   const goSlide = (i) => { heroI.current = i; heroGo.current.forEach((f) => f(i)); };
+  // reklam kutusunun önizlemelerdeki gerçek ölçüsü (px): ölçü rehberi için
+  const measure = (i) => { const out = {}; for (const [k, w] of Object.entries(wins.current)) { try { const el = w?.document?.querySelectorAll('.sh-hero .sh-slide')[i]; if (el) { const r = el.getBoundingClientRect(); if (r.width) out[k] = { w: Math.round(r.width), h: Math.round(r.height) }; } } catch {} } return out; };
 
   const get = (k) => (store.s.designDraft || prepare(store.s.settings)).shopHome[k];
   // reklam içindeki öğeyi sürükleyerek taşı (ortaya ve ilk yerine mıknatısla yapışır); hiç kımıldamazsa seç
@@ -243,7 +245,7 @@ export function ShopDesigner() {
     return [...out];
   }, [d, baseObj, dirty]);
 
-  const P = { get, sel, d, H, set, setSel, heroI, goSlide, removeBlock, dupBlock, setPeek, L, setL, toggleHide, reveal, pack, openVers: () => setVers(true) };
+  const P = { measure, get, sel, d, H, set, setSel, heroI, goSlide, removeBlock, dupBlock, setPeek, L, setL, toggleHide, reveal, pack, openVers: () => setVers(true) };
 
   if (mobile) return (
     <div className={'page dz-page dz-mobile' + (sel ? ' has-panel' : '') + (pick ? ' has-pick' : '')}>
@@ -489,6 +491,7 @@ function HeroPanel(P) {
   const up = (p) => S('slides', slides.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const pick = (j) => { setI(j); goSlide(j); };
   const peekP = (p) => setPeek(p ? { path: 'shopHome.slides', v: slides.map((x, j) => (j === i ? { ...x, ...p } : x)) } : null);
+  const [tpl, setTpl] = useState(false);
   if (!s) return <><p className="fine">Henüz reklam yok.</p><button className="btn sm primary" onClick={() => { S('slides', [NEW.slide()]); pick(0); }}><Icon n="plus" s={15} />Reklam ekle</button></>;
   const ly = SLIDE_LAYOUTS[s.layout] ? s.layout : 'split';
   const cover = COVER_LY.includes(ly);
@@ -497,7 +500,19 @@ function HeroPanel(P) {
   const bgHex = cover ? null : BG_BY[bgk] ? bgTone(BG_BY[bgk].bg) : THEME_BG[s.theme || 'night'];
   const bad = bgHex ? [['tc', 'Başlık'], ['xc', 'Açıklama']].filter(([k]) => s[k] && !s[k].startsWith('g:') && (contrast(s[k], bgHex) ?? 9) < 2.6) : [];
   const fixC = contrast('#ffffff', bgHex || '#000') > contrast('#0f172a', bgHex || '#000') ? '#ffffff' : '#0f172a';
+  const addFromTpl = (t) => { const n = [...slides, { ...NEW.slide(), ...structuredClone(t.s), img: '' }]; S('slides', n); setTimeout(() => pick(n.length - 1), 60); setTpl(false); toast('“' + t.n + '” şablonuyla yeni reklam eklendi. Yazıları değiştirip resmini seçin.'); };
+  const applyTpl = (t) => { const k = ['layout', 'bg', 'theme', 'bs', 'tc', 'xc', 'mfit']; up({ ...Object.fromEntries(k.map((x) => [x, t.s[x] ?? ''])), fx: {} }); setTpl(false); toast('Şablonun görünümü bu reklama uygulandı (yazılar ve resim aynı kaldı)'); };
   return <>
+    <button type="button" className={'dz2-tplbtn' + (tpl ? ' on' : '')} onClick={() => setTpl(!tpl)}><Icon n="sparkle" s={16} /><span><b>Hazır şablonlar</b><small>{SLIDE_TEMPLATES.length} şablon · hangi resmin gerektiği yazar</small></span><Icon n="chev" s={16} className="fold-chev" /></button>
+    {tpl && <div className="dz2-tpls">{SLIDE_TEMPLATES.map((t) => (
+      <div key={t.id} className="dz2-tpl">
+        <button type="button" className="dz2-tpl-pv" onClick={() => addFromTpl(t)} onMouseEnter={() => peekP({ ...t.s, title: s.title, text: s.text, cta: s.cta, tag: s.tag, img: s.img })} onMouseLeave={() => peekP(null)} style={{ background: BG_BY[t.s.bg]?.bg || 'linear-gradient(135deg, #64748b, #1e293b)' }} title="Yeni reklam olarak ekle">
+          <i className={'tpl-ly ly-' + t.s.layout + (BG_BY[t.s.bg]?.ink === 'l' ? ' dk' : '')} aria-hidden="true"><b /><b /><em /></i>
+        </button>
+        <span className="dz2-tpl-t"><b>{t.n}</b><small>{t.d}</small><small className="dz2-tpl-sz"><Icon n="image" s={12} />{t.size}</small></span>
+        <span className="dz2-tpl-a"><button type="button" className="btn sm primary" onClick={() => addFromTpl(t)}><Icon n="plus" s={14} />Yeni reklam</button><button type="button" className="btn sm ghost" onClick={() => applyTpl(t)}>Bu reklama uygula</button></span>
+      </div>
+    ))}</div>}
     <div className="dz2-slides" role="group" aria-label="Reklamlar">
       {slides.map((x, j) => <button key={j} className={'dz2-sl' + (j === i ? ' on' : '')} onClick={() => pick(j)} title={x.title || ''}><b>{j + 1}</b><span>{x.title || 'Reklam'}</span></button>)}
       {slides.length < 8 && <button className="dz2-sl add" onClick={() => { S('slides', [...slides, NEW.slide()]); setTimeout(() => pick(slides.length), 60); }} title="Reklam ekle"><Icon n="plus" s={15} /></button>}
@@ -516,6 +531,11 @@ function HeroPanel(P) {
     </div>
     {s.cta && <div data-f="bs"><Field label="Buton görünümü"><span className="seg seg-wrap">{Object.entries(BTN_STYLES).map(([k, l]) => <button key={k} type="button" className={(s.bs || 'light') === k ? 'on' : ''} onClick={() => up({ bs: k })} onMouseEnter={() => peekP({ bs: k })} onMouseLeave={() => peekP(null)}>{l}</button>)}</span></Field></div>}
     <div data-f="img"><ImgPick v={s.img} onChange={(img) => up({ img })} alpha={!cover} max={cover ? 1800 : 1000} label={cover ? 'Banner resmi' : 'Görsel'} hint={cover ? 'Yatay banner resmi (ör. 1600×640). Sayfada resmi tutup sürükleyerek kaydırabilirsiniz.' : 'Saydam arka planlı ürün resmi en iyisi'} prodOk /></div>
+    {cover && <div data-f="mfit"><Field label="Telefonda nasıl görünsün?" hint={{ stack: 'Resim telefonda kesilmeden üstte, yazılar altında. Yatay banner için en temiz sonuç.', whole: 'Resmin tamamı görünür, kenarlar resmin bulanık hâliyle dolar.' }[s.mfit] || 'Resim telefonun dikey kutusunu doldurur; yanları kesilir. Ölçü rehberinde nereden kesildiğini görün.'}>
+      <span className="dz2-mfits">{[['', 'Kırp', 'doldurur'], ['whole', 'Resmin tamamı', 'bulanık kenar'], ['stack', 'Resim üstte', 'yazı altta']].map(([k, l, h]) => <button key={k} type="button" className={'dz2-mfit mf-' + (k || 'crop') + ((s.mfit || '') === k ? ' on' : '')} onClick={() => up({ mfit: k })}><i aria-hidden="true"><b /><em /></i><span>{l}</span><small>{h}</small></button>)}</span>
+    </Field></div>}
+    {cover && s.img && <div data-f="imgM"><ImgPick v={s.imgM || ''} onChange={(imgM) => up({ imgM })} max={1200} label="Telefon için ayrı resim" hint="İsteğe bağlı. Telefonda bu resim görünür; dikey (ör. 900×1180) hazırlayın. Boşsa bilgisayardaki resim kullanılır." /></div>}
+    {cover && s.img && <SizeGuide s={s} i={i} measure={P.measure} H={H} />}
     {s.img && cover && <div data-f="frame" className="dz2-frame-box"><h4><Icon n="zoom" s={15} />Resmi çerçevele</h4><ImgLook s={s} up={up} cover phone={false} /></div>}
     <More>
       <Field label="Küçük etiket" opt><input value={s.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. Yeni · Stokta" /></Field>
@@ -533,6 +553,53 @@ function HeroPanel(P) {
       </div>
     </More>
   </>;
+}
+// ---- Ölçü rehberi: reklam kutusunun bilgisayarda ve telefonda gerçek ölçüsü, önerilen resim boyu,
+// yüklenen resmin hangi kısmının görüneceği (mavi: bilgisayar, turuncu: telefon)
+function useNatural(v) {
+  const src = useShopImg(v); const [n, setN] = useState(null);
+  useEffect(() => { if (!src) { setN(null); return; } const im = new Image(); im.onload = () => setN({ w: im.naturalWidth, h: im.naturalHeight, src }); im.onerror = () => setN(null); im.src = src; }, [src]);
+  return n;
+}
+// cover kırpma hesabı: kutu (bw×bh), resim (W×H), z yakınlaştırma, fx/fy odak % → resimde görünen dikdörtgen (oran 0..1)
+function visibleRect(W, H, bw, bh, z = 1, fx = 50, fy = 50, contain) {
+  if (contain) return { x: 0, y: 0, w: 1, h: 1 };
+  const sc = Math.max(bw / W, bh / H) * z;
+  const vw = Math.min(1, bw / sc / W), vh = Math.min(1, bh / sc / H);
+  return { x: (1 - vw) * fx / 100, y: (1 - vh) * fy / 100, w: vw, h: vh };
+}
+function SizeGuide({ s, i, measure, H }) {
+  const [m, setM] = useState({});
+  useEffect(() => { const f = () => setM(measure(i)); f(); const t = setInterval(f, 800); return () => clearInterval(t); }, [i]);
+  const desk = m.desk || { w: 1248, h: Number(H.heroH) || 540, est: true };
+  const phone = m.phone || { w: 358, h: Math.max(470, Math.round((Number(H.heroH) || 0) * 0.82)), est: true };
+  const img = useNatural(s.img); const imgM = useNatural(s.imgM);
+  const im = s.im || {}; const g = (k, d, mob) => Number((mob ? im[k + 'm'] ?? im[k] : im[k]) ?? d);
+  const rec = (b, cap) => { const w = cap; return w + ' × ' + Math.round((w * b.h) / b.w); };
+  const ratio = (b) => (b.w / b.h >= 1.15 ? 'yatay' : b.w / b.h <= 0.87 ? 'dikey' : 'kareye yakın');
+  const contain = im.f === 'contain';
+  const vd = img && visibleRect(img.w, img.h, desk.w, desk.h, g('z', 1), g('x', 50), g('y', 50), contain);
+  const pImg = s.imgM ? imgM : img;
+  const vp = pImg && (s.mfit === 'whole' || s.mfit === 'stack' || (s.imgM ? false : contain) ? { x: 0, y: 0, w: 1, h: 1 } : visibleRect(pImg.w, pImg.h, phone.w, phone.h, g('z', 1, 1), g('x', 50, 1), g('y', 50, 1), false));
+  const warns = [];
+  if (img && img.w < desk.w * 1.3) warns.push('Resim bilgisayardaki kutudan pek büyük değil (' + img.w + ' px); netlik için en az ' + Math.round(desk.w * 1.4) + ' px genişlik önerilir.');
+  if (vp && !s.imgM && vp.w * vp.h < 0.5) warns.push('Telefonda resmin sadece %' + Math.round(vp.w * vp.h * 100) + '’i görünüyor. “Resim üstte” ya da “Resmin tamamı” seçin veya telefona ayrı resim koyun.');
+  return <div className="dz2-size" data-f="size">
+    <h4><Icon n="expand" s={15} />Ölçü rehberi</h4>
+    <div className="dz2-size-rows">
+      <div><i className="sw-d" /><span><b>Bilgisayar kutusu</b><small>{desk.w} × {desk.h} px · {ratio(desk)}{desk.est ? ' · tahmini' : ''}</small></span><code>Önerilen resim: {rec(desk, 1800)}</code></div>
+      <div><i className="sw-p" /><span><b>Telefon kutusu</b><small>{s.mfit === 'stack' ? 'resim kendi oranında, yazı altta' : phone.w + ' × ' + phone.h + ' px · ' + ratio(phone) + (phone.est ? ' · tahmini' : '')}</small></span><code>{s.mfit === 'stack' ? 'Aynı resim kullanılır' : 'Telefon resmi: ' + rec(phone, 900)}</code></div>
+    </div>
+    {img && <div className="dz2-crop">
+      <div className="dz2-crop-img" style={{ aspectRatio: img.w + ' / ' + img.h, width: `min(100%, ${Math.round((240 * img.w) / img.h)}px)` }}>
+        <img src={img.src} alt="" />
+        {vd && <span className="cr-d" style={{ left: vd.x * 100 + '%', top: vd.y * 100 + '%', width: vd.w * 100 + '%', height: vd.h * 100 + '%' }}><em>Bilgisayar</em></span>}
+        {vp && !s.imgM && <span className="cr-p" style={{ left: vp.x * 100 + '%', top: vp.y * 100 + '%', width: vp.w * 100 + '%', height: vp.h * 100 + '%' }}><em>Telefon</em></span>}
+      </div>
+      <small>Yüklediğiniz resim: {img.w} × {img.h} px. Çerçevelerin dışında kalan kısım kesilir. {s.imgM ? 'Telefonda ayrı resim kullanılıyor.' : ''}</small>
+    </div>}
+    {warns.map((w) => <p key={w} className="dz2-warn sm"><Icon n="eye" s={14} /><span>{w}</span></p>)}
+  </div>;
 }
 // arka plan seçici: ışıklı temalar + hazır arka planlar; üzerine gelince sayfada denenir
 function BgPicker({ s, up, peekP, packOn }) {

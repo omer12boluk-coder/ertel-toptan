@@ -781,10 +781,12 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
   const fill = im.fill || 'blur';
   const vars = { ...(cover ? imVars(s.im) : {}), ...(bgp ? { '--bgp': bgp.bg } : {}), ...(cover && shrunk && fill === 'color' ? { '--fillc': im.fc || '#0b1430' } : {}) };
   const btn = s.bs && s.bs !== 'light' ? ' bs-' + s.bs : '';
+  // telefonda tam resim: crop (kırp, varsayılan) · whole (resmin tamamı + bulanık dolgu) · stack (resim üstte, yazı altta)
+  const mf = cover && ['whole', 'stack'].includes(s.mfit) ? ' m-' + s.mfit : '';
   const ink = bgp ? (bgp.ink === 'l' ? ' ink-dark' : ' ink-light') : '';
   return (
-    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (imDown ? ' dz-imdrag' : '') + (bgp ? ' has-bgp' : '') + ink + btn + (shrunk ? ' fill-' + fill : '')} style={Object.keys(vars).length ? vars : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
-      {cover ? <>{shrunk && fill === 'blur' && <ShopImg v={s.img} className="sh-slide-bg sh-bg-blur" />}<ShopImg v={s.img} className="sh-slide-bg sh-bg-main" /></> : bgp ? <span className="sh-bgp" aria-hidden="true" /> : ly !== 'plain' && <>
+    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (imDown ? ' dz-imdrag' : '') + (bgp ? ' has-bgp' : '') + ink + btn + (shrunk ? ' fill-' + fill : '') + mf + (cover && s.imgM ? ' has-mimg' : '')} style={Object.keys(vars).length ? vars : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
+      {cover ? <>{((shrunk && fill === 'blur') || s.mfit === 'whole') && <ShopImg v={s.img} className={'sh-slide-bg sh-bg-blur' + (shrunk && fill === 'blur' ? '' : ' m-only')} />}<ShopImg v={s.img} className="sh-slide-bg sh-bg-main pc-img" />{s.imgM && <ShopImg v={s.imgM} className="sh-slide-bg sh-bg-main m-img" />}</> : bgp ? <span className="sh-bgp" aria-hidden="true" /> : ly !== 'plain' && <>
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}
       {E?.guide?.k === k && <span className="dz-guides" aria-hidden="true">{E.guide.v.map((x) => <i key={'v' + x} className="gv" style={{ left: x }} />)}{E.guide.h.map((y) => <i key={'h' + y} className="gh" style={{ top: y }} />)}</span>}
