@@ -597,6 +597,9 @@ function IntroSplash() {
   useEffect(() => { if (phase === 'out') { const t = setTimeout(() => setPhase('off'), 500); return () => clearTimeout(t); } }, [phase]);
   // arka plan seçeneği (Ayarlar > Genel > Açılış ekranı): navy | light | white | grad
   const sty = SPLASH_STYLES[S.brand.splashStyle] ? S.brand.splashStyle : 'navy';
+  // index.html başındaki düz renkli örtü (pre-intro): JS yüklenene kadar arkada bir şey çizilmesin; açılış ekranı çizilince kalkar
+  useLayoutEffect(() => { const h = document.documentElement; [...h.classList].filter((c) => c.startsWith('pre-')).forEach((c) => h.classList.remove(c)); }, []);
+  useEffect(() => { try { localStorage.setItem('intro-sty', S.brand.splashOn === false ? 'off' : sty); } catch {} }, [sty, S.brand.splashOn]);
   if (phase === 'off') return null;
   return (
     <div className={'intro intro2 sp-' + sty + (phase === 'out' ? ' out' : '')} onClick={() => setPhase('out')} role="presentation">

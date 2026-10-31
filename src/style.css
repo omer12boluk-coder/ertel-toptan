@@ -5006,3 +5006,10 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .spl-sw.sp-white { background: #fff; border: 1px solid var(--line); } .spl-sw.sp-white::before { display: none; }
 .spl-sw.sp-grad { background: linear-gradient(150deg, #1e48c8, #2f6bff 45%, #10b3e0); }
 
+
+/* açılış ekranı ön örtüsü (31.10.2026): JS gelmeden önce aynı zemin; React açılış ekranı solmadan üstüne biner */
+html.pre-intro body::before { content: ""; position: fixed; inset: 0; z-index: 199; background-color: #0b1530; background-image: radial-gradient(120% 90% at 50% 40%, #13224a 0%, #0b1530 55%, #070d1f 100%); }
+html.pre-light body::before { background-color: #f3f6fc; background-image: radial-gradient(120% 90% at 50% 40%, #ffffff 0%, #f3f6fc 60%, #e8eef9 100%); }
+html.pre-white body::before { background: #fff; }
+html.pre-grad body::before { background-color: #1e48c8; background-image: linear-gradient(150deg, #1e48c8 0%, #2f6bff 45%, #10b3e0 100%); }
+.intro.intro2 { animation: none; }
