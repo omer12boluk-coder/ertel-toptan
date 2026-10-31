@@ -1,0 +1,11 @@
+name: Link önizleme denemesi
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -s -A "WhatsApp/2.23.20.0 A" https://ertelmarket.com/urun/2000 -o /tmp/p.html
+          echo "::notice title=Konum::og:image bayt $(grep -bo 'og:image' /tmp/p.html | head -1) / toplam $(wc -c < /tmp/p.html)"
+          img=$(grep -o 'og:image" content="[^"]*"' /tmp/p.html | sed 's/.*content="//;s/"$//')
+          echo "::notice title=Resim::$img → $(curl -s -o /dev/null -w '%{http_code} %{content_type} %{size_download}' -A 'WhatsApp/2.23.20.0 A' "$img")"

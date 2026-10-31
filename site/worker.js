@@ -71,7 +71,7 @@ export default {
     const page = await env.ASSETS.fetch(req);
     if (req.method !== 'GET' || !BOT.test(req.headers.get('user-agent') || '')) return page;
     try {
-      const cache = caches.default; const key = new Request('https://og2.cache' + url.pathname);
+      const cache = caches.default; const key = new Request('https://og3.cache' + url.pathname);
       let og = await cache.match(key).then((r) => r?.json()).catch(() => null);
       if (!og) {
         og = await ogFor(url.pathname);
@@ -80,8 +80,9 @@ export default {
       if (!og) return page;
       const tags = `<meta property="og:type" content="product"><meta property="og:site_name" content="ERTEL GSM"><meta property="og:title" content="${esc(og.title)}"><meta property="og:description" content="${esc(og.desc)}"><meta property="og:image" content="${esc(og.img)}"><meta property="og:url" content="${esc(url.origin + url.pathname)}"><meta name="twitter:card" content="summary_large_image"><meta name="description" content="${esc(og.desc)}">`;
       return new HTMLRewriter()
-        .on('title', { element(e) { e.setInnerContent(og.title + ' · ERTEL GSM'); } })
-        .on('head', { element(e) { e.append(tags, { html: true }); } })
+        // etiketler sayfanın EN BAŞINA (başlığın hemen arkasına): sayfa ~1,6 MB, WhatsApp sadece ilk kısmını okuyor;
+        // head'in sonuna eklenen etiketler okunmuyordu (başlık geliyor, resim gelmiyordu)
+        .on('title', { element(e) { e.setInnerContent(og.title + ' · ERTEL GSM'); e.after(tags, { html: true }); } })
         .transform(page);
     } catch { return page; }
   },
