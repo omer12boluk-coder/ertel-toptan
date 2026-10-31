@@ -771,14 +771,20 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
     // telefona özel konum (s.fxm) varsa telefonda o, yoksa bilgisayardaki konum küçültülerek (--fxk)
     // ax/ay varsa (1.11.2026): telefonda öğenin sol-üst köşesi reklam kutusunun %'si → her telefon boyunda aynı yerde
     const f = s.fx?.[el]; const fm = s.fxm?.[el]; const abs = fm && fm.ax != null;
-    const style = abs ? { '--fxt': f ? fxTransform(f) : 'none', '--fxax': (fm.ax * 100).toFixed(2) + '%', '--fxay': (fm.ay * 100).toFixed(2) + '%', '--fxtm': `perspective(900px) rotateX(${fm.rx || 0}deg) rotateY(${fm.ry || 0}deg) rotate(${fm.r || 0}deg) scale(${fm.s || 1})`, transform: 'var(--fxc)', transformOrigin: 'center' }
+    let style = abs ? { '--fxt': f ? fxTransform(f) : 'none', '--fxax': (fm.ax * 100).toFixed(2) + '%', '--fxay': (fm.ay * 100).toFixed(2) + '%', '--fxtm': `perspective(900px) rotateX(${fm.rx || 0}deg) rotateY(${fm.ry || 0}deg) rotate(${fm.r || 0}deg) scale(${fm.s || 1})`, transform: 'var(--fxc)', transformOrigin: 'center' }
       : fm ? { '--fxt': f ? fxTransform(f) : 'none', '--fxtm': fxTransform(fm, '1'), transform: 'var(--fxc)', transformOrigin: 'center' } : f ? { transform: fxTransform(f), transformOrigin: 'center' } : undefined;
-    if (fm) cls = (cls ? cls + ' ' : '') + 'fx-m' + (abs ? ' fx-a' + (fm.c ? ' fx-c' : '') : '');
+    if (fm) cls = (cls ? cls + ' ' : '') + 'fx-m' + (abs ? ' fx-a' + (fm.c && !fm.w ? ' fx-c' : '') : '');
+    // yazı genişliği (kenar tutamaçlarıyla): bilgisayarda fx.w px, telefonda fxm.w kutunun oranı → konum değişince satırlar değişmez
+    if (f?.w) { style = { ...(style || {}), '--fxwd': f.w + 'px' }; cls = (cls ? cls + ' ' : '') + 'fx-wd'; }
+    if (abs && fm.w) { style['--fxw'] = (fm.w * 100).toFixed(2) + '%'; if (fm.c) style['--fxax'] = ((fm.ax - fm.w / 2) * 100).toFixed(2) + '%'; }
     if (!E || E.mobile) return { className: cls || undefined, style };
     const selOn = E.sel?.kind === 'fx' && E.sel.slide === k && E.sel.el === el;
     return { className: (cls ? cls + ' ' : '') + 'dz-fx' + (selOn ? ' on' : ''), style, 'data-fx-name': FX_NAMES[el], onClick: (e) => e.stopPropagation(), onPointerDown: (e) => E.fxDrag(e, k, el) };
   };
   const tt = titleStyle(s.tc); const tf = fx('title', tt.className || '');
+  // tasarım modu: seçili yazı öğesinin iki yanında genişlik tutamaçları (daraltınca yazı alt satıra geçer)
+  const hz = (el) => (E && !E.mobile && E.fxResize && E.sel?.kind === 'fx' && E.sel.slide === k && E.sel.el === el
+    ? <><i className="fx-h fx-hl" title="Tutup çekin: yazı alanı genişliği" onPointerDown={(e) => E.fxResize(e, k, el, 'l')} onClick={(e) => e.stopPropagation()} /><i className="fx-h fx-hr" title="Tutup çekin: yazı alanı genişliği" onPointerDown={(e) => E.fxResize(e, k, el, 'r')} onClick={(e) => e.stopPropagation()} /></> : null);
   // hazır arka plan (slides[i].bg) ya da tema stüdyosu banner zemini; tam resimli reklamda resim esas
   const bgp = !cover && (BG_BY[pkHero] || BG_BY[s.bg]);
   // resim küçültülünce (yakınlaştırma < %100) ya da sığdırınca kalan yer: bulanık resim (varsayılan) · düz renk · tema rengi
@@ -797,8 +803,8 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
       {E?.guide?.k === k && <span className="dz-guides" aria-hidden="true">{E.guide.v.map((x) => <i key={'v' + x} className="gv" style={{ left: x }} />)}{E.guide.h.map((y) => <i key={'h' + y} className="gh" style={{ top: y }} />)}</span>}
       <div className="sh-slide-t">
         {logo ? <span {...fx('logo', 'sh-slide-logo')}><ShopImg v={logo} alt={s.tag || ''} /></span> : s.tag && <span {...fx('logo', 'sh-tag glow')}>{s.tag}</span>}
-        {s.title && <h1 {...tf} style={{ ...(tf.style || {}), ...(tt.style || {}) }}>{s.title}</h1>}
-        {s.text && (() => { const xf = fx('text'); return <p {...xf} style={s.xc ? { ...(xf.style || {}), color: s.xc, opacity: 1 } : xf.style}>{s.text}</p>; })()}
+        {s.title && <h1 {...tf} style={{ ...(tf.style || {}), ...(tt.style || {}) }}>{s.title}{hz('title')}</h1>}
+        {s.text && (() => { const xf = fx('text'); return <p {...xf} style={s.xc ? { ...(xf.style || {}), color: s.xc, opacity: 1 } : xf.style}>{s.text}{hz('text')}</p>; })()}
         {s.cta && s.link && <span {...fx('cta', 'sh-cta-wrap')}><CtaButton s={s} onClick={(e) => { e.stopPropagation(); open(s.link)(); }} /></span>}
       </div>
       {!cover && s.img && <div ref={art} {...fx('art', 'sh-slide-art')}>{st === 'pop' ? <span className="sh-stage" aria-hidden="true" /> : <span className="sh-halo" aria-hidden="true" />}<span className="sh-depth">{isProdImg(s.img) && st !== 'pop' ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</span></div>}

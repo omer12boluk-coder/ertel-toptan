@@ -5977,3 +5977,13 @@ html.dz2-open .sheet-bg { z-index: 960; }
   .sh-slide.has-fxa .sh-slide-t { position: static !important; translate: none !important; transform: none !important; filter: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; contain: none !important; will-change: auto !important; }
   .sh-slide.has-fxa.ly-glass .sh-slide-t { background: transparent; box-shadow: none; padding: 0; }
 }
+
+/* yazı alanı genişliği (kenar tutamaçları) */
+.sh-slide-t .fx-wd { width: var(--fxwd); max-width: none; }
+@media (max-width: 700px) {
+  .sh-slide-t .fx-wd:not(.fx-a) { width: auto; max-width: 100%; }
+  .sh-slide .sh-slide-t .fx-a { width: var(--fxw, max-content); max-width: var(--fxw, calc(100% - var(--fxax) - 14px)); }
+}
+.fx-h { position: absolute; top: 50%; width: 10px; height: 30px; margin-top: -15px; border-radius: 5px; background: #fff; box-shadow: 0 0 0 2px #38bdf8, 0 2px 6px rgb(0 0 0 / .4); cursor: ew-resize; z-index: 6; touch-action: none; }
+.fx-hl { left: -7px; } .fx-hr { right: -7px; }
+.fx-h::after { content: ""; position: absolute; inset: 9px 3px; border-left: 1.5px solid #38bdf8; border-right: 1.5px solid #38bdf8; }

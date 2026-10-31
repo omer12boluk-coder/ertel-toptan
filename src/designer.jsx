@@ -45,12 +45,23 @@ function phoneAbs(art, s) {
   const R = art.getBoundingClientRect(); const out = { ...(s.fxm || {}) };
   art.querySelectorAll('.sh-slide-t > [data-fx-name]').forEach((n) => {
     const el = FX_KEY[n.dataset.fxName]; if (!el) return;
-    const old = out[el] || {}; if (old.ax != null) return;
+    const old = out[el] || {};
+    // yazılarda kutunun değil yazının kendi genişliği (ortalı başlık da yerinde kalır, tutamaçlar yazının hemen yanında olur)
+    const tn = [...n.childNodes].filter((x) => x.nodeType === 3 && x.textContent.trim());
+    let tr = null; if (tn.length) { const rg = n.ownerDocument.createRange(); rg.setStartBefore(tn[0]); rg.setEndAfter(tn[tn.length - 1]); tr = rg.getBoundingClientRect(); }
+    const sc0 = (s.fxm?.[el] || s.fx?.[el] || {}).s || 1;
+    const wpx = tr && tr.width ? tr.width / sc0 + 4 : n.offsetWidth;
+    const wf = Math.round((wpx / R.width) * 10000) / 10000;
+    // zaten oranlı: sadece genişliği sabitle (yoksa yer değişince satırlar değişiyordu); ortalı eski kayıt sol kenara çevrilir
+    if (old.ax != null) {
+      if (old.w == null) { const rr = n.getBoundingClientRect(); const lx = tr && tr.width ? (tr.left + tr.width / 2 - R.left) - wpx / 2 : rr.left + rr.width / 2 - R.left - n.offsetWidth / 2; out[el] = { ...old, w: wf, ax: Math.round((lx / R.width) * 10000) / 10000, c: undefined }; }
+      return;
+    }
     const r = n.getBoundingClientRect(); const cx = r.left + r.width / 2 - R.left, cy = r.top + r.height / 2 - R.top;
     const f = s.fxm?.[el] || s.fx?.[el] || {};
     // ortalı yazılar ortasından, diğerleri sol kenarından tutturulur (genişlik telefonla değişse de hizası bozulmasın)
-    const c = n.ownerDocument.defaultView.getComputedStyle(n).textAlign === 'center';
-    out[el] = { s: f.s, r: f.r, rx: f.rx, ry: f.ry, ...(c ? { c: 1 } : {}), ax: Math.round(((c ? cx : cx - n.offsetWidth / 2) / R.width) * 10000) / 10000, ay: Math.round(((cy - n.offsetHeight / 2) / R.height) * 10000) / 10000 };
+    const lx = tr && tr.width ? (tr.left + tr.width / 2 - R.left) - wpx / 2 : cx - n.offsetWidth / 2;
+    out[el] = { s: f.s, r: f.r, rx: f.rx, ry: f.ry, w: wf, ax: Math.round((lx / R.width) * 10000) / 10000, ay: Math.round(((cy - n.offsetHeight / 2) / R.height) * 10000) / 10000 };
   });
   return out;
 }
@@ -203,11 +214,31 @@ export function ShopDesigner() {
       const gv = [], gh = [];
       if (!ev.altKey) { if (Math.abs(cx + dx - R.width / 2) < 8) { dx = R.width / 2 - cx; gv.push(Math.round(R.width / 2)); } if (Math.abs(cy + dy - R.height / 2) < 8) { dy = R.height / 2 - cy; gh.push(Math.round(R.height / 2)); } }
       setGuide(gv.length || gh.length ? { k: slide, v: gv, h: gh } : null);
-      const cc = base[el]?.c;
-      const ax = Math.min(0.97, Math.max(-0.1, (cx + dx - (cc ? 0 : ow / 2)) / R.width)), ay = Math.min(0.97, Math.max(-0.1, (cy + dy - oh / 2) / R.height));
+      const ax = Math.min(0.97, Math.max(-0.3, (cx + dx - ow / 2) / R.width)), ay = Math.min(0.97, Math.max(-0.1, (cy + dy - oh / 2) / R.height));
       const sl = get('slides'); if (!sl[slide]) return;
       set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, fxm: { ...base, [el]: { ...(base[el] || {}), ax: Math.round(ax * 10000) / 10000, ay: Math.round(ay * 10000) / 10000 } } } : x)));
     }, () => { setGuide(null); if (!moved) setSel({ kind: 'fx', slide, el, dev: 'm' }); });
+  };
+  // yazı öğesinin genişliği: kenar tutamacıyla (telefonda kutunun oranı, bilgisayarda px); sol tutamaçta sağ kenar yerinde kalır
+  const fxResize = (e, slide, el, side) => {
+    if (e.button > 0) return; e.stopPropagation(); e.preventDefault();
+    const w = winOf(e); const node = e.currentTarget.parentElement; const art = node.closest('.sh-slide');
+    const R = art.getBoundingClientRect(); const x0 = e.clientX; const sl0 = get('slides')[slide] || {};
+    if (w.innerWidth <= 700) {
+      const base = phoneAbs(art, sl0); const b = base[el]; if (!b) return; const sc = b.s || 1;
+      onDrag(e, (ev) => {
+        const dx = (ev.clientX - x0) / sc; const nwpx = Math.max(40, b.w * R.width + (side === 'r' ? dx : -dx)); const nw = nwpx / R.width;
+        const sl = get('slides');
+        set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, fxm: { ...base, [el]: { ...b, w: Math.round(nw * 10000) / 10000, ax: side === 'l' ? Math.round((b.ax + b.w - nw) * 10000) / 10000 : b.ax } } } : x)));
+      });
+    } else {
+      const f0 = sl0.fx?.[el] || {}; const w0 = f0.w || node.offsetWidth; const fk = parseFloat(w.getComputedStyle(art).getPropertyValue('--fxk')) || 1; const sc = f0.s || 1;
+      onDrag(e, (ev) => {
+        const dx = (ev.clientX - x0) / sc; const nw = Math.max(60, Math.round(w0 + (side === 'r' ? dx : -dx)));
+        const sl = get('slides');
+        set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, fx: { ...(x.fx || {}), [el]: { ...f0, w: nw, ...(side === 'l' ? { x: Math.round((f0.x || 0) + (w0 - nw) / fk) } : {}) } } } : x)));
+      });
+    }
   };
   // tam resim reklamında resmi sürükleyerek odak noktasını kaydır (telefon çerçevesinde telefon ayarı)
   const imDrag = (e, slide) => {
@@ -287,7 +318,7 @@ export function ShopDesigner() {
 
   // tema stüdyosu tasarımda tarihten bağımsız önizlenir
   const pack = useMemo(() => { const lk = (peek?.path === 'look.pack' ? { ...d.look, pack: peek.v } : d.look) || {}; return lk.pack?.id ? activePack({ ...lk, pack: { ...lk.pack, from: '', to: '' } }) : null; }, [d.look, peek]);
-  const E = { H, L, get, fxDrag, imDrag, mobile, sel: mobile ? pick : sel, tapBlock, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, heroGo: heroGo.current, guide, pack, blockMenu: mobile ? null : blockMenu, Block: DzBlock, HeroTools: DzHeroTools };
+  const E = { H, L, get, fxDrag, fxResize, imDrag, mobile, sel: mobile ? pick : sel, tapBlock, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, heroGo: heroGo.current, guide, pack, blockMenu: mobile ? null : blockMenu, Block: DzBlock, HeroTools: DzHeroTools };
   const view = useMemo(() => withDefaults(peek ? setPath(d, peek.path, peek.v) : d), [d, peek]);
   // değişen bölümler (Yayınla düğmesinin yanında)
   const changes = useMemo(() => {
