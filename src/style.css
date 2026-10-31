@@ -5302,3 +5302,11 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 @media (max-width: 560px) { .lc-list-page .lc-tool .lc-chips .chip { padding: 6px 11px; font-size: 13px; } }
 @media (min-width: 961px) { .otable.lc-table:not(.selecting) .orow, .otable.lc-table:not(.selecting) .otable-h { grid-template-columns: 110px minmax(150px, 1.3fr) 140px minmax(150px, 1fr) 150px 170px 8px; } }
 @media (min-width: 961px) and (max-width: 1150px) { .otable.lc-table:not(.selecting) .orow, .otable.lc-table:not(.selecting) .otable-h { grid-template-columns: 84px minmax(120px, 1.2fr) 120px minmax(120px, 1fr) 118px 140px 8px; } }
+
+/* Mağaza siparişleri ⇄ Linkle gelen sepetler: başlık satırı birebir aynı boyda (geçişte hiçbir şey kaymasın) */
+.page-h.ord-head { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+.page-h.ord-head .page-t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ord-head .lc-newbtn { flex: none; height: 36px; }
+@media (max-width: 560px) { .ord-head .lc-newbtn { width: 36px; padding: 0; justify-content: center; border-radius: 50%; } .ord-head .lc-newbtn span { display: none; } }
+.lc-list.lc-list-page { display: flex; flex-direction: column; gap: 14px; }
+.lc-list.lc-list-page > .lc-tool { margin-bottom: 0; }

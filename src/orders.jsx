@@ -182,7 +182,7 @@ export function Orders() {
 
   return (
     <div className="page orders-page">
-      <div className="page-h">
+      <div className="page-h ord-head">
         <h1 className="page-t">Mağaza siparişleri{newN > 0 && <span className="muted"> · {newN} yeni</span>}</h1>
       </div>
       <OrdersSwitch on="orders" />

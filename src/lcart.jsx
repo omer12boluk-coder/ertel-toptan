@@ -83,9 +83,9 @@ export function finalItems(c) {
 export function LinkCartsPage() {
   return (
     <div className="page lc-page-adm">
-      <div className="page-h">
+      <div className="page-h ord-head">
         <h1 className="page-t">Linkle gelen sepetler</h1>
-        <span className="row-btns"><button className="btn sm primary" onClick={() => go('sepetlink')}><Icon n="plus" s={15} />Yeni sepet linki</button></span>
+        <button className="btn sm primary lc-newbtn" onClick={() => go('sepetlink')} aria-label="Yeni sepet linki"><Icon n="plus" s={15} /><span>Yeni sepet linki</span></button>
       </div>
       <OrdersSwitch on="lcarts" />
       <LinkCarts page />
