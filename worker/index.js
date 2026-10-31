@@ -454,7 +454,8 @@ async function pushStatus(env, id, test) {
   const custom = O.pushTexts?.[st] === 'Siparişiniz onaylandı, hazırlanıyor.' ? '' : O.pushTexts?.[st]; // eski varsayılan metin ("hazırlanıyor" artık ayrı adım)
   let body = test ? 'Bildirimler açık. Siparişinizin durumu değişince buradan haber vereceğiz.' : (custom || PUSH_TEXTS[st] || 'Siparişinizin durumu güncellendi.');
   if (!test && st === 'shipped' && o.cargo?.code) body += ` ${o.cargo.company || 'Kargo'} takip no: ${o.cargo.code}`;
-  const data = { title: `${shop} · Sipariş #${o.no}`, body, url: '/s/' + id, tag: 'o-' + id };
+  // her durum ayrı etiket: aynı etiket iPhone'da öncekinin yerine SESSİZCE geçiyor, ekrana düşmüyordu (31.10.2026)
+  const data = { title: `${shop} · Sipariş #${o.no}`, body, url: '/s/' + id, tag: 'o-' + id + '-' + (test ? 'test' : st === 'shipped' ? 'k' + (o.cargo?.code || '') : st) };
   const keep = []; let sent = 0; const codes = [];
   for (const s of list) { const code = await pushOne(env, s, data).catch(() => 0); codes.push(code); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
   if (keep.length !== list.length) {
