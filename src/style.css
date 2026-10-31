@@ -5420,3 +5420,17 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 .subnav button { flex: 1 0 auto; justify-content: center; }
 @media (max-width: 400px) { .subnav button { padding: 0 9px; font-size: 12.5px; gap: 5px; } }
 @media (max-width: 560px) { .ocg-car { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Ayarlar › Veri ve kota › Fatura ve harcama */
+.qt-box.bill { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+.qt-box.bill.on { border-color: color-mix(in oklab, var(--accent) 40%, var(--line)); }
+.qt-box.bill.stop { border-color: #b42318; }
+.bill-h { display: flex; align-items: center; gap: 8px; } .bill-h .ic { color: var(--accent); }
+.bill-plan { margin-left: auto; font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 10px; background: var(--surface-2); color: var(--muted); }
+.qt-box.bill.on .bill-plan { background: color-mix(in oklab, var(--accent) 12%, var(--surface)); color: var(--accent); }
+.qt-box.bill.stop .bill-plan { background: #fdecea; color: #b42318; }
+.bill-cost { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; }
+.bill-cost b { font: 700 26px/1 var(--f-display); } .bill-cost small { color: var(--muted); font-size: 12.5px; } .bill-cost small:last-child { flex-basis: 100%; }
+.bill-row { display: flex; align-items: flex-end; gap: 10px; } .bill-row .field { flex: 1; margin: 0; } .bill-row .btn { height: 42px; }
+.bill-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.bill-log span { color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { .bill-row { flex-direction: column; align-items: stretch; } }

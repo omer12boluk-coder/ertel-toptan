@@ -1,0 +1,17 @@
+# YEDEK ACİL DÜĞME: ücretli Firebase kullanımını durdurur (fatura hesabı ayrılır, veri silinmez)
+name: Ücretli kullanımı durdur
+on: workflow_dispatch
+jobs:
+  stop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+        run: node tools/billing-stop.mjs

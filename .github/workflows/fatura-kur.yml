@@ -1,0 +1,23 @@
+# Fatura bekçisini kur (Blaze'e geçtikten sonra BİR KEZ): bütçe + Pub/Sub → bekçi her 1 $'da bildirir
+name: Fatura bekçisini kur
+on:
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: 'Aylık bütçe (fatura hesabının para biriminde, ör. 100 TL ya da 5 USD) — Google e-postası %50/%90/%100'
+        default: '100'
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+          BUDGET: ${{ inputs.budget }}
+        run: node tools/billing-setup.mjs

@@ -86,6 +86,9 @@ export default {
       if (url.pathname === '/push/back' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushBack(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/rev/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await revNew(req, env, b)); }
       if (url.pathname === '/push/member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushMember(env, b)); }
+      // Fatura (31.10.2026): Google bütçe bildirimi (Pub/Sub) → her 1 $'da bildirim; yönetici durumu görür / ücretli kullanımı durdurur
+      if (url.pathname === '/billing/pubsub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await billPubsub(env, url.searchParams.get('k') || '', b)); }
+      if (url.pathname.startsWith('/billing/') && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); return json(await billAdmin(env, url.pathname.slice(9), b)); }
       if (url.pathname === '/notify-usage' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyUsage(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/notify-sync' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifySync(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname.startsWith('/dhl/') && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await dhl(env, url.pathname.slice(5), b)); }
@@ -1257,3 +1260,93 @@ export async function fsCreate(env, col, id, data) {
   if (r.ok) return { ok: true };
   return { ok: false, exists: r.status === 409, status: r.status };
 }
+
+// ============================================================================================
+// FATURA BEKÇİSİ (31.10.2026, Blaze hazırlığı)
+// Google Cloud bütçesi (fatura-kur.yml kurar) harcamayı günde birkaç kez Pub/Sub ile buraya iter:
+//   POST /billing/pubsub?k=<anahtar>  { message: { data: base64({ costAmount, budgetAmount, currencyCode, costIntervalStart }) } }
+// Bu ayın harcaması dolara çevrilir; ücretsiz kısım bitince (ilk kuruş) ve her tam dolarda Telegram + e-posta + yönetici
+// bildirimi gider. Ayarlanan sınıra gelince (isteğe bağlı) ücretli kullanım KENDİLİĞİNDEN durdurulur.
+// Durdurma = projenin fatura hesabı bağlantısı kesilir → proje ücretsiz plan sınırlarına döner (veri SİLİNMEZ, sınırı aşan
+// istekler o günün sonuna kadar reddedilir). Geri açmak: Firebase › Kullanım ve faturalandırma › Blaze'e yükselt.
+// Not: Google harcama verisi birkaç saat gecikmeli gelir; bildirim ve otomatik durdurma da o kadar gecikebilir.
+const BILL_PROJECT = 'erteltoptan';
+const billKey = async (env) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('bill:' + (env.TELEGRAM_TOKEN || ''))))].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 40);
+async function gToken(env, scope) { // servis hesabıyla istenen yetkide erişim anahtarı (fatura API'si için)
+  const ck = 'gtok:' + scope; const hit = await env.KV.get(ck, 'json').catch(() => null); if (hit && hit.exp > Date.now() + 60000) return hit.tok;
+  const sa = JSON.parse(env.FIREBASE_SA); const now = Math.floor(Date.now() / 1000);
+  const unsigned = b64uStr(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + b64uStr(JSON.stringify({ iss: sa.client_email, scope, aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 }));
+  const pem = sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const key = await crypto.subtle.importKey('pkcs8', Uint8Array.from(atob(pem), (c) => c.charCodeAt(0)), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, te.encode(unsigned)));
+  const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + unsigned + '.' + b64uBytes(sig) });
+  const j = await r.json().catch(() => ({})); if (!j.access_token) throw new Error('Servis anahtarı alınamadı');
+  await env.KV.put(ck, JSON.stringify({ tok: j.access_token, exp: Date.now() + 3000e3 }), { expirationTtl: 3000 }).catch(() => {});
+  return j.access_token;
+}
+const BILL_SCOPE = 'https://www.googleapis.com/auth/cloud-billing';
+async function billInfo(env) {
+  const tok = await gToken(env, BILL_SCOPE);
+  const r = await fetch(`https://cloudbilling.googleapis.com/v1/projects/${BILL_PROJECT}/billingInfo`, { headers: { Authorization: 'Bearer ' + tok } });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error?.message || 'Fatura bilgisi okunamadı (' + r.status + ')');
+  return { enabled: !!j.billingEnabled, account: j.billingAccountName || '' };
+}
+const fmtUsd = (n) => '$' + (Math.round(n * 100) / 100).toFixed(2);
+async function billAlert(env, title, text, tag) {
+  await Promise.all([
+    notifySend(env, { subject: title, text, link: 'https://ertelmarket.com/admin/ayarlar' }).catch(() => {}),
+    adminPush(env, { title, body: text.split('\n')[0], url: '/admin/ayarlar', tag: 'bill-' + tag }).catch(() => {}),
+  ]);
+  const log = (await env.KV.get('bill-log', 'json')) || [];
+  await env.KV.put('bill-log', JSON.stringify([{ at: Date.now(), title }, ...log].slice(0, 30)));
+}
+async function billStop(env, why) {
+  const st = (await env.KV.get('bill', 'json')) || {};
+  let info; try { info = await billInfo(env); } catch (e) { return { ok: false, error: e.message }; }
+  if (!info.enabled) { await env.KV.put('bill', JSON.stringify({ ...st, stopped: st.stopped || Date.now() })); return { ok: true, already: true }; }
+  const tok = await gToken(env, BILL_SCOPE);
+  const r = await fetch(`https://cloudbilling.googleapis.com/v1/projects/${BILL_PROJECT}/billingInfo`, { method: 'PUT', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ billingAccountName: '' }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = j.error?.message || r.status; await billAlert(env, '⚠️ Ücretli kullanım DURDURULAMADI', `Sebep: ${e}\nHemen Firebase › Kullanım ve faturalandırma'dan planı Spark'a düşürün.`, 'stopfail'); return { ok: false, error: String(e) }; }
+  await env.KV.put('bill', JSON.stringify({ ...st, stopped: Date.now(), stopWhy: why, account: info.account }));
+  await billAlert(env, '🛑 Ücretli kullanım durduruldu', `${why}\nSite ücretsiz plan sınırlarına döndü: veriler duruyor, sadece günlük ücretsiz hak dolarsa o gün yeni okuma/yazma yapılamaz.\nGeri açmak için: Firebase › Kullanım ve faturalandırma › Blaze planına geç (aynı kartı seçin).`, 'stop');
+  return { ok: true };
+}
+async function billPubsub(env, k, b) {
+  if (!env.TELEGRAM_TOKEN || k !== (await billKey(env))) return { ok: false, error: 'yetki' };
+  let d = {}; try { d = JSON.parse(atob(b.message?.data || '')); } catch { return { ok: true, skip: 'veri yok' }; }
+  const cost = Number(d.costAmount) || 0; const cur = d.currencyCode || 'USD';
+  const month = String(d.costIntervalStart || '').slice(0, 7);
+  let usd = cost;
+  if (cur === 'TRY') { const r = await haremRate().catch(() => null); const last = Number(await env.KV.get('bill-rate')) || 0; const rate = r?.usd || last || 0; if (r?.usd) await env.KV.put('bill-rate', String(r.usd)); usd = rate ? cost / rate : 0; }
+  else if (cur !== 'USD') usd = cost; // başka para birimi beklenmiyor; ham değer kullanılır
+  const st = (await env.KV.get('bill', 'json')) || {};
+  const cfg = (await env.KV.get('bill-cfg', 'json')) || {};
+  const fresh = st.month !== month; // yeni ay: basamaklar sıfırlanır
+  const step = fresh ? -1 : (st.step ?? -1);
+  const now = { ...st, month, cost, cur, usd, budget: Number(d.budgetAmount) || null, at: Date.now(), step, ...(fresh ? { free: false } : {}) };
+  const sym = cur === 'TRY' ? '₺' : cur === 'USD' ? '$' : cur + ' ';
+  const line = `Bu ay: ${fmtUsd(usd)}${cur !== 'USD' ? ` (${sym}${cost.toFixed(2)})` : ''}`;
+  if (usd > 0.004 && !now.free) { now.free = true; await billAlert(env, '💳 Ücretsiz kullanım bitti', `${line}\nArtık ücretsiz hakkın üstündesiniz; her tam dolarda tekrar haber vereceğim.${cfg.cap ? `\nOtomatik durdurma sınırı: $${cfg.cap}` : '\nOtomatik durdurma sınırı ayarlı değil (Yönetim › Ayarlar › Veri ve kota).'}`, 'free'); }
+  const dollars = Math.floor(usd);
+  if (dollars >= 1 && dollars > step) { now.step = dollars; await billAlert(env, `💵 ${dollars} doları geçtiniz`, `${line}${cfg.cap ? `\nOtomatik durdurma: $${cfg.cap}` : ''}\nDurdurmak için: Yönetim › Ayarlar › Veri ve kota › “Ücretli kullanımı durdur”.`, 'd' + dollars); }
+  await env.KV.put('bill', JSON.stringify(now));
+  if (cfg.cap && cfg.auto !== false && usd >= Number(cfg.cap) && !st.stopped) return { ok: true, stop: await billStop(env, `Aylık sınır ($${cfg.cap}) aşıldı: ${fmtUsd(usd)}`) };
+  return { ok: true };
+}
+async function billAdmin(env, act, b) {
+  if (act === 'state') {
+    let info = null; try { info = await billInfo(env); } catch (e) { info = { error: e.message }; }
+    return { ok: true, st: (await env.KV.get('bill', 'json')) || null, cfg: (await env.KV.get('bill-cfg', 'json')) || {}, log: (await env.KV.get('bill-log', 'json')) || [], info };
+  }
+  if (act === 'cfg') {
+    const cap = Math.max(0, Math.min(10000, Math.round(Number(b.cap) || 0)));
+    await env.KV.put('bill-cfg', JSON.stringify({ cap: cap || null, auto: b.auto !== false }));
+    return { ok: true };
+  }
+  if (act === 'stop') return billStop(env, 'Yönetim panelinden elle durduruldu.');
+  if (act === 'test') { await billAlert(env, '🔔 Fatura bildirimi denemesi', 'Ücretsiz kullanım bitince ve her tam dolarda bu kanallardan (Telegram, e-posta, yönetici bildirimi) haber gelecek.', 'test'); return { ok: true }; }
+  if (act === 'resume') { const st = (await env.KV.get('bill', 'json')) || {}; delete st.stopped; await env.KV.put('bill', JSON.stringify(st)); return { ok: true }; }
+  return { ok: false, error: 'bilinmeyen işlem' };
+}
+
