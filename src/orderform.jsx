@@ -92,6 +92,8 @@ export function OrderForm({ linkMode = false }) {
       : { ...x, items: [...x.items, { id: p.id, qty: 1, price: p.r > 0 ? p.r : null }] });
     bump(p.id);
     toast('Eklendi: ' + (p.n.length > 40 ? p.n.slice(0, 38) + '…' : p.n));
+    // telefonda eklenince arama silinir, klavye kapanır (yoksa 'qu' silinene kadar uzun sonuç listesi kalıyordu)
+    if (matchMedia('(max-width: 899px), (hover: none) and (pointer: coarse)').matches) { setQ(''); document.activeElement?.blur?.(); }
   }
   const dirty = sig(d) !== d.base; // açıldığı / kaydedildiği hâlden farklı mı
   // Formu temizle: içindeki ürünler ve müşteri adı silinir; kayıtlı formdan açıldıysa kayıt (kaydetmedikçe) eski hâliyle kalır
