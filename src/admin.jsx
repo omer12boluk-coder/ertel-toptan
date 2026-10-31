@@ -506,38 +506,115 @@ export function CustomerSheet({ c, onClose }) {
 }
 
 // =========================================================================
-// Ayarlar
-const SECTIONS = [
-  ['genel', 'Genel', 'Uygulama adı, logo, özellikler', 'gear'],
-  ['gorunum', 'Renkler ve görünüm', 'Mağaza ve bayi renkleri, fiyat renkleri, tema · önizlemeli', 'brush'],
-  ['tema', 'Mağaza teması (süsleme)', 'Yılbaşı, 29 Ekim, bahar, sahil… 18 süs · sadece müşteriler görür', 'star'],
-  ['magazaana', 'Mağaza ana sayfası', 'Reklamlar, marka kutuları, raflar (liste hâlinde)', 'store'],
-  ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star'],
-  ['ozellik', 'Mağaza özellikleri', 'Tek dokunuşla aç / kapat: paylaşma, gelince haber ver, popüler ürünler, yorumlar', 'star'],
-  ['magaza', 'Online mağaza', 'Sipariş, teslimat, ödeme, kargo firmaları, bildirimler', 'cart'],
-  ['altbilgi', 'Alt bilgi ve sayfalar', 'Mağazanın en altı: iletişim, sosyal medya, Kargo / İade sayfaları, KVKK ve sözleşmeler', 'list'],
-  ['anasayfa', 'Bayi ana sayfası', 'Bayilerin giriş yapınca gördüğü sayfa', 'home'],
-  ['fiyat', 'Fiyatlandırma', 'Toptan indirimi, KDV, kur', 'tag'],
-  ['kademe', 'Kademeler', 'Bayi indirim kademeleri', 'users'],
-  ['kart', 'Ürün kartları', 'Fiyat gösterimi, sepete ekle düğmesi, resimler · önizlemeli', 'grid'],
-  ['katalog', 'Katalog', 'Stok gösterimi, sayfa, arama', 'grid'],
-  ['kalip', 'Kalıp bulucu', 'Telefon modelleri ve işlemcileri · uyan kalıplar', 'chip'],
-  ['urtalep', 'Ürün talebi', 'Müşterinin fotoğraflı ürün isteği · günlük sınır, fotoğraf saklama süresi', 'camera'],
-  ['sorun', 'Sorun bildirimi', 'Müşterinin fotoğraflı / videolu sorun bildirimi · günlük sınır, saklama süresi', 'ask'],
-  ['talep', 'Talepler', 'Bayi talepleri ve mesajlar', 'chat'],
-  ['dukkan', 'Dükkan', 'Adres, telefon, WhatsApp, erişim', 'phone'],
-  ['kategori', 'Kategoriler', 'Kategori adları ve sırası', 'list'],
-  ['kota', 'Veri ve kota', 'Ücretsiz plan sınırları, günlük kullanım, panelin kaç günlük kayıt yüklediği', 'clock'],
-  ['veri', 'Veri', 'Excel içe / dışa aktarma, yedek', 'upload'],
-  ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'user'],
+// Ayarlar (31.10.2026 yeni düzen): 6 grup → grubun başlıkları → başlığın kendi sayfası.
+// Ayarların kaydı (settings alanları) DEĞİŞMEDİ; sadece menüdeki yerleri. Eski bölüm adları ALIAS ile yeni yerine gider
+// (ör. başka sayfadan gelen intent 'sec:magaza' → 'siparis'). Yeni bölüm eklerken: SECTIONS'a grubuyla ekle, body'de
+// {sec === 'anahtar' && …} yaz, gerekirse SEC_KEYS'e kaydedilmedi noktası için ayar yollarını yaz.
+const GROUPS = [
+  ['vitrin', 'Mağaza vitrini', 'Ana sayfa, renkler, kartlar, alt bilgi', 'store'],
+  ['satis', 'Satış', 'Fiyat, sipariş, kargo, ödeme, bildirim', 'cart'],
+  ['bayi', 'Bayiler', 'Bayi sayfası, kademeler, talepler', 'users'],
+  ['urun', 'Ürünler', 'Katalog, kategoriler, kalıp bulucu', 'box'],
+  ['ozel', 'Özellikler', 'Aç / kapat, ürün talebi, sorun bildirimi', 'toggle'],
+  ['sistem', 'İşletme ve sistem', 'Dükkan, logo, Excel, yedek, hesabım', 'gear'],
 ];
-// hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için)
-const SEC_KEYS = { tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand', 'features'], anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], katalog: ['catalog'], talep: ['requests'], dukkan: ['shop', 'access'], magaza: ['orders', 'access', 'shop'], kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'], kota: ['quota'] };
+// [anahtar, ad, açıklama, simge, grup]
+const SECTIONS = [
+  ['magazaana', 'Mağaza ana sayfası', 'Reklamlar, marka kutuları, raflar (liste hâlinde)', 'monitor', 'vitrin'],
+  ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star', 'vitrin'],
+  ['gorunum', 'Renkler ve görünüm', 'Mağaza ve bayi renkleri, fiyat renkleri, tema · önizlemeli', 'palette', 'vitrin'],
+  ['kart', 'Ürün kartları', 'Fiyat gösterimi, sepete ekle düğmesi, resimler, ürün açılışı · önizlemeli', 'grid', 'vitrin'],
+  ['tema', 'Süsleme teması', 'Yılbaşı, 29 Ekim, bahar, sahil… · sadece müşteriler görür', 'sparkle', 'vitrin'],
+  ['altbilgi', 'Alt bilgi ve sayfalar', 'İletişim, sosyal medya, Kargo / İade sayfaları, KVKK ve sözleşmeler', 'list', 'vitrin'],
+  ['fiyat', 'Fiyat, KDV ve kur', 'Toptan indirimi, yuvarlama, KDV oranı, elle kur', 'tag', 'satis'],
+  ['siparis', 'Sipariş ve üyelik', 'Mağaza açık / kapalı, “çok yakında”, üyelik, Google ile giriş', 'login', 'satis'],
+  ['teslimat', 'Teslimat ve kargo', 'Kargo, dükkandan teslim, kargo notu, kargo firmaları', 'truck', 'satis'],
+  ['odeme', 'Ödeme seçenekleri', 'Havale / EFT bilgisi, kredi kartı, dükkanda ödeme', 'card', 'satis'],
+  ['bildirim', 'Bildirimler', 'Müşteriye sipariş durumu, yönetici bildirimleri (Telegram, e-posta), sipariş alındı mesajı', 'bell', 'satis'],
+  ['anasayfa', 'Bayi ana sayfası', 'Bayilerin giriş yapınca gördüğü sayfa: duyurular, bannerlar', 'home', 'bayi'],
+  ['kademe', 'Kademeler', 'Bayi indirim kademeleri', 'sort', 'bayi'],
+  ['talep', 'Talepler ve mesajlar', '“Hazırlayın geliyorum”, fiyat sor, hazır cevaplar', 'chat', 'bayi'],
+  ['bayiuye', 'Bayi üyeliği ve profil', 'Bayiler kendi üye olabilsin, profil fotoğrafı, geçmiş istatistikleri', 'user', 'bayi'],
+  ['katalog', 'Katalog ve stok', 'Stok gösterimi, “az kaldı”, sayfa başına ürün, pasifler, gizli etiketle arama', 'filter', 'urun'],
+  ['kategori', 'Kategoriler', 'Kategori adları, sırası, gizleme', 'folder', 'urun'],
+  ['kalip', 'Kalıp bulucu', 'Telefon modelleri ve işlemcileri · uyan kalıplar', 'chip', 'urun'],
+  ['resim', 'Resim adresleri', 'Ürün resimlerinin adresi · nadiren değişir', 'image', 'urun'],
+  ['ozellik', 'Mağaza özellikleri', 'Tek dokunuşla aç / kapat: paylaşma, gelince haber ver, popüler ürünler, yorumlar', 'toggle', 'ozel'],
+  ['urtalep', 'Ürün talebi', 'Müşterinin fotoğraflı ürün isteği · günlük sınır, fotoğraf saklama süresi', 'camera', 'ozel'],
+  ['sorun', 'Sorun bildirimi', 'Müşterinin fotoğraflı / videolu sorun bildirimi · günlük sınır, saklama süresi', 'ask', 'ozel'],
+  ['dokunma', 'Telefonda dokunma', 'Yazı seçme, uzun basınca menü, resme basılı tutma', 'mobile', 'ozel'],
+  ['dukkan', 'Dükkan ve iletişim', 'Dükkan adı, adres, telefon, WhatsApp, çalışma saatleri', 'phone', 'sistem'],
+  ['genel', 'Uygulama adı ve logo', 'Ad, alt başlık, logo, açılış ekranı', 'edit', 'sistem'],
+  ['veri', 'Excel ve katalog', 'Excel’den ürün yükleme, site eşitleme, ayarları kopyala', 'upload', 'sistem'],
+  ['kota', 'Veri, yedek ve kota', 'Ücretsiz plan sınırları, günlük kullanım, yedekler, panelin kaç günlük kayıt yüklediği', 'db', 'sistem'],
+  ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'shield', 'sistem'],
+];
+const SEC_BY = Object.fromEntries(SECTIONS.map((x) => [x[0], x]));
+const ALIAS = { magaza: 'siparis' }; // eski bölüm adı → yeni yeri (eski kısayollar / kayıtlı geçmiş)
+const secKey = (k) => (k && (SEC_BY[k] ? k : ALIAS[k])) || null;
+const groupOf = (k) => SEC_BY[k]?.[4] || null;
+// hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için; 'a.b' = alt alan)
+const SEC_KEYS = {
+  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
+  anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], talep: ['requests'],
+  katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
+  resim: ['catalog.imageThumb', 'catalog.imageLarge'],
+  dukkan: ['shop.name', 'shop.hours', 'shop.address', 'shop.phone', 'shop.whatsapp', 'shop.pickupNote'],
+  siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook'],
+  teslimat: ['orders.cargo', 'orders.pickup', 'orders.cargoNote', 'orders.carriers', 'orders.carrierDef'],
+  odeme: ['orders.payHavale', 'orders.payCard', 'orders.payShop', 'shop.payInfo'],
+  bildirim: ['orders.push', 'orders.pushTexts', 'orders.doneNote'],
+  dokunma: ['shop.touch'], bayiuye: ['access.allowSignup', 'features'],
+  kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'], kota: ['quota'],
+};
+const atPath = (o, p) => p.split('.').reduce((x, k) => (x == null ? x : x[k]), o);
+// "Son açtıklarınız" (cihazda, en çok 3)
+const recentSecs = () => { try { return (ls.get('set-recent', []) || []).filter((k) => SEC_BY[k]).slice(0, 3); } catch { return []; } };
+const pushRecent = (k) => { try { ls.set('set-recent', [k, ...recentSecs().filter((x) => x !== k)].slice(0, 3)); } catch {} };
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
   const [d, setD] = useState(() => structuredClone(settings));
-  const [sec, setSec] = useState(() => { const i = store.s.intent; if (typeof i === 'string' && i.startsWith('sec:')) { store.set({ intent: null }); return i.slice(4); } return null; }); // hepsi kapalı başlar
+  // nerede: grp = açık grup, sec = açık bölüm (ikisi de boş = ana ekran). Başka sayfadan gelen kısayol (intent 'sec:fiyat')
+  // doğrudan o bölümü açar; geri = grubu. Geçmişe kayıt düşülür → telefonda geri kaydırma / geri tuşu bir önceki ekrana döner.
+  const [intentSec] = useState(() => { const i = store.s.intent; if (typeof i === 'string' && i.startsWith('sec:')) { store.set({ intent: null }); return secKey(i.slice(4)); } return null; });
+  const [sec, setSecS] = useState(() => intentSec || secKey(history.state?.tab === 'ayarlar' ? history.state?.ss : null));
+  const [grp, setGrp] = useState(() => groupOf(sec) || (history.state?.tab === 'ayarlar' && GROUPS.some((g) => g[0] === history.state?.sg) ? history.state.sg : null));
+  useEffect(() => {
+    if (intentSec) { // kısayolla gelindi: bu kayıt grubu, üstüne bölüm kaydı → geri grubu açar
+      try { history.replaceState({ ...(history.state || {}), tab: 'ayarlar', sg: groupOf(intentSec), ss: null, y: 0 }, ''); history.pushState({ ...(history.state || {}), tab: 'ayarlar', sg: groupOf(intentSec), ss: intentSec, y: 0 }, ''); } catch {}
+      pushRecent(intentSec);
+    }
+    const h = () => { const st = history.state || {}; if (st.tab && st.tab !== 'ayarlar') return; const k = secKey(st.ss); setSecS(k); setGrp(groupOf(k) || st.sg || null); };
+    addEventListener('popstate', h); return () => removeEventListener('popstate', h);
+  }, []);
+  // menüde Ayarlar'a tekrar basılınca (Ayarlar içindeyken) ayarların ana ekranına dönülür
+  const tabTap = useStore((s) => s.tabTap);
+  const tap0 = useRef(tabTap);
+  useEffect(() => {
+    if (tabTap === tap0.current) return; tap0.current = tabTap;
+    if (!sec && !grp) return;
+    try { history.replaceState({ ...(history.state || {}), sg: null, ss: null, y: 0 }, ''); } catch {}
+    setSecS(null); setGrp(null);
+  }, [tabTap]);
+  // ileri: yeni ekran geçmişe eklenir, sayfa başa çıkar
+  const nav = (g, k, link) => {
+    k = secKey(k); g = k ? groupOf(k) : g;
+    try {
+      history.replaceState({ ...(history.state || {}), y: scrollY }, '');
+      // aramadan / son açılanlardan başka gruba geçilince önce o grubun kaydı: geri = bölümün grubu
+      if (k && g !== grp && !link) history.pushState({ ...(history.state || {}), tab: 'ayarlar', sg: g, ss: null, y: 0 }, '');
+      history.pushState({ ...(history.state || {}), tab: 'ayarlar', sg: g || null, ss: k || null, y: 0 }, '');
+    } catch {}
+    setGrp(g || null); setSecS(k || null); if (k) pushRecent(k); window.scrollTo(0, 0);
+  };
+  const setSec = (k) => nav(null, k, true); // bölüm içindeki "şuraya bakın" bağlantıları: geri = geldiği bölüm
+  // geri: geçmişte bizim kaydımız varsa geri git (kaydırma yeri de geri gelir), yoksa bir üst ekran
+  const back = () => {
+    const st = history.state || {};
+    if (st.tab === 'ayarlar' && (st.ss || st.sg)) { history.back(); return; }
+    if (sec) { setSecS(null); } else setGrp(null);
+  };
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState('');
   const [search, setSearch] = useState(false);
@@ -546,7 +623,8 @@ export function Settings() {
   const dirty = JSON.stringify(d) !== JSON.stringify(settings);
   const set = (path, v) => setD((x) => { const n = structuredClone(x); const ks = path.split('.'); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k] = o[k] ?? {})); o[ks.at(-1)] = v; return n; });
   const sample = catalog.find((p) => p.w == null && p.r >= 20) || catalog[0];
-  const secDirty = (k) => (SEC_KEYS[k] || []).some((key) => JSON.stringify(d[key]) !== JSON.stringify(settings[key]));
+  const secDirty = (k) => (SEC_KEYS[k] || []).some((key) => JSON.stringify(atPath(d, key)) !== JSON.stringify(atPath(settings, key)));
+  const grpDirty = (g) => SECTIONS.some((x) => x[4] === g && secDirty(x[0]));
   // kaydetmeden sayfadan çıkılırsa uyar
   useEffect(() => { if (!dirty) return; const h = (e) => { e.preventDefault(); e.returnValue = ''; }; addEventListener('beforeunload', h); return () => removeEventListener('beforeunload', h); }, [dirty]);
 
@@ -618,7 +696,9 @@ export function Settings() {
           <Toggle id="s-splash" label="Açılış ekranı" hint="Mağaza ve bayi uygulaması açılırken kısa süre logolu açılış ekranı görünür (oturumda bir kez, dokununca geçer)" checked={d.brand.splashOn !== false} onChange={(v) => set('brand.splashOn', v)} />
           {d.brand.splashOn !== false && <Field label="Arka plan"><div className="spl-pick">{Object.entries(SPLASH_STYLES).map(([k, v]) => <button type="button" key={k} className={'spl-opt' + ((d.brand.splashStyle || 'navy') === k ? ' on' : '')} onClick={() => set('brand.splashStyle', k)}><span className={'spl-sw sp-' + k}><i /></span>{v.n}</button>)}</div></Field>}
           {d.brand.splashOn !== false && <Field label="Görünme süresi" hint="En az bu kadar görünür; dokununca hemen geçer. Site daha geç yüklenirse en fazla 3 sn daha bekler."><span className="she-scale"><input type="range" min="0.5" max="6" step="0.1" value={Number(d.brand.splashSec) || 1.4} onChange={(e) => set('brand.splashSec', Number(e.target.value))} /><code>{(Number(d.brand.splashSec) || 1.4).toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} sn</code></span></Field>}
-          <h3>Özellikler</h3>
+        </>}
+
+        {sec === 'bayiuye' && <>
           <Toggle id="s-signup" label="Bayiler kendileri üye olabilsin" hint="Giriş ekranında “Bayi olarak üye olun” çıkar; siz onaylayana kadar giriş yapamazlar" checked={d.access.allowSignup} onChange={(v) => set('access.allowSignup', v)} />
           <Toggle id="s-photo" label="Profil fotoğrafı" hint="Müşteriler kendi fotoğrafını ekleyebilir" checked={d.features.profilePhoto} onChange={(v) => set('features.profilePhoto', v)} />
           <Toggle id="s-hist" label="Müşteri geçmiş istatistikleri" hint="Profilde alım / gelmedi sayıları görünür" checked={d.features.history} onChange={(v) => set('features.history', v)} />
@@ -689,8 +769,10 @@ export function Settings() {
           <Toggle id="s-tags" label="Gizli etiketleri aramada kullan" hint="Bayiler etiketleri görmez ama “jbc uç” gibi aramalarda ürün bulunur" checked={d.catalog.searchTags} onChange={(v) => set('catalog.searchTags', v)} />
           <Toggle id="s-brand" label="Markayı göster" checked={d.catalog.showBrand} onChange={(v) => set('catalog.showBrand', v)} />
           <Toggle id="s-desc" label="Ürün açıklamasını göster" hint="Siteden gelen açıklama ürün detayında görünür" checked={d.catalog.showDescription} onChange={(v) => set('catalog.showDescription', v)} />
-          <h3>Ürün resimleri</h3>
-          <p className="fine">Resimler sitenizden (PlatinMarket) gösterilir, Firebase’de yer kaplamaz. Yeni eklenen ürünlerin resimlerini Ayarlar → Veri → “Resimleri siteden eşle” ile çekebilirsiniz. Elle yüklediğiniz resim her zaman önceliklidir.</p>
+        </>}
+
+        {sec === 'resim' && <>
+          <p className="fine">Ürün resimleri kendi resim sunucunuzdan gösterilir, Firebase’de yer kaplamaz. Yeni eklenen ürünlerin resimleri site eşitlemesinden sonra kendiliğinden gelir. Elle yüklediğiniz resim her zaman önceliklidir. Bu adresleri değiştirmeyin; yanlış adres mağazadaki tüm resimleri bozar.</p>
           <div className="row2">
             <Field label="Liste resmi adresi" hint="{pi} = siteden eşlenen dosya adı"><input id="s-imgt" value={d.catalog.imageThumb} onChange={(e) => set('catalog.imageThumb', e.target.value)} /></Field>
             <Field label="Büyük resim adresi"><input id="s-imgl" value={d.catalog.imageLarge} onChange={(e) => set('catalog.imageLarge', e.target.value)} /></Field>
@@ -729,7 +811,7 @@ export function Settings() {
         {sec === 'sorun' && <IssueSettings d={d} set={set} />}
         {sec === 'ozellik' && <FeatSettings d={d} set={set} />}
 
-        {sec === 'magaza' && <>
+        {sec === 'siparis' && <>
           <p className="fine">Herkese açık mağaza: <b>{location.host}</b>. Müşteri ürünleri sepete ekler, <b>Sepeti onayla</b> ile teslimat, fatura ve ödeme bilgilerini girip siparişi tamamlar; sipariş <b>Siparişler</b>’e düşer. İsterse üye olur (bilgileri bir dahakine hazır gelir), isterse misafir devam eder. Ayrıca sepeti sadece link olarak WhatsApp’tan da gönderebilir (o liste hiçbir yere kaydedilmez).</p>
           <Toggle id="s-pub" label="Online mağaza açık" checked={d.access.publicShop} onChange={(v) => set('access.publicShop', v)} />
           <div className="input-btn"><input id="s-publink" readOnly value={links.shop()} /><button type="button" className="btn sm outline" onClick={() => copyText(links.shop(), 'Mağaza linki kopyalandı')}>Kopyala</button></div>
@@ -744,6 +826,9 @@ export function Settings() {
           <Toggle id="s-osign" label="Müşteriler mağazaya üye olabilsin" hint="Adres ve fatura bilgileri kayıtlı kalır, siparişlerini takip ederler" checked={d.orders.signup !== false} onChange={(v) => set('orders.signup', v)} />
           <Toggle id="s-lgoogle" label="Google ile giriş" hint="Önce Firebase > Authentication > Sign-in method'da Google açılmalı" checked={d.orders.loginGoogle === true} onChange={(v) => set('orders.loginGoogle', v)} />
           <Toggle id="s-lfb" label="Facebook ile giriş" hint="Önce Facebook uygulaması kurulup Firebase'de Facebook sağlayıcısı açılmalı" checked={d.orders.loginFacebook === true} onChange={(v) => set('orders.loginFacebook', v)} />
+        </>}
+
+        {sec === 'bildirim' && <>
           <h3>Müşteriye bildirim</h3>
           <Toggle id="s-push" label="Sipariş durumu bildirimi" hint="Müşteri sipariş sayfasında “Bildirimleri aç” der; siz durumu değiştirince (Onaylandı, Kargoda…) telefonuna bildirim gider. Android ve bilgisayarda hemen, iPhone’da site ana ekrana eklenince (iOS 16.4+) çalışır." checked={d.orders.push !== false} onChange={(v) => set('orders.push', v)} />
           {d.orders.push !== false && <div className="push-texts">
@@ -751,7 +836,11 @@ export function Settings() {
               <Field key={k} label={l} hint={k === 'shipped' ? 'Sonuna kargo firması ve takip no kendiliğinden eklenir' : undefined}><input id={'s-pt-' + k} value={d.orders.pushTexts?.[k] ?? ''} onChange={(e) => set('orders.pushTexts', { ...(d.orders.pushTexts || {}), [k]: e.target.value })} /></Field>
             ))}
           </div>}
-          <h3>Mobil dokunma seçenekleri</h3>
+          <NotifyCard />
+          <Field label="Sipariş alındı mesajı" hint="Sipariş verilince teşekkür kutusunda görünür"><textarea id="s-odone" rows="2" value={d.orders.doneNote || ''} onChange={(e) => set('orders.doneNote', e.target.value)} /></Field>
+        </>}
+
+        {sec === 'dokunma' && <>
           <p className="fine">Sadece telefon ve tablette geçerli (mağaza, bayi uygulaması ve yönetim paneli). Yanlışlıkla basılı tutunca yazıların maviyle seçilmesini engeller.</p>
           <div className="seg-cards col" role="radiogroup" aria-label="Yazı seçme">
             {[['smart', 'Sadece gerekli yerler', 'Önerilen. Ürün açıklaması, sipariş ve adres bilgileri, mesajlar seçilip kopyalanabilir; başlıklar, ürün adları, resimler ve menüler seçilmez.'],
@@ -763,18 +852,20 @@ export function Settings() {
           </div>
           <Toggle id="s-tlp" label="Uzun basınca işlem menüsü açılsın" hint="Masaüstündeki sağ tık menüsü: ürüne, siparişe, talebe ya da sepetteki ürüne basılı tutunca alttan seçenekler açılır (Sepete ekle, Kopyala, Sil…)" checked={d.shop.touch?.longPress !== false} onChange={(v) => set('shop.touch', { ...(d.shop.touch || {}), longPress: v })} />
           <Toggle id="s-timg" label="Resimlere basılı tutunca telefonun menüsü açılsın" hint="Açıkken iPhone/Android’in kendi “Resmi kaydet / Paylaş” menüsü çıkar. Kapalı önerilir." checked={!!d.shop.touch?.imgMenu} onChange={(v) => set('shop.touch', { ...(d.shop.touch || {}), imgMenu: v })} />
-          <h3>Teslimat</h3>
+        </>}
+
+        {sec === 'teslimat' && <>
           <Toggle id="s-ocargo" label="Kargo ile gönderim" checked={d.orders.cargo !== false} onChange={(v) => set('orders.cargo', v)} />
           <Toggle id="s-opick" label="Dükkandan teslim al" checked={d.orders.pickup !== false} onChange={(v) => set('orders.pickup', v)} />
           <Field label="Kargo notu" hint="Sepet ve sipariş ekranında görünür"><input id="s-onote" value={d.orders.cargoNote || ''} onChange={(e) => set('orders.cargoNote', e.target.value)} /></Field>
           <CarrierSettings d={d} set={set} />
-          <h3>Ödeme seçenekleri</h3>
+        </>}
+
+        {sec === 'odeme' && <>
           <Toggle id="s-ohav" label="Havale / EFT" checked={d.orders.payHavale !== false} onChange={(v) => set('orders.payHavale', v)} />
           <Toggle id="s-ocard" label="Kredi kartı (ödeme linki gönderilir)" hint="Siparişi onaylayınca müşteriye ödeme linkini siz gönderirsiniz" checked={d.orders.payCard !== false} onChange={(v) => set('orders.payCard', v)} />
           <Toggle id="s-oshop" label="Dükkanda ödeme" hint="Sadece dükkandan teslim alırken" checked={d.orders.payShop !== false} onChange={(v) => set('orders.payShop', v)} />
           <Field label="Havale / EFT bilgisi" hint="Sipariş verilince müşterinin sipariş sayfasında görünür. IBAN, alıcı adı vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00'} /></Field>
-          <NotifyCard />
-          <Field label="Sipariş alındı mesajı" hint="Sipariş verilince teşekkür kutusunda görünür"><textarea id="s-odone" rows="2" value={d.orders.doneNote || ''} onChange={(e) => set('orders.doneNote', e.target.value)} /></Field>
         </>}
 
         {sec === 'kategori' && <>
@@ -828,52 +919,94 @@ export function Settings() {
   // ---- ayar arama: bölüm adı/açıklaması + bölümdeki alan adları (setindex.json, derlemede üretilir)
   const toks = norm(q.trim()).split(/\s+/).filter(Boolean);
   const hitOf = (txt) => toks.length > 0 && toks.every((t) => norm(txt).includes(t));
-  const results = toks.length ? SECTIONS.flatMap(([k, l, hint]) => {
-    const items = (SETIDX[k] || []).filter((x) => hitOf(x + ' ' + l)).map((x) => ({ k, l, x }));
-    return items.length ? items : hitOf(l + ' ' + hint) ? [{ k, l, x: null }] : [];
+  const results = toks.length ? SECTIONS.flatMap(([k, l, hint, , g]) => {
+    const gl = GROUPS.find((x) => x[0] === g)[1];
+    const items = (SETIDX[k] || []).filter((x) => hitOf(x + ' ' + l)).map((x) => ({ k, l, x, gl }));
+    return items.length ? items : hitOf(l + ' ' + hint + ' ' + gl) ? [{ k, l, x: null, gl }] : [];
   }) : [];
+  // sonuca basınca bölümün sayfası açılır, aranan ayar ortalanıp kısa süre parlar
   const jump = (k, label) => {
-    setQ(''); setSearch(false); setSec(k);
+    setQ(''); setSearch(false); nav(null, k);
     setTimeout(() => {
-      const box = document.getElementById('acc-' + k); if (!box) return;
-      let el = null;
-      if (label) { const want = norm(label); el = [...box.querySelectorAll('.acc-b label, .acc-b .field-l, .acc-b b, .acc-b h3, .acc-b summary, .acc-b .fold-h, .acc-b span, .acc-b button')].find((e) => norm(e.textContent.trim()).startsWith(want)); }
-      const tgt = el?.closest('.field, .toggle, label, .fold, .row2, h3') || el || box;
-      tgt.scrollIntoView({ block: el ? 'center' : 'start', behavior: 'smooth' });
-      if (el) { tgt.classList.add('set-hit'); setTimeout(() => tgt.classList.remove('set-hit'), 1800); }
-    }, 160);
+      const box = document.getElementById('acc-' + k); if (!box || !label) return;
+      const want = norm(label);
+      const el = [...box.querySelectorAll('label, .field-l, b, h3, summary, .fold-h, span, button')].find((e) => norm(e.textContent.trim()).startsWith(want));
+      if (!el) return;
+      const tgt = el.closest('.field, .toggle, label, .fold, .row2, h3') || el;
+      tgt.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      tgt.classList.add('set-hit'); setTimeout(() => tgt.classList.remove('set-hit'), 1800);
+    }, 220);
   };
-  const openSec = (k) => { const n = sec === k ? null : k; setSec(n); if (n) requestAnimationFrame(() => document.getElementById('acc-' + k)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); };
+  const openSec = (k) => nav(null, k);
+  const G = grp && GROUPS.find((x) => x[0] === grp);
+  const S0 = sec && SEC_BY[sec];
+  const recent = !grp && !sec ? recentSecs() : [];
 
   return (
-    <div className="page settings">
-      <div className="page-h">
-        <h1 className="page-t">Ayarlar</h1>
-        <button className={'set-find-btn' + (search ? ' on' : '')} onClick={() => { setSearch(!search); setQ(''); }} aria-label="Ayar ara" title="Ayar ara"><Icon n={search ? 'x' : 'search'} s={16} /><span>{search ? 'Aramayı kapat' : 'Ayar ara'}</span></button>
-        <span className="muted set-mode">{A.mode === 'demo' ? 'Demo modu · veriler bu tarayıcıda' : 'Firebase’e bağlı'}</span>
-      </div>
-      {search && (
+    <div className={'page settings set-v-' + (sec ? 'sec' : grp ? 'grp' : 'home')}>
+      {/* üst: ana ekranda başlık + ayar arama; grup ve bölüm sayfasında geri + başlık */}
+      {!sec && !grp ? (
+        <div className="page-h">
+          <h1 className="page-t">Ayarlar</h1>
+          <button className={'set-find-btn' + (search ? ' on' : '')} onClick={() => { setSearch(!search); setQ(''); }} aria-label="Ayar ara" title="Ayar ara"><Icon n={search ? 'x' : 'search'} s={16} /><span>{search ? 'Aramayı kapat' : 'Ayar ara'}</span></button>
+          <span className="muted set-mode">{A.mode === 'demo' ? 'Demo modu · veriler bu tarayıcıda' : 'Firebase’e bağlı'}</span>
+        </div>
+      ) : (
+        <div className="set-top">
+          <button type="button" className="back-btn" onClick={back}><Icon n="back" s={16} />{sec ? GROUPS.find((x) => x[0] === groupOf(sec))[1] : 'Ayarlar'}</button>
+          <div className="set-top-t">
+            <span className="set-top-ic"><Icon n={sec ? S0[3] : G[3]} s={20} /></span>
+            <span><h1 className="page-t">{sec ? S0[1] : G[1]}</h1><small className="muted">{sec ? S0[2] : G[2]}</small></span>
+          </div>
+        </div>
+      )}
+      {search && !sec && !grp && (
         <div className="set-find">
           <div className="search"><Icon n="search" s={18} /><input id="set-q" type="search" autoFocus placeholder="Ayar ara… (ör. kargo, KDV, logo, bildirim)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) jump(results[0].k, results[0].x); if (e.key === 'Escape') { setSearch(false); setQ(''); } }} /></div>
           {toks.length > 0 && (results.length
-            ? <ul className="set-res">{results.slice(0, 40).map((r, i) => <li key={i}><button onClick={() => jump(r.k, r.x)}><span className="set-res-ic"><Icon n={SECTIONS.find((x) => x[0] === r.k)[3]} s={16} /></span><span><b>{r.x || r.l}</b>{r.x && <small>{r.l}</small>}</span><Icon n="chev" s={16} className="set-res-go" /></button></li>)}</ul>
+            ? <ul className="set-res">{results.slice(0, 40).map((r, i) => <li key={i}><button onClick={() => jump(r.k, r.x)}><span className="set-res-ic"><Icon n={SEC_BY[r.k][3]} s={16} /></span><span><b>{r.x || r.l}</b><small>{r.gl} › {r.l}</small></span><Icon n="chev" s={16} className="set-res-go" /></button></li>)}</ul>
             : <p className="fine set-none">“{q}” ile eşleşen ayar yok.</p>)}
         </div>
       )}
-      <p className="fine set-intro">Bir başlığa basınca açılır, tekrar basınca kapanır. Mağazanın görünüşünü sürükle-bırak ile düzenlemek için <button type="button" className="linkish" onClick={() => go('tasarim')}>Tasarım modu</button>.</p>
-      <div className="acc">
-        {SECTIONS.map(([k, l, hint, ic]) => (
-          <section key={k} id={'acc-' + k} className={'acc-i' + (sec === k ? ' open' : '')}>
-            <button type="button" className="acc-h" aria-expanded={sec === k} onClick={() => openSec(k)}>
+
+      {!sec && !grp && <>
+        {recent.length > 0 && (
+          <div className="set-recent">
+            <span className="set-lbl">Son açtıklarınız</span>
+            <div className="set-recent-l">{recent.map((k) => <button key={k} type="button" className="chip" onClick={() => openSec(k)}><Icon n={SEC_BY[k][3]} s={14} />{SEC_BY[k][1]}</button>)}</div>
+          </div>
+        )}
+        <div className="set-groups">
+          {GROUPS.map(([g, l, hint, ic]) => (
+            <button key={g} type="button" className="set-g" onClick={() => nav(g, null)}>
+              <span className="set-g-ic"><Icon n={ic} s={20} /></span>
+              <b>{l}</b>
+              <small>{hint}</small>
+              {grpDirty(g) && <i className="dirty-dot" aria-label="kaydedilmedi" />}
+            </button>
+          ))}
+        </div>
+        <p className="fine set-intro">Mağazanın görünüşünü sürükle-bırak ile düzenlemek için <button type="button" className="linkish" onClick={() => go('tasarim')}>Tasarım modu</button>.</p>
+      </>}
+
+      {grp && !sec && (
+        <div className="set-rows">
+          {SECTIONS.filter((x) => x[4] === grp).map(([k, l, hint, ic]) => (
+            <button key={k} type="button" className="set-row" onClick={() => openSec(k)}>
               <span className="acc-ic"><Icon n={ic} s={18} /></span>
               <span className="acc-t"><b>{l}</b><small>{hint}</small></span>
               {secDirty(k) && <i className="dirty-dot" aria-label="kaydedilmedi" />}
-              <Icon n="chev" s={18} className="acc-chev" />
+              <Icon n="chev" s={18} className="acc-chev set-row-go" />
             </button>
-            {sec === k && (k === 'hesap' ? <div className="acc-b"><Profile embedded /></div> : <div className="set-card acc-b">{body}</div>)}
-          </section>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {sec && (
+        <section id={'acc-' + sec} className="set-sec">
+          {sec === 'hesap' ? <div className="acc-b"><Profile embedded /></div> : <div className="set-card acc-b">{body}</div>}
+        </section>
+      )}
       {dirty && (
         <div className="save-bar" role="status">
           <span><i className="dirty-dot" />Kaydedilmemiş değişiklik var</span>

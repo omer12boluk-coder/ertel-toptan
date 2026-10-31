@@ -5,11 +5,12 @@
 "Logo",
 "Açılış ekranı",
 "Arka plan",
-"Görünme süresi",
+"Görünme süresi"
+],
+"bayiuye": [
 "Bayiler kendileri üye olabilsin",
 "Profil fotoğrafı",
-"Müşteri geçmiş istatistikleri",
-"Özellikler"
+"Müşteri geçmiş istatistikleri"
 ],
 "fiyat": [
 "Toptan fiyatı olmayan ürünler",
@@ -52,7 +53,13 @@
 "Bayi uygulaması ve yönetim",
 "Ortak"
 ],
-"tema": [],
+"tema": [
+"Üstte süs şeridi",
+"Süsler ürünlerin önünde de",
+"Süs miktarı",
+"Sadece müşteriler görür",
+"Kapalı"
+],
 "kademe": [
 "Kademe adı",
 "Ek indirim yüzdesi",
@@ -68,10 +75,11 @@
 "Stokta olmayanları gizle",
 "Gizli etiketleri aramada kullan",
 "Markayı göster",
-"Ürün açıklamasını göster",
+"Ürün açıklamasını göster"
+],
+"resim": [
 "Liste resmi adresi",
-"Büyük resim adresi",
-"Ürün resimleri"
+"Büyük resim adresi"
 ],
 "talep": [
 "“Hazırlayın, geliyorum” butonu",
@@ -105,12 +113,50 @@
 "Telefonlar",
 "Bilgi sayfaları"
 ],
-"kalip": [],
-"urtalep": [],
-"kota": [],
-"sorun": [],
-"ozellik": [],
-"magaza": [
+"kalip": [
+"Mağazada Kalıp bulucu görünsün",
+"Sonuçlar liste görünümünde",
+"Kalıp bulucuda bilgi notu göster",
+"Temizle",
+"Geri al",
+"Uyan kalıplar",
+"Değişikliği geri al",
+"Bilgi notu"
+],
+"urtalep": [
+"Mağazada Ürün talebi görünsün",
+"Bir üye günde en çok kaç talep gönderebilir",
+"Fotoğraflar kaç gün saklansın",
+"Ürün talebi",
+"Müşteriler › Ürün talepleri"
+],
+"kota": [
+"Her gece kullanım raporu Telegram'a gelsin",
+"günde 50.000 okuma",
+"bu yönetim paneli",
+"Bekleyen / hazırlanan / kargodaki",
+"“30 gün daha eskisini yükle”",
+"Tarih",
+"Müşteriler › Mağaza müşterileri"
+],
+"sorun": [
+"Sorun bildirimi açık",
+"Bir üye günde en çok kaç bildirim gönderebilir",
+"Dosyalar kaç gün saklansın",
+"Müşteriler › Sorun bildirimleri"
+],
+"ozellik": [
+"Ürün paylaşma",
+"Gelince haber ver",
+"Popüler ürünler (tümü)",
+"Ana sayfada “Herkesin favorisi” rafı",
+"Ürün penceresinde “Birlikte iyi gider”",
+"Kategoride “Ustaların tercihi”",
+"Kategoride öne çıkanlar",
+"Ürün yorumları",
+"Yorumlar ben onaylayınca yayınlansın"
+],
+"siparis": [
 "Online mağaza açık",
 "Mağazadan sipariş alınsın",
 "Online sipariş: “Çok yakında” göster",
@@ -118,32 +164,40 @@
 "Müşteriler mağazaya üye olabilsin",
 "Google ile giriş",
 "Facebook ile giriş",
+"Sipariş",
+"Sepeti onayla",
+"Siparişler"
+],
+"bildirim": [
 "Sipariş durumu bildirimi",
-"Yazı seçme",
-"Uzun basınca işlem menüsü açılsın",
-"Resimlere basılı tutunca telefonun menüsü açılsın",
-"Kargo ile gönderim",
-"Dükkandan teslim al",
-"Kargo notu",
-"Havale / EFT",
-"Kredi kartı (ödeme linki gönderilir)",
-"Dükkanda ödeme",
-"Havale / EFT bilgisi",
 "Sipariş alındı mesajı",
 "Gizle",
-"Sipariş",
 "Müşteriye bildirim",
-"Mobil dokunma seçenekleri",
-"Teslimat",
-"Ödeme seçenekleri",
-"Sepeti onayla",
-"Siparişler",
 "Yönetici bildirimleri",
 "bağlanmayı bekliyor",
 "Başlat",
 "bildirimlerin geleceği e-postayla",
 "Bildirimleri açın",
 "Bu cihaza anlık bildirim"
+],
+"dokunma": [
+"Yazı seçme",
+"Uzun basınca işlem menüsü açılsın",
+"Resimlere basılı tutunca telefonun menüsü açılsın"
+],
+"teslimat": [
+"Kargo ile gönderim",
+"Dükkandan teslim al",
+"Kargo notu",
+"Firma adı",
+"Takip sayfası adresi",
+"Kargo firmaları"
+],
+"odeme": [
+"Havale / EFT",
+"Kredi kartı (ödeme linki gönderilir)",
+"Dükkanda ödeme",
+"Havale / EFT bilgisi"
 ],
 "kategori": [
 "Sıra"

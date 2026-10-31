@@ -180,6 +180,7 @@ export function go(tab) {
   // zaten o sayfadaysak (alt menüde aynı sekmeye tekrar basmak) en üste ŞAK diye atlamak yerine yumuşakça kayarak çıkılır
   const same = tab === from && !store.s.openOrder && !store.s.openReq && !store.s.acct && !store.s.lcOpen;
   store.set({ urunFrom: null, urunLayer: false, tab, acct: null, openReq: null, openOrder: null, lcOpen: null, orderJust: false });
+  if (same) store.set({ tabTap: (store.s.tabTap || 0) + 1 }); // aynı sekmeye tekrar basıldı (ör. Ayarlar içindeyken Ayarlar → ana ekran)
   if (same && !store.s.catalogGo) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   window.scrollTo(0, 0);
   if (y) requestAnimationFrame(() => window.scrollTo(0, y)); // gizli sayfa görünür olduktan sonra (React çizdikten sonraki ilk kare)

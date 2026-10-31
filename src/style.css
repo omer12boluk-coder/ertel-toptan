@@ -5458,3 +5458,42 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 .chip.set-chip.on b, .chip.fav-chip.on b { color: inherit; opacity: .8; }
 
 .no-anim, .no-anim * { animation: none !important; }
+
+/* Ayarlar yeni düzen (31.10.2026): ana ekran = 6 grup kutusu, grup = başlık satırları, bölüm = kendi sayfası */
+.settings { max-width: 860px; }
+.settings .set-intro { margin: 2px 0 0; }
+.set-lbl { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.set-recent { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
+.set-recent-l { display: flex; flex-wrap: wrap; gap: 6px; }
+.set-recent-l .chip { cursor: pointer; color: var(--fg); }
+.set-recent-l .chip .ic { color: var(--accent); }
+.set-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding-bottom: 6px; }
+.set-g { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--fg); text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
+.set-g:hover { border-color: color-mix(in oklab, var(--accent) 35%, var(--line)); background: color-mix(in oklab, var(--accent) 3%, var(--surface)); }
+.set-g-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in oklab, var(--accent) 10%, var(--surface)); color: var(--accent); margin-bottom: 2px; }
+.set-g b { font-size: 16px; line-height: 1.2; }
+.set-g small { font-size: 13px; line-height: 1.35; color: var(--muted); }
+.set-g .dirty-dot { position: absolute; top: 14px; right: 14px; margin: 0; }
+.set-top { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin: 0 0 14px; }
+.set-top-t { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.set-top-t > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.set-top-t small { font-size: 13.5px; line-height: 1.35; }
+.set-top-ic { width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center; background: color-mix(in oklab, var(--accent) 10%, var(--surface)); color: var(--accent); }
+.set-rows { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; padding-bottom: 0; }
+.set-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 0; border-top: 1px solid var(--line-2); background: none; color: var(--fg); text-align: left; cursor: pointer; }
+.set-row:first-child { border-top: 0; }
+.set-row:hover { background: var(--surface-2); }
+.set-row .acc-t small { white-space: normal; line-height: 1.35; }
+.set-row .dirty-dot { margin: 0; flex: none; }
+.set-row-go { rotate: -90deg; }
+.set-sec { padding-bottom: 80px; }
+.set-sec > .acc-b { border: 1px solid var(--line); border-radius: var(--r); max-width: 860px; }
+.set-sec > .acc-b:not(.set-card) { padding: 0; border: 0; }
+@media (max-width: 700px) {
+  .set-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .set-g { padding: 13px; border-radius: 14px; }
+  .set-g-ic { width: 36px; height: 36px; border-radius: 11px; }
+  .set-g b { font-size: 15px; } .set-g small { font-size: 12.5px; }
+  .set-top-ic { width: 38px; height: 38px; }
+  .set-row { padding: 13px 14px; }
+}
