@@ -38,8 +38,8 @@ export function QuotaSettings({ d, set }) {
 
     <h4 className="qt-h">Son 24 saat</h4>
     {u === undefined ? <p className="fine">Yükleniyor…</p> : !u ? <p className="fine">Henüz rapor yok. Her gece 23:47'de hazırlanır.</p> : <div className="qt-box">
-      <Bar l="Veritabanı okuma" v={u.read} lim={50000} />
-      <Bar l="Veritabanı yazma" v={u.write} lim={20000} />
+      {u.read != null ? <><Bar l="Veritabanı okuma" v={u.read} lim={50000} /><Bar l="Veritabanı yazma" v={u.write} lim={20000} /></>
+        : <p className="fine qt-fs">Veritabanı okuma/yazma sayısını Google ücretsiz planda dışarıya vermiyor; <a href="https://console.firebase.google.com/project/erteltoptan/firestore/databases/-default-/usage" target="_blank" rel="noopener">Firebase › Firestore › Usage</a> sayfasından günlük grafiği görebilirsiniz.</p>}
       <Bar l="Bekçi istekleri" v={u.cfReq} lim={100000} />
       <Bar l="Bekçi kayıt (KV)" v={u.kvWrite} lim={1000} />
       <small className="fine">Rapor: {new Date(u.at).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</small>

@@ -24,7 +24,7 @@ async function cf(query) {
 }
 const out = { at: Date.now() };
 for (const [k, t] of [['read', 'firestore.googleapis.com/document/read_count'], ['write', 'firestore.googleapis.com/document/write_count'], ['del', 'firestore.googleapis.com/document/delete_count']]) {
-  try { out[k] = await fsMetric(t); } catch (e) { note('Firestore ' + k, 'okunamadı: ' + e.message); }
+  try { out[k] = await fsMetric(t); } catch (e) { note('Firestore ' + k, 'okunamadı (Google bu ölçümü sadece ücretli planda veriyor): ' + e.message.slice(0, 80)); break; }
 }
 try {
   const A = process.env.CF_ACCOUNT, S = from.toISOString(), E = now.toISOString();
@@ -42,8 +42,7 @@ if (S.quota?.report !== false && process.env.TELEGRAM_TOKEN) {
   const pct = (v, lim) => (v == null ? '—' : `${v.toLocaleString('tr-TR')} / ${lim.toLocaleString('tr-TR')} (%${Math.round((v / lim) * 100)})`);
   const warn = (v, lim) => (v != null && v / lim >= 0.7 ? ' ⚠️' : '');
   const text = `📊 Günlük kullanım (son 24 saat)\n\n` +
-    `Veritabanı okuma: ${pct(out.read, 50000)}${warn(out.read, 50000)}\n` +
-    `Veritabanı yazma: ${pct(out.write, 20000)}${warn(out.write, 20000)}\n` +
+    (out.read == null ? `Veritabanı okuma/yazma: ücretsiz planda otomatik okunamıyor → Firebase › Firestore › Usage\n` : `Veritabanı okuma: ${pct(out.read, 50000)}${warn(out.read, 50000)}\nVeritabanı yazma: ${pct(out.write, 20000)}${warn(out.write, 20000)}\n`) +
     `Bekçi istekleri: ${pct(out.cfReq, 100000)}${warn(out.cfReq, 100000)}\n` +
     `Bekçi kayıt (KV): ${pct(out.kvWrite, 1000)}${warn(out.kvWrite, 1000)}\n\n` +
     `%70'i geçen satırda ⚠️ var. Ayar: Yönetim › Ayarlar › Veri ve kota`;

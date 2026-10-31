@@ -467,7 +467,7 @@ Claude'un yapacağı (sırayla):
 
 ### Veri ve kota (31.10.2026, `src/quota.jsx`, Ayarlar > Veri ve kota)
 - `settings.quota {days 14|30|62|120 (varsayılan 62), members, report}`: datawin.js açılış penceresi (siparişler, talepler, ürün talepleri, sorunlar, yorumlar; üyeler ayrı) + "Daha eski" adımı (en az 30 gün). Açık durumdakiler her zaman yüklenir. Siparişlerde sipariş no yazınca yüklü değilse `findOrderByNo` (tek okuma) ile bulunur.
-- **Günlük kullanım raporu:** Actions "Günlük kullanım raporu" (`usage.yml`, TR 23:47) → `tools/usage-report.mjs`: Google Cloud Monitoring (Firestore read/write/delete_count, servis hesabıyla) + Cloudflare GraphQL (Worker istekleri, KV yazma) → `meta/usage` (Ayarlar'da çubuklar) + bekçi `POST /notify-usage` (X-Key sync) → Telegram (%70 üstü ⚠️; `quota.report` kapatır).
+- **Günlük kullanım raporu:** Actions "Günlük kullanım raporu" (`usage.yml`, TR 23:47) → `tools/usage-report.mjs`: Google Cloud Monitoring (Firestore read/write/delete_count — ÜCRETSİZ PLANDA ÇALIŞMIYOR: 'billing must be enabled'; Blaze'e geçilirse kendiliğinden gelir, şimdilik Firebase konsolu Usage linki) + Cloudflare GraphQL (Worker istekleri, KV yazma) → `meta/usage` (Ayarlar'da çubuklar) + bekçi `POST /notify-usage` (X-Key sync) → Telegram (%70 üstü ⚠️; `quota.report` kapatır).
 - **Deneme siparişleri:** Actions "Deneme siparişleri" (`test-orders.yml`, ekle/sil): TEST20, TEST45, TEST90, TEST150 (o kadar gün önce, İPTAL durumunda, `test: true`, bekçiden geçmez → bildirim yok).
 
 ### Mağazada gizli etiketle arama (30.10.2026)
