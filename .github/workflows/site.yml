@@ -3,7 +3,7 @@ name: Siteyi Cloudflare'e yayınla
 on:
   push:
     branches: [main]
-    paths: ['hosting/public/**', 'site/**', '.github/workflows/site.yml']
+    paths: ['hosting/public/**', 'site/**', 'src/seo.js', 'src/categories.json', '.github/workflows/site.yml']
   workflow_dispatch:
 jobs:
   deploy:

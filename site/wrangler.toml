@@ -16,4 +16,4 @@ directory = "../hosting/public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"   # /urun/12 gibi adresler index.html'e düşer (Firebase rewrite ile aynı)
 html_handling = "auto-trailing-slash"
-run_worker_first = ["/__/*", "/urun/*", "/set/*", "/magaza/urun/*", "/magaza/set/*"]
+run_worker_first = ["/__/*", "/", "/urunler", "/kalip", "/sitemap.xml", "/urun/*", "/set/*", "/marka/*", "/kategori/*", "/magaza", "/magaza/urunler", "/magaza/kalip", "/magaza/urun/*", "/magaza/set/*", "/magaza/marka/*", "/magaza/kategori/*"]   # Google için başlık/açıklama/ürün bilgisi + sitemap (worker.js)

@@ -1,0 +1,16 @@
+# ERTEL GSM — ertelmarket.com
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /b2b
+Disallow: /siparisformu
+Disallow: /sepet
+Disallow: /hesap
+Disallow: /islem
+Disallow: /s/
+Disallow: /k/
+Disallow: /l/
+Disallow: /t/
+Disallow: /__/
+
+Sitemap: https://ertelmarket.com/sitemap.xml

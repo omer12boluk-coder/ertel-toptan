@@ -7,6 +7,8 @@ import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picU
 import { links } from './route.js';
 import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
+import { slugify, catSlugs } from './seo.js';
+import CAT_TREE from './categories.json';
 import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
 import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
@@ -366,6 +368,15 @@ export function Catalog({ admin }) {
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
   // useLayoutEffect: marka / kategori linkinden gelince süzme EKRANA ÇİZİLMEDEN uygulanır (önce eski liste görünüp 'patlamasın')
   useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  // Google'dan gelen /marka/<ad> ya da /kategori/<ad> adresi → ürünler yüklenince o marka / kategori seçili açılır
+  const seoGo = useStore((s) => s.seoGo);
+  useEffect(() => {
+    if (!seoGo || !all.length) return;
+    let to = null;
+    if (seoGo.t === 'marka') { const b = all.find((p) => p.b && slugify(p.b) === seoGo.slug)?.b; if (b) to = { brand: b }; }
+    else for (const [id, sl] of catSlugs(CAT_TREE, S.categories)) if (sl === seoGo.slug) { to = { cat: id }; break; }
+    store.set(to ? { seoGo: null, catalogGo: to } : { seoGo: null });
+  }, [seoGo, all.length]);
   const changedN = useMemo(() => (admin ? all.filter(needsCheck).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);

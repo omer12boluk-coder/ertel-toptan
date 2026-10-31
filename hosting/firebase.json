@@ -3,7 +3,7 @@
     "public": "public",
     "ignore": ["firebase.json", "**/.*", "_headers"],
     "headers": [
-      { "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-cache" }, { "key": "X-Robots-Tag", "value": "noindex" }] },
       { "source": "**/*.@(png|jpg|jpeg|webp|svg|webmanifest)", "headers": [{ "key": "Cache-Control", "value": "max-age=86400" }] },
       { "source": "/tr/**", "headers": [{ "key": "Cache-Control", "value": "max-age=604800" }] },
       { "source": "/fb/**", "headers": [{ "key": "Cache-Control", "value": "max-age=604800" }] }

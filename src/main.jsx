@@ -10,7 +10,8 @@ import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
 import { loadFavs, mergeFavs } from './store.js';
 import { linkMember } from './push.js';
 import { store, useStore, setCatalog, loadCart, go, home, toast, openRequest, openOrder, tabFromPath, startHistory, acctFromPath, pidFromPath, storeListen } from './store.js';
-import { ROUTE, links } from './route.js';
+import { ROUTE, links, lpath } from './route.js';
+import { seoRoute } from './seo.js';
 import { withDefaults, ls, cleanUsername, mediaFallback } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS, SPLASH_STYLES } from './config.js';
 import { DemoBackend } from './backend-demo.js';
@@ -248,7 +249,10 @@ async function bootShop(A) {
   // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
   if (ROUTE.reqId && !ROUTE.orderId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
-  const firstTab = ROUTE.listCode ? 'liste' : tabFromPath() || shopFirst();
+  // Google'dan gelen marka / kategori sayfası (/marka/jbc, /kategori/havya-istasyonu): Ürünler o süzgeçle açılır (çözümü Catalog yapar)
+  const seo = ROUTE.listCode ? null : seoRoute(lpath());
+  if (seo) store.set({ seoGo: seo });
+  const firstTab = ROUTE.listCode ? 'liste' : seo ? 'katalog' : tabFromPath() || shopFirst();
   if (firstTab === 'hesap') store.set({ acct: acctFromPath() });
   if (firstTab === 'urun') store.set({ pid: pidFromPath() });
   if (firstTab === 'set') store.set({ setId: setIdFromPath() });
@@ -278,7 +282,7 @@ function useTheme() {
     r.style.setProperty('--pcard-r', (Number(L.cardR) >= 0 && L.cardR !== '' ? Number(L.cardR) : 18) + 'px');
     const t = dev || S.brand.theme;
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
-    document.title = S.brand.appName;
+    document.title = seoTitle() || S.brand.appName;
   }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
@@ -449,6 +453,10 @@ function FormOnlyShell() {
   );
 }
 
+// Site bekçisinin Google için yazdığı sayfa başlığı (ör. "JBC Ürünleri ve Fiyatları | ERTEL GSM") o adreste kalsın;
+// başka sayfaya geçince uygulama adı (site/worker.js x-seo-path etiketi)
+const SEO0 = (() => { try { return { path: document.querySelector('meta[name="x-seo-path"]')?.content || '', title: document.title }; } catch { return {}; } })();
+const seoTitle = () => (SEO0.path && location.pathname === SEO0.path ? SEO0.title : '');
 function Shell() {
   if (ROUTE.formOnly) return <FormOnlyShell />;
   return <ShellFull />;
@@ -473,8 +481,8 @@ function ShellFull() {
   useEffect(() => {
     if (unread > prev.current) { toast(admin ? 'Yeni bayi siparişi / mesaj geldi' : 'Dükkandan yeni mesaj', 'info'); try { navigator.vibrate?.(120); } catch {} }
     prev.current = unread;
-    document.title = (unread ? `(${unread}) ` : '') + store.s.settings.brand.appName;
-  }, [unread]);
+    document.title = (unread ? `(${unread}) ` : '') + (seoTitle() || store.s.settings.brand.appName);
+  }, [unread, tab, pid]);
   const pendingN = useStore((s) => s.customers.filter((c) => c.pending).length + (admin ? s.preqs.filter((q) => q.seenAdmin === false).length + (s.issues || []).filter((q) => q.seenAdmin === false).length + (s.reviews || []).filter((r) => r.status === 'pending').length : 0));
   const priceN = useStore((s) => (admin ? s.catalog.filter((p) => p.pc && p.w != null).length : 0));
   const newOrders = useStore((s) => (admin ? s.orders.filter((o) => o.unread).length : 0));
