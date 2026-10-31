@@ -251,12 +251,11 @@ async function bootShop(A) {
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
   // Google'dan gelen marka / kategori sayfası (/marka/jbc, /kategori/havya-istasyonu): Ürünler o süzgeçle açılır (çözümü Catalog yapar)
   if (ROUTE.notFound) {
-    try { const m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex'; document.head.appendChild(m); history.replaceState(null, '', '/'); } catch {}
-    setTimeout(() => toast('Bu adreste bir sayfa yok, ana sayfayı açtık'), 900);
+    try { const m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex'; document.head.appendChild(m); } catch {}
   }
   const seo = ROUTE.listCode ? null : seoRoute(lpath());
   if (seo) store.set({ seoGo: seo });
-  const firstTab = ROUTE.listCode ? 'liste' : seo ? 'katalog' : tabFromPath() || shopFirst();
+  const firstTab = ROUTE.listCode ? 'liste' : ROUTE.notFound ? 'yok' : seo ? 'katalog' : tabFromPath() || shopFirst();
   if (firstTab === 'hesap') store.set({ acct: acctFromPath() });
   if (firstTab === 'urun') store.set({ pid: pidFromPath() });
   if (firstTab === 'set') store.set({ setId: setIdFromPath() });
@@ -410,6 +409,21 @@ function Login() {
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Siparişlerim', 'box', 'Siparişler'], ['profil', 'Hesabım', 'user']];
 const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Sipariş formu', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Ürünler', 'grid', 'Ürünler'], ['kalip', 'Kalıp bulucu', 'chip', 'Kalıp'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
+// Sayfa bulunamadı (tanınmayan mağaza adresi; Google'a noindex boot'ta eklenir)
+function NotFound() {
+  return (
+    <div className="page nf-page">
+      <div className="nf-ic"><Icon n="search" s={34} /></div>
+      <div className="nf-code">404</div>
+      <h1>Aradığınız sayfa bulunamadı</h1>
+      <p>Bu adres değişmiş ya da hiç var olmamış olabilir. Ana sayfadan devam edebilir ya da tüm ürünlere göz atabilirsiniz.</p>
+      <div className="nf-act">
+        <button className="btn primary" onClick={() => go('anasayfa')}><Icon n="home" s={18} /> Ana sayfaya dön</button>
+        <button className="btn" onClick={() => go('katalog')}>Tüm ürünler</button>
+      </div>
+    </div>
+  );
+}
 const shopFirst = () => (store.s.settings.shopHome?.enabled === false ? 'katalog' : 'anasayfa');
 
 // Boş bir yere sağ tıklayınca çıkan genel menü (ürün, müşteri, talep üstündekiler kendi menülerini açar)
@@ -563,6 +577,7 @@ function ShellFull() {
         {tab === 'setler' && admin && <SetsAdmin />}
         {tab === 'talep' && pub && <PreqPage />}
         {tab === 'yasal' && pub && <LegalPage />}
+        {tab === 'yok' && pub && <NotFound />}
         {tab === 'sorun' && pub && <IssuePage />}
         {tab === 'islem' && pub && <AuthAction />}
         {tab === 'ayarlar' && admin && <Settings />}
