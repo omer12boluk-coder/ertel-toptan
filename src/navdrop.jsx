@@ -15,17 +15,17 @@ function useDesk() {
   return on;
 }
 
-let active = null; // açık olan menünün kapatıcısı (bir menüden diğerine geçince beklemeden geçsin)
+let active = null; // açık olan menü { id, close } (bir menüden diğerine geçince beklemeden geçsin)
 
 export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   const desk = useDesk();
   const [open, setOpen] = useState(false);
   const t = useRef(0);
-  const me = useRef(null);
+  const me = useRef(null); const myId = useRef({}); // kimlik çizimden çizime değişmez (eski hâlde her yeniden çizimde menü kendini kapatıyordu)
   const tab = useStore((s) => s.tab);
   const acct = useStore((s) => s.acct);
   const wrap = useRef(null), pane = useRef(null);
-  const close = () => { clearTimeout(t.current); setOpen(false); if (active === me.current) active = null; };
+  const close = () => { clearTimeout(t.current); setOpen(false); if (active?.id === myId.current) active = null; };
   // panel gövdeye (portal) çizilir: yönetim menüsü taşmayı gizlediği için içinde kırpılıyordu; yeri düğmeden ölçülür
   useLayoutEffect(() => {
     if (!open) return;
@@ -51,8 +51,9 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   const enter = () => {
     clearTimeout(t.current);
     if (open) return;
-    if (active && active !== close) { active(); active = close; setOpen(true); return; }
-    t.current = setTimeout(() => { if (active && active !== close) active(); active = close; setOpen(true); }, 150);
+    const mine = { id: myId.current, close: () => me.current() };
+    if (active && active.id !== myId.current) { active.close(); active = mine; setOpen(true); return; }
+    t.current = setTimeout(() => { if (active && active.id !== myId.current) active.close(); active = mine; setOpen(true); }, 150);
   };
   const leave = () => { clearTimeout(t.current); if (open) t.current = setTimeout(close, 300); };
   return (
@@ -117,14 +118,12 @@ export function ProductsDrop({ children }) {
     for (const p of vis) for (const c of new Set([p.c, p.c2].filter((x) => x != null).flatMap((x) => tree.ancestors(x)))) cnt.set(c, (cnt.get(c) || 0) + 1);
     return tree.roots.filter((n) => !n.hidden && cnt.get(n.id)).map((n) => ({ n, subs: n.children.filter((x) => !x.hidden && cnt.get(x.id)) }));
   }, [vis, tree]);
-  const kalip = S.kalip?.on !== false;
   return <HoverDrop cls="hd-mega" panel={(c) => (
     <div className="hd-mega-in">
       <div className="hd-side">
         <Item close={c} icon="grid" label="Tüm ürünler" onClick={() => { store.set({ catalogGo: {} }); go('katalog'); }} />
         {hasSets && <Item close={c} icon="box" label="Setler" pill="Yeni" tone="green" onClick={() => { store.set({ catalogGo: { sets: true } }); go('katalog'); }} />}
         <Item close={c} icon="heart" label="Favorilerim" onClick={() => { store.set({ catalogGo: { fav: true } }); go('katalog'); }} />
-        {kalip && <Item close={c} icon="chip" label="Kalıp bulucu" onClick={() => go('kalip')} />}
         <p className="hd-note">Aradığınızı bulamadınız mı? <a href="/talep" onClick={(e) => { e.preventDefault(); c(); go('talep'); }}>Ürün talebi bırakın</a></p>
       </div>
       <div className="hd-cats">

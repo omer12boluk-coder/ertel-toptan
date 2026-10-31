@@ -5033,7 +5033,7 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 .hd-pill { margin-left: auto; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .hd-pill.red { background: #fde8e8; color: #b42318; }
 .hd-pill.green { background: #e7f6ee; color: #1f6b47; }
-.hd-i.danger, .hd-i.danger .hd-ic { color: #b42318; } .hd-i.danger .hd-ic { background: #fde8e8; }
+.hd-i.danger, .hd-i.danger .hd-ic { color: #b42318; } .hd-i.danger .hd-ic { background: transparent; }
 .hd-i.danger:hover { background: #fde8e8; } .hd-i.danger:hover .hd-t b { color: #b42318; }
 .hd-sep { display: block; height: 1px; background: var(--line); margin: 6px 4px; }
 .hd-who { display: flex; flex-direction: column; padding: 8px 10px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
@@ -5041,12 +5041,12 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 .hd-prof-p { min-width: 280px; }
 .hd-prof-p .hd-ic { width: 30px; height: 30px; background: transparent; }
 /* Ürünler ▾ büyük menü */
-.hd-mega-p { width: min(930px, calc(100vw - 48px)); padding: 18px; }
-.hd-mega-in { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; }
+.hd-mega-p { width: min(600px, calc(100vw - 48px)); padding: 16px; }
+.hd-mega-in { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; height: min(400px, 62vh); }
 .hd-side { display: flex; flex-direction: column; gap: 2px; padding-right: 16px; border-right: 1px solid var(--line); }
 .hd-side .hd-ic { width: 30px; height: 30px; }
 .hd-note { margin: auto 0 0; padding: 11px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; color: var(--muted); line-height: 1.4; }
-.hd-cats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 18px; align-content: start; max-height: min(62vh, 560px); overflow: auto; overscroll-behavior: contain; }
+.hd-cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 16px; align-content: start; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; scrollbar-width: thin; }
 .hd-cat { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; }
 .hd-ct { font-weight: 700; font-size: 14.5px; color: var(--fg); text-align: left; padding: 2px 0 4px; }
 .hd-ct:hover { color: var(--accent); }
