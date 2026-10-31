@@ -1,4 +1,4 @@
-// Bilgisayarda üst menü açılır menüleri (31.10.2026): fare başlıkta 0,15 sn durunca açılır, çıkınca 0,3 sn bekleyip kapanır;
+// Bilgisayarda üst menü açılır menüleri (31.10.2026): fare başlıkta 0,38 sn durunca açılır, çıkınca 0,3 sn bekleyip kapanır;
 // başlığa tıklamak yine o sayfaya gider. Telefonda / dokunmatikte hiç çizilmez (alt menü aynı kalır).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -53,7 +53,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     if (open) return;
     const mine = { id: myId.current, close: () => me.current() };
     if (active && active.id !== myId.current) { active.close(); active = mine; setOpen(true); return; }
-    t.current = setTimeout(() => { if (active && active.id !== myId.current) active.close(); active = mine; setOpen(true); }, 150);
+    t.current = setTimeout(() => { if (active && active.id !== myId.current) active.close(); active = mine; setOpen(true); }, 380);
   };
   const leave = () => { clearTimeout(t.current); if (open) t.current = setTimeout(close, 300); };
   return (
@@ -133,19 +133,18 @@ export function ProductsDrop({ children }) {
 
 // büyük başlıklar tek sütun (kaydırma yok); üstüne gelince alt başlıklar yanda açılır
 function MegaCats({ cats, close }) {
-  const [hov, setHov] = useState(null);
+  const [hov, setHov] = useState(null); const [top, setTop] = useState(0);
   const pick = (id) => { close(); store.set({ catalogGo: { cat: id } }); go('katalog'); };
   const cur = cats.find((x) => x.n.id === hov);
   return (
     <div className="hd-cats">
       {cats.map(({ n, subs }) => (
-        <button key={n.id} type="button" className={'hd-ct' + (hov === n.id ? ' on' : '')} onMouseEnter={() => setHov(n.id)} onFocus={() => setHov(n.id)} onClick={() => pick(n.id)}>
+        <button key={n.id} type="button" className={'hd-ct' + (hov === n.id ? ' on' : '')} onMouseEnter={(e) => { setHov(n.id); setTop(e.currentTarget.offsetTop); }} onFocus={(e) => { setHov(n.id); setTop(e.currentTarget.offsetTop); }} onClick={() => pick(n.id)}>
           <span>{n.name}</span>{subs.length > 0 && <Icon n="back" s={14} className="flip" />}
         </button>
       ))}
       {cur && cur.subs.length > 0 && (
-        <div className={'hd-fly' + (cur.subs.length > 10 ? ' two' : '')} onMouseLeave={() => setHov(null)}>
-          <button type="button" className="hd-fly-h" onClick={() => pick(cur.n.id)}>{cur.n.name}<small>Tümünü gör</small></button>
+        <div key={cur.n.id} className={'hd-fly' + (cur.subs.length > 10 ? ' two' : '')} style={{ top: Math.max(0, top - 9) }} onMouseLeave={() => setHov(null)}>
           <div className="hd-fly-l">{cur.subs.map((x) => <button key={x.id} type="button" className="hd-cs" onClick={() => pick(x.id)}>{x.name}</button>)}</div>
         </div>
       )}
