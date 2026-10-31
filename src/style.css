@@ -5909,3 +5909,9 @@ html.dz2-open .sheet-bg { z-index: 960; }
 .dz2-fxdev .seg button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .dz2-fxdev small { color: var(--muted); font-size: 12px; line-height: 1.4; }
 .dz2-fxdev .linkish { align-self: flex-start; font-size: 12.5px; }
+
+/* Video bölümü: yükleme düğmeleri */
+.vup-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.vup-btn { position: relative; overflow: hidden; }
+.vup-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); transition: width .2s; }
+.vup-ok { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ok); font-weight: 600; }

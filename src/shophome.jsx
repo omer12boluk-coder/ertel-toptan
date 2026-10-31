@@ -5,9 +5,9 @@ import { SetRail } from './sets.jsx';
 import { flushSync } from 'react-dom';
 import { useStore, store, setQty, go, api, toast } from './store.js';
 import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
-import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg, fbSkip } from './utils.js';
+import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg, fbSkip, fileHash, imageBlob } from './utils.js';
 import { waLink } from './route.js';
-import { ProductSheet, useTree, PlayVideo } from './catalog.jsx';
+import { ProductSheet, useTree, PlayVideo, mediaUrl } from './catalog.jsx';
 import { currentRate } from './listsheet.jsx';
 import { feat, useStats } from './extras.jsx';
 import { useWin, winOf, onDrag } from './dzframe.jsx';
@@ -495,7 +495,7 @@ function VideoBlock({ b, edit, up }) {
         <div className="sh-video-grid" style={{ '--n': list.length }}>
           {list.map((x, i) => (
             <div key={i} className="sh-video-box" style={{ aspectRatio: `${g.rw} / ${g.rh}` }}>
-              {x.src ? <PlayVideo src={x.src} poster={x.poster && !String(x.poster).startsWith('si:') ? x.poster : undefined} active={vis && !edit} auto={b.play === 'auto'} /> : edit ? <span className="sh-video-empty"><Icon n="play" s={28} />Video linki girin</span> : null}
+              {x.src ? <PlayVideo src={x.src} poster={x.poster && !String(x.poster).startsWith('si:') ? mediaUrl(x.poster) : undefined} active={vis && !edit} auto={b.play === 'auto'} /> : edit ? <span className="sh-video-empty"><Icon n="play" s={28} />Video linki girin</span> : null}
             </div>
           ))}
         </div>
@@ -1134,6 +1134,35 @@ export function BrandFields({ b, up, d, set }) {
 export function ScaleField({ v, onChange, label = 'Boyut', min = 0.4, max = 1.6 }) {
   return <Field label={label}><span className="she-scale"><input type="range" min={min} max={max} step="0.05" value={v} onChange={(e) => onChange(Number(e.target.value))} /><code>%{Math.round(v * 100)}</code>{v !== 1 && <button type="button" className="linkish" onClick={() => onChange(1)}>sıfırla</button>}</span></Field>;
 }
+// Video bölümü: bilgisayardan / telefondan video ve kapak resmi yükleme (ürün videolarıyla aynı depo; aynı dosya ikinci kez yüklenmez)
+function MediaUp({ kind, onDone }) {
+  const inp = useRef(null);
+  const [p, setP] = useState(null);
+  const vid = kind === 'video';
+  async function send(file) {
+    if (!file) return;
+    if (vid && !/^video\/(mp4|webm|quicktime)$/.test(file.type)) return toast('Sadece MP4, WebM ya da MOV video', 'bad');
+    if (vid && file.size > 95e6) return toast('Video 95 MB\'tan büyük olamaz (' + Math.round(file.size / 1e6) + ' MB). Daha kısa ya da sıkıştırılmış bir video seçin.', 'bad');
+    if (!vid && !/^image\//.test(file.type)) return toast('Bir resim dosyası seçin', 'bad');
+    setP(0);
+    try {
+      const h = await fileHash(file);
+      let ref = await api().findUpload?.(h);
+      if (ref) toast('Bu dosya depoda zaten var, oradan eklendi');
+      else if (vid) ref = await api().uploadVideo(file, (x) => setP(x), h);
+      else { const [big, th] = await Promise.all([imageBlob(file, 1600, 0.85), imageBlob(file, 420, 0.8)]); ref = await api().uploadImage(big, th, h); }
+      onDone(ref); if (vid) toast('Video yüklendi');
+    } catch (e) { toast('Yüklenemedi: ' + e.message, 'bad'); }
+    setP(null);
+  }
+  return <>
+    <button type="button" className="btn sm outline vup-btn" disabled={p != null} onClick={() => inp.current?.click()}>
+      <Icon n={vid ? 'upload' : 'image'} s={15} />{p != null ? (vid ? 'Yükleniyor… %' + Math.round(p * 100) : 'Yükleniyor…') : vid ? 'Video yükle' : 'Kapak resmi yükle'}
+      {p != null && vid && <i className="vup-bar" style={{ width: Math.round(p * 100) + '%' }} />}
+    </button>
+    <input ref={inp} type="file" hidden accept={vid ? 'video/mp4,video/webm,video/quicktime' : 'image/*'} onChange={(e) => { send(e.target.files?.[0]); e.target.value = ''; }} />
+  </>;
+}
 export function BlockFields({ b, up }) {
   if (b.t === 'rate') return <>
     <p className="fine">Müşteri kuru buradan görür: Harem Altın dolar satış (Ayarlar &gt; Fiyatlandırma’da elle kur yazdıysanız o). Bilgisayarda kutuyu tutup sağa-sola çekin, sağ alt köşesinden büyütüp küçültün.</p>
@@ -1154,7 +1183,12 @@ export function BlockFields({ b, up }) {
       <p className="fine">Bilgisayarda videoyu ortadaki <b>Taşı</b> ile sağa-sola çekin, kenarlarından tutup büyütüp küçültün.</p>
       {list.map((x, i) => (
         <div key={i} className="vid-item">
-          <Field label={list.length > 1 ? `${i + 1}. video linki` : 'Video linki'} hint={i === 0 ? 'Doğrudan video dosyası (.mp4); R2 linkleri de olur.' : undefined}>
+          <div className="vup-row">
+            <MediaUp kind="video" onDone={(ref) => setList(list.map((y, j) => (j === i ? { ...y, src: ref } : y)))} />
+            <MediaUp kind="image" onDone={(ref) => setList(list.map((y, j) => (j === i ? { ...y, poster: ref } : y)))} />
+            {x.src && /^r2:/.test(x.src) && <span className="vup-ok"><Icon n="check" s={14} />Video depoda</span>}
+          </div>
+          <Field label={list.length > 1 ? `${i + 1}. video linki` : 'Video linki'} hint={i === 0 ? 'Yükleyince adres kendiliğinden yazılır. İsterseniz doğrudan bir .mp4 linki de yapıştırabilirsiniz. En çok 95 MB.' : undefined}>
             <span className="input-btn"><input inputMode="url" placeholder="https://…/video.mp4" value={x.src || ''} onChange={(e) => setList(list.map((y, j) => (j === i ? { ...y, src: e.target.value.trim() } : y)))} />
               {list.length > 1 && <button type="button" className="btn sm ghost" aria-label="Videoyu kaldır" onClick={() => delVid(i)}><Icon n="trash" s={15} /></button>}</span>
           </Field>
