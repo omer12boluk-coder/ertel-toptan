@@ -57,7 +57,8 @@ export class FirebaseBackend {
     // Yönetim paneli verileri cihazda saklar (27.10.2026): açılışta sadece değişen kayıtlar okunur (Firestore okuma kotası).
     // Sadece yönetici örneğinde ve normal tarayıcıda; çıkışta silinir (logout).
     this.persist = this.appName === 'admin' && !inApp && !!F.persistentLocalCache;
-    const net = inApp ? { experimentalForceLongPolling: true } : { experimentalAutoDetectLongPolling: true };
+    // ignoreUndefinedProperties: boş (undefined) alanlar kayıtta atlanır, kayıt reddedilmez (1.11.2026: tasarım kaydı 'Unsupported field value: undefined' ile düşüyordu)
+    const net = { ...(inApp ? { experimentalForceLongPolling: true } : { experimentalAutoDetectLongPolling: true }), ignoreUndefinedProperties: true };
     try { this.db = F.initializeFirestore(this.app, this.persist ? { ...net, localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) } : net); }
     catch (e) { console.warn('firestore önbellek', e); this.persist = false; try { this.db = F.initializeFirestore(this.app, net); } catch { this.db = F.getFirestore(this.app); } }
   }

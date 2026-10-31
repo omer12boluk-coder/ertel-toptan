@@ -63,6 +63,8 @@ function phoneAbs(art, s) {
     const lx = tr && tr.width ? (tr.left + tr.width / 2 - R.left) - wpx / 2 : cx - n.offsetWidth / 2;
     out[el] = { s: f.s, r: f.r, rx: f.rx, ry: f.ry, w: wf, ax: Math.round((lx / R.width) * 10000) / 10000, ay: Math.round(((cy - n.offsetHeight / 2) / R.height) * 10000) / 10000 };
   });
+  // boş alanları at (kayıt düşmesin)
+  for (const k of Object.keys(out)) if (out[k]) out[k] = Object.fromEntries(Object.entries(out[k]).filter(([, v]) => v !== undefined));
   return out;
 }
 // Firebase önizleme adresi (erteltoptan--kanal-….web.app): veriler canlıyla ortak olduğu için orada Yayınla kapalı
@@ -127,7 +129,8 @@ export function ShopDesigner() {
     try {
       // yayından önceki hâl sürüm geçmişine (bu bilgisayarda, son 12)
       try { const prev = { at: Date.now(), shopHome: baseObj.shopHome, look: baseObj.look, brandLogos: baseObj.brandLogos }; ls.set(VERS_KEY, [prev, ...ls.get(VERS_KEY, [])].slice(0, 12)); } catch {}
-      const clean = withProdFallback(withDefaults(store.s.designDraft)); store.set({ settings: clean, designDraft: null }); hist.current = { list: [], redo: [], t: 0 }; toast('Mağaza tasarımı yayınlandı'); queueSave('settings', () => A.saveSettings(store.s.settings));
+      // boş (undefined) alanlar atılır: Firestore kabul etmiyor
+    const clean = withProdFallback(withDefaults(JSON.parse(JSON.stringify(store.s.designDraft)))); store.set({ settings: clean, designDraft: null }); hist.current = { list: [], redo: [], t: 0 }; toast('Mağaza tasarımı yayınlandı'); queueSave('settings', () => A.saveSettings(store.s.settings));
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
