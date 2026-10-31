@@ -649,12 +649,26 @@ function Hero({ slides, open, brands, heroH }) {
   }, [i, paused, n]);
   // telefonda reklamlar arasında boşluk var (ayrık kartlar) → bir adım = genişlik + boşluk
   const step = (el) => el.clientWidth + (parseFloat(getComputedStyle(el).columnGap) || 0);
-  function goTo(k) { const el = track.current; if (!el) return; el.scrollTo({ left: k * step(el), behavior: 'smooth' }); setI(k); }
-  const onScroll = (e) => { const el = e.currentTarget; const k = Math.round(el.scrollLeft / step(el)); if (k !== i) setI(k); };
+  // yazı giriş animasyonu (play): sadece reklam kendiliğinden / nokta-ok ile geldiğinde oynar. Parmakla kaydırırken yazı zaten
+  // görünür hâlde gelir → yarı yolda kaybolup yeniden belirmesin diye animasyon oynamaz.
+  // target: kodla kaydırma sürerken ara scroll olayları etkin reklamı geri çevirmesin (1→0→1 gidip gelme, animasyon iki kez başlıyordu)
+  const [play, setPlay] = useState(0);
+  const target = useRef(null); const targetT = useRef(0);
+  function goTo(k) {
+    const el = track.current; if (!el) return;
+    target.current = k; clearTimeout(targetT.current); targetT.current = setTimeout(() => { target.current = null; }, 1200);
+    el.scrollTo({ left: k * step(el), behavior: 'smooth' }); setI(k); setPlay(k);
+  }
+  const onScroll = (e) => {
+    const el = e.currentTarget; const s = step(el);
+    if (target.current != null) { if (Math.abs(el.scrollLeft - target.current * s) < 2) target.current = null; return; }
+    const k = Math.round(el.scrollLeft / s); if (k !== i) { setI(k); setPlay(-1); }
+  };
+  const grab = () => { target.current = null; clearTimeout(targetT.current); };
   return (
     <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
-      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => setPaused(false)}>
-        {slides.map((s, k) => <Slide key={k} k={k} s={s} on={k === i} open={open} logo={slideLogo(s, brands)} />)}
+      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => setPaused(false)}>
+        {slides.map((s, k) => <Slide key={k} k={k} s={s} on={k === i} play={k === i && k === play} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>
@@ -680,7 +694,7 @@ export const fxTransform = (f) => f ? `translate(calc(${f.x || 0}px * var(--fxk,
 // Reklam düzenleri: split yazı+görsel · reverse görsel+yazı · center ortalı · plain sade (süssüz) · cover tam resim · glass resim + yazı kutusu
 export const SLIDE_LAYOUTS = { split: 'Yazı + görsel', reverse: 'Görsel + yazı', center: 'Ortalı', plain: 'Sade (süssüz)', cover: 'Tam resim (banner)', glass: 'Resim + yazı kutusu' };
 const COVER_LY = ['cover', 'glass'];
-function Slide({ s, on, open, logo, k }) {
+function Slide({ s, on, play, open, logo, k }) {
   const E = useContext(DesignCtx);
   const ly = SLIDE_LAYOUTS[s.layout] ? s.layout : 'split';
   const cover = COVER_LY.includes(ly) && s.img;
@@ -692,7 +706,7 @@ function Slide({ s, on, open, logo, k }) {
   };
   const tt = titleStyle(s.tc); const tf = fx('title', tt.className || '');
   return (
-    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover' : '') + (on ? ' on' : '')} onClick={cover && s.link && !s.cta ? open(s.link) : undefined}>
+    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover' : '') + (on ? ' on' : '') + (play ? ' play' : '')} onClick={cover && s.link && !s.cta ? open(s.link) : undefined}>
       {cover ? <ShopImg v={s.img} className="sh-slide-bg" /> : ly !== 'plain' && <>
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}
