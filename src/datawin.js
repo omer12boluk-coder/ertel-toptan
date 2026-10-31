@@ -22,22 +22,24 @@ export function startAdminWatchers(api, u) {
   const t = Date.now();
   // 62 gün: Genel bakış'ta "bu ay"ı önceki ayla kıyaslamaya yetsin
   const D = wd() * DAY;
-  store.set({ win: { orders: t - D, reqs: t - D, preqs: t - D, issues: t - D, reviews: t - D, membersAll: false } });
+  store.set({ win: { orders: t - D, reqs: t - D, preqs: t - D, issues: t - D, reviews: t - D, lcarts: t - D, membersAll: false } });
   watchOrders(); watchReqs(); watchMembers(); watchPreqs(); watchIssues(); watchReviews();
   // sepet linkleri (zil: "Sepet linki onaylandı")
-  if (A.watchLcarts) un.lcarts = A.watchLcarts((lcarts) => store.set({ lcarts }));
+  // pencereli: son N gün + tarihine bakmadan bekleyenler (müşteri bekleniyor / onaylandı)
+  watchLcarts();
   // tarihine bakmadan açık olanlar da (eski ama hâlâ bekleyen kayıt listeden düşmesin)
   if (A.watchByStatus) {
     if (A.watchOrders) un.ordersOpen = A.watchByStatus('orders', ORDER_OPEN, (l) => { part.ordersOpen = l; mergeOrders(); });
     un.reqsOpen = A.watchByStatus('requests', OPEN_STATUSES, (l) => { part.reqsOpen = l; mergeReqs(); });
     if (A.watchPreqs) un.preqsOpen = A.watchByStatus('preq', PQ_OPEN, (l) => { part.preqsOpen = l; mergePreqs(); });
     if (A.watchIssues) un.issuesOpen = A.watchByStatus('issues', IS_OPEN, (l) => { part.issuesOpen = l; mergeIssues(); });
+    if (A.watchLcarts) un.lcartsOpen = A.watchByStatus('lcarts', ['open', 'sent'], (l) => { part.lcartsOpen = l; mergeLcarts(); });
     if (A.watchReviews) un.reviewsOpen = A.watchByStatus('reviews', ['pending'], (l) => { part.reviewsOpen = l; mergeReviews(); });
   }
 }
 
 // pencere + açık kayıtlar birleşir (aynı kayıt bir kez)
-const part = { orders: [], ordersOpen: [], reqs: [], reqsOpen: [], preqs: [], preqsOpen: [], issues: [], issuesOpen: [], reviews: [], reviewsOpen: [] };
+const part = { orders: [], ordersOpen: [], reqs: [], reqsOpen: [], preqs: [], preqsOpen: [], issues: [], issuesOpen: [], reviews: [], reviewsOpen: [], lcarts: [], lcartsOpen: [] };
 const PQ_OPEN = ['new', 'answered'];
 const IS_OPEN = ['new', 'received', 'review', 'action', 'shipping'];
 const merge = (a, b, key) => { const m = new Map(); for (const x of [...b, ...a]) m.set(x.id, x); return [...m.values()].sort((x, y) => (y[key] || 0) - (x[key] || 0)); };
@@ -46,6 +48,8 @@ const fire = (k) => { const f = hook[k]; if (f) { delete hook[k]; f(); } };
 const mergeOrders = () => store.set({ orders: merge(part.orders, part.ordersOpen, 'createdAt') });
 const mergeReqs = () => store.set({ requests: merge(part.reqs, part.reqsOpen, 'updatedAt') });
 const mergePreqs = () => store.set({ preqs: merge(part.preqs, part.preqsOpen, 'createdAt') });
+const mergeLcarts = () => store.set({ lcarts: merge(part.lcarts, part.lcartsOpen, 'at') });
+function watchLcarts() { stop('lcarts'); if (A?.watchLcarts) un.lcarts = A.watchLcarts((l) => { part.lcarts = l; mergeLcarts(); fire('lcarts'); }, store.s.win.lcarts); }
 const mergeIssues = () => store.set({ issues: merge(part.issues, part.issuesOpen, 'createdAt') });
 function watchPreqs() { stop('preqs'); if (A?.watchPreqs) un.preqs = A.watchPreqs((l) => { part.preqs = l; mergePreqs(); fire('preqs'); }, store.s.win.preqs); }
 const mergeReviews = () => { const reviews = merge(part.reviews, part.reviewsOpen, 'createdAt'); store.set({ reviews }); autoSum(reviews); };
@@ -60,7 +64,7 @@ function watchMembers() {
 
 // "Daha eski siparişleri göster" / "Daha eski talepleri göster": pencereyi 60 gün geriye açar
 // Söz verir: { from, to, added: [yeni gelen kimlikler] }
-const LIST = { orders: 'orders', reqs: 'requests', preqs: 'preqs', issues: 'issues', reviews: 'reviews' };
+const LIST = { lcarts: 'lcarts', orders: 'orders', reqs: 'requests', preqs: 'preqs', issues: 'issues', reviews: 'reviews' };
 export const olderStep = () => Math.max(30, wd());
 export function loadOlder(kind) {
   if (!A) return Promise.resolve(null);
@@ -71,7 +75,7 @@ export function loadOlder(kind) {
     const t = setTimeout(() => { delete hook[kind]; res(null); }, 15000);
     hook[kind] = () => { clearTimeout(t); res({ from: w[kind], to, added: (store.s[LIST[kind]] || []).filter((x) => !before.has(x.id)).map((x) => x.id) }); };
     store.set({ win: w });
-    ({ orders: watchOrders, reqs: watchReqs, preqs: watchPreqs, issues: watchIssues, reviews: watchReviews })[kind]?.();
+    ({ orders: watchOrders, reqs: watchReqs, preqs: watchPreqs, issues: watchIssues, reviews: watchReviews, lcarts: watchLcarts })[kind]?.();
   });
 }
 // Tüm mağaza üyeleri (Müşteriler > Mağaza müşterileri, üye penceresi)

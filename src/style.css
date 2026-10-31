@@ -5287,3 +5287,8 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 .o-date.on svg { color: currentColor; }
 @media (max-width: 560px) { .o-date { padding: 0 12px; } .o-date span { display: none; } }
 .orders-page .chips .chip.on svg { color: currentColor; }
+
+/* Linkle gelen sepetler: sipariş listesiyle aynı tablo (31.10.2026) */
+.lc-list-page .lc-tool .lc-chips { margin: 0; }
+.lc-table .ost.lc-ost { cursor: default; justify-content: center; }
+.lc-table .or-act { width: 0; }

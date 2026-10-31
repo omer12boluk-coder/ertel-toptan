@@ -186,7 +186,7 @@ export class DemoBackend {
   async authVerifyEmail() {}
   async saveMember(m) { const o = this.mem()[m.uid]; Object.assign(o, m); this.persist(); this.memberCb?.(this.pub(o)); }
   watchMembers(cb, since = 0) { return this.sub(() => cb(Object.values(this.mem()).filter((m) => !since || (m.createdAt || 0) >= since).map((m) => this.pub(m)))); }
-  watchByStatus(col, statuses, cb) { return this.sub(() => cb(Object.values(col === 'orders' ? this.ord() : col === 'preq' ? this.pq() : col === 'issues' ? this.is_() : col === 'reviews' ? this.rv() : this.db.requests).filter((x) => statuses.includes(x.status)).map((x) => ({ ...x })))); }
+  watchByStatus(col, statuses, cb) { return this.sub(() => cb(Object.entries(col === 'lcarts' ? this.lc_() : {}).map(([id, x]) => ({ id, ...x })).concat(Object.values(col === 'lcarts' ? {} : col === 'orders' ? this.ord() : col === 'preq' ? this.pq() : col === 'issues' ? this.is_() : col === 'reviews' ? this.rv() : this.db.requests)).filter((x) => statuses.includes(x.status)).map((x) => ({ ...x })))); }
   watchUserRequests(uid, cb) { return this.sub(() => cb(Object.values(this.db.requests).filter((r) => r.uid === uid).sort((a, b) => b.updatedAt - a.updatedAt).map((r) => ({ ...r })))); }
   async deleteMember(uid) { delete this.mem()[uid]; this.persist(); }
   newOrderId() { return 'o' + rid() + rid(); }
@@ -196,6 +196,7 @@ export class DemoBackend {
   watchFeed(cb) { return this.sub(() => cb(this.db.feed || [])); }
   async findOrderByNo(no) { return Object.values(this.ord()).filter((o) => String(o.no).toUpperCase() === String(no).toUpperCase()).map((o) => ({ ...o })); }
   async findOrdersRange(from, to) { return Object.values(this.ord()).filter((o) => (o.createdAt || 0) >= from && (o.createdAt || 0) < to).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })); }
+  async countOrdersRange(from, to) { return Object.values(this.ord()).filter((o) => (o.createdAt || 0) >= from && (o.createdAt || 0) < to).length; }
   async getUsage() { return { at: Date.now(), read: 1234, write: 210, cfReq: 8000, kvWrite: 120 }; }
   watchOrders(cb, since = 0) { return this.sub(() => cb(Object.values(this.ord()).filter((o) => !since || (o.createdAt || 0) >= since).sort((a, b) => b.createdAt - a.createdAt).map((o) => ({ ...o })))); }
   async updateOrder(id, patch) { Object.assign(this.ord()[id], patch); this.persist(); }
@@ -254,7 +255,7 @@ export class DemoBackend {
   lc_() { return (this.db.lcarts = this.db.lcarts || {}); }
   newLcartId() { return 'k' + rid() + rid() + rid(); }
   async createLcart(id, data) { this.lc_()[id] = data; this.persist(); }
-  watchLcarts(cb) { return this.sub(() => cb(Object.entries(this.lc_()).map(([id, x]) => ({ id, ...JSON.parse(JSON.stringify(x)) })).sort((a, b) => b.at - a.at))); }
+  watchLcarts(cb, since = 0) { return this.sub(() => cb(Object.entries(this.lc_()).map(([id, x]) => ({ id, ...JSON.parse(JSON.stringify(x)) })).filter((x) => !since || (x.at || 0) >= since).sort((a, b) => b.at - a.at))); }
   async getLcart(id) { const x = this.lc_()[id]; return x ? { id, ...JSON.parse(JSON.stringify(x)) } : null; }
   async submitLcart(id, sub) { const x = this.lc_()[id]; if (!x || x.status !== 'open') throw new Error('Bu sepet artık açık değil'); Object.assign(x, { status: 'sent', sub, subAt: now() }); this.persist(); }
   async updateLcart(id, patch) { Object.assign(this.lc_()[id], patch); this.persist(); }

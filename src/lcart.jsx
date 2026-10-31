@@ -9,7 +9,7 @@ import { useStore, api, toast, store, go } from './store.js';
 import { Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls } from './utils.js';
 import { pingWatch } from './push.js';
-import { CargoCard, OrdersSwitch } from './orders.jsx';
+import { CargoCard, OrdersSwitch, OlderBtn, OrderThumbs, ago2, fullDate } from './orders.jsx';
 import { PAY, DELIVERY } from './config.js';
 import { waLink } from './route.js';
 import { useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -94,49 +94,73 @@ export function LinkCartsPage() {
 }
 
 export function LinkCarts({ page = false }) {
-  const byId = useStore((s) => s.byId);
-  const [list, setList] = useState(null);
+  const list = useStore((s) => s.lcarts ?? null); // datawin: son N gün + bekleyenler (Ayarlar > Veri ve kota)
+  const live = useRate();
   const [f, setF] = useState('sent');
+  const [q, setQ] = useState('');
   const [open, setOpen] = useState(null);
-  useEffect(() => { const A = api(); return A?.watchLcarts ? A.watchLcarts(setList) : setList([]); }, []);
   // zilden gelince o sepet açılır
   const want = useStore((s) => s.openLcart);
   useEffect(() => { if (!want || !list) return; const x = list.find((c) => c.id === want); if (x) { setF(x.status === 'open' ? 'open' : x.status); setOpen(want); } store.set({ openLcart: null }); }, [want, list]);
   const n = (k) => (list || []).filter((c) => c.status === k).length;
-  const shown = (list || []).filter((c) => c.status === f);
+  const t = q.trim().toLocaleLowerCase('tr');
+  const shown = (list || []).filter((c) => c.status === f && (!t || [c.no, c.name, c.sub?.contact?.name, c.sub?.contact?.phone].join(' ').toLocaleLowerCase('tr').includes(t)));
   const cur = open && (list || []).find((c) => c.id === open);
+  const pick = (c) => { setOpen(c.id); if (c.status === 'sent' && !c.seen) api().updateLcart(c.id, { seen: true }).catch(() => {}); };
   return (
-    <section className="oform-saved lc-list">
+    <section className={'lc-list' + (page ? ' lc-list-page' : ' oform-saved')}>
       {!page && <h2>Linkle gelen sepetler</h2>}
-      <div className="chips lc-chips">
-        {['sent', 'open', 'done'].map((k) => <button key={k} className={'chip' + (f === k ? ' on' : '')} onClick={() => setF(k)}>{ST[k][0]}{n(k) > 0 && <span className="num"> {n(k)}</span>}</button>)}
+      <div className="toolbar lc-tool">
+        {page && <div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Sepet no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>}
+        <div className="chips lc-chips">
+          {['sent', 'open', 'done'].map((k) => <button key={k} className={'chip' + (f === k ? ' on' : '')} onClick={() => setF(k)}>{ST[k][0]}{n(k) > 0 && k !== 'done' && <span className="num"> ({n(k)})</span>}</button>)}
+        </div>
       </div>
       {list == null ? <div className="spinner sm" /> : shown.length === 0 ? (
-        <p className="fine">{f === 'sent' ? 'Henüz onaylanan sepet yok. Müşteri linkten onaylayınca burada görünür.' : f === 'open' ? 'Müşteriye gönderilip henüz onaylanmamış sepet yok.' : 'Tamamlanan sepet yok.'}</p>
+        <Empty icon="cart" title={t ? 'Aramaya uyan sepet yok' : f === 'sent' ? 'Onaylanan sepet yok' : f === 'open' ? 'Bekleyen sepet yok' : 'Tamamlanan sepet yok'}>
+          {!t && <p>{f === 'sent' ? 'Müşteri linkten onaylayınca burada görünür.' : f === 'open' ? 'Müşteriye gönderilip henüz onaylanmamış sepetler burada durur.' : 'Tamamlandı olarak işaretlediğiniz sepetler.'}</p>}
+        </Empty>
       ) : (
-        <ul className="ofs-list">
-          {shown.map((c) => {
-            const its = finalItems(c); const adet = its.reduce((t, it) => t + (Number(it.qty) || 0), 0);
-            const who = c.sub?.contact?.name || c.name || 'İsimsiz';
-            return (
-              <li key={c.id} className={c.status === 'sent' && !c.seen ? 'lc-new' : ''}>
-                <button type="button" className="ofs-main" onClick={() => { setOpen(c.id); if (c.status === 'sent' && !c.seen) api().updateLcart(c.id, { seen: true }).catch(() => {}); }}>
-                  <span className="ofs-th">{its.slice(0, 3).map((it) => <Thumb key={it.id} p={byId.get(it.id) || it} size="sm" />)}</span>
-                  <span className="ofs-t">
-                    <b>{who} <span className="muted num">#{c.no}</span>{c.status === 'sent' && !c.seen && <span className="lc-dot" aria-label="Yeni" />}</b>
-                    <small className="muted">{its.length} ürün · {adet} adet · {fmtTotals(totals(its, 'offer'))} · {when(subTime(c) || c.at)}{c.sub ? ' · ' + (c.sub.delivery?.method === 'pickup' ? 'Dükkândan' : c.cargo?.code ? 'DHL ' + c.cargo.code : c.dhl?.ref && !c.dhl.cancelled ? 'DHL’e aktarıldı' : 'Kargo') : ''}</small>
-                  </span>
-                </button>
-                <span className="lc-st" style={{ '--c': ST[c.status]?.[1] }}>{ST[c.status]?.[0] || c.status}</span>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="otable lc-table">
+          <div className="otable-h" aria-hidden="true">
+            <span>Sepet no</span><span>Müşteri</span><span className="oh-th">Ürünler</span><span>Teslimat / ödeme</span><span className="oh-sum">Tutar</span><span>Tarih</span><span>Durum</span><span />
+          </div>
+          <ul className="olist orows">
+            {shown.map((c) => {
+              const its = finalItems(c);
+              const tot = totals(its, 'offer');
+              const tl = toTL(tot, c.rate ? { usd: c.rate } : live);
+              const ts = subTime(c) || c.at;
+              const who = c.sub?.contact?.name || c.name || 'İsimsiz';
+              const isNew = c.status === 'sent' && !c.seen;
+              const stK = c.status === 'sent' ? 'confirmed' : c.status === 'open' ? 'new' : 'done';
+              const o = { items: its };
+              const deliv = !c.sub ? null : c.sub.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (c.cargo?.code || c.dhl?.ref ? 'dhl' : 'none')}>{c.cargo?.code || (c.dhl?.ref && !c.dhl.cancelled) ? 'DHL' : 'Kargo'}</span>;
+              return (
+                <li key={c.id}>
+                  <div role="button" tabIndex={0} className={'orow st-' + stK + (isNew ? ' unread' : '')} onClick={() => pick(c)} onKeyDown={(e) => e.key === 'Enter' && pick(c)}>
+                    <span className="or-no">{isNew ? <span className="dot-new" aria-label="Yeni" /> : null}<b className="num">#{c.no}</b></span>
+                    <span className="or-who"><b>{who}</b><small>{c.sub?.contact?.phone || (c.name && c.sub ? c.name : '')}</small></span>
+                    <span className="or-thd"><OrderThumbs o={o} /></span>
+                    <span className="or-tags">{c.sub?.pay && <span className="or-pay">{PAY_SHORT[c.sub.pay] || PAY[c.sub.pay] || c.sub.pay}</span>}{deliv}{!c.sub && <span className="muted">Müşteri bekleniyor</span>}</span>
+                    <span className="or-sum">{tl != null ? <><b className="num">{fmtTL(tl)}</b><small className="num">{fmtTotals(tot)} · {its.length} ürün</small></> : <><b className="num">{fmtTotals(tot)}</b><small>{its.length} ürün</small></>}</span>
+                    <span className="or-date"><span>{fullDate(ts)}</span><small className="or-ago">{ago2(ts)}</small></span>
+                    <span className="or-st"><span className={'ost ost-' + stK + ' lc-ost'}><span>{ST[c.status]?.[0] || c.status}</span></span></span>
+                    <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{who}</b><span className="num or-mob-s">{tl != null ? fmtTL(tl) : fmtTotals(tot)} <small>· {ago2(ts)}</small></span></span></span>
+                    <span className="or-act" />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
+      {page && f === 'done' && <OlderBtn kind="lcarts" what="sepetleri" unit="sepet" />}
       {cur && <LinkCartSheet c={cur} onClose={() => setOpen(null)} />}
     </section>
   );
 }
+const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda' };
 
 function LinkCartSheet({ c, onClose }) {
   const byId = useStore((s) => s.byId);

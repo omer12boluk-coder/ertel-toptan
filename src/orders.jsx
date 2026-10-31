@@ -61,6 +61,7 @@ export function OlderBtn({ kind, what = 'siparişleri', unit = 'sipariş', onDon
 const dIn = (ts) => { const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 const dOut = (v) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
 const DAY = 864e5;
+const RANGE_CACHE = new Map();
 const rangeLabel = (r) => { const f = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }); const a = f(r.from), b = f(r.to - 1); return a === b ? a : a + ' – ' + b; };
 function RangeSheet({ cur, onPick, onClose }) {
   const t0 = new Date(); t0.setHours(0, 0, 0, 0);
@@ -72,6 +73,7 @@ function RangeSheet({ cur, onPick, onClose }) {
     ['Bu ay', new Date(y, m, 1).getTime(), t0.getTime() + DAY],
     ['Geçen ay', new Date(y, m - 1, 1).getTime(), new Date(y, m, 1).getTime()],
     ['Son 3 ay', new Date(y, m - 2, 1).getTime(), t0.getTime() + DAY],
+    ['Son 1 yıl', t0.getTime() - 364 * DAY, t0.getTime() + DAY],
   ];
   const ok = a && b && dOut(a) <= dOut(b);
   return (
@@ -81,7 +83,7 @@ function RangeSheet({ cur, onPick, onClose }) {
         <Field label="Başlangıç"><input type="date" value={a} max={b || undefined} onChange={(e) => setA(e.target.value)} /></Field>
         <Field label="Bitiş"><input type="date" value={b} min={a || undefined} onChange={(e) => setB(e.target.value)} /></Field>
       </div>
-      <p className="fine">Aralıktaki her sipariş 1 okuma sayılır (100 siparişlik ay ≈ 100 okuma); sadece bastığınızda, bir kez.</p>
+      <p className="fine">Aralıktaki her sipariş 1 okuma sayılır (100 siparişlik ay ≈ 100 okuma). Sadece bastığınızda bir kez okunur, açık kalsa da okuma harcamaz; aynı aralığa yarım saat içinde tekrar bakmak bedava. Uzun aralıkta sipariş çoksa önce sorulur.</p>
     </Sheet>
   );
 }
@@ -113,9 +115,19 @@ export function Orders() {
   // tarih aralığı: seçilince o aralığın siparişleri bir kez okunur; liste sadece onları gösterir
   const [range, setRange] = useState(null); // {from, to, items|null}
   const [rangeOpen, setRangeOpen] = useState(false);
-  const runRange = (from, to) => {
-    setRangeOpen(false); setFilter('all'); setRange({ from, to, items: null });
-    api().findOrdersRange(from, to).then((l) => setRange({ from, to, items: l || [] }), (e) => { toast('Yüklenemedi: ' + e.message, 'bad'); setRange(null); });
+  // Koruma: aralık BİR KEZ okunur (canlı dinlenmez → açık unutulsa da okuma harcamaz); aynı aralık 30 dk cihaz belleğinde
+  // tutulur (tekrar basınca yeniden okunmaz); 45 günden uzun aralıkta önce sadece SAYI sorulur (1 okuma), 300'den fazlaysa onay istenir.
+  const runRange = async (from, to, sure) => {
+    setRangeOpen(false); setFilter('all');
+    const key = from + '-' + to; const hit = RANGE_CACHE.get(key);
+    if (hit && Date.now() - hit.at < 30 * 60e3) { setRange({ from, to, items: hit.items }); return; }
+    if (!sure && to - from > 45 * DAY && api().countOrdersRange) {
+      let n = null; try { n = await api().countOrdersRange(from, to); } catch {}
+      if (n != null && n > 300) { setConfirm({ title: `${n.toLocaleString('tr-TR')} sipariş yüklenecek`, text: `${rangeLabel({ from, to })} arasında ${n.toLocaleString('tr-TR')} sipariş var. Yüklemek yaklaşık ${n.toLocaleString('tr-TR')} okuma harcar (günlük hak 50.000). Daha kısa bir aralık seçmek daha hafif olur.`, okLabel: 'Yine de yükle', onOk: () => runRange(from, to, true) }); return; }
+      if (n === 0) { setRange({ from, to, items: [] }); RANGE_CACHE.set(key, { at: Date.now(), items: [] }); return; }
+    }
+    setRange({ from, to, items: null });
+    api().findOrdersRange(from, to).then((l) => { RANGE_CACHE.set(key, { at: Date.now(), items: l || [] }); setRange({ from, to, items: l || [] }); }, (e) => { toast('Yüklenemedi: ' + e.message, 'bad'); setRange(null); });
   };
   const list = useMemo(() => {
     let base = orders;
@@ -250,15 +262,15 @@ const PAY_SHORT = { havale: 'Havale/EFT', card: 'Kart (link)', shop: 'Dükkânda
 // sipariş başlığındaki üye adı → Müşteriler > Mağaza müşterileri, o üyenin penceresi açık
 const openMember = (uid) => { ls.set('cust-kind', 'magaza'); store.set({ openMember: uid, openOrder: null }); go('musteriler'); };
 // sipariş içeriğinden ilk 3 ürünün resmi + "+N" (telefon listesi)
-function OrderThumbs({ o }) {
+export function OrderThumbs({ o }) {
   const byId = useStore((st) => st.byId); const its = o.items || []; const show = its.slice(0, 3);
   return <span className="or-th">{show.map((it, i) => <span key={i} className="or-th-i"><Thumb p={{ ...(byId.get(it.id) || {}), ...it }} size="sm" /></span>)}{its.length > 3 && <span className="or-th-i more num">+{its.length - 3}</span>}</span>;
 }
 // "3 saat önce" (75 saat önce gibi; 1 saatten azsa dakika)
-const ago2 = (ts) => { if (!ts) return ''; const m = Math.max(0, Math.round((Date.now() - ts) / 6e4)); return m < 1 ? 'az önce' : m < 60 ? m + ' dk önce' : m < 1440 ? Math.round(m / 60) + ' saat önce' : m < 2880 ? 'dün' : m < 43200 ? Math.round(m / 1440) + ' gün önce' : m < 525600 ? Math.round(m / 43200) + ' ay önce' : Math.round(m / 525600) + ' yıl önce'; };
+export const ago2 = (ts) => { if (!ts) return ''; const m = Math.max(0, Math.round((Date.now() - ts) / 6e4)); return m < 1 ? 'az önce' : m < 60 ? m + ' dk önce' : m < 1440 ? Math.round(m / 60) + ' saat önce' : m < 2880 ? 'dün' : m < 43200 ? Math.round(m / 1440) + ' gün önce' : m < 525600 ? Math.round(m / 43200) + ' ay önce' : Math.round(m / 525600) + ' yıl önce'; };
 const PAGE = 25; // listede sayfa başına sipariş
 // tarih: 26.10.2026 17:32
-const fullDate = (ts) => { if (!ts) return ''; const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+export const fullDate = (ts) => { if (!ts) return ''; const d = new Date(ts); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
 // ---- Durum değiştirme (liste ve detay ortak): onay penceresi, kargo bilgisi penceresi ----
 // Kargoda iken takip no sonradan eklenebilir/düzeltilebilir: durum değişmez, müşteriye sadece takip no ile tek bildirim gider.
