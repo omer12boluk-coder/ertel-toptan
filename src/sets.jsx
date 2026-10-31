@@ -2,12 +2,13 @@
 // pp = ürünün paketteki birim fiyatı (eklenirken liste fiyatı gelir, yönetici değiştirebilir). Set fiyatı = Σ pp × adet.
 // Sepette anahtar 's:<setId>' (müşteri "Elimde var" dediyse 's:<setId>~<çıkarılan ürünler . ile>') ve değeri set adedi.
 // Siparişte ürünler tek tek yazılır, her kalemde set: { id, n, k } (bekçi fiyatı setin tanımından doğrular).
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, go, setQty, toast, api, openProduct } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, Toggle, Confirm, openMenu } from './ui.jsx';
 import { fmt, norm, now } from './utils.js';
 import { queueSave } from './saveq.js';
 import { ShareBtn } from './extras.jsx';
+import { PriceBlock, cardAdd } from './catalog.jsx';
 
 const r2 = (n) => Math.round(Number(n) * 100) / 100;
 export const setsOf = (S) => (Array.isArray(S?.sets) ? S.sets : []);
@@ -66,44 +67,83 @@ export function openSet(id) {
 export const setIdFromPath = () => { const m = /^\/(?:magaza\/)?set\/([\w-]+)/.exec(location.pathname); return m ? m[1] : null; };
 
 // Kapak: ilk 4 ürünün resmi
-export function SetCover({ v, n }) {
+export function SetCover({ v, n, bare }) {
   const ps = v.lines.map((l) => l.p).filter(Boolean).slice(0, 4);
   return (
-    <span className={'set-cov n' + Math.min(4, ps.length)}>
+    <span className={'set-cov n' + Math.min(4, ps.length) + (bare ? ' bare' : '')}>
       {ps.map((p, i) => <span key={p.id} className="set-cov-i">{<Thumb p={p} size={i === 0 ? 'lg' : 'sm'} />}{i === 3 && v.lines.length > 4 && <b className="set-cov-more">+{v.lines.length - 3}</b>}</span>)}
-      <span className="set-tag"><Icon n="box" s={12} />SET · {n ?? v.active.length} ÜRÜN</span>
+      {!bare && <span className="set-tag"><Icon n="box" s={12} />SET · {n ?? v.active.length} ÜRÜN</span>}
     </span>
   );
 }
 
-export function SetCard({ set }) {
+// Set kartı = ürün kartının aynısı (31.10.2026, kullanıcı: tutarsız görünüyordu): aynı kutu, aynı fiyat bloğu, aynı
+// "Sepete ekle" düğmesi ve adet seçiciye aynı geçiş. Resim yerine setteki ürünlerin kolajı, üstte SET rozeti.
+export function SetCard({ set, asLi = true }) {
   const byId = useStore((s) => s.byId);
+  const S = useStore((s) => s.settings);
   const k = setKey(set.id);
   const qty = useStore((s) => s.cart[k] || 0);
-  const ordersOn = useStore((s) => s.settings.orders?.enabled !== false);
   const v = useMemo(() => setView(set, byId), [set, byId]);
-  const open = () => openSet(set.id);
+  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
+  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
+  const ordersOn = S.orders?.enabled !== false;
+  const pseudo = useMemo(() => ({ id: 's-' + set.id, n: set.name, r: v.price, cur: v.cur, s: v.ok ? 1 : 0, a: 1 }), [set, v]);
+  const Tag = asLi ? 'li' : 'div';
   return (
-    <div className="set-card" role="link" tabIndex={0} onClick={(e) => { if (!e.target.closest('button, .stepper')) open(); }} onKeyDown={(e) => e.key === 'Enter' && open()}>
-      <SetCover v={v} />
-      <span className="set-card-b">
-        <b className="set-card-n">{set.name}</b>
-        <span className="set-card-sv">{v.save > 0 ? <><s>{fmt(v.list, v.cur)}</s><em>{fmt(v.save, v.cur)} kazanç</em></> : <small>{v.active.length} ürün bir arada</small>}</span>
-        <span className="set-card-f">
-          <b className="set-card-pr">{fmt(v.price, v.cur)}</b>
-          {!v.ok ? <small className="set-card-x">Stokta değil</small>
-            : qty > 0 ? <Stepper small min={0} value={qty} onChange={(x) => setQty(k, x)} onRemove={() => setQty(k, 0)} />
-            : ordersOn && <button type="button" className="sh-add set-card-add" onClick={() => { setQty(k, 1); toast('Set sepete eklendi'); }} aria-label="Seti sepete ekle" title="Seti sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
-        </span>
-      </span>
-    </div>
+    <Tag className="prow set-prow">
+      <span className="pin-tag set-tag2"><Icon n="box" s={12} />SET · {v.active.length} ÜRÜN</span>
+      <button className="prow-main" onClick={() => openSet(set.id)}>
+        <span className="cimg set-cimg"><SetCover v={v} bare /></span>
+        <div className="prow-info">
+          <span className="prow-name">{set.name}</span>
+          <span className="prow-meta">
+            {v.ok ? <span className="dot tone-ok">Stokta</span> : <span className="dot tone-bad">Stokta değil</span>}
+            {v.save > 0 && <span className="set-save-l"><s>{fmt(v.list, v.cur)}</s> · {fmt(v.save, v.cur)} kazanç</span>}
+          </span>
+        </div>
+      </button>
+      <div className="prow-side">
+        <PriceBlock p={pseudo} />
+        {!v.ok || !ordersOn ? null : qty > 0 ? (
+          <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(x) => setQty(k, x)} onRemove={() => setQty(k, 0)} /></span>
+        ) : (
+          <button className={'btn sm add' + (morph === 'back' ? ' back' : '')} onClick={() => { setQty(k, 1); toast('Set sepete eklendi'); }} aria-label="Seti sepete ekle" title="Seti sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-cart" aria-hidden="true"><Icon n="cart" s={18} /><i>+</i></span><span className="add-l">Sepete ekle</span></button>
+        )}
+      </div>
+    </Tag>
   );
 }
 export function SetGrid() {
   const S = useStore((s) => s.settings);
   const sets = liveSets(S);
   if (!sets.length) return <Empty icon="box" title="Şu an set yok"><p>Yakında ürün paketleri burada olacak.</p></Empty>;
-  return <div className="set-grid">{sets.map((x) => <SetCard key={x.id} set={x} />)}</div>;
+  return <ul className={'plist pgrid add-' + cardAdd(S, 'public')}>{sets.map((x) => <SetCard key={x.id} set={x} />)}</ul>;
+}
+// Ana sayfa rafındaki kart = raftaki ürün kartının (PCard) aynısı
+function SetRailCard({ set, i }) {
+  const byId = useStore((s) => s.byId);
+  const k = setKey(set.id);
+  const qty = useStore((s) => s.cart[k] || 0);
+  const v = useMemo(() => setView(set, byId), [set, byId]);
+  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
+  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
+  const open = () => openSet(set.id);
+  return (
+    <div className="sh-card set-shcard" style={{ '--i': i }} onClick={(e) => { if (!e.target.closest('button, input, .stepper')) open(); }}>
+      <button className="sh-card-img" onClick={open} aria-label={set.name}><SetCover v={v} bare /><span className="sh-new set-new"><Icon n="box" s={11} />SET · {v.active.length}</span></button>
+      <div className="sh-card-b">
+        <span className="sh-card-brand">{v.save > 0 ? <><s>{fmt(v.list, v.cur)}</s> · {fmt(v.save, v.cur)} kazanç</> : v.active.length + ' ürün bir arada'}</span>
+        <button className="sh-card-n" onClick={open}>{set.name}</button>
+        <div className="sh-card-f">
+          <b className="sh-card-p">{fmt(v.price, v.cur)}</b>
+          {!v.ok ? null : qty > 0
+            ? <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(x) => setQty(k, x)} onRemove={() => setQty(k, 0)} /></span>
+            : <button className={'sh-add' + (morph === 'back' ? ' back' : '')} onClick={() => { setQty(k, 1); toast('Set sepete eklendi'); }} aria-label="Seti sepete ekle" title="Seti sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
+        </div>
+      </div>
+    </div>
+  );
 }
 // Ana sayfa rafı (Tasarım modunda 'Setler' bölümü)
 export function SetRail({ edit }) {
@@ -114,7 +154,7 @@ export function SetRail({ edit }) {
     <section className="sh-sec rv set-rail">
       <div className="sh-head"><div><h2>Setler</h2><p>Birlikte daha uygun, tek tıkla sepette</p></div>
         <button type="button" className="sh-more" onClick={() => { store.set({ catalogGo: { sets: true } }); go('katalog'); }}>Tümü<Icon n="back" s={14} className="flip" /></button></div>
-      <div className="sh-rail">{sets.map((x) => <SetCard key={x.id} set={x} />)}</div>
+      <div className="sh-rail">{sets.map((x, i) => <SetRailCard key={x.id} set={x} i={i} />)}</div>
     </section>
   );
 }

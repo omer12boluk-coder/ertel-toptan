@@ -5232,3 +5232,15 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
   .sh-hero-track { gap: 10px; }
   .sh-hero .sh-slide { border-radius: 22px; }
 }
+
+/* set kartları ürün kartlarıyla aynı (31.10.2026) */
+.set-cov.bare { aspect-ratio: 1; width: 100%; padding: 12px; gap: 6px; border-radius: 0; background: #fff; box-sizing: border-box; }
+.set-cov.bare .set-cov-i { border-radius: 8px; background: #f6f7fa; }
+.plist.pgrid .set-cimg { display: block; border-bottom: 1px solid var(--line-2); }
+.plist:not(.pgrid) .set-cimg { width: 72px; flex: none; } .plist:not(.pgrid) .set-cimg .set-cov.bare { padding: 4px; gap: 2px; }
+.set-prow .set-tag2 { background: #10204a; color: #fff; border-color: transparent; }
+.set-save-l { font-size: 12.5px; color: #1f6b47; font-weight: 600; } .set-save-l s { color: var(--muted); font-weight: 500; }
+.sh-card-img .set-cov.bare { padding: 8px; }
+.set-new { display: inline-flex; align-items: center; gap: 4px; background: #10204a !important; }
+.set-shcard .sh-card-brand s { color: var(--muted); } .set-shcard .sh-card-brand { color: #1f6b47; }
+.plist.pgrid .prow-main .set-cov .thumb, .set-cov .thumb { width: 100%; height: 100%; aspect-ratio: auto; padding: 4px; border: 0; border-radius: 8px; background: #fff; }
