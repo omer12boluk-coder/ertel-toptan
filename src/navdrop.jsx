@@ -126,17 +126,31 @@ export function ProductsDrop({ children }) {
         <Item close={c} icon="heart" label="Favorilerim" onClick={() => { store.set({ catalogGo: { fav: true } }); go('katalog'); }} />
         <p className="hd-note">Aradığınızı bulamadınız mı? <a href="/talep" onClick={(e) => { e.preventDefault(); c(); go('talep'); }}>Ürün talebi bırakın</a></p>
       </div>
-      <div className="hd-cats">
-        {cats.map(({ n, subs }) => (
-          <div key={n.id} className="hd-cat">
-            <button type="button" className="hd-ct" onClick={() => { c(); store.set({ catalogGo: { cat: n.id } }); go('katalog'); }}>{n.name}</button>
-            {subs.slice(0, 5).map((x) => <button key={x.id} type="button" className="hd-cs" onClick={() => { c(); store.set({ catalogGo: { cat: x.id } }); go('katalog'); }}>{x.name}</button>)}
-            {subs.length > 5 && <button type="button" className="hd-cs more" onClick={() => { c(); store.set({ catalogGo: { cat: n.id } }); go('katalog'); }}>+ {subs.length - 5} alt kategori</button>}
-          </div>
-        ))}
-      </div>
+      <MegaCats cats={cats} close={c} />
     </div>
   )}>{children}</HoverDrop>;
+}
+
+// büyük başlıklar tek sütun (kaydırma yok); üstüne gelince alt başlıklar yanda açılır
+function MegaCats({ cats, close }) {
+  const [hov, setHov] = useState(null);
+  const pick = (id) => { close(); store.set({ catalogGo: { cat: id } }); go('katalog'); };
+  const cur = cats.find((x) => x.n.id === hov);
+  return (
+    <div className="hd-cats">
+      {cats.map(({ n, subs }) => (
+        <button key={n.id} type="button" className={'hd-ct' + (hov === n.id ? ' on' : '')} onMouseEnter={() => setHov(n.id)} onFocus={() => setHov(n.id)} onClick={() => pick(n.id)}>
+          <span>{n.name}</span>{subs.length > 0 && <Icon n="back" s={14} className="flip" />}
+        </button>
+      ))}
+      {cur && cur.subs.length > 0 && (
+        <div className={'hd-fly' + (cur.subs.length > 10 ? ' two' : '')} onMouseLeave={() => setHov(null)}>
+          <button type="button" className="hd-fly-h" onClick={() => pick(cur.n.id)}>{cur.n.name}<small>Tümünü gör</small></button>
+          <div className="hd-fly-l">{cur.subs.map((x) => <button key={x.id} type="button" className="hd-cs" onClick={() => pick(x.id)}>{x.name}</button>)}</div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ---- Mağaza: profil (üye) ----

@@ -553,7 +553,7 @@ export function Catalog({ admin }) {
           {widened && <div className="banner info widen"><Icon n="search" /><div><b>“{q.trim()}” {scopeName} içinde yok.</b> Tüm ürünlerde bulunan {list.length} sonucu gösteriyoruz.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Filtreyi kaldır</button></div>}
           {moreOutside > 0 && <div className="banner info widen"><Icon n="search" /><div>{scopeName} dışında da <b>{moreOutside} sonuç</b> var.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Tüm ürünlerde ara</button></div>}
           <div className="result-line">
-            <span>{list.length.toLocaleString('tr-TR')} ürün{!widened && scopeName && <> · <b>{scopeName}</b></>}</span>
+            <span>{setsOnly && user?.role === 'public' ? setN + ' set' : <>{list.length.toLocaleString('tr-TR')} ürün</>}{!(setsOnly && user?.role === 'public') && !widened && scopeName && <> · <b>{scopeName}</b></>}</span>
             {admin && <SyncButton icon />}
             <span className="view-sw" role="group" aria-label="Görünüm">
               <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Kutu kutu" title="Kutu kutu"><Icon n="grid" s={17} /></button>
@@ -573,7 +573,7 @@ export function Catalog({ admin }) {
                 : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} pinned={!!pinShow?.has(p.id)} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
             </ul>
           )}
-          {limit < list.length && <div ref={sentinel} className="more"><button className="btn ghost" onClick={more}>Daha fazla göster ({list.length - limit})</button></div>}
+          {!(setsOnly && user?.role === 'public') && limit < list.length && <div ref={sentinel} className="more"><button className="btn ghost" onClick={more}>Daha fazla göster ({list.length - limit})</button></div>}
         </section>
       </div>
 
