@@ -5023,6 +5023,11 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 @media (hover: hover) and (pointer: fine) and (min-width: 900px) { .topnav-chev { display: inline-flex; } }
 .hd { position: relative; display: flex; }
 .hd.open .topnav-chev { transform: rotate(180deg); }
+/* MENU.ok: ok ayrı tıklama alanı (yazıya basmak sayfaya gider) */
+.hd-chev .topnav-chev { display: inline-grid; place-items: center; padding: 5px; margin: -5px -7px -5px -3px; border-radius: 7px; cursor: pointer; transition: background .15s; }
+.hd-chev .topnav-chev:hover { background: rgb(16 32 74 / .09); }
+.shell.admin .hd-chev .topnav-chev:hover { background: rgb(255 255 255 / .14); }
+.hd-chev .topnav-chev svg { transition: transform .2s ease; } .hd-chev.open .topnav-chev { transform: none; } .hd-chev.open .topnav-chev svg { transform: rotate(180deg); }
 .hd.open > .topnav-b { color: var(--accent); background: var(--accent-soft); }
 .hd-p { position: fixed; top: 0; left: 0; z-index: 60; min-width: 300px; padding: 8px; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px -18px rgb(16 32 74 / .35), 0 2px 6px rgb(16 32 74 / .06); animation: hdIn .2s cubic-bezier(.2, .8, .2, 1) both; text-align: left; }
 .hd-p::before { content: ""; position: absolute; left: 0; right: 0; top: -12px; height: 12px; } /* fare menüye inerken boşlukta kapanmasın */
