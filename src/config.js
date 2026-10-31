@@ -176,7 +176,7 @@ export const DEFAULT_SETTINGS = {
   shopHome: {
     enabled: true,
     slides: [
-      { layout: 'split', theme: 'night', tag: 'Yeni gelenler', title: 'Tamir masanızın yeni yıldızları', text: 'Aixun, JCID, Mechanic, Sunshine, Luban ve daha fazlası. Orijinal ürün, aynı gün kargo.', cta: 'Yeni ürünleri gör', link: 'q:', img: 'prod:2882' },
+      { layout: 'split', theme: 'night', tag: 'Yeni gelenler', title: 'Tamir masanızın yeni yıldızları', text: 'Aixun, JCID, Mechanic, Sunshine, Luban ve daha fazlası. Orijinal ürün, aynı gün kargo.', cta: 'Yeni ürünleri gör', link: 'new:', img: 'prod:2882' },
       { layout: 'split', theme: 'ember', tag: 'Aixun', title: 'Akıllı havya istasyonları', text: 'T420D çift kanallı istasyon ve C210 / C245 / C115 uçları stokta.', cta: 'Aixun ürünleri', link: 'brand:Aixun', img: 'prod:1758' },
       { layout: 'split', theme: 'volt', tag: 'JCID', title: 'Face ID ve True Tone onarımı', text: 'JC V1SE adaptörleriyle iPhone 17 serisine kadar tam destek.', cta: 'JCID ürünleri', link: 'brand:JCID', img: 'prod:3001' },
       { layout: 'split', theme: 'violet', tag: 'AmScope', title: 'Net görüş, rahat çalışma', text: 'Stereo mikroskoplar, başlıklar ve lensler.', cta: 'Mikroskopları gör', link: 'q:mikroskop', img: 'prod:3064' },

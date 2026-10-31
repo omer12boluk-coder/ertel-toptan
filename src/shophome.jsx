@@ -97,6 +97,8 @@ export function useOpenLink() {
     let browse = {};
     if (k === 'brand') { const real = catalog.find((p) => p.b && norm(p.b) === norm(v))?.b || v; browse = { brand: real }; }
     else if (k === 'cat') browse = { cat: Number(v) };
+    // 'q:yeni …' (eski "Yeni ürünleri gör" linkleri) adında 'yeni' geçen ürün aradığı için boş liste veriyordu → yeni gelenler süzgeci
+    else if (k === 'new' || (k === 'q' && /^\s*yeni\b/i.test(v))) browse = { nw: true };
     else if (k === 'q') browse = { q: v };
     store.set({ catalogGo: browse }); go('katalog');
   };
@@ -659,15 +661,25 @@ function Hero({ slides, open, brands, heroH }) {
     target.current = k; clearTimeout(targetT.current); targetT.current = setTimeout(() => { target.current = null; }, 1200);
     el.scrollTo({ left: k * step(el), behavior: 'smooth' }); setI(k); setPlay(k);
   }
+  // parmakla kaydırma: gelen reklamın yazısı kaydırırken gizli (CSS), reklam yerine OTURUNCA (parmak kalkmış + kayma 140 ms
+  // durmuş) yazılar yeniden dökülür. Yarı yolda değil — eskiden ortada kaybolup yeniden beliriyordu.
+  const touching = useRef(false); const settleT = useRef(0);
+  const settle = () => {
+    clearTimeout(settleT.current);
+    settleT.current = setTimeout(() => { const el = track.current; if (!el || touching.current) return; setPlay(Math.round(el.scrollLeft / step(el))); }, 140);
+  };
+  useEffect(() => () => { clearTimeout(settleT.current); clearTimeout(targetT.current); }, []);
   const onScroll = (e) => {
     const el = e.currentTarget; const s = step(el);
     if (target.current != null) { if (Math.abs(el.scrollLeft - target.current * s) < 2) target.current = null; return; }
-    const k = Math.round(el.scrollLeft / s); if (k !== i) { setI(k); setPlay(-1); }
+    const k = Math.round(el.scrollLeft / s); if (k !== i) setI(k);
+    settle();
   };
-  const grab = () => { target.current = null; clearTimeout(targetT.current); };
+  const grab = () => { target.current = null; clearTimeout(targetT.current); touching.current = true; clearTimeout(settleT.current); };
+  const release = () => { touching.current = false; settle(); };
   return (
     <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
-      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => setPaused(false)}>
+      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
         {slides.map((s, k) => <Slide key={k} k={k} s={s} on={k === i} play={k === i && k === play} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
@@ -852,7 +864,7 @@ function LinkPick({ v = '', onChange, label = 'Tıklanınca' }) {
       <span className="field-l">{label}</span>
       <div className="she-link">
         <select value={type} onChange={(e) => setT(e.target.value)} aria-label="Link türü">
-          <option value="">Hiçbir yere gitmesin</option><option value="brand">Marka ürünleri</option><option value="cat">Kategori</option><option value="q">Arama sonucu</option><option value="p">Bir ürün</option><option value="url">Web adresi</option>
+          <option value="">Hiçbir yere gitmesin</option><option value="brand">Marka ürünleri</option><option value="cat">Kategori</option><option value="new">Yeni gelenler</option><option value="all">Tüm ürünler</option><option value="q">Arama sonucu</option><option value="p">Bir ürün</option><option value="url">Web adresi</option>
         </select>
         {type === 'brand' && <select value={val} onChange={(e) => onChange('brand:' + e.target.value)}><option value="">Marka seçin</option>{brands.map((b) => <option key={b}>{b}</option>)}</select>}
         {type === 'cat' && <select value={val} onChange={(e) => onChange('cat:' + e.target.value)}><option value="">Kategori seçin</option>{cats.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>}

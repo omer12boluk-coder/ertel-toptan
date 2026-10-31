@@ -365,7 +365,7 @@ export function Catalog({ admin }) {
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
   // useLayoutEffect: marka / kategori linkinden gelince süzme EKRANA ÇİZİLMEDEN uygulanır (önce eski liste görünüp 'patlamasın')
-  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(false); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   const changedN = useMemo(() => (admin ? all.filter(needsCheck).length : 0), [all, admin]);
 
   const pcats = useMemo(() => new Map(all.map((p) => [p.id, productCats(p, tree)])), [all, tree]);
