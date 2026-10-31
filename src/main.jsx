@@ -860,15 +860,19 @@ function setupNavAnim() {
 
 function setupPull() {
   if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
-  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const STANDALONE = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-  if (!IOS || !STANDALONE) return; // Safari'nin kendi çekip yenilesi var; bu sadece ana ekran uygulamasında
+  if (!STANDALONE) return; // tarayıcıda (Safari/Chrome) kendi çekip yenilesi var; bu sadece ana ekran uygulamasında
+  // 31.10.2026: Android ana ekran uygulamasında Chrome'un çekip yenilesi YOK ve sayfa eksiye esnemez → çekiş parmaktan
+  // ölçülür (iPhone'da da esneme gelmezse aynı yedek devreye girer). Gösterge üst menünün altından parmakla iner.
   // 30.10.2026 (10): gösterge üst menünün İÇİNE (alt kenarının hemen altına, taşanı kırpılan bir kutuya) konur →
   // menüyle birlikte telefonun kendi esnemesiyle (120/144 Hz) hareket eder; JS her karede konum hesaplamaz.
   // JS sadece çekiş oranını (--k) yazar; kısa bir geçiş (70 ms) aradaki kareleri ekran kartında doldurur → takılma yok.
   // Bırakınca: kısa dönüş → yeşil ✓ → yerinde küçülüp solar. Sayfa YENİLENMEZ (veriler canlı); sadece yeni sürümde reload.
   const TH = 72, SPIN_MIN = 300, OK_MS = 340;
   let box = null, finger = false, armed = false, ready = false, phase = '', wasOk = false, raf = 0, lastCn = '', lastK = -1;
+  let sx = 0, sy = 0, dy = 0;
+  const atTop = () => scrollY <= 1 && (document.scrollingElement?.scrollTop || 0) <= 1;
+  const rub = (d) => (d > 0 ? 170 * (1 - Math.exp(-d / 230)) : 0); // parmak ~150px → eşik
   const ui = () => {
     const host = document.querySelector('.topbar') || document.body;
     if (box && box.parentNode === host) return box;
@@ -882,7 +886,7 @@ function setupPull() {
   };
   const paint = () => {
     raf = 0;
-    const px = (armed && !phase) ? Math.max(0, -scrollY) : 0;
+    const px = (armed && !phase) ? Math.max(0, -scrollY, rub(dy)) : 0;
     if (!px && !phase) { if (box && lastCn !== 'ptr10') { box.className = lastCn = 'ptr10' + (box.parentNode === document.body ? ' loose' : ''); } return; }
     const b = ui(); const k = phase ? 1 : Math.min(1, px / TH);
     if (finger && armed && !phase) ready = px >= TH;
@@ -896,10 +900,24 @@ function setupPull() {
     setTimeout(() => { phase = 'hide'; req(); setTimeout(() => { phase = ''; wasOk = false; armed = false; lastK = -1; req(); }, 240); }, ok ? OK_MS : 0);
   };
   addEventListener('scroll', req, { passive: true });
-  addEventListener('touchmove', req, { passive: true });
-  addEventListener('touchstart', (ev) => { finger = true; ready = false; armed = !phase && ev.touches.length === 1 && scrollY <= 1 && !document.querySelector('.sheet-bg, .lb, .vv'); }, { passive: true });
+  addEventListener('touchmove', (ev) => {
+    if (armed && !phase && ev.touches.length === 1) {
+      const p = ev.touches[0]; const ddy = p.clientY - sy, ddx = p.clientX - sx;
+      if (dy === 0 && (ddy < -3 || Math.abs(ddx) > Math.abs(ddy) + 4)) { armed = false; } // yukarı kaydırma / yana kaydırma → çekiş değil
+      else if (!atTop() && scrollY > 1) { armed = false; dy = 0; }
+      else dy = Math.max(0, ddy);
+    }
+    req();
+  }, { passive: true });
+  addEventListener('touchstart', (ev) => {
+    finger = true; ready = false; dy = 0;
+    const p = ev.touches[0]; sx = p ? p.clientX : 0; sy = p ? p.clientY : 0;
+    const t = ev.target; const inScroller = t instanceof Element && t.closest('.sheet-b, .ctx-sheet-list, .nc-list, .kf-sugg, input, textarea, select');
+    armed = !phase && ev.touches.length === 1 && atTop() && !inScroller && !document.querySelector('.sheet-bg, .lb, .vv');
+  }, { passive: true });
+  addEventListener('touchcancel', () => { finger = false; ready = false; armed = false; dy = 0; req(); }, { passive: true });
   addEventListener('touchend', async () => {
-    finger = false; const go = armed && ready; ready = false;
+    finger = false; const go = armed && ready; ready = false; dy = 0;
     if (!go || phase || document.querySelector('.sheet-bg, .lb, .vv')) { armed = false; req(); return; }
     haptic();
     if (navigator.onLine === false) { finish(false); toast('İnternet bağlantısı yok', 'bad'); return; }
