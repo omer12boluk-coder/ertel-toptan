@@ -1,0 +1,14 @@
+name: Link önizleme denemesi
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for id in 9000001 3114 2000; do
+            u="https://ertelmarket.com/urun/$id"
+            h=$(curl -s -A "WhatsApp/2.23.20.0 A" "$u" | grep -o '<meta property="og:[a-z]*" content="[^"]*"' | tr '\n' ' ')
+            echo "::notice title=OG $id::$h"
+            img=$(echo "$h" | grep -o 'og:image" content="[^"]*"' | sed 's/.*content="//;s/"$//')
+            if [ -n "$img" ]; then r=$(curl -s -o /dev/null -w '%{http_code} %{content_type} %{size_download}' -A "WhatsApp/2.23.20.0 A" "$img"); echo "::notice title=IMG $id::$img → $r"; fi
+          done
