@@ -10,6 +10,8 @@ import { waLink } from './route.js';
 import { ProductSheet, useTree, PlayVideo } from './catalog.jsx';
 import { currentRate } from './listsheet.jsx';
 import { feat, useStats } from './extras.jsx';
+import { useWin, winOf, onDrag } from './dzframe.jsx';
+import { BG_BY, activePack } from './presets.js';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
@@ -152,17 +154,46 @@ export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün
 // sürükleyerek sıralama: aynı gruptaki [data-dz][data-i] öğelerinin üstüne gelince yer değiştirir; hiç sürüklenmezse tıklama sayılır
 export function dragSort(e, group, idx, onMove, onClick) {
   if (e.button > 0) return;
-  const x0 = e.clientX, y0 = e.clientY; let cur = idx, moved = false;
+  const w = winOf(e), doc = w.document;
+  const x0 = e.clientX, y0 = e.clientY; let cur = idx, moved = false, lock = 0, chip = null;
+  const src = e.currentTarget.closest?.(`[data-dz="${group}"]`) || e.currentTarget;
+  const name = src.dataset.dzName || '';
+  const items = () => [...doc.querySelectorAll(`[data-dz="${group}"]`)];
+  const keyOf = (el) => el.dataset.k || el.dataset.fk || el.textContent.slice(0, 60);
+  const lifted = () => { items().forEach((el) => el.classList.toggle('dz-lifted', Number(el.dataset.i) === cur)); };
   const mv = (ev) => {
     if (!moved && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 7) return;
-    if (!moved) { moved = true; document.body.classList.add('dz-dragging'); }
+    if (!moved) {
+      moved = true; doc.body.classList.add('dz-dragging'); lifted();
+      if (name) { chip = doc.createElement('div'); chip.className = 'dz-chip'; chip.textContent = name; doc.body.appendChild(chip); }
+    }
     ev.preventDefault();
-    const t = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(`[data-dz="${group}"]`);
-    if (t) { const j = Number(t.dataset.i); if (j !== cur && !Number.isNaN(j)) { onMove(cur, j); cur = j; } }
-    if (ev.clientY < 70) scrollBy(0, -18); else if (ev.clientY > innerHeight - 70) scrollBy(0, 18);
+    if (chip) chip.style.transform = `translate(${ev.clientX + 14}px, ${ev.clientY + 12}px)`;
+    const now = performance.now();
+    const t = doc.elementFromPoint(ev.clientX, ev.clientY)?.closest(`[data-dz="${group}"]`);
+    if (t && now > lock) {
+      const j = Number(t.dataset.i);
+      if (j !== cur && !Number.isNaN(j)) {
+        // FLIP: öğeler eski yerlerinden yeni yerlerine kayarak gider
+        const before = new Map(items().map((el) => [keyOf(el), el.getBoundingClientRect()]));
+        flushSync(() => onMove(cur, j)); cur = j; lock = now + 200;
+        items().forEach((el) => {
+          const a = before.get(keyOf(el)); if (!a) return; const b = el.getBoundingClientRect();
+          const dx = a.left - b.left, dy = a.top - b.top; if (!dx && !dy) return;
+          el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        });
+        lifted();
+      }
+    }
+    if (ev.clientY < 70) w.scrollBy(0, -18); else if (ev.clientY > w.innerHeight - 70) w.scrollBy(0, 18);
   };
-  const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); document.body.classList.remove('dz-dragging'); if (!moved) onClick?.(); };
-  addEventListener('pointermove', mv, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  const up = () => {
+    w.removeEventListener('pointermove', mv); w.removeEventListener('pointerup', up); w.removeEventListener('pointercancel', up);
+    doc.body.classList.remove('dz-dragging'); items().forEach((el) => el.classList.remove('dz-lifted')); chip?.remove();
+    if (moved) { const el = items().find((x) => Number(x.dataset.i) === cur); el?.animate([{ boxShadow: '0 0 0 3px var(--accent)' }, { boxShadow: '0 0 0 0 transparent' }], { duration: 600 }); }
+    if (!moved) onClick?.();
+  };
+  w.addEventListener('pointermove', mv, { passive: false }); w.addEventListener('pointerup', up); w.addEventListener('pointercancel', up);
 }
 export const moveItem = (list, from, to) => { const n = [...list]; const [x] = n.splice(from, 1); n.splice(to, 0, x); return n; };
 
@@ -189,9 +220,10 @@ export function ShopHome({ S: Sover }) {
   const sel = E?.sel;
   const pick = (kind, i) => (e) => { e?.stopPropagation?.(); E.select(kind, i); };
   const ls = Number(H.brandLogoScale) || 1;
+  const pk = E?.pack !== undefined ? E.pack : activePack(S.look); // tema stüdyosu (tasarımda önizlenen)
 
   const render = (k) => {
-    if (k === 'hero') return slides.length > 0 ? <Hero slides={slides} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'hero') return slides.length > 0 ? <Hero slides={slides} pkHero={pk?.hero} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
     if (k === 'usps') return (H.usps || []).some((u) => u.title) ? (
       <section className="sh-usps rv" aria-label="Avantajlar">
         {(H.usps || []).filter((u) => u.title).map((u, i) => (
@@ -205,7 +237,7 @@ export function ShopHome({ S: Sover }) {
         <SecHead title={H.brandsTitle || 'Markalar'} sub={H.brandsSub ?? 'Dünyanın önde gelen tamir ekipmanı üreticileri'} onTitle={E && !E.mobile && ((t) => E.set('shopHome.brandsTitle', t))} />
         <div className={'sh-brands bs-' + (H.brandSize || 'md')}>
           {brands.map((b, i) => (
-            <button key={(b.name || '') + b.idx} data-dz="brand" data-i={b.idx}
+            <button key={(b.name || '') + b.idx} data-dz="brand" data-i={b.idx} data-fk={b.name} data-dz-name={b.name}
               className={'sh-brand' + (b.logo ? ' has-logo' : isLight(b.color) ? ' light' : '') + (sel?.kind === 'brand' && sel.i === b.idx ? ' dz-sel' : '')}
               style={{ '--c': b.color || '#111827', '--i': i, '--len': Math.max(4, (b.name || '').length), '--ls': b.scale * ls }}
               onClick={E ? (E.mobile ? (e) => { stop(e); E.select('brand', b.idx); } : stop) : link(b.link || 'brand:' + b.name)} onMouseMove={spot}
@@ -225,7 +257,7 @@ export function ShopHome({ S: Sover }) {
         <SecHead title={H.promosTitle || 'Öne çıkanlar'} onTitle={E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t))} />
         <div className="sh-bento">
           {promos.map((x, i) => (
-            <button key={x.idx} data-dz="promo" data-i={x.idx} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? (isProdImg(x.img) ? ' prod' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (sel?.kind === 'promo' && sel.i === x.idx ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i }}
+            <button key={x.idx} data-dz="promo" data-i={x.idx} data-fk={(x.title || '') + (x.img || '')} data-dz-name={x.title || 'Kutu'} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? (isProdImg(x.img) ? ' prod' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (sel?.kind === 'promo' && sel.i === x.idx ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i }}
               onClick={E ? (E.mobile ? (e) => { stop(e); E.select('promo', x.idx); } : stop) : link(x.link)} onMouseMove={spot}
               onPointerDown={E && !E.mobile ? (e) => dragSort(e, 'promo', x.idx, (f, t) => E.set('shopHome.promos', moveItem(E.get('promos'), f, t)), () => E.select('promo', x.idx)) : undefined}>
               {x.img && (isProdImg(x.img) ? <span className="sh-box-prod"><ShopImg v={x.img} /></span> : <ShopImg v={x.img} className="sh-box-img" />)}
@@ -410,7 +442,7 @@ export function WideBox({ W = 100, pos = 0.5, up, children, phone = 100, selOnly
     e.preventDefault(); e.stopPropagation();
     const rw = row.current.getBoundingClientRect().width; const W0 = (W / 100) * rw; const x0 = (rw - W0) * pos; const sx = e.clientX;
     let cur = { W, pos };
-    document.body.classList.add('dz-dragging');
+    winOf(e).document.body.classList.add('dz-dragging');
     const mv = (ev) => {
       const dx = ev.clientX - sx; let ww = W0, x = x0;
       if (mode === 'move') x = Math.min(rw - ww, Math.max(0, x0 + dx));
@@ -421,8 +453,7 @@ export function WideBox({ W = 100, pos = 0.5, up, children, phone = 100, selOnly
       let pc = Math.round((ww / rw) * 100); if (pc > 97) pc = 100;
       cur = { W: pc, pos: Math.round(pp * 1000) / 1000 }; setLive(cur);
     };
-    const end = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', end); document.body.classList.remove('dz-dragging'); setLive(null); up({ wp: cur.W, pos: cur.pos }); };
-    addEventListener('pointermove', mv); addEventListener('pointerup', end);
+    onDrag(e, mv, () => { setLive(null); up({ wp: cur.W, pos: cur.pos }); });
   };
   return (
     <div className={'wbox-row ' + className} ref={row}>
@@ -484,15 +515,14 @@ export function FreeBox({ pos = 0.5, sc = 1, up, children, className = '' }) {
     const rw = row.current.getBoundingClientRect().width, bw = box.current.getBoundingClientRect().width;
     const free = Math.max(1, rw - bw), x0 = free * pos, sx = e.clientX, sy = e.clientY;
     let cur = { pos, sc }, moved = false;
-    document.body.classList.add('dz-dragging');
+    winOf(e).document.body.classList.add('dz-dragging');
     const mv = (ev) => {
       const dx = ev.clientX - sx, dy = ev.clientY - sy; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
       if (mode === 'move') { let p = Math.min(1, Math.max(0, (x0 + dx) / free)); for (const sn of [0, 0.5, 1]) if (Math.abs(p - sn) < 0.04) p = sn; cur = { pos: Math.round(p * 1000) / 1000, sc }; }
       else { const k = Math.min(2.2, Math.max(0.6, sc * (1 + (dx + dy) / Math.max(120, bw)))); cur = { pos, sc: Math.round(k * 100) / 100 }; }
       setLive(cur);
     };
-    const end = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', end); document.body.classList.remove('dz-dragging'); setLive(null); if (moved) up(cur); };
-    addEventListener('pointermove', mv); addEventListener('pointerup', end);
+    onDrag(e, mv, () => { setLive(null); if (moved) up(cur); });
   };
   return (
     <div className={'fbox-row ' + className} ref={row}>
@@ -571,11 +601,11 @@ function SecHead({ title, sub, more, rail, onTitle }) {
 // kayan marka şeridi: dev bir kayan katman yerine kendi içinde kayan kutu (iPhone'da kaybolma / titreme olmasın).
 // Telefonda parmakla da kaydırılabilir; bırakınca kendiliğinden devam eder. Ekranda değilken durur.
 function Marquee({ items, style, speed, speedM, ls = 1 }) { // speed: masaüstü, speedM: telefon (ayrı ayarlanır)
-  const ref = useRef(null);
-  const phone = matchMedia('(max-width: 700px)').matches; // masaüstünde eskisi gibi CSS ile kayar
+  const ref = useRef(null); const W = useWin();
+  const phone = W.matchMedia('(max-width: 700px)').matches; // masaüstünde eskisi gibi CSS ile kayar
   const row = phone && items.length >= 8 ? items : [...items, ...items, ...items];
   useEffect(() => {
-    const el = ref.current; if (!el || !phone || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const el = ref.current; if (!el || !phone || W.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const inner = el.firstElementChild;
     // Sadece parmakla YANA çekince durur; sayfayı aşağı kaydırırken ya da dokununca durmaz.
     // Bırakınca fırlatma kayması bitene kadar bekler (kayma olayı 160 ms susunca), sonra yumuşakça hızlanarak devam eder.
@@ -633,7 +663,7 @@ function Marquee({ items, style, speed, speedM, ls = 1 }) { // speed: masaüstü
 const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
-function Hero({ slides, open, brands, heroH }) {
+function Hero({ slides, open, brands, heroH, pkHero }) {
   const E = useContext(DesignCtx);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -669,6 +699,8 @@ function Hero({ slides, open, brands, heroH }) {
     settleT.current = setTimeout(() => { const el = track.current; if (!el || touching.current) return; setPlay(Math.round(el.scrollLeft / step(el))); }, 60);
   };
   useEffect(() => () => { clearTimeout(settleT.current); clearTimeout(targetT.current); }, []);
+  // tasarım modu: panelden reklam seçilince her önizlemede o reklama kay
+  useEffect(() => { if (!E?.heroGo) return; const f = (k) => k !== i && goTo(k); E.heroGo.add(f); return () => E.heroGo.delete(f); });
   const onScroll = (e) => {
     const el = e.currentTarget; const s = step(el);
     if (target.current != null) { if (Math.abs(el.scrollLeft - target.current * s) < 2) target.current = null; return; }
@@ -682,7 +714,7 @@ function Hero({ slides, open, brands, heroH }) {
   return (
     <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
-        {slides.map((s, k) => <Slide key={k} k={k} s={s} on={k === i} play={k === i && k === play} open={open} logo={slideLogo(s, brands)} />)}
+        {slides.map((s, k) => <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>
@@ -707,7 +739,7 @@ export const FX_NAMES = { logo: 'Logo / etiket', title: 'Başlık', text: 'Açı
 export const fxTransform = (f) => f ? `translate(calc(${f.x || 0}px * var(--fxk, 1)), calc(${f.y || 0}px * var(--fxk, 1))) perspective(900px) rotateX(${f.rx || 0}deg) rotateY(${f.ry || 0}deg) rotate(${f.r || 0}deg) scale(${f.s || 1})` : undefined;
 // Reklam düzenleri: split yazı+görsel · reverse görsel+yazı · center ortalı · plain sade (süssüz) · cover tam resim · glass resim + yazı kutusu
 export const SLIDE_LAYOUTS = { split: 'Yazı + görsel', reverse: 'Görsel + yazı', center: 'Ortalı', plain: 'Sade (süssüz)', cover: 'Tam resim (banner)', glass: 'Resim + yazı kutusu' };
-const COVER_LY = ['cover', 'glass'];
+export const COVER_LY = ['cover', 'glass'];
 // Görsel stili (31.10.2026, reklam başına; varsayılan düz): depth = fare gezdikçe resim/yazı katmanlı eğilir (telefonda sabit),
 // pop = ürün arkasındaki sahneden yukarı taşar (yazı+görsel düzenlerinde; dekupe/şeffaf resimle en iyi)
 export const IMG_STYLES = { flat: 'Düz', depth: 'Derinlik', pop: 'Taşma' };
@@ -720,7 +752,7 @@ const imVars = (im) => {
   return v;
 };
 const TOUCH_DEV = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
-function Slide({ s, on, play, open, logo, k }) {
+function Slide({ s, on, play, open, logo, k, pkHero }) {
   const E = useContext(DesignCtx);
   const ly = SLIDE_LAYOUTS[s.layout] ? s.layout : 'split';
   const cover = COVER_LY.includes(ly) && s.img;
@@ -742,15 +774,24 @@ function Slide({ s, on, play, open, logo, k }) {
     return { className: (cls ? cls + ' ' : '') + 'dz-fx' + (selOn ? ' on' : ''), style, 'data-fx-name': FX_NAMES[el], onClick: (e) => e.stopPropagation(), onPointerDown: (e) => E.fxDrag(e, k, el) };
   };
   const tt = titleStyle(s.tc); const tf = fx('title', tt.className || '');
+  // hazır arka plan (slides[i].bg) ya da tema stüdyosu banner zemini; tam resimli reklamda resim esas
+  const bgp = !cover && (BG_BY[pkHero] || BG_BY[s.bg]);
+  // resim küçültülünce (yakınlaştırma < %100) ya da sığdırınca kalan yer: bulanık resim (varsayılan) · düz renk · tema rengi
+  const im = s.im || {}; const shrunk = cover && (fit === 'contain' || Number(im.z) < 1 || Number(im.zm) < 1);
+  const fill = im.fill || 'blur';
+  const vars = { ...(cover ? imVars(s.im) : {}), ...(bgp ? { '--bgp': bgp.bg } : {}), ...(cover && shrunk && fill === 'color' ? { '--fillc': im.fc || '#0b1430' } : {}) };
+  const btn = s.bs && s.bs !== 'light' ? ' bs-' + s.bs : '';
+  const ink = bgp ? (bgp.ink === 'l' ? ' ink-dark' : ' ink-light') : '';
   return (
-    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (imDown ? ' dz-imdrag' : '')} style={cover ? imVars(s.im) : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
-      {cover ? <>{fit === 'contain' && <ShopImg v={s.img} className="sh-slide-bg sh-bg-blur" />}<ShopImg v={s.img} className="sh-slide-bg sh-bg-main" /></> : ly !== 'plain' && <>
+    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (imDown ? ' dz-imdrag' : '') + (bgp ? ' has-bgp' : '') + ink + btn + (shrunk ? ' fill-' + fill : '')} style={Object.keys(vars).length ? vars : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
+      {cover ? <>{shrunk && fill === 'blur' && <ShopImg v={s.img} className="sh-slide-bg sh-bg-blur" />}<ShopImg v={s.img} className="sh-slide-bg sh-bg-main" /></> : bgp ? <span className="sh-bgp" aria-hidden="true" /> : ly !== 'plain' && <>
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}
+      {E?.guide?.k === k && <span className="dz-guides" aria-hidden="true">{E.guide.v.map((x) => <i key={'v' + x} className="gv" style={{ left: x }} />)}{E.guide.h.map((y) => <i key={'h' + y} className="gh" style={{ top: y }} />)}</span>}
       <div className="sh-slide-t">
         {logo ? <span {...fx('logo', 'sh-slide-logo')}><ShopImg v={logo} alt={s.tag || ''} /></span> : s.tag && <span {...fx('logo', 'sh-tag glow')}>{s.tag}</span>}
         {s.title && <h1 {...tf} style={{ ...(tf.style || {}), ...(tt.style || {}) }}>{s.title}</h1>}
-        {s.text && <p {...fx('text')}>{s.text}</p>}
+        {s.text && (() => { const xf = fx('text'); return <p {...xf} style={s.xc ? { ...(xf.style || {}), color: s.xc, opacity: 1 } : xf.style}>{s.text}</p>; })()}
         {s.cta && s.link && <span {...fx('cta', 'sh-cta-wrap')}><button className="sh-cta-btn" onClick={(e) => { e.stopPropagation(); open(s.link)(); }}>{s.cta}<span><Icon n="back" s={18} className="flip" /></span></button></span>}
       </div>
       {!cover && s.img && <div ref={art} {...fx('art', 'sh-slide-art')}>{st === 'pop' ? <span className="sh-stage" aria-hidden="true" /> : <span className="sh-halo" aria-hidden="true" />}<span className="sh-depth">{isProdImg(s.img) && st !== 'pop' ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</span></div>}
@@ -875,7 +916,7 @@ function ProductSearch({ onPick, placeholder = 'Ürün ara (ad ya da stok kodu)�
   );
 }
 
-function LinkPick({ v = '', onChange, label = 'Tıklanınca' }) {
+export function LinkPick({ v = '', onChange, label = 'Tıklanınca' }) {
   const catalog = useStore((s) => s.catalog);
   const byId = useStore((s) => s.byId);
   const tree = useTree();
@@ -940,7 +981,7 @@ export const NEW = {
   brand: (name = '') => ({ name, color: '#1f2937', link: name ? 'brand:' + name : '' }),
 };
 // Etiketteki marka logosu: otomatik (reklamın linki / etiketi) ya da elle seçilen marka
-function LogoPick({ s, up }) {
+export function LogoPick({ s, up }) {
   const BL = useStore((st) => st.designDraft?.brandLogos || st.settings.brandLogos || {});
   const H = useStore((st) => (st.designDraft || st.settings).shopHome || {});
   const [q, setQ] = useState('');
@@ -975,6 +1016,7 @@ export function SlideFields({ s, up, phone }) {
     <Field label="Başlık"><input value={s.title || ''} onChange={(e) => up({ title: e.target.value })} placeholder="ör. Aixun T3A ile tanışın" /></Field>
     <ColorPick v={s.tc || ''} onChange={(tc) => up({ tc })} />
     <Field label="Açıklama" opt><input value={s.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
+    {s.text && <ColorPick v={s.xc || ''} onChange={(xc) => up({ xc })} label="Açıklama rengi" grads={false} />}
     <LogoPick s={s} up={up} />
     <div className="row2">
       <Field label="Buton yazısı" opt><input value={s.cta || ''} onChange={(e) => up({ cta: e.target.value })} placeholder="ör. Hemen incele" /></Field>
@@ -985,7 +1027,7 @@ export function SlideFields({ s, up, phone }) {
   </>;
 }
 // reklam resminin stili + (tam resim düzenlerinde) ölçeği; hepsi isteğe bağlı, varsayılan eskisi gibi
-function ImgLook({ s, up, cover, phone }) {
+export function ImgLook({ s, up, cover, phone }) {
   const [dev, setDev] = useState(phone ? 'm' : 'pc');
   useEffect(() => { setDev(phone ? 'm' : 'pc'); }, [phone]);
   const im = s.im || {}; const m = dev === 'm';
@@ -1005,7 +1047,11 @@ function ImgLook({ s, up, cover, phone }) {
       <div className="im-dev"><span className="seg sm">{[['pc', 'Bilgisayar'], ['m', 'Telefon']].map(([k, l]) => <button key={k} type="button" className={dev === k ? 'on' : ''} onClick={() => setDev(k)}><Icon n={k === 'm' ? 'mobile' : 'monitor'} s={14} />{l}</button>)}</span>
         {changed && <button type="button" className="linkish" onClick={() => up({ im: { ...im, ...(m ? { zm: null, xm: null, ym: null } : { z: null, x: null, y: null }) } })}>sıfırla</button>}</div>
       {m && im.zm == null && im.xm == null && im.ym == null && <p className="fine">Telefonda şu an bilgisayardaki ayar kullanılıyor; burada değiştirirseniz telefona özel olur.</p>}
-      {R('Yakınlaştır', 'z', 1, 3, 0.05, 1, (v) => '%' + Math.round(v * 100))}
+      {R('Boyut', 'z', 0.5, 3, 0.05, 1, (v) => '%' + Math.round(v * 100))}
+      {((im.f || 'cover') === 'contain' || g('z', 1) < 1) && <Field label="Boş kalan yer" hint="Resim kutudan küçükken kenarlarda kalan alan">
+        <span className="seg">{[['blur', 'Bulanık resim'], ['color', 'Düz renk'], ['theme', 'Siyah']].map(([k, l]) => <button key={k} type="button" className={(im.fill || 'blur') === k ? 'on' : ''} onClick={() => up({ im: { ...im, fill: k } })}>{l}</button>)}</span>
+        {im.fill === 'color' && <span className="she-color"><input type="color" value={im.fc || '#0b1430'} onChange={(e) => up({ im: { ...im, fc: e.target.value } })} /><code>{im.fc || '#0b1430'}</code></span>}
+      </Field>}
       <div className="row2">
         {R('Yatay odak', 'x', 0, 100, 1, 50, (v) => v <= 5 ? 'sol' : v >= 95 ? 'sağ' : Math.round(v))}
         {R('Dikey odak', 'y', 0, 100, 1, 50, (v) => v <= 5 ? 'üst' : v >= 95 ? 'alt' : Math.round(v))}
@@ -1160,53 +1206,13 @@ export const MQ_STYLES = { color: 'Açık zemin, renkli logolar', dark: 'Koyu ze
 
 export function ShopHomeEditor({ d, set }) {
   const H = d.shopHome || {};
-  const S = (k, v) => set('shopHome.' + k, v);
+  // 31.10.2026: ana sayfanın bütün ayarları Tasarım modunda (tek yer). Burada sadece aç/kapa ve giriş.
   return <>
     <div className="dz-cta">
-      <span><b>Tasarım modu</b><small>Mağaza sayfasının üstünde sürükle-bırak ile düzenleyin: sıralama, boyut, yeni başlık ve bölümler.</small></span>
+      <span><b>Tasarım modu</b><small>Reklamlar, marka kutuları, raflar, renkler ve Tema Stüdyosu artık tek yerde: mağaza sayfasının üstünde, önizlemeli. Telefon görünümü birebir.</small></span>
       <button type="button" className="btn primary sm" onClick={() => go('tasarim')}><Icon n="brush" s={16} />Tasarım modunu aç</button>
     </div>
-    <Toggle id="sh-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => S('enabled', v)} />
-
-    <Fold title="Büyük reklam alanı" hint="Sırayla kayan büyük kartlar" badge={(H.slides || []).length}>
-      <p className="fine">“Ürün görselli”de arka planı saydam ürün resmi (PNG) çok iyi durur; “Tam resim”de hazır banner (ör. 1600×640) kullanın.</p>
-      <Field label="Yükseklik" hint="0 = otomatik"><span className="she-scale"><input type="range" min="0" max="720" step="10" value={Number(H.heroH) || 0} onChange={(e) => S('heroH', Number(e.target.value) < 260 ? 0 : Number(e.target.value))} /><code>{Number(H.heroH) ? H.heroH + ' px' : 'otomatik'}</code></span></Field>
-      <Rows list={H.slides || []} set={(v) => S('slides', v)} max={8} sub="Reklam ekle" title={(s, i) => `${i + 1}. ${s.title || 'Reklam'}`} add={() => S('slides', [...(H.slides || []), NEW.slide()])} render={(s, up) => <SlideFields s={s} up={up} />} />
-    </Fold>
-
-    <Fold title="Avantaj şeridi" hint="Orijinal ürün, hızlı kargo…" badge={(H.usps || []).length}>
-      <Rows list={H.usps || []} set={(v) => S('usps', v)} max={4} sub="Avantaj ekle" title={(u, i) => u.title || `${i + 1}. avantaj`} add={() => S('usps', [...(H.usps || []), NEW.usp()])} render={(u, up) => <UspFields u={u} up={up} />} />
-    </Fold>
-
-    <Fold title="Marka kutuları ve kayan şerit" hint="Logolar Markalar ayarından gelir" badge={(H.brands || []).length}>
-      <div className="row3">
-        <Field label="Bölüm başlığı"><input value={H.brandsTitle || ''} onChange={(e) => S('brandsTitle', e.target.value)} placeholder="Markalar" /></Field>
-        <Field label="Kutu büyüklüğü"><select value={H.brandSize || 'md'} onChange={(e) => S('brandSize', e.target.value)}><option value="sm">Küçük (satırda 8)</option><option value="md">Orta (satırda 5)</option><option value="lg">Büyük (satırda 4)</option></select></Field>
-        <Field label="Kayan şerit"><select value={H.marquee || 'color'} onChange={(e) => S('marquee', e.target.value)}>{Object.entries(MQ_STYLES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-      </div>
-      <div className="row2">
-        <Field label="Şerit hızı · bilgisayar" hint="Büyük sayı = yavaş"><span className="she-scale"><input type="range" min="15" max="200" step="1" value={Number(H.mqSpeed) || 46} onChange={(e) => S('mqSpeed', Number(e.target.value))} /><code>{Number(H.mqSpeed) || 46} sn</code></span></Field>
-        <Field label="Şerit hızı · telefon" hint="Büyük sayı = yavaş"><span className="she-scale"><input type="range" min="10" max="150" step="1" value={Number(H.mqSpeedM) || 46} onChange={(e) => S('mqSpeedM', Number(e.target.value))} /><code>{Number(H.mqSpeedM) || 46} sn</code></span></Field>
-      </div>
-      <ScaleField v={Number(H.brandLogoScale) || 1} onChange={(v) => S('brandLogoScale', v)} label="Tüm logoların boyutu" />
-      <Rows list={H.brands || []} set={(v) => S('brands', v)} max={30} sub="Marka ekle" title={(b, i) => b.name || `${i + 1}. marka`} add={() => S('brands', [...(H.brands || []), NEW.brand()])} render={(b, up) => <BrandFields b={b} up={up} d={d} set={set} />} />
-    </Fold>
-
-    <Fold title="Kare reklam kutuları" hint="Dergi gibi karışık boyutlu kutular" badge={(H.promos || []).length}>
-      <Field label="Bölüm başlığı"><input value={H.promosTitle || ''} onChange={(e) => S('promosTitle', e.target.value)} placeholder="Öne çıkanlar" /></Field>
-      <Rows list={H.promos || []} set={(v) => S('promos', v)} max={16} sub="Kutu ekle" title={(x, i) => x.title || `${i + 1}. kutu`} add={() => S('promos', [...(H.promos || []), NEW.promo()])} render={(x, up) => <PromoFields x={x} up={up} />} />
-    </Fold>
-
-    <Fold title="Ürün rafları" hint="Yeni gelenler, marka, kategori ya da elle seçilen ürünler" badge={(H.sections || []).length}>
-      <Rows list={H.sections || []} set={(v) => S('sections', v)} max={10} sub="Raf ekle" title={(x, i) => x.title || `${i + 1}. raf`} add={() => S('sections', [...(H.sections || []), NEW.rail()])} render={(x, up) => <RailFields x={x} up={up} />} />
-    </Fold>
-
-    <Fold title="Alt bant" hint="WhatsApp ve Tüm ürünler düğmeli kapanış bandı">
-      <div className="row2">
-        <Field label="Başlık" opt><input value={H.cta?.title || ''} onChange={(e) => S('cta', { ...(H.cta || {}), title: e.target.value })} placeholder="Boşsa bant görünmez" /></Field>
-        <Field label="Yazı" opt><input value={H.cta?.text || ''} onChange={(e) => S('cta', { ...(H.cta || {}), text: e.target.value })} /></Field>
-      </div>
-    </Fold>
+    <Toggle id="sh-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => set('shopHome.enabled', v)} />
   </>;
 }
 

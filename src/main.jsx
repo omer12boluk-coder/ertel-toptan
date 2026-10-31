@@ -1,6 +1,7 @@
 import { LinkCartPage, LinkCartsPage } from './lcart.jsx';
 import { SaveDock } from './savedock.jsx';
 import { StoreDecor } from './decor.jsx';
+import { activePack } from './presets.js';
 import { RatePrompt } from './reviews.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -276,17 +277,21 @@ function useTheme() {
   const dev = useStore((s) => s.deviceTheme);
   const pub = useStore((s) => s.user?.role === 'public');
   const L = S.look || {};
+  const pk = pub ? activePack(L) : null; const pp = pk?.palette;
   useEffect(() => {
     const r = document.documentElement;
-    // mağaza ve bayi renkleri ayrı (Ayarlar > Renkler ve görünüm)
-    r.style.setProperty('--accent-user', (pub && L.shopAccent) || S.brand.accent);
-    r.style.setProperty('--price-user', (pub && L.shopPrice) || S.brand.priceAccent);
-    if (pub && L.bg) r.style.setProperty('--bg-user', L.bg); else r.style.removeProperty('--bg-user');
+    // mağaza ve bayi renkleri ayrı (Ayarlar > Renkler ve görünüm); Tema Stüdyosu açıksa onun renkleri
+    r.style.setProperty('--accent-user', (pub && (pp?.accent || L.shopAccent)) || S.brand.accent);
+    r.style.setProperty('--price-user', (pub && (pp?.price || L.shopPrice)) || S.brand.priceAccent);
+    const bg = pub && (pp ? pp.bg || L.bg : L.bg);
+    if (bg) r.style.setProperty('--bg-user', bg); else r.style.removeProperty('--bg-user');
+    const bd = pk?.badge;
+    r.classList.toggle('pk-on', !!bd); if (bd) { r.style.setProperty('--pk-badge', JSON.stringify(bd.text || '')); r.style.setProperty('--pk-bbg', bd.bg || '#111'); r.style.setProperty('--pk-bfg', bd.color || '#fff'); }
     r.style.setProperty('--pcard-r', (Number(L.cardR) >= 0 && L.cardR !== '' ? Number(L.cardR) : 18) + 'px');
     const t = dev || S.brand.theme;
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
     document.title = seoTitle() || S.brand.appName;
-  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {

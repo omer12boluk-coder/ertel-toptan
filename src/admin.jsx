@@ -520,11 +520,11 @@ const GROUPS = [
 ];
 // [anahtar, ad, açıklama, simge, grup]
 const SECTIONS = [
-  ['magazaana', 'Mağaza ana sayfası', 'Reklamlar, marka kutuları, raflar (liste hâlinde)', 'monitor', 'vitrin'],
+  ['magazaana', 'Mağaza ana sayfası', 'Tasarım modunda düzenlenir: reklamlar, kutular, raflar, renkler', 'monitor', 'vitrin'],
   ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star', 'vitrin'],
   ['gorunum', 'Renkler ve görünüm', 'Mağaza ve bayi renkleri, fiyat renkleri, tema · önizlemeli', 'palette', 'vitrin'],
   ['kart', 'Ürün kartları', 'Fiyat gösterimi, sepete ekle düğmesi, resimler, ürün açılışı · önizlemeli', 'grid', 'vitrin'],
-  ['tema', 'Süsleme teması', 'Yılbaşı, 29 Ekim, bahar, sahil… · sadece müşteriler görür', 'sparkle', 'vitrin'],
+  ['tema', 'Süsleme teması (eski)', 'Yenisi: Tasarım modu › Tema Stüdyosu', 'sparkle', 'vitrin'],
   ['altbilgi', 'Alt bilgi ve sayfalar', 'İletişim, sosyal medya, Kargo / İade sayfaları, KVKK ve sözleşmeler', 'list', 'vitrin'],
   ['fiyat', 'Fiyat, KDV ve kur', 'Toptan indirimi, yuvarlama, KDV oranı, elle kur', 'tag', 'satis'],
   ['siparis', 'Sipariş ve üyelik', 'Mağaza açık / kapalı, “çok yakında”, üyelik, Google ile giriş', 'login', 'satis'],

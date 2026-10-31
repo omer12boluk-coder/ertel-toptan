@@ -2,6 +2,8 @@
 // hafif zemin tonu. Ayar: settings.look.decor = { id, amt: 'sm'|'md'|'lg', front }. Yönetim panelinde / bayide çizilmez.
 import { useMemo } from 'react';
 import { useStore } from './store.js';
+import { activePack } from './presets.js';
+import { useWin } from './dzframe.jsx';
 
 // p: parçalar (emoji ya da şekil: '.dot' nokta, '.rect' konfeti, '.streak' yağmur, '.bubble' kabarcık, '.star' parıltı)
 // m: hareket fall | rise | float | twinkle · c: şekil renkleri · bg: zemin tonu · band: süs şeridi (emoji tekrarı) · bandBg: şerit zemini
@@ -35,7 +37,7 @@ function Parts({ t, n }) {
     const r = rnd(t.id.length * 977 + n);
     return Array.from({ length: n }, (_, i) => {
       const p = t.p[i % t.p.length];
-      const size = p.startsWith('.') ? (p === '.streak' ? 1 : p === '.rect' ? 7 : p === '.bubble' ? 10 + r() * 14 : 3 + r() * 5) : 12 + r() * 14;
+      const size = p.startsWith('.') ? (p === '.streak' ? 1 : p === '.rect' || p === '.petal' ? 7 : p === '.bubble' ? 10 + r() * 14 : 3 + r() * 5) : 12 + r() * 14;
       const dur = t.m === 'rain' ? 0.9 + r() * 0.8 : t.m === 'twinkle' ? 2 + r() * 3 : t.m === 'float' ? 14 + r() * 12 : 9 + r() * 9;
       return { p, i, left: r() * 100, top: r() * 100, size, dur, delay: -r() * dur, sway: 10 + r() * 40, rot: r() * 360, c: t.c ? t.c[i % t.c.length] : null, o: 0.55 + r() * 0.4 };
     });
@@ -53,6 +55,8 @@ function Parts({ t, n }) {
 export function StoreDecor({ cfg, preview }) {
   const S = useStore((s) => s.settings);
   const role = useStore((s) => s.user?.role);
+  const pk = !cfg && !preview ? activePack(S.look) : null;
+  if (pk && role === 'public') return <PackDecor pk={pk} />;
   const c = cfg || S.look?.decor || {};
   const t = DECOR.find((x) => x.id === c.id);
   if (!t || (!preview && role !== 'public')) return null;
@@ -64,6 +68,25 @@ export function StoreDecor({ cfg, preview }) {
       {t.bg && <div className="dc-bg" style={{ background: t.bg }} />}
       <div className="dc-layer"><Parts t={t} n={n} /></div>
       {band && c.band !== false && <div className="dc-band" style={{ background: t.bandBg || 'transparent', color: t.bandColor || undefined }}><span>{band}</span></div>}
+    </div>
+  );
+}
+
+// Tema Stüdyosu (look.pack): efekt + duyuru şeridi + sayfa tonu. inFrame: tasarım modunun önizleme çerçevesinde
+const FX_SHAPE = { sparkle: ['.star', 'twinkle'], dust: ['.dot', 'float'], snow: ['.dot', 'fall'], confetti: ['.rect', 'fall'], bubble: ['.bubble', 'rise'], rain: ['.streak', 'rain'], petal: ['.petal', 'fall'] };
+export function PackDecor({ pk, mini }) {
+  const W = useWin();
+  if (!pk) return null;
+  const sh = FX_SHAPE[pk.fx?.kind];
+  const phone = W.matchMedia('(max-width: 700px)').matches;
+  const n = sh ? Math.round((AMT[pk.fx.amt] || AMT.md) * (phone ? 0.6 : 1) * (mini ? 0.6 : 1)) : 0;
+  const t = sh ? { id: pk.id + pk.fx.kind, p: [sh[0]], m: sh[1], c: pk.fx.c?.length ? pk.fx.c : ['#ffffff'] } : null;
+  const band = pk.band?.text ? (pk.band.text + '   ·   ').repeat(mini ? 4 : 14) : '';
+  return (
+    <div className={'decor pk-decor front' + (mini ? ' pv' : '')} aria-hidden="true">
+      {pk.tint && <div className="dc-bg" style={{ background: pk.tint }} />}
+      {t && <div className="dc-layer"><Parts t={t} n={n} /></div>}
+      {band && <div className="dc-band pk-band" style={{ background: pk.band.bg || '#111827', color: pk.band.color || '#fff' }}><span>{band}</span></div>}
     </div>
   );
 }
