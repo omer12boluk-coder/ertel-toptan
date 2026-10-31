@@ -1169,13 +1169,14 @@ async function placeOrder(req, env, b, ctx) {
     if (!it?.set) continue;
     const def = sets.get(String(it.set.id)); const di = def && (def.items || []).find((x) => String(x.id) === String(it.id));
     if (!def || !di) return { ok: false, code: 'set', error: 'Sepetteki set değişti, sepeti yenileyip tekrar deneyin' };
-    const k = String(it.set.k || it.set.id); const g = groups.get(k) || { def, n: 0, mult: null }; groups.set(k, g);
+    const k = String(it.set.k || it.set.id); const g = groups.get(k) || { def, ids: new Set(), mult: null }; groups.set(k, g);
+    if (g.ids.has(String(it.id))) return { ok: false, code: 'set', error: 'Sette aynı ürün iki kez olamaz, sepeti yenileyin' }; // aynı ürünü tekrarlayıp 'en az 3 ürün' şartını aşmasın
     const m = Math.floor(Number(it.qty)) / Math.max(1, Math.floor(di.qty) || 1);
     if (!(m >= 1) || m !== Math.floor(m) || (g.mult != null && g.mult !== m)) return { ok: false, code: 'set', error: 'Set adetleri tutmuyor, sepeti yenileyin' };
-    g.mult = m; g.n++;
+    g.mult = m; g.ids.add(String(it.id));
     it._pp = r2c(di.pp);
   }
-  for (const g of groups.values()) { const all = (g.def.items || []).length; if (g.n < Math.min(3, all) || (g.def.rm === false && g.def.stock !== 'skip' && g.n < all)) return { ok: false, code: 'set', error: 'Set eksik, sepeti yenileyin' }; }
+  for (const g of groups.values()) { const all = (g.def.items || []).length; if (g.ids.size < Math.min(3, all) || (g.def.rm === false && g.def.stock !== 'skip' && g.ids.size < all)) return { ok: false, code: 'set', error: 'Set eksik, sepeti yenileyin' }; }
   for (const it of list) {
     const p = cat.get(String(it?.id));
     const qty = Math.floor(Number(it?.qty));
