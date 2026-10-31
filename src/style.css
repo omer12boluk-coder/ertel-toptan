@@ -5278,7 +5278,9 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 .orders-page .chips .chip-sel.on { color: var(--accent); border-color: var(--accent); }
 .orders-page .chips .chip-sel { margin-left: auto; }
 .orders-page .chips .chip-sel svg { color: var(--muted); }
-.o-sr { display: flex; gap: 8px; align-items: stretch; flex: 1; min-width: 0; }
+.o-sr { display: flex; gap: 12px; align-items: stretch; flex: 1; min-width: 0; }
+.orders-page .toolbar { gap: 14px; padding-bottom: 14px; }
+.orders-page .chips { gap: 8px; }
 .o-sr > .search { flex: 1; min-width: 0; }
 .o-date { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
 .o-date svg { color: var(--muted); }
@@ -5287,8 +5289,3 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 .o-date.on svg { color: currentColor; }
 @media (max-width: 560px) { .o-date { padding: 0 12px; } .o-date span { display: none; } }
 .orders-page .chips .chip.on svg { color: currentColor; }
-
-/* Linkle gelen sepetler: sipariş listesiyle aynı tablo (31.10.2026) */
-.lc-list-page .lc-tool .lc-chips { margin: 0; }
-.lc-table .ost.lc-ost { cursor: default; justify-content: center; }
-.lc-table .or-act { width: 0; }
