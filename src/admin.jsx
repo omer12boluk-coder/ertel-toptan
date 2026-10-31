@@ -3,14 +3,14 @@ import { QuotaSettings } from './quota.jsx';
 import { RichText as PageText } from './footer.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, store, setCatalog, toast, openRequest, go } from './store.js';
-import { Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
+import { CarrierMark, Icon, Sheet, Thumb, Avatar, Field, Toggle, Empty, StatusPill, Confirm, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { stencilCodes } from './kalip.js';
 import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
 import { ensureAllMembers } from './datawin.js';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls, nextCode, picUrl, imageBlob, imgFiles, mediaOf, isVid, fileHash } from './utils.js';
-import { CATEGORY_NAMES, TYPE, LOGO_MARK, SPLASH_STYLES } from './config.js';
+import { CATEGORY_NAMES, TYPE, LOGO_MARK, SPLASH_STYLES, CARRIERS, carrierAll, carrierDef } from './config.js';
 import { readSheet, rowsToProducts, mergeCatalog } from './xlsx.js';
 import { buildTree, cleanHtml } from './cats.js';
 import { imageList, CardPreview, saveCatalogLater } from './catalog.jsx';
@@ -770,7 +770,7 @@ export function Settings() {
           <Toggle id="s-ocargo" label="Kargo ile gönderim" checked={d.orders.cargo !== false} onChange={(v) => set('orders.cargo', v)} />
           <Toggle id="s-opick" label="Dükkandan teslim al" checked={d.orders.pickup !== false} onChange={(v) => set('orders.pickup', v)} />
           <Field label="Kargo notu" hint="Sepet ve sipariş ekranında görünür"><input id="s-onote" value={d.orders.cargoNote || ''} onChange={(e) => set('orders.cargoNote', e.target.value)} /></Field>
-          <Field label="Kargo firmaları" hint="Her satıra bir firma. Siparişi “Kargoda” yaparken bunlardan seçersiniz."><textarea id="s-cargos" rows="4" value={(d.orders.cargoCompanies || []).join('\n')} onChange={(e) => set('orders.cargoCompanies', e.target.value.split('\n'))} onBlur={(e) => set('orders.cargoCompanies', e.target.value.split('\n').map((x) => x.trim()).filter(Boolean))} /></Field>
+          <CarrierSettings d={d} set={set} />
           <h3>Ödeme seçenekleri</h3>
           <Toggle id="s-ohav" label="Havale / EFT" checked={d.orders.payHavale !== false} onChange={(v) => set('orders.payHavale', v)} />
           <Toggle id="s-ocard" label="Kredi kartı (ödeme linki gönderilir)" hint="Siparişi onaylayınca müşteriye ödeme linkini siz gönderirsiniz" checked={d.orders.payCard !== false} onChange={(v) => set('orders.payCard', v)} />
@@ -1566,6 +1566,50 @@ function KalipHint({ f }) {
       {codes.length
         ? <span>Kalıp bulucuda bu işlemcilerle eşleşir: {codes.map((c) => <b key={c} className="kf-code">{nice(c)}</b>)}</span>
         : <span>Kalıp bulucuda hiçbir işlemciyle eşleşmiyor. Gizli etiketlere işlemci kodu ya da adı yazın (ör. <i>MT6781</i>, <i>SM7150</i>, <i>Helio G96</i>, <i>Exynos 850</i>).</span>}
+    </div>
+  );
+}
+
+// Ayarlar > Online mağaza > Kargo firmaları (31.10.2026): aç/kapat, müşteriye varsayılan, firma ekle (elle takip no + takip sayfası adresi).
+// Kapatılan firma müşteriye ve kargo kartında çıkmaz; o firmayla gönderilmiş eski siparişlerin takip bilgisi aynen kalır.
+function CarrierSettings({ d, set }) {
+  const all = carrierAll(d);
+  const def = carrierDef(d);
+  const [add, setAdd] = useState(null); // { name, track }
+  const put = (list) => set('orders.carriers', list.map((c) => (c.custom ? { k: c.k, name: c.name, track: c.track || '', on: c.on } : { k: c.k, on: c.on, ...(c.track && c.track !== CARRIERS[c.k]?.track ? { track: c.track } : {}) })));
+  const toggle = (k, on) => {
+    if (!on && all.filter((c) => c.on && c.k !== k).length === 0) { toast('En az bir kargo firması açık kalmalı', 'warn'); return; }
+    put(all.map((c) => (c.k === k ? { ...c, on } : c)));
+    if (!on && def === k) { const n = all.find((c) => c.on && c.k !== k); if (n) set('orders.carrierDef', n.k); }
+  };
+  const addIt = () => {
+    const name = String(add?.name || '').trim(); if (!name) return;
+    const track = String(add.track || '').trim();
+    if (track && !track.includes('{no}')) { toast('Takip adresinde numaranın geleceği yere {no} yazın', 'warn'); return; }
+    put([...all, { k: 'c' + Date.now().toString(36), name, track, on: true, custom: true }]); setAdd(null);
+  };
+  return (
+    <div className="field car-set">
+      <span className="field-l">Kargo firmaları</span>
+      <span className="field-h">Açık olanlar müşterinin sipariş ekranında ve sipariş kargo kartında çıkar. Bir firmayla çalışmayı bırakırsanız kapatın; eski siparişlerin takip bilgisi silinmez.</span>
+      <ul className="car-rows">
+        {all.map((c) => (
+          <li key={c.k} className={'car-row' + (c.on ? '' : ' off')}>
+            <CarrierMark k={c.k} name={c.name} />
+            <span className="car-t"><b>{c.name}</b><small>{c.live ? 'Entegrasyonlu: barkod ve takip no kendiliğinden' : 'Takip no elle girilir'}{c.on && def === c.k ? ' · müşteriye ilk seçili' : ''}</small></span>
+            {c.on && def !== c.k && <button type="button" className="btn sm ghost" onClick={() => set('orders.carrierDef', c.k)}>Varsayılan yap</button>}
+            {c.custom && <button type="button" className="icon-btn sm" aria-label={c.name + ' sil'} onClick={() => put(all.filter((x) => x.k !== c.k))}><Icon n="trash" s={15} /></button>}
+            <Toggle id={'car-' + c.k} label="" checked={c.on} onChange={(v) => toggle(c.k, v)} />
+          </li>
+        ))}
+      </ul>
+      {add ? (
+        <div className="car-add">
+          <Field label="Firma adı"><input value={add.name} placeholder="ör. Aras Kargo" onChange={(e) => setAdd({ ...add, name: e.target.value })} /></Field>
+          <Field label="Takip sayfası adresi" opt hint="Numaranın geleceği yere {no} yazın. Boşsa müşteri sadece numarayı görür."><input inputMode="url" value={add.track} placeholder="https://…?takipNo={no}" onChange={(e) => setAdd({ ...add, track: e.target.value })} /></Field>
+          <span className="row-btns"><button type="button" className="btn sm primary" onClick={addIt}><Icon n="check" s={14} />Ekle</button><button type="button" className="btn sm ghost" onClick={() => setAdd(null)}>Vazgeç</button></span>
+        </div>
+      ) : <button type="button" className="btn sm outline car-addbtn" onClick={() => setAdd({ name: '', track: '' })}><Icon n="plus" s={14} />Firma ekle</button>}
     </div>
   );
 }

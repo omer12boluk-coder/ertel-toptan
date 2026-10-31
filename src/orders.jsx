@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, openOrder, go } from './store.js';
 import { CarrierMark, Thumb, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, now, norm, ls } from './utils.js';
-import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf } from './config.js';
+import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf, carrierList, carrierInfo, carrierDef, trackLink } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pushStatus } from './push.js';
@@ -295,7 +295,7 @@ function useStatusFlow(S) {
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }
-  const openShip = (o) => setShip({ o, company: o.cargo?.company || S.orders?.cargoCompany || (S.orders?.cargoCompanies || [])[0] || '', code: o.cargo?.code || '' });
+  const openShip = (o) => { const k = o.cargo?.carrier || o.delivery?.carrier || carrierDef(S); setShip({ o, k: carrierInfo(S, k) ? k : carrierDef(S), code: o.cargo?.code || '' }); };
   function ask(o, k) {
     if (k === 'shipped') return openShip(o);
     if (o.status === k) return;
@@ -303,12 +303,12 @@ function useStatusFlow(S) {
     setConfirm({ title: ADMIN_ST[k], text: `#${o.no} “${ORDER_STATUS[k].label}” olarak işaretlensin mi? Müşteri takip sayfasında görür${S.orders?.push !== false && k !== 'new' ? ', bildirimleri açtıysa telefonuna bildirim gider' : ''}.`, okLabel: 'Evet, değiştir', onOk: () => setStatus(o, k) });
   }
   async function saveShip() {
-    const { o } = ship; const company = ship.company.trim(); const low = company.toLocaleLowerCase('tr-TR');
-    const c = { ...(o.cargo || {}), company, code: ship.code.trim() };
-    if (/dhl|mng/.test(low)) c.carrier = 'dhl'; else if (/yurt/.test(low)) c.carrier = 'yurtici'; else delete c.carrier;
+    const { o } = ship; const info = carrierInfo(S, ship.k) || CARRIERS.dhl; const code = ship.code.trim();
+    const c = { ...(o.cargo || {}), carrier: info.k, company: info.company || info.name, code };
+    const u = trackLink(info, code); if (u && !(o.dhl?.ref && !o.dhl.cancelled && o.cargo?.url)) c.url = u; if (!code) delete c.url;
     setShip(null);
     if (o.status !== 'shipped') return setStatus(o, 'shipped', { cargo: c });
-    if (c.company === (o.cargo?.company || '') && c.code === (o.cargo?.code || '')) return;
+    if (c.carrier === (o.cargo?.carrier || '') && c.code === (o.cargo?.code || '')) return;
     try {
       await api().updateOrder(o.id, { cargo: c, updatedAt: now() });
       toast('Kargo bilgisi kaydedildi');
@@ -321,9 +321,8 @@ function useStatusFlow(S) {
         footer={<><button className="btn ghost" onClick={() => setShip(null)}>Vazgeç</button><button className="btn primary" disabled={busy} onClick={saveShip}><Icon n="check" s={16} />{ship.o.status === 'shipped' ? 'Kaydet' : 'Kargoya verildi'}</button></>}>
         <div className="form-col">
           <div className="field"><span className="field-l">Kargo firması</span>
-            <div className="cargo-pick">{(S.orders?.cargoCompanies || []).map((c) => <button key={c} type="button" className={'chip' + (ship.company === c ? ' on' : '')} onClick={() => setShip({ ...ship, company: c })}>{c}</button>)}</div>
-            <input id="ship-co" value={ship.company} onChange={(e) => setShip({ ...ship, company: e.target.value })} placeholder="Listede yoksa yazın" />
-            <span className="field-h">Listeyi Ayarlar &gt; Online mağaza &gt; Kargo firmaları’ndan düzenleyebilirsiniz.</span>
+            <div className="cargo-pick">{carrierList(S, ship.k).map((c) => <button key={c.k} type="button" className={'chip' + (ship.k === c.k ? ' on' : '')} onClick={() => setShip({ ...ship, k: c.k })}>{c.name}</button>)}</div>
+            <span className="field-h">Firmaları Ayarlar &gt; Online mağaza &gt; Kargo firmaları’ndan açıp kapatabilirsiniz.</span>
           </div>
           <Field label="Takip numarası" opt hint={ship.code.trim() ? undefined : 'Şimdi bilmiyorsanız boş bırakın; sonra listede “Takip no yok” yazar, oradan ekleyebilirsiniz.'}><input id="ship-code" inputMode="text" value={ship.code} onChange={(e) => setShip({ ...ship, code: e.target.value })} /></Field>
         </div>
@@ -670,8 +669,13 @@ export function CargoCard({ o, flow, col = 'orders' }) {
   const save = (x) => (lc ? api().updateLcart(o.id, x) : api().updateOrder(o.id, x)); // DİKKAT: kendini çağırmasın (30.10.2026: sonsuz döngü → "Aktarılıyor…"da donma)
   const S = store.s.settings;
   const pk = (S.orders?.packages?.length ? S.orders.packages : [{ n: 'Poşet', kg: 1, desi: 1 }]);
-  const car = o.cargo?.carrier || o.delivery?.carrier || 'dhl';
+  const car = o.cargo?.carrier || o.delivery?.carrier || carrierDef(S);
+  const list = carrierList(S, car);
+  const info = carrierInfo(S, car) || { k: car, name: o.cargo?.company || car, company: o.cargo?.company || car, live: false };
   const live = !!(o.dhl?.ref && !o.dhl.cancelled);
+  const [man, setMan] = useState(false); // DHL'de takip no'yu elle girme
+  const manualCode = !!o.cargo?.code && !live; // takip no elle girilmiş
+  const useManual = !info.live || man || manualCode;
   const [pkg, setPkg] = useState(() => o.dhl?.pkg ? pk.findIndex((x) => x.n === o.dhl.pkg) : 0); // -1 = özel
   const [kg, setKg] = useState(o.dhl?.kg || pk[0].kg);
   const [desi, setDesi] = useState(o.dhl?.desi || pk[0].desi);
@@ -697,9 +701,25 @@ export function CargoCard({ o, flow, col = 'orders' }) {
   const addPkg = async () => { const n = String(addPk?.n || '').trim(); if (!n) return; await savePk([...pk, { n, kg: Math.max(1, Number(addPk.kg) || 1), desi: Math.max(1, Number(addPk.desi) || 1) }]); setAddPk(null); toast('Paket tipi eklendi'); };
   const delPkg = (i) => setConfirm({ title: 'Paket tipini sil', text: `“${pk[i].n}” listeden kalkacak.`, okLabel: 'Sil', tone: 'danger', onOk: async () => { await savePk(pk.filter((_, j) => j !== i)); pickPkg(0); } });
   async function pickCarrier(k) { // firmayı siparişe ata (durum değişmez)
-    if (live && k !== 'dhl') { toast('Önce DHL kaydını iptal edin', 'bad'); return; }
-    if (o.cargo?.carrier === k) return;
-    try { await save({ cargo: { ...(o.cargo || {}), carrier: k, company: CARRIERS[k].company } }); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+    if (k === car) return;
+    if (live) { toast('Önce DHL kaydını iptal edin', 'bad'); return; }
+    const c = carrierInfo(S, k); if (!c) return;
+    const put = async () => { try { setMan(false); await save({ cargo: { carrier: k, company: c.company || c.name } }); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); } };
+    if (o.cargo?.code) setConfirm({ title: 'Kargo firması değişsin mi?', text: `Girilen takip no (${o.cargo.code}) silinecek; ${c.name} için yeniden girersiniz.`, okLabel: 'Değiştir', onOk: put });
+    else put();
+  }
+  // elle takip no: siparişte "Kargoya verildi"ye geçirir (müşteriye bildirim), sepet linkinde sadece yazar
+  async function saveManual(code) {
+    const k = String(code || '').trim();
+    const cargo = { carrier: info.k, company: info.company || info.name, ...(k ? { code: k, url: trackLink(info, k) } : {}) };
+    setBusy('man');
+    try {
+      if (lc) await save({ cargo });
+      else if (k && flow?.setStatus && !['shipped', 'done'].includes(o.status)) await flow.setStatus(o, 'shipped', { cargo });
+      else { await api().updateOrder(o.id, { cargo, updatedAt: now() }); if (k && api().mode === 'firebase') pushStatus(o.id); }
+      if (lc || ['shipped', 'done'].includes(o.status) || !k) toast(k ? 'Takip no kaydedildi' : 'Takip no kaldırıldı');
+      setMan(false); return true;
+    } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); return false; } finally { setBusy(''); }
   }
   async function transfer() {
     if (demo) { toast('DHL sadece canlı sitede çalışır', 'bad'); return; }
@@ -740,16 +760,16 @@ export function CargoCard({ o, flow, col = 'orders' }) {
   const st = o.status === 'done' ? 'Teslim edildi' : o.cargo?.code ? 'Kargoda · ' + (o.dhl?.text || 'yolda') : o.dhl?.text && o.dhl.statu !== '0' ? o.dhl.text : 'DHL’e aktarıldı · şubede okutulmayı bekliyor';
   return (
     <div className="set-card o-cargo">
-      <div className="ocg-h"><h3>Kargo</h3>{o.cargo?.code && <span className="ocg-code">Takip no {o.cargo.url ? <a className="num" href={o.cargo.url} target="_blank" rel="noopener">{o.cargo.code}</a> : <b className="num">{o.cargo.code}</b>}</span>}</div>
-      {!lc && <div className="ocg-car" role="radiogroup" aria-label="Kargo firması">
-        {Object.values(CARRIERS).map((c) => (
+      <div className="ocg-h"><h3>Kargo</h3>{o.cargo?.code && live && <span className="ocg-code">Takip no {o.cargo.url ? <a className="num" href={o.cargo.url} target="_blank" rel="noopener">{o.cargo.code}</a> : <b className="num">{o.cargo.code}</b>}</span>}</div>
+      {list.length > 1 && <div className="ocg-car" role="radiogroup" aria-label="Kargo firması">
+        {list.map((c) => (
           <button key={c.k} type="button" role="radio" aria-checked={car === c.k} className={'ocg-opt' + (car === c.k ? ' on' : '')} onClick={() => pickCarrier(c.k)}>
-            <CarrierMark k={c.k} size="lg" /><span><b>{c.name}</b><small>{!c.live ? 'Entegrasyon yakında' : o.delivery?.carrier === c.k ? 'Müşterinin seçimi' : 'Otomatik barkod'}</small></span>
+            <CarrierMark k={c.k} name={c.name} size="lg" /><span><b>{c.name}</b><small>{o.delivery?.carrier === c.k ? 'Müşterinin seçimi' : c.live ? 'Otomatik barkod' : 'Takip no elle'}</small></span>
           </button>
         ))}
       </div>}
-      {car === 'yurtici' && !lc ? (
-        <p className="fine ocg-soon"><Icon n="clock" s={16} />Yurtiçi Kargo entegrasyonu henüz hazır değil. Şimdilik barkodu Yurtiçi’nin kendi sisteminden alın; takip numarasını <button className="link" onClick={() => flow.openShip(o)}>elle girebilirsiniz</button></p>
+      {useManual ? (
+        <ManualTrack o={o} info={info} busy={busy === 'man'} canBack={man && info.live} onBack={() => setMan(false)} onSave={saveManual} />
       ) : live ? (<>
         <p className="dhl-st"><span className={'dot' + (o.cargo?.code ? ' ok' : '')} />{st}</p>
         <p className="fine">Referans <b className="num">{o.dhl.ref}</b> · {when(o.dhl.at)} · {o.dhl.pkg ? o.dhl.pkg + ' · ' : ''}{o.dhl.kg || 1} kg / {o.dhl.desi || 1} desi · {o.dhl.pay === 'P' ? 'gönderici ödemeli' : 'alıcı ödemeli'}</p>
@@ -764,7 +784,7 @@ export function CargoCard({ o, flow, col = 'orders' }) {
             <p className="fine">Barkod yazdır’a basınca açılan menüden <b>Yazdır</b>’ı seçin.{paper === 'a6' && <> Yazıcıya A6 kâğıt takın; iPhone kâğıt olarak A4 gösterse de etiket A6 kâğıda basılır.</>}</p></div>}
           {dhlOpen(o) && <button className="btn outline" disabled={!!busy} onClick={check}>{busy === 'check' ? 'Bakılıyor…' : o.cargo?.code ? 'Teslim edildi mi?' : 'Takip no geldi mi?'}</button>}
           {!o.cargo?.code && <button className="btn ghost danger" disabled={!!busy} onClick={cancel}>DHL kaydını iptal et</button>}
-          {!o.cargo?.code && (!lc || flow) && <button className="link ocg-manual" onClick={() => flow.openShip(o)}>Takip no’yu elle gir</button>}
+
         </div>
       </>) : (<>
         <div className="ocg-grid">
@@ -800,9 +820,36 @@ export function CargoCard({ o, flow, col = 'orders' }) {
           <button className="btn primary" disabled={!!busy} onClick={transfer}><Icon n="send" s={16} />{busy === 'send' ? 'Aktarılıyor…' : 'DHL’e aktar'}</button>
           <span className="fine">Aktarınca barkod yazdırma açılır. Şube okutunca takip no siparişe kendiliğinden gelir.</span>
         </div>
-        {lc && flow && <p className="fine ocg-other">Başka kargoyla mı gönderdiniz? <button className="link" onClick={() => flow.openShip(o)}>Takip no’yu elle girin</button></p>}
+        <p className="fine ocg-other">DHL’e online şubeden kendiniz mi girdiniz? <button className="link" onClick={() => setMan(true)}>Takip no’yu elle girin</button></p>
       </>)}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </div>
+  );
+}
+
+// Kargo kartı: takip numarasını elle girme (entegrasyonu olmayan firma ya da DHL'i kendiniz girdiyseniz). Ayrı pencere yok, klavye kendiliğinden açılmaz.
+function ManualTrack({ o, info, busy, canBack, onBack, onSave }) {
+  const has = !!o.cargo?.code;
+  const [edit, setEdit] = useState(!has);
+  const [code, setCode] = useState(o.cargo?.code || '');
+  useEffect(() => { setCode(o.cargo?.code || ''); setEdit(!o.cargo?.code); }, [o.cargo?.code]);
+  if (has && !edit) return (<>
+    <div className="ship-card adm"><span className="sc-ic"><Icon n="box" s={19} /></span><span className="ss-t"><small>Takip no · {o.cargo.company || info.name}</small><b className="num">{o.cargo.code}</b></span>
+      <span className="sc-act">{o.cargo.url && <a className="icon-btn" href={o.cargo.url} target="_blank" rel="noopener" title="Takip sayfası" aria-label="Takip sayfası"><Icon n="ext" s={16} /></a>}<button className="btn sm outline" onClick={() => setEdit(true)}>Değiştir</button></span></div>
+    <p className="fine">Müşteri takip sayfasında firmayı ve takip numarasını görür{o.cargo.url ? ', “Kargom nerede?” ile takip sayfasına gider' : ''}.</p>
+  </>);
+  return (
+    <div className="ocg-man">
+      <p className="fine">{info.live ? 'Takip numarasını elle girin.' : `${info.name} entegrasyonu yok: barkodu ${info.name}’nin kendi sisteminden alın, takip numarasını buraya yazın.`}</p>
+      <div className="ocg-man-row">
+        <Field label={`${info.name} takip no`}><input inputMode="text" autoComplete="off" enterKeyHint="done" value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && code.trim() && onSave(code)} /></Field>
+        <button className="btn primary" disabled={busy || !code.trim() || code.trim() === (o.cargo?.code || '')} onClick={() => onSave(code)}><Icon n="check" s={16} />{busy ? 'Kaydediliyor…' : 'Kaydet'}</button>
+      </div>
+      <div className="row-btns">
+        {has && <button className="btn sm ghost" onClick={() => { setCode(o.cargo.code); setEdit(false); }}>Vazgeç</button>}
+        {has && <button className="btn sm ghost danger" disabled={busy} onClick={() => onSave('')}>Takip no’yu kaldır</button>}
+        {canBack && !has && <button className="btn sm ghost" onClick={onBack}>DHL’e aktarmaya dön</button>}
+      </div>
     </div>
   );
 }

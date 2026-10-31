@@ -5345,3 +5345,32 @@ li.o-fresh > .orow { animation: ofresh 3.6s ease-out; }
 @media (max-width: 560px) { .lc-list-page .chips .chip-sel { padding: 6px 10px; } .lc-list-page .chips .chip-sel .chip-sel-t { display: none; } }
 @media (max-width: 560px) { .lc-list-page .lc-tool .lc-chips { gap: 6px; } .lc-list-page .lc-tool .lc-chips .chip { padding: 6px 10px; } }
 @media (max-width: 400px) { .lc-list-page .lc-tool .lc-chips .chip { padding: 6px 9px; font-size: 12.5px; } .lc-list-page .chips .chip-sel { padding: 6px 8px; } }
+/* linkle gelen sipariş: kargo bilgisi aynı pencerede ikinci sayfa */
+.lc-p2-t { display: inline-flex; align-items: center; gap: 6px; }
+.lc-p2-t .lc-back { margin-left: -8px; width: 36px; height: 36px; }
+.lc-p2-in { animation: lcP2 .24s cubic-bezier(.2, .8, .3, 1); }
+@keyframes lcP2 { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.lc-ship .fine { margin: 2px 0 0; }
+/* kargo firmaları (31.10.2026): elle takip no, ayar listesi, linkle gelen sipariş sayfası */
+.cmark.other { background: var(--surface-2); color: var(--fg); } .cmark.other b { font-size: .78em; } .cmark.other small { color: var(--muted); }
+.ocg-man { display: flex; flex-direction: column; gap: 10px; }
+.ocg-man .fine { margin: 0; }
+.ocg-man-row { display: flex; align-items: flex-end; gap: 10px; }
+.ocg-man-row .field { flex: 1; min-width: 0; margin: 0; }
+.ocg-man-row .btn { height: 44px; flex: none; }
+.ocg-man .row-btns:empty { display: none; }
+.car-set .car-rows { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.car-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.car-row.off { opacity: .6; }
+.car-row .car-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.car-row .car-t small { color: var(--muted); font-size: 12.5px; }
+.car-row .toggle { flex: none; padding: 0; border: 0; background: none; min-height: 0; }
+.car-row .toggle-t { display: none; }
+.car-add { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px dashed var(--line); border-radius: 12px; }
+.car-addbtn { align-self: flex-start; }
+.lc-adm .lc-st-pill { flex: none; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; font: 600 12.5px/1 var(--f-body); color: color-mix(in oklab, var(--t) 80%, var(--fg)); background: color-mix(in oklab, var(--t) 14%, var(--surface)); }
+.lc-adm .lc-adm-items { max-width: none; margin: 0; }
+.lc-adm .lc-linkrow { margin: 0; }
+.lc-adm .lc-adm-act { justify-content: flex-end; }
+.lc-adm .o-cargo { margin: 0; }
+@media (max-width: 560px) { .ocg-man-row { flex-direction: column; align-items: stretch; } .car-row { flex-wrap: wrap; } .lc-adm .lc-adm-act .btn { flex: 1; } }

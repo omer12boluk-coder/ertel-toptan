@@ -72,9 +72,10 @@ const P = {
   ask: 'M4 5h16v11h-8l-5 4v-4H4zM9.6 8.9a2.4 2.4 0 1 1 3.3 2.2c-.6.3-.9.7-.9 1.3M12 14.4v.01',
 };
 // Kargo firması işareti (logo yerine sade yazı-işaret; ödeme adımı ve yönetim kargo kartı)
-export function CarrierMark({ k, size = 'md' }) {
+export function CarrierMark({ k, size = 'md', name }) {
   if (k === 'dhl') return <span className={'cmark dhl ' + size} aria-label="DHL eCommerce"><b>DHL</b><small>eCommerce</small></span>;
   if (k === 'yurtici') return <span className={'cmark yurtici ' + size} aria-label="Yurtiçi Kargo"><b>Yurtiçi</b><small>Kargo</small></span>;
+  if (name) return <span className={'cmark other ' + size} aria-label={name}><b>{name.replace(/\s*kargo\s*$/i, '')}</b><small>Kargo</small></span>;
   return null;
 }
 export function Icon({ n, s = 20, className = '' }) {

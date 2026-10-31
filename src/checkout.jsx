@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders, setCatalog } from './store.js';
 import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
-import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf } from './config.js';
+import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf, carrierList, carrierInfo, carrierDef, pickCar } from './config.js';
 import TR from './tr-ilce.json';
 import { SwipeLine } from './cart.jsx';
 import { FavGrid, WaitGrid } from './catalog.jsx';
@@ -201,7 +201,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   const draftOrder = () => ({
     contact: { ...contactOut(), email: f.contact.email.trim() },
     items: items.map(({ n, cur, qty, offer }) => ({ n, cur, qty, price: offer })), total: tot,
-    delivery: { method: f.method, addr: f.method === 'cargo' ? delivAddr : null, carrier: f.carrier || 'dhl' },
+    delivery: { method: f.method, addr: f.method === 'cargo' ? delivAddr : null, carrier: pickCar(S, f.carrier) },
     invoice: f.inv.type === 'company' ? { type: 'company', company: f.inv.company, taxOffice: f.inv.taxOffice, taxNo: f.inv.taxNo } : { type: 'person', tc: f.inv.tc },
     pay: f.pay,
   });
@@ -266,7 +266,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         items: items.map(({ id: pid, k, n, cur, qty, offer, pi, u, set }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u, ...(set ? { set } : {}) })),
         total: tot, rate: rate?.usd || null,
         contact: { ...contactOut(), email },
-        delivery: { method: f.method, addr: f.method === 'cargo' ? cleanA(delivAddr) : null, ...(f.method === 'cargo' ? { carrier: f.carrier || 'dhl' } : {}) },
+        delivery: { method: f.method, addr: f.method === 'cargo' ? cleanA(delivAddr) : null, ...(f.method === 'cargo' ? { carrier: pickCar(S, f.carrier) } : {}) },
         // teslimat adresiyle aynıysa adres faturaya da yazılır (fatura kendi başına eksiksiz okunsun)
         invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' ? (f.billSame ? cleanA(delivAddr) : cleanA(f.bill, false)) : f.bill?.address ? cleanA(f.bill, false) : null },
         pay: f.pay, note: f.note.trim(),
@@ -331,13 +331,13 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
               </div>
             )}
             {f.method === 'cargo' && <>
-              <div className="carrier-pick" role="radiogroup" aria-label="Kargo firması">
-                {Object.values(CARRIERS).map((c) => (
-                  <button key={c.k} type="button" role="radio" aria-checked={(f.carrier || 'dhl') === c.k} className={'carrier-opt' + ((f.carrier || 'dhl') === c.k ? ' on' : '')} onClick={() => set({ carrier: c.k })}>
-                    <span className="radio" aria-hidden="true" /><CarrierMark k={c.k} /><span className="co-car-t"><b>{c.name}</b><small>{c.k === 'dhl' ? 'Anlaşmalı kargomuz' : 'İsterseniz'}</small></span>
+              {carrierList(S).length > 1 && <div className="carrier-pick" role="radiogroup" aria-label="Kargo firması">
+                {carrierList(S).map((c) => (
+                  <button key={c.k} type="button" role="radio" aria-checked={pickCar(S, f.carrier) === c.k} className={'carrier-opt' + (pickCar(S, f.carrier) === c.k ? ' on' : '')} onClick={() => set({ carrier: c.k })}>
+                    <span className="radio" aria-hidden="true" /><CarrierMark k={c.k} name={c.name} /><span className="co-car-t"><b>{c.name}</b><small>{c.k === carrierDef(S) ? 'Anlaşmalı kargomuz' : 'İsterseniz'}</small></span>
                   </button>
                 ))}
-              </div>
+              </div>}
               {saved.length > 0 && (
                 <div className="addr-cards" role="radiogroup" aria-label="Teslimat adresi">
                   {saved.map((a) => (
@@ -427,7 +427,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
             </ul>
             <div className="sum-rows">
               <div><span>Ürünler</span><span className="num">{fmtTotals(tot)}</span></div>
-              <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span>{f.method === 'pickup' ? 'Dükkandan' : (CARRIERS[f.carrier || 'dhl']?.name || 'Onayda bildirilir')}</span></div>
+              <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span>{f.method === 'pickup' ? 'Dükkandan' : (carrierInfo(S, pickCar(S, f.carrier))?.name || 'Onayda bildirilir')}</span></div>
               <div className="sum-total"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
               {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
             </div>
@@ -449,7 +449,7 @@ function initForm(m, methods, guest) {
   const inv0 = m?.invoice || g.inv || {};
   return {
     contact: { name: m?.name || g.contact?.name || '', phone: m?.phone || g.contact?.phone || '', email: m?.email || g.contact?.email || '' },
-    method: methods[0] || 'cargo', carrier: 'dhl',
+    method: methods[0] || 'cargo', carrier: '',
     addrId: addrs[0]?.id || 'new',
     addr: { ...blankAddr(), name: m?.name || g.contact?.name || '', phone: m?.phone || g.contact?.phone || '', ...(!m && g.addr ? g.addr : {}) },
     saveAddr: true,
@@ -556,7 +556,7 @@ export function OrderPage({ id }) {
 
       <div className="o-info">
         {/* İletişim kartı yok (27.10.2026): alıcı Teslimat'ta, dükkândan teslimde teslim alacak kişi aşağıda */}
-        <div className="o-card"><h3>Teslimat</h3><p><b>{DELIVERY[o.delivery?.method] || ''}</b>{o.delivery?.method !== 'pickup' && CARRIERS[o.delivery?.carrier] && <span className="muted"> · {CARRIERS[o.delivery.carrier].name}</span>}</p>{o.delivery?.addr ? <>{o.delivery.addr.name && <p>{o.delivery.addr.name}{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></> : <>{o.contact?.name && <p>Teslim alacak: {o.contact.name}{o.contact.phone && <> · <span className="num">{o.contact.phone}</span></>}</p>}<p>{[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}</p></>}</div>
+        <div className="o-card"><h3>Teslimat</h3><p><b>{DELIVERY[o.delivery?.method] || ''}</b>{o.delivery?.method !== 'pickup' && carrierInfo(S, o.delivery?.carrier) && <span className="muted"> · {carrierInfo(S, o.delivery.carrier).name}</span>}</p>{o.delivery?.addr ? <>{o.delivery.addr.name && <p>{o.delivery.addr.name}{o.delivery.addr.phone && <> · <span className="num">{o.delivery.addr.phone}</span></>}</p>}<p>{addrLine(o.delivery.addr)}</p></> : <>{o.contact?.name && <p>Teslim alacak: {o.contact.name}{o.contact.phone && <> · <span className="num">{o.contact.phone}</span></>}</p>}<p>{[S.shop.address, S.shop.hours].filter(Boolean).join(' · ')}</p></>}</div>
         <div className="o-card"><h3>Fatura</h3><InvoiceText inv={o.invoice} name={o.contact?.name} deliv={o.delivery?.addr} phone={o.contact?.phone} /></div>
       </div>
       {o.note && <p className="o-note"><b>Notunuz:</b> {o.note}</p>}
