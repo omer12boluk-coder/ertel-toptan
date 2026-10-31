@@ -33,14 +33,16 @@ async function product(id) {
   }
   return null;
 }
-const firstImg = (p) => [p?.pi, ...(p?.im || [])].find((f) => f && !String(f).startsWith('v:')) || null;
+// WhatsApp webp önizleme resmini göstermiyor → önce JPEG/PNG olanı seç (sitenin kendi resimleri R2'de orijinal JPEG; yüklenenler webp)
+const isWebp = (f) => /\.webp($|\?)/i.test(f) || String(f).startsWith('r2:');
+const firstImg = (p) => { const all = [p?.pi, ...(p?.im || [])].filter((f) => f && !String(f).startsWith('v:')); return all.find((f) => !isWebp(f)) || all[0] || null; };
 function imgUrl(f) {
   if (!f) return IMG + 'platin/_none.jpg';
   f = String(f);
   if (/^https?:\/\//.test(f)) return f;
   if (f.startsWith('r2:')) return IMG + f.slice(3);
   if (f.startsWith('/')) return 'https://ertelmarket.com' + f;
-  return IMG + 'platin/t/' + encodeURIComponent(f);
+  return IMG + 'platin/' + encodeURIComponent(f); // büyük resim = orijinal JPEG (küçük resimler webp'e çevrilmişti)
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -69,7 +71,7 @@ export default {
     const page = await env.ASSETS.fetch(req);
     if (req.method !== 'GET' || !BOT.test(req.headers.get('user-agent') || '')) return page;
     try {
-      const cache = caches.default; const key = new Request('https://og.cache' + url.pathname);
+      const cache = caches.default; const key = new Request('https://og2.cache' + url.pathname);
       let og = await cache.match(key).then((r) => r?.json()).catch(() => null);
       if (!og) {
         og = await ogFor(url.pathname);
