@@ -27,6 +27,31 @@ Aşağıdaki iki madde tarihçe:
 
 **Kapasite (kullanıcıya anlatıldı):** asıl darboğaz Firebase Hosting Spark günlük ~360 MB indirme (ilk açılış ~650 KB → ~500-550 yeni cihaz/gün; her yayında herkes yeniden indirir). Cloudflare'e taşınınca kalkar. Firestore okuma 50k/gün (~3-5k ziyaret), yazma 20k/gün rahat.
 
+**★ YAPILACAKLAR LİSTESİ (güncel, 31.10.2026 akşam — kullanıcı 'to-do' deyince BUNU göster, iş bitince buradan sil/işaretle):**
+Senin (kullanıcının) yapacakları:
+1. Blaze'e geç (Firebase › Upgrade, kart) → servis hesabına roller (proje: Project Billing Manager, Pub/Sub Admin, Service Usage Admin; fatura hesabı: Billing Account Costs Manager) → Actions 'Fatura bekçisini kur' (bütçe ör. 200 TL) → panelde sınır 5 $ + 'Bildirim denemesi'.
+2. Cloudflare Workers Paid (5 $/ay) — siparişler günde 50'ye yaklaşınca (ya da hemen).
+3. Cloudflare hesabında 2FA.
+4. Telefonda web.app'ten eklenmiş ana ekran uygulamalarını silip ertelmarket.com'dan (mağaza) ve ertelmarket.com/admin'den (yönetim) yeniden ekle.
+5. Yasal kontrol (avukat + mali müşavir): ETBİS'e ertelmarket.com, mesafeli sözleşme/ön bilgilendirme e-postası, KVKK metinleri ve yurt dışı aktarım, TL + KDV dahil fiyat gösterimi, e-Arşiv, İYS.
+6. Google Cloud › Credentials'a https://ertelmarket.com/__/auth/handler (+www) ekle (Google ile giriş için); Facebook girişi için Meta doğrulaması (ertelendi).
+Claude'un yapacakları:
+7. Blaze günü: sahte harcama denemesi düğmesi, Firebase App Check, hızlı kota bekçisi (5-10 dk'da okuma sayısı, eşik aşılırsa haber + durdurma), gerekirse Cloudflare hız sınırı.
+8. Sipariş e-postasını Resend'den Cloudflare Email Service'e taşı (yöneticiye giden ücretsiz/sınırsız; müşteriye gerekirse Workers Paid ile) — kullanıcı 'en son döneriz' dedi.
+9. E-posta: Resend 'verified' kontrolü; Firebase Auth e-postaları noreply@ertelmarket.com (Verify) → spam sorunu; destek@ adresi + alt bilgi + Gmail 'farklı adresten gönder' + info@ spam filtresi.
+10. WhatsApp bilgilendirme (kargoya verildi / teslim edildi; Meta Cloud API, ~4-5 $/ay) — önce Meta işletme doğrulaması (kullanıcıyla birlikte).
+11. Siparişleri okuma yükünü azaltma: akış/özet için tek 'özet belge' (son 7 gün) — kullanıcı kararı bekliyor (Özet'teki ay kıyası da bundan mı gelsin?).
+12. DHL ilk gerçek okutmada takip no + 'Kargoda' kendiliğinden geliyor mu kontrol (HEE7F6 31.10'da otomatik geldi ✓ — müşteriye bildirim tag düzeltmesi sonrası tekrar gözle).
+13. Satışa hazırlık: iyzico kart ödemesi → Yurtiçi Kargo entegrasyonu (barkod + takip no otomatik).
+14. Sepet linkinden gelen siparişi normal siparişe çevirme + yasal onay kutusu + üye adres önerisi.
+Karar bekleyen (kullanıcı):
+15. Ödeme özeti 2 üründe kayıyor (çözüm önerildi) · elde kalan mal için dürüst raf/rozet seçeneği · ana sayfa 'imza' etkileşimi · Ürün talebi / Sorun bildir menüye konacak mı · SMS (Netgsm) belki · Ürünler ve Bayi siparişleri sayfaları da ortak PageHead/SubNav düzenine alınsın mı.
+Küçük işler / bakım:
+16. Banner videosu (Santral Center dosyası), logosu olmayan markalar, Qianli gece rengi, sipariş formu uzun ad, Platin'e kalan bağlar (`u`, 'Sitede aç', XML eşitleme).
+17. Eski GitHub dallarını sil (cf-site, eposta, resim-adresi, platin-kopma, sunucu-siparis, peek-out, mng-probe, tr-data, kalip-data, kalip-bulucu, linkli-siparis, blaze-hazirlik), Actions Node 20 → 24 uyarıları.
+Uzun vade: başka sektörlere şablon olarak satış, App Store.
+
+(Aşağıdaki yol haritası ayrıntı/tarihçe içindir; güncel liste yukarıda.)
 **YOL HARİTASI (31.10.2026 gece, tarama sonrası; eskisinin yerine):**
 Tarama sonucu: ertelmarket.com/www/resim DNS + dosyalar + derin linkler + bekçi (/rate, /push/key, CORS, /dhl/*) + DHL SOAP + iki sitede aynı sürüm → hepsi SAĞLAM. Cloudflare son 24 saat: Worker ~20 bin istek (sınır 100 bin), KV yazma 170/1000, R2 rahat. Son 40 Actions işi başarılı.
 - **A. Hemen (bu hafta):** (1) ~~Kök adres → mağaza~~ YAPILDI 31.10 (kısa adresler + bayi girişi Hesabım'da, Bölüm 4). (2) Cloudflare 2FA. (3) DHL ilk gerçek okutma: SJUPYU şubede okutulunca takip no + "Kargoda" otomatik geliyor mu bak. (4) ~~Veri yedeği otomatik değil~~ YAPILDI 31.10: `yedek.yml` her gece 00:17 UTC → `ertel-yedek/db/gunluk/` (R2 saklama kuralı 30 gün) + ayın 1'i `db/aylik/` (süresiz); hata → Telegram. Panel: Ayarlar › Veri ve kota › **Yedekler** (bekçi `/backup/list|get`, R2Y bağı). Geri yükleme: Actions **'Yedekten geri yükle'** (`geri-yukle.yml` + `tools/backup-restore.mjs`; mod dene/eksik/uzerine, 'son' = bekçi `/backup/latest`). Not: yedek her belgeyi okur (şu an birkaç yüz; büyüyünce Blaze'de önemsiz). (5) ~~Tek adres~~ YAPILDI 31.10: index.html başındaki betik + sw.js (`OLD`, önbellek v5) erteltoptan.web.app / firebaseapp.com / www → https://ertelmarket.com aynı yol; /__/ dokunulmaz. web.app'te ana ekrana eklenmiş uygulama yeni adrese gider, kullanıcı ertelmarket.com'dan yeniden eklemeli.
