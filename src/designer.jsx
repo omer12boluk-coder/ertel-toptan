@@ -520,7 +520,8 @@ function HeroPanel(P) {
       </div>
     ))}</div>}
     <div className="dz2-slides" role="group" aria-label="Reklamlar">
-      {slides.map((x, j) => <button key={j} className={'dz2-sl' + (j === i ? ' on' : '')} onClick={() => pick(j)} title={x.title || ''}><b>{j + 1}</b><span>{x.title || 'Reklam'}</span></button>)}
+      {slides.map((x, j) => <button key={j} className={'dz2-sl' + (j === i ? ' on' : '')} data-dz="slides" data-i={j} data-fk={(x.title || '') + '|' + (x.img || '') + '|' + (x.layout || '')} data-dz-name={(j + 1) + '. ' + (x.title || 'Reklam')} title={(x.title || '') + ' · tutup sürükleyerek sıralayın'}
+        onPointerDown={(e) => dragSort(e, 'slides', j, (f, t) => { const cur = store.s.designDraft?.shopHome?.slides || slides; S('slides', moveItem(cur, f, t)); setI((ii) => (ii === f ? t : ii === t ? f : ii)); }, () => pick(j))}><b>{j + 1}</b><span>{x.title || 'Reklam'}</span></button>)}
       {slides.length < 8 && <button className="dz2-sl add" onClick={() => { S('slides', [...slides, NEW.slide()]); setTimeout(() => pick(slides.length), 60); }} title="Reklam ekle"><Icon n="plus" s={15} /></button>}
     </div>
     {bad.length > 0 && <div className="dz2-warn"><Icon n="eye" s={16} /><span><b>{bad.map((x) => x[1]).join(' ve ')} zor okunuyor.</b> Yazı rengi arka plana çok yakın.</span><button className="btn sm" onClick={() => up(Object.fromEntries(bad.map(([k]) => [k, fixC])))}>Düzelt</button></div>}
@@ -550,7 +551,7 @@ function HeroPanel(P) {
       <div data-f="heroH"><Field label="Reklam alanı yüksekliği" hint="Alt kenarındaki tutamaçla da çekebilirsiniz. 0 = otomatik"><span className="she-scale"><input type="range" min="0" max="760" step="10" value={Number(H.heroH) || 0} onChange={(e) => S('heroH', Number(e.target.value) < 260 ? 0 : Number(e.target.value))} /><code>{Number(H.heroH) ? H.heroH + ' px' : 'otomatik'}</code></span></Field></div>
       <GeoMore H={H} k="hero" S={S} />
       <div className="dz2-acts">
-        <button className="btn sm ghost" disabled={i === 0} onClick={() => { S('slides', moveItem(slides, i, i - 1)); pick(i - 1); }}><Icon n="back" s={15} />Öne al</button>
+        <button className="btn sm ghost" disabled={i === 0} onClick={() => { S('slides', moveItem(slides, i, 0)); pick(0); }}><Icon n="up" s={15} />En başa al</button><button className="btn sm ghost" disabled={i === 0} onClick={() => { S('slides', moveItem(slides, i, i - 1)); pick(i - 1); }}><Icon n="back" s={15} />Öne al</button>
         <button className="btn sm ghost" disabled={i >= slides.length - 1} onClick={() => { S('slides', moveItem(slides, i, i + 1)); pick(i + 1); }}><Icon n="back" s={15} className="flip" />Sona al</button>
         <button className="btn sm ghost" disabled={slides.length >= 8} onClick={() => { const n = [...slides]; n.splice(i + 1, 0, structuredClone(s)); S('slides', n); setTimeout(() => pick(i + 1), 60); }}><Icon n="copy" s={15} />Çoğalt</button>
         <button className="btn sm ghost" onClick={() => { styleClip = Object.fromEntries(STYLE_KEYS.map((k) => [k, s[k]])); toast('Stil kopyalandı: düzen, arka plan, renkler, buton'); }}><Icon n="copy" s={15} />Stili kopyala</button>
