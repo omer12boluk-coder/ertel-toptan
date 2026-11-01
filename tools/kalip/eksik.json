@@ -1,5 +1,5 @@
 {
- "tarih": "2026-10-27",
+ "tarih": "2026-11-01",
  "not": "Katalogdaki kalıplarda geçen ama telefon listesinde hiçbir telefona bağlı olmayan işlemci kodları",
  "kodlar": [
   {
@@ -12,6 +12,12 @@
    "kod": "SM8916",
    "kaliplar": [
     "Qianli 9 NOTE/2/2A"
+   ]
+  },
+  {
+   "kod": "SM8711",
+   "kaliplar": [
+    "Amaoe S23FE SM-S711B"
    ]
   },
   {
