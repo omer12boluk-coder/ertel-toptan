@@ -21,9 +21,10 @@ const FB = 'https://erteltoptan.firebaseapp.com';
 const FS = 'https://firestore.googleapis.com/v1/projects/erteltoptan/databases/(default)/documents/';
 const IMG = 'https://resim.ertelmarket.com/';
 const SITE = 'https://ertelmarket.com';
-const NAME = 'ERTEL GSM';
+const NAME = 'Ertel Market'; // Google'da görünen site adı (kullanıcı, 1.11.2026); dükkânın adı ERTEL GSM ikinci ad olarak verilir
+const BRAND = 'ERTEL GSM';
 const WATCH = 'https://ertel-b2b-watch.omer-12boluk.workers.dev'; // kur (Harem Altın dolar satış) — uygulamadaki fiyatla aynı kaynak
-const VER = 'v4'; // önbellek anahtarı: sayfa düzeni değişince artır
+const VER = 'v5'; // önbellek anahtarı: sayfa düzeni değişince artır
 const BOT = /bot\b|bot\/|crawl|spider|slurp|google|bing|yandex|baidu|duckduck|facebookexternalhit|facebot|whatsapp|telegram|slack|linkedin|discord|pinterest|skypeuripreview|vkshare|embedly|viber|snapchat|petal|applebot|preview/i;
 
 // ---- Firestore REST (herkese açık okuma)
@@ -133,7 +134,7 @@ const topCats = (I) => [...I.cats.values()].filter((c) => !c.par || !I.catById.h
 const crumbs = (items) => ({ '@type': 'BreadcrumbList', itemListElement: items.map(([name, url], i) => ({ '@type': 'ListItem', position: i + 1, name, item: SITE + url })) });
 function storeLd(I) {
   const s = I.shop;
-  return { '@type': 'Store', '@id': SITE + '/#store', name: NAME, url: SITE + '/', logo: SITE + '/icon-512.png', image: SITE + '/icon-512.png',
+  return { '@type': 'Store', '@id': SITE + '/#store', name: NAME, alternateName: BRAND, url: SITE + '/', logo: SITE + '/icon-512.png', image: SITE + '/icon-512.png',
     description: 'Telefon tamircileri için havya, sıcak hava istasyonu, mikroskop, entegre, kalıp ve tamir ekipmanları.',
     ...(s.phone ? { telephone: s.phone } : {}), ...(s.address ? { address: { '@type': 'PostalAddress', streetAddress: s.address, addressLocality: 'Fatih', addressRegion: 'İstanbul', addressCountry: 'TR' } } : {}),
     sameAs: [s.ig, s.fb].filter((x) => x && /^https?:/.test(x)) };
@@ -161,10 +162,10 @@ async function seoFor(path, I) {
   const brandsTop = [...I.brands.values()].sort((a, b) => b.ids.length - a.ids.length).slice(0, 6).map((b) => b.name);
   if (path === '/' || path === '') {
     return {
-      title: `${NAME} | Telefon Tamir Ekipmanları – Havya, Sıcak Hava, Mikroskop`,
+      title: `${NAME} | ${BRAND} Telefon Tamir Ekipmanları – Havya, Sıcak Hava, Mikroskop`,
       desc: `Telefon tamircileri için havya, sıcak hava istasyonu, mikroskop, entegre ve kalıp. ${brandsTop.join(', ')} ve daha fazlası. Tahtakale, İstanbul.`,
-      ld: [storeLd(I), { '@type': 'WebSite', name: NAME, url: SITE + '/', potentialAction: { '@type': 'SearchAction', target: SITE + '/urunler?q={q}', 'query-input': 'required name=q' } }],
-      body: `<h1>${esc(NAME)} – Telefon tamir ekipmanları</h1><p>${esc(I.shop.intro || 'Telefon tamircileri için havya, sıcak hava istasyonu, mikroskop, entegre, kalıp ve tamir ekipmanları. Tahtakale, İstanbul.')}</p>`
+      ld: [storeLd(I), { '@type': 'WebSite', '@id': SITE + '/#website', name: NAME, alternateName: [BRAND, 'ertelmarket.com'], url: SITE + '/', potentialAction: { '@type': 'SearchAction', target: SITE + '/urunler?q={q}', 'query-input': 'required name=q' } }],
+      body: `<h1>${esc(NAME)} – ${esc(BRAND)} telefon tamir ekipmanları</h1><p>${esc(I.shop.intro || 'Telefon tamircileri için havya, sıcak hava istasyonu, mikroskop, entegre, kalıp ve tamir ekipmanları. Tahtakale, İstanbul.')}</p>`
         + `<p>${A('/urunler', 'Tüm ürünler')} · ${A('/kalip', 'Kalıp bulucu')}</p><h2>Markalar</h2>${brandLinks(I)}<h2>Kategoriler</h2>${catLinks(I, topCats(I))}`
         + (I.shop.address ? `<p>Adres: ${esc(I.shop.address)}${I.shop.phone ? ' · Telefon: ' + esc(I.shop.phone) : ''}</p>` : ''),
     };
