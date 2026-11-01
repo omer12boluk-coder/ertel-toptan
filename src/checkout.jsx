@@ -616,7 +616,7 @@ export function OrderPage({ id }) {
 
 
       <PaidNotice o={o} payInfo={S.shop.payInfo} onSend={() => setConfirm({ title: 'Ödemeyi bildir', text: 'Havale / EFT ödemesini yaptığınızı bize bildireceğiz. Gönderdiyseniz devam edin.', okLabel: 'Bildir', onOk: () => sendPaid(o) })} />
-      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={o.sum ? <OrderSumFoot o={o} /> : null} />
+      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={o.sum ? <OrderSumFoot o={o} /> : null} tlRate={o.sum?.allUsd ? o.sum.rate : null} />
       <OrderRate o={o} />
 
       <div className="o-info">

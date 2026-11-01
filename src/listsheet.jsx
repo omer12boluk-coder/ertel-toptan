@@ -40,7 +40,8 @@ const priced = (r) => r.status !== 'new';
 const listRate = (r, live) => (r.rate && r.rate.usd > 0 ? r.rate : live);
 
 // ---- Sayfadaki tablo --------------------------------------------------------
-export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, viewOnly = false, b2b = false, foot = null }) { // foot: mağaza siparişinin KDV dahil tutar bölümü (storepay OrderSumFoot) — verilmezse eski toplam + KDV satırı // b2b: bayiye KDV yok, liste toplamı ve kârı gösterilir // viewOnly: tamamlanmış sipariş — ürün penceresinde Sepete ekle yok
+const trl = (v) => Number(v).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, viewOnly = false, b2b = false, foot = null, tlRate = null }) { // tlRate: mağaza siparişi (KDV dahil satış) — fiyat/tutar altında küçük TL + tablo altında toplam ($ ve TL, KDV hariç) // foot: mağaza siparişinin KDV dahil tutar bölümü (storepay OrderSumFoot) — verilmezse eski toplam + KDV satırı // b2b: bayiye KDV yok, liste toplamı ve kârı gösterilir // viewOnly: tamamlanmış sipariş — ürün penceresinde Sepete ekle yok
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const live = useRate();
@@ -51,7 +52,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
   const tot = totals(items, 'offer');
   const tTL = rate ? toTL(tot, rate) : null; // TL sadece toplamda
   return (
-    <article className="paper">
+    <article className={'paper' + (tlRate ? ' paper-store' : '')}>
       <header className="paper-h">
         <img src={S.brand.logo || LOGO_MARK} alt="" />
         <div className="paper-shop"><b>{S.shop.name}</b><span>{[S.shop.address, S.shop.phone].filter(Boolean).join(' · ')}</span></div>
@@ -77,12 +78,15 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
                     </div>
                   </td>
                   <td className="r num pt-qty">{it.qty}</td>
-                  <td className="r num pt-unit">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}</td>
-                  <td className="r num pt-sum">{sum == null ? '—' : fmt(sum, it.cur)}</td>
+                  <td className="r num pt-unit">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}{tlRate && it.offer != null && it.cur === 'USD' && <small className="pt-tl">{trl(it.offer * tlRate)}</small>}</td>
+                  <td className="r num pt-sum">{sum == null ? '—' : fmt(sum, it.cur)}{tlRate && sum != null && it.cur === 'USD' && <small className="pt-tl">{trl(Math.round(it.offer * tlRate * 100) / 100 * it.qty)}</small>}</td>
                 </tr>
               );
             })}
           </tbody>
+          {tlRate && (() => { const usd = items.reduce((a, i) => a + (i.cur === 'USD' && i.offer != null ? i.offer * i.qty : 0), 0); const tl = items.reduce((a, i) => a + (i.cur === 'USD' && i.offer != null ? Math.round(i.offer * tlRate * 100) / 100 * i.qty : 0), 0); return (
+            <tfoot><tr className="pt-total"><td className="c" /><td className="pt-total-l">Toplam <small>KDV hariç</small></td><td className="r num pt-qty">{items.reduce((n, i) => n + (Number(i.qty) || 0), 0)}</td><td className="pt-unit" /><td className="r num pt-sum">{fmt(usd, 'USD')}<small className="pt-tl">{trl(tl)}</small></td></tr></tfoot>
+          ); })()}
         </table>
       </div>
       <footer className={'paper-f' + (foot ? ' has-foot' : '')}>

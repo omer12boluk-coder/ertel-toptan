@@ -170,7 +170,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
         <button type="button" className="cart-clear cc-m" onClick={() => setAsk(true)}><Icon n="trash" s={14} />Sepeti temizle</button>
       </div>
       <div className="cart-grid">
-        <ul className="clist gclist">
+        <div className="cart-main"><ul className="clist gclist">
           <li className="gline gline-h" aria-hidden="true"><span>Ürün</span><span className="gline-ctl"><span className="r">Birim fiyat</span><span className="c">Adet</span><span className="r">Toplam</span><span /></span></li>
           {groupLines(items).map((g) => g.set ? (
             <SwipeLine key={g.sk} id={g.sk} open={swOpen} setOpen={setSwOpen} onDelete={() => setQty(g.sk, 0)} className="set-line">
@@ -193,13 +193,13 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
               </div>
             </SwipeLine>
           ))(g))}
-          {vsum && ( // tablonun altı: toplamların toplamı ($ ve altında KDV'siz TL)
-            <li className="gline gline-foot" aria-label="Sepet toplamı">
-              <span className="gf-l"><b>Toplam</b><small>{lineCount(items)} ürün · {nQty} adet</small></span>
-              <span className="gline-ctl"><span /><span /><span className="num gline-sum has-tl">{vsum.allUsd ? fmt(vsum.usd, 'USD') : fmtTotals(tot)}<small className="ln-tl num">{tl2(vsum.tl)}<em>+KDV</em></small></span><span /></span>
-            </li>
-          )}
         </ul>
+        {vsum && ( // tablonun altında: ürünlerin toplamı ($ ve altında KDV'siz TL)
+          <div className="cart-subtot">
+            <span className="cst-l">Ürünlerin toplamı<small>{lineCount(items)} ürün · {nQty} adet · KDV hariç</small></span>
+            <span className="cst-v num"><b>{vsum.allUsd ? fmt(vsum.usd, 'USD') : tl2(vsum.tl)}</b>{vsum.allUsd && <small>{tl2(vsum.tl)}</small>}</span>
+          </div>
+        )}</div>
         <div className="cart-side" ref={sideRef}><aside className="cart-sum" ref={boxRef}>
           <div className="cs-head">
             <div className="cs-head-t"><b>Sepetiniz</b><small>{lineCount(items)} ürün · {nQty} adet</small></div>

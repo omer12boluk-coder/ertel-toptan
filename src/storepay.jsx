@@ -57,11 +57,11 @@ export function PayableBox({ sum, label = 'Ödenecek tutar', compact, usd = true
 }
 
 // Ara toplam / KDV / ödeme komisyonu satırları (+ ek satırlar: kargo vb.)
-export function SumRows({ sum, children, incRow }) {
+export function SumRows({ sum, children, incRow, usd = true }) {
   if (!sum) return null;
   return (
     <div className="ssum-rows num">
-      <div><span>Ara toplam <small>(KDV hariç)</small></span><span className="v">{tl2(sum.tl)}{sum.allUsd && <small className="ssum-usd">{usd2(sum.usd)}</small>}</span></div>
+      <div><span>Ara toplam <small>(KDV hariç)</small></span><span className="v">{tl2(sum.tl)}{usd && sum.allUsd && <small className="ssum-usd">{usd2(sum.usd)}</small>}</span></div>
       {sum.vatPct > 0 && <div><span>KDV %{sum.vatPct.toLocaleString('tr-TR')}</span><span className="v">{tl2(sum.vat)}</span></div>}
       {(incRow || (sum.inst && sum.inst.fee > 0)) && sum.vatPct > 0 && <div className="ssum-inc"><span>KDV dahil</span><span className="v">{tl2(sum.inc)}</span></div>}
       {sum.inst && sum.inst.fee > 0 && <div><span>Ödeme komisyonu{sum.inst.n > 1 && <small> ({instName(sum.inst)} · %{sum.inst.pct.toLocaleString('tr-TR')})</small>}</span><span className="v">+{tl2(sum.inst.fee)}</span></div>}
@@ -144,7 +144,7 @@ export function OrderSumFoot({ o }) {
   const sum = o?.sum; if (!sum) return null;
   return (
     <div className="ssum foot">
-      <SumRows sum={sum} />
+      <SumRows sum={sum} usd={false} />
       <PayableBox sum={sum} label={o.pay === 'card' ? 'Kartla ödenen' : 'Ödenecek tutar'} usd={false} />
     </div>
   );
@@ -154,16 +154,12 @@ export function OrderSumFoot({ o }) {
 export function AdminPayCard({ o }) {
   const sum = o?.sum; if (!sum) return null;
   const how = o.pay === 'card' ? 'Kredi kartı · ' + (sum.inst?.n > 1 ? sum.inst.n + ' taksit' : 'tek çekim') : o.pay === 'havale' ? 'Havale / EFT' : 'Dükkanda ödeme';
-  const inv = invoiceSplit(sum.pay, sum.vatPct);
   return (
     <div className="o-card pay-card">
       <h3>Ödeme{o.card?.demo && <span className="tag warn">Demo</span>}</h3>
       <p><b>{how}</b></p>
       {o.card && <p className="muted num">{cardLine(o.card)}</p>}
-      <div className="pc-two num">
-        <span><small>KDV hariç</small><b>{tl2(inv.base)}</b></span>
-        <span><small>KDV dahil</small><b>{tl2(sum.pay)}</b></span>
-      </div>
+      <p className="pc-amt num">{tl2(sum.pay)}</p>
       {o.paid?.at && <p className="pc-paid"><Icon n="check" s={14} />Müşteri ödemeyi yaptığını bildirdi · {new Date(o.paid.at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>}
     </div>
   );
