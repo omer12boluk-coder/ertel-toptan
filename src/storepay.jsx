@@ -2,7 +2,7 @@
 // SADECE mağaza sepeti (cart.jsx, pub), "Siparişi tamamla" (checkout.jsx), müşterinin sipariş sayfası ve yönetimdeki
 // mağaza siparişi kullanır. Sipariş formu, sepet linki ve bayi tarafı eski parçaları (VatLines, ListPaper toplamı) kullanmaya devam eder.
 // Hesap: paycalc.js (bekçi de aynı dosyayı kullanır).
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from './store.js';
 import { Icon, copyText } from './ui.jsx';
 import { useRate } from './listsheet.jsx';
@@ -139,13 +139,21 @@ export function CardForm({ card, setCard, inc, list, err = {} }) {
 export const payLabel = (o, PAY) => (o?.sum && o.pay === 'card' ? 'Kart · ' + (o.sum.inst?.n > 1 ? o.sum.inst.n + ' taksit' : 'tek çekim') : PAY?.[o?.pay] || '');
 export const cardLine = (c) => (!c ? '' : [BRAND[c.brand] || c.brand, c.bank, c.last4 && '•••• ' + c.last4].filter(Boolean).join(' · '));
 
-// Sipariş kâğıdının (ListPaper) altına: satırlar + ödenen tutar
+// Sipariş kâğıdının (ListPaper) altına: satırlar + ödenen tutar — açılır kapanır, son hâli cihazda hatırlanır (ls 'osum-open')
+const osumGet = () => { try { return localStorage.getItem('osum-open') !== '0'; } catch { return true; } };
 export function OrderSumFoot({ o }) {
+  const [open, setOpen] = useState(osumGet);
   const sum = o?.sum; if (!sum) return null;
+  const tog = () => { const v = !open; setOpen(v); try { localStorage.setItem('osum-open', v ? '1' : '0'); } catch {} };
+  const label = o.pay === 'card' ? 'Kartla ödenen' : 'Ödenecek tutar';
   return (
-    <div className="ssum foot">
-      <SumRows sum={sum} usd={false} />
-      <PayableBox sum={sum} label={o.pay === 'card' ? 'Kartla ödenen' : 'Ödenecek tutar'} usd={false} />
+    <div className={'ssum foot' + (open ? ' open' : ' shut')}>
+      <button type="button" className="osum-tg" onClick={tog} aria-expanded={open}>
+        <span>Ödeme özeti</span>
+        {!open && <span className="osum-mini num">{label} · <b>{tl2(sum.pay)}</b>{sum.vatPct > 0 && <small> KDV dahil</small>}</span>}
+        <Icon n="chev" s={16} className="osum-chev" />
+      </button>
+      {open && <div className="osum-body"><SumRows sum={sum} usd={false} /><PayableBox sum={sum} label={label} usd={false} /></div>}
     </div>
   );
 }

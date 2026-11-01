@@ -85,7 +85,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
             })}
           </tbody>
           {tlRate && (() => { const usd = items.reduce((a, i) => a + (i.cur === 'USD' && i.offer != null ? i.offer * i.qty : 0), 0); const tl = items.reduce((a, i) => a + (i.cur === 'USD' && i.offer != null ? Math.round(i.offer * tlRate * 100) / 100 * i.qty : 0), 0); return (
-            <tfoot><tr className="pt-total"><td className="c" /><td className="pt-total-l">Toplam <small>KDV hariç</small></td><td className="r num pt-qty">{items.reduce((n, i) => n + (Number(i.qty) || 0), 0)}</td><td className="pt-unit" /><td className="r num pt-sum">{fmt(usd, 'USD')}<small className="pt-tl">{trl(tl)}</small></td></tr></tfoot>
+            <tfoot><tr className="pt-total"><td colSpan={5}><span className="pt-total-box num"><small>Toplam</small><b>{fmt(usd, 'USD')}</b><span>{trl(tl)}</span></span></td></tr></tfoot>
           ); })()}
         </table>
       </div>
