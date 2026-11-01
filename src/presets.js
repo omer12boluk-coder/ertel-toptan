@@ -112,7 +112,45 @@ export const PALETTES = [
 // fx: hafif parça efekti · badge: ürün kartı köşe rozeti · tint: sayfanın üstünde hafif renk
 export const FX_KINDS = {
   none: 'Yok', sparkle: 'Işıltı', dust: 'Işık tozu', snow: 'Kar', confetti: 'Konfeti', bubble: 'Kabarcık', rain: 'Yağmur', petal: 'Yaprak',
+  hearts: 'Kalpler', flakes: 'Kar tanesi', stars: 'Yıldızlar', leaves: 'Sonbahar yaprağı', balloons: 'Balonlar', gears: 'Dişliler',
 };
+// ---- Sayfa deseni (1.11.2026, tema parçası 'pat'): sayfanın zemininde çok hafif tekrar eden desen {k, c, o (0-1), z (ölçek)}
+export const PATTERNS = { none: 'Yok', dots: 'Noktalar', grid: 'Kareli', diag: 'Çapraz çizgi', checks: 'Dama', plus: 'Artılar', waves: 'Dalgalar', zigzag: 'Zikzak',
+  stars: 'Yıldızlar', hearts: 'Kalpler', snow: 'Kar taneleri', circuit: 'Devre kartı', moons: 'Hilal ve yıldız', tools: 'Tamir aletleri' };
+const svgUrl = (w, h, body) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>${body}</svg>`)}")`;
+export function patBg(k, c = '#64748b', z = 1) {
+  const S = Math.round(28 * (z || 1));
+  switch (k) {
+    case 'dots': return { backgroundImage: `radial-gradient(${c} 1.4px, transparent 1.6px)`, backgroundSize: `${S}px ${S}px` };
+    case 'grid': return { backgroundImage: `linear-gradient(${c} 1px, transparent 1px), linear-gradient(90deg, ${c} 1px, transparent 1px)`, backgroundSize: `${S}px ${S}px` };
+    case 'diag': return { backgroundImage: `repeating-linear-gradient(45deg, ${c} 0 1.2px, transparent 1.2px ${Math.round(S / 2.2)}px)` };
+    case 'checks': return { backgroundImage: `conic-gradient(${c} 25%, transparent 0 50%, ${c} 0 75%, transparent 0)`, backgroundSize: `${S}px ${S}px` };
+    case 'plus': return { backgroundImage: svgUrl(30, 30, `<path d='M15 9v12M9 15h12' stroke='${c}' stroke-width='1.6' stroke-linecap='round'/>`), backgroundSize: `${S + 4}px ${S + 4}px` };
+    case 'waves': return { backgroundImage: svgUrl(60, 20, `<path d='M0 10 Q15 0 30 10 T60 10' fill='none' stroke='${c}' stroke-width='1.4'/>`), backgroundSize: `${S * 2}px ${Math.round(S * 0.7)}px` };
+    case 'zigzag': return { backgroundImage: svgUrl(40, 16, `<path d='M0 12 L10 4 L20 12 L30 4 L40 12' fill='none' stroke='${c}' stroke-width='1.4' stroke-linejoin='round'/>`), backgroundSize: `${Math.round(S * 1.4)}px ${Math.round(S * 0.6)}px` };
+    case 'stars': return { backgroundImage: svgUrl(60, 60, `<path d='M15 8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z' fill='${c}'/><path d='M45 38l1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.6 1.4.5-3-2.2-2.1 3-.4z' fill='${c}'/>`), backgroundSize: `${S * 2}px ${S * 2}px` };
+    case 'hearts': return { backgroundImage: svgUrl(60, 60, `<path d='M16 24c-6-4-9-7-9-10.5C7 10.5 9 9 11.2 9c2 0 3.4 1.2 4.8 3 1.4-1.8 2.8-3 4.8-3C23 9 25 10.5 25 13.5 25 17 22 20 16 24z' fill='${c}'/><path d='M44 50c-4-2.7-6-4.7-6-7 0-2 1.3-3 2.8-3 1.4 0 2.3.8 3.2 2 .9-1.2 1.8-2 3.2-2 1.5 0 2.8 1 2.8 3 0 2.3-2 4.3-6 7z' fill='${c}'/>`), backgroundSize: `${S * 2}px ${S * 2}px` };
+    case 'snow': return { backgroundImage: svgUrl(60, 60, `<g stroke='${c}' stroke-width='1.3' stroke-linecap='round'><path d='M16 8v16M9 12l14 8M9 20l14-8'/><path d='M45 38v10M40.7 40.5l8.6 5M40.7 45.5l8.6-5'/></g>`), backgroundSize: `${S * 2}px ${S * 2}px` };
+    case 'circuit': return { backgroundImage: svgUrl(80, 80, `<g fill='none' stroke='${c}' stroke-width='1.2'><path d='M0 20h22l8 8h20M50 28v24l8 8h22M20 80V58l-8-8V30'/><circle cx='50' cy='28' r='2.5' fill='${c}'/><circle cx='12' cy='30' r='2.5' fill='${c}'/><circle cx='58' cy='60' r='2.5' fill='${c}'/></g>`), backgroundSize: `${Math.round(S * 2.6)}px ${Math.round(S * 2.6)}px` };
+    case 'moons': return { backgroundImage: svgUrl(70, 70, `<path d='M22 10a10 10 0 1 0 8 16 8 8 0 1 1-8-16z' fill='${c}'/><path d='M52 44l1.4 3 3.2.4-2.4 2.2.6 3.2-2.8-1.6-2.8 1.6.6-3.2-2.4-2.2 3.2-.4z' fill='${c}'/>`), backgroundSize: `${Math.round(S * 2.4)}px ${Math.round(S * 2.4)}px` };
+    case 'tools': return { backgroundImage: svgUrl(80, 80, `<g fill='none' stroke='${c}' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M14 30l12-12m-2-4a5 5 0 0 0 6 6l-3 3-3-3z'/><rect x='48' y='44' width='14' height='24' rx='3'/><path d='M53 64h4'/></g>`), backgroundSize: `${Math.round(S * 2.8)}px ${Math.round(S * 2.8)}px` };
+    default: return null;
+  }
+}
+// ---- Süs dizisi (tema parçası 'orn'): menünün altında sarkan ince süs
+export const ORNS = { none: 'Yok', bunting: 'Flama dizisi', lights: 'Renkli ampuller', garland: 'Yapraklı çelenk', stars: 'Sarkan yıldızlar', hearts: 'Kalp dizisi', moons: 'Fener ve hilal' };
+export function ornBg(k, cs = []) {
+  const [a = '#ef4444', b = '#facc15', c = '#22c55e', d = '#3b82f6'] = cs;
+  switch (k) {
+    case 'bunting': return { h: 26, img: svgUrl(120, 26, `<path d='M0 3 Q60 9 120 3' fill='none' stroke='#6b7280' stroke-width='1'/><path d='M4 3.4l10 18 10-17z' fill='${a}'/><path d='M34 5l10 18 10-17.8z' fill='${b}'/><path d='M64 5.8l10 18 10-17.6z' fill='${c}'/><path d='M94 4.8l10 18 10-17z' fill='${d}'/>`), w: 120 };
+    case 'lights': return { h: 26, img: svgUrl(120, 26, `<path d='M0 2 Q30 12 60 2 T120 2' fill='none' stroke='#374151' stroke-width='1.2'/><g><ellipse cx='15' cy='14' rx='4' ry='6' fill='${a}'/><ellipse cx='45' cy='14' rx='4' ry='6' fill='${b}'/><ellipse cx='75' cy='14' rx='4' ry='6' fill='${c}'/><ellipse cx='105' cy='14' rx='4' ry='6' fill='${d}'/></g>`), w: 120 };
+    case 'garland': return { h: 24, img: svgUrl(80, 24, `<path d='M0 4 Q40 18 80 4' fill='none' stroke='${c || '#15803d'}' stroke-width='2.4'/><g fill='${c || '#15803d'}'><ellipse cx='14' cy='9' rx='5' ry='2.6' transform='rotate(-25 14 9)'/><ellipse cx='30' cy='13' rx='5' ry='2.6' transform='rotate(20 30 13)'/><ellipse cx='50' cy='13' rx='5' ry='2.6' transform='rotate(-20 50 13)'/><ellipse cx='66' cy='9' rx='5' ry='2.6' transform='rotate(25 66 9)'/></g><circle cx='40' cy='12' r='3.2' fill='${a}'/>`), w: 80 };
+    case 'stars': return { h: 34, img: svgUrl(90, 34, `<g stroke='#9ca3af' stroke-width='.8'><path d='M15 0v14M45 0v22M75 0v10'/></g><g fill='${b}'><path d='M15 14l2 4 4.4.6-3.2 3 .8 4.4-4-2.1-4 2.1.8-4.4-3.2-3 4.4-.6z'/><path d='M45 22l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z'/><path d='M75 10l2 4 4.4.6-3.2 3 .8 4.4-4-2.1-4 2.1.8-4.4-3.2-3 4.4-.6z'/></g>`), w: 90 };
+    case 'hearts': return { h: 24, img: svgUrl(80, 24, `<path d='M0 3 Q40 10 80 3' fill='none' stroke='#9ca3af' stroke-width='.8'/><g fill='${a}'><path d='M20 20c-4-2.6-6-4.6-6-7 0-1.8 1.3-3 2.8-3 1.4 0 2.3.8 3.2 2 .9-1.2 1.8-2 3.2-2 1.5 0 2.8 1.2 2.8 3 0 2.4-2 4.4-6 7z'/><path d='M60 20c-4-2.6-6-4.6-6-7 0-1.8 1.3-3 2.8-3 1.4 0 2.3.8 3.2 2 .9-1.2 1.8-2 3.2-2 1.5 0 2.8 1.2 2.8 3 0 2.4-2 4.4-6 7z' fill='${b}'/></g>`), w: 80 };
+    case 'moons': return { h: 36, img: svgUrl(100, 36, `<g stroke='#9ca3af' stroke-width='.8'><path d='M20 0v12M70 0v18'/></g><rect x='15' y='12' width='10' height='14' rx='3' fill='${a}'/><rect x='17' y='26' width='6' height='2' fill='${b}'/><path d='M74 18a8 8 0 1 0 5 13 6.4 6.4 0 1 1-5-13z' fill='${b}'/>`), w: 100 };
+    default: return null;
+  }
+}
 export const PACKS = [
   { id: 'efsane', n: 'Efsane Cuma', d: 'Siyah-altın, ışıltı, indirim rozeti', sw: ['#0a0a0b', '#f5c542', '#3a2f12'],
     palette: { accent: '#111827', price: '#a16207', bg: '#f7f6f2' }, hero: 'a-gold', band: { text: 'EFSANE CUMA · SEÇİLİ ÜRÜNLERDE BÜYÜK İNDİRİM', bg: 'linear-gradient(90deg, #0a0a0b, #3a2f12, #0a0a0b)', color: '#f5c542' },
@@ -150,9 +188,49 @@ export const PACKS = [
   { id: 'gece', n: 'Yıldızlı gece', d: 'Koyu lacivert, yıldız ışıltısı', sw: ['#0b1036', '#3730a3', '#fde68a'],
     palette: { accent: '#3730a3', price: '#312e81', bg: '#f6f6fc' }, hero: 'a-spot', band: null,
     fx: { kind: 'sparkle', c: ['#fde68a', '#ffffff', '#c7d2fe'] }, badge: null, tint: 'linear-gradient(180deg, rgb(49 46 129 / .08), transparent 60%)' },
+  // 1.11.2026 yeni temalar (desen ve süs dizisi ile)
+  { id: 'yilbasi2', n: 'Yılbaşı · neşeli', d: 'Kırmızı-yeşil, ampul dizisi, kar', sw: ['#b91c1c', '#15803d', '#fde68a'],
+    palette: { accent: '#b91c1c', price: '#15803d', bg: '#fffaf7' }, hero: 'g-cherry', band: { text: 'YENİ YILA ÖZEL FİYATLAR · HEDİYE PAKETİ ÜCRETSİZ', bg: 'linear-gradient(90deg, #14532d, #b91c1c, #14532d)', color: '#fff' },
+    fx: { kind: 'flakes', c: ['#93c5fd', '#e0f2fe', '#ffffff'] }, badge: { text: 'YILBAŞI', bg: '#15803d', color: '#fff' }, tint: '', pat: { k: 'snow', c: '#b91c1c', o: 0.07 }, orn: 'lights', ornC: ['#ef4444', '#facc15', '#22c55e', '#3b82f6'] },
+  { id: 'anneler', n: 'Anneler günü', d: 'Pudra pembe, kalpler, çiçek', sw: ['#fdf2f8', '#ec4899', '#9d174d'],
+    palette: { accent: '#be185d', price: '#9d174d', bg: '#fffafc' }, hero: 'a-rose', band: { text: 'ANNELER GÜNÜNÜZ KUTLU OLSUN', bg: '#be185d', color: '#fff' },
+    fx: { kind: 'hearts', c: ['#f472b6', '#fb7185', '#f9a8d4'] }, badge: { text: 'HEDİYE', bg: '#ec4899', color: '#fff' }, tint: 'linear-gradient(180deg, rgb(236 72 153 / .07), transparent 60%)', pat: { k: 'hearts', c: '#ec4899', o: 0.06 }, orn: 'hearts', ornC: ['#ec4899', '#f9a8d4'] },
+  { id: 'babalar', n: 'Babalar günü', d: 'Çelik mavi, sade ve güçlü', sw: ['#0f172a', '#475569', '#f59e0b'],
+    palette: { accent: '#1e293b', price: '#b45309', bg: '#f5f6f8' }, hero: 'g-steel', band: { text: 'BABALAR GÜNÜ · USTAYA YAKIŞIR HEDİYELER', bg: '#0f172a', color: '#fbbf24' },
+    fx: { kind: 'gears', c: ['#94a3b8', '#cbd5e1'] }, badge: { text: 'HEDİYE', bg: '#f59e0b', color: '#111' }, tint: '', pat: { k: 'diag', c: '#334155', o: 0.05 } },
+  { id: 'cocuk', n: '23 Nisan', d: 'Rengârenk flama, balonlar', sw: ['#ef4444', '#facc15', '#3b82f6'],
+    palette: { accent: '#dc2626', price: '#1d4ed8', bg: '#fffdf7' }, hero: 'g-sunset', band: { text: '23 NİSAN ULUSAL EGEMENLİK VE ÇOCUK BAYRAMI KUTLU OLSUN', bg: '#c8102e', color: '#fff' },
+    fx: { kind: 'balloons' }, badge: null, tint: '', pat: { k: 'dots', c: '#f59e0b', o: 0.08 }, orn: 'bunting', ornC: ['#ef4444', '#facc15', '#22c55e', '#3b82f6'] },
+  { id: 'genclik', n: '19 Mayıs', d: 'Kırmızı-beyaz flama', sw: ['#c8102e', '#ffffff', '#7f1d1d'],
+    palette: { accent: '#c8102e', price: '#991b1b', bg: '#fffafa' }, hero: 'g-cherry', band: { text: '19 MAYIS ATATÜRK\'Ü ANMA, GENÇLİK VE SPOR BAYRAMI KUTLU OLSUN', bg: '#c8102e', color: '#fff' },
+    fx: { kind: 'none' }, badge: null, tint: 'linear-gradient(180deg, rgb(200 16 46 / .05), transparent 50%)', orn: 'bunting', ornC: ['#c8102e', '#ffffff', '#c8102e', '#ffffff'] },
+  { id: 'kurban', n: 'Kurban bayramı', d: 'Zümrüt yeşil, altın ışık, fener', sw: ['#064e3b', '#10b981', '#fbbf24'],
+    palette: { accent: '#047857', price: '#92400e', bg: '#f6fbf8' }, hero: 'g-emerald', band: { text: 'KURBAN BAYRAMINIZ MÜBAREK OLSUN', bg: 'linear-gradient(90deg, #064e3b, #047857, #064e3b)', color: '#fde68a' },
+    fx: { kind: 'stars', c: ['#fbbf24', '#fde68a'] }, badge: null, tint: 'linear-gradient(180deg, rgb(16 185 129 / .06), transparent 60%)', pat: { k: 'moons', c: '#047857', o: 0.06 }, orn: 'moons', ornC: ['#b45309', '#fbbf24'] },
+  { id: 'kadinlar', n: '8 Mart', d: 'Mor tonlar, uçuşan yaprak', sw: ['#2e1065', '#a855f7', '#f0abfc'],
+    palette: { accent: '#7e22ce', price: '#6b21a8', bg: '#fcfaff' }, hero: 'g-violet', band: { text: '8 MART DÜNYA KADINLAR GÜNÜ', bg: '#6b21a8', color: '#fff' },
+    fx: { kind: 'petal', c: ['#e9d5ff', '#f0abfc', '#c4b5fd'] }, badge: null, tint: 'linear-gradient(180deg, rgb(168 85 247 / .06), transparent 60%)' },
+  { id: 'sonbahar2', n: 'Sonbahar', d: 'Bakır, düşen yapraklar', sw: ['#431407', '#ea580c', '#fde68a'],
+    palette: { accent: '#c2410c', price: '#9a3412', bg: '#fffaf5' }, hero: 'g-copper', band: { text: 'SONBAHAR İNDİRİMİ', bg: '#9a3412', color: '#fff7ed' },
+    fx: { kind: 'leaves' }, badge: null, tint: 'linear-gradient(180deg, rgb(234 88 12 / .07), transparent 60%)', orn: 'garland', ornC: ['#dc2626', '#facc15', '#b45309'] },
+  { id: 'siber', n: 'Siber Pazartesi', d: 'Neon, kareli zemin', sw: ['#0a0a1a', '#22d3ee', '#e879f9'],
+    palette: { accent: '#7c3aed', price: '#0891b2', bg: '#f7f7fc' }, hero: 'a-neon', band: { text: 'SİBER PAZARTESİ · SADECE ONLINE', bg: 'linear-gradient(90deg, #0a0a1a, #312e81, #0a0a1a)', color: '#67e8f9' },
+    fx: { kind: 'sparkle', c: ['#22d3ee', '#e879f9', '#a5b4fc'] }, badge: { text: 'ONLINE', bg: '#22d3ee', color: '#0a0a1a' }, tint: '', pat: { k: 'grid', c: '#7c3aed', o: 0.05 } },
+  { id: 'indirim', n: 'Büyük indirim', d: 'Kırmızı-sarı, konfeti, rozet', sw: ['#dc2626', '#facc15', '#111827'],
+    palette: { accent: '#dc2626', price: '#dc2626', bg: '#fffbf5' }, hero: 'g-ember', band: { text: 'BÜYÜK İNDİRİM · STOKLARLA SINIRLI', bg: '#dc2626', color: '#fff' },
+    fx: { kind: 'confetti', c: ['#dc2626', '#facc15', '#111827'] }, badge: { text: 'İNDİRİM', bg: '#facc15', color: '#111' }, tint: '', pat: { k: 'zigzag', c: '#dc2626', o: 0.05 } },
+  { id: 'yildonumu', n: 'Mağaza yıldönümü', d: 'Altın, balon, kutlama', sw: ['#1c1917', '#d4a017', '#fde68a'],
+    palette: { accent: '#a16207', price: '#854d0e', bg: '#fdfbf6' }, hero: 'c-gold', band: { text: 'NİCE YILLARA · YILDÖNÜMÜNE ÖZEL FİYATLAR', bg: 'linear-gradient(90deg, #1c1917, #713f12, #1c1917)', color: '#fde68a' },
+    fx: { kind: 'balloons' }, badge: { text: 'KUTLAMA', bg: '#d4a017', color: '#111' }, tint: '', orn: 'stars', ornC: ['#d4a017', '#facc15'] },
+  { id: 'fuar', n: 'Teknoloji haftası', d: 'Devre kartı deseni, mavi ışık', sw: ['#0b1220', '#2563eb', '#22d3ee'],
+    palette: { accent: '#2563eb', price: '#0e7490', bg: '#f4f7fb' }, hero: 'k-pcb', band: { text: 'YENİ CİHAZLAR · YENİ EKİPMANLAR · TEKNOLOJİ HAFTASI', bg: '#0b1220', color: '#67e8f9' },
+    fx: { kind: 'dust', c: ['#60a5fa', '#22d3ee'] }, badge: { text: 'YENİ', bg: '#2563eb', color: '#fff' }, tint: '', pat: { k: 'circuit', c: '#2563eb', o: 0.06 } },
+  { id: 'ogretmen', n: 'Öğretmenler günü', d: 'Yeşil tahta, sarı tebeşir', sw: ['#14532d', '#16a34a', '#fde047'],
+    palette: { accent: '#15803d', price: '#a16207', bg: '#fbfdf8' }, hero: 'g-forest', band: { text: '24 KASIM ÖĞRETMENLER GÜNÜ KUTLU OLSUN', bg: '#14532d', color: '#fef08a' },
+    fx: { kind: 'none' }, badge: null, tint: '', pat: { k: 'plus', c: '#15803d', o: 0.06 } },
 ];
 export const PACK_BY = Object.fromEntries(PACKS.map((x) => [x.id, x]));
-export const PACK_PARTS = [['palette', 'Renkler'], ['hero', 'Banner zemini'], ['band', 'Duyuru şeridi'], ['fx', 'Efekt'], ['badge', 'Ürün rozeti'], ['tint', 'Sayfa tonu']];
+export const PACK_PARTS = [['palette', 'Renkler'], ['hero', 'Banner zemini'], ['band', 'Duyuru şeridi'], ['fx', 'Efekt'], ['badge', 'Ürün rozeti'], ['tint', 'Sayfa tonu'], ['pat', 'Sayfa deseni'], ['orn', 'Süs dizisi']];
 
 // Etkin tema: kayıttaki pack + (varsa) kullanıcının kendi ayarları; tarih aralığı dışındaysa null
 export function activePack(look, now = Date.now()) {
@@ -169,8 +247,17 @@ export function activePack(look, now = Date.now()) {
     band: on('band') && (base.band || p.band) ? { ...(base.band || {}), ...(p.band || {}) } : null,
     fx: on('fx') ? { ...(base.fx || {}), ...(p.fx || {}), amt: p.amt || 'md' } : null,
     badge: on('badge') && (base.badge || p.badge) ? { ...(base.badge || {}), ...(p.badge || {}) } : null,
-    tint: on('tint') ? base.tint : '',
+    tint: on('tint') ? (p.tintC ? `linear-gradient(180deg, ${hexA(p.tintC, p.tintO ?? 0.1)}, transparent 62%)` : base.tint) : '',
+    pat: on('pat') ? { ...(base.pat || {}), ...(p.pat || {}) } : null,
+    orn: on('orn') ? { k: p.orn ?? base.orn ?? 'none', c: p.ornC || base.ornC || [] } : null,
   };
+}
+const hexA = (h, a) => { const m = /^#([\da-f]{6})$/i.exec(h || ''); if (!m) return h; const n = parseInt(m[1], 16); return `rgb(${n >> 16} ${(n >> 8) & 255} ${n & 255} / ${a})`; };
+// Sayfa renkleri: tema açıksa temanın renkleri; ama kullanıcının 'temada da kullan' dediği (look.keep) renkleri her zaman üstte
+export function lookColors(L = {}, pk) {
+  const pp = pk?.palette; const keep = L.keep || {};
+  const pick = (k, lk) => (pp && !(keep[k] && L[lk]) ? pp[k] || (k === 'bg' ? L.bg : '') : L[lk]);
+  return { accent: pick('accent', 'shopAccent'), price: pick('price', 'shopPrice'), bg: pick('bg', 'bg') };
 }
 
 // ---- Okunabilirlik: iki renk arası kontrast (WCAG). Bilinmeyen renk → null

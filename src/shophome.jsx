@@ -12,6 +12,7 @@ import { currentRate } from './listsheet.jsx';
 import { feat, useStats, toggleNotify, outOfStock } from './extras.jsx';
 import { useWin, winOf, onDrag } from './dzframe.jsx';
 import { BG_BY, activePack, BTN_BY, ARROW_BY } from './presets.js';
+import { SlideEls, useSlideFonts } from './slidex.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
@@ -255,7 +256,7 @@ export function ShopHome({ S: Sover }) {
         ))}
       </section>
     ) : E && <Empty label="Avantaj yok" />;
-    if (k === 'marquee') return brands.length > 0 && H.marquee !== 'off' ? <Marquee items={brands} style={H.marquee || 'color'} speed={H.mqSpeed} speedM={H.mqSpeedM} ls={ls} /> : E && <Empty label={H.marquee === 'off' ? 'Kayan şerit kapalı (ayarından açın)' : 'Marka yok'} />;
+    if (k === 'marquee') return brands.length > 0 && H.marquee !== 'off' ? <Marquee items={brands} style={H.marquee || 'color'} speed={H.mqSpeed} speedM={H.mqSpeedM} ls={ls} z={H.mqZ} zm={H.mqZM} /> : E && <Empty label={H.marquee === 'off' ? 'Kayan şerit kapalı (ayarından açın)' : 'Marka yok'} />;
     if (k === 'brands') return (brands.length > 0 || E) && (
       <section className="sh-sec rv">
         <SecHead title={H.brandsTitle || 'Markalar'} sub={H.brandsSub ?? 'Dünyanın önde gelen tamir ekipmanı üreticileri'} onTitle={E && !E.mobile && ((t) => E.set('shopHome.brandsTitle', t))} />
@@ -677,7 +678,7 @@ function SecHead({ title, sub, more, rail, onTitle }) {
 
 // kayan marka şeridi: dev bir kayan katman yerine kendi içinde kayan kutu (iPhone'da kaybolma / titreme olmasın).
 // Telefonda parmakla da kaydırılabilir; bırakınca kendiliğinden devam eder. Ekranda değilken durur.
-function Marquee({ items, style, speed, speedM, ls = 1 }) { // speed: masaüstü, speedM: telefon (ayrı ayarlanır)
+function Marquee({ items, style, speed, speedM, ls = 1, z, zm }) { // speed: masaüstü, speedM: telefon (ayrı ayarlanır)
   const ref = useRef(null); const W = useWin();
   const phone = W.matchMedia('(max-width: 700px)').matches; // masaüstünde eskisi gibi CSS ile kayar
   const row = phone && items.length >= 8 ? items : [...items, ...items, ...items];
@@ -725,7 +726,7 @@ function Marquee({ items, style, speed, speedM, ls = 1 }) { // speed: masaüstü
   }, [items.length, speedM, phone]);
   if (!items.length) return null;
   return (
-    <div ref={ref} className={'sh-mq mq-' + style} aria-hidden="true" style={{ '--mq-dur': (Number(speed) || 46) + 's' }}>
+    <div ref={ref} className={'sh-mq mq-' + style} aria-hidden="true" style={{ '--mq-dur': (Number(speed) || 46) + 's', '--mqz-d': Number(z) || 1, '--mqz-m': Number(zm) || Number(z) || 1 }}>
       <div className="sh-mq-in">{[...row, ...row].map((b, i) => (
         <span key={i} className="sh-mq-it" style={{ '--c': b.color || '#64748b', '--ls': ls }}>
           {b.logo ? <ShopImg v={b.logo} className="sh-mq-logo" alt={b.name} /> : <b>{b.name}</b>}
@@ -741,6 +742,7 @@ const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
 function Hero({ slides, open, brands, heroH, pkHero }) {
+  useSlideFonts(slides);
   const E = useContext(DesignCtx);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -886,6 +888,7 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
       </div>
       {!cover && s.img && <div ref={art} {...fx('art', 'sh-slide-art')}>{st === 'pop' ? <span className="sh-stage" aria-hidden="true" /> : <span className="sh-halo" aria-hidden="true" />}<span className="sh-depth">{isProdImg(s.img) && st !== 'pop' ? <div className="sh-pcard"><ShopImg v={s.img} /></div> : <ShopImg v={s.img} className="sh-float" />}</span></div>}
       {!cover && !s.img && ly !== 'center' && <div className="sh-slide-art word" aria-hidden="true"><b>{(s.tag || s.title || '').split(' ')[0]}</b></div>}
+      <SlideEls s={s} k={k} E={E} />
     </article>
   );
 }

@@ -2,7 +2,7 @@
 // hafif zemin tonu. Ayar: settings.look.decor = { id, amt: 'sm'|'md'|'lg', front }. Yönetim panelinde / bayide çizilmez.
 import { useMemo } from 'react';
 import { useStore } from './store.js';
-import { activePack } from './presets.js';
+import { activePack, patBg, ornBg } from './presets.js';
 import { useWin } from './dzframe.jsx';
 
 // p: parçalar (emoji ya da şekil: '.dot' nokta, '.rect' konfeti, '.streak' yağmur, '.bubble' kabarcık, '.star' parıltı)
@@ -73,7 +73,8 @@ export function StoreDecor({ cfg, preview }) {
 }
 
 // Tema Stüdyosu (look.pack): efekt + duyuru şeridi + sayfa tonu. inFrame: tasarım modunun önizleme çerçevesinde
-const FX_SHAPE = { sparkle: ['.star', 'twinkle'], dust: ['.dot', 'float'], snow: ['.dot', 'fall'], confetti: ['.rect', 'fall'], bubble: ['.bubble', 'rise'], rain: ['.streak', 'rain'], petal: ['.petal', 'fall'] };
+const FX_SHAPE = { sparkle: ['.star', 'twinkle'], dust: ['.dot', 'float'], snow: ['.dot', 'fall'], confetti: ['.rect', 'fall'], bubble: ['.bubble', 'rise'], rain: ['.streak', 'rain'], petal: ['.petal', 'fall'],
+  hearts: ['♥', 'rise'], flakes: ['❄', 'fall'], stars: ['★', 'float'], leaves: ['🍂', 'fall'], balloons: ['🎈', 'rise'], gears: ['⚙', 'float'] };
 export function PackDecor({ pk, mini }) {
   const W = useWin();
   if (!pk) return null;
@@ -82,9 +83,13 @@ export function PackDecor({ pk, mini }) {
   const n = sh ? Math.round((AMT[pk.fx.amt] || AMT.md) * (phone ? 0.6 : 1) * (mini ? 0.6 : 1)) : 0;
   const t = sh ? { id: pk.id + pk.fx.kind, p: [sh[0]], m: sh[1], c: pk.fx.c?.length ? pk.fx.c : ['#ffffff'] } : null;
   const band = pk.band?.text ? (pk.band.text + '   ·   ').repeat(mini ? 4 : 14) : '';
+  const pat = pk.pat?.k && pk.pat.k !== 'none' ? patBg(pk.pat.k, pk.pat.c || '#64748b', pk.pat.z || 1) : null;
+  const orn = pk.orn?.k && pk.orn.k !== 'none' ? ornBg(pk.orn.k, pk.orn.c) : null;
   return (
-    <div className={'decor pk-decor front' + (mini ? ' pv' : '')} aria-hidden="true">
+    <div className={'decor pk-decor front' + (mini ? ' pv' : '') + (band ? ' has-band' : '')} aria-hidden="true">
+      {pat && <div className="dc-bg pk-pat" style={{ ...pat, opacity: pk.pat.o ?? 0.07 }} />}
       {pk.tint && <div className="dc-bg" style={{ background: pk.tint }} />}
+      {orn && <div className="pk-orn" style={{ backgroundImage: orn.img, backgroundSize: orn.w + 'px ' + orn.h + 'px', height: orn.h }} />}
       {t && <div className="dc-layer"><Parts t={t} n={n} /></div>}
       {band && <div className="dc-band pk-band" style={{ background: pk.band.bg || '#111827', color: pk.band.color || '#fff' }}><span>{band}</span></div>}
     </div>

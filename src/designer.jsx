@@ -13,8 +13,9 @@ import {
   ScaleField, MQ_STYLES, ShopImg, useShopImg, CtaButton, btnStyleOf, GeoFields, geoOf, withProdFallback, THEMES, SLIDE_LAYOUTS, COVER_LY, ColorPick, LinkPick, LogoPick, ImgPick, ImgLook, Rows,
 } from './shophome.jsx';
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
-import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone } from './presets.js';
+import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg } from './presets.js';
 import { PackDecor, DECOR } from './decor.jsx';
+import { XelBar, XelPanel, Disclose, drawToEl, SHAPES } from './slidex.jsx';
 
 // raflara kalıcı kimlik ver, eski sıra kayıtlarını (rail:0) kimliğe çevir.
 // Aynı ayar nesnesi için hep aynı sonuç (kimlikler her çağrıda yeniden üretilip sıra kayıtlarıyla çelişmesin)
@@ -86,6 +87,7 @@ export function ShopDesigner() {
   const [pw, setPwS] = useState(() => Number(ls.get('dz-pw', 430)) || 430);
   const setPw = (v) => { setPwS(v); ls.set('dz-pw', v); };
   const setDev = (v) => { setDevS(v); ls.set('dz-dev', v); };
+  const [pen, setPen] = useState({ on: false, c: '#ffffff', w: 5 }); // kalem (serbest çizim) aracı
   const [peek, setPeek] = useState(null); // üzerine gelince deneme: {path, v}
   const [guide, setGuide] = useState(null);
   const [cmd, setCmd] = useState(false);
@@ -193,6 +195,61 @@ export function ShopDesigner() {
     let best = null;
     for (const g of list) for (let i = 0; i < 3; i++) { if (g.c && i !== 1) continue; const d = g.t - a[i]; if (Math.abs(d) <= th && (!best || Math.abs(d) < Math.abs(best.d) - 0.5)) best = { d, t: g.t }; }
     return best;
+  };
+  // sürükleme / büyütme bitince gelen tıklama başka bir öğeyi (banner'ı) seçmesin
+  const eatClick = (w) => { const h = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; w.addEventListener('click', h, { capture: true, once: true }); setTimeout(() => w.removeEventListener('click', h, { capture: true }), 350); };
+  // ---- serbest öğeler (slides[i].els, slidex.jsx): yazı / şekil / çizim -------------------------------------------------
+  const updEl = (slide, id, fn) => { const sl = get('slides'); if (!sl[slide]) return; set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, els: (x.els || []).map((e) => (e.id === id ? fn(e) : e)) } : x))); };
+  const addEl = (slide, el) => { const sl = get('slides'); if (!sl[slide]) return; set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, els: [...(x.els || []), el] } : x))); setSel({ kind: 'xel', slide, id: el.id }); };
+  const removeEl = (slide, id) => { const sl = get('slides'); set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, els: (x.els || []).filter((e) => e.id !== id) } : x))); setSel({ kind: 'blk', k: 'hero' }); };
+  const dupEl = (slide, id) => { const e0 = (get('slides')[slide]?.els || []).find((e) => e.id === id); if (!e0) return; const c = structuredClone(e0); c.id = Math.random().toString(36).slice(2, 8); c.d = { ...(c.d || {}), x: (c.d?.x ?? 50) + 3, y: (c.d?.y ?? 50) + 4 }; if (c.m) c.m = { ...c.m, x: (c.m.x ?? c.d.x) + 3, y: (c.m.y ?? c.d.y) + 4 }; addEl(slide, c); };
+  const orderEl = (slide, id, dir) => { const sl = get('slides'); const els = [...(sl[slide]?.els || [])]; const i = els.findIndex((e) => e.id === id); const j = i + dir; if (i < 0 || j < 0 || j >= els.length) return; [els[i], els[j]] = [els[j], els[i]]; set('shopHome.slides', sl.map((x, k) => (k === slide ? { ...x, els } : x))); };
+  const xDrag = (e, slide, id) => {
+    if (e.button > 0) return; e.stopPropagation(); e.preventDefault();
+    const node = e.currentTarget; const art = node.closest('.sh-slide'); const w = winOf(e); const phone = w.innerWidth <= 700; const dev = phone ? 'm' : '';
+    const R = art.getBoundingClientRect(); const r0 = node.getBoundingClientRect();
+    const cx = r0.left + r0.width / 2 - R.left, cy = r0.top + r0.height / 2 - R.top; const hw = r0.width / 2, hh = r0.height / 2;
+    const SN = snapSet(art, node, [R.width / 2], [R.height / 2]); const x0 = e.clientX, y0 = e.clientY; let moved = false;
+    onDrag(e, (ev) => {
+      let dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!moved && Math.hypot(dx, dy) < 4) return;
+      if (!moved) { moved = true; w.document.body.classList.add('dz-dragging'); setSel({ kind: 'xel', slide, id, dev }); }
+      const gv = [], gh = [];
+      if (!ev.altKey) {
+        const bx = snapAxis([cx + dx - hw, cx + dx, cx + dx + hw], SN.xs); if (bx) { dx += bx.d; gv.push(Math.round(bx.t)); }
+        const by = snapAxis([cy + dy - hh, cy + dy, cy + dy + hh], SN.ys); if (by) { dy += by.d; gh.push(Math.round(by.t)); }
+      }
+      setGuide(gv.length || gh.length ? { k: slide, v: gv, h: gh } : null);
+      const x = Math.round(((cx + dx) / R.width) * 10000) / 100, y = Math.round(((cy + dy) / R.height) * 10000) / 100;
+      updEl(slide, id, (el) => (phone ? { ...el, m: { ...(el.m || {}), x, y } } : { ...el, d: { ...(el.d || {}), x, y } }));
+    }, () => { setGuide(null); if (!moved) setSel({ kind: 'xel', slide, id, dev }); else eatClick(w); });
+  };
+  // köşe tutamacı: ortadan uzaklığa göre büyüt / küçült (yazıda yazı boyu ve alan genişliği birlikte)
+  const xScale = (e, slide, id) => {
+    if (e.button > 0) return; e.stopPropagation(); e.preventDefault();
+    const node = e.currentTarget.parentElement; const art = node.closest('.sh-slide'); const w = winOf(e); const phone = w.innerWidth <= 700;
+    const r0 = node.getBoundingClientRect(); const cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+    const dist0 = Math.max(8, Math.hypot(e.clientX - cx, e.clientY - cy));
+    const el0 = (get('slides')[slide]?.els || []).find((x) => x.id === id); if (!el0) return;
+    const g = el0.d || {}; const m = el0.m || {};
+    const G = phone ? { w: m.w ?? g.w, fs: m.fs ?? Math.max(12, Math.round((g.fs || 36) * 0.55)) } : { w: g.w, fs: g.fs || 36 };
+    const R = art.getBoundingClientRect(); const w0 = G.w || (r0.width / R.width) * 100;
+    onDrag(e, (ev) => {
+      const k = Math.max(0.1, Math.hypot(ev.clientX - cx, ev.clientY - cy) / dist0);
+      const p = el0.k === 'text' ? { fs: Math.max(6, Math.round(G.fs * k * 10) / 10), ...(G.w ? { w: Math.round(G.w * k * 10) / 10 } : {}) } : { w: Math.max(0.5, Math.round(w0 * k * 10) / 10) };
+      updEl(slide, id, (el) => (phone ? { ...el, m: { ...(el.m || {}), ...p } } : { ...el, d: { ...(el.d || {}), ...p } }));
+    }, () => { eatClick(w); setSel({ kind: 'xel', slide, id, dev: phone ? 'm' : '' }); });
+  };
+  // kalem: reklamın üstünde basılı tutup çiz → bırakınca 'çizim' öğesi
+  const penDown = (e, slide) => {
+    if (e.button > 0) return; e.stopPropagation(); e.preventDefault();
+    const art = e.currentTarget.closest('.sh-slide'); const w = winOf(e); const doc = w.document; const R = art.getBoundingClientRect();
+    const NS = 'http://www.w3.org/2000/svg'; const svg = doc.createElementNS(NS, 'svg'); svg.setAttribute('class', 'sx-penprev'); svg.setAttribute('width', R.width); svg.setAttribute('height', R.height);
+    const pl = doc.createElementNS(NS, 'polyline'); pl.setAttribute('fill', 'none'); pl.setAttribute('stroke', pen.c); pl.setAttribute('stroke-width', pen.w); pl.setAttribute('stroke-linecap', 'round'); pl.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(pl); art.appendChild(svg);
+    const pts = [[e.clientX - R.left, e.clientY - R.top]];
+    onDrag(e, (ev) => { const p = [ev.clientX - R.left, ev.clientY - R.top]; const l = pts[pts.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2.5) return; pts.push(p); pl.setAttribute('points', pts.map((q) => q.join(',')).join(' ')); },
+      () => { svg.remove(); eatClick(w); if (pts.length < 3) return; const el = drawToEl(pts, R, pen.c, pen.w); if (w.innerWidth <= 700) el.m = { ...el.d }; const sl = get('slides'); if (!sl[slide]) return; set('shopHome.slides', sl.map((x, j) => (j === slide ? { ...x, els: [...(x.els || []), el] } : x))); });
   };
   const fxDrag = (e, slide, el) => {
     if (e.button > 0) return;
@@ -307,6 +364,7 @@ export function ShopDesigner() {
   };
 
   // klavye: Ctrl K ara, Ctrl Z / Ctrl Y, Esc, Del sil, Ctrl D çoğalt, oklar ile reklam öğesini kaydır
+  const penRef = useRef(false); penRef.current = pen.on;
   const keyRef = useRef(null);
   keyRef.current = (e) => {
     if (mobile) return;
@@ -316,10 +374,19 @@ export function ShopDesigner() {
     if (typing || store.s.ctx) return;
     if (mod && k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
     if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
-    if (e.key === 'Escape') { setSel(null); setCmd(false); return; }
+    if (e.key === 'Escape') { if (penRef.current) { setPen((p) => ({ ...p, on: false })); return; } setSel(null); setCmd(false); return; }
     const s = selRef.current; if (!s) return;
     if ((e.key === 'Delete' || e.key === 'Backspace') && s.kind === 'blk' && (s.k.startsWith('rail:') || s.k.startsWith('b:'))) { e.preventDefault(); removeBlock(s.k); return; }
     if (mod && k === 'd' && s.kind === 'blk') { e.preventDefault(); dupBlock(s.k); return; }
+    if (s.kind === 'xel') {
+      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeEl(s.slide, s.id); return; }
+      if (mod && k === 'd') { e.preventDefault(); dupEl(s.slide, s.id); return; }
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault(); const st = e.shiftKey ? 2 : 0.25; const dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, dy = e.key === 'ArrowUp' ? -st : e.key === 'ArrowDown' ? st : 0;
+        updEl(s.slide, s.id, (el) => { const g = el.d || {}; if (s.dev === 'm') { const m = el.m || {}; return { ...el, m: { ...m, x: Math.round(((m.x ?? g.x ?? 50) + dx) * 100) / 100, y: Math.round(((m.y ?? g.y ?? 50) + dy) * 100) / 100 } }; } return { ...el, d: { ...g, x: Math.round(((g.x ?? 50) + dx) * 100) / 100, y: Math.round(((g.y ?? 50) + dy) * 100) / 100 } }; });
+        return;
+      }
+    }
     if (s.kind === 'fx' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
       e.preventDefault(); const st = e.shiftKey ? 10 : 1; const sl = get('slides'); const key = s.dev === 'm' ? 'fxm' : 'fx';
       const am = sl[s.slide]?.fxm?.[s.el];
@@ -346,7 +413,7 @@ export function ShopDesigner() {
 
   // tema stüdyosu tasarımda tarihten bağımsız önizlenir
   const pack = useMemo(() => { const lk = (peek?.path === 'look.pack' ? { ...d.look, pack: peek.v } : d.look) || {}; return lk.pack?.id ? activePack({ ...lk, pack: { ...lk.pack, from: '', to: '' } }) : null; }, [d.look, peek]);
-  const E = { H, L, get, fxDrag, fxResize, imDrag, mobile, sel: mobile ? pick : sel, tapBlock, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, heroGo: heroGo.current, guide, pack, blockMenu: mobile ? null : blockMenu, Block: DzBlock, HeroTools: DzHeroTools };
+  const E = { H, L, get, fxDrag, fxResize, imDrag, xDrag, xScale, penDown, tool: pen.on ? 'pen' : null, mobile, sel: mobile ? pick : sel, tapBlock, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, heroGo: heroGo.current, guide, pack, blockMenu: mobile ? null : blockMenu, Block: DzBlock, HeroTools: DzHeroTools };
   const view = useMemo(() => withDefaults(peek ? setPath(d, peek.path, peek.v) : d), [d, peek]);
   // değişen bölümler (Yayınla düğmesinin yanında)
   const changes = useMemo(() => {
@@ -359,7 +426,7 @@ export function ShopDesigner() {
     return [...out];
   }, [d, baseObj, dirty]);
 
-  const P = { measure, get, sel, d, H, set, setSel, heroI, goSlide, removeBlock, dupBlock, setPeek, L, setL, toggleHide, reveal, pack, openVers: () => setVers(true) };
+  const P = { measure, get, sel, d, H, set, setSel, heroI, goSlide, removeBlock, dupBlock, setPeek, L, setL, toggleHide, reveal, pack, openVers: () => setVers(true), pen, setPen, addEl, updEl, removeEl, dupEl, orderEl };
 
   if (mobile) return (
     <div className={'page dz-page dz-mobile' + (sel ? ' has-panel' : '') + (pick ? ' has-pick' : '')}>
@@ -424,8 +491,8 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   const ref = useRef(null); const { w, h } = useSize(ref);
   const L = view.look || {}; const pp = pack?.palette;
   const vars = {
-    '--accent-user': pp?.accent || L.shopAccent || view.brand?.accent, '--price-user': pp?.price || L.shopPrice || view.brand?.priceAccent,
-    '--bg-user': (pp ? pp.bg || L.bg : L.bg) || '', '--pcard-r': (Number(L.cardR) >= 0 && L.cardR !== '' && L.cardR != null ? Number(L.cardR) : 18) + 'px', '--top-h': '0px',
+    '--accent-user': lookColors(L, pack).accent || view.brand?.accent, '--price-user': lookColors(L, pack).price || view.brand?.priceAccent,
+    '--bg-user': lookColors(L, pack).bg || '', '--pcard-r': (Number(L.cardR) >= 0 && L.cardR !== '' && L.cardR != null ? Number(L.cardR) : 18) + 'px', '--top-h': '0px',
     '--pk-badge': pack?.badge?.text ? JSON.stringify(pack.badge.text) : '', '--pk-bbg': pack?.badge?.bg || '', '--pk-bfg': pack?.badge?.color || '',
   };
   const inner = (kind) => (
@@ -506,6 +573,10 @@ function Inspector(P) {
     const sl = H.slides[sel.slide]; if (!sl) return null;
     title = FX_NAMES[sel.el]; sub = (sel.slide + 1) + '. reklamın içinde'; back = () => setSel({ kind: 'blk', k: 'hero' });
     body = <FxPanel {...P} s={sl} i={sel.slide} el={sel.el} />;
+  } else if (sel.kind === 'xel') {
+    const sl = H.slides[sel.slide]; const el = (sl?.els || []).find((x) => x.id === sel.id); if (!el) return null;
+    title = el.k === 'text' ? 'Yazı' : el.k === 'draw' ? 'Çizim' : (SHAPES.find((x) => x.id === el.sh)?.n || 'Şekil'); sub = (sel.slide + 1) + '. reklamın içinde · serbest öğe'; back = () => setSel({ kind: 'blk', k: 'hero' });
+    body = <XelBox P={P} el={el} slide={sel.slide} />;
   } else if (sel.kind === 'promo') {
     const x = H.promos[sel.i]; if (!x) return null;
     title = 'Reklam kutusu'; sub = x.title || String(sel.i + 1); back = () => setSel({ kind: 'blk', k: 'promos' });
@@ -522,6 +593,8 @@ function Inspector(P) {
     else if (k === 'usps') body = <Rows list={H.usps || []} set={(v) => S('usps', v)} max={4} sub="Avantaj ekle" openIdx={0} title={(u, i) => u.title || `${i + 1}. avantaj`} add={() => S('usps', [...(H.usps || []), NEW.usp()])} render={(u, up) => <UspFields u={u} up={up} />} />;
     else if (k === 'marquee') body = <>
       <Field label="Görünüm"><span className="dz2-mqs">{Object.entries(MQ_STYLES).map(([x, l]) => <button key={x} type="button" className={'dz2-mq mq-' + x + ((H.marquee || 'color') === x ? ' on' : '')} onClick={() => S('marquee', x)}><i aria-hidden="true"><b /><b /><b /></i><span>{l}</span></button>)}</span></Field>
+      <Field label="Şerit kalınlığı · bilgisayar" hint="Şeridin yüksekliği ve logoların boyu birlikte küçülür / büyür"><span className="she-scale"><input type="range" min="0.4" max="1.6" step="0.05" value={Number(H.mqZ) || 1} onChange={(e) => S('mqZ', Number(e.target.value))} /><code>%{Math.round((Number(H.mqZ) || 1) * 100)}</code></span></Field>
+      <Field label="Şerit kalınlığı · telefon" hint="Boşsa bilgisayardakiyle aynı oran"><span className="she-scale"><input type="range" min="0.4" max="1.6" step="0.05" value={Number(H.mqZM) || Number(H.mqZ) || 1} onChange={(e) => S('mqZM', Number(e.target.value))} /><code>%{Math.round((Number(H.mqZM) || Number(H.mqZ) || 1) * 100)}</code></span></Field>
       <More>
         <Field label="Hız · bilgisayar" hint="Bir turun süresi; büyük sayı = yavaş"><span className="she-scale"><input type="range" min="15" max="200" step="1" value={Number(H.mqSpeed) || 46} onChange={(e) => S('mqSpeed', Number(e.target.value))} /><code>{Number(H.mqSpeed) || 46} sn</code></span></Field>
         <Field label="Hız · telefon" hint="Telefonda ayrı"><span className="she-scale"><input type="range" min="10" max="150" step="1" value={Number(H.mqSpeedM) || 46} onChange={(e) => S('mqSpeedM', Number(e.target.value))} /><code>{Number(H.mqSpeedM) || 46} sn</code></span></Field>
@@ -591,6 +664,13 @@ function useFocusField(sel) {
   }, [sel?.focus]);
 }
 
+function XelBox({ P, el, slide }) {
+  const [dev, setDev] = useState(P.sel?.dev === 'm' ? 'm' : '');
+  useEffect(() => { setDev(P.sel?.dev === 'm' ? 'm' : ''); }, [P.sel?.dev, el.id]);
+  useFocusField(P.sel);
+  return <XelPanel el={el} dev={dev} setDev={setDev} upd={(p) => P.updEl(slide, el.id, (x) => { const n = { ...x, ...p }; if (p.m === undefined && 'm' in p) delete n.m; return n; })}
+    remove={() => P.removeEl(slide, el.id)} dup={() => P.dupEl(slide, el.id)} order={(dir) => P.orderEl(slide, el.id, dir)} />;
+}
 // ---- Büyük reklam paneli ---------------------------------------------------------------------------------------------------
 let styleClip = null; // stil kopyala / yapıştır (oturum boyunca)
 const STYLE_KEYS = ['theme', 'bg', 'layout', 'tc', 'xc', 'bs', 'btn', 'ist'];
@@ -635,6 +715,7 @@ function HeroPanel(P) {
         onPointerDown={(e) => dragSort(e, 'slides', j, (f, t) => { const cur = store.s.designDraft?.shopHome?.slides || slides; S('slides', moveItem(cur, f, t)); setI((ii) => (ii === f ? t : ii === t ? f : ii)); }, () => pick(j))}><b>{j + 1}</b><span>{x.title || 'Reklam'}</span></button>)}
       {slides.length < 8 && <button className="dz2-sl add" onClick={() => { S('slides', [...slides, NEW.slide()]); setTimeout(() => pick(slides.length), 60); }} title="Reklam ekle"><Icon n="plus" s={15} /></button>}
     </div>
+    <XelBar s={s} add={(el) => { goSlide(i); P.addEl(i, el); }} pen={P.pen} setPen={(p) => { if (p.on) goSlide(i); P.setPen(p); }} select={(id) => P.setSel({ kind: 'xel', slide: i, id })} selId={sel?.kind === 'xel' ? sel.id : null} />
     {bad.length > 0 && <div className="dz2-warn"><Icon n="eye" s={16} /><span><b>{bad.map((x) => x[1]).join(' ve ')} zor okunuyor.</b> Yazı rengi arka plana çok yakın.</span><button className="btn sm" onClick={() => up(Object.fromEntries(bad.map(([k]) => [k, fixC])))}>Düzelt</button></div>}
 
     <div data-f="layout"><Field label="Düzen"><span className="dz2-lys">{Object.entries(SLIDE_LAYOUTS).map(([k, l]) => <button key={k} type="button" className={'dz2-lyc ly-' + k + (ly === k ? ' on' : '')} onClick={() => up({ layout: k })} onMouseEnter={() => peekP({ layout: k })} onMouseLeave={() => peekP(null)}><i aria-hidden="true"><b /><em /></i><span>{l}</span></button>)}</span></Field></div>
@@ -730,7 +811,7 @@ function ButtonStudio({ s, up, peekP, pack }) {
   const groups = [...new Set(BTN_STYLES.map((x) => x.g))];
   const C = (k, label) => <span className="dz2-bcol"><small>{label}</small><span className="she-color"><input type="color" value={/^#/.test(B[k] || '') ? B[k] : '#ffffff'} onChange={(e) => set({ [k]: e.target.value })} aria-label={label} />{B[k] ? <button type="button" className="linkish" onClick={() => set({ [k]: '' })}>oto</button> : <code>oto</code>}</span></span>;
   return <div className="dz2-bstudio">
-    <span className="field-l">Buton stili</span>
+    <Disclose label="Buton stili" value={<span className="disc-pv"><span className="dz2-bprev" style={tile}><CtaButton s={{ cta: 'İncele', btn: { ...B, sz: 'sm' } }} onClick={() => {}} /></span><small>{(BTN_STYLES.find((x) => x.id === B.st) || {}).n || ''}</small></span>}>
     {groups.map((g) => <div key={g} className="dz2-bgrp"><small>{g}</small><div className="dz2-bgrid">
       {BTN_STYLES.filter((x) => x.g === g).map((x) => (
         <button key={x.id} type="button" className={'dz2-bcard' + (B.st === x.id ? ' on' : '')} onClick={() => set({ st: x.id })} onMouseEnter={() => peek({ st: x.id })} onMouseLeave={() => peek(null)} title={x.n}>
@@ -739,7 +820,8 @@ function ButtonStudio({ s, up, peekP, pack }) {
         </button>
       ))}
     </div></div>)}
-    <span className="field-l">Ok simgesi</span>
+    </Disclose>
+    <Disclose label="Ok simgesi" value={<span className="disc-pv"><span className="dz2-bprev" style={tile}><CtaButton s={{ cta: '', btn: { ...B, sz: 'sm' } }} onClick={() => {}} /></span><small>{(ARROWS.find((a) => a.id === (B.ar || 'auto')) || {}).n || ''}</small></span>}>
     <div className="dz2-agrid">
       {ARROWS.map((a) => (
         <button key={a.id} type="button" className={'dz2-acard' + ((B.ar || 'auto') === a.id ? ' on' : '')} onClick={() => set({ ar: a.id })} onMouseEnter={() => peek({ ar: a.id })} onMouseLeave={() => peek(null)} title={a.n}>
@@ -748,6 +830,7 @@ function ButtonStudio({ s, up, peekP, pack }) {
         </button>
       ))}
     </div>
+    </Disclose>
     <div className="dz2-brow">
       <Field label="Şekil"><span className="seg">{[['pill', 'Hap'], ['round', 'Yuvarlak köşe'], ['square', 'Köşeli']].map(([k, l]) => <button key={k} type="button" className={(B.sh || 'pill') === k ? 'on' : ''} onClick={() => set({ sh: k })}>{l}</button>)}</span></Field>
       <Field label="Boyut"><span className="seg">{[['sm', 'Küçük'], ['md', 'Orta'], ['lg', 'Büyük']].map(([k, l]) => <button key={k} type="button" className={(B.sz || 'md') === k ? 'on' : ''} onClick={() => set({ sz: k })}>{l}</button>)}</span></Field>
@@ -760,8 +843,9 @@ function ButtonStudio({ s, up, peekP, pack }) {
 // arka plan seçici: ışıklı temalar + hazır arka planlar; üzerine gelince sayfada denenir
 function BgPicker({ s, up, peekP, packOn }) {
   const [cat, setCat] = useState(() => (s.bg && BG_BY[s.bg] ? BG_BY[s.bg].cat : 'theme'));
-  return <div className="field">
-    <span className="field-l">Arka plan</span>
+  const curBg = s.bg && BG_BY[s.bg] ? BG_BY[s.bg] : null; const th = s.theme || 'night';
+  const curSw = curBg ? curBg.bg : `radial-gradient(60% 80% at 15% 10%, ${THEME_SW[th]?.[1]}aa, transparent 60%), ${THEME_SW[th]?.[0]}`;
+  return <Disclose label="Arka plan" value={<span className="disc-pv"><i className="disc-sw" style={{ background: curSw }} /><small>{curBg ? curBg.n : THEMES[th]}</small></span>}>
     {packOn && <p className="fine dz2-note">Tema Stüdyosu açık: kampanya süresince banner zemini temadan gelir. Buradaki seçim tema kapanınca görünür.</p>}
     <div className="dz2-bgcats" role="group" aria-label="Arka plan grupları">
       {[['theme', 'Işıklı tema'], ...Object.entries(BG_CATS)].map(([k, l]) => <button key={k} type="button" className={cat === k ? 'on' : ''} onClick={() => setCat(k)}>{l}</button>)}
@@ -777,7 +861,7 @@ function BgPicker({ s, up, peekP, packOn }) {
       ))}
     </div>
     <small className="field-h">{BG_PRESETS.length + Object.keys(THEMES).length} seçenek · üzerine gelince sayfada denenir, tıklayınca seçilir</small>
-  </div>;
+  </Disclose>;
 }
 // reklamın içindeki tek bir öğe seçilince: sadece o öğenin ayarları
 function FxPanel({ H, set, s, i, el, setSel, sel }) {
@@ -817,30 +901,43 @@ function FxPanel({ H, set, s, i, el, setSel, sel }) {
 
 // ---- Sayfa paneli: renk paleti, özel renkler, kart köşeleri, bölüm arası -----------------------------------------------------
 function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
-  const L = d.look || {}; const H = d.shopHome;
+  const L = d.look || {}; const H = d.shopHome; const keep = L.keep || {};
   const cur = PALETTES.find((p) => p.accent === L.shopAccent && p.price === L.shopPrice && (p.bg || '') === (L.bg || ''));
   const applyP = (p) => set('look', { ...L, shopAccent: p.accent, shopPrice: p.price, bg: p.bg });
   const peekP = (p) => setPeek(p ? { path: 'look', v: { ...L, shopAccent: p.accent, shopPrice: p.price, bg: p.bg } } : null);
-  const C = (k, label, def) => <Field label={label}><span className="she-color"><input type="color" value={L[k] || def} onChange={(e) => set('look.' + k, e.target.value)} /><code>{L[k] || 'varsayılan'}</code>{L[k] && <button type="button" className="linkish" onClick={() => set('look.' + k, '')}>sıfırla</button>}</span></Field>;
+  const lc = lookColors(L, pack);
+  // her renk: kendi rengim + 'tema açıkken de bunu kullan' kilidi (1.11.2026: tema seçiliyken de fiyat rengi vb. değiştirilebilsin)
+  const C = (k, kk, label, def) => {
+    const fromTheme = pack?.palette && !(keep[kk] && L[k]);
+    return <div className="lc-row" key={k}>
+      <span className="lc-l"><b>{label}</b><small>{fromTheme ? 'Şu an temadan geliyor' : L[k] ? 'Sizin renginiz' : 'Varsayılan'}</small></span>
+      <span className="she-color"><input type="color" value={(fromTheme ? lc[kk] : L[k]) || def} onChange={(e) => set('look', { ...L, [k]: e.target.value, ...(pack?.palette ? { keep: { ...keep, [kk]: true } } : {}) })} aria-label={label} />{L[k] && <button type="button" className="linkish" onClick={() => set('look', { ...L, [k]: '', keep: { ...keep, [kk]: false } })}>sıfırla</button>}</span>
+      <button type="button" className={'lc-lock' + (keep[kk] && L[k] ? ' on' : '')} disabled={!L[k]} onClick={() => set('look.keep', { ...keep, [kk]: !keep[kk] })} title="Tema açıkken de bu rengi kullan"><Icon n={keep[kk] && L[k] ? 'check' : 'plus'} s={13} />Temada da</button>
+    </div>;
+  };
   return <>
-    {pack?.palette && <div className="dz2-warn info"><Icon n="sparkle" s={16} /><span>Tema Stüdyosu açık (<b>{pack.n}</b>): kampanya süresince sayfa renkleri temadan gelir.</span><button className="btn sm" onClick={() => setSel({ kind: 'studio' })}>Aç</button></div>}
-    <Field label="Hazır renk paleti" hint="Ana renk, fiyat rengi ve sayfa zemini birlikte değişir. Üzerine gelince sayfada denenir.">
+    {pack?.palette && <div className="dz2-warn info"><Icon n="sparkle" s={16} /><span>Tema açık (<b>{pack.n}</b>). Renkler temadan gelir; aşağıda değiştirdiğiniz renk <b>temanın üstüne yazılır</b> (“Temada da” işaretli).</span><button className="btn sm" onClick={() => setSel({ kind: 'studio' })}>Tema</button></div>}
+    <div className="lc-box">
+      <span className="field-l">Renklerim</span>
+      {C('shopAccent', 'accent', 'Ana renk (düğmeler, seçili menü)', '#2f55b0')}
+      {C('shopPrice', 'price', 'Fiyat rengi', '#2f55b0')}
+      {C('bg', 'bg', 'Sayfa zemini', '#f3f5f9')}
+    </div>
+    <Disclose label="Hazır renk paletleri" value={cur ? cur.n : null}>
+      <p className="fine">Ana renk, fiyat rengi ve sayfa zemini birlikte değişir. Üzerine gelince sayfada denenir.</p>
       <span className="dz2-pals">{PALETTES.map((p) => (
         <button key={p.id} type="button" className={'dz2-pal' + (cur?.id === p.id ? ' on' : '')} onClick={() => applyP(p)} onMouseEnter={() => peekP(p)} onMouseLeave={() => peekP(null)} title={p.n}>
           <i style={{ background: p.bg || '#f3f5f9' }}><b style={{ background: p.accent }} /><b style={{ background: p.price }} /></i><span>{p.n}</span>
         </button>
       ))}</span>
-    </Field>
-    <More label="Özel renkler ve ölçüler">
-      {C('shopAccent', 'Ana renk (düğmeler, seçili menü)', '#2f55b0')}
-      {C('shopPrice', 'Fiyat rengi', '#2f55b0')}
-      {C('bg', 'Sayfa zemini', '#f3f5f9')}
+    </Disclose>
+    <Disclose label="Ölçüler">
       <Field label="Ürün kartı köşeleri"><span className="she-scale"><input type="range" min="0" max="28" step="1" value={Number(L.cardR ?? 18)} onChange={(e) => set('look.cardR', Number(e.target.value))} /><code>{Number(L.cardR ?? 18)} px</code></span></Field>
       <Field label="Bölümler arası boşluk"><span className="she-scale"><input type="range" min="0" max="80" step="2" value={Number(H.gap) || 0} onChange={(e) => set('shopHome.gap', Number(e.target.value))} /><code>{Number(H.gap) ? H.gap + ' px' : 'varsayılan'}</code></span></Field>
       <Toggle id="dz-home-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => set('shopHome.enabled', v)} />
-    </More>
+    </Disclose>
     <div className="dz2-tiles">
-      <button className="dz2-tile" onClick={() => setSel({ kind: 'studio' })}><Icon n="sparkle" s={20} /><span><b>Tema Stüdyosu</b><small>{pack ? 'Açık: ' + pack.n : 'Efsane Cuma, yılbaşı, bayram…'}</small></span></button>
+      <button className="dz2-tile" onClick={() => setSel({ kind: 'studio' })}><Icon n="sparkle" s={20} /><span><b>Tema Stüdyosu</b><small>{pack ? 'Açık: ' + pack.n : PACKS.length + ' tema · desen, süs, efekt'}</small></span></button>
       <button className="dz2-tile" onClick={openVers}><Icon n="clock" s={20} /><span><b>Sürüm geçmişi</b><small>Önceki yayınlara dön</small></span></button>
     </div>
     <p className="fine">Sayfada bir şeye tıklayınca bu panel tam o şeyin ayarlarını açar: banner'daki açıklamaya tıklarsanız açıklamanın rengi, butona tıklarsanız buton.</p>
@@ -878,24 +975,62 @@ function StudioPanel({ d, set, setPeek }) {
       {my.map((x) => card(x, true))}
     </div>
     {base && pk && <>
-      <Field label="Nereye uygulansın"><span className="dz2-chips">{PACK_PARTS.map(([k, l]) => <button key={k} type="button" className={parts[k] !== false ? 'on' : ''} onClick={() => upP({ parts: { ...parts, [k]: parts[k] === false } })}><Icon n={parts[k] !== false ? 'check' : 'plus'} s={13} />{l}</button>)}</span></Field>
-      {parts.fx !== false && <>
-        <Field label="Efekt"><span className="seg seg-wrap">{Object.entries(FX_KINDS).map(([k, l]) => <button key={k} type="button" className={(fx.kind || 'none') === k ? 'on' : ''} onClick={() => upP({ fx: { ...(p.fx || {}), kind: k, c: fx.c } })}>{l}</button>)}</span></Field>
-        {fx.kind && fx.kind !== 'none' && <Field label="Yoğunluk"><span className="seg">{[['sm', 'Az'], ['md', 'Orta'], ['lg', 'Çok']].map(([k, l]) => <button key={k} type="button" className={(p.amt || 'md') === k ? 'on' : ''} onClick={() => upP({ amt: k })}>{l}</button>)}</span></Field>}
-      </>}
-      {parts.band !== false && <Field label="Duyuru şeridi yazısı" hint="Menünün altında kayan ince şerit. Boşsa şerit görünmez."><input value={band.text || ''} onChange={(e) => upP({ band: { ...(p.band || {}), text: e.target.value } })} /></Field>}
-      {parts.badge !== false && <Field label="Ürün rozeti" hint="Ürün kartlarının köşesinde. Boşsa rozet yok."><input value={badge.text || ''} maxLength={14} onChange={(e) => upP({ badge: { ...(p.badge || {}), text: e.target.value } })} placeholder="ör. FIRSAT" /></Field>}
-      {parts.hero !== false && <Field label="Banner zemini" hint="Tam resimli reklamlar kendi resmini korur"><span className="dz2-bgs sm">{BG_PRESETS.filter((b) => !b.ink).slice(0, 32).map((b) => <button key={b.id} type="button" className={'dz2-bg' + ((p.hero || base.hero) === b.id ? ' on' : '')} title={b.n} style={{ background: b.bg }} onClick={() => upP({ hero: b.id })}><span>{b.n}</span></button>)}</span></Field>}
-      {parts.palette !== false && <More label="Tema renkleri">
-        {[['accent', 'Ana renk'], ['price', 'Fiyat rengi'], ['bg', 'Sayfa zemini']].map(([k, l]) => <Field key={k} label={l}><span className="she-color"><input type="color" value={pk.palette?.[k] || '#f3f5f9'} onChange={(e) => upP({ palette: { ...(p.palette || {}), [k]: e.target.value } })} /><code>{pk.palette?.[k] || 'varsayılan'}</code></span></Field>)}
-      </More>}
+      <Field label="Nereye uygulansın" hint="Kapattığınız parça mağazada görünmez"><span className="dz2-chips">{PACK_PARTS.map(([k, l]) => <button key={k} type="button" className={parts[k] !== false ? 'on' : ''} onClick={() => upP({ parts: { ...parts, [k]: parts[k] === false } })}><Icon n={parts[k] !== false ? 'check' : 'plus'} s={13} />{l}</button>)}</span></Field>
+      {parts.palette !== false && <Disclose label="Tema renkleri" value={<span className="disc-pv">{['accent', 'price', 'bg'].map((k) => <i key={k} className="disc-dot" style={{ background: pk.palette?.[k] || '#f3f5f9' }} />)}</span>}>
+        <p className="fine">Sayfa › Renklerim'de “Temada da” işaretli renkler bunların da üstüne yazar.</p>
+        {[['accent', 'Ana renk'], ['price', 'Fiyat rengi'], ['bg', 'Sayfa zemini']].map(([k, l]) => <Field key={k} label={l}><span className="she-color"><input type="color" value={pk.palette?.[k] || '#f3f5f9'} onChange={(e) => upP({ palette: { ...(p.palette || {}), [k]: e.target.value } })} /><code>{pk.palette?.[k] || 'varsayılan'}</code>{p.palette?.[k] && <button type="button" className="linkish" onClick={() => { const n = { ...(p.palette || {}) }; delete n[k]; upP({ palette: n }); }}>temanınki</button>}</span></Field>)}
+      </Disclose>}
+      {parts.hero !== false && <Disclose label="Banner zemini" value={<span className="disc-pv"><i className="disc-sw" style={{ background: BG_BY[p.hero || base.hero]?.bg }} /><small>{BG_BY[p.hero || base.hero]?.n}</small></span>}>
+        <p className="fine">Tam resimli reklamlar kendi resmini korur.</p>
+        <span className="dz2-bgs sm">{BG_PRESETS.filter((b) => !b.ink).map((b) => <button key={b.id} type="button" className={'dz2-bg' + ((p.hero || base.hero) === b.id ? ' on' : '')} title={b.n} style={{ background: b.bg }} onClick={() => upP({ hero: b.id })}><span>{b.n}</span></button>)}</span>
+      </Disclose>}
+      {parts.band !== false && <Disclose label="Duyuru şeridi" value={band.text ? <small>{band.text.slice(0, 22)}…</small> : <small>kapalı</small>}>
+        <Field label="Yazı" hint="Menünün altında kayan ince şerit. Boşsa şerit görünmez."><input value={band.text || ''} onChange={(e) => upP({ band: { ...(p.band || {}), text: e.target.value } })} /></Field>
+        <div className="sxp-row">
+          <Field label="Zemin"><span className="she-color"><input type="color" value={/^#[0-9a-f]{6}$/i.test(band.bg || '') ? band.bg : '#111827'} onChange={(e) => upP({ band: { ...(p.band || {}), bg: e.target.value } })} /></span></Field>
+          <Field label="Yazı rengi"><span className="she-color"><input type="color" value={/^#[0-9a-f]{6}$/i.test(band.color || '') ? band.color : '#ffffff'} onChange={(e) => upP({ band: { ...(p.band || {}), color: e.target.value } })} /></span></Field>
+        </div>
+      </Disclose>}
+      {parts.fx !== false && <Disclose label="Efekt" value={<small>{FX_KINDS[fx.kind || 'none']}</small>}>
+        <span className="seg seg-wrap">{Object.entries(FX_KINDS).map(([k, l]) => <button key={k} type="button" className={(fx.kind || 'none') === k ? 'on' : ''} onClick={() => upP({ fx: { ...(p.fx || {}), kind: k, c: fx.c } })}>{l}</button>)}</span>
+        {fx.kind && fx.kind !== 'none' && <>
+          <Field label="Yoğunluk"><span className="seg">{[['sm', 'Az'], ['md', 'Orta'], ['lg', 'Çok']].map(([k, l]) => <button key={k} type="button" className={(p.amt || 'md') === k ? 'on' : ''} onClick={() => upP({ amt: k })}>{l}</button>)}</span></Field>
+          <Field label="Renkler" hint="Emoji efektlerde (yaprak, balon) renk değişmez"><span className="sxp-row">{[0, 1, 2].map((j) => <span key={j} className="she-color"><input type="color" value={(fx.c || [])[j] || '#ffffff'} onChange={(e) => { const c = [...(fx.c || ['#ffffff', '#ffffff', '#ffffff'])]; c[j] = e.target.value; upP({ fx: { ...(p.fx || {}), kind: fx.kind, c } }); }} /></span>)}</span></Field>
+        </>}
+      </Disclose>}
+      {parts.badge !== false && <Disclose label="Ürün rozeti" value={<small>{badge.text || 'yok'}</small>}>
+        <Field label="Yazı" hint="Ürün kartlarının köşesinde. Boşsa rozet yok."><input value={badge.text || ''} maxLength={14} onChange={(e) => upP({ badge: { ...(p.badge || {}), text: e.target.value } })} placeholder="ör. FIRSAT" /></Field>
+        <div className="sxp-row">
+          <Field label="Zemin"><span className="she-color"><input type="color" value={/^#[0-9a-f]{6}$/i.test(badge.bg || '') ? badge.bg : '#111111'} onChange={(e) => upP({ badge: { ...(p.badge || {}), bg: e.target.value } })} /></span></Field>
+          <Field label="Yazı rengi"><span className="she-color"><input type="color" value={/^#[0-9a-f]{6}$/i.test(badge.color || '') ? badge.color : '#ffffff'} onChange={(e) => upP({ badge: { ...(p.badge || {}), color: e.target.value } })} /></span></Field>
+        </div>
+      </Disclose>}
+      {parts.pat !== false && <Disclose label="Sayfa deseni" value={<small>{PATTERNS[pk.pat?.k || 'none']}</small>}>
+        <p className="fine">Sayfanın zemininde çok hafif tekrar eden desen. Ürünlerin okunmasını bozmaz.</p>
+        <span className="pat-grid">{Object.entries(PATTERNS).map(([k, l]) => <button key={k} type="button" className={'pat-it' + ((pk.pat?.k || 'none') === k ? ' on' : '')} onClick={() => upP({ pat: { ...(p.pat || {}), k } })}><i style={k === 'none' ? undefined : { ...patBg(k, '#475569', 0.6), opacity: 0.55 }} /><small>{l}</small></button>)}</span>
+        {pk.pat?.k && pk.pat.k !== 'none' && <>
+          <Field label="Desen rengi"><span className="she-color"><input type="color" value={pk.pat.c || '#64748b'} onChange={(e) => upP({ pat: { ...(p.pat || {}), k: pk.pat.k, c: e.target.value } })} /></span></Field>
+          <Field label="Belirginlik"><span className="she-scale"><input type="range" min="2" max="30" step="1" value={Math.round((pk.pat.o ?? 0.07) * 100)} onChange={(e) => upP({ pat: { ...(p.pat || {}), k: pk.pat.k, o: Number(e.target.value) / 100 } })} /><code>%{Math.round((pk.pat.o ?? 0.07) * 100)}</code></span></Field>
+          <Field label="Desen boyu"><span className="she-scale"><input type="range" min="0.5" max="3" step="0.1" value={pk.pat.z || 1} onChange={(e) => upP({ pat: { ...(p.pat || {}), k: pk.pat.k, z: Number(e.target.value) } })} /><code>×{pk.pat.z || 1}</code></span></Field>
+        </>}
+      </Disclose>}
+      {parts.orn !== false && <Disclose label="Süs dizisi" value={<small>{ORNS[pk.orn?.k || 'none']}</small>}>
+        <p className="fine">Menünün hemen altında sarkan ince süs (flama, ampul, çelenk…).</p>
+        <span className="orn-grid">{Object.entries(ORNS).map(([k, l]) => { const o = ornBg(k, pk.orn?.c); return <button key={k} type="button" className={'orn-it' + ((pk.orn?.k || 'none') === k ? ' on' : '')} onClick={() => upP({ orn: k })}><i style={o ? { backgroundImage: o.img, backgroundSize: o.w + 'px ' + o.h + 'px', height: o.h } : undefined} /><small>{l}</small></button>; })}</span>
+        {pk.orn?.k && pk.orn.k !== 'none' && <Field label="Renkler"><span className="sxp-row">{[0, 1, 2, 3].map((j) => <span key={j} className="she-color"><input type="color" value={(pk.orn.c || [])[j] || ['#ef4444', '#facc15', '#22c55e', '#3b82f6'][j]} onChange={(e) => { const c = [...(pk.orn.c?.length ? pk.orn.c : ['#ef4444', '#facc15', '#22c55e', '#3b82f6'])]; c[j] = e.target.value; upP({ ornC: c }); }} /></span>)}</span></Field>}
+      </Disclose>}
+      {parts.tint !== false && <Disclose label="Sayfa tonu" value={<small>{p.tintC ? 'kendi renginiz' : base.tint ? 'temanınki' : 'yok'}</small>}>
+        <p className="fine">Sayfanın üst kısmına çok hafif renk verir.</p>
+        <Field label="Renk"><span className="she-color"><input type="color" value={p.tintC || pk.palette?.accent || '#2f55b0'} onChange={(e) => upP({ tintC: e.target.value })} />{p.tintC && <button type="button" className="linkish" onClick={() => upP({ tintC: '' })}>temanınki</button>}</span></Field>
+        {p.tintC && <Field label="Yoğunluk"><span className="she-scale"><input type="range" min="2" max="30" step="1" value={Math.round((p.tintO ?? 0.1) * 100)} onChange={(e) => upP({ tintO: Number(e.target.value) / 100 })} /><code>%{Math.round((p.tintO ?? 0.1) * 100)}</code></span></Field>}
+      </Disclose>}
       <Field label="Otomatik aç / kapa" hint="Boş bırakırsanız tema siz kapatana kadar açık kalır. Tasarım modunda tarih ne olursa olsun önizlenir.">
         <span className="dz2-dates"><input type="datetime-local" value={p.from || ''} onChange={(e) => upP({ from: e.target.value })} aria-label="Başlangıç" /><span>→</span><input type="datetime-local" value={p.to || ''} onChange={(e) => upP({ to: e.target.value })} aria-label="Bitiş" /></span>
       </Field>
       {sched && <p className="fine dz2-note">{sched}</p>}
       <div className="dz2-save-my">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kendi temam olarak kaydet: ad yazın" maxLength={30} />
-        <button className="btn sm outline" disabled={!name.trim()} onClick={() => { const id = 'my-' + rid(); const mine = { id, n: name.trim(), d: 'Kendi temanız', sw: [pk.palette?.accent, pk.palette?.price].filter(Boolean), palette: pk.palette || base.palette, hero: pk.hero || base.hero, band: pk.band, fx: pk.fx, badge: pk.badge, tint: base.tint }; set('look', { ...L, myPacks: [...my, mine], pack: { id, parts: {}, amt: p.amt || 'md', from: p.from, to: p.to } }); setName(''); toast('Temanız kaydedildi'); }}>Kaydet</button>
+        <button className="btn sm outline" disabled={!name.trim()} onClick={() => { const id = 'my-' + rid(); const mine = { id, n: name.trim(), d: 'Kendi temanız', sw: [pk.palette?.accent, pk.palette?.price].filter(Boolean), palette: pk.palette || base.palette, hero: pk.hero || base.hero, band: pk.band, fx: pk.fx, badge: pk.badge, tint: pk.tint || base.tint, pat: pk.pat, orn: pk.orn?.k, ornC: pk.orn?.c }; set('look', { ...L, myPacks: [...my, mine], pack: { id, parts: {}, amt: p.amt || 'md', from: p.from, to: p.to } }); setName(''); toast('Temanız kaydedildi'); }}>Kaydet</button>
       </div>
       {p.id?.startsWith('my-') && <div className="dz2-acts"><button className="btn sm ghost danger" onClick={() => set('look', { ...L, myPacks: my.filter((x) => x.id !== p.id), pack: {} })}><Icon n="trash" s={15} />Bu temayı sil</button></div>}
     </>}
