@@ -6594,3 +6594,4 @@ html.ow-lock { overflow: hidden; }
 .co-side .cart-sum.co-tight .co-items-tg .rot-l { transform: rotate(-90deg); }
 .co-side .cart-sum.co-tight.co-fixed { overflow-y: auto; scrollbar-width: thin; }
 .co-items.in-sheet { max-height: none; overflow: visible; }
+.otag.pvtag { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font: 700 10.5px/1.5 var(--f-body); letter-spacing: .04em; text-transform: uppercase; color: color-mix(in oklab, var(--warn) 80%, var(--fg)); background: color-mix(in oklab, var(--warn) 14%, var(--surface)); vertical-align: 2px; }

@@ -234,6 +234,7 @@ export function Orders() {
                         <span className={'or-pay' + (o.sum && o.pay === 'card' ? ' card' : '')}>{o.sum && o.pay === 'card' ? (o.sum.inst?.n > 1 ? 'Kart ' + o.sum.inst.n + ' tk' : 'Kart') : PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
                         {o.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (car?.k || 'none')}>{car ? car.short : 'Kargo'}</span>}
                         {needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
+                        {o.pv && <span className="otag pvtag">Önizleme</span>}
                       </span>
                       <span className="or-sum">{orderTL(o, live) != null ? <><b className="num">{o.sum ? tl2(o.sum.pay) : fmtTL(orderTL(o, live))}</b><small className="num">{orderTotal(o)} · {(o.items || []).length} ürün</small></> : <><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></>}</span>
                       <span className="or-date"><span>{fullDate(o.createdAt)}</span><small className="or-ago">{ago2(o.createdAt)}</small></span>
@@ -391,7 +392,7 @@ function OrderDetail({ id }) {
     <div className="page order-page admin-order">
       <div className="send-bar">
         <button className="btn sm ghost oa-back" onClick={back} aria-label="Siparişler"><Icon n="back" s={16} /><span>Siparişler</span></button>
-        <div className="send-t"><b>Sipariş #{o.no}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {o.sum ? tl2(o.sum.pay) + ' KDV dahil' : orderTotal(o)}<span className="oa-pay-m"> · {payLabel(o, PAY)}</span></span>
+        <div className="send-t"><b>Sipariş #{o.no}{o.pv && <span className="otag pvtag">Önizleme</span>}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {o.sum ? tl2(o.sum.pay) + ' KDV dahil' : orderTotal(o)}<span className="oa-pay-m"> · {payLabel(o, PAY)}</span></span>
           <span className="oa-who">{o.uid ? <button type="button" className="oa-who-b" onClick={() => setMem(o.uid)} title="Üye bilgileri">{o.contact?.name}<Icon n="chev" s={13} className="rot-l" /></button> : <span className="oa-who-g">{o.contact?.name} · misafir</span>}</span></div>
         <span className="pay-chip" title={o.pay === 'card' && !o.sum ? 'Onaylayınca müşteriye ödeme linki gönderin' : 'Ödeme yöntemi'}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{payLabel(o, PAY) || '—'}</span>
         <StatusPill status={o.status} map={ORDER_STATUS} />

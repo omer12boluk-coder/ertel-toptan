@@ -2,6 +2,7 @@
 //  - Auth: kullanıcı adı + şifre (arka planda kullaniciadi@EMAIL_DOMAIN e-postasına çevrilir)
 //  - Firestore: katalog 1500'lük parçalar halinde birkaç dokümanda tutulur → her açılışta ~2-3 okuma
 //  - Resimler: küçültülüp Firestore'da (img/{id}) saklanır; Storage (ücretli plan) gerekmez
+import { isPv, pvGet, pvPatch, pvDelete } from './pvorders.js';
 import { pingWatch } from './push.js';
 import { EMAIL_DOMAIN } from './config.js';
 import { now, ls, r2Base } from './utils.js';
@@ -687,6 +688,7 @@ export class FirebaseBackend {
   }
   // sipariş takip: canlı dinleyici; 3,5 sn içinde cevap gelmezse REST ile getirilir ve dinleyici sessiz kaldıkça 20 sn'de bir yenilenir
   watchOrder(id, cb) {
+    if (isPv(id)) { cb(pvGet(id)); const f = () => cb(pvGet(id)); addEventListener('pv-orders', f); return () => removeEventListener('pv-orders', f); } // önizleme demo siparişi
     let live = false, stop = false, poll = null;
     const un = this.F.onSnapshot(this.d('orders', id), (s) => { live = true; clearInterval(poll); cb(s.exists() ? { id: s.id, ...s.data() } : null); }, () => { if (!live) rest(); });
     const rest = () => this.restGet('orders/' + id).then((d) => { if (!live && !stop) cb(d ? { id, ...d } : null); }).catch(() => {});
@@ -704,8 +706,8 @@ export class FirebaseBackend {
   async countOrdersRange(from, to) { const r = await this.F.getCountFromServer(this.F.query(this.c('orders'), this.F.where('createdAt', '>=', from), this.F.where('createdAt', '<', to))); return r.data().count; }
   async getUsage() { const s = await this.F.getDoc(this.d('meta', 'usage')); return s.exists() ? s.data() : null; }
   watchOrders(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('orders'), ...(since ? [this.F.where('createdAt', '>=', since)] : []), this.F.orderBy('createdAt', 'desc'), this.F.limit(since ? 3000 : 300)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => console.error(e)); }
-  async updateOrder(id, patch) { await timeout(this.F.updateDoc(this.d('orders', id), patch)); }
-  async deleteOrders(ids) { const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('orders', id))); await b.commit(); }
+  async updateOrder(id, patch) { if (isPv(id)) return pvPatch(id, patch); await timeout(this.F.updateDoc(this.d('orders', id), patch)); }
+  async deleteOrders(ids) { if (ids.some(isPv)) pvDelete(ids.filter(isPv)); ids = ids.filter((x) => !isPv(x)); if (!ids.length) return; const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('orders', id))); await b.commit(); }
 
   async updateRequest(id, patch) { await this.F.updateDoc(this.d('requests', id), patch); }
   watchMessages(id, cb) {

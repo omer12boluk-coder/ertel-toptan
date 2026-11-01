@@ -71,14 +71,26 @@ export function SumRows({ sum, children, incRow }) {
 
 // ---- Kart formu (demo) + taksit seçenekleri --------------------------------------------------------------
 export const emptyCard = () => ({ num: '', name: '', exp: '', cvv: '', n: 1 });
-const fmtNum = (v) => { const d = digitsOf(v).slice(0, 19); return /^3[47]/.test(d) ? [d.slice(0, 4), d.slice(4, 10), d.slice(10, 15)].filter(Boolean).join(' ') : d.replace(/(\d{4})(?=\d)/g, '$1 '); };
-const fmtExp = (v) => { const d = digitsOf(v).slice(0, 4); return d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d; };
+// kart numarası: 16 hane (AMEX 15) — fazlası yazılamaz
+const fmtNum = (v) => { let d = digitsOf(v); const amex = /^3[47]/.test(d); d = d.slice(0, amex ? 15 : 16); return amex ? [d.slice(0, 4), d.slice(4, 10), d.slice(10, 15)].filter(Boolean).join(' ') : d.replace(/(\d{4})(?=\d)/g, '$1 '); };
+// son kullanma: AA/YY. "8" → "08", "0829", "08/2029", "082029" hepsi kabul (4 haneli yıl 2 haneye iner)
+const fmtExp = (v, prev = '') => {
+  const raw = String(v || ''); let d = digitsOf(raw);
+  if (raw.length < String(prev).length && /\/$/.test(prev)) d = d.slice(0, 1); // silerken "/" takılmasın
+  if (d.length === 1 && Number(d) > 1) d = '0' + d;
+  if (d.length >= 5 && d.slice(2, 4) === '20') { // yıl 4 haneli yazılıyor: 08/2029 → 08/29
+    d = d.slice(0, 6); if (d.length < 6) return d.slice(0, 2) + '/' + d.slice(2);
+    d = d.slice(0, 2) + d.slice(4);
+  }
+  d = d.slice(0, 4);
+  return d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d.length === 2 && raw.length > String(prev).length ? d + '/' : d;
+};
 export function cardErrors(c) {
   const e = {}; const d = digitsOf(c.num);
   if (!luhnOk(d) || (/^3[47]/.test(d) ? d.length !== 15 : d.length < 16)) e.cnum = 'Kart numarasını kontrol edin';
   if (String(c.name || '').trim().length < 4) e.cname = 'Kart üzerindeki adı yazın';
   const m = /^(\d{2})\/(\d{2})$/.exec(c.exp || ''); const now = new Date(); const yy = now.getFullYear() % 100, mm = now.getMonth() + 1;
-  if (!m || Number(m[1]) < 1 || Number(m[1]) > 12 || Number(m[2]) < yy || (Number(m[2]) === yy && Number(m[1]) < mm) || Number(m[2]) > yy + 20) e.cexp = 'Son kullanma tarihini AA/YY yazın';
+  if (!m || Number(m[1]) < 1 || Number(m[1]) > 12 || Number(m[2]) < yy || (Number(m[2]) === yy && Number(m[1]) < mm) || Number(m[2]) > yy + 20) e.cexp = 'Son kullanma tarihini ay/yıl yazın (ör. 08/29)';
   if (!/^\d{3,4}$/.test(c.cvv || '')) e.ccvv = 'Kartın arkasındaki 3 haneli kod';
   return e;
 }
@@ -88,13 +100,13 @@ export function CardForm({ card, setCard, inc, list, err = {} }) {
   const d = digitsOf(card.num);
   const brand = cardBrand(d);
   const known = d.length >= 6;
-  const set = (k) => (e) => setCard({ ...card, [k]: k === 'num' ? fmtNum(e.target.value) : k === 'exp' ? fmtExp(e.target.value) : k === 'cvv' ? digitsOf(e.target.value).slice(0, 4) : e.target.value.toLocaleUpperCase('tr-TR') });
+  const set = (k) => (e) => setCard({ ...card, [k]: k === 'num' ? fmtNum(e.target.value) : k === 'exp' ? fmtExp(e.target.value, card.exp) : k === 'cvv' ? digitsOf(e.target.value).slice(0, 4) : e.target.value.toLocaleUpperCase('tr-TR') });
   const opts = list.length ? list : [{ n: 1, pct: 0 }];
   return (
     <div className="cardf">
       <span className="cardf-demo"><Icon n="shield" s={13} />Demo kart: gerçek çekim yapılmaz, kart bilgisi hiçbir yere gönderilmez</span>
       <label className={'field cardf-num' + (err.cnum ? ' bad' : '')}><span className="field-l">Kart numarası</span>
-        <span className="cardf-in"><input id="co-cnum" inputMode="numeric" autoComplete="cc-number" placeholder="0000 0000 0000 0000" value={card.num} onChange={set('num')} />{brand && <span className={'cbrand ' + brand}>{BRAND[brand]}</span>}</span>
+        <span className="cardf-in"><input id="co-cnum" inputMode="numeric" autoComplete="cc-number" placeholder="0000 0000 0000 0000" maxLength={19} value={card.num} onChange={set('num')} />{brand && <span className={'cbrand ' + brand}>{BRAND[brand]}</span>}</span>
         {err.cnum && <span className="field-e">{err.cnum}</span>}</label>
       <label className={'field' + (err.cname ? ' bad' : '')}><span className="field-l">Kart üzerindeki ad soyad</span><input id="co-cname" autoComplete="cc-name" value={card.name} onChange={set('name')} />{err.cname && <span className="field-e">{err.cname}</span>}</label>
       <div className="row2 cardf-row">

@@ -14,6 +14,7 @@ import { SwipeLine } from './cart.jsx';
 import { FavGrid, WaitGrid } from './catalog.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
+import { pvSave } from './pvorders.js';
 import { useStoreVat, useStoreCard, useStoreSum, SumRows, PayableBox, CardForm, emptyCard, cardErrors, cardOut, LineTL, tl2, usd2, PREVIEW, OrderSumFoot, AdminPayCard, payLabel, cardLine } from './storepay.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
 import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
@@ -303,7 +304,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       });
       // sunucusuz (demo veri) ve önizleme: tutar burada aynı formülle yazılır; gerçek sitede bekçi kendisi hesaplar
       if (vsum) { const { lines, ...sumDoc } = vsum; order.sum = { ...sumDoc, at: t }; }
-      if (PREVIEW) { setBusy(false); setDemo({ ...order, id }); window.scrollTo(0, 0); return; }
+      if (PREVIEW) { const pv = { ...order, id: 'pv_' + id, pv: 1 }; delete pv.seen; delete pv.inst; pvSave(pv); setBusy(false); setDemo(pv); window.scrollTo(0, 0); return; } // önizleme: kaydedilmez, bu cihazda yönetim listesine eklenir
       let res = null;
       try { if (srv) res = await A.placeOrderSrv(order, id); else { const { seen, inst, ...o2 } = order; await A.placeOrder(o2, id); } } finally { if (signedUp) await A.memberDone(); }
       if (res && !res.ok) { if (res.code === 'price') { priceFix(res); setBusy(false); return; } if (res.code === 'rate') { rateFix(res); setBusy(false); return; } throw new Error(res.error || 'tekrar deneyin'); }
@@ -499,7 +500,7 @@ function PreviewDone({ o, onBack }) {
   return (
     <div className="page order-page pv-done">
       <div className="list-top"><button className="back-btn" onClick={onBack}><Icon n="back" s={16} />Ödeme ekranına dön</button></div>
-      <div className="banner warn"><Icon n="eye" /><div><b>Önizleme · sipariş kaydedilmedi.</b> Gerçek sitede bekçi aynı hesabı kendisi yapıp siparişi aşağıdaki gibi kaydeder.</div></div>
+      <div className="banner warn"><Icon n="eye" /><div><b>Önizleme · sipariş veritabanına kaydedilmedi.</b> Gerçek sitede bekçi aynı hesabı kendisi yapıp siparişi aşağıdaki gibi kaydeder. Bu demo sipariş SADECE bu cihazda, önizleme adresinin <a className="link" href="/admin/siparisler">yönetim paneli › Siparişler</a> listesinde “Önizleme” etiketiyle de görünür.</div></div>
       <h2 className="pv-h">Müşterinin sipariş sayfasında</h2>
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={<OrderSumFoot o={o} />} />
       <h2 className="pv-h">Yönetim › Siparişler’de</h2>

@@ -6,6 +6,7 @@
 import { store } from './store.js';
 import { ORDER_OPEN, OPEN_STATUSES } from './config.js';
 import { autoSum } from './reviews.jsx';
+import { PV, pvList } from './pvorders.js';
 
 const DAY = 86400000;
 // yükleme penceresi (Ayarlar > Veri ve kota): siparişler/talepler ve üyeler kaç günlük açılsın
@@ -45,7 +46,9 @@ const IS_OPEN = ['new', 'received', 'review', 'action', 'shipping'];
 const merge = (a, b, key) => { const m = new Map(); for (const x of [...b, ...a]) m.set(x.id, x); return [...m.values()].sort((x, y) => (y[key] || 0) - (x[key] || 0)); };
 const hook = {}; // loadOlder: yeni pencerenin ilk cevabı gelince haber ver
 const fire = (k) => { const f = hook[k]; if (f) { delete hook[k]; f(); } };
-const mergeOrders = () => store.set({ orders: merge(part.orders, part.ordersOpen, 'createdAt') });
+// önizleme adresinde: bu cihazda verilen demo siparişler de listeye eklenir (pvorders.js)
+const mergeOrders = () => store.set({ orders: merge(PV ? [...part.orders, ...pvList()] : part.orders, part.ordersOpen, 'createdAt') });
+if (PV) addEventListener('pv-orders', () => mergeOrders());
 const mergeReqs = () => store.set({ requests: merge(part.reqs, part.reqsOpen, 'updatedAt') });
 const mergePreqs = () => store.set({ preqs: merge(part.preqs, part.preqsOpen, 'createdAt') });
 const mergeLcarts = () => store.set({ lcarts: merge(part.lcarts, part.lcartsOpen, 'at') });
