@@ -9,6 +9,7 @@ import { fmt, norm, now } from './utils.js';
 import { queueSave } from './saveq.js';
 import { ShareBtn } from './extras.jsx';
 import { PriceBlock, cardAdd, ProductSheet } from './catalog.jsx';
+import { LineTL } from './storepay.jsx';
 
 // Yönetim: Ürünler ⇄ Setler (31.10.2026, kullanıcı: Setler Ürünler'in içinde; Siparişler'deki seçicinin aynısı)
 export function ProductsSwitch({ on }) {
@@ -296,7 +297,7 @@ export function SetPage({ id }) {
 }
 
 // ---- Sepette set satırı
-export function SetCartLine({ group, onImg }) {
+export function SetCartLine({ group, onImg, rate }) { // rate: mağazada KDV dahil satış açıkken kur → satırlarda TL (storepay.jsx)
   const [open, setOpen] = useState(false);
   const { sk, sq, set, items } = group;
   const cur = items[0]?.cur || 'USD';
@@ -310,13 +311,13 @@ export function SetCartLine({ group, onImg }) {
           <button type="button" className="prow-name set-gname" onClick={() => openSet(set.id)}>{set.n}</button>
           <span className="prow-meta"><span className="set-mini">SET · {items.length} ürün</span>{list > unit && <span className="strike">{fmt(list, cur)}</span>}
             <button type="button" className="link set-open" onClick={() => setOpen(!open)}>{open ? 'İçeriği gizle' : 'Setin içini göster'}</button></span>
-          {open && <ul className="set-in">{items.map((it) => <li key={it.id}><span>{it.qty / sq > 1 ? it.qty / sq + ' × ' : ''}{it.n}</span><b className="num">{fmt(it.offer * (it.qty / sq), cur)}</b></li>)}</ul>}
+          {open && <ul className={'set-in' + (rate ? ' has-tl' : '')}>{items.map((it) => <li key={it.id}><span className="set-in-n">{it.qty / sq > 1 && <b className="num">{it.qty / sq} × </b>}{it.n}</span><span className="set-in-p num"><b>{fmt(it.offer * (it.qty / sq), cur)}</b>{rate && <LineTL v={it.offer * (it.qty / sq)} cur={cur} rate={rate} />}</span></li>)}</ul>}
         </div>
       </div>
       <div className="gline-ctl">
-        <span className="num gline-unit" data-l="Birim">{fmt(unit, cur)}</span>
+        <span className={'num gline-unit' + (rate ? ' has-tl' : '')} data-l="Birim">{fmt(unit, cur)}{rate && <LineTL v={unit} cur={cur} rate={rate} />}</span>
         <Stepper small min={1} value={sq} onChange={(v) => setQty(sk, v)} onRemove={() => setQty(sk, 0)} />
-        <b className="num gline-sum">{fmt(unit * sq, cur)}</b>
+        <b className={'num gline-sum' + (rate ? ' has-tl' : '')}>{fmt(unit * sq, cur)}{rate && <LineTL v={unit * sq} cur={cur} rate={rate} />}</b>
         <button className="icon-btn sm" onClick={() => setQty(sk, 0)} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
       </div>
     </>

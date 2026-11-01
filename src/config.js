@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS = {
     b2bTL: false, b2bVatInc: false, b2bPlusVat: false, // bayi uygulamasında aynı seçenekler (ayrı)
     showTL: false, // dolar fiyatların TL karşılığını bayilere / vitrine de göster (yönetici her zaman görür)
     manualRate: '', // doluysa Harem Altın kuru yerine bu kur kullanılır (1 USD = ? TL)
+    storeVatInc: true, // mağaza sepeti + ödeme: KDV dahil TL "Ödenecek tutar", satırlarda TL; bekçi KDV'yi ekleyerek kaydeder (1.11.2026). Kapalı = eski görünüm
   },
   look: { // Ayarlar > Renkler ve görünüm (önizlemeli). Boş = varsayılan
     shopAccent: '', // online mağazanın ana rengi (boş = Ana renk)
@@ -136,7 +137,9 @@ export const DEFAULT_SETTINGS = {
     pickup: true, // dükkandan teslim al
     payHavale: true, // havale / EFT
     payCard: true, // kredi kartı (ödeme linki gönderilir)
-    cardSoon: true, // kredi kartı "Yakında": görünür ama seçilemez (31.10.2026; Ayarlar > Ödeme seçenekleri'nden tek dokunuşla açılır)
+    cardSoon: true, // SEPET LİNKİ: kredi kartı "Yakında": görünür ama seçilemez (mağaza sepeti artık storeCard'a bakar)
+    storeCard: true, // MAĞAZA sepeti: kredi / banka kartı (kart bilgisi + taksit; şimdilik demo, gerçek çekim yok) — 1.11.2026
+    inst: [{ n: 1, pct: 3 }, { n: 3, pct: 7 }, { n: 6, pct: 12.5 }, { n: 9, pct: 18 }], // kart ödeme komisyonu: n taksit (1 = tek çekim), pct müşteriye yansıyan %
     lcartHours: 12, // sepet linki: müşteri bu kadar saat içinde onaylamazsa link kapanır ve kayıt silinir (Ayarlar > Sepet linki)
     payShop: true, // dükkanda ödeme (sadece dükkandan teslimde)
     signup: true, // mağazada üye olunabilsin

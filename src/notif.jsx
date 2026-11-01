@@ -24,7 +24,7 @@ function useNotifs() {
   return useMemo(() => {
     const from = Date.now() - 30 * DAY; const out = [];
     for (const o of orders) {
-      const sum = o.total ? fmtTotals(o.total) : '';
+      const sum = o.sum ? Number(o.sum.pay).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺' : o.total ? fmtTotals(o.total) : '';
       if (o.createdAt > from) out.push({ id: 'o' + o.id, at: o.createdAt, g: 'order', ic: 'cart', tone: 'new', t: `Yeni sipariş #${o.no}`, s: `${o.contact?.name || ''}${sum ? ' · ' + sum : ''}`, go: () => openOrder(o.id) });
       const c = (o.history || []).find((h) => h.s === 'cancelled' && h.by === 'customer');
       if (c && c.at > from) out.push({ id: 'c' + o.id, at: c.at, g: 'order', ic: 'x', tone: 'bad', t: `Müşteri siparişi iptal etti #${o.no}`, s: `${o.contact?.name || ''}${sum ? ' · ' + sum : ''}`, go: () => openOrder(o.id) });

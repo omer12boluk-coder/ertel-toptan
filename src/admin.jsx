@@ -8,12 +8,13 @@ import { stencilCodes } from './kalip.js';
 import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
 import { SetSettings } from './sets.jsx';
+import { DEF_INST } from './paycalc.js';
 
 // ---- Ayar arama motoru -------------------------------------------------------------------------------------------------
 const SYN = {
   banner: 'reklam tasarim anasayfa slayt', reklam: 'banner tasarim anasayfa', slayt: 'reklam banner', renk: 'tema gorunum renkler', tema: 'renk gorunum sus', gece: 'tema karanlik koyu',
   logo: 'logo marka simge ikon', ikon: 'simge logo', simge: 'logo ikon', favicon: 'logo simge', kargo: 'teslimat dhl yurtici gonderim kargo', teslimat: 'kargo dhl', dhl: 'kargo teslimat',
-  odeme: 'kart havale iyzico pos eft', kart: 'odeme kredi pos', havale: 'odeme iban banka', iban: 'havale banka', fiyat: 'fiyatlandirma toptan indirim kdv kur', indirim: 'fiyat toptan yuzde',
+  komisyon: 'odeme kart taksit', taksit: 'odeme kart komisyon kredi', odeme: 'kart havale iyzico pos eft taksit komisyon', kart: 'odeme kredi pos', havale: 'odeme iban banka', iban: 'havale banka', fiyat: 'fiyatlandirma toptan indirim kdv kur', indirim: 'fiyat toptan yuzde',
   kdv: 'vergi fiyat', kur: 'dolar doviz tl', dolar: 'kur usd', tl: 'kur lira', bildirim: 'push telegram eposta zil haber', eposta: 'mail e-posta bildirim', mail: 'eposta e-posta',
   stok: 'stok az kaldi tukendi', set: 'set paket', paket: 'set kargo paket', video: 'video oynat', alt: 'alt bilgi footer', footer: 'alt bilgi', yasal: 'kvkk sozlesme gizlilik',
   uye: 'uyelik musteri hesap giris', giris: 'uyelik oturum google', bayi: 'toptanci bayi kademe', toptanci: 'bayi', kademe: 'bayi seviye', siparis: 'siparis form sepet',
@@ -622,7 +623,7 @@ const SEC_KEYS = {
   dukkan: ['shop.name', 'shop.hours', 'shop.address', 'shop.phone', 'shop.whatsapp', 'shop.pickupNote'],
   siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook'],
   teslimat: ['orders.cargo', 'orders.pickup', 'orders.cargoNote', 'orders.carriers', 'orders.carrierDef'],
-  odeme: ['orders.payHavale', 'orders.payCard', 'orders.cardSoon', 'orders.payShop', 'shop.payInfo'],
+  odeme: ['orders.payHavale', 'orders.storeCard', 'orders.inst', 'orders.payCard', 'orders.cardSoon', 'orders.payShop', 'shop.payInfo'],
   sepetlink: ['orders.lcartHours'],
   bildirim: ['orders.push', 'orders.pushTexts', 'orders.doneNote'],
   dokunma: ['shop.touch'], bayiuye: ['access.allowSignup', 'features'],
@@ -783,6 +784,8 @@ export function Settings() {
             <Field label="Teklifte −/+ adımı (USD)"><select id="s-step" value={d.pricing.adjustStep} onChange={(e) => set('pricing.adjustStep', Number(e.target.value))}><option value="0.5">0,5</option><option value="1">1</option><option value="5">5</option><option value="10">10</option></select></Field>
           </div>
           <p className="fine">Kartta TL karşılığı, KDV dahil tutar ve “+KDV” gösterimi: <button className="linkish" onClick={() => setSec('kart')}>Ürün kartları</button>.</p>
+          <h3>Mağaza sepeti ve ödeme</h3>
+          <Toggle id="s-svinc" label="Mağazada KDV dahil satış" hint="Açıkken mağaza sepetinde ve “Siparişi tamamla” ekranında her ürünün altında TL karşılığı, en altta büyük “Ödenecek tutar (KDV dahil)” görünür; bekçi siparişi KDV dahil TL tutarla kaydeder. Kapalıyken eski görünüm (dolar toplam + küçük KDV satırı) ve KDV eklenmez. Sipariş formu, sepet linki ve bayi tarafı bu ayardan etkilenmez." checked={d.pricing.storeVatInc !== false} onChange={(v) => set('pricing.storeVatInc', v)} />
           <h3>Sepet ve toplam</h3>
           <Toggle id="s-save" label="Sepette avantaj tutarını göster" checked={d.pricing.showSaving} onChange={(v) => set('pricing.showSaving', v)} />
           <Toggle id="s-showvat" label="Toplamın altında KDV bilgisini göster" hint="Sepet, liste linki, liste resmi ve tekliflerde toplamın altında küçük bir satır: KDV ve KDV dahil toplam" checked={d.pricing.showVat !== false} onChange={(v) => set('pricing.showVat', v)} />
@@ -932,8 +935,10 @@ export function Settings() {
 
         {sec === 'odeme' && <>
           <Toggle id="s-ohav" label="Havale / EFT" checked={d.orders.payHavale !== false} onChange={(v) => set('orders.payHavale', v)} />
-          <Toggle id="s-ocard" label="Kredi kartı (ödeme linki gönderilir)" hint="Siparişi onaylayınca müşteriye ödeme linkini siz gönderirsiniz" checked={d.orders.payCard !== false} onChange={(v) => set('orders.payCard', v)} />
-          {d.orders.payCard !== false && <Toggle id="s-ocsoon" label="Kredi kartı: “Yakında” (seçilemez)" hint="Açıkken kart seçeneği mağaza sepetinde ve sepet linkinde görünür ama seçilemez, yanında “Yakında” yazar. Kart ödemesi hazır olunca bunu kapatın." checked={d.orders.cardSoon !== false} onChange={(v) => set('orders.cardSoon', v)} />}
+          <Toggle id="s-oscard" label="Mağazada kredi / banka kartı" hint="Mağaza sepetinde “Siparişi tamamla” ekranında kart bilgisi girilir, kart tanınınca tek çekim ve taksit seçenekleri çıkar. Şimdilik DEMO: kart bilgisi hiçbir yere gönderilmez, gerçek çekim yapılmaz; siparişe sadece kartın son 4 hanesi ve taksit yazılır." checked={d.orders.storeCard !== false} onChange={(v) => set('orders.storeCard', v)} />
+          {d.orders.storeCard !== false && <InstEditor d={d} set={set} />}
+          <Toggle id="s-ocard" label="Sepet linki: kredi kartı (ödeme linki gönderilir)" hint="Sadece sepet linkinde (Siparişler › Yeni sepet linki). Siparişi onaylayınca müşteriye ödeme linkini siz gönderirsiniz" checked={d.orders.payCard !== false} onChange={(v) => set('orders.payCard', v)} />
+          {d.orders.payCard !== false && <Toggle id="s-ocsoon" label="Sepet linki: kredi kartı “Yakında” (seçilemez)" hint="Açıkken kart seçeneği sepet linkinde görünür ama seçilemez, yanında “Yakında” yazar. Mağaza sepetindeki kart bu ayardan etkilenmez." checked={d.orders.cardSoon !== false} onChange={(v) => set('orders.cardSoon', v)} />}
           <Toggle id="s-oshop" label="Dükkanda ödeme" hint="Sadece dükkandan teslim alırken" checked={d.orders.payShop !== false} onChange={(v) => set('orders.payShop', v)} />
           <Field label="Havale / EFT bilgisi" hint="Sipariş verilince müşterinin sipariş sayfasında görünür. IBAN, alıcı adı vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00'} /></Field>
         </>}
@@ -1444,6 +1449,44 @@ function LookSettings({ d, set }) {
 }
 // Ürün kartları: mağaza ve bayi kartı yan yana önizleme + ayarlar
 const ADD_STYLES = [['auto', 'Otomatik'], ['text', 'Sepete ekle'], ['icon', 'Sepet +'], ['plus', 'Sadece +']];
+// Kart ödeme komisyonu tablosu (Ayarlar > Ödeme seçenekleri): her satır bir seçenek (1 = tek çekim), % müşteriye yansır.
+// Örnek sütunu KDV dahil 1.000 ₺'lik siparişte müşterinin ödeyeceğini gösterir (paycalc.storeSum ile aynı formül).
+function InstEditor({ d, set }) {
+  const rows = Array.isArray(d.orders.inst) && d.orders.inst.length ? d.orders.inst : DEF_INST;
+  const put = (next) => set('orders.inst', next);
+  const upd = (i, patch) => put(rows.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const num = (v) => { const n = Number(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; };
+  const used = new Set(rows.map((x) => Number(x.n)));
+  const nextN = [2, 3, 4, 5, 6, 8, 9, 10, 12].find((n) => !used.has(n));
+  return (
+    <div className="inst-ed">
+      <div className="inst-ed-h"><b>Kart ödeme komisyonu</b><small>Kart seçilince bu oran KDV dahil tutarın üstüne eklenir (PlatinMarket’teki “Ödeme komisyonu” gibi). Faturayı müşterinin ödediği son tutara kesersiniz.</small></div>
+      <div className="inst-ed-t">
+        <span className="inst-ed-l" aria-hidden="true"><span>Seçenek</span><span>Komisyon %</span><span>1.000 ₺ için</span><span /></span>
+        {rows.map((x, i) => {
+          const n = Math.round(Number(x.n)) || 1; const pct = Number(x.pct) || 0; const tot = Math.round((1000 + 1000 * pct / 100) * 100) / 100;
+          return (
+            <div key={i} className={'inst-ed-r' + (x.off ? ' off' : '')}>
+              <span className="inst-ed-n">{n === 1 ? <b>Tek çekim</b> : <><select id={'s-inst-n' + i} value={n} onChange={(e) => upd(i, { n: Number(e.target.value) })} aria-label="Taksit sayısı">{[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((k) => <option key={k} value={k} disabled={k !== n && used.has(k)}>{k}</option>)}</select><b>taksit</b></>}</span>
+              <span className="inst-ed-p"><input id={'s-inst-p' + i} inputMode="decimal" value={x.pct ?? ''} onChange={(e) => upd(i, { pct: e.target.value === '' ? '' : num(e.target.value) })} aria-label="Komisyon yüzdesi" /><i>%</i></span>
+              <span className="inst-ed-x num">{tot.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺{n > 1 && <small>{n} × {(Math.round(tot / n * 100) / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺</small>}</span>
+              <span className="inst-ed-a">
+                <button type="button" className="icon-btn sm" onClick={() => upd(i, { off: !x.off })} title={x.off ? 'Müşteriye göster' : 'Gizle'} aria-label={x.off ? 'Müşteriye göster' : 'Gizle'}><Icon n={x.off ? 'eyeoff' : 'eye'} s={15} /></button>
+                {n !== 1 && <button type="button" className="icon-btn sm" onClick={() => put(rows.filter((_, j) => j !== i))} title="Sil" aria-label="Sil"><Icon n="trash" s={15} /></button>}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="row-btns">
+        {nextN && <button type="button" className="btn sm outline" onClick={() => put([...rows, { n: nextN, pct: 0 }].sort((a, b) => a.n - b.n))}><Icon n="plus" s={14} />Taksit ekle</button>}
+        <button type="button" className="btn sm ghost" onClick={() => put(DEF_INST.map((x) => ({ ...x })))}>Varsayılan oranlar</button>
+      </div>
+      <p className="fine">Gizlenen seçenek müşteriye çıkmaz. Gerçek ödeme altyapısı (QNB / İş Bankası sanal POS ya da iyzico) bağlanınca bankanın taksit seçenekleri buradaki oranlarla gösterilir.</p>
+    </div>
+  );
+}
+
 function CardSettings({ d, set }) {
   const catalog = useStore((s) => s.catalog);
   const S = withDefaults(d);

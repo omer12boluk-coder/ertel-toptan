@@ -11,6 +11,15 @@ import { PAY, DELIVERY, CARRIERS } from './config.js';
 
 const addrLine = (a) => (!a ? '' : [[a.hood, a.address].filter(Boolean).join(' '), [a.district, a.city].filter(Boolean).join(' / ')].filter(Boolean).join(', '));
 
+// Mağaza siparişi KDV dahil (o.sum, 1.11.2026): sözleşmedeki toplam TL ve KDV dahil, kartta ödeme komisyonu ve taksit
+const tlx = (v) => Number(v).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
+function sumText(o) {
+  const x = o.sum; const ins = x.inst;
+  return (x.vatPct > 0 ? `${tlx(x.tl)} + %${x.vatPct} KDV ${tlx(x.vat)} = ${tlx(x.inc)} (KDV dahil)` : tlx(x.tl))
+    + (ins && ins.fee > 0 ? ` + ödeme komisyonu (${ins.n > 1 ? ins.n + ' taksit' : 'tek çekim'}, %${ins.pct}) ${tlx(ins.fee)}` : '')
+    + ` · Ödenecek toplam ${tlx(x.pay)}${ins && ins.n > 1 ? ` (${ins.n} × ${tlx(ins.per)})` : ''}`;
+}
+
 // Sipariş (kayıtlı ya da ödeme adımındaki taslak) → sözleşmedeki alıcı / ürün alanları
 export function legalFromOrder(o, S, tl) {
   if (!o) return null;
@@ -24,12 +33,12 @@ export function legalFromOrder(o, S, tl) {
     phone: o.contact?.phone || '', email: o.contact?.email || '',
     invoice: inv.type === 'company' ? [inv.company, inv.taxOffice && 'VD ' + inv.taxOffice, inv.taxNo && 'VKN ' + inv.taxNo].filter(Boolean).join(' · ') : 'Bireysel' + (inv.tc ? ' · TCKN ' + inv.tc : ''),
     items,
-    total: (() => { // fiyatlar KDV hariç: KDV'li toplam ayrıca yazılır (Ayarlar > Fiyatlandırma > KDV)
+    total: o.sum ? sumText(o) : (() => { // fiyatlar KDV hariç: KDV'li toplam ayrıca yazılır (Ayarlar > Fiyatlandırma > KDV)
       const pct = Number(S.pricing?.vatPct ?? 20); const vat = S.pricing?.showVat !== false && pct > 0;
       const parts = Object.entries(o.total || {}).filter(([, v]) => v).map(([c, v]) => (vat ? `${fmt(v, c)} + %${pct} KDV = ${fmt(v * (1 + pct / 100), c)} (KDV dahil)` : fmt(v, c)));
       return (parts.join(' + ') || fmtTotals(o.total || {})) + (tl ? ' · ≈ ' + tl + ' + KDV' : '');
     })(),
-    pay: PAY[o.pay] || '',
+    pay: o.sum && o.pay === 'card' ? 'Kredi / banka kartı · ' + (o.sum.inst?.n > 1 ? o.sum.inst.n + ' taksit' : 'tek çekim') : PAY[o.pay] || '',
     deliv: (DELIVERY[o.delivery?.method] || '') + (!pickup && CARRIERS[o.delivery?.carrier] ? ' · ' + CARRIERS[o.delivery.carrier].name : ''),
     ship: pickup ? 'Yok (dükkândan teslim)' : undefined,
     date: d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),

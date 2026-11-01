@@ -14,6 +14,7 @@ import { SwipeLine } from './cart.jsx';
 import { FavGrid, WaitGrid } from './catalog.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
+import { useStoreVat, useStoreCard, useStoreSum, SumRows, PayableBox, CardForm, emptyCard, cardErrors, cardOut, LineTL, tl2, usd2, PREVIEW, OrderSumFoot, AdminPayCard, payLabel, cardLine } from './storepay.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
 import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
 import { LegalConsent, SignupConsent, legalFromOrder, OrderLegalLink } from './legalui.jsx';
@@ -149,6 +150,12 @@ function useFixedSum(sideRef, sumRef) {
       for (let e = side.parentElement; e && e !== document.body; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.transform !== 'none' || e.getAnimations?.().some((a) => a.playState === 'running')) { sum.classList.remove('co-fixed'); sum.style.top = sum.style.left = ''; clearTimeout(retry); retry = setTimeout(place, 60); return; } }
       sum.classList.add('co-fixed');
       Object.assign(sum.style, { top: top + 'px', left: Math.round(x - scrollX) + 'px' });
+      fit();
+    };
+    // kısa ekran (1.11.2026, KDV dahil özet daha uzun): her şey sığmıyorsa ürün listesi gizlenir, yerine "N ürün · göster" (pencere)
+    const fit = () => {
+      sum.classList.remove('co-tight'); const it = sum.querySelector('.co-items');
+      if (sum.scrollHeight > sum.clientHeight + 1 || (it && it.clientHeight < 96 && it.scrollHeight > it.clientHeight + 4)) sum.classList.add('co-tight');
     };
     place(); const t = [setTimeout(place, 60), setTimeout(place, 400)];
     const ro = new ResizeObserver(place); ro.observe(document.body);
@@ -169,6 +176,10 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   const [done, setDone] = useState(false);
   const [auth, setAuth] = useState(false);
   const formRef = useRef(null);
+  // mağaza: KDV dahil satış + kart (demo) + taksit (storepay.jsx / paycalc.js; bekçi aynı hesabı yapar)
+  const sv = useStoreVat(); const sc = useStoreCard();
+  const [card, setCard] = useState(emptyCard);
+  const [demo, setDemo] = useState(null); // önizleme adresinde: sipariş kaydedilmez, bekçinin kaydedeceği hâl gösterilir
   const prevMember = useRef(member?.uid);
   // giriş yapılınca bilgileri doldur
   useEffect(() => { if (member?.uid && member.uid !== prevMember.current) setF((x) => ({ ...initForm(member, methods, null), pay: x.pay, note: x.note, method: x.method })); prevMember.current = member?.uid; }, [member?.uid]);
@@ -182,13 +193,16 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   };
   const setI = (k) => (e) => set({ inv: { ...f.inv, [k]: e.target.value } });
   const saved = member?.addresses || [];
-  const pays = [O.payHavale !== false && 'havale', O.payCard !== false && 'card', O.payShop !== false && f.method === 'pickup' && 'shop'].filter(Boolean);
-  const cardSoon = O.cardSoon !== false; // kart "Yakında": görünür, seçilemez
-  const payable = pays.filter((k) => k !== 'card' || !cardSoon);
-  useEffect(() => { if (!payable.includes(f.pay)) set({ pay: payable[0] || 'havale' }); }, [f.method, cardSoon]);
+  // kart: mağazada orders.storeCard (sepet linkindeki "Kredi kartı: Yakında" ayarı burayı etkilemez)
+  const pays = [O.payHavale !== false && 'havale', sc.on && 'card', O.payShop !== false && f.method === 'pickup' && 'shop'].filter(Boolean);
+  const payable = pays;
+  useEffect(() => { if (!payable.includes(f.pay)) set({ pay: payable[0] || 'havale' }); }, [f.method, sc.on]);
   const tot = totals(items, 'offer');
+  const vsum = useStoreSum(items, f.pay, card.n, sv.on || (f.pay === 'card' && sc.on)); // KDV kapalıyken de kartta komisyonlu tutar gösterilir
+  const [showItems, setShowItems] = useState(false);
+  useEffect(() => { dispatchEvent(new Event('resize')); }, [f.pay, f.method, !!vsum, card.n]); // özet satır sayısı değişti → sabit özet yeniden sığdırılır
   const tried = useRef(false);
-  useEffect(() => { if (tried.current) setErr(validate()); }, [f]);
+  useEffect(() => { if (tried.current) setErr(validate()); }, [f, card]);
   const tTL = S.pricing.showTL && rate ? toTL(tot, rate) : null;
   const selSaved = f.method === 'cargo' && f.addrId !== 'new' ? saved.find((a) => a.id === f.addrId) : null;
   const savedBad = !!selSaved && !addrOk(selSaved); // eski kayıtlı adres: ilçe/mahalle listeden seçilmemiş → burada düzeltilir
@@ -209,6 +223,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
     delivery: { method: f.method, addr: f.method === 'cargo' ? delivAddr : null, carrier: pickCar(S, f.carrier) },
     invoice: f.inv.type === 'company' ? { type: 'company', company: f.inv.company, taxOffice: f.inv.taxOffice, taxNo: f.inv.taxNo } : { type: 'person', tc: f.inv.tc },
     pay: f.pay,
+    ...(vsum ? { sum: vsum } : {}),
   });
   function validate() {
     const e = {};
@@ -227,6 +242,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
     if (f.method === 'cargo' && !f.billSame) Object.assign(e, addrErrors(f.bill, 'bill'));
     if (!f.legal) e.legal = 'Siparişi tamamlamak için sözleşmeleri onaylayın';
     if (!member && f.signup && !f.legalM) e.legalM = 'Üyelik için üyelik sözleşmesini onaylayın';
+    if (f.pay === 'card' && sc.on) Object.assign(e, cardErrors(card));
     return e;
   }
   async function submit() {
@@ -237,6 +253,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       setTimeout(() => { const el = formRef.current?.querySelector('.field.bad input, .field.bad select, .field.bad textarea, .legal-ok.bad input'); el?.focus(); el?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }); }, 30);
       return;
     }
+    if (sv.on && !vsum) { toast('Kur alınamadı, birkaç saniye sonra tekrar deneyin', 'bad'); return; }
     setBusy(true);
     try {
       let uid = member?.uid || null;
@@ -254,12 +271,18 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         toast('Bazı ürünlerin fiyatı güncellendi. Yeni tutarı kontrol edip tekrar onaylayın.', 'bad');
       };
       const srvItems = items.map(({ id: pid, k, n, cur, qty, offer, pi, u, set }) => ({ id: pid, k, n, cur, qty, price: offer, pi, u, ...(set ? { set } : {}) }));
-      if (srv && !member && f.signup) { // hesap açılmadan önce fiyatlar kontrol edilir (sonra oturum kapanıyor)
-        const c = await A.placeOrderSrv({ items: srvItems, pay: f.pay, delivery: { method: f.method } }, 'chk' + rid() + rid() + rid(), true);
-        if (!c.ok) { if (c.code === 'price') priceFix(c); else toast('Sipariş gönderilemedi: ' + (c.error || 'tekrar deneyin'), 'bad'); setBusy(false); return; }
+      // KDV dahil tutar / kart: bekçi aynı hesabı kendisi yapar (paycalc.js); ekranda görülen tutar karşılaştırma için gider
+      const payX = { ...(f.pay === 'card' && sc.on ? { card: cardOut(card), inst: vsum?.inst?.n || 1 } : {}), ...(vsum ? { seen: { pay: vsum.pay, rate: vsum.rate } } : {}) };
+      const rateFix = (r) => { // kur değişti: yeni kurla tutar yeniden hesaplanır, müşteri tekrar onaylar
+        if (r.rate > 0) store.set({ rate: { ...(store.s.rate || {}), usd: r.rate, src: store.s.rate?.src || 'harem', at: Date.now() } });
+        toast('Dolar kuru güncellendi' + (r.pay ? ', yeni tutar ' + tl2(r.pay) : '') + '. Kontrol edip tekrar onaylayın.', 'bad');
+      };
+      if (srv && !member && f.signup && !PREVIEW) { // hesap açılmadan önce fiyatlar kontrol edilir (sonra oturum kapanıyor)
+        const c = await A.placeOrderSrv({ items: srvItems, pay: f.pay, delivery: { method: f.method }, ...payX }, 'chk' + rid() + rid() + rid(), true);
+        if (!c.ok) { if (c.code === 'price') priceFix(c); else if (c.code === 'rate') rateFix(c); else toast('Sipariş gönderilemedi: ' + (c.error || 'tekrar deneyin'), 'bad'); setBusy(false); return; }
       }
       let signedUp = false;
-      if (!member && f.signup) {
+      if (!member && f.signup && !PREVIEW) {
         const addr = f.method === 'cargo' ? [{ ...cleanA(delivAddr), id: rid(), title: 'Adresim' }] : [];
         const m = await A.memberSignup({ email, password: f.pw, name: contactOut().name, phone: contactOut().phone, username: f.uname || undefined, addresses: addr, invoice: inv, legal: { v: LEGAL_V, at: now() } }, true);
         uid = m.uid; signedUp = true;
@@ -276,11 +299,16 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         invoice: { ...inv, same: f.method !== 'cargo' || f.billSame, addr: f.method === 'cargo' ? (f.billSame ? cleanA(delivAddr) : cleanA(f.bill, false)) : f.bill?.address ? cleanA(f.bill, false) : null },
         pay: f.pay, note: f.note.trim(),
         legal: { v: LEGAL_V, at: t }, // ön bilgilendirme + mesafeli satış onayı (metinler sipariş sayfasında bu siparişin bilgileriyle görünür)
+        ...payX,
       });
+      // sunucusuz (demo veri) ve önizleme: tutar burada aynı formülle yazılır; gerçek sitede bekçi kendisi hesaplar
+      if (vsum) { const { lines, ...sumDoc } = vsum; order.sum = { ...sumDoc, at: t }; }
+      if (PREVIEW) { setBusy(false); setDemo({ ...order, id }); window.scrollTo(0, 0); return; }
       let res = null;
-      try { if (srv) res = await A.placeOrderSrv(order, id); else await A.placeOrder(order, id); } finally { if (signedUp) await A.memberDone(); }
-      if (res && !res.ok) { if (res.code === 'price') { priceFix(res); setBusy(false); return; } throw new Error(res.error || 'tekrar deneyin'); }
-      if (res) Object.assign(order, { no: res.no, items: res.items, total: res.total }); // sunucunun kaydettiği hâli
+      try { if (srv) res = await A.placeOrderSrv(order, id); else { const { seen, inst, ...o2 } = order; await A.placeOrder(o2, id); } } finally { if (signedUp) await A.memberDone(); }
+      if (res && !res.ok) { if (res.code === 'price') { priceFix(res); setBusy(false); return; } if (res.code === 'rate') { rateFix(res); setBusy(false); return; } throw new Error(res.error || 'tekrar deneyin'); }
+      if (res) { Object.assign(order, { no: res.no, items: res.items, total: res.total }); if (res.sum) order.sum = res.sum; else delete order.sum; } // sunucunun kaydettiği hâli
+      delete order.seen; delete order.inst;
       // dükkan sahibine bildirimi (Telegram + e-posta) bekçi siparişi yazınca kendisi gönderir
       if (A.mode === 'firebase') autoPush(id);
       // üye: yeni adresi ve fatura bilgisini hesaba kaydet
@@ -306,12 +334,13 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
     setBusy(false); setDone(false);
   }
 
+  if (demo) return <PreviewDone o={demo} onBack={() => setDemo(null)} />;
   return (
     <div className="page checkout" ref={formRef}>
       {busy && <OrderWait done={done} logo={S.brand.logo || LOGO_MARK} />}
       <div className="send-bar">
         <button className="back-btn co-back-std" onClick={onBack}><Icon n="back" s={16} />{single ? 'Vazgeç' : 'Sepete dön'}</button>
-        <div className="send-t"><b>Siparişi tamamla</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
+        <div className="send-t"><b>Siparişi tamamla</b><span className="muted">{items.length} ürün · {vsum ? tl2(vsum.pay) + (vsum.vatPct > 0 ? ' KDV dahil' : '') : fmtTotals(tot)}</span></div>
       </div>
       <div className="co-grid">
         <div className="co-main">
@@ -404,9 +433,10 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
             <h2><span className="co-n">3</span>Ödeme</h2>
             <div className="seg-cards col" role="radiogroup" aria-label="Ödeme şekli">
               {pays.includes('havale') && <Choice on={f.pay === 'havale'} onClick={() => set({ pay: 'havale' })} title={PAY.havale} sub="Banka bilgileri sipariş sonrası gösterilir" />}
-              {pays.includes('card') && <Choice soon={cardSoon} on={f.pay === 'card'} onClick={() => set({ pay: 'card' })} title={PAY.card} sub={cardSoon ? 'Kartla ödeme çok yakında' : 'Sipariş onaylanınca güvenli ödeme linki gönderilir'} />}
+              {pays.includes('card') && <Choice on={f.pay === 'card'} onClick={() => set({ pay: 'card' })} title="Kredi / banka kartı" sub={sc.list.length > 1 ? 'Tek çekim ya da taksit' : 'Tek çekim'} />}
               {pays.includes('shop') && <Choice on={f.pay === 'shop'} onClick={() => set({ pay: 'shop' })} title={PAY.shop} sub="Teslim alırken nakit ya da kartla" />}
             </div>
+            {f.pay === 'card' && sc.on && <CardForm card={card} setCard={setCard} inc={vsum ? vsum.inc : 0} list={sc.list} err={err} />}
             <Field label="Sipariş notu" opt><textarea id="co-note" rows="2" placeholder="ör. Faturayı ürünle birlikte gönderin" value={f.note} onChange={(e) => set({ note: e.target.value })} /></Field>
           </section>
 
@@ -426,25 +456,57 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         <aside className="co-side" ref={sideRef}>
           <div className="cart-sum" ref={sumRef}>
             <h2 className="co-side-t">Sipariş özeti <small className="co-side-n">{items.length} ürün · {items.reduce((t, it) => t + (Number(it.qty) || 0), 0)} adet</small></h2>
+            <button type="button" className="co-items-tg" onClick={() => setShowItems(true)}><Icon n="list" s={15} />{items.length} ürün · Ürünleri göster<Icon n="chev" s={13} className="rot-l" /></button>
+            {showItems && <Sheet title={'Sipariş özeti · ' + items.length + ' ürün'} onClose={() => setShowItems(false)}><ul className="co-items in-sheet">{items.map((it) => (
+              <li key={it.id}><Thumb p={it} size="sm" /><span className="co-it-n"><span className="co-it-t">{it.n}</span><small className="num">{it.qty} × {fmt(it.offer, it.cur)}</small></span><span className="co-it-p num"><b>{fmt(it.offer * it.qty, it.cur)}</b>{vsum && <LineTL v={it.offer * it.qty} cur={it.cur} rate={vsum.rate} vat={vsum.vatPct > 0} />}</span></li>
+            ))}</ul></Sheet>}
             <ul className="co-items">
               {items.map((it) => (
-                <li key={it.id}><Thumb p={it} size="sm" /><span className="co-it-n">{it.n}<small className="num">{it.qty} × {fmt(it.offer, it.cur)}</small></span><b className="num">{fmt(it.offer * it.qty, it.cur)}</b></li>
+                <li key={it.id}><Thumb p={it} size="sm" /><span className="co-it-n"><span className="co-it-t">{it.n}</span><small className="num">{it.qty} × {fmt(it.offer, it.cur)}</small></span><span className="co-it-p num"><b>{fmt(it.offer * it.qty, it.cur)}</b>{vsum && <LineTL v={it.offer * it.qty} cur={it.cur} rate={vsum.rate} vat={vsum.vatPct > 0} />}</span></li>
               ))}
             </ul>
-            <div className="sum-rows">
-              <div><span>Ürünler</span><span className="num">{fmtTotals(tot)}</span></div>
-              <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span>{f.method === 'pickup' ? 'Dükkandan' : (carrierInfo(S, pickCar(S, f.carrier))?.name || 'Onayda bildirilir')}</span></div>
-              <div className="sum-total"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
-              {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
-            </div>
-            <VatLines by={tot} />
+            {vsum ? <>
+              <SumRows sum={vsum}>
+                <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span className="v">{f.method === 'pickup' ? 'Dükkandan' : (carrierInfo(S, pickCar(S, f.carrier))?.name || 'Onayda bildirilir')}{f.method !== 'pickup' && <small>(Alıcı ödemeli)</small>}</span></div>
+              </SumRows>
+              <PayableBox sum={vsum} />
+            </> : <>
+              <div className="sum-rows">
+                <div><span>Ürünler</span><span className="num">{fmtTotals(tot)}</span></div>
+                <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span className="co-carg">{f.method === 'pickup' ? 'Dükkandan' : (carrierInfo(S, pickCar(S, f.carrier))?.name || 'Onayda bildirilir')}{f.method !== 'pickup' && <small>(Alıcı ödemeli)</small>}</span></div>
+                <div className="sum-total"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
+                {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
+              </div>
+              <VatLines by={tot} />
+            </>}
             <LegalConsent checked={!!f.legal} onChange={(v) => set({ legal: v })} error={err.legal} order={legalFromOrder(draftOrder(), S, tTL != null ? fmtTL(tTL) : '')} />
-            <button className="btn primary big co-go" disabled={busy} onClick={submit}><Icon n="check" /><span><b>{busy ? 'Gönderiliyor…' : 'Siparişi tamamla'}</b></span></button>
+            {vsum && <p className="ssum-ok">“Siparişi tamamla”ya basınca {f.pay === 'card' ? 'kartınızdan ' : ''}<b className="num">{vsum.vatPct > 0 ? 'KDV dahil ' : ''}{tl2(vsum.pay)}{vsum.inst ? (vsum.inst.n > 1 ? ` (${vsum.inst.n} taksit)` : ' (tek çekim)') : ''}</b> {f.pay === 'card' ? 'çekilmesini' : 'ödemeyi'} onaylarsınız.</p>}
+            <button className="btn primary big co-go" disabled={busy} onClick={submit}><Icon n="check" /><span><b>{busy ? 'Gönderiliyor…' : vsum ? 'Siparişi tamamla · ' + tl2(vsum.pay) : 'Siparişi tamamla'}</b></span></button>
             {f.method === 'cargo' && O.cargoNote && <p className="fine">{O.cargoNote}</p>}
           </div>
         </aside>
       </div>
       {auth && <AuthSheet onClose={() => setAuth(false)} />}
+    </div>
+  );
+}
+
+// Önizleme adresinde "Siparişi tamamla": sipariş KAYDEDİLMEZ; müşterinin ve yönetimin göreceği hâl gösterilir (1.11.2026 demo)
+function PreviewDone({ o, onBack }) {
+  const items = orderItems(o);
+  const sum = o.sum;
+  const tot = sum ? `${tl2(sum.pay)} KDV dahil${o.pay === 'card' && sum.inst ? ' · Kart ' + (sum.inst.n > 1 ? sum.inst.n + ' taksit' : 'tek çekim') : ''}` : fmtTotals(o.total || {});
+  return (
+    <div className="page order-page pv-done">
+      <div className="list-top"><button className="back-btn" onClick={onBack}><Icon n="back" s={16} />Ödeme ekranına dön</button></div>
+      <div className="banner warn"><Icon n="eye" /><div><b>Önizleme · sipariş kaydedilmedi.</b> Gerçek sitede bekçi aynı hesabı kendisi yapıp siparişi aşağıdaki gibi kaydeder.</div></div>
+      <h2 className="pv-h">Müşterinin sipariş sayfasında</h2>
+      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={<OrderSumFoot o={o} />} />
+      <h2 className="pv-h">Yönetim › Siparişler’de</h2>
+      <div className="pv-row"><span className="num">#{o.no}</span><span><b>{o.contact?.name}</b><small>{items.length} ürün · şimdi</small></span><span className="pay-chip"><Icon n="tag" s={13} />{payLabel(o, PAY)}{o.card ? ' · •••• ' + o.card.last4 : ''}</span><span className="pv-amt num"><b>{sum ? tl2(sum.pay) : fmtTotals(o.total || {})}</b>{sum?.allUsd && <small>KDV dahil · {usd2(sum.vatPct > 0 ? sum.usdInc : sum.usd)}</small>}</span></div>
+      <div className="o-info pv-info"><AdminPayCard o={o} /></div>
+      <h2 className="pv-h">Telegram / e-posta bildirimi</h2>
+      <pre className="pv-msg">{`🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${items.length} ürün · ${tot}${o.card ? '\n' + cardLine(o.card) : ''}`}</pre>
     </div>
   );
 }
@@ -557,7 +619,7 @@ export function OrderPage({ id }) {
       {!autoCargo(o) && ['shipped', 'done'].includes(o.status) && o.cargo?.code && <ShipCard o={o} />}
 
 
-      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
+      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={o.sum ? <OrderSumFoot o={o} /> : null} />
       <OrderRate o={o} />
 
       <div className="o-info">
@@ -657,8 +719,8 @@ function PayChip({ o }) {
   if (!o.pay) return null;
   const bank = o.pay === 'havale' && S.shop.payInfo;
   return <>
-    <button type="button" className={'pay-chip' + (bank ? ' link' : '')} onClick={bank ? () => setOpen(true) : undefined} disabled={!bank}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{PAY[o.pay]}{bank && <Icon n="chev" s={12} />}</button>
-    {open && <Sheet title="Havale / EFT bilgileri" onClose={() => setOpen(false)}><div className="pay-info sel-ok"><pre>{S.shop.payInfo}</pre><p className="fine">Açıklamaya sipariş numarasını yazın: <b>#{o.no}</b></p></div></Sheet>}
+    <button type="button" className={'pay-chip' + (bank ? ' link' : '')} onClick={bank ? () => setOpen(true) : undefined} disabled={!bank}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{payLabel(o, PAY)}{bank && <Icon n="chev" s={12} />}</button>
+    {open && <Sheet title="Havale / EFT bilgileri" onClose={() => setOpen(false)}><div className="pay-info sel-ok"><pre>{S.shop.payInfo}</pre>{o.sum && <p className="pay-amt">Gönderilecek tutar: <b className="num">{tl2(o.sum.pay)}</b> <small>(KDV dahil)</small></p>}<p className="fine">Açıklamaya sipariş numarasını yazın: <b>#{o.no}</b></p></div></Sheet>}
   </>;
 }
 
@@ -1066,7 +1128,7 @@ function MyOrders({ limit }) {
     const show = its.slice(0, 5); const more = its.length - show.length; const on = sel?.has(o.id);
     return (
       <button className={'mo-card' + (fresh.has(o.id) ? ' fresh' : '') + (on ? ' picked' : '')} onClick={() => (sel ? toggle(o.id) : openOrder(o.id))}>
-        <span className="mo-top">{sel && <span className={'ocheck' + (on ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}{fresh.has(o.id) && <span className="dot-new" title="Yeni güncelleme" />}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /><span className="muted mo-date">{when(o.createdAt)}</span><b className="num mo-sum">{fmtTotals(o.total || totals(orderItems(o), 'offer'))}</b></span>
+        <span className="mo-top">{sel && <span className={'ocheck' + (on ? ' on' : '')} aria-hidden="true"><Icon n="check" s={14} /></span>}{fresh.has(o.id) && <span className="dot-new" title="Yeni güncelleme" />}<b className="num">#{o.no}</b><StatusPill status={o.status} map={ORDER_STATUS} /><span className="muted mo-date">{when(o.createdAt)}</span><b className="num mo-sum">{(o.sum ? tl2(o.sum.pay) : fmtTotals(o.total || totals(orderItems(o), 'offer')))}</b></span>
         <span className="mo-thumbs">
           {show.map((it, i) => <span key={i} className="mo-th" title={it.n}><Thumb p={it} size="sm" />{it.qty > 1 && <i className="num">×{it.qty}</i>}</span>)}
           {more > 0 && <span className="mo-more num">+{more}</span>}

@@ -7,6 +7,7 @@ import { fmt, totals, fmtTotals, when, now, norm, ls } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf, carrierList, carrierInfo, carrierDef, trackLink } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
+import { OrderSumFoot, AdminPayCard, payLabel, tl2, usd2 } from './storepay.jsx';
 import { pushStatus } from './push.js';
 import { ensureAllMembers, loadOlder, olderStep } from './datawin.js';
 import { code128svg } from './barcode.js';
@@ -21,9 +22,10 @@ export const ST_COLOR = { new: '#8a919e', confirmed: '#b08d2e', preparing: '#3f9
 export const ADMIN_ST = { new: 'Onay bekliyor', confirmed: 'Onaylandı', preparing: 'Hazırlanıyor', shipped: 'Kargoda', ready: 'Teslime hazır', done: 'Tamamlandı', cancelled: 'İptal' };
 const ago = (ts) => { const h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + ' dk' : h < 48 ? Math.round(h) + ' sa' : Math.round(h / 24) + ' gün'; };
 const isPhone = () => matchMedia('(max-width: 700px)').matches;
-const orderTotal = (o) => fmtTotals(o.total || totals(orderItems(o), 'offer'));
+// mağaza siparişi KDV dahil kaydedildiyse (o.sum, 1.11.2026): büyük rakam müşterinin ödediği TL, altında KDV dahil $
+const orderTotal = (o) => (o.sum ? (o.sum.allUsd ? usd2(o.sum.vatPct > 0 ? o.sum.usdInc : o.sum.usd) : 'KDV dahil') : fmtTotals(o.total || totals(orderItems(o), 'offer')));
 // TL karşılığı: sipariş anındaki kur (o.rate), yoksa güncel kur
-const orderTL = (o, live) => toTL(o.total || totals(orderItems(o), 'offer'), o.rate ? { usd: o.rate } : live);
+const orderTL = (o, live) => o.sum ? o.sum.pay : toTL(o.total || totals(orderItems(o), 'offer'), o.rate ? { usd: o.rate } : live);
 const custMsg = (o, S) => {
   const st = ORDER_STATUS[o.status]?.cust || '';
   const cargo = o.status === 'shipped' && o.cargo?.code ? `\nKargo: ${o.cargo.company || ''} ${o.cargo.code}` : '';
@@ -229,17 +231,17 @@ export function Orders() {
                       <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
                       <span className="or-thd"><OrderThumbs o={o} /></span>
                       <span className="or-tags">
-                        <span className="or-pay">{PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
+                        <span className={'or-pay' + (o.sum && o.pay === 'card' ? ' card' : '')}>{o.sum && o.pay === 'card' ? (o.sum.inst?.n > 1 ? 'Kart ' + o.sum.inst.n + ' tk' : 'Kart') : PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
                         {o.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (car?.k || 'none')}>{car ? car.short : 'Kargo'}</span>}
                         {needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
                       </span>
-                      <span className="or-sum">{orderTL(o, live) != null ? <><b className="num">{fmtTL(orderTL(o, live))}</b><small className="num">{orderTotal(o)} · {(o.items || []).length} ürün</small></> : <><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></>}</span>
+                      <span className="or-sum">{orderTL(o, live) != null ? <><b className="num">{o.sum ? tl2(o.sum.pay) : fmtTL(orderTL(o, live))}</b><small className="num">{orderTotal(o)} · {(o.items || []).length} ürün</small></> : <><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></>}</span>
                       <span className="or-date"><span>{fullDate(o.createdAt)}</span><small className="or-ago">{ago2(o.createdAt)}</small></span>
                       <span className="or-st">
                         <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); quick(e, o); }} title="Durumu değiştir"><span>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={14} /></button>
                         {noCode && <small className="warn-t">Takip no yok</small>}
                       </span>
-                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{o.contact?.name}{!o.member && <small> · misafir</small>}</b><span className="num or-mob-s">{orderTL(o, live) != null ? fmtTL(orderTL(o, live)) : orderTotal(o)} <small>· {ago2(o.createdAt)}</small></span></span></span>
+                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{o.contact?.name}{!o.member && <small> · misafir</small>}</b><span className="num or-mob-s">{o.sum ? tl2(o.sum.pay) : orderTL(o, live) != null ? fmtTL(orderTL(o, live)) : orderTotal(o)} <small>· {ago2(o.createdAt)}</small></span></span></span>
                       <span className="or-act"><button type="button" className="or-dots" aria-label="İşlemler" onClick={(e) => { e.stopPropagation(); menu(e, o); }}><Icon n="more" s={18} /></button></span>
                     </div>
                   </li>
@@ -389,9 +391,9 @@ function OrderDetail({ id }) {
     <div className="page order-page admin-order">
       <div className="send-bar">
         <button className="btn sm ghost oa-back" onClick={back} aria-label="Siparişler"><Icon n="back" s={16} /><span>Siparişler</span></button>
-        <div className="send-t"><b>Sipariş #{o.no}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {orderTotal(o)}<span className="oa-pay-m"> · {PAY[o.pay] || ''}</span></span>
+        <div className="send-t"><b>Sipariş #{o.no}</b><span className="muted">{when(o.createdAt)} · {items.length} ürün · {o.sum ? tl2(o.sum.pay) + ' KDV dahil' : orderTotal(o)}<span className="oa-pay-m"> · {payLabel(o, PAY)}</span></span>
           <span className="oa-who">{o.uid ? <button type="button" className="oa-who-b" onClick={() => setMem(o.uid)} title="Üye bilgileri">{o.contact?.name}<Icon n="chev" s={13} className="rot-l" /></button> : <span className="oa-who-g">{o.contact?.name} · misafir</span>}</span></div>
-        <span className="pay-chip" title={o.pay === 'card' ? 'Onaylayınca müşteriye ödeme linki gönderin' : 'Ödeme yöntemi'}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{PAY[o.pay] || '—'}</span>
+        <span className="pay-chip" title={o.pay === 'card' && !o.sum ? 'Onaylayınca müşteriye ödeme linki gönderin' : 'Ödeme yöntemi'}><Icon n={o.pay === 'shop' ? 'store' : 'tag'} s={13} />{payLabel(o, PAY) || '—'}</span>
         <StatusPill status={o.status} map={ORDER_STATUS} />
         <button className="icon-btn oa-del" onClick={del} aria-label="Siparişi sil" title="Siparişi sil"><Icon n="trash" s={17} /></button>
       </div>
@@ -408,7 +410,7 @@ function OrderDetail({ id }) {
         ? <div className="ship-card adm"><span className="sc-ic"><Icon n="box" s={19} /></span><span className="ss-t"><small>Takip no · {o.cargo.company}{o.dhl?.ref && !o.dhl.cancelled ? ' · otomatik' : ''}</small><b className="num">{o.cargo.code}</b></span><span className="sc-act">{o.cargo.url && <a className="icon-btn" href={o.cargo.url} target="_blank" rel="noopener" title="Takip sayfası" aria-label="Takip sayfası"><Icon n="ext" s={16} /></a>}<button className="btn sm outline" onClick={() => flow.openShip(o)}>Değiştir</button></span></div>
         : <div className="banner warn"><Icon n="box" /><div><b>Takip numarası girilmedi.</b> {o.cargo?.company || ''} <button className="btn sm primary" onClick={() => flow.openShip(o)}>Takip no ekle</button></div></div>)}
 
-      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly />
+      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={o.sum ? <OrderSumFoot o={o} /> : null} />
       <div className="oa-status" role="radiogroup" aria-label="Sipariş durumu">
         <span className="oa-status-l">Durum:</span>
         {['new', 'confirmed', 'preparing', 'shipped', 'ready', 'done', 'cancelled'].map((k) => (
@@ -423,7 +425,8 @@ function OrderDetail({ id }) {
         <span><small>Durum</small>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={15} />
       </button>
 
-      <div className="o-info">
+      <div className={'o-info' + (o.sum ? ' has-pay' : '')}>
+        <AdminPayCard o={o} />
         <div className="o-card">
           <h3>Teslimat{o.delivery?.addr && <button className="oc-copy" onClick={() => copyText(`${o.delivery.addr.name || o.contact?.name}\n${o.delivery.addr.phone || o.contact?.phone}\n${addrLine(o.delivery.addr)}`, 'Kargo için adres kopyalandı')} title="Adresi kopyala (kargo için)" aria-label="Adresi kopyala"><Icon n="copy" s={15} /></button>}</h3>
           <p><b>{DELIVERY[o.delivery?.method] || ''}</b>{o.delivery?.method !== 'pickup' && o.delivery?.carrier && CARRIERS[o.delivery.carrier] && <span className="muted"> · müşteri seçimi: {CARRIERS[o.delivery.carrier].name}</span>}</p>

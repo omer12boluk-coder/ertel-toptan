@@ -6450,3 +6450,147 @@ html.ow-lock { overflow: hidden; }
 @keyframes owDot { 40% { opacity: 1; transform: translateY(-3px); } }
 .ow.done .ow-dots { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .ow-arc, .ow-logo, .ow-dots i { animation: none; } }
+
+/* ==== Mağaza: KDV dahil tutar, kart (demo), taksit — storepay.jsx / paycalc.js (1.11.2026) ==== */
+.ln-tl { display: block; margin-top: 5px; font: 500 12px/1.15 var(--f-body); color: var(--muted); white-space: nowrap; letter-spacing: 0; }
+.ln-tl em { font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .03em; margin-left: 4px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; vertical-align: 1px; }
+.gline-unit.has-tl, .gline-sum.has-tl { display: flex; flex-direction: column; align-items: flex-end; }
+@media (min-width: 561px) { .gline-unit.has-tl, .gline-sum.has-tl { align-items: center; } }
+@media (max-width: 560px) {
+  .gline-ctl:has(> .has-tl) { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 36px; }
+  .gline-unit.has-tl { display: block; text-align: left; }
+  .gline-sum.has-tl { display: block; text-align: right; }
+  .gline-unit.has-tl .ln-tl, .gline-sum.has-tl .ln-tl { margin-top: 4px; font-size: 11.5px; }
+}
+/* özet satırları + ödenecek tutar kutusu */
+.ssum-rows { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--muted); }
+.ssum-rows > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.ssum-rows > div > span:first-child small { font-size: 12px; opacity: .85; }
+.ssum-rows .v { text-align: right; color: var(--fg); font-weight: 500; }
+.ssum-rows .v small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+.ssum-rows .sum-save .v { color: inherit; }
+.ssum-pay { display: grid; gap: 3px; padding: 13px 14px 12px; border-radius: 12px; background: color-mix(in oklab, var(--accent) 9%, var(--surface)); border: 1px solid color-mix(in oklab, var(--accent) 18%, var(--line)); }
+.ssum-pay-l { display: flex; justify-content: space-between; gap: 8px; font: 700 11.5px/1.1 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.ssum-pay-v { font: 700 34px/1.05 var(--f-display); color: var(--fg); letter-spacing: -.005em; }
+.ssum-pay-i { font: 600 13.5px/1.25 var(--f-body); color: var(--fg); }
+.ssum-pay-s { font-size: 12px; color: var(--muted); }
+.ssum-ok { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--muted); text-align: center; }
+.ssum-ok b { color: var(--fg); font-weight: 600; }
+.co-it-p { display: flex; flex-direction: column; align-items: flex-end; }
+.co-it-p .ln-tl { margin-top: 3px; font-size: 11.5px; }
+.ssum-rows .v small:only-of-type, .co-carg small { font-size: 11px; color: var(--muted); font-weight: 500; }
+.co-carg { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+/* telefon alt çubuğu: KDV dahil TL */
+.cart-bar-t.ssum-bar span { font: 500 12px/1 var(--f-body); color: var(--muted); }
+.cart-bar-t.ssum-bar b { color: var(--fg); }
+/* ödeme adımı (bilgisayar) sabit özet: sıkı */
+@media (min-width: 960px) {
+  .co-side .ssum-rows { gap: 4px; font-size: 13px; }
+  .co-side .ssum-rows .v small { font-size: 11px; }
+  .co-side .ssum-pay { padding: 10px 12px 9px; gap: 2px; }
+  .co-side .ssum-pay-v { font-size: 29px; }
+  .co-side .ssum-pay-i { font-size: 12.5px; }
+  .co-side .ssum-pay-s { font-size: 11.5px; }
+  .co-side .ssum-ok { font-size: 11.5px; line-height: 1.35; }
+}
+@media (min-width: 960px) and (max-height: 760px) { .co-side .ssum-pay-s { display: none; } .co-side .ssum-ok { display: none; } }
+/* sepet: set içeriği (Setin içini göster) okunur boyda, $ ve TL */
+.set-in { gap: 6px; }
+.set-in li { font-size: 14px; color: var(--fg); align-items: baseline; }
+.set-in .set-in-n { min-width: 0; }
+.set-in .set-in-n b { font-weight: 600; color: var(--muted); }
+.set-in .set-in-p { display: flex; flex-direction: column; align-items: flex-end; flex: none; text-align: right; }
+.set-in .set-in-p > b { font: 700 15px/1.1 var(--f-display); }
+.set-in .set-in-p .ln-tl { margin-top: 2px; font-size: 11.5px; }
+/* kart formu (demo) + taksit seçenekleri */
+.cardf { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; padding: 14px; border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--line)); border-radius: 12px; background: color-mix(in oklab, var(--accent) 4%, var(--surface)); }
+.cardf-demo { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; font: 600 11.5px/1.25 var(--f-body); color: color-mix(in oklab, var(--warn) 80%, var(--fg)); background: color-mix(in oklab, var(--warn) 13%, var(--surface)); }
+.cardf-in { position: relative; display: block; }
+.cardf-in input { width: 100%; font-family: var(--f-mono); letter-spacing: .06em; padding-right: 96px; }
+.cbrand { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 3px 8px; border-radius: 6px; font: 800 12px/1 var(--f-body); letter-spacing: .04em; background: #fff; border: 1px solid var(--line); color: #1a1f71; }
+.cbrand.mastercard { color: #c2410c; } .cbrand.troy { color: #0e7490; } .cbrand.amex { color: #1d4ed8; }
+.cardf-row .field input { font-family: var(--f-mono); letter-spacing: .06em; }
+.cardf-wait { margin: 0; font-size: 13px; color: var(--muted); }
+.cardf-id { display: flex; align-items: center; gap: 8px; padding: 8px 11px; border-radius: 9px; font: 600 13px/1.2 var(--f-body); color: var(--ok); background: color-mix(in oklab, var(--ok) 11%, var(--surface)); }
+.insts { display: flex; flex-direction: column; gap: 6px; }
+.inst-o { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); text-align: left; font: inherit; cursor: pointer; }
+.inst-o .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); }
+.inst-o.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.inst-o.on .radio { border: 5px solid var(--accent); }
+.inst-t { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.inst-t b { font-weight: 700; font-size: 14.5px; }
+.inst-t small { font-size: 12px; color: var(--muted); }
+.inst-a { display: flex; flex-direction: column; align-items: flex-end; }
+.inst-a b { font: 700 16px/1.1 var(--f-display); }
+.inst-a small { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+@media (hover: hover) { .inst-o:hover:not(.on) { border-color: color-mix(in oklab, var(--accent) 45%, var(--line)); } }
+/* sipariş kâğıdı altı (müşteri + yönetim) */
+.paper-f.has-foot { display: flex; flex-direction: column; gap: 10px; }
+.paper-f.has-foot .paper-cnt { font-size: 13px; }
+.ssum.foot { display: grid; gap: 12px; }
+@media (min-width: 700px) { .ssum.foot { grid-template-columns: minmax(0, 1fr) minmax(250px, 300px); align-items: end; gap: 24px; } }
+.paper .ssum-rows .v { color: #111827; } .paper .ssum-rows { color: #6b7280; }
+.paper .ssum-pay { background: #eef3fb; border-color: #d5e0f3; }
+.paper .ssum-pay-v { color: #111827; }
+/* yönetim: Ödeme kartı */
+.o-card.pay-card h3 { display: flex; align-items: center; gap: 6px; }
+.o-card.pay-card h3 .oc-copy { margin-left: auto; }
+.pc-inv { display: grid; gap: 4px; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: color-mix(in oklab, var(--accent) 7%, var(--surface)); }
+.pc-inv-l { font: 700 11px/1.1 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.pc-inv-l small { font-weight: 600; margin-left: 4px; opacity: .8; }
+.pc-inv > b { font: 700 26px/1.1 var(--f-display); }
+.pc-inv-r { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.pc-inv-r span:last-child { color: var(--fg); font-weight: 500; }
+.or-pay.card { color: var(--accent); }
+.pay-amt { margin: 8px 0 0; font-size: 14px; }
+.pay-amt b { font: 700 20px/1 var(--f-display); }
+/* önizleme sonucu (siparişi tamamla, önizleme adresinde) */
+.pv-done { display: flex; flex-direction: column; gap: 14px; }
+.pv-h { margin: 10px 0 0; font: 700 20px/1.1 var(--f-display); }
+.pv-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.pv-row > span:nth-child(2) { display: flex; flex-direction: column; min-width: 0; }
+.pv-row small { color: var(--muted); font-size: 12px; }
+.pv-amt { display: flex; flex-direction: column; align-items: flex-end; }
+.pv-amt b { font: 700 19px/1.1 var(--f-display); }
+@media (max-width: 640px) { .pv-row { grid-template-columns: minmax(0, 1fr) auto; } .pv-row .pay-chip { grid-column: 1 / -1; justify-self: start; } }
+.pv-info { grid-template-columns: minmax(0, 420px) !important; }
+.pv-msg { margin: 0; padding: 12px 14px; white-space: pre-wrap; font: 13px/1.5 var(--f-mono); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+/* Ayarlar: kart ödeme komisyonu tablosu */
+.inst-ed { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 8px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.inst-ed-h { display: flex; flex-direction: column; gap: 3px; }
+.inst-ed-h small { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.inst-ed-t { display: flex; flex-direction: column; gap: 6px; }
+.inst-ed-l, .inst-ed-r { display: grid; grid-template-columns: minmax(0, 1.2fr) 110px minmax(0, 1fr) 72px; gap: 10px; align-items: center; }
+.inst-ed-l { font: 700 11px/1 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 10px; }
+.inst-ed-r { padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.inst-ed-r.off { opacity: .55; }
+.inst-ed-n { display: flex; align-items: center; gap: 6px; }
+.inst-ed-n select { width: 64px; height: 34px; }
+.inst-ed-p { position: relative; }
+.inst-ed-p input { width: 100%; height: 34px; padding-right: 26px; text-align: right; }
+.inst-ed-p i { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--muted); font-size: 13px; }
+.inst-ed-x { display: flex; flex-direction: column; font-weight: 600; font-size: 14px; }
+.inst-ed-x small { font-weight: 500; font-size: 11.5px; color: var(--muted); }
+.inst-ed-a { display: flex; justify-content: flex-end; gap: 2px; }
+@media (max-width: 560px) { .inst-ed-l { display: none; } .inst-ed-r { grid-template-columns: minmax(0, 1fr) 92px auto; } .inst-ed-x { grid-column: 1 / 3; grid-row: 2; flex-direction: row; gap: 8px; align-items: baseline; } .inst-ed-a { grid-row: 1 / 3; grid-column: 3; flex-direction: column; } }
+/* ödeme özeti kısa ekranda (laptop 1366×768 tarayıcı ≈ 650 px) sığsın: tekrar eden satırlar gizlenir, ürün listesi en az 2 satır */
+@media (min-width: 960px) and (max-height: 860px) {
+  .co-side .ssum-rows .v .ssum-usd, .co-side .ssum-rows .ssum-inc { display: none; }
+  .co-side .cart-sum { gap: 8px; }
+  .co-side .ssum-pay-v { font-size: 26px; }
+  .co-side .co-carg small, .co-side .ssum-rows .v small { margin-top: 0; line-height: 1.1; }
+}
+@media (min-width: 960px) and (max-height: 700px) {
+  .co-side .co-side-n { display: none; }
+  .co-side .legal-ok .legal-note { display: none; }
+  .co-side .ssum-rows { gap: 2px; }
+}
+.co-it-n:has(> .co-it-t) { display: flex; flex-direction: column; -webkit-line-clamp: unset; min-width: 0; }
+.co-it-t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.co-items-tg { display: none; }
+.co-side .cart-sum.co-tight .co-items { display: none; }
+.co-side .cart-sum.co-tight .co-items-tg { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); font: 600 13px/1 var(--f-body); }
+.co-side .cart-sum.co-tight .co-items-tg .rot-l { transform: rotate(-90deg); }
+.co-side .cart-sum.co-tight.co-fixed { overflow-y: auto; scrollbar-width: thin; }
+.co-items.in-sheet { max-height: none; overflow: visible; }

@@ -40,7 +40,7 @@ const priced = (r) => r.status !== 'new';
 const listRate = (r, live) => (r.rate && r.rate.usd > 0 ? r.rate : live);
 
 // ---- Sayfadaki tablo --------------------------------------------------------
-export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, viewOnly = false, b2b = false }) { // b2b: bayiye KDV yok, liste toplamı ve kârı gösterilir // viewOnly: tamamlanmış sipariş — ürün penceresinde Sepete ekle yok
+export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, viewOnly = false, b2b = false, foot = null }) { // foot: mağaza siparişinin KDV dahil tutar bölümü (storepay OrderSumFoot) — verilmezse eski toplam + KDV satırı // b2b: bayiye KDV yok, liste toplamı ve kârı gösterilir // viewOnly: tamamlanmış sipariş — ürün penceresinde Sepete ekle yok
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const live = useRate();
@@ -85,7 +85,8 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
           </tbody>
         </table>
       </div>
-      <footer className="paper-f">
+      <footer className={'paper-f' + (foot ? ' has-foot' : '')}>
+        {foot ? <><span className="paper-cnt">{items.length} kalem · {items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet</span>{foot}</> : <>
         <div className="paper-tot">
           <span className="paper-cnt">{items.length} kalem · {items.reduce((n, i) => n + (Number(i.qty) || 0), 0)} adet</span>
           <div className="paper-sum">
@@ -95,6 +96,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
           </div>
         </div>
         {b2b ? <B2bGain items={items} /> : <VatLines by={tot} rate={rate} />}
+        </>}
       </footer>
       {zoom && <Lightbox urls={zoom.urls} title={zoom.title} onClose={() => setZoom(null)} />}
       {sheet && <ProductSheet p={sheet} viewOnly={viewOnly} onClose={() => setSheet(null)} />}

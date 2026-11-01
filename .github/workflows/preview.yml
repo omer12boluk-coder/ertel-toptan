@@ -1,8 +1,8 @@
-# Önizleme: resim-adresi / ayarlar-duzen / tasarim-2 dalına her gönderimde uygulamayı Firebase ÖNİZLEME kanalına yükler (canlı site değişmez).
+# Önizleme: resim-adresi / ayarlar-duzen / tasarim-2 / kdv-odeme dalına her gönderimde uygulamayı Firebase ÖNİZLEME kanalına yükler (canlı site değişmez).
 name: Önizleme (canlıya dokunmaz)
 on:
   push:
-    branches: [resim-adresi, ayarlar-duzen, tasarim-2, tasarim-3]
+    branches: [resim-adresi, ayarlar-duzen, tasarim-2, tasarim-3, kdv-odeme]
   workflow_dispatch:
 jobs:
   preview:

@@ -17,11 +17,13 @@
 "İndirim %",
 "Yuvarlama",
 "Teklifte −/+ adımı (USD)",
+"Mağazada KDV dahil satış",
 "Sepette avantaj tutarını göster",
 "Toplamın altında KDV bilgisini göster",
 "KDV oranı (%)",
 "Elle kur (isteğe bağlı)",
 "İndirim tablosu",
+"Mağaza sepeti ve ödeme",
 "Sepet ve toplam",
 "Kur"
 ],
@@ -208,8 +210,9 @@
 ],
 "odeme": [
 "Havale / EFT",
-"Kredi kartı (ödeme linki gönderilir)",
-"Kredi kartı: “Yakında” (seçilemez)",
+"Mağazada kredi / banka kartı",
+"Sepet linki: kredi kartı (ödeme linki gönderilir)",
+"Sepet linki: kredi kartı “Yakında” (seçilemez)",
 "Dükkanda ödeme",
 "Havale / EFT bilgisi"
 ],

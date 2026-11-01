@@ -12,6 +12,7 @@ import { encodeList, listLink, listItems, listRecord } from './listcode.js';
 import { ProductSheet, Lightbox, imageList } from './catalog.jsx';
 import { renderListImages, currentRate, ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { Checkout } from './checkout.jsx';
+import { useStoreVat, useStoreSum, LineTL, SumRows, PayableBox, tl2, usd2 } from './storepay.jsx';
 
 import { setCartItems, lineCount, SetCartLine } from './sets.jsx';
 // sepet satırları: set kalemleri tek satırda toplanır
@@ -147,6 +148,10 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
   const setSave = Math.round(items.filter((i) => i.sk && i.list > i.offer).reduce((a, i) => a + (i.list - i.offer) * i.qty, 0) * 100) / 100;
   const sideRef = useRef(null), boxRef = useRef(null);
   useFixedCartSum(sideRef, boxRef);
+  // mağaza: KDV dahil satış (Ayarlar > Fiyat, KDV ve kur) → satırlarda TL, özette büyük "Ödenecek tutar (KDV dahil)"
+  const sv = useStoreVat();
+  const vsum = useStoreSum(items, 'havale', 1, pub && sv.on);
+  const k = vsum ? vsum.rate : null;
   const menu = (e, it) => openMenu(e, [
     { label: '1 tane daha', icon: 'plus', onClick: () => setQty(it.id, it.qty + 1) },
     it.qty > 1 && { label: '1 tane azalt', icon: 'minus', onClick: () => setQty(it.id, it.qty - 1) },
@@ -169,7 +174,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
           <li className="gline gline-h" aria-hidden="true"><span>Ürün</span><span className="gline-ctl"><span className="r">Birim fiyat</span><span className="c">Adet</span><span className="r">Toplam</span><span /></span></li>
           {groupLines(items).map((g) => g.set ? (
             <SwipeLine key={g.sk} id={g.sk} open={swOpen} setOpen={setSwOpen} onDelete={() => setQty(g.sk, 0)} className="set-line">
-              <SetCartLine group={g} />
+              <SetCartLine group={g} rate={k} />
             </SwipeLine>
           ) : ((it) => (
             <SwipeLine key={it.id} id={it.id} open={swOpen} setOpen={setSwOpen} onDelete={() => setQty(it.id, 0)} onContextMenu={(e) => menu(e, it)}>
@@ -181,9 +186,9 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
                 </button>
               </div>
               <div className="gline-ctl">
-                <span className="num gline-unit" data-l="Birim">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}</span>
+                <span className={'num gline-unit' + (k ? ' has-tl' : '')} data-l="Birim">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}{k && <LineTL v={it.offer} cur={it.cur} rate={k} />}</span>
                 <Stepper small min={1} value={it.qty} onChange={(v) => setQty(it.id, v)} onRemove={() => setQty(it.id, 0)} />
-                <b className="num gline-sum">{it.offer == null ? '—' : fmt(it.offer * it.qty, it.cur)}</b>
+                <b className={'num gline-sum' + (k ? ' has-tl' : '')}>{it.offer == null ? '—' : fmt(it.offer * it.qty, it.cur)}{k && it.offer != null && <LineTL v={it.offer * it.qty} cur={it.cur} rate={k} />}</b>
                 <button className="icon-btn sm" onClick={() => setQty(it.id, 0)} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
               </div>
             </SwipeLine>
@@ -194,7 +199,10 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
             <div className="cs-head-t"><b>Sepetiniz</b><small>{lineCount(items)} ürün · {nQty} adet</small></div>
             <button type="button" className="cart-clear" onClick={() => setAsk(true)} title="Sepetteki tüm ürünleri çıkar"><Icon n="trash" s={14} />Temizle</button>
           </div>
-          <div className="sum-rows">
+          {vsum ? <>
+            <SumRows sum={vsum}>{setSave > 0 && <div className="sum-save"><span>Set indirimi <small>(dahil)</small></span><span className="v">−{fmt(setSave, items.find((i) => i.sk)?.cur || 'USD')}</span></div>}</SumRows>
+            <PayableBox sum={vsum} />
+          </> : <><div className="sum-rows">
             {!pub && S.pricing.showRetail && saving.length > 0 && <div><span>Liste toplamı</span><span className="num strike">{fmtTotals(tList)}</span></div>}
             {!pub && S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
             {pub && setSave > 0 && <div className="sum-save"><span>Set indirimi</span><span className="num">−{fmt(setSave, items.find((i) => i.sk)?.cur || 'USD')}</span></div>}
@@ -202,6 +210,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
             {tTL != null && <div className="sum-tl"><span /><span className="num">≈ {fmtTL(tTL)}</span></div>}
           </div>
           {pub && <VatLines by={tot} />}
+          </>}
           {(!pub || orders) && (
             <button className="btn primary big" onClick={onConfirm}>
               <Icon n="check" />
@@ -221,7 +230,9 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
       </div>
       {ask && <Confirm title="Sepet temizlensin mi?" text={`Sepetteki ${lineCount(items)} ürün çıkarılacak.`} okLabel="Temizle" tone="danger" onOk={reset} onClose={() => setAsk(false)} />}
       {(orders || !pub) && <div className="cart-bar" aria-hidden="false">
-        <span className="cart-bar-t"><small>{pub ? 'Toplam' : 'Toptan toplam'}</small><b className="num">{fmtTotals(tot)}</b></span>
+        {vsum
+          ? <span className="cart-bar-t ssum-bar"><small>Ödenecek · KDV dahil</small><b className="num">{tl2(vsum.pay)}</b>{vsum.allUsd && <span className="num">{usd2(vsum.usdInc)}</span>}</span>
+          : <span className="cart-bar-t"><small>{pub ? 'Toplam' : 'Toptan toplam'}</small><b className="num">{fmtTotals(tot)}</b></span>}
         <button className="btn primary" onClick={onConfirm}><Icon n="check" s={18} />Sepeti onayla</button>
       </div>}
       {sheetP && <ProductSheet p={sheetP} viewOnly onClose={() => setSheetP(null)} />}

@@ -1,3 +1,4 @@
+import { storeSum, instList, storeVatOn, storeCardOn } from '../src/paycalc.js'; // mağaza KDV dahil tutar + kart komisyonu (uygulamayla aynı hesap)
 // ERTEL B2B — site değişiklik bekçisi (Cloudflare Worker, dakikada bir)
 // Sitenin ürün beslemesini okur, bir öncekiyle karşılaştırır. Ürün kalkmış/eklenmiş, ad/resim/marka değişmiş
 // ya da bir ürünün fiyatı (kur değişiminden bağımsız olarak) değişmişse GitHub'daki "Siteyle eşitle" işini başlatır.
@@ -243,6 +244,11 @@ function fsVal(v) {
   return null;
 }
 const money = (n, c = 'USD') => (c === 'USD' ? '$' : '') + Number(n || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + (c === 'USD' ? '' : ' ' + c);
+// mağaza siparişi KDV dahil kaydedildiyse (o.sum): bildirimde ödenen TL tutar ve kart/taksit
+const tlm = (n) => Number(n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+const ordTot = (o) => (o.sum ? tlm(o.sum.pay) + (o.sum.vatPct > 0 ? ' KDV dahil' : '') : Object.entries(o.total || {}).map(([c, v]) => money(v, c)).join(' + '));
+const BRANDS = { visa: 'VISA', mastercard: 'Mastercard', troy: 'TROY', amex: 'AMEX' };
+const cardTxt = (o) => (o.pay === 'card' && o.sum ? 'Kart · ' + (o.sum.inst?.n > 1 ? o.sum.inst.n + ' taksit' : 'tek çekim') + (o.card?.last4 ? ` (${BRANDS[o.card.brand] || o.card.brand || ''} •••• ${o.card.last4}${o.card.demo ? ', demo' : ''})` : '') : '');
 async function notifyOrder(env, id, internal) {
   if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
   if (!internal && await env.KV.get('n:' + id)) return { ok: true, already: true };
@@ -254,10 +260,10 @@ async function notifyOrder(env, id, internal) {
   // bekçinin yazdığı sipariş (via 'srv') yazılır yazılmaz bildirildi: dışarıdan /notify ile tekrar bildirilemez, KV yazması da gerekmez
   if (!internal && o.via === 'srv') return { ok: true, already: true };
   if (!internal) await env.KV.put('n:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
-  const tot = Object.entries(o.total || {}).map(([c, v]) => money(v, c)).join(' + ');
+  const tot = ordTot(o);
   const lines = (o.items || []).map((i) => `• ${i.qty} × ${i.n} (${i.k || ''}) ${i.price != null ? money(i.price, i.cur) : ''}`).join('\n');
   const deliv = o.delivery?.method === 'pickup' ? 'Dükkandan teslim' : 'Kargo' + (o.delivery?.addr ? ` · ${o.delivery.addr.district || ''} / ${o.delivery.addr.city || ''}` : '');
-  const pay = { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[o.pay] || o.pay;
+  const pay = cardTxt(o) || { havale: 'Havale / EFT', card: 'Kredi kartı (link)', shop: 'Dükkanda ödeme' }[o.pay] || o.pay;
   const link = `https://ertelmarket.com/admin/s/${id}`;
   const text = `🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n${deliv} · ${pay}${o.note ? '\nNot: ' + o.note : ''}\n\n${lines}\n\nPanelde aç: ${link}`;
   await adminPush(env, { title: `🛒 Yeni sipariş #${o.no} · ${tot}`, body: `${o.contact?.name || ''} · ${(o.items || []).length} ürün · ${deliv}`, url: '/admin/s/' + id, tag: 'ao-' + id }).catch(() => {});
@@ -518,7 +524,7 @@ async function notifyCancel(env, id) {
   const last = (o.history || []).slice(-1)[0] || {};
   if (last.by !== 'customer') return { ok: true, skip: 'yönetici iptali' };
   await env.KV.put('nc:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
-  const tot = Object.entries(o.total || {}).map(([c, v]) => money(v, c)).join(' + ');
+  const tot = ordTot(o);
   const link = `https://ertelmarket.com/admin/s/${id}`;
   const text = `❌ Müşteri siparişi iptal etti #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${(o.items || []).length} ürün · ${tot}\n\nPanelde aç: ${link}`;
   await adminPush(env, { title: `❌ Sipariş iptal edildi #${o.no}`, body: `${o.contact?.name || ''} · ${tot} · müşteri iptal etti`, url: '/admin/s/' + id, tag: 'ao-' + id }).catch(() => {});
@@ -1202,6 +1208,12 @@ async function pubPrices() {
 }
 const r2c = (n) => Math.round(Number(n) * 100) / 100;
 // Setler (31.10.2026): tanımlar settings/public.sets; set kalemi fiyatı katalogdan değil setin paket fiyatından (pp) doğrulanır
+// settings/public (KDV, kur, kart ayarları) — 60 sn önbellek
+let psCache = null;
+async function pubSettingsDoc() {
+  if (psCache && psCache.at > Date.now() - 60000) return psCache.d;
+  const d = await fsDoc('settings/public'); psCache = { at: Date.now(), d }; return d;
+}
 let setCache = null;
 async function pubSets() {
   if (setCache && setCache.at > Date.now() - 60000) return setCache.map;
@@ -1263,13 +1275,40 @@ async function placeOrder(req, env, b, ctx) {
     total[cur] = (total[cur] || 0) + price * qty;
   }
   if (changed.length) return { ok: false, code: 'price', error: 'Bazı ürünlerin fiyatı değişti', items: changed };
+  // ---- KDV dahil tutar + kart (1.11.2026): uygulamayla aynı formül (src/paycalc.js), ayarlar settings/public'ten.
+  // Müşterinin ekranda gördüğü tutar (o.seen) ile 1 TL'den fazla fark varsa (kur değiştiyse) sipariş yazılmaz, yeni tutar döner.
+  // 1 TL'ye kadar farkta müşteri lehine olan (düşük) tutar kaydedilir. Kart bilgisi gelmez: sadece marka + son 4 hane.
+  const PS = await pubSettingsDoc().catch(() => null); const P = PS?.pricing || {}, OS = PS?.orders || {};
+  if (pay === 'card' && !storeCardOn(OS)) return { ok: false, error: 'Kartla ödeme şu an kapalı, başka bir ödeme şekli seçin' };
+  let sum = null, card = null;
+  const vatOn = storeVatOn(P);
+  if (vatOn || pay === 'card') {
+    const manual = Number(String(P.manualRate ?? '').replace(',', '.'));
+    const srvRate = manual > 0 ? manual : Number((await haremRate().catch(() => null))?.usd) || 0;
+    const seen = o.seen && typeof o.seen === 'object' ? o.seen : {}; const cRate = Number(seen.rate) || 0;
+    const calc = (k) => storeSum(items.map((i) => ({ price: i.price, cur: i.cur, qty: i.qty })), { rate: k, vatPct: P.vatPct ?? 20, vat: vatOn, pay, n: Number(o.inst) || 1, inst: instList(OS) });
+    let s1 = srvRate > 0 ? calc(srvRate) : null;
+    if (!s1 && cRate > 0) s1 = calc(cRate); // kur alınamadıysa müşterinin gördüğü kur
+    if (!s1) return { ok: false, error: 'Dolar kuru alınamadı, birkaç saniye sonra tekrar deneyin' };
+    if (cRate > 0 && cRate !== s1.rate) {
+      const s2 = calc(cRate);
+      if (s2 && Math.abs(s2.pay - s1.pay) <= 1) { if (s2.pay < s1.pay) s1 = s2; }
+      else return { ok: false, code: 'rate', rate: s1.rate, pay: s1.pay, error: 'Dolar kuru güncellendi' };
+    } else if (Number(seen.pay) > 0 && Math.abs(Number(seen.pay) - s1.pay) > 1) return { ok: false, code: 'rate', rate: s1.rate, pay: s1.pay, error: 'Tutar güncellendi' };
+    const { lines, ...rest } = s1; sum = { ...rest, at: Date.now() };
+  }
+  if (pay === 'card') {
+    const c = o.card && typeof o.card === 'object' ? o.card : {};
+    card = { brand: String(c.brand || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), last4: /^\d{4}$/.test(String(c.last4)) ? String(c.last4) : '', bank: String(c.bank || '').slice(0, 40), demo: true }; // gerçek ödeme altyapısı gelene kadar hep demo
+  }
   if (b.check) return { ok: true, check: true }; // sadece fiyat kontrolü (siparişte üye olurken hesap açmadan önce)
-  const t = Date.now(); const rate = await haremRate().catch(() => null);
+  const t = Date.now(); const rate = sum ? { usd: sum.rate } : await haremRate().catch(() => null);
   const doc = {
     no: /^[A-Z0-9]{4,10}$/.test(String(o.no || '')) ? String(o.no) : Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join(''),
     // kartla ödeme (link gönderilir) siparişi doğrudan 'Onaylandı' başlar (uygulamadaki davranış, 29.10.2026)
     uid, member: !!uid, status: pay === 'card' ? 'confirmed' : 'new', createdAt: t, updatedAt: t, unread: 1, history: pay === 'card' ? [{ s: 'new', at: t }, { s: 'confirmed', at: t, by: 'card' }] : [{ s: 'new', at: t }],
     items, total, rate: rate?.usd || (Number(o.rate) > 0 ? Number(o.rate) : null), via: 'srv',
+    ...(sum ? { sum } : {}), ...(card ? { card } : {}),
   };
   for (const k of ORD_FIELDS) if (o[k] !== undefined && o[k] !== null) doc[k] = o[k];
   if (typeof doc.note === 'string') doc.note = doc.note.slice(0, 1000);
@@ -1278,7 +1317,7 @@ async function placeOrder(req, env, b, ctx) {
   if (!w.ok) return { ok: false, error: w.exists ? 'Bu sipariş zaten kayıtlı' : 'Sipariş kaydedilemedi, tekrar deneyin' };
   await env.KV.put(kr, String(nr + 1), { expirationTtl: 7200 });
   ctx.waitUntil(notifyOrder(env, id, true).catch((e) => console.log('notify', e.message)));
-  return { ok: true, id, no: doc.no, total, items };
+  return { ok: true, id, no: doc.no, total, items, ...(sum ? { sum } : {}) };
 }
 
 // Firestore'a servis hesabıyla yazma (kurallara takılmaz). Erişim anahtarı ~55 dk KV'de saklanır (imza her istekte atılmasın).
