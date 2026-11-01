@@ -235,6 +235,7 @@ export function Orders() {
                         {o.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (car?.k || 'none')}>{car ? car.short : 'Kargo'}</span>}
                         {needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
                         {o.pv && <span className="otag pvtag">Önizleme</span>}
+                        {o.paid?.at && !['confirmed', 'preparing', 'ready', 'shipped', 'done'].includes(o.status) && <span className="otag paidtag"><Icon n="check" s={11} />Ödendi bildirildi</span>}
                       </span>
                       <span className="or-sum">{orderTL(o, live) != null ? <><b className="num">{o.sum ? tl2(o.sum.pay) : fmtTL(orderTL(o, live))}</b><small className="num">{orderTotal(o)} · {(o.items || []).length} ürün</small></> : <><b className="num">{orderTotal(o)}</b><small>{(o.items || []).length} ürün</small></>}</span>
                       <span className="or-date"><span>{fullDate(o.createdAt)}</span><small className="or-ago">{ago2(o.createdAt)}</small></span>
@@ -426,6 +427,7 @@ function OrderDetail({ id }) {
         <span><small>Durum</small>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={15} />
       </button>
 
+      {o.paid?.at && !o.sum && <div className="banner ok"><Icon n="check" /><div><b>Müşteri havale ödemesini yaptığını bildirdi.</b> {new Date(o.paid.at).toLocaleString('tr-TR')}</div></div>}
       <div className={'o-info' + (o.sum ? ' has-pay' : '')}>
         <AdminPayCard o={o} />
         <div className="o-card">

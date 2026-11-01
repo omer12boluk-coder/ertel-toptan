@@ -14,8 +14,8 @@ import { SwipeLine } from './cart.jsx';
 import { FavGrid, WaitGrid } from './catalog.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
-import { pvSave } from './pvorders.js';
-import { useStoreVat, useStoreCard, useStoreSum, SumRows, PayableBox, CardForm, emptyCard, cardErrors, cardOut, LineTL, tl2, usd2, PREVIEW, OrderSumFoot, AdminPayCard, payLabel, cardLine } from './storepay.jsx';
+import { pvSave, pvPatch } from './pvorders.js';
+import { useStoreVat, useStoreCard, useStoreSum, SumRows, PayableBox, CardForm, emptyCard, cardErrors, cardOut, LineTL, tl2, usd2, PREVIEW, OrderSumFoot, AdminPayCard, payLabel, cardLine, PaidNotice } from './storepay.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
 import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
 import { LegalConsent, SignupConsent, legalFromOrder, OrderLegalLink } from './legalui.jsx';
@@ -546,6 +546,16 @@ function ShipCard({ o }) {
 
 // =============================================================================================
 // Sipariş sayfası: az önce verildiyse teşekkür kutusu; her zaman durum, ödeme, teslimat ve ürünler
+// Havale "Ödemeyi yaptım" (1.11.2026): bekçi siparişe paid yazar + yöneticiye haber verir; önizleme siparişi bu cihazda
+async function sendPaid(o) {
+  try {
+    if (String(o.id).startsWith('pv_')) { pvPatch(o.id, { paid: { at: now(), by: 'customer' } }); toast('Ödeme bildiriminiz alındı'); return; }
+    const r = await fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/order-paid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: o.id }) });
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'tekrar deneyin');
+    toast('Ödeme bildiriminiz alındı, teşekkürler');
+  } catch (x) { toast('Bildirilemedi: ' + x.message, 'bad'); }
+}
 export function OrderPage({ id }) {
   const { settings: S, orderJust, member } = useStore();
   const seed = () => (store.s.justOrder?.id === id ? store.s.justOrder : undefined);
@@ -605,6 +615,7 @@ export function OrderPage({ id }) {
       {!autoCargo(o) && ['shipped', 'done'].includes(o.status) && o.cargo?.code && <ShipCard o={o} />}
 
 
+      <PaidNotice o={o} payInfo={S.shop.payInfo} onSend={() => setConfirm({ title: 'Ödemeyi bildir', text: 'Havale / EFT ödemesini yaptığınızı bize bildireceğiz. Gönderdiyseniz devam edin.', okLabel: 'Bildir', onOk: () => sendPaid(o) })} />
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={o.sum ? <OrderSumFoot o={o} /> : null} />
       <OrderRate o={o} />
 

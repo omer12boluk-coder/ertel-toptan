@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { useStore } from './store.js';
 import { Icon, copyText } from './ui.jsx';
 import { useRate } from './listsheet.jsx';
-import { storeSum, instList, storeVatOn, storeCardOn, cardBrand, luhnOk, digitsOf, r2 } from './paycalc.js';
+import { storeSum, instList, storeVatOn, storeCardOn, cardBrand, luhnOk, digitsOf, invoiceSplit, r2 } from './paycalc.js';
 
 export const tl2 = (v) => (v == null || isNaN(v) ? '—' : Number(v).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺');
 export const usd2 = (v) => '$' + Number(v || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -43,13 +43,13 @@ export function LineTL({ v, cur = 'USD', rate, vat = true }) {
 const instName = (ins) => (!ins ? '' : ins.n > 1 ? ins.n + ' taksit' : 'Tek çekim');
 
 // Ödenecek tutar kutusu (büyük KDV dahil TL)
-export function PayableBox({ sum, label = 'Ödenecek tutar', compact }) {
+export function PayableBox({ sum, label = 'Ödenecek tutar', compact, usd = true }) {
   if (!sum) return null;
   return (
     <div className={'ssum-pay' + (compact ? ' compact' : '')}>
       <span className="ssum-pay-l"><span>{label}</span>{sum.vatPct > 0 && <span>KDV dahil</span>}</span>
       <b className="ssum-pay-v num">{tl2(sum.pay)}</b>
-      {sum.allUsd && <span className="ssum-pay-usd num">{usd2(sum.vatPct > 0 ? sum.usdInc : sum.usd)}{sum.vatPct > 0 && <small>KDV dahil</small>}</span>}
+      {usd && sum.allUsd && <span className="ssum-pay-usd num">{usd2(sum.vatPct > 0 ? sum.usdInc : sum.usd)}{sum.vatPct > 0 && <small>KDV dahil</small>}</span>}
       {sum.inst && <span className="ssum-pay-i num">{sum.inst.n > 1 ? `${sum.inst.n} taksit · ${sum.inst.n} × ${tl2(sum.inst.per)}` : 'Kartla tek çekim'}</span>}
       <span className="ssum-pay-s num">Kur {rateTxt(sum.rate)}</span>
     </div>
@@ -64,7 +64,7 @@ export function SumRows({ sum, children, incRow }) {
       <div><span>Ara toplam <small>(KDV hariç)</small></span><span className="v">{tl2(sum.tl)}{sum.allUsd && <small className="ssum-usd">{usd2(sum.usd)}</small>}</span></div>
       {sum.vatPct > 0 && <div><span>KDV %{sum.vatPct.toLocaleString('tr-TR')}</span><span className="v">{tl2(sum.vat)}</span></div>}
       {(incRow || (sum.inst && sum.inst.fee > 0)) && sum.vatPct > 0 && <div className="ssum-inc"><span>KDV dahil</span><span className="v">{tl2(sum.inc)}</span></div>}
-      {sum.inst && sum.inst.fee > 0 && <div><span>Ödeme komisyonu <small>({instName(sum.inst)} · %{sum.inst.pct.toLocaleString('tr-TR')})</small></span><span className="v">+{tl2(sum.inst.fee)}</span></div>}
+      {sum.inst && sum.inst.fee > 0 && <div><span>Ödeme komisyonu{sum.inst.n > 1 && <small> ({instName(sum.inst)} · %{sum.inst.pct.toLocaleString('tr-TR')})</small>}</span><span className="v">+{tl2(sum.inst.fee)}</span></div>}
       {children}
     </div>
   );
@@ -124,7 +124,7 @@ export function CardForm({ card, setCard, inc, list, err = {} }) {
               return (
                 <button key={x.n} type="button" role="radio" aria-checked={on} className={'inst-o' + (on ? ' on' : '')} onClick={() => setCard({ ...card, n: x.n })}>
                   <span className="radio" aria-hidden="true" />
-                  <span className="inst-t"><b>{x.n > 1 ? x.n + ' taksit' : 'Tek çekim'}</b>{x.pct > 0 && <small>komisyon %{x.pct.toLocaleString('tr-TR')}</small>}</span>
+                  <span className="inst-t"><b>{x.n > 1 ? x.n + ' taksit' : 'Tek çekim'}</b>{x.pct > 0 && x.n > 1 && <small>komisyon %{x.pct.toLocaleString('tr-TR')}</small>}</span>
                   <span className="inst-a num"><b>{tl2(tot)}</b>{x.n > 1 && <small>{x.n} × {tl2(r2(tot / x.n))}</small>}</span>
                 </button>
               );
@@ -145,25 +145,40 @@ export function OrderSumFoot({ o }) {
   return (
     <div className="ssum foot">
       <SumRows sum={sum} />
-      <PayableBox sum={sum} label={o.pay === 'card' ? 'Kartla ödenen' : 'Ödenecek tutar'} />
+      <PayableBox sum={sum} label={o.pay === 'card' ? 'Kartla ödenen' : 'Ödenecek tutar'} usd={false} />
     </div>
   );
 }
 
-// Yönetim > sipariş detayı: Ödeme kartı — sade: nasıl ödendi + faturaya yazılacak tutar (ayrıntı üstteki tabloda)
+// Yönetim > sipariş detayı: Ödeme kartı — nasıl ödendi + KDV hariç / KDV dahil (faturaya yazılacak) tutar
 export function AdminPayCard({ o }) {
   const sum = o?.sum; if (!sum) return null;
   const how = o.pay === 'card' ? 'Kredi kartı · ' + (sum.inst?.n > 1 ? sum.inst.n + ' taksit' : 'tek çekim') : o.pay === 'havale' ? 'Havale / EFT' : 'Dükkanda ödeme';
+  const inv = invoiceSplit(sum.pay, sum.vatPct);
   return (
     <div className="o-card pay-card">
-      <h3>Ödeme{o.card?.demo && <span className="tag warn">Demo</span>}<button className="oc-copy" onClick={() => copyText(String(sum.pay.toFixed(2)).replace('.', ','), 'Fatura tutarı kopyalandı')} title="Fatura tutarını kopyala" aria-label="Fatura tutarını kopyala"><Icon n="copy" s={15} /></button></h3>
+      <h3>Ödeme{o.card?.demo && <span className="tag warn">Demo</span>}</h3>
       <p><b>{how}</b></p>
       {o.card && <p className="muted num">{cardLine(o.card)}</p>}
-      <div className="pc-inv num">
-        <span className="pc-inv-l">{o.pay === 'card' ? 'Müşterinin ödediği' : 'Müşterinin ödeyeceği'}</span>
-        <b>{tl2(sum.pay)}</b>
-        <span className="pc-inv-n">Faturayı bu tutara kesin (KDV dahil)</span>
+      <div className="pc-two num">
+        <span><small>KDV hariç</small><b>{tl2(inv.base)}</b></span>
+        <span><small>KDV dahil</small><b>{tl2(sum.pay)}</b></span>
       </div>
+      {o.paid?.at && <p className="pc-paid"><Icon n="check" s={14} />Müşteri ödemeyi yaptığını bildirdi · {new Date(o.paid.at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>}
+    </div>
+  );
+}
+
+// Müşterinin sipariş sayfası: havale siparişinde "Ödemeyi yaptım" bildirimi (bekçi /order-paid; önizleme siparişinde bu cihazda)
+export function PaidNotice({ o, payInfo, onSend }) {
+  if (!o || o.pay !== 'havale' || o.status === 'cancelled') return null;
+  if (o.paid?.at) return <div className="banner ok paid-ok"><Icon n="check" /><div><b>Ödeme bildiriminiz alındı.</b> {new Date(o.paid.at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · Hesabımızı kontrol edip siparişinizi onaylayacağız.</div></div>;
+  if (['confirmed', 'preparing', 'ready', 'shipped', 'done'].includes(o.status)) return null; // zaten onaylandı
+  return (
+    <div className="paid-card">
+      <div className="paid-t"><b>Havale / EFT ile ödeme</b><span>{o.sum ? <>Tutarı (<b className="num">{tl2(o.sum.pay)}</b>) gönderdikten sonra aşağıdaki düğmeyle bize bildirin.</> : 'Ödemeyi gönderdikten sonra aşağıdaki düğmeyle bize bildirin.'} Açıklamaya sipariş numarasını yazın: <b>#{o.no}</b></span></div>
+      {payInfo && <pre className="paid-iban sel-ok">{payInfo}</pre>}
+      <button type="button" className="btn primary" onClick={onSend}><Icon n="check" s={16} />Ödemeyi yaptım, bildir</button>
     </div>
   );
 }

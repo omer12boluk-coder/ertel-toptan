@@ -26,6 +26,7 @@ function useNotifs() {
     for (const o of orders) {
       const sum = o.sum ? Number(o.sum.pay).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺' : o.total ? fmtTotals(o.total) : '';
       if (o.createdAt > from) out.push({ id: 'o' + o.id, at: o.createdAt, g: 'order', ic: 'cart', tone: 'new', t: `Yeni sipariş #${o.no}`, s: `${o.contact?.name || ''}${sum ? ' · ' + sum : ''}`, go: () => openOrder(o.id) });
+      if (o.paid?.at > from) out.push({ id: 'pd' + o.id, at: o.paid.at, g: 'order', ic: 'check', tone: 'new', t: `Ödeme bildirildi #${o.no}`, s: `${o.contact?.name || ''} havale yaptığını bildirdi${sum ? ' · ' + sum : ''}`, go: () => openOrder(o.id) });
       const c = (o.history || []).find((h) => h.s === 'cancelled' && h.by === 'customer');
       if (c && c.at > from) out.push({ id: 'c' + o.id, at: c.at, g: 'order', ic: 'x', tone: 'bad', t: `Müşteri siparişi iptal etti #${o.no}`, s: `${o.contact?.name || ''}${sum ? ' · ' + sum : ''}`, go: () => openOrder(o.id) });
     }

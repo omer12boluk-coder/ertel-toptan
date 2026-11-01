@@ -6616,3 +6616,19 @@ html.ow-lock { overflow: hidden; }
 .ssum.foot .ssum-rows { gap: 10px; }
 .pc-inv-n { font-size: 12.5px; color: var(--muted); }
 .pv-note { margin-bottom: 4px; }
+/* yönetim ödeme kartı: KDV hariç / dahil */
+.pc-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.pc-two > span { display: flex; flex-direction: column; gap: 2px; padding: 9px 11px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line-2); }
+.pc-two small { font: 700 10.5px/1.2 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.pc-two b { font: 700 19px/1.15 var(--f-display); }
+.pc-two > span:last-child { background: color-mix(in oklab, var(--accent) 8%, var(--surface)); border-color: color-mix(in oklab, var(--accent) 20%, var(--line)); }
+.pc-paid { display: flex; align-items: center; gap: 6px; margin-top: 8px !important; font-size: 13px; font-weight: 600; color: var(--ok); }
+.otag.paidtag { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font: 700 10.5px/1.5 var(--f-body); color: var(--ok); background: color-mix(in oklab, var(--ok) 13%, var(--surface)); }
+/* müşteri: havale "Ödemeyi yaptım" */
+.paid-card { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--r); background: var(--surface); border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--line)); }
+.paid-t { display: flex; flex-direction: column; gap: 3px; font-size: 14px; color: var(--muted); }
+.paid-t > b { font: 700 18px/1.2 var(--f-display); color: var(--fg); }
+.paid-t span b { color: var(--fg); }
+.paid-iban { margin: 0; padding: 10px 12px; border-radius: 9px; background: var(--surface-2); font: 13.5px/1.5 var(--f-mono); white-space: pre-wrap; }
+.paid-card .btn { align-self: flex-start; }
+@media (max-width: 560px) { .paid-card .btn { align-self: stretch; justify-content: center; } }

@@ -81,6 +81,7 @@ export default {
       if (url.pathname === '/push/key') return json({ key: (await vapidKeys(env)).pub });
       if (url.pathname === '/push/sub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); const r = await pushSub(env, b); if (r.ok && b.hello && !(await env.KV.get('ph:' + b.id))) { await env.KV.put('ph:' + b.id, '1', { expirationTtl: 60 }); r.test = await pushStatus(env, String(b.id), true).catch((e) => ({ error: e.message })); } return json(r); }
       if (url.pathname === '/push/admin' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminSub(env, b)); }
+      if (url.pathname === '/order-paid' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await orderPaid(env, String(b.id || ''))); }
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
@@ -514,6 +515,29 @@ async function adminPush(env, data) {
   for (const s of list) { const code = await pushOne(env, s, { icon: '/icon-admin-192.png', ...data }).catch(() => 0); if (code >= 200 && code < 300) sent++; if (code !== 404 && code !== 410) keep.push(s); }
   if (keep.length !== list.length) await env.KV.put('ps-admin', JSON.stringify(keep));
   return sent;
+}
+// Havale ödemesi bildirimi (1.11.2026): müşteri sipariş sayfasında "Ödemeyi yaptım" → siparişe paid {at, by} yazılır
+// (servis hesabıyla; tek sefer — kayıttaki işaret ikinci bildirimi engeller, KV yazması yok) → Telegram + e-posta + yönetici push
+async function fsPatch(env, path, data) {
+  const tok = await saToken(env);
+  const mask = Object.keys(data).map((k) => 'updateMask.fieldPaths=' + encodeURIComponent(k)).join('&');
+  const r = await fetch(FS + path + '?' + mask + '&currentDocument.exists=true', { method: 'PATCH', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: toFs(data).mapValue.fields }) });
+  return r.ok;
+}
+async function orderPaid(env, id) {
+  if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'Sipariş bulunamadı' };
+  const o = await fsDoc('orders/' + id);
+  if (!o) return { ok: false, error: 'Sipariş bulunamadı' };
+  if (o.pay !== 'havale') return { ok: false, error: 'Bu sipariş havale ile ödenmiyor' };
+  if (o.status === 'cancelled') return { ok: false, error: 'Sipariş iptal edilmiş' };
+  if (o.paid && o.paid.at) return { ok: true, already: true, paid: o.paid };
+  const paid = { at: Date.now(), by: 'customer' };
+  if (!(await fsPatch(env, 'orders/' + id, { paid, unread: 1 }))) return { ok: false, error: 'Kaydedilemedi, tekrar deneyin' };
+  const tot = ordTot(o); const link = `https://ertelmarket.com/admin/s/${id}`;
+  const text = `💸 Ödeme bildirildi #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\nHavale / EFT · ${tot}\nMüşteri ödemeyi yaptığını bildirdi, hesabınızı kontrol edin.\n\nPanelde aç: ${link}`;
+  await adminPush(env, { title: `💸 Ödeme bildirildi #${o.no} · ${tot}`, body: `${o.contact?.name || ''} havale yaptığını bildirdi`, url: '/admin/s/' + id, tag: 'ap-' + id }).catch(() => {});
+  await notifySend(env, { subject: `Ödeme bildirildi: sipariş #${o.no} · ${o.contact?.name || ''} · ${tot}`, text, link, short: text, replyTo: o.contact?.email }).catch(() => {});
+  return { ok: true, paid };
 }
 // Müşteri siparişini iptal edince (sipariş herkese açık okunur, durum gerçekten 'cancelled' mı bakılır)
 async function notifyCancel(env, id) {
