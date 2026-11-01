@@ -5987,3 +5987,15 @@ html.dz2-open .sheet-bg { z-index: 960; }
 .fx-h { position: absolute; top: 50%; width: 10px; height: 30px; margin-top: -15px; border-radius: 5px; background: #fff; box-shadow: 0 0 0 2px #38bdf8, 0 2px 6px rgb(0 0 0 / .4); cursor: ew-resize; z-index: 6; touch-action: none; }
 .fx-hl { left: -7px; } .fx-hr { right: -7px; }
 .fx-h::after { content: ""; position: absolute; inset: 9px 3px; border-left: 1.5px solid #38bdf8; border-right: 1.5px solid #38bdf8; }
+
+/* Kategori / marka tanıtım yazısı */
+.scope-intro { margin: 12px 0 14px; max-width: 860px; }
+.scope-intro h1 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
+.scope-intro p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+.scope-intro .si-more { display: none; font-size: 13.5px; margin-top: 4px; padding: 0; }
+@media (max-width: 700px) {
+  .scope-intro h1 { font-size: 19px; }
+  .scope-intro p { font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .scope-intro.open p { display: block; -webkit-line-clamp: unset; }
+  .scope-intro .si-more { display: inline; }
+}

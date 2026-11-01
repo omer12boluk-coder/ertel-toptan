@@ -255,6 +255,22 @@ function CopyPick({ onPick, onClose }) {
   );
 }
 
+// Kategori / marka tanıtım yazısı (Google görünürlüğü, 01.11.2026): settings.seoText {c: {kategoriNo: yazı}, b: {marka küçük harf: yazı}}
+// Sadece tek kategori YA DA tek marka seçiliyken, arama yokken. Telefonda 2 satır + "Devamını oku".
+function ScopeIntro({ S, cat, brand, name }) {
+  const T = S.seoText || {};
+  const txt = cat != null && !brand ? T.c?.[cat] : brand && cat == null ? T.b?.[String(brand).toLowerCase()] : '';
+  const [open, setOpen] = useState(false);
+  if (!txt) return null;
+  return (
+    <div className={'scope-intro' + (open ? ' open' : '')}>
+      <h1>{name}</h1>
+      <p>{txt}</p>
+      <button className="link si-more" onClick={() => setOpen((v) => !v)}>{open ? 'Daha az' : 'Devamını oku'}</button>
+    </div>
+  );
+}
+
 // Yönetici ürün satırı (kutu görünümü): Stok · Satış (büyük) · Toptan sütunları + Aktif/Pasif seçici; TL yok
 function AdminCols({ p }) {
   const { settings: S, user } = useStore();
@@ -576,6 +592,7 @@ export function Catalog({ admin }) {
           )}
           {widened && <div className="banner info widen"><Icon n="search" /><div><b>“{q.trim()}” {scopeName} içinde yok.</b> Tüm ürünlerde bulunan {list.length} sonucu gösteriyoruz.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Filtreyi kaldır</button></div>}
           {moreOutside > 0 && <div className="banner info widen"><Icon n="search" /><div>{scopeName} dışında da <b>{moreOutside} sonuç</b> var.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Tüm ürünlerde ara</button></div>}
+          {!admin && user?.role === 'public' && !q.trim() && <ScopeIntro S={S} cat={cat} brand={brand} name={scopeName} />}
           <div className="result-line">
             <span>{setsOnly && user?.role === 'public' ? setN + ' set' : <>{list.length.toLocaleString('tr-TR')} ürün</>}{!(setsOnly && user?.role === 'public') && !widened && scopeName && <> · <b>{scopeName}</b></>}</span>
             {admin && <SyncButton icon />}

@@ -22,7 +22,8 @@ const FS = 'https://firestore.googleapis.com/v1/projects/erteltoptan/databases/(
 const IMG = 'https://resim.ertelmarket.com/';
 const SITE = 'https://ertelmarket.com';
 const NAME = 'ERTEL GSM';
-const VER = 'v3'; // önbellek anahtarı: sayfa düzeni değişince artır
+const WATCH = 'https://ertel-b2b-watch.omer-12boluk.workers.dev'; // kur (Harem Altın dolar satış) — uygulamadaki fiyatla aynı kaynak
+const VER = 'v4'; // önbellek anahtarı: sayfa düzeni değişince artır
 const BOT = /bot\b|bot\/|crawl|spider|slurp|google|bing|yandex|baidu|duckduck|facebookexternalhit|facebot|whatsapp|telegram|slack|linkedin|discord|pinterest|skypeuripreview|vkshare|embedly|viber|snapchat|petal|applebot|preview/i;
 
 // ---- Firestore REST (herkese açık okuma)
@@ -71,13 +72,15 @@ async function siteIndex(ctx) {
   const items = [];
   for (const c of chunks) for (const p of c?.items || []) {
     if (!p || !p.a || p.so || p.id == null || !p.n) continue;
-    items.push([String(p.id), p.n, p.b || '', p.c ?? null, p.c2 ?? null, Number(p.r) || 0, Number(p.s) || 0, firstImg(p) || '', p.k || '']);
+    items.push([String(p.id), p.n, p.b || '', p.c ?? null, p.c2 ?? null, Number(p.r) || 0, Number(p.s) || 0, firstImg(p) || '', p.k || '', p.cur || 'USD']);
   }
   const sh = S?.shop || {}, ft = S?.footer || {};
   const idx = {
     at: Date.now(), items,
     shop: { name: sh.name || S?.brand?.appName || NAME, address: ft.address || sh.address || '', phone: sh.phone || ft.phones?.[0]?.phone || '', ig: ft.instagram || '', fb: ft.facebook || '', intro: ft.about || '' },
     catOver: S?.categories || {},
+    pricing: { vat: Number(S?.pricing?.vatPct ?? 20) || 0, manual: Number(S?.pricing?.manualRate) || 0 },
+    seoText: S?.seoText || {},
     sets: (S?.sets || []).filter((s) => s && s.id && s.name).map((s) => ({ id: s.id, name: s.name, desc: s.desc || '', items: (s.items || []).map((x) => String(x.id)) })),
   };
   ctx.waitUntil(caches.default.put(key, new Response(JSON.stringify(idx), { headers: { 'Cache-Control': 'max-age=21600', 'Content-Type': 'application/json' } })).catch(() => {}));
@@ -85,7 +88,7 @@ async function siteIndex(ctx) {
 }
 // dizinden türetilenler (önbelleğe yazılmaz): markalar, kategoriler, sayılar
 function prep(idx) {
-  const P = idx.items.map(([id, n, b, c, c2, r, s, img, k]) => ({ id, n, b, c, c2, r, s, img, k }));
+  const P = idx.items.map(([id, n, b, c, c2, r, s, img, k, cur]) => ({ id, n, b, c, c2, r, s, img, k, cur: cur || 'USD' }));
   const byId = new Map(P.map((p) => [p.id, p]));
   // markalar: aynı adın farklı yazılışları tek sayfa (en çok kullanılan yazılış)
   const brands = new Map();
@@ -136,6 +139,24 @@ function storeLd(I) {
     sameAs: [s.ig, s.fb].filter((x) => x && /^https?:/.test(x)) };
 }
 
+// ---- TL fiyat (KDV dahil): uygulamadaki 'KDV dahil … ₺' ile aynı hesap (liste fiyatı × (1+KDV) × kur, tam TL'ye yuvarlı)
+let RATE = null;
+async function usdRate(I) {
+  if (I.pricing?.manual > 0) return I.pricing.manual;
+  if (RATE && Date.now() - RATE.at < 20 * 60e3) return RATE.v;
+  try { const r = await fetch(WATCH + '/rate', { cf: { cacheTtl: 300 } }); const j = await r.json(); if (j?.usd > 0) RATE = { v: Number(j.usd), at: Date.now() }; } catch {}
+  return RATE?.v || 0;
+}
+function tlInc(p, I, rate) {
+  const r = Number(p.r) || 0; if (!r) return 0;
+  const inc = r * (1 + (I.pricing?.vat ?? 20) / 100);
+  if (p.cur === 'TRY') return Math.round(inc);
+  if (p.cur && p.cur !== 'USD') return 0;
+  return rate > 0 ? Math.round(inc * rate) : 0;
+}
+const tlFmt = (v) => Number(v).toLocaleString('tr-TR') + ' ₺';
+const seoTxt = (I, kind, key) => String((kind === 'b' ? I.seoText?.b?.[String(key).toLowerCase()] : I.seoText?.c?.[key]) || '').trim();
+
 async function seoFor(path, I) {
   const brandsTop = [...I.brands.values()].sort((a, b) => b.ids.length - a.ids.length).slice(0, 6).map((b) => b.name);
   if (path === '/' || path === '') {
@@ -161,19 +182,21 @@ async function seoFor(path, I) {
   if (m) {
     const b = I.brands.get(m[1]); if (!b) return null;
     const inStock = b.ids.filter((id) => I.byId.get(id)?.s > 0).length;
-    return { title: `${b.name} Ürünleri ve Fiyatları | ${NAME}`, desc: `${b.name} marka telefon tamir ekipmanları: ${b.ids.length} ürün${inStock ? `, ${inStock} tanesi stokta` : ''}. ${NAME}, Tahtakale İstanbul. Hızlı kargo.`,
+    const bt = seoTxt(I, 'b', b.name);
+    return { title: `${b.name} Ürünleri ve Fiyatları | ${NAME}`, desc: bt ? cut(bt, 158) : `${b.name} marka telefon tamir ekipmanları: ${b.ids.length} ürün${inStock ? `, ${inStock} tanesi stokta` : ''}. ${NAME}, Tahtakale İstanbul. Hızlı kargo.`,
       ld: [crumbs([[NAME, '/'], ['Markalar', '/urunler'], [b.name, '/marka/' + b.slug]]), { '@type': 'CollectionPage', name: `${b.name} ürünleri`, url: SITE + '/marka/' + b.slug, about: { '@type': 'Brand', name: b.name } }],
-      img: imgUrl(I.byId.get(b.ids[0])?.img), body: `<h1>${esc(b.name)} ürünleri</h1><p>${esc(NAME)} online mağazada ${b.ids.length} ${esc(b.name)} ürünü.</p>${prodList(I, b.ids)}<h2>Diğer markalar</h2>${brandLinks(I)}` };
+      img: imgUrl(I.byId.get(b.ids[0])?.img), body: `<h1>${esc(b.name)} ürünleri</h1><p>${esc(bt || `${NAME} online mağazada ${b.ids.length} ${b.name} ürünü.`)}</p>${prodList(I, b.ids)}<h2>Diğer markalar</h2>${brandLinks(I)}` };
   }
   m = /^\/kategori\/([a-z0-9-]+)$/.exec(path);
   if (m) {
     const c = I.cats.get(m[1]); if (!c) return null;
     const subs = [...I.cats.values()].filter((x) => x.par === c.id);
     const trail = c.path.filter((x) => I.catById.has(x.id));
-    return { title: `${c.name} | ${NAME}`, desc: `${c.name}: ${c.ids.length} ürün. Telefon tamir ekipmanları ${NAME} online mağazada, Tahtakale İstanbul.`,
+    const ct = seoTxt(I, 'c', c.id);
+    return { title: `${c.name} | ${NAME}`, desc: ct ? cut(ct, 158) : `${c.name}: ${c.ids.length} ürün. Telefon tamir ekipmanları ${NAME} online mağazada, Tahtakale İstanbul.`,
       ld: [crumbs([[NAME, '/'], ...trail.map((x) => [x.name, '/kategori/' + I.catById.get(x.id).slug])]), { '@type': 'CollectionPage', name: c.name, url: SITE + '/kategori/' + c.slug }],
       img: imgUrl(I.byId.get(c.ids[0])?.img),
-      body: `<p>${trail.map((x) => A('/kategori/' + I.catById.get(x.id).slug, x.name)).join(' › ')}</p><h1>${esc(c.name)}</h1>${subs.length ? '<h2>Alt kategoriler</h2>' + catLinks(I, subs) : ''}<h2>Ürünler</h2>${prodList(I, c.ids)}` };
+      body: `<p>${trail.map((x) => A('/kategori/' + I.catById.get(x.id).slug, x.name)).join(' › ')}</p><h1>${esc(c.name)}</h1>${ct ? `<p>${esc(ct)}</p>` : ''}${subs.length ? '<h2>Alt kategoriler</h2>' + catLinks(I, subs) : ''}<h2>Ürünler</h2>${prodList(I, c.ids)}` };
   }
   const pid = prodIdOf(path);
   if (pid) {
@@ -185,11 +208,11 @@ async function seoFor(path, I) {
     const desc = cut(d, 155) || `${p.n}${p.b ? ' · ' + p.b : ''}${c ? ' · ' + c.name : ''}. ${NAME} online mağaza, Tahtakale İstanbul.`;
     const offer = p.r ? { '@type': 'Offer', url: SITE + pp, price: Number(p.r).toFixed(2), priceCurrency: 'USD', availability: 'https://schema.org/' + (p.s > 0 ? 'InStock' : 'OutOfStock'), itemCondition: 'https://schema.org/NewCondition',
       priceSpecification: { '@type': 'UnitPriceSpecification', price: Number(p.r).toFixed(2), priceCurrency: 'USD', valueAddedTaxIncluded: false }, seller: { '@type': 'Organization', name: NAME } } : undefined;
-    return { path: pp, title: `${cut(p.n, 70)} | ${NAME}`, desc, type: 'product', img: imgUrl(p.img),
+    return { path: pp, price: p.r ? { r: p.r, cur: p.cur } : null, title: `${cut(p.n, 70)} | ${NAME}`, desc, type: 'product', img: imgUrl(p.img),
       ld: [{ '@type': 'Product', name: p.n, image: [imgUrl(p.img)], ...(p.k ? { sku: p.k } : {}), ...(p.b ? { brand: { '@type': 'Brand', name: p.b } } : {}), ...(d ? { description: cut(d, 1000) } : {}), ...(c ? { category: c.name } : {}), ...(offer ? { offers: offer } : {}) },
         crumbs([[NAME, '/'], ...trail.map((x) => [x.name, '/kategori/' + I.catById.get(x.id).slug]), [p.n, pp]])],
       body: `<p>${trail.map((x) => A('/kategori/' + I.catById.get(x.id).slug, x.name)).join(' › ')}</p><h1>${esc(p.n)}</h1><img src="${esc(imgUrl(p.img))}" alt="${esc(p.n)}" width="400">`
-        + `<p>${b ? 'Marka: ' + A('/marka/' + b.slug, b.name) + ' · ' : ''}${p.k ? 'Stok kodu: ' + esc(p.k) + ' · ' : ''}${p.r ? 'Fiyat: ' + usd(p.r) + ' +KDV · ' : ''}${p.s > 0 ? 'Stokta' : 'Stokta yok'}</p>`
+        + `<p>${b ? 'Marka: ' + A('/marka/' + b.slug, b.name) + ' · ' : ''}${p.k ? 'Stok kodu: ' + esc(p.k) + ' · ' : ''}${p.r ? 'Fiyat: ' + usd(p.r) + ' +KDV<!--tl--> · ' : ''}${p.s > 0 ? 'Stokta' : 'Stokta yok'}</p>`
         + (d ? `<div>${esc(cut(d, 4000)).replace(/\n/g, '<br>')}</div>` : '') + (b ? `<h2>Diğer ${esc(b.name)} ürünleri</h2>${prodList(I, b.ids.filter((x) => x !== p.id), 24)}` : '') };
   }
   m = /^\/set\/([\w-]+)$/.exec(path);
@@ -235,6 +258,38 @@ async function sitemap(ctx) {
   return new Response(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'max-age=3600' } });
 }
 
+// ---- Google Merchant Center ürün dosyası (Google Alışveriş ücretsiz listeleme), 1 saat önbellek
+// Fiyat: TL, KDV dahil (sayfadaki 'KDV dahil … ₺' ile aynı). Stokta olmayan da gider (out_of_stock). Resmi / fiyatı olmayan gitmez.
+async function merchantFeed(ctx) {
+  const key = new Request('https://seo-feed.cache/' + VER);
+  try { const r = await caches.default.match(key); if (r) return new Response(r.body, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'max-age=900' } }); } catch {}
+  const I = await siteIndex(ctx); const rate = await usdRate(I);
+  if (!(rate > 0) && !I.P.every((p) => p.cur === 'TRY')) throw new Error('kur alınamadı');
+  // açıklamalar: kovalar (64 küçük belge) bir kez okunur
+  const D = {};
+  try {
+    const meta = await doc('desc/_meta'); const bk = Number(meta?.bk) || 0;
+    const bs = await Promise.all(Array.from({ length: bk }, (_, n) => doc('descb/b' + n).catch(() => null)));
+    for (const b of bs) Object.assign(D, b?.d || {});
+  } catch {}
+  const x = (v) => esc(String(v ?? '')).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+  const rows = [];
+  for (const p of I.P) {
+    const tl = tlInc(p, I, rate); if (!tl || !p.img) continue;
+    const c = I.catById.get(p.c) || I.catById.get(p.c2);
+    const trail = c ? c.path.filter((q) => I.catById.has(q.id)).map((q) => q.name).join(' > ') : '';
+    const d = cut(strip(D[p.id] || ''), 4900) || [p.n, p.b, c?.name].filter(Boolean).join(' · ');
+    rows.push(`<item><g:id>${x(p.id)}</g:id><title>${x(cut(p.n, 150))}</title><description>${x(d)}</description><link>${SITE}${x(prodPath(p))}</link>`
+      + `<g:image_link>${x(imgUrl(p.img))}</g:image_link><g:availability>${p.s > 0 ? 'in_stock' : 'out_of_stock'}</g:availability><g:price>${tl}.00 TRY</g:price>`
+      + `<g:condition>new</g:condition>${p.b ? `<g:brand>${x(p.b)}</g:brand>` : ''}${p.k ? `<g:mpn>${x(p.k)}</g:mpn>` : ''}<g:identifier_exists>no</g:identifier_exists>`
+      + (trail ? `<g:product_type>${x(trail)}</g:product_type>` : '') + `</item>`);
+  }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel><title>${NAME}</title><link>${SITE}/</link><description>${NAME} online mağaza ürünleri</description>\n`
+    + rows.join('\n') + '\n</channel></rss>\n';
+  ctx.waitUntil(caches.default.put(key, new Response(xml, { headers: { 'Cache-Control': 'max-age=3600' } })).catch(() => {}));
+  return new Response(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'max-age=900' } });
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -242,6 +297,7 @@ export default {
       const r = await fetch(FB + url.pathname + url.search, { method: req.method, headers: req.headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body, redirect: 'manual' });
       return new Response(r.body, r);
     }
+    if (url.pathname === '/merchant.xml') { try { return await merchantFeed(ctx); } catch (e) { return new Response('feed: ' + e.message, { status: 503 }); } }
     if (url.pathname === '/sitemap.xml') { try { return await sitemap(ctx); } catch (e) { return new Response('sitemap: ' + e.message, { status: 503 }); } }
     const page = await env.ASSETS.fetch(req);
     if (req.method !== 'GET' || !(page.headers.get('content-type') || '').includes('text/html')) return page;
@@ -250,6 +306,14 @@ export default {
     let o = null;
     try { o = await pageSeo(path, ctx); } catch { return page; }
     if (!o) return page;
+    if (o.price) { // ürün fiyatı: TL + KDV dahil, istek anındaki kurla (Google Alışveriş dosyasıyla aynı)
+      try {
+        const I = await siteIndex(ctx); const tl = tlInc(o.price, I, await usdRate(I));
+        const off = o.ld?.[0]?.offers;
+        if (tl && off) { off.price = String(tl) + '.00'; off.priceCurrency = 'TRY'; off.priceSpecification = { '@type': 'UnitPriceSpecification', price: String(tl) + '.00', priceCurrency: 'TRY', valueAddedTaxIncluded: true }; }
+        if (tl && o.body) o.body = o.body.replace('<!--tl-->', ' (KDV dahil ' + tlFmt(tl) + ')');
+      } catch {}
+    }
     // ürünün asıl adresi /urun/<ad>-<no>: eski /urun/<no>, /magaza/urun/… ya da adı değişmiş link → kalıcı yönlendirme (Google tek adres öğrenir)
     if (o.path && o.path !== url.pathname) return Response.redirect(SITE + o.path + url.search, 301);
     const bot = BOT.test(req.headers.get('user-agent') || '');
