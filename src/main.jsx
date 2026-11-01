@@ -873,7 +873,7 @@ function setupPull() {
   // menüyle birlikte telefonun kendi esnemesiyle (120/144 Hz) hareket eder; JS her karede konum hesaplamaz.
   // JS sadece çekiş oranını (--k) yazar; kısa bir geçiş (70 ms) aradaki kareleri ekran kartında doldurur → takılma yok.
   // Bırakınca: kısa dönüş → yeşil ✓ → yerinde küçülüp solar. Sayfa YENİLENMEZ (veriler canlı); sadece yeni sürümde reload.
-  const TH = 72, SPIN_MIN = 300, OK_MS = 340;
+  const TH = 72, SPIN_MIN = 650, OK_MS = 900;
   let box = null, finger = false, armed = false, ready = false, phase = '', wasOk = false, raf = 0, lastCn = '', lastK = -1;
   let sx = 0, sy = 0, dy = 0;
   const atTop = () => scrollY <= 1 && (document.scrollingElement?.scrollTop || 0) <= 1;
@@ -884,7 +884,7 @@ function setupPull() {
     if (!box) {
       box = document.createElement('div'); box.setAttribute('aria-hidden', 'true');
       box.innerHTML = '<span class="ptr10-i"><span class="ptr10-c"><i class="ptr10-r"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg></i>'
-        + '<svg class="ptr10-ok" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></span>';
+        + '<svg class="ptr10-ok" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b class="ptr10-t">Güncel</b></span></span>';
     }
     box.className = 'ptr10' + (host === document.body ? ' loose' : ''); lastCn = '';
     host.appendChild(box); return box;
@@ -939,6 +939,9 @@ function setupPull() {
     } catch {}
     await new Promise((r) => setTimeout(r, Math.max(0, SPIN_MIN - (Date.now() - t0))));
     if (newer) { location.reload(); return; } // sadece yeni sürüm yayınlandıysa gerçek yenileme
+    // 1.11.2026 (kullanıcı: 'çalıştığı belli değil'): sayfa içeriği kısa bir 'tazelenme' yapar (soluk → net) +
+    // gösterge ✓ yanında 'Güncel' yazısıyla biraz daha uzun kalır. Veriler zaten canlı; bu sadece görünür onay.
+    try { const m = document.querySelector('.shell > .main'); m?.animate([{ opacity: 1, filter: 'none' }, { opacity: .45, filter: 'saturate(.6)' }, { opacity: 1, filter: 'none' }], { duration: 420, easing: 'cubic-bezier(.3,.7,.3,1)' }); } catch {}
     finish(true);
   }, { passive: true });
 }

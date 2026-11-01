@@ -7,6 +7,62 @@ import { CarrierMark, PageHead, SubNav, Icon, Sheet, Thumb, Avatar, Field, Toggl
 import { stencilCodes } from './kalip.js';
 import { waLink, links } from './route.js';
 import SETIDX from './setindex.json';
+import { SetSettings } from './sets.jsx';
+
+// ---- Ayar arama motoru -------------------------------------------------------------------------------------------------
+const SYN = {
+  banner: 'reklam tasarim anasayfa slayt', reklam: 'banner tasarim anasayfa', slayt: 'reklam banner', renk: 'tema gorunum renkler', tema: 'renk gorunum sus', gece: 'tema karanlik koyu',
+  logo: 'logo marka simge ikon', ikon: 'simge logo', simge: 'logo ikon', favicon: 'logo simge', kargo: 'teslimat dhl yurtici gonderim kargo', teslimat: 'kargo dhl', dhl: 'kargo teslimat',
+  odeme: 'kart havale iyzico pos eft', kart: 'odeme kredi pos', havale: 'odeme iban banka', iban: 'havale banka', fiyat: 'fiyatlandirma toptan indirim kdv kur', indirim: 'fiyat toptan yuzde',
+  kdv: 'vergi fiyat', kur: 'dolar doviz tl', dolar: 'kur usd', tl: 'kur lira', bildirim: 'push telegram eposta zil haber', eposta: 'mail e-posta bildirim', mail: 'eposta e-posta',
+  stok: 'stok az kaldi tukendi', set: 'set paket', paket: 'set kargo paket', video: 'video oynat', alt: 'alt bilgi footer', footer: 'alt bilgi', yasal: 'kvkk sozlesme gizlilik',
+  uye: 'uyelik musteri hesap giris', giris: 'uyelik oturum google', bayi: 'toptanci bayi kademe', toptanci: 'bayi', kademe: 'bayi seviye', siparis: 'siparis form sepet',
+  sepet: 'sepet siparis', kalip: 'kalip bulucu', yorum: 'yorum degerlendirme puan', favori: 'favori begeni', arama: 'ara arama', menu: 'ust menu', kategori: 'kategori reyon',
+  resim: 'resim gorsel foto', gorsel: 'resim', foto: 'resim fotograf', acilis: 'acilis ekrani splash', whatsapp: 'whatsapp telefon iletisim', telefon: 'telefon iletisim', adres: 'adres dukkan konum',
+  kota: 'veri kota yedek', yedek: 'yedek veri', kullanici: 'bayi uye musteri',
+};
+const words = (t) => norm(t).replace(/[^\p{L}\p{N}%$]/gu, ' ').split(/\s+/).filter(Boolean);
+function lev1(a, b) { // en çok 1 harf farkı (ekleme/silme/değiştirme/yer değiştirme)
+  if (a === b) return true; const la = a.length, lb = b.length; if (Math.abs(la - lb) > 1) return false;
+  let i = 0; while (i < la && i < lb && a[i] === b[i]) i++;
+  if (la === lb) return a.slice(i + 1) === b.slice(i + 1) || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+  return la > lb ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
+}
+// bir arama kelimesinin bir kelime listesiyle eşleşme puanı (0 = yok)
+function tokScore(t, ws) {
+  let best = 0; const stem = t.length > 5 ? t.slice(0, Math.max(4, t.length - 3)) : t;
+  for (const w of ws) {
+    let sc = 0;
+    if (w === t) sc = 10; else if (w.startsWith(t)) sc = 8; else if (t.length >= 4 && w.startsWith(stem)) sc = 6;
+    else if (t.length >= 3 && w.includes(t)) sc = 5; else if (t.length >= 4 && w.length >= 4 && lev1(t, w.slice(0, t.length))) sc = 4; else if (t.length >= 4 && w.length >= 3 && lev1(t, w)) sc = 4;
+    if (sc > best) best = sc; if (best === 10) break;
+  }
+  return best;
+}
+function scoreText(toks, txt, any) { const ws = words(txt); let sum = 0, hit = 0; for (const t of toks) { let s1 = tokScore(t, ws); if (!s1) { for (const y of (SYN[t] || '').split(' ').filter(Boolean)) { const s2 = tokScore(y, ws); if (s2) { s1 = Math.max(s1, s2 - 3); } } } if (!s1 && !any) return 0; if (s1) hit++; sum += s1; } return any ? (hit ? sum * hit / toks.length : 0) : sum; }
+// hiçbir ayar bütün kelimeleri içermiyorsa: en az bir kelimesi geçenler (daha düşük puanla) — 'kargo ücreti' gibi aramalar boş dönmesin
+function findSettings(toks) { const r = findSettings1(toks, false); return r.length || toks.length < 2 ? r : findSettings1(toks, true); }
+function findSettings1(toks, any) {
+  const out = [];
+  for (const [k, l, hint, , g] of SECTIONS) {
+    const gl = GROUPS.find((x) => x[0] === g)[1];
+    const secS = scoreText(toks, l + ' ' + hint + ' ' + gl, any);
+    let hasHit = false;
+    for (const x of SETIDX[k] || []) {
+      const f = scoreText(toks, x, any); const both = f || scoreText(toks, x + ' ' + l, any);
+      if (both) { hasHit = true; out.push({ k, l, x, gl, sc: (f ? f * 1.4 : both) + (norm(x).startsWith(toks[0]) ? 3 : 0) }); }
+    }
+    if (secS) out.push({ k, l, x: null, gl, sc: secS * 1.25 + (norm(l).startsWith(toks[0]) ? 4 : 0) + (hasHit ? 2 : 0) });
+  }
+  out.sort((a, b) => b.sc - a.sc || (a.x ? 1 : 0) - (b.x ? 1 : 0));
+  const seen = new Set(); return out.filter((r) => { const key = r.k + '|' + (r.x || ''); if (seen.has(key)) return false; seen.add(key); return true; });
+}
+// eşleşen kısmı kalın göster
+function Hl({ t, toks }) {
+  const n = norm(t); let best = null;
+  for (const q of toks) { for (const v of [q, q.length > 5 ? q.slice(0, Math.max(4, q.length - 3)) : null].filter(Boolean)) { const i = n.indexOf(v); if (i >= 0 && (!best || v.length > best[1])) best = [i, v.length]; } }
+  if (!best) return t; const [i, L] = best; return <>{t.slice(0, i)}<mark className="set-mark">{t.slice(i, i + L)}</mark>{t.slice(i + L)}</>;
+}
 import { adminPushState, enableAdminPush, disableAdminPush } from './push.js';
 import { ensureAllMembers } from './datawin.js';
 import { fmt, priceFor, catName, norm, resizeImage, withDefaults, cleanUsername, usernameOk, when, totals, fmtTotals, ls, nextCode, picUrl, imageBlob, imgFiles, mediaOf, isVid, fileHash } from './utils.js';
@@ -538,6 +594,7 @@ const SECTIONS = [
   ['bayiuye', 'Bayi üyeliği ve profil', 'Bayiler kendi üye olabilsin, profil fotoğrafı, geçmiş istatistikleri', 'user', 'bayi'],
   ['katalog', 'Katalog ve stok', 'Stok gösterimi, “az kaldı”, sayfa başına ürün, pasifler, gizli etiketle arama', 'filter', 'urun'],
   ['kategori', 'Kategoriler', 'Kategori adları, sırası, gizleme', 'folder', 'urun'],
+  ['setler', 'Setler', 'Set fiyatı gösterimi, sette ürün fiyatları, aramada setler · setleri yayına al / kaldır', 'box', 'urun'],
   ['kalip', 'Kalıp bulucu', 'Telefon modelleri ve işlemcileri · uyan kalıplar', 'chip', 'urun'],
   ['resim', 'Resim adresleri', 'Ürün resimlerinin adresi · nadiren değişir', 'image', 'urun'],
   ['ozellik', 'Mağaza özellikleri', 'Tek dokunuşla aç / kapat: paylaşma, gelince haber ver, popüler ürünler, yorumlar', 'toggle', 'ozel'],
@@ -567,7 +624,7 @@ const SEC_KEYS = {
   sepetlink: ['orders.lcartHours'],
   bildirim: ['orders.push', 'orders.pushTexts', 'orders.doneNote'],
   dokunma: ['shop.touch'], bayiuye: ['access.allowSignup', 'features'],
-  kategori: ['categories'], kalip: ['kalip'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'], kota: ['quota'],
+  kategori: ['categories'], kalip: ['kalip'], setler: ['setLook', 'sets'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'], kota: ['quota'],
 };
 const atPath = (o, p) => p.split('.').reduce((x, k) => (x == null ? x : x[k]), o);
 // "Son açtıklarınız" (cihazda, en çok 3)
@@ -808,6 +865,7 @@ export function Settings() {
 
         {sec === 'altbilgi' && <FooterSettings d={d} set={set} />}
         {sec === 'kalip' && <KalipSettings d={d} set={set} />}
+        {sec === 'setler' && <SetSettings d={d} set={set} />}
         {sec === 'urtalep' && <PreqSettings d={d} set={set} />}
         {sec === 'kota' && <QuotaSettings d={d} set={set} />}
         {sec === 'sorun' && <IssueSettings d={d} set={set} />}
@@ -926,13 +984,10 @@ export function Settings() {
         {sec === 'markalar' && <BrandLogosEditor d={d} set={set} />}
   </>;
   // ---- ayar arama: bölüm adı/açıklaması + bölümdeki alan adları (setindex.json, derlemede üretilir)
-  const toks = norm(q.trim()).split(/\s+/).filter(Boolean);
-  const hitOf = (txt) => toks.length > 0 && toks.every((t) => norm(txt).includes(t));
-  const results = toks.length ? SECTIONS.flatMap(([k, l, hint, , g]) => {
-    const gl = GROUPS.find((x) => x[0] === g)[1];
-    const items = (SETIDX[k] || []).filter((x) => hitOf(x + ' ' + l)).map((x) => ({ k, l, x, gl }));
-    return items.length ? items : hitOf(l + ' ' + hint + ' ' + gl) ? [{ k, l, x: null, gl }] : [];
-  }) : [];
+  // 1.11.2026 (kullanıcı: 'aradığımı bulamıyorum'): gelişmiş arama — Türkçe eklere dayanıklı (bildirimler → bildirim),
+  // yazım hatasına toleranslı (1 harf), eş anlamlılar (banner → reklam, renk → tema…), puanlı sıralama (en iyi eşleşme üstte).
+  const toks = norm(q.trim()).replace(/[^\p{L}\p{N}\s%$]/gu, ' ').split(/\s+/).filter(Boolean);
+  const results = toks.length ? findSettings(toks) : [];
   // sonuca basınca bölümün sayfası açılır, aranan ayar ortalanıp kısa süre parlar
   const jump = (k, label) => {
     setQ(''); setSearch(false); nav(null, k);
@@ -971,10 +1026,10 @@ export function Settings() {
       )}
       {search && !sec && !grp && (
         <div className="set-find">
-          <div className="search"><Icon n="search" s={18} /><input id="set-q" type="search" autoFocus placeholder="Ayar ara… (ör. kargo, KDV, logo, bildirim)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) jump(results[0].k, results[0].x); if (e.key === 'Escape') { setSearch(false); setQ(''); } }} /></div>
+          <div className="search"><Icon n="search" s={18} /><input id="set-q" type="search" autoFocus placeholder="Ayar ara… (ör. kargo, kdv, logo, banner, set fiyatı)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) jump(results[0].k, results[0].x); if (e.key === 'Escape') { setSearch(false); setQ(''); } }} /></div>
           {toks.length > 0 && (results.length
-            ? <ul className="set-res">{results.slice(0, 40).map((r, i) => <li key={i}><button onClick={() => jump(r.k, r.x)}><span className="set-res-ic"><Icon n={SEC_BY[r.k][3]} s={16} /></span><span><b>{r.x || r.l}</b><small>{r.gl} › {r.l}</small></span><Icon n="chev" s={16} className="set-res-go" /></button></li>)}</ul>
-            : <p className="fine set-none">“{q}” ile eşleşen ayar yok.</p>)}
+            ? <ul className="set-res">{results.slice(0, 40).map((r, i) => <li key={i}><button onClick={() => jump(r.k, r.x)}><span className="set-res-ic"><Icon n={SEC_BY[r.k][3]} s={16} /></span><span><b><Hl t={r.x || r.l} toks={toks} /></b><small>{r.gl} › {r.l}{!r.x ? ' · bölüm' : ''}</small></span><Icon n="chev" s={16} className="set-res-go" /></button></li>)}</ul>
+            : <p className="fine set-none">“{q}” ile eşleşen ayar yok. Daha kısa ya da farklı bir kelime deneyin (ör. “fiyat”, “kargo”, “renk”).</p>)}
         </div>
       )}
 

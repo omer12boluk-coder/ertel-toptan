@@ -1,7 +1,7 @@
 // Online mağaza ana sayfası (/magaza → Ana sayfa): büyük reklam alanı, avantajlar, marka kutuları,
 // kare reklam kutuları (bento), ürün rafları ve alt WhatsApp bandı. İçerik: Ayarlar > Mağaza ana sayfası (settings.shopHome).
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { SetRail } from './sets.jsx';
+import { SetRail, searchSets, setView, openSet, setLookOf } from './sets.jsx';
 import { flushSync } from 'react-dom';
 import { useStore, store, setQty, go, api, toast } from './store.js';
 import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
@@ -9,7 +9,7 @@ import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg, fbSkip, fileHash, 
 import { waLink } from './route.js';
 import { ProductSheet, useTree, PlayVideo, mediaUrl } from './catalog.jsx';
 import { currentRate } from './listsheet.jsx';
-import { feat, useStats } from './extras.jsx';
+import { feat, useStats, toggleNotify, outOfStock } from './extras.jsx';
 import { useWin, winOf, onDrag } from './dzframe.jsx';
 import { BG_BY, activePack, BTN_BY, ARROW_BY } from './presets.js';
 
@@ -73,11 +73,35 @@ function isInk(img) {
   } catch {}
   inkCache.set(key, ink); return ink;
 }
+// Kayan şerit logolarını eşitle (1.11.2026): her logonun resimdeki GERÇEK dolu alanı (saydam/beyaz kenar boşlukları atılarak)
+// ölçülür, görünen alanı (genişlik × yükseklik) hepsinde aynı olacak boy verilir; kenar boşlukları eksi pay ile kapatılır.
+// Sonuç px (bilgisayar ölçüsü); telefonda CSS --mqu ile küçülür. Ölçülemezse (izin yok) eski görünüm.
+const trimCache = new Map();
+function logoBox(img) {
+  const key = img.currentSrc || img.src; if (trimCache.has(key)) return trimCache.get(key);
+  let r = null;
+  try {
+    const W = img.naturalWidth, H = img.naturalHeight; if (!W || !H) return null;
+    const k = Math.min(1, 240 / Math.max(W, H)); const w = Math.max(1, Math.round(W * k)), h = Math.max(1, Math.round(H * k));
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const q = (y * w + x) * 4; if (d[q + 3] < 24) continue; if (d[q] > 242 && d[q + 1] > 242 && d[q + 2] > 242) continue; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 >= x0 && y1 >= y0) {
+      const cw = x1 - x0 + 1, ch = y1 - y0 + 1, ar = cw / ch;
+      const A = 34 * 128; let th = Math.sqrt(A / ar); th = Math.min(46, Math.max(17, th)); if (th * ar > 168) th = 168 / ar;
+      const ih = th * (h / ch), iw = ih * (w / h);
+      r = { h: Math.round(ih * 10) / 10, ml: -Math.round((x0 / w) * iw * 10) / 10, mr: -Math.round(((w - 1 - x1) / w) * iw * 10) / 10, mt: -Math.round((y0 / h) * ih * 10) / 10, mb: -Math.round(((h - 1 - y1) / h) * ih * 10) / 10 };
+    }
+  } catch {}
+  trimCache.set(key, r); return r;
+}
+const applyLogoBox = (i, r) => { if (!r) return; i.classList.add('mq-eq'); const st = i.style; st.setProperty('--mqh', r.h + 'px'); st.setProperty('--mql', r.ml + 'px'); st.setProperty('--mqr', r.mr + 'px'); st.setProperty('--mqt', r.mt + 'px'); st.setProperty('--mqb', r.mb + 'px'); };
 export function ShopImg({ v, className, alt = '' }) {
   const src = useShopImg(v);
   // kare logolar (ör. yuvarlak amblem) yatay logolardan daha büyük gösterilir
   const onLoad = (e) => {
     const i = e.currentTarget; if (i.naturalWidth && i.naturalWidth / i.naturalHeight < 1.7) i.classList.add('sq');
+    if (/sh-mq-logo/.test(className || '')) applyLogoBox(i, logoBox(i));
     // koyu yazılı logo mu? (gece modunda yalnız koyu kısımları açılır; renkler korunur)
     if (/logo/.test(className || '') && isInk(i)) i.classList.add('ink');
   };
@@ -331,12 +355,14 @@ export function HeaderSearch() {
     document.addEventListener('pointerdown', f, true); return () => document.removeEventListener('pointerdown', f, true);
   }, [mob]);
   const res = useMemo(() => {
-    const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return { list: [], n: 0 };
+    const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return { list: [], n: 0, sets: [] };
     const tags = store.s.settings?.catalog?.searchTags !== false; // gizli etiketler de aranır (ad eşleşmeleri önde)
     const all = catalog.filter((p) => p.a !== 0 && !p.so && t.every((x) => p._s?.includes(x) || (tags && p._t?.includes(x))));
     all.sort((a, b) => t.filter((x) => b._s?.includes(x)).length - t.filter((x) => a._s?.includes(x)).length);
-    return { list: all.slice(0, 6), n: all.length };
-  }, [q, catalog]);
+    // setler de (1.11.2026): adı / içindeki ürünler eşleşen en çok 2 set listenin başında
+    const sets = searchSets(S, store.s.byId, q).slice(0, 2);
+    return { list: all.slice(0, sets.length ? 5 : 6), n: all.length, sets };
+  }, [q, catalog, S]);
   const [closing, setClosing] = useState(false);
   const [fit, setFit] = useState(null); // { w, drop }: açılırken menüyle sağdaki düğmeler arasındaki boşluğa göre
   const closeT = useRef(0);
@@ -371,7 +397,13 @@ export function HeaderSearch() {
         {(q || mob) && <button type="button" className="hsearch-x" onMouseDown={(e) => e.preventDefault()} onClick={() => { if (q) setQ(''); else close(); }} aria-label="Temizle"><Icon n="x" s={14} /></button>}
         {open && q.trim() && (
           <div className="hsearch-res" role="listbox">
-            {res.list.length === 0 ? <p className="hsearch-none">“{q}” ile eşleşen ürün yok.</p> : res.list.map((p, i) => {
+            {res.sets?.map((x) => { const v = setView(x, store.s.byId); const lk = setLookOf(S, x); return (
+              <button type="button" key={'s' + x.id} className="hsearch-it hs-set" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(''); close(); inp.current?.blur(); openSet(x.id); }}>
+                <span className="hs-set-cov">{v.lines[0]?.p && <Thumb p={v.lines[0].p} size="sm" />}<i><Icon n="box" s={10} /></i></span>
+                <span className="hsearch-n"><b>{x.name}</b><small><span className="hs-set-tag">SET</span> {v.active.length} ürün{lk.price && lk.cardSave && v.save > 0 ? ' · ' + fmt(v.save, v.cur) + ' kazanç' : ''}</small></span>
+                <b className="hsearch-p num">{lk.price ? fmt(v.price, v.cur) : ''}</b>
+              </button>); })}
+            {res.list.length === 0 && !res.sets?.length ? <p className="hsearch-none">“{q}” ile eşleşen ürün yok.</p> : res.list.map((p, i) => {
               const pr = priceFor(p, S, user, userPrices);
               return (
                 <button type="button" key={p.id} role="option" aria-selected={i === hi} className={'hsearch-it' + (i === hi ? ' on' : '')} onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(p)}>
@@ -412,7 +444,52 @@ export function ColorPick({ v = '', onChange, label = 'Başlık rengi', grads = 
   </Field>;
 }
 
+// ---- Bölüm başlığı biçimi (1.11.2026): raflardaki 'Markalar' gibi başlıklar video ve başlık bölümlerinde de.
+// b.hst: plain (sade) | bar (renkli çubuk, raf başlığı) | dot (nokta) | icon (simge kutusu, b.hic) | line (yanında çizgi) | num (numaralı rozet b.hnum)
+// b.ha: left | center | right (yoksa def), b.hg: sm | md | lg (içerikle arasındaki boşluk)
+export const HEAD_STYLES = [['plain', 'Sade'], ['bar', 'Çubuklu'], ['dot', 'Noktalı'], ['icon', 'Simgeli'], ['line', 'Çizgili'], ['pill', 'Etiketli']];
+export const HEAD_ICONS = ['play', 'star', 'sparkle', 'tag', 'box', 'heart', 'check', 'truck', 'shield', 'chip', 'clock', 'store'];
+function SecTitle({ b, onTitle, defStyle = 'plain', defAlign = 'left', tagTitle }) {
+  const st = b.hst || defStyle; const al = b.ha || defAlign;
+  return (
+    <div className={'stl hs2-' + st + ' ha-' + al + ' hg-' + (b.hg || 'md')}>
+      <div className="stl-row">
+        {st === 'icon' && <span className="stl-ic" aria-hidden="true"><Icon n={b.hic || 'play'} s={18} /></span>}
+        {st === 'pill' && <span className="stl-pill">{b.hpill || tagTitle || 'Yeni'}</span>}
+        <TitleText as="h2" b={b} onTitle={onTitle} />
+      </div>
+      {b.sub && <p style={b.sc ? { color: b.sc } : undefined}>{b.sub}</p>}
+    </div>
+  );
+}
+export function HeadStyleFields({ b, up, defStyle = 'plain', defAlign = 'left' }) {
+  const st = b.hst || defStyle;
+  return <>
+    <Field label="Başlık biçimi" hint="Raflardaki 'Markalar' başlığı = Çubuklu">
+      <span className="hst-pick">{HEAD_STYLES.map(([x, l]) => (
+        <button key={x} type="button" className={'hst-opt' + (st === x ? ' on' : '')} onClick={() => up({ hst: x })}>
+          <span className={'stl mini hs2-' + x + ' ha-left'}><span className="stl-row">{x === 'icon' && <span className="stl-ic"><Icon n="play" s={10} /></span>}{x === 'pill' && <span className="stl-pill">Yeni</span>}<h2>Aa</h2></span></span>
+          <small>{l}</small>
+        </button>))}
+      </span>
+    </Field>
+    {st === 'icon' && <Field label="Simge"><span className="hic-pick">{HEAD_ICONS.map((n) => <button key={n} type="button" className={(b.hic || 'play') === n ? 'on' : ''} onClick={() => up({ hic: n })} aria-label={n}><Icon n={n} s={17} /></button>)}</span></Field>}
+    {st === 'pill' && <Field label="Etiket yazısı"><input value={b.hpill || ''} placeholder="Yeni" maxLength={18} onChange={(e) => up({ hpill: e.target.value })} /></Field>}
+    <div className="row2">
+      <Field label="Hizalama"><span className="seg">{[['left', 'Sola'], ['center', 'Ortaya'], ['right', 'Sağa']].map(([x, l]) => <button key={x} type="button" className={(b.ha || defAlign) === x ? 'on' : ''} onClick={() => up({ ha: x })}>{l}</button>)}</span></Field>
+      <Field label="Altındaki boşluk"><span className="seg">{[['sm', 'Az'], ['md', 'Orta'], ['lg', 'Çok']].map(([x, l]) => <button key={x} type="button" className={(b.hg || 'md') === x ? 'on' : ''} onClick={() => up({ hg: x })}>{l}</button>)}</span></Field>
+    </div>
+  </>;
+}
+
 function HeadBlock({ b, onTitle }) {
+  // yeni biçim seçilmişse (hst) ortak başlık; seçilmemişse eski görünüm birebir
+  if (b.hst) return (
+    <section className={'sh-headblk rv hs-' + (b.size || 'md')}>
+      {b.tag && <span className="sh-tag">{b.tag}</span>}
+      <SecTitle b={b} onTitle={onTitle} defAlign={b.align || 'left'} />
+    </section>
+  );
   return (
     <section className={'sh-headblk rv al-' + (b.align || 'left') + ' hs-' + (b.size || 'md')}>
       {b.tag && <span className="sh-tag">{b.tag}</span>}
@@ -491,7 +568,7 @@ function VideoBlock({ b, edit, up }) {
   return (
     <section ref={ref} className={'sh-video rv al-' + al}>
       <WideBox W={g.W} pos={g.pos} up={up} phone={64} className="vid">
-        {(b.title || b.sub) && <div className="sh-video-h"><TitleText as="h2" b={b} k="title" />{b.sub && <p style={b.sc ? { color: b.sc } : undefined}>{b.sub}</p>}</div>}
+        {(b.title || b.sub) && <div className="sh-video-h"><SecTitle b={b} defStyle="bar" defAlign={al} /></div>}
         <div className="sh-video-grid" style={{ '--n': list.length }}>
           {list.map((x, i) => (
             <div key={i} className="sh-video-box" style={{ aspectRatio: `${g.rw} / ${g.rh}` }}>
@@ -650,7 +727,7 @@ function Marquee({ items, style, speed, speedM, ls = 1 }) { // speed: masaüstü
   return (
     <div ref={ref} className={'sh-mq mq-' + style} aria-hidden="true" style={{ '--mq-dur': (Number(speed) || 46) + 's' }}>
       <div className="sh-mq-in">{[...row, ...row].map((b, i) => (
-        <span key={i} className="sh-mq-it" style={{ '--c': b.color || '#64748b', '--ls': (b.scale || 1) * ls }}>
+        <span key={i} className="sh-mq-it" style={{ '--c': b.color || '#64748b', '--ls': ls }}>
           {b.logo ? <ShopImg v={b.logo} className="sh-mq-logo" alt={b.name} /> : <b>{b.name}</b>}
         </span>
       ))}</div>
@@ -712,7 +789,7 @@ function Hero({ slides, open, brands, heroH, pkHero }) {
   const grab = () => { target.current = null; clearTimeout(targetT.current); touching.current = true; clearTimeout(settleT.current); };
   const release = () => { touching.current = false; settle(); };
   return (
-    <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px' } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
+    <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
         {slides.map((s, k) => <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} open={open} logo={slideLogo(s, brands)} />)}
       </div>
@@ -878,6 +955,16 @@ function FavRail({ onProduct, edit, S }) {
     </section>
   );
 }
+// Ana sayfa rafında fiyatı sorulan / stokta olmayan ürün (1.11.2026): sepet yerine küçük çan. Basınca 'gelince haber ver'
+// açılır, çan dolu ve renkli olur; tekrar basınca kapanır (Tüm ürünler'deki Haber ver ile aynı kayıt).
+function BellBtn({ p, edit }) {
+  const on = useStore((s) => (s.member?.notify || []).includes(p.id));
+  const [pop, setPop] = useState(0);
+  return <button type="button" className={'sh-bell' + (on ? ' on' : '')} aria-pressed={on} title={on ? 'Haber vereceğiz · kapatmak için dokunun' : 'Gelince haber ver'} aria-label="Gelince haber ver"
+    onClick={(e) => { e.stopPropagation(); if (edit) return; toggleNotify(p.id).then((v) => v != null && setPop((x) => x + 1)); }}>
+    <Icon key={pop} n="bell" s={17} className={pop ? 'fav-pop' : ''} />
+  </button>;
+}
 export function PCard({ p, i, isNew, onOpen }) {
   const S = useStore((s) => s.settings); const user = useStore((s) => s.user); const userPrices = useStore((s) => s.userPrices);
   const qty = useStore((s) => s.cart[p.id] || 0);
@@ -897,7 +984,9 @@ export function PCard({ p, i, isNew, onOpen }) {
         <button className="sh-card-n" onClick={onOpen}>{p.n}</button>
         <div className="sh-card-f">
           <b className="sh-card-p">{pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur)}</b>
-          {qty > 0
+          {!qty && (pr.mine == null || outOfStock(p)) && (E || (user?.role || 'public') === 'public') && feat(S).notify
+            ? <BellBtn p={p} edit={!!E} />
+            : qty > 0
             ? <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} /></span>
             : <button className={'sh-add' + (morph === 'back' ? ' back' : '')} onClick={() => { if (E) return; setQty(p.id, 1); toast('Sepete eklendi'); }} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
         </div>
@@ -1235,6 +1324,7 @@ export function BlockFields({ b, up }) {
         <Field label="Başlık" opt><input value={b.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
         <Field label="Alt yazı" opt><input value={b.sub || ''} onChange={(e) => up({ sub: e.target.value })} /></Field>
       </div>
+      {(b.title || b.sub) && <HeadStyleFields b={b} up={up} defStyle="bar" defAlign={g.pos < 0.25 ? 'left' : g.pos > 0.75 ? 'right' : 'center'} />}
       {b.title && <ColorPick v={b.tc || ''} onChange={(tc) => up({ tc })} />}
     </>;
   }
@@ -1248,9 +1338,10 @@ export function BlockFields({ b, up }) {
     <Field label="Alt yazı" opt><input value={b.sub || ''} onChange={(e) => up({ sub: e.target.value })} /></Field>
     <div className="row3">
       <Field label="Küçük etiket" opt><input value={b.tag || ''} onChange={(e) => up({ tag: e.target.value })} /></Field>
-      <Field label="Hizalama"><select value={b.align || 'left'} onChange={(e) => up({ align: e.target.value })}><option value="left">Sola</option><option value="center">Ortaya</option><option value="right">Sağa</option></select></Field>
+      {!b.hst && <Field label="Hizalama"><select value={b.align || 'left'} onChange={(e) => up({ align: e.target.value })}><option value="left">Sola</option><option value="center">Ortaya</option><option value="right">Sağa</option></select></Field>}
       <Field label="Büyüklük"><select value={b.size || 'md'} onChange={(e) => up({ size: e.target.value })}><option value="sm">Küçük</option><option value="md">Orta</option><option value="lg">Büyük</option><option value="xl">Dev</option></select></Field>
     </div>
+    <HeadStyleFields b={b} up={(p) => up(p.ha ? { ...p, align: p.ha } : p.hst && !b.hst ? { ...p, ha: b.align || 'left' } : p)} defStyle="plain" defAlign={b.align || 'left'} />
     <ColorPick v={b.tc || ''} onChange={(tc) => up({ tc })} />
     {b.sub && <ColorPick v={b.sc || ''} onChange={(sc) => up({ sc })} label="Alt yazı rengi" grads={false} />}
   </>;

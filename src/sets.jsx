@@ -8,7 +8,7 @@ import { PageHead, SubNav, Icon, Thumb, Stepper, Sheet, Empty, Toggle, Confirm, 
 import { fmt, norm, now } from './utils.js';
 import { queueSave } from './saveq.js';
 import { ShareBtn } from './extras.jsx';
-import { PriceBlock, cardAdd } from './catalog.jsx';
+import { PriceBlock, cardAdd, ProductSheet } from './catalog.jsx';
 
 // Yönetim: Ürünler ⇄ Setler (31.10.2026, kullanıcı: Setler Ürünler'in içinde; Siparişler'deki seçicinin aynısı)
 export function ProductsSwitch({ on }) {
@@ -26,6 +26,37 @@ export const liveSets = (S) => setsOf(S).filter((x) => x.on && (x.items || []).l
 export const setKey = (id, removed = []) => 's:' + id + (removed.length ? '~' + [...removed].map(Number).sort((a, b) => a - b).join('.') : '');
 export const parseSetKey = (k) => { const m = /^s:([\w-]+)(?:~([\d.]+))?$/.exec(String(k)); return m ? { id: m[1], removed: m[2] ? m[2].split('.').map(Number) : [] } : null; };
 const sellable = (p) => !!p && !!p.a && !p.so;
+
+// ---- Set görünüm ayarları (1.11.2026): genel (Ayarlar › Ürünler › Setler, settings.setLook) + sete özel (set.look, boş = genel)
+// price: kartlarda set fiyatı · rows: set sayfasında ürün satırı fiyatı 'pp' paketteki | 'list' site fiyatı (indirim toplamda) | 'none'
+// compare: 'Ayrı ayrı → Set fiyatı' ve kazanç · cardSave: kartta kazanç yazısı · search: aramalarda setler de çıksın
+export const SET_LOOK_DEF = { price: true, rows: 'pp', compare: true, cardSave: true, search: true };
+export const setLookOf = (S, set) => ({ ...SET_LOOK_DEF, ...(S?.setLook || {}), ...(set?.look || {}) });
+// Toplam indirimle fiyat: indirim ürünlerin liste fiyatına orantılı dağıtılır → her ürünün pp'si yazılır
+// (bekçi siparişte pp ile doğrular, yani sunucu tarafı değişmez). Kuruş farkı adedi 1 olan en pahalı ürüne eklenir.
+export function spreadOff(items, byId, off, unit) {
+  const L = items.reduce((a, it) => a + (byId.get(Number(it.id))?.r || 0) * (it.qty || 1), 0);
+  if (!(L > 0)) return items;
+  const o = Math.max(0, Number(String(off).replace(',', '.')) || 0);
+  const T = Math.max(0, unit === 'pct' ? L * (1 - Math.min(100, o) / 100) : L - o); const k = T / L;
+  const out = items.map((it) => ({ ...it, pp: r2((byId.get(Number(it.id))?.r || 0) * k) }));
+  const diff = r2(T - out.reduce((a, it) => a + it.pp * (it.qty || 1), 0));
+  if (diff) { const j = out.map((it, i) => [i, it]).filter(([, it]) => (it.qty || 1) === 1).sort((a, b) => b[1].pp - a[1].pp)[0]?.[0]; if (j != null) out[j] = { ...out[j], pp: Math.max(0, r2(out[j].pp + diff)) }; }
+  return out;
+}
+// aramada set: adı + açıklaması + içindeki ürün adları (hepsinde her kelime aranır; adda geçen öne)
+export function searchSets(S, byId, q) {
+  const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return [];
+  const out = [];
+  for (const x of liveSets(S)) {
+    if (setLookOf(S, x).search === false) continue;
+    const head = norm((x.name || '') + ' ' + (x.desc || ''));
+    const all = head + ' set paket ' + (x.items || []).map((it) => byId.get(Number(it.id))?._s || norm(byId.get(Number(it.id))?.n || '')).join(' ');
+    if (!t.every((w) => all.includes(w))) continue;
+    out.push([x, t.filter((w) => head.includes(w)).length]);
+  }
+  return out.sort((a, b) => b[1] - a[1]).map((y) => y[0]);
+}
 
 // Setin o anki hâli (çıkarılan ürünler ve stok kuralıyla)
 export function setView(set, byId, removed = []) {
@@ -99,6 +130,7 @@ export function SetCard({ set, asLi = true }) {
   useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
   const ordersOn = S.orders?.enabled !== false;
   const pseudo = useMemo(() => ({ id: 's-' + set.id, n: set.name, r: v.price, cur: v.cur, s: v.ok ? 1 : 0, a: 1 }), [set, v]);
+  const lk = setLookOf(S, set);
   const Tag = asLi ? 'li' : 'div';
   return (
     <Tag className="prow set-prow">
@@ -109,13 +141,13 @@ export function SetCard({ set, asLi = true }) {
           <span className="prow-name">{set.name}</span>
           <span className="prow-meta">
             {v.ok ? <span className="dot tone-ok">Stokta</span> : <span className="dot tone-bad">Stokta değil</span>}
-            {v.save > 0 && <span className="set-save-l"><s>{fmt(v.list, v.cur)}</s> · {fmt(v.save, v.cur)} kazanç</span>}
+            {lk.price && lk.cardSave && v.save > 0 && <span className="set-save-l"><s>{fmt(v.list, v.cur)}</s> · {fmt(v.save, v.cur)} kazanç</span>}
           </span>
         </div>
       </button>
       <div className="prow-side">
-        <PriceBlock p={pseudo} />
-        {!v.ok || !ordersOn ? null : qty > 0 ? (
+        {lk.price ? <PriceBlock p={pseudo} /> : <button type="button" className="set-noprice" onClick={() => openSet(set.id)}>Seti inceleyin<Icon n="back" s={14} className="flip" /></button>}
+        {!lk.price || !v.ok || !ordersOn ? null : qty > 0 ? (
           <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(x) => setQty(k, x)} onRemove={() => setQty(k, 0)} /></span>
         ) : (
           <button className={'btn sm add' + (morph === 'back' ? ' back' : '')} onClick={() => { setQty(k, 1); toast('Set sepete eklendi'); }} aria-label="Seti sepete ekle" title="Seti sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-cart" aria-hidden="true"><Icon n="cart" s={18} /><i>+</i></span><span className="add-l">Sepete ekle</span></button>
@@ -133,6 +165,7 @@ export function SetGrid() {
 // Ana sayfa rafındaki kart = raftaki ürün kartının (PCard) aynısı
 function SetRailCard({ set, i }) {
   const byId = useStore((s) => s.byId);
+  const SS = useStore((s) => s.settings); const lk = setLookOf(SS, set); // seçici yeni nesne döndürmesin (sonsuz döngü)
   const k = setKey(set.id);
   const qty = useStore((s) => s.cart[k] || 0);
   const v = useMemo(() => setView(set, byId), [set, byId]);
@@ -143,11 +176,11 @@ function SetRailCard({ set, i }) {
     <div className="sh-card set-shcard" style={{ '--i': i }} onClick={(e) => { if (!e.target.closest('button, input, .stepper')) open(); }}>
       <button className="sh-card-img" onClick={open} aria-label={set.name}><SetCover v={v} bare /><span className="sh-new set-new"><Icon n="box" s={11} />SET · {v.active.length}</span></button>
       <div className="sh-card-b">
-        <span className="sh-card-brand">{v.save > 0 ? <><s>{fmt(v.list, v.cur)}</s> · {fmt(v.save, v.cur)} kazanç</> : v.active.length + ' ürün bir arada'}</span>
+        <span className="sh-card-brand">{lk.price && lk.cardSave && v.save > 0 ? <><s>{fmt(v.list, v.cur)}</s> · {fmt(v.save, v.cur)} kazanç</> : v.active.length + ' ürün bir arada'}</span>
         <button className="sh-card-n" onClick={open}>{set.name}</button>
         <div className="sh-card-f">
-          <b className="sh-card-p">{fmt(v.price, v.cur)}</b>
-          {!v.ok ? null : qty > 0
+          {lk.price ? <b className="sh-card-p">{fmt(v.price, v.cur)}</b> : <button type="button" className="set-noprice" onClick={open}>Seti inceleyin</button>}
+          {!lk.price || !v.ok ? null : qty > 0
             ? <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(x) => setQty(k, x)} onRemove={() => setQty(k, 0)} /></span>
             : <button className={'sh-add' + (morph === 'back' ? ' back' : '')} onClick={() => { setQty(k, 1); toast('Set sepete eklendi'); }} aria-label="Seti sepete ekle" title="Seti sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
         </div>
@@ -176,10 +209,10 @@ export function InSets({ p }) {
   if (!sets.length) return null;
   return (
     <div className="in-sets">
-      {sets.slice(0, 3).map((x) => { const v = setView(x, byId); return (
+      {sets.slice(0, 3).map((x) => { const v = setView(x, byId); const lk = setLookOf(S, x); return (
         <button key={x.id} type="button" className="in-set" onClick={() => openSet(x.id)}>
           <SetCover v={v} />
-          <span className="in-set-t"><small>BU ÜRÜN SETTE DE VAR</small><b>{x.name}</b><em>{v.active.length} ürün · {fmt(v.price, v.cur)}{v.save > 0 ? ' · ' + fmt(v.save, v.cur) + ' kazanç' : ''}</em></span>
+          <span className="in-set-t"><small>BU ÜRÜN SETTE DE VAR</small><b>{x.name}</b><em>{v.active.length} ürün{lk.price ? ' · ' + fmt(v.price, v.cur) : ''}{lk.price && lk.cardSave && v.save > 0 ? ' · ' + fmt(v.save, v.cur) + ' kazanç' : ''}</em></span>
           <Icon n="back" s={16} className="flip" />
         </button>
       ); })}
@@ -188,33 +221,44 @@ export function InSets({ p }) {
 }
 
 // ---- Müşterinin set sayfası (/set/<id>)
+// 1.11.2026: başlıkta 'SET · N ÜRÜN', liste başlığında 'Sette N ürün var', fiyatlar tek sütunda hizalı, ürüne basınca
+// sayfa değil pencere (ProductSheet) açılır; ürün satırı fiyatı ve 'Ayrı ayrı → Set fiyatı' ayarlardan (setLookOf).
 export function SetPage({ id }) {
   const S = useStore((s) => s.settings);
   const byId = useStore((s) => s.byId);
   const cart = useStore((s) => s.cart);
   const set = liveSets(S).find((x) => x.id === id);
   const [removed, setRemoved] = useState([]);
+  const [peek, setPeek] = useState(null);
   if (!set) return <div className="page narrow"><Empty icon="box" title="Set bulunamadı"><button className="btn primary" onClick={() => go('katalog')}>Ürünlere git</button></Empty></div>;
   const v = setView(set, byId, removed);
+  const lk = setLookOf(S, set);
   const canRm = set.rm !== false;
   const k = setKey(set.id, removed);
   const inCart = cart[k] || 0;
   const ordersOn = S.orders?.enabled !== false;
   const add = () => { setQty(k, inCart + 1); toast(inCart ? 'Set sepette ' + (inCart + 1) + ' adet' : 'Set sepete eklendi'); };
   const toggle = (l) => setRemoved(l.off ? removed.filter((x) => x !== l.id) : [...removed, l.id]);
+  const n = v.active.length; const pcs = v.active.reduce((a, l) => a + l.qty, 0);
+  const rowP = (l) => {
+    if (lk.rows === 'none') return null;
+    if (lk.rows === 'list') return <span className="set-row-p"><b className="num">{fmt((l.list ?? l.pp) * l.qty, v.cur)}</b>{l.qty > 1 && <small className="num">{l.qty} × {fmt(l.list ?? l.pp, v.cur)}</small>}</span>;
+    return <span className="set-row-p">{l.list != null && l.list !== l.pp && <s className="num">{fmt(l.list * l.qty, v.cur)}</s>}<b className="num">{fmt(l.pp * l.qty, v.cur)}</b>{l.qty > 1 && <small className="num">{l.qty} × {fmt(l.pp, v.cur)}</small>}</span>;
+  };
   return (
-    <div className="page set-page">
+    <div className={'page set-page sp-rows-' + lk.rows + (canRm ? ' sp-rm' : '')}>
       <button type="button" className="back-btn" onClick={() => (history.state?.setId ? history.back() : go('katalog'))}><Icon n="back" s={16} />Geri</button>
       <div className="set-top">
         <div className="set-top-cov"><SetCover v={v} /></div>
         <div className="set-top-i">
+          <span className="sp-badge"><Icon n="box" s={13} />SET · {n} ÜRÜN{pcs > n ? ' · ' + pcs + ' PARÇA' : ''}</span>
           <div className="set-th"><h1 className="set-t">{set.name}</h1><ShareBtn big url={location.origin + '/set/' + set.id} title={set.name} label="Seti paylaş" /></div>
           {set.desc && <p className="set-d">{set.desc}</p>}
           <div className="set-price">
-            {v.save > 0 && <span className="set-pl"><small>Ayrı ayrı</small><s>{fmt(v.list, v.cur)}</s></span>}
-            {v.save > 0 && <Icon n="back" s={18} className="flip set-arrow" />}
+            {lk.compare && v.save > 0 && <span className="set-pl"><small>Ayrı ayrı</small><s>{fmt(v.list, v.cur)}</s></span>}
+            {lk.compare && v.save > 0 && <Icon n="back" s={18} className="flip set-arrow" />}
             <span className="set-pp"><small>Set fiyatı</small><b>{fmt(v.price, v.cur)}</b></span>
-            {v.save > 0 && <span className="set-save">Sette {fmt(v.save, v.cur)} kazancınız var</span>}
+            {lk.compare && v.save > 0 && <span className="set-save">Sette {fmt(v.save, v.cur)} kazancınız var</span>}
           </div>
           {v.ok
             ? <button type="button" className="btn primary big set-add" onClick={add} disabled={!ordersOn}><Icon n="cart" s={18} />{inCart ? `Sepette · ${inCart} set · 1 daha ekle` : 'Seti sepete ekle'}</button>
@@ -223,23 +267,30 @@ export function SetPage({ id }) {
         </div>
       </div>
       <div className="set-list">
-        <div className="set-list-h"><b>Sette neler var</b>{canRm && <small>Elinizde olanı çıkarın, o ürünün paketteki fiyatı düşülür · en az {v.minN} ürün</small>}
+        <div className="set-list-h"><b>Sette {n} ürün var</b>{canRm && <small>Elinizde olanı çıkarın, o ürünün paketteki fiyatı düşülür · en az {v.minN} ürün</small>}
           {removed.length > 0 && <button type="button" className="link" onClick={() => setRemoved([])}>Hepsini geri al</button>}</div>
-        {v.lines.map((l) => {
+        {v.lines.map((l, idx) => {
           const lock = !l.off && canRm && v.active.length <= v.minN;
           return (
-            <div key={l.id} className={'set-row' + (l.off || l.auto ? ' off' : '')}>
-              <button type="button" className="set-row-img" onClick={() => l.p && openProduct(l.p.id)} disabled={!l.p}>{l.p && <Thumb p={l.p} size="sm" />}</button>
-              <button type="button" className="set-row-n" onClick={() => l.p && openProduct(l.p.id)} disabled={!l.p}>
+            <div key={l.id} className={'set-row sp-row' + (l.off || l.auto ? ' off' : '')}>
+              <span className="sp-i num">{idx + 1}</span>
+              <button type="button" className="set-row-img" onClick={() => l.p && setPeek(l.p)} disabled={!l.p} aria-label="Ürünü incele">{l.p && <Thumb p={l.p} size="sm" />}</button>
+              <button type="button" className="set-row-n" onClick={() => l.p && setPeek(l.p)} disabled={!l.p}>
                 <b>{l.qty > 1 ? l.qty + ' × ' : ''}{l.p?.n || 'Ürün kaldırıldı'}</b>
                 <small>{l.p?.b ? l.p.b + ' · ' : ''}{l.gone ? 'Satışta değil' : l.oos ? 'Stokta yok' : 'Stokta'}{l.auto ? ' · setten çıkarıldı' : ''}</small>
               </button>
-              <span className="set-row-p">{l.list != null && l.list !== l.pp && <s>{fmt(l.list, v.cur)}</s>}<b>{fmt(l.pp, v.cur)}</b></span>
-              {canRm && !l.auto && <button type="button" className={'set-have' + (l.off ? ' on' : '')} onClick={() => toggle(l)} disabled={lock} title={lock ? `En az ${v.minN} ürün kalmalı` : ''}>{l.off ? <><Icon n="plus" s={13} />Sete geri ekle</> : 'Elimde var'}</button>}
+              {rowP(l) || <span />}
+              {canRm && (!l.auto ? <button type="button" className={'set-have' + (l.off ? ' on' : '')} onClick={() => toggle(l)} disabled={lock} title={lock ? `En az ${v.minN} ürün kalmalı` : ''}>{l.off ? <><Icon n="plus" s={13} />Sete geri ekle</> : 'Elimde var'}</button> : <span />)}
             </div>
           );
         })}
+        {lk.rows !== 'none' && <div className="sp-sum">
+          {(lk.rows === 'list' || (lk.compare && v.save > 0)) && <div className="sp-sl"><span>Ayrı ayrı toplam</span><span className="num">{fmt(v.list, v.cur)}</span></div>}
+          {v.save > 0 && (lk.rows === 'list' || lk.compare) && <div className="sp-sl sp-off"><span>Set indirimi</span><span className="num">−{fmt(v.save, v.cur)}</span></div>}
+          <div className="sp-sl sp-tot"><span>Set fiyatı</span><b className="num">{fmt(v.price, v.cur)}</b></div>
+        </div>}
       </div>
+      {peek && <ProductSheet p={peek} forceSheet onClose={() => setPeek(null)} />}
     </div>
   );
 }
@@ -320,7 +371,8 @@ export function SetsAdmin() {
 function SetEdit({ set, onClose, onSave }) {
   const byId = useStore((s) => s.byId);
   const catalog = useStore((s) => s.catalog);
-  const [f, setF] = useState(() => ({ id: set.id || null, name: set.name || '', desc: set.desc || '', on: !!set.on, stock: set.stock || 'notify', rm: set.rm !== false, items: (set.items || []).map((it) => ({ id: Number(it.id), qty: it.qty || 1, pp: String(it.pp ?? '') })) }));
+  const init = () => ({ id: set.id || null, name: set.name || '', desc: set.desc || '', on: !!set.on, stock: set.stock || 'notify', rm: set.rm !== false, mode: set.mode || 'items', off: String(set.off ?? ''), offU: set.offU || 'pct', look: set.look || null, items: (set.items || []).map((it) => ({ id: Number(it.id), qty: it.qty || 1, pp: String(it.pp ?? '') })) });
+  const [f, setF] = useState(init);
   const [q, setQ] = useState('');
   const [ask, setAsk] = useState(false);
   const up = (p) => setF((x) => ({ ...x, ...p }));
@@ -332,15 +384,22 @@ function SetEdit({ set, onClose, onSave }) {
   }, [q, catalog, f.items]);
   const num = (v) => { const n = Number(String(v).replace(',', '.')); return isFinite(n) && n >= 0 ? n : 0; };
   const sum = r2(f.items.reduce((a, it) => a + (byId.get(it.id)?.r || 0) * it.qty, 0));
-  const price = r2(f.items.reduce((a, it) => a + num(it.pp) * it.qty, 0));
+  // 'Toplam indirim' modunda paketteki fiyatlar indirimden hesaplanır (liste fiyatlarına orantılı)
+  const tot = f.mode === 'total';
+  const price = r2((tot ? spreadOff(f.items, byId, f.off, f.offU) : f.items).reduce((a, it) => a + num(it.pp) * it.qty, 0));
   const cur = byId.get(f.items[0]?.id)?.cur || 'USD';
-  const dirty = JSON.stringify(f) !== JSON.stringify({ id: set.id || null, name: set.name || '', desc: set.desc || '', on: !!set.on, stock: set.stock || 'notify', rm: set.rm !== false, items: (set.items || []).map((it) => ({ id: Number(it.id), qty: it.qty || 1, pp: String(it.pp ?? '') })) });
+  const dirty = JSON.stringify(f) !== JSON.stringify(init());
+  const shown = tot ? spreadOff(f.items.map((it) => ({ ...it })), byId, f.off, f.offU).map((it) => ({ ...it, pp: String(it.pp) })) : f.items;
   const close = () => (dirty ? setAsk(true) : onClose());
-  const ok = f.name.trim() && f.items.length >= 2 && f.items.every((it) => String(it.pp).trim() !== '' && num(it.pp) >= 0);
+  const ok = f.name.trim() && f.items.length >= 2 && (tot ? num(f.off) >= 0 : f.items.every((it) => String(it.pp).trim() !== '' && num(it.pp) >= 0));
   const save = (on) => {
     if (!f.name.trim()) return toast('Set adı yazın', 'bad');
     if (f.items.length < 2) return toast('Sete en az 2 ürün ekleyin', 'bad');
-    onSave({ id: f.id || rid(), name: f.name.trim(), desc: f.desc.trim(), on, stock: f.stock, rm: f.rm, at: now(), items: f.items.map((it) => ({ id: it.id, qty: Math.max(1, it.qty), pp: r2(num(it.pp)) })) });
+    const its = (tot ? spreadOff(f.items, byId, f.off, f.offU) : f.items).map((it) => ({ id: it.id, qty: Math.max(1, it.qty), pp: r2(num(it.pp)) }));
+    const x = { id: f.id || rid(), name: f.name.trim(), desc: f.desc.trim(), on, stock: f.stock, rm: f.rm, at: now(), items: its, mode: f.mode };
+    if (tot) { x.off = num(f.off); x.offU = f.offU; }
+    if (f.look && Object.keys(f.look).length) x.look = f.look;
+    onSave(x);
   };
   return (
     <Sheet wide sticky cls="set-edit" title={set.id ? 'Seti düzenle' : 'Yeni set'} onClose={close}
@@ -350,8 +409,18 @@ function SetEdit({ set, onClose, onSave }) {
       <div className="se">
         <label className="field"><span className="field-l">Set adı</span><input value={f.name} onChange={(e) => up({ name: e.target.value })} placeholder="ör. Yeni Başlayan Tamir Seti" /></label>
         <label className="field"><span className="field-l">Kısa açıklama <small className="opt">(müşteri görür, isteğe bağlı)</small></span><textarea rows={2} value={f.desc} onChange={(e) => up({ desc: e.target.value })} placeholder="ör. Dükkân açan ustalar için başlangıç seti" /></label>
-        <div className="se-h"><b>Setteki ürünler</b><small>{f.items.length} ürün · eklenince liste fiyatıyla gelir, “Pakette” kutusuna pakete özel fiyat yazabilirsiniz</small>
-          {f.items.some((it) => num(it.pp) !== (byId.get(it.id)?.r || 0)) && <button type="button" className="link" onClick={() => up({ items: f.items.map((it) => ({ ...it, pp: String(byId.get(it.id)?.r ?? it.pp) })) })}>Liste fiyatlarına dön</button>}</div>
+        <div className="se-mode">
+          <span className="field-l">Set fiyatı nasıl belirlensin?</span>
+          <span className="seg">{[['items', 'Ürün ürün fiyat yazarak'], ['total', 'Toplam indirim seçerek']].map(([x, l]) => <button key={x} type="button" className={f.mode === x ? 'on' : ''} onClick={() => up({ mode: x })}>{l}</button>)}</span>
+          {tot && <div className="se-off">
+            <label className="se-pp"><input inputMode="decimal" value={f.off} placeholder="0" onChange={(e) => up({ off: e.target.value })} aria-label="Toplam indirim" /></label>
+            <span className="seg">{[['pct', '%'], ['amt', '$']].map(([x, l]) => <button key={x} type="button" className={f.offU === x ? 'on' : ''} onClick={() => up({ offU: x })}>{l}</button>)}</span>
+            {f.offU === 'pct' && [5, 10, 15, 20].map((n) => <button key={n} type="button" className={'chip' + (num(f.off) === n ? ' on' : '')} onClick={() => up({ off: String(n) })}>%{n}</button>)}
+            <small className="muted">İndirim ürünlerin liste fiyatına orantılı dağıtılır · liste {fmt(sum, cur)} → set {fmt(price, cur)}</small>
+          </div>}
+        </div>
+        <div className="se-h"><b>Setteki ürünler</b><small>{f.items.length} ürün · {tot ? 'paketteki fiyatlar indirimden kendiliğinden hesaplanır' : 'eklenince liste fiyatıyla gelir, “Pakette” kutusuna pakete özel fiyat yazabilirsiniz'}</small>
+          {!tot && f.items.some((it) => num(it.pp) !== (byId.get(it.id)?.r || 0)) && <button type="button" className="link" onClick={() => up({ items: f.items.map((it) => ({ ...it, pp: String(byId.get(it.id)?.r ?? it.pp) })) })}>Liste fiyatlarına dön</button>}</div>
         <div className="se-search">
           <div className="search"><Icon n="search" s={17} /><input autoComplete="off" autoCorrect="off" spellCheck={false} placeholder="Ürün adı veya stok kodu ile ekle…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           {res.length > 0 && <div className="se-res">{res.map((p) => (
@@ -361,13 +430,13 @@ function SetEdit({ set, onClose, onSave }) {
         </div>
         {f.items.length > 0 && <div className="se-items">
           <div className="se-it se-ith"><span /><span>Ürün</span><span>Adet</span><span>Liste</span><span>Pakette (adet)</span><span /></div>
-          {f.items.map((it, i) => { const p = byId.get(it.id); const ch = p && num(it.pp) !== (p.r || 0); return (
+          {f.items.map((it0, i) => { const it = shown[i] || it0; const p = byId.get(it.id); const ch = p && num(it.pp) !== (p.r || 0); return (
             <div key={it.id} className="se-it">
               {p ? <Thumb p={p} size="sm" /> : <span />}
               <span className="se-n"><b>{p?.n || 'Ürün bulunamadı (#' + it.id + ')'}</b><small className={p && (!p.a || p.so || !(p.s > 0)) ? 'bad' : ''}>{p ? p.k + (!p.a || p.so ? ' · satışta değil' : !(p.s > 0) ? ' · stokta yok' : ' · stok ' + p.s) : ''}</small></span>
               <Stepper small min={1} value={it.qty} onChange={(v) => upIt(i, { qty: v })} />
               <span className={'se-l num' + (ch ? ' ch' : '')}>{p ? fmt(p.r || 0, p.cur) : '—'}</span>
-              <label className={'se-pp' + (ch ? ' ch' : '')}><span>$</span><input inputMode="decimal" value={it.pp} onChange={(e) => upIt(i, { pp: e.target.value })} aria-label="Paketteki fiyat" /></label>
+              <label className={'se-pp' + (ch ? ' ch' : '') + (tot ? ' ro' : '')}><span>$</span><input inputMode="decimal" value={it.pp} readOnly={tot} onChange={(e) => upIt(i, { pp: e.target.value })} aria-label="Paketteki fiyat" /></label>
               <button type="button" className="icon-btn sm" onClick={() => up({ items: f.items.filter((_, j) => j !== i) })} aria-label="Çıkar"><Icon n="x" s={15} /></button>
             </div>
           ); })}
@@ -378,8 +447,44 @@ function SetEdit({ set, onClose, onSave }) {
           <label className={'se-radio' + (f.stock === 'skip' ? ' on' : '')}><input type="radio" checked={f.stock === 'skip'} onChange={() => up({ stock: 'skip' })} /><span><b>O ürün olmadan satılır</b><small>Fiyattan o ürünün paketteki fiyatı düşülür</small></span></label>
           <Toggle checked={f.rm} onChange={(v) => up({ rm: v })} label="Müşteri “Elimde var” diyebilsin" hint="Sahip olduğu ürünü setten çıkarır, en az 3 ürün kalır" />
         </div>
+        <div className="se-opts">
+          <div className="se-opt-h"><b>Bu setin görünümü</b></div>
+          <Toggle checked={!f.look} onChange={(v) => up({ look: v ? null : { ...setLookOf(store.s.settings, null) } })} label="Genel set ayarlarını kullan" hint="Ayarlar › Ürünler › Setler" />
+          {f.look && <SetLookFields L={f.look} up={(p) => up({ look: { ...f.look, ...p } })} />}
+        </div>
       </div>
       {ask && <Confirm title="Değişiklikler kaydedilmedi" text="Kaydetmeden çıkılsın mı?" okLabel="Kaydetmeden çık" tone="danger" onOk={onClose} onClose={() => setAsk(false)} />}
     </Sheet>
   );
+}
+
+// ---- Set görünümü alanları (Ayarlar › Setler ve sete özel)
+export function SetLookFields({ L, up }) {
+  const v = { ...SET_LOOK_DEF, ...(L || {}) };
+  return <div className="setlook">
+    <Toggle checked={v.price} onChange={(x) => up({ price: x })} label="Kartlarda set fiyatını göster" hint="Kapalıysa kartta 'Seti inceleyin' yazar; fiyat set sayfasında görünür" />
+    <label className="field"><span className="field-l">Set sayfasında ürün satırlarındaki fiyat</span>
+      <span className="seg seg-wrap">{[['pp', 'Paketteki fiyat'], ['list', 'Site fiyatı · indirim toplamda'], ['none', 'Fiyat gösterme']].map(([x, l]) => <button key={x} type="button" className={v.rows === x ? 'on' : ''} onClick={() => up({ rows: x })}>{l}</button>)}</span>
+      <small className="field-h">{v.rows === 'list' ? 'Her ürün sitedeki normal fiyatıyla görünür; altta “Ayrı ayrı toplam − Set indirimi = Set fiyatı” yazar.' : v.rows === 'pp' ? 'Her ürünün yanında pakete özel fiyatı (varsa üstü çizili liste fiyatıyla).' : 'Ürünler fiyatsız listelenir; sadece set fiyatı görünür.'}</small></label>
+    <Toggle checked={v.compare} onChange={(x) => up({ compare: x })} label="“Ayrı ayrı → Set fiyatı” ve kazancı göster" />
+    <Toggle checked={v.cardSave} onChange={(x) => up({ cardSave: x })} label="Kartlarda kazanç yazısı" hint="ör. “$412 · $40 kazanç”" />
+    <Toggle checked={v.search} onChange={(x) => up({ search: x })} label="Aramalarda da çıksın" hint="Üstteki arama ve Ürünler araması, Setler filtresi seçilmese de seti gösterir" />
+  </div>;
+}
+export function SetSettings({ d, set }) {
+  const byId = useStore((s) => s.byId);
+  const sets = setsOf(d);
+  return <>
+    <p className="fine">Bu ayarlar bütün setler için geçerlidir. Bir sete özel görünüm vermek için seti düzenleyip “Genel set ayarlarını kullan”ı kapatın.</p>
+    <SetLookFields L={d.setLook} up={(p) => set('setLook', { ...(d.setLook || {}), ...p })} />
+    <div className="setset-list">
+      <div className="se-opt-h"><b>Setler</b><button type="button" className="link" onClick={() => go('setler')}>Setleri düzenle →</button></div>
+      {!sets.length ? <p className="fine">Henüz set yok.</p> : sets.map((x, i) => { const v = setView(x, byId); return (
+        <div key={x.id} className="setset-row">
+          <span className="setset-t"><b>{x.name || 'Adsız set'}</b><small>{(x.items || []).length} ürün · {fmt(v.price, v.cur)} · {x.mode === 'total' ? 'toplam indirim ' + (x.offU === 'amt' ? fmt(x.off || 0, v.cur) : '%' + (x.off || 0)) : 'ürün ürün fiyat'}{x.look ? ' · kendi görünümü' : ''}</small></span>
+          <Toggle checked={!!x.on} onChange={(on) => set('sets', sets.map((y, j) => (j === i ? { ...y, on } : y)))} label={x.on ? 'Yayında' : 'Taslak'} />
+        </div>
+      ); })}
+    </div>
+  </>;
 }

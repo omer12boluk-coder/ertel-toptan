@@ -19,7 +19,7 @@ COMP = {'kart': [(adm, 'CardSettings')], 'gorunum': [(adm, 'LookSettings')], 'al
         'magazaana': [(shp, 'ShopHomeEditor')], 'markalar': [(shp, 'BrandLogosEditor')], 'hesap': [(adm, 'Profile')], 'bildirim': [(adm, 'NotifyCard'), (adm, 'AdminPush')],
         'teslimat': [(adm, 'CarrierSettings')], 'tema': [(oth('decor.jsx'), 'DecorSettings')], 'kalip': [(oth('kalipfind.jsx'), 'KalipSettings')],
         'urtalep': [(oth('preq.jsx'), 'PreqSettings')], 'sorun': [(oth('issue.jsx'), 'IssueSettings')], 'ozellik': [(oth('extras.jsx'), 'FeatSettings')],
-        'kota': [(oth('quota.jsx'), 'QuotaSettings')]}
+        'kota': [(oth('quota.jsx'), 'QuotaSettings')], 'setler': [(oth('sets.jsx'), 'SetSettings'), (oth('sets.jsx'), 'SetLookFields')]}
 for k, fs in COMP.items():
     for src, n in fs: sec[k] = sec.get(k, '') + fn(src, n)
 PAT = [r'\blabel="([^"{}]{2,70})"', r'\btitle="([^"{}]{2,70})"', r'className="field-l">([^<{]{2,60})<', r'<h3>([^<{]{2,60})<', r'<b>([^<{]{3,50})</b>']

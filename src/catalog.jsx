@@ -13,7 +13,7 @@ import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
 import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
-import { SetGrid, InSets, liveSets, ProductsSwitch } from './sets.jsx';
+import { SetGrid, InSets, liveSets, ProductsSwitch, SetCard, searchSets } from './sets.jsx';
 
 export function useTree() {
   const { catalog, settings: S } = useStore();
@@ -339,6 +339,35 @@ export function CardPreview({ p, S, role }) {
   );
 }
 
+// Aramada setler (1.11.2026): 'Setler' filtresi seçilmese de aranan kelime setin adında / içindeki ürünlerde geçiyorsa
+// ürünlerin üstünde küçük bir 'Setler' satırı (set kartları) gösterilir.
+function SetHits({ q }) {
+  const S = useStore((st) => st.settings); const byId = useStore((st) => st.byId);
+  const hits = useMemo(() => searchSets(S, byId, q).slice(0, 4), [S, byId, q]);
+  if (!hits.length) return null;
+  return <div className="set-hits"><div className="set-hits-h"><Icon n="box" s={15} /><b>Setler</b><small>{hits.length} set</small></div>
+    <ul className={'plist pgrid add-' + cardAdd(S, 'public')}>{hits.map((x) => <SetCard key={x.id} set={x} />)}</ul></div>;
+}
+// Filtre çipleri tek satır (1.11.2026): satıra sığmazsa önce boşluklar, sonra yazı, sonra simgeler adım adım küçülür
+// (fit-1 … fit-3); yine sığmazsa (dar telefon) satır yana kayar. Sıralama alt satıra düşmez.
+function useFitRow() {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    let busy = false;
+    const fit = () => {
+      if (busy) return; busy = true;
+      for (let k = 1; k <= 3; k++) el.classList.remove('fit-' + k);
+      let k = 0; while (k < 3 && el.scrollWidth > el.clientWidth + 1) { k++; el.classList.add('fit-' + k); }
+      busy = false;
+    };
+    fit(); document.fonts?.ready.then(fit);
+    const ro = new ResizeObserver(fit); ro.observe(el);
+    const mo = new MutationObserver(() => requestAnimationFrame(fit)); mo.observe(el, { childList: true, subtree: true, characterData: true });
+    return () => { ro.disconnect(); mo.disconnect(); };
+  }, []);
+  return ref;
+}
 export function Catalog({ admin }) {
   const { settings: S, cart, user } = useStore();
   const all = useVisibleProducts(admin);
@@ -349,6 +378,7 @@ export function Catalog({ admin }) {
   const [sort, setSort] = useState('default');
   const [stockOnly, setStockOnly] = useState(false);
   const [showOos, setShowOos] = useState(false); // mağaza: stokta olmayanlar varsayılan gizli (31.10.2026)
+  const chipRow = useFitRow();
   const [limit, setLimit] = useState(S.catalog.pageSize);
   const [open, setOpen] = useState(null);
   const [edit, setEdit] = useState(null);
@@ -523,12 +553,12 @@ export function Catalog({ admin }) {
                 { label: 'Bir ürünü kopyala…', icon: 'copy', onClick: () => setCopyPick(true) },
               ], 'Yeni ürün')}><Icon n="plus" s={17} /><span>Yeni ürün</span><Icon n="chev" s={14} /></button>}
             </div>
-            <div className="chips" role="tablist" aria-label="Kategori">
+            <div className="chips one-row" ref={chipRow} role="tablist" aria-label="Kategori">
               <button className="chip only-m" onClick={() => setCatSheet(true)}><Icon n="filter" s={15} />{cat == null ? 'Kategoriler' : tree.nodes.get(cat)?.name || catName(S, cat)}</button>
               {cat != null && <button className="chip on only-m" onClick={() => setCat(null)}>Tümü <Icon n="x" s={14} /></button>}
               {user?.role === 'public' && setN > 0 && <button className={'chip set-chip' + (setsOnly ? ' on' : '')} onClick={() => setSetsOnly(!setsOnly)}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
               {user?.role === 'public' && (favs.length > 0 || favOnly) && <button className={'chip fav-chip' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
-              {!admin && user?.role === 'public' && <button className={'chip' + (showOos ? ' on' : '')} onClick={() => setShowOos(!showOos)}>Stokta olmayanları göster</button>}
+              {!admin && user?.role === 'public' && <button className={'chip' + (showOos ? ' on' : '')} onClick={() => setShowOos(!showOos)} title="Stokta olmayan ürünleri de listele"><Icon n={showOos ? 'eye' : 'eyeoff'} s={14} />Stokta olmayanlar</button>}
               {!admin && user?.role !== 'public' && <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>}
               {!admin && <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>}
               <label className={'chip select' + (price ? ' on' : '')}>
@@ -604,6 +634,7 @@ export function Catalog({ admin }) {
           </div>
 
           {!admin && user?.role === 'public' && cat != null && !q.trim() && <CatTop ids={catIds} onOpen={setOpen} />}
+          {!admin && user?.role === 'public' && !setsOnly && q.trim() && <SetHits q={q} />}
           {setsOnly && user?.role === 'public' ? <SetGrid /> : shown.length === 0 && favOnly && actives.length === 1 ? (
             <Empty icon="heart" title="Henüz favoriniz yok"><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p></Empty>
           ) : shown.length === 0 ? (
@@ -1062,6 +1093,7 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   const v = useRef(null);
   const [muted, setMuted] = useState(auto); // dokununca oynayanlar sesli başlar
   const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false); // bir kez oynadı mı: başlamadan ses / büyüt / süre çubuğu yok, sadece küçük oynat simgesi
   const [prog, setProg] = useState(0);
   const [err, setErr] = useState(false);
   const [big, setBig] = useState(false); // tam ekranda mı (aynı video öğesi tam ekran katmanına taşınır)
@@ -1081,21 +1113,21 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   const fmtT = (x) => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
   if (err) return <div className={'gal-vid-err ' + className}><Icon n="play" s={26} /><span>Video açılamadı</span></div>;
   return (
-    <div className={'gal-vid' + (playing ? ' playing' : '') + ' ' + className}>
+    <div className={'gal-vid' + (playing ? ' playing' : '') + (started ? ' started' : ' fresh') + ' ' + className}>
       <video ref={v} src={live ? src : undefined} poster={pst} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
-        style={{ objectFit: fit }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={(e) => { if (!fbSkip(e)) setErr(true); }}
+        style={{ objectFit: fit }} onPlay={() => { setPlaying(true); setStarted(true); }} onPause={() => setPlaying(false)} onError={(e) => { if (!fbSkip(e)) setErr(true); }}
         onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); }} onClick={() => !big && toggle()} />
-      {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={28} /></button>}
-      <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>
-      <button className="gal-vid-big" onClick={open} aria-label="Büyüt" title="Büyük izle"><Icon n="full" s={17} /></button>
-      <div className={'gal-vid-seek' + (seek != null ? ' on' : '')} ref={bar} role="slider" aria-label="Sar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((seek ?? prog) * 100)}
+      {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={started ? 24 : 17} /></button>}
+      {started && <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>}
+      {started && <button className="gal-vid-big" onClick={open} aria-label="Büyüt" title="Büyük izle"><Icon n="full" s={17} /></button>}
+      {started && <div className={'gal-vid-seek' + (seek != null ? ' on' : '')} ref={bar} role="slider" aria-label="Sar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((seek ?? prog) * 100)}
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); const x = at(e); setSeek(x); jump(x); }}
         onPointerMove={(e) => { if (seek == null) return; const x = at(e); setSeek(x); jump(x); }}
         onPointerUp={() => setSeek(null)} onPointerCancel={() => setSeek(null)}
         onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
         <span className="gal-vid-bar"><i style={{ transform: `scaleX(${seek ?? prog})` }} /></span>
         {seek != null && <><b className="gal-vid-knob" style={{ left: `calc(10px + ${seek} * (100% - 20px))` }} /><em className="gal-vid-time num" style={{ left: `clamp(30px, calc(10px + ${seek} * (100% - 20px)), calc(100% - 30px))` }}>{fmtT(seek * (v.current?.duration || 0))}</em></>}
-      </div>
+      </div>}
       {big && v.current && <VideoViewer el={v.current} onClose={() => setBig(false)} />}
     </div>
   );

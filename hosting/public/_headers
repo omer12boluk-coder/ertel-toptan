@@ -13,3 +13,5 @@
   Cache-Control: max-age=86400
 /icon-*
   Cache-Control: max-age=86400
+/favicon*
+  Cache-Control: max-age=86400

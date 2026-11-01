@@ -82,6 +82,9 @@ export function ShopDesigner() {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [dev, setDevS] = useState(() => ls.get('dz-dev', 'desk'));
+  // telefon önizleme genişliği (1.11.2026): kullanıcının telefonuyla birebir görmek için (15/16 Pro Max = 430 px)
+  const [pw, setPwS] = useState(() => Number(ls.get('dz-pw', 430)) || 430);
+  const setPw = (v) => { setPwS(v); ls.set('dz-pw', v); };
   const setDev = (v) => { setDevS(v); ls.set('dz-dev', v); };
   const [peek, setPeek] = useState(null); // üzerine gelince deneme: {path, v}
   const [guide, setGuide] = useState(null);
@@ -174,6 +177,23 @@ export function ShopDesigner() {
 
   const get = (k) => (store.s.designDraft || prepare(store.s.settings)).shopHome[k];
   // reklam içindeki öğeyi sürükleyerek taşı (ortaya ve ilk yerine mıknatısla yapışır); hiç kımıldamazsa seç
+  // Canva gibi hizalama mıknatısı (1.11.2026): sürüklenen öğenin sol / orta / sağ (ve üst / orta / alt) kenarı reklamdaki
+  // diğer öğelerin kenarlarına ya da reklamın ortasına 6 px yaklaşınca oraya yapışır, pembe kesik çizgi gösterilir. Alt = serbest.
+  const snapSet = (art, node, extraX = [], extraY = []) => {
+    const R = art.getBoundingClientRect(); const xs = extraX.map((t) => ({ t, c: 1 })), ys = extraY.map((t) => ({ t, c: 1 }));
+    art.querySelectorAll('[data-fx-name]').forEach((n) => {
+      if (n === node || n.contains(node) || node.contains(n)) return; const r = n.getBoundingClientRect(); if (!r.width || !r.height) return;
+      xs.push({ t: r.left - R.left }, { t: r.left + r.width / 2 - R.left }, { t: r.right - R.left });
+      ys.push({ t: r.top - R.top }, { t: r.top + r.height / 2 - R.top }, { t: r.bottom - R.top });
+    });
+    return { xs, ys };
+  };
+  // a: sürüklenen öğenin [sol, orta, sağ]; c: 1 olan hedefler (reklam ortası) sadece ortayla eşleşir
+  const snapAxis = (a, list, th = 6) => {
+    let best = null;
+    for (const g of list) for (let i = 0; i < 3; i++) { if (g.c && i !== 1) continue; const d = g.t - a[i]; if (Math.abs(d) <= th && (!best || Math.abs(d) < Math.abs(best.d) - 0.5)) best = { d, t: g.t }; }
+    return best;
+  };
   const fxDrag = (e, slide, el) => {
     if (e.button > 0) return;
     e.stopPropagation(); e.preventDefault();
@@ -189,14 +209,15 @@ export function ShopDesigner() {
     const x0 = e.clientX, y0 = e.clientY; let moved = false;
     const c0x = r0.left + r0.width / 2 - R.left, c0y = r0.top + r0.height / 2 - R.top;
     const homeX = c0x - (f0.x || 0) * k, homeY = c0y - (f0.y || 0) * k;
+    const SN = snapSet(art, node, [R.width / 2, homeX], [R.height / 2, homeY]); const hw = r0.width / 2, hh = r0.height / 2;
     onDrag(e, (ev) => {
       let dx = ev.clientX - x0, dy = ev.clientY - y0;
       if (!moved && Math.hypot(dx, dy) < 5) return;
       if (!moved) { moved = true; w.document.body.classList.add('dz-dragging'); setSel({ kind: 'fx', slide, el, dev }); }
       const gv = [], gh = [];
       if (!ev.altKey) {
-        for (const t of [R.width / 2, homeX]) if (Math.abs(c0x + dx - t) < 8) { dx = t - c0x; gv.push(Math.round(t)); break; }
-        for (const t of [R.height / 2, homeY]) if (Math.abs(c0y + dy - t) < 8) { dy = t - c0y; gh.push(Math.round(t)); break; }
+        const bx = snapAxis([c0x + dx - hw, c0x + dx, c0x + dx + hw], SN.xs); if (bx) { dx += bx.d; gv.push(Math.round(bx.t)); }
+        const by = snapAxis([c0y + dy - hh, c0y + dy, c0y + dy + hh], SN.ys); if (by) { dy += by.d; gh.push(Math.round(by.t)); }
       }
       setGuide(gv.length || gh.length ? { k: slide, v: gv, h: gh } : null);
       const sl = get('slides'); if (!sl[slide]) return;
@@ -210,12 +231,16 @@ export function ShopDesigner() {
     const ow = node.offsetWidth, oh = node.offsetHeight;
     const cx = r0.left + r0.width / 2 - R.left, cy = r0.top + r0.height / 2 - R.top;
     const x0 = e.clientX, y0 = e.clientY; let moved = false;
+    const SN = snapSet(art, node, [R.width / 2], [R.height / 2]); const hw = r0.width / 2, hh = r0.height / 2;
     onDrag(e, (ev) => {
       let dx = ev.clientX - x0, dy = ev.clientY - y0;
       if (!moved && Math.hypot(dx, dy) < 5) return;
       if (!moved) { moved = true; w.document.body.classList.add('dz-dragging'); setSel({ kind: 'fx', slide, el, dev: 'm' }); }
       const gv = [], gh = [];
-      if (!ev.altKey) { if (Math.abs(cx + dx - R.width / 2) < 8) { dx = R.width / 2 - cx; gv.push(Math.round(R.width / 2)); } if (Math.abs(cy + dy - R.height / 2) < 8) { dy = R.height / 2 - cy; gh.push(Math.round(R.height / 2)); } }
+      if (!ev.altKey) {
+        const bx = snapAxis([cx + dx - hw, cx + dx, cx + dx + hw], SN.xs, 5); if (bx) { dx += bx.d; gv.push(Math.round(bx.t)); }
+        const by = snapAxis([cy + dy - hh, cy + dy, cy + dy + hh], SN.ys, 5); if (by) { dy += by.d; gh.push(Math.round(by.t)); }
+      }
       setGuide(gv.length || gh.length ? { k: slide, v: gv, h: gh } : null);
       const ax = Math.min(0.97, Math.max(-0.3, (cx + dx - ow / 2) / R.width)), ay = Math.min(0.97, Math.max(-0.1, (cy + dy - oh / 2) / R.height));
       const sl = get('slides'); if (!sl[slide]) return;
@@ -361,6 +386,9 @@ export function ShopDesigner() {
         <span className="dz2-dev" role="group" aria-label="Önizleme">
           {[['desk', 'monitor', 'Bilgisayar'], ['phone', 'mobile', 'Telefon'], ['both', 'grid', 'Yan yana']].map(([k, ic, l]) => <button key={k} className={dev === k ? 'on' : ''} onClick={() => setDev(k)}><Icon n={ic} s={16} /><span>{l}</span></button>)}
         </span>
+        {dev !== 'desk' && <select className="dz2-pw" value={pw} onChange={(e) => setPw(Number(e.target.value))} title="Önizlemedeki telefonun genişliği">
+          {PHONES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>}
         <span className="dz2-sp" />
         <button className="dz2-ib" onClick={undo} disabled={!hist.current.list.length} title={hist.current.list.length ? 'Geri al: ' + hist.current.list.at(-1).n + ' (Ctrl Z)' : 'Geri al (Ctrl Z)'}><Icon n="undo" s={17} /></button>
         <button className="dz2-ib" onClick={redo} disabled={!hist.current.redo.length} title="Yeniden yap (Ctrl Y)"><Icon n="undo" s={17} className="dz2-flipx" /></button>
@@ -373,7 +401,7 @@ export function ShopDesigner() {
       </div>
       <div className="dz2-body">
         <Layers {...P} addBlock={addBlock} blockMenu={blockMenu} />
-        <Stage dev={dev} view={view} E={E} d={d} pack={pack} onFrame={onFrame} />
+        <Stage dev={dev} pw={pw} view={view} E={E} d={d} pack={pack} onFrame={onFrame} />
         <aside className="dz2-insp" aria-label="Ayarlar"><Inspector key={sel ? JSON.stringify([sel.kind, sel.k, sel.i, sel.slide, sel.el]) : 'page'} {...P} close={() => setSel(null)} /></aside>
       </div>
       {cmd && <CommandK close={() => setCmd(false)} P={P} setDev={setDev} addBlock={addBlock} undo={undo} />}
@@ -391,7 +419,8 @@ function useMobile() {
 }
 
 // ---- Orta alan: gerçek genişlikte önizleme çerçeveleri ---------------------------------------------------------------------
-function Stage({ dev, view, E, d, pack, onFrame }) {
+const PHONES = [[430, 'iPhone 15/16 Pro Max · 430'], [393, 'iPhone 15/16 Pro · 393'], [390, 'iPhone 13/14 · 390'], [375, 'iPhone SE / mini · 375'], [412, 'Android · 412'], [360, 'Küçük Android · 360']];
+function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   const ref = useRef(null); const { w, h } = useSize(ref);
   const L = view.look || {}; const pp = pack?.palette;
   const vars = {
@@ -409,11 +438,11 @@ function Stage({ dev, view, E, d, pack, onFrame }) {
   );
   const both = dev === 'both';
   const H0 = Math.max(320, h - 44);
-  const deskAvail = both ? w - 390 - 100 : w - 48;
+  const deskAvail = both ? w - pw - 100 : w - 48;
   return (
     <div className={'dz2-stage dev-' + dev} ref={ref}>
       {w > 0 && dev !== 'phone' && <DeviceFrame key="desk" kind="desk" width={1280} availW={deskAvail} height={H0} rootVars={vars} theme={view.brand?.theme} onReady={onFrame('desk')} label={'Bilgisayar · 1280 px' + (deskAvail < 1280 ? ' · %' + Math.round((deskAvail / 1280) * 100) + ' küçültülmüş' : '')}>{inner('desk')}</DeviceFrame>}
-      {w > 0 && dev !== 'desk' && <div className="dz2-phone"><DeviceFrame key="phone" kind="phone" width={390} height={Math.min(H0 - 76, 812)} rootVars={vars} theme={view.brand?.theme} onReady={onFrame('phone')} label="Telefon · 390 px">{inner('phone')}</DeviceFrame></div>}
+      {w > 0 && dev !== 'desk' && <div className="dz2-phone"><DeviceFrame key="phone" kind="phone" width={pw} height={Math.min(H0 - 76, Math.round(pw * 2.0))} rootVars={vars} theme={view.brand?.theme} onReady={onFrame('phone')} label={'Telefon · ' + pw + ' px'}>{inner('phone')}</DeviceFrame></div>}
     </div>
   );
 }
