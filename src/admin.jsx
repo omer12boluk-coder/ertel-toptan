@@ -623,7 +623,7 @@ const SEC_KEYS = {
   dukkan: ['shop.name', 'shop.hours', 'shop.address', 'shop.phone', 'shop.whatsapp', 'shop.pickupNote'],
   siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook'],
   teslimat: ['orders.cargo', 'orders.pickup', 'orders.cargoNote', 'orders.carriers', 'orders.carrierDef'],
-  odeme: ['orders.payHavale', 'orders.storeCard', 'orders.inst', 'orders.payCard', 'orders.cardSoon', 'orders.payShop', 'shop.payInfo'],
+  odeme: ['orders.payHavale', 'orders.storeCard', 'orders.inst', 'orders.payCard', 'orders.cardSoon', 'orders.payShop', 'shop.payInfo', 'shop.ibans'],
   sepetlink: ['orders.lcartHours'],
   bildirim: ['orders.push', 'orders.pushTexts', 'orders.doneNote'],
   dokunma: ['shop.touch'], bayiuye: ['access.allowSignup', 'features'],
@@ -940,7 +940,8 @@ export function Settings() {
           <Toggle id="s-ocard" label="Sepet linki: kredi kartı (ödeme linki gönderilir)" hint="Sadece sepet linkinde (Siparişler › Yeni sepet linki). Siparişi onaylayınca müşteriye ödeme linkini siz gönderirsiniz" checked={d.orders.payCard !== false} onChange={(v) => set('orders.payCard', v)} />
           {d.orders.payCard !== false && <Toggle id="s-ocsoon" label="Sepet linki: kredi kartı “Yakında” (seçilemez)" hint="Açıkken kart seçeneği sepet linkinde görünür ama seçilemez, yanında “Yakında” yazar. Mağaza sepetindeki kart bu ayardan etkilenmez." checked={d.orders.cardSoon !== false} onChange={(v) => set('orders.cardSoon', v)} />}
           <Toggle id="s-oshop" label="Dükkanda ödeme" hint="Sadece dükkandan teslim alırken" checked={d.orders.payShop !== false} onChange={(v) => set('orders.payShop', v)} />
-          <Field label="Havale / EFT bilgisi" hint="Sipariş verilince müşterinin sipariş sayfasında görünür. IBAN, alıcı adı vb."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00'} /></Field>
+          <IbanEditor d={d} set={set} />
+          <Field label="Havale / EFT bilgisi (eski, düz yazı)" hint="Yukarıda IBAN eklediyseniz bu yazı mağaza siparişinde gösterilmez; IBAN listesi boşsa gösterilir."><textarea id="s-iban" rows="3" value={d.shop.payInfo} onChange={(e) => set('shop.payInfo', e.target.value)} placeholder={'ERTEL TELEKOMÜNİKASYON LTD. ŞTİ.\nTR00 0000 0000 0000 0000 0000 00'} /></Field>
         </>}
 
         {sec === 'kategori' && <>
@@ -1451,6 +1452,28 @@ function LookSettings({ d, set }) {
 const ADD_STYLES = [['auto', 'Otomatik'], ['text', 'Sepete ekle'], ['icon', 'Sepet +'], ['plus', 'Sadece +']];
 // Kart ödeme komisyonu tablosu (Ayarlar > Ödeme seçenekleri): her satır bir seçenek (1 = tek çekim), % müşteriye yansır.
 // Örnek sütunu KDV dahil 1.000 ₺'lik siparişte müşterinin ödeyeceğini gösterir (paycalc.storeSum ile aynı formül).
+// Havale IBAN listesi (Ayarlar > Ödeme seçenekleri, shop.ibans [{bank, name, iban}]): müşterinin sipariş sayfasındaki
+// "Havale / EFT ile ödeme" kutusunda kopyala düğmesiyle görünür; boşsa hiç görünmez.
+function IbanEditor({ d, set }) {
+  const rows = Array.isArray(d.shop.ibans) ? d.shop.ibans : [];
+  const put = (next) => set('shop.ibans', next);
+  const upd = (i, k, v) => put(rows.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
+  return (
+    <div className="inst-ed iban-ed">
+      <div className="inst-ed-h"><b>Havale IBAN’ları</b><small>Müşteri havale ile sipariş verince sipariş sayfasında “Ödemeyi yaptım” düğmesinin üstünde, kopyala düğmesiyle görünür. Boşsa hiç görünmez.</small></div>
+      {rows.map((x, i) => (
+        <div key={i} className="iban-ed-r">
+          <input id={'s-ib-b' + i} placeholder="Banka (ör. QNB)" value={x.bank || ''} onChange={(e) => upd(i, 'bank', e.target.value)} />
+          <input id={'s-ib-n' + i} placeholder="Alıcı adı" value={x.name || ''} onChange={(e) => upd(i, 'name', e.target.value)} />
+          <input id={'s-ib-i' + i} className="num" placeholder="TR00 0000 0000 0000 0000 0000 00" value={x.iban || ''} onChange={(e) => upd(i, 'iban', e.target.value.toUpperCase())} />
+          <button type="button" className="icon-btn sm" onClick={() => put(rows.filter((_, j) => j !== i))} title="Sil" aria-label="Sil"><Icon n="trash" s={15} /></button>
+        </div>
+      ))}
+      <div className="row-btns"><button type="button" className="btn sm outline" onClick={() => put([...rows, { bank: '', name: d.footer?.company || '', iban: '' }])}><Icon n="plus" s={14} />IBAN ekle</button></div>
+    </div>
+  );
+}
+
 function InstEditor({ d, set }) {
   const rows = Array.isArray(d.orders.inst) && d.orders.inst.length ? d.orders.inst : DEF_INST;
   const put = (next) => set('orders.inst', next);

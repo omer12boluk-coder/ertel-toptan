@@ -615,7 +615,7 @@ export function OrderPage({ id }) {
       {!autoCargo(o) && ['shipped', 'done'].includes(o.status) && o.cargo?.code && <ShipCard o={o} />}
 
 
-      <PaidNotice o={o} payInfo={S.shop.payInfo} onSend={() => setConfirm({ title: 'Ödemeyi bildir', text: 'Havale / EFT ödemesini yaptığınızı bize bildireceğiz. Gönderdiyseniz devam edin.', okLabel: 'Bildir', onOk: () => sendPaid(o) })} />
+      <PaidNotice o={o} payInfo={S.shop.payInfo} ibans={S.shop.ibans} onSend={() => setConfirm({ title: 'Ödemeyi bildir', text: 'Havale / EFT ödemesini yaptığınızı bize bildireceğiz. Gönderdiyseniz devam edin.', okLabel: 'Bildir', onOk: () => sendPaid(o) })} />
       <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={o.sum ? <OrderSumFoot o={o} /> : null} tlRate={o.sum?.allUsd ? o.sum.rate : null} />
       <OrderRate o={o} />
 

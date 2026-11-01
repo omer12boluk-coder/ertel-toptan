@@ -175,14 +175,20 @@ export function AdminPayCard({ o }) {
 }
 
 // Müşterinin sipariş sayfası: havale siparişinde "Ödemeyi yaptım" bildirimi (bekçi /order-paid; önizleme siparişinde bu cihazda)
-export function PaidNotice({ o, payInfo, onSend }) {
+export function PaidNotice({ o, payInfo, ibans = [], onSend }) {
+  const list = (ibans || []).filter((x) => x && String(x.iban || '').trim());
   if (!o || o.pay !== 'havale' || o.status === 'cancelled') return null;
   if (o.paid?.at) return <div className="banner ok paid-ok"><Icon n="check" /><div><b>Ödeme bildiriminiz alındı.</b> {new Date(o.paid.at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · Hesabımızı kontrol edip siparişinizi onaylayacağız.</div></div>;
   if (['confirmed', 'preparing', 'ready', 'shipped', 'done'].includes(o.status)) return null; // zaten onaylandı
   return (
     <div className="paid-card">
       <div className="paid-t"><b>Havale / EFT ile ödeme</b><span>{o.sum ? <>Tutarı (<b className="num">{tl2(o.sum.pay)}</b>) gönderdikten sonra aşağıdaki düğmeyle bize bildirin.</> : 'Ödemeyi gönderdikten sonra aşağıdaki düğmeyle bize bildirin.'} Açıklamaya sipariş numarasını yazın: <b>#{o.no}</b></span></div>
-      {payInfo && <pre className="paid-iban sel-ok">{payInfo}</pre>}
+      {list.length > 0 ? (
+        <div className="iban-list">{list.map((x, i) => (
+          <div key={i} className="iban-row"><span className="iban-t"><b>{x.bank || 'Banka'}</b>{x.name && <small>{x.name}</small>}<span className="num sel-ok">{x.iban}</span></span>
+            <button type="button" className="btn sm outline" onClick={() => copyText(String(x.iban).replace(/\s/g, ''), 'IBAN kopyalandı')}><Icon n="copy" s={14} />Kopyala</button></div>
+        ))}</div>
+      ) : payInfo ? <pre className="paid-iban sel-ok">{payInfo}</pre> : null}
       <button type="button" className="btn primary" onClick={onSend}><Icon n="check" s={16} />Ödemeyi yaptım, bildir</button>
     </div>
   );
