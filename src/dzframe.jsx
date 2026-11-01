@@ -1,6 +1,7 @@
 // Tasarım modu 2: önizleme çerçevesi. Mağaza sayfası gerçek genişlikte bir iframe'in içine (React portal) çizilir:
 // telefon kuralları (@media) gerçekten telefon genişliğine göre çalışır, bilgisayar görünümü yan panellerden bağımsız 1280 px'tir.
 // Aynı React ağacı olduğu için bağlam, durum ve olaylar ortak; sürüklemeler çerçevenin kendi penceresini dinler (winOf).
+import { ensureFonts } from './slidex.jsx';
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -20,7 +21,7 @@ export function onDrag(e, move, end) {
 }
 
 // width: çerçevenin gerçek genişliği (px). Görünen alana sığmazsa küçültülür (scale). height: görünen yükseklik.
-export function DeviceFrame({ width, availW, height, kind, rootVars, theme, children, onReady, label }) {
+export function DeviceFrame({ width, availW, height, kind, rootVars, rootClass, theme, children, onReady, label }) {
   const ref = useRef(null);
   const [body, setBody] = useState(null);
   const scale = Math.min(1, (availW || width) / width);
@@ -41,7 +42,11 @@ export function DeviceFrame({ width, availW, height, kind, rootVars, theme, chil
     const d = ref.current?.contentDocument; if (!d) return; const r = d.documentElement;
     Object.entries(rootVars || {}).forEach(([k, v]) => (v == null || v === '' ? r.style.removeProperty(k) : r.style.setProperty(k, v)));
     if (theme && theme !== 'auto') r.setAttribute('data-theme', theme); else r.removeAttribute('data-theme');
-  }, [body, JSON.stringify(rootVars), theme]);
+    // Stil Stüdyosu sınıfları (st-…) + yazı tipleri
+    [...r.classList].filter((c) => c.startsWith('st-')).forEach((c) => r.classList.remove(c));
+    (rootClass?.cls || []).forEach((c) => r.classList.add(c));
+    if (rootClass?.fonts?.length) ensureFonts(d, rootClass.fonts);
+  }, [body, JSON.stringify(rootVars), JSON.stringify(rootClass || null), theme]);
   return (
     <div className={'dzf dzf-' + kind} style={{ width: width * scale, height }}>
       {label && <span className="dzf-label">{label}</span>}

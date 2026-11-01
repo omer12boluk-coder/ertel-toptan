@@ -348,3 +348,17 @@ export const ARROWS = [
   { id: 'none', n: 'Oksuz', ic: '', v: {} },
 ];
 export const ARROW_BY = Object.fromEntries(ARROWS.map((x) => [x.id, x]));
+
+// ---- Logo rengi (look.logoTone): 'orig' (varsayılan) · 'tint' temanın ana rengine kaydır · 'gray' siyah-beyaz · 'white' beyaz
+// ERT logosu mavi-camgöbeği (ortalama ton ~197°, açıklık ~%42): tint = renk tonunu ana renge çevirir, doygunluk / açıklık yaklaştırılır.
+const toHsl = (hex) => { const r0 = hexRgb(hex); if (!r0) return null; const [r, g, b] = r0.map((v) => v / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); const l = (mx + mn) / 2; let h = 0, s = 0; if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; } return { h, s, l }; };
+export function logoFilter(mode, accent) {
+  if (mode === 'gray') return 'grayscale(1) contrast(1.1)';
+  if (mode === 'white') return 'brightness(0) invert(1)';
+  if (mode !== 'tint') return '';
+  const c = toHsl(accent); if (!c) return '';
+  const br = Math.min(1.5, Math.max(0.45, c.l / 0.42)).toFixed(2);
+  if (c.s < 0.14) return `grayscale(1) brightness(${br})`;
+  const sat = Math.min(1.6, Math.max(0.35, c.s / 0.85)).toFixed(2);
+  return `hue-rotate(${Math.round(c.h - 197)}deg) saturate(${sat}) brightness(${br})`;
+}

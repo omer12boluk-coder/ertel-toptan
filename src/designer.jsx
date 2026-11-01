@@ -1,4 +1,5 @@
 import { queueSave } from './saveq.js';
+import { LOGO_MARK } from './config.js';
 // Yönetim paneli > Tasarım modu (2. sürüm, 31.10.2026).
 // Bilgisayarda tam ekran düzenleyici: solda Katmanlar, ortada gerçek genişlikte önizleme çerçeveleri (Bilgisayar / Telefon / Yan yana),
 // sağda hep aynı yerde duran ayar paneli. Hiçbir şey seçili değilken panel "Sayfa" ayarlarını gösterir.
@@ -9,13 +10,14 @@ import { useStore, store, toast, go } from './store.js';
 import { Icon, Field, Toggle, Confirm, openMenu } from './ui.jsx';
 import { withDefaults, norm, ls } from './utils.js';
 import {
-  ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, UspFields, PromoFields, RailFields, BrandFields, BlockFields,
+  ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, UspFields, PromoFields, PromoSizeGuide, FontSelect, RailFields, BrandFields, BlockFields,
   ScaleField, MQ_STYLES, ShopImg, useShopImg, CtaButton, btnStyleOf, GeoFields, geoOf, withProdFallback, THEMES, SLIDE_LAYOUTS, COVER_LY, ColorPick, LinkPick, LogoPick, ImgPick, ImgLook, Rows,
 } from './shophome.jsx';
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
-import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg } from './presets.js';
+import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter } from './presets.js';
+import { STYLE_PRESETS, PRESET_BY, SHADOWS, BORDERS, HOVERS, TITLES, styleOut } from './stylekit.js';
 import { PackDecor, DECOR } from './decor.jsx';
-import { XelBar, XelPanel, Disclose, drawToEl, SHAPES } from './slidex.jsx';
+import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
 
 // raflara kalıcı kimlik ver, eski sıra kayıtlarını (rail:0) kimliğe çevir.
 // Aynı ayar nesnesi için hep aynı sonuç (kimlikler her çağrıda yeniden üretilip sıra kayıtlarıyla çelişmesin)
@@ -40,6 +42,9 @@ const setPath = (obj, path, v) => { const n = structuredClone(obj); const ks = p
 const PATH_NAMES = { slides: 'Büyük reklam', heroH: 'Reklam yüksekliği', usps: 'Avantaj şeridi', brands: 'Marka kutuları', promos: 'Kare kutular', sections: 'Ürün rafları', blocks: 'Eklenen bölümler', layout: 'Bölüm sırası', hidden: 'Gizli bölümler', geo: 'Genişlik ve yer', marquee: 'Kayan şerit', mqSpeed: 'Şerit hızı', mqSpeedM: 'Şerit hızı (telefon)', brandSize: 'Marka kutusu boyu', brandLogoScale: 'Logo boyutu', brandsTitle: 'Markalar başlığı', brandsSub: 'Markalar alt yazısı', promosTitle: 'Kutular başlığı', cta: 'Alt bant', gap: 'Bölüm arası boşluk', brandCta: '“Ürünleri gör” yazısı', enabled: 'Ana sayfa açık/kapalı' };
 const nameOf = (path) => { const k = path.split('.'); if (k[0] === 'look') return k[1] === 'pack' || k[1] === 'myPacks' ? 'Tema Stüdyosu' : 'Sayfa renkleri'; if (k[0] === 'brandLogos') return 'Marka logoları'; return PATH_NAMES[k[1]] || 'Tasarım'; };
 const VERS_KEY = 'dz-versions';
+// reklam kutusu listesi: sabit 'Kare reklam kutuları' (H.promos) ya da Bölüm ekle'den gelen ek ızgara (H.blocks[b].items)
+const promoList = (H, b) => (b ? H.blocks?.[b]?.items || [] : H.promos || []);
+const setPromoList = (set, H, b, list) => (b ? set('shopHome.blocks', { ...H.blocks, [b]: { ...H.blocks[b], items: list } }) : set('shopHome.promos', list));
 // telefon çerçevesindeki bir reklamın yazı öğelerinin şu anki yerini kutuya oranla ölç → fxm {el: {ax, ay, s, r, rx, ry}}
 const FX_KEY = Object.fromEntries(Object.entries(FX_NAMES).map(([k, v]) => [v, k]));
 function phoneAbs(art, s) {
@@ -143,10 +148,10 @@ export function ShopDesigner() {
 
   const L = H.layout;
   const setL = (n) => set('shopHome.layout', n);
-  const select = (kind, i) => {
-    if (kind === 'promo' && i === -1) { const n = [...(H.promos || []), NEW.promo()]; set('shopHome.promos', n); (mobile ? setPick : setSel)({ kind: 'promo', i: n.length - 1 }); return; }
+  const select = (kind, i, b) => {
+    if (kind === 'promo' && i === -1) { const n = [...promoList(H, b), NEW.promo()]; setPromoList(set, H, b, n); (mobile ? setPick : setSel)({ kind: 'promo', i: n.length - 1, b: b || undefined }); return; }
     if (kind === 'brand' && i === -1) { setSel({ kind: 'brand', i: -1 }); return; }
-    const v = kind === 'brand' || kind === 'promo' ? { kind, i } : { kind: 'blk', k: kind };
+    const v = kind === 'brand' ? { kind, i } : kind === 'promo' ? { kind, i, b: b || undefined } : { kind: 'blk', k: kind };
     if (mobile) setPick(v); else setSel(v);
   };
   const tapBlock = (k) => (mobile ? setPick({ kind: 'blk', k }) : setSel((s) => (s?.kind === 'fx' && k === 'hero' ? s : { kind: 'blk', k })));
@@ -155,7 +160,7 @@ export function ShopDesigner() {
   function addBlock(at, type) {
     let key;
     if (type === 'rail') { const r = NEW.rail(); set('shopHome.sections', [...H.sections, r]); key = 'rail:' + r.id; }
-    else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : type === 'video' ? { t: 'video', vids: [{ src: '' }], ratio: '16:9', wp: 100, pos: 0.5, title: '' } : type === 'rate' ? { t: 'rate', pos: 1, sc: 1, style: 'soft' } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
+    else { const id = rid(); set('shopHome.blocks', { ...H.blocks, [id]: type === 'banner' ? { t: 'banner', img: '', link: '', h: 0 } : type === 'video' ? { t: 'video', vids: [{ src: '' }], ratio: '16:9', wp: 100, pos: 0.5, title: '' } : type === 'rate' ? { t: 'rate', pos: 1, sc: 1, style: 'soft' } : type === 'promos' ? { t: 'promos', title: '', items: [NEW.promo(), NEW.promo()] } : { t: 'head', title: 'Yeni başlık', sub: '', align: 'left', size: 'md' } }); key = 'b:' + id; }
     const n = [...(get('layout') || L)]; n.splice(at, 0, key); setL(n); if (mobile) setPick({ kind: 'blk', k: key }); setSel({ kind: 'blk', k: key });
     setTimeout(() => reveal(key), 150);
   }
@@ -426,7 +431,7 @@ export function ShopDesigner() {
     return [...out];
   }, [d, baseObj, dirty]);
 
-  const P = { measure, get, sel, d, H, set, setSel, heroI, goSlide, removeBlock, dupBlock, setPeek, L, setL, toggleHide, reveal, pack, openVers: () => setVers(true), pen, setPen, addEl, updEl, removeEl, dupEl, orderEl };
+  const P = { select, measure, get, sel, d, H, set, setSel, heroI, goSlide, removeBlock, dupBlock, setPeek, L, setL, toggleHide, reveal, pack, openVers: () => setVers(true), pen, setPen, addEl, updEl, removeEl, dupEl, orderEl };
 
   if (mobile) return (
     <div className={'page dz-page dz-mobile' + (sel ? ' has-panel' : '') + (pick ? ' has-pick' : '')}>
@@ -469,7 +474,7 @@ export function ShopDesigner() {
       <div className="dz2-body">
         <Layers {...P} addBlock={addBlock} blockMenu={blockMenu} />
         <Stage dev={dev} pw={pw} view={view} E={E} d={d} pack={pack} onFrame={onFrame} />
-        <aside className="dz2-insp" aria-label="Ayarlar"><Inspector key={sel ? JSON.stringify([sel.kind, sel.k, sel.i, sel.slide, sel.el]) : 'page'} {...P} close={() => setSel(null)} /></aside>
+        <aside className="dz2-insp" aria-label="Ayarlar"><Inspector key={sel ? JSON.stringify([sel.kind, sel.k, sel.i, sel.b, sel.slide, sel.el]) : 'page'} {...P} close={() => setSel(null)} /></aside>
       </div>
       {cmd && <CommandK close={() => setCmd(false)} P={P} setDev={setDev} addBlock={addBlock} undo={undo} />}
       {vers && <Versions close={() => setVers(false)} />}
@@ -494,7 +499,10 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
     '--accent-user': lookColors(L, pack).accent || view.brand?.accent, '--price-user': lookColors(L, pack).price || view.brand?.priceAccent,
     '--bg-user': lookColors(L, pack).bg || '', '--pcard-r': (Number(L.cardR) >= 0 && L.cardR !== '' && L.cardR != null ? Number(L.cardR) : 18) + 'px', '--top-h': '0px',
     '--pk-badge': pack?.badge?.text ? JSON.stringify(pack.badge.text) : '', '--pk-bbg': pack?.badge?.bg || '', '--pk-bfg': pack?.badge?.color || '',
+    '--logo-f': logoFilter(L.logoTone, lookColors(L, pack).accent || view.brand?.accent) || '',
   };
+  const so = styleOut(L.style); Object.assign(vars, so.vars);
+  const rootClass = { cls: so.cls, fonts: so.fonts };
   const inner = (kind) => (
     <div className={'shell public tab-anasayfa dz-fshell' + (pack?.badge?.text ? ' pk-on' : '')}>
       <main className={'main dz-canvas w-' + (kind === 'phone' ? 'phone' : 'full')}>
@@ -508,8 +516,8 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   const deskAvail = both ? w - pw - 100 : w - 48;
   return (
     <div className={'dz2-stage dev-' + dev} ref={ref}>
-      {w > 0 && dev !== 'phone' && <DeviceFrame key="desk" kind="desk" width={1280} availW={deskAvail} height={H0} rootVars={vars} theme={view.brand?.theme} onReady={onFrame('desk')} label={'Bilgisayar · 1280 px' + (deskAvail < 1280 ? ' · %' + Math.round((deskAvail / 1280) * 100) + ' küçültülmüş' : '')}>{inner('desk')}</DeviceFrame>}
-      {w > 0 && dev !== 'desk' && <div className="dz2-phone"><DeviceFrame key="phone" kind="phone" width={pw} height={Math.min(H0 - 76, Math.round(pw * 2.0))} rootVars={vars} theme={view.brand?.theme} onReady={onFrame('phone')} label={'Telefon · ' + pw + ' px'}>{inner('phone')}</DeviceFrame></div>}
+      {w > 0 && dev !== 'phone' && <DeviceFrame key="desk" kind="desk" width={1280} availW={deskAvail} height={H0} rootVars={vars} rootClass={rootClass} theme={view.brand?.theme} onReady={onFrame('desk')} label={'Bilgisayar · 1280 px' + (deskAvail < 1280 ? ' · %' + Math.round((deskAvail / 1280) * 100) + ' küçültülmüş' : '')}>{inner('desk')}</DeviceFrame>}
+      {w > 0 && dev !== 'desk' && <div className="dz2-phone"><DeviceFrame key="phone" kind="phone" width={pw} height={Math.min(H0 - 76, Math.round(pw * 2.0))} rootVars={vars} rootClass={rootClass} theme={view.brand?.theme} onReady={onFrame('phone')} label={'Telefon · ' + pw + ' px'}>{inner('phone')}</DeviceFrame></div>}
     </div>
   );
 }
@@ -519,12 +527,13 @@ const LAYER_IC = { hero: 'image', usps: 'check', marquee: 'star', brands: 'grid'
 function Layers({ get, H, L, setL, sel, setSel, toggleHide, reveal, addBlock, blockMenu }) {
   const [adding, setAdding] = useState(false);
   const hidden = new Set(H.hidden || []);
-  const ic = (k) => LAYER_IC[k] || (k.startsWith('rail:') ? 'list' : H.blocks?.[k.slice(2)]?.t === 'video' ? 'play' : H.blocks?.[k.slice(2)]?.t === 'banner' ? 'image' : H.blocks?.[k.slice(2)]?.t === 'rate' ? 'tag' : 'edit');
-  const on = (k) => (sel?.kind === 'blk' && sel.k === k) || (sel?.kind === 'fx' && k === 'hero') || (sel?.kind === 'brand' && k === 'brands') || (sel?.kind === 'promo' && k === 'promos');
+  const ic = (k) => LAYER_IC[k] || (k.startsWith('rail:') ? 'list' : H.blocks?.[k.slice(2)]?.t === 'video' ? 'play' : H.blocks?.[k.slice(2)]?.t === 'banner' ? 'image' : H.blocks?.[k.slice(2)]?.t === 'rate' ? 'tag' : H.blocks?.[k.slice(2)]?.t === 'promos' ? 'grid' : 'edit');
+  const on = (k) => (sel?.kind === 'blk' && sel.k === k) || (sel?.kind === 'fx' && k === 'hero') || (sel?.kind === 'brand' && k === 'brands') || (sel?.kind === 'promo' && (sel.b ? k === 'b:' + sel.b : k === 'promos'));
   return (
     <aside className="dz2-layers" aria-label="Katmanlar">
       <div className="dz2-lh">Sayfa</div>
       <button className={'dz2-ly page' + (!sel ? ' on' : '')} onClick={() => setSel(null)}><Icon n="palette" s={16} /><span className="dz2-lyn">Renkler ve sayfa</span></button>
+      <button className={'dz2-ly page' + (sel?.kind === 'style' ? ' on' : '')} onClick={() => setSel({ kind: 'style' })}><Icon n="brush" s={16} /><span className="dz2-lyn">Stil Stüdyosu</span></button>
       <button className={'dz2-ly page' + (sel?.kind === 'studio' ? ' on' : '')} onClick={() => setSel({ kind: 'studio' })}><Icon n="sparkle" s={16} /><span className="dz2-lyn">Tema Stüdyosu</span></button>
       <div className="dz2-lh">Bölümler <small>tutup sürükleyin</small></div>
       <div className="dz2-lylist">
@@ -546,7 +555,7 @@ function Layers({ get, H, L, setL, sel, setSel, toggleHide, reveal, addBlock, bl
     </aside>
   );
 }
-const ADD_TYPES = [['head', 'Başlık', 'Büyük başlık + alt yazı'], ['rail', 'Ürün rafı', 'Yeni gelenler, marka, kategori…'], ['banner', 'Görsel bant', 'Tam genişlik resim, tıklanabilir'], ['video', 'Video', 'Yatay, kare ya da dikey'], ['rate', 'Kur kutusu', 'Güncel dolar kuru']];
+const ADD_TYPES = [['head', 'Başlık', 'Büyük başlık + alt yazı'], ['rail', 'Ürün rafı', 'Yeni gelenler, marka, kategori…'], ['promos', 'Reklam kutuları', 'Kare / geniş / uzun kutular (bento ızgara)'], ['banner', 'Görsel bant', 'Tam genişlik resim, tıklanabilir'], ['video', 'Video', 'Yatay, kare ya da dikey'], ['rate', 'Kur kutusu', 'Güncel dolar kuru']];
 function AddMenu({ onAdd, side }) {
   return <div className={'dz-add-menu' + (side ? ' dz2-addm' : '')}>{ADD_TYPES.map(([t, l, h]) => <button key={t} onClick={() => onAdd(t)}><b>{l}</b><small>{h}</small></button>)}</div>;
 }
@@ -558,6 +567,7 @@ function Inspector(P) {
   let title = '', sub = '', body = null, back = null;
   if (!sel) { title = 'Renkler ve sayfa'; sub = 'Hiçbir şey seçili değilken burası açık'; body = <PagePanel {...P} />; }
   else if (sel.kind === 'studio') { title = 'Tema Stüdyosu'; sub = 'Kampanya ve sezon görünümü'; body = <StudioPanel {...P} />; }
+  else if (sel.kind === 'style') { title = 'Stil Stüdyosu'; sub = 'Yazı tipleri, köşeler, hazır stiller'; body = <StylePanel {...P} />; }
   else if (sel.kind === 'brand') {
     if (sel.i === -1) { title = 'Marka ekle'; back = () => setSel({ kind: 'blk', k: 'brands' }); body = <AddBrand d={d} H={H} onAdd={(name) => { const n = [...(H.brands || []), NEW.brand(name)]; S('brands', n); setSel({ kind: 'brand', i: n.length - 1 }); }} />; }
     else {
@@ -578,13 +588,14 @@ function Inspector(P) {
     title = el.k === 'text' ? 'Yazı' : el.k === 'draw' ? 'Çizim' : (SHAPES.find((x) => x.id === el.sh)?.n || 'Şekil'); sub = (sel.slide + 1) + '. reklamın içinde · serbest öğe'; back = () => setSel({ kind: 'blk', k: 'hero' });
     body = <XelBox P={P} el={el} slide={sel.slide} />;
   } else if (sel.kind === 'promo') {
-    const x = H.promos[sel.i]; if (!x) return null;
-    title = 'Reklam kutusu'; sub = x.title || String(sel.i + 1); back = () => setSel({ kind: 'blk', k: 'promos' });
+    const list = promoList(H, sel.b); const x = list[sel.i]; if (!x) return null;
+    const setL2 = (n) => setPromoList(set, H, sel.b, n);
+    title = 'Reklam kutusu'; sub = x.title || String(sel.i + 1); back = () => setSel({ kind: 'blk', k: sel.b ? 'b:' + sel.b : 'promos' });
     body = <>
-      <PromoFields x={x} up={(p) => S('promos', H.promos.map((y, j) => (j === sel.i ? { ...y, ...p } : y)))} />
+      <PromoFields x={x} up={(p) => setL2(list.map((y, j) => (j === sel.i ? { ...y, ...p } : y)))} />
       <div className="dz2-acts">
-        <button className="btn sm ghost" onClick={() => { const n = [...H.promos]; n.splice(sel.i + 1, 0, structuredClone(x)); S('promos', n); setSel({ kind: 'promo', i: sel.i + 1 }); }}><Icon n="copy" s={15} />Çoğalt</button>
-        <button className="btn sm ghost danger" onClick={() => { S('promos', H.promos.filter((_, j) => j !== sel.i)); close(); }}><Icon n="trash" s={15} />Sil</button>
+        <button className="btn sm ghost" onClick={() => { const n = [...list]; n.splice(sel.i + 1, 0, structuredClone(x)); setL2(n); setSel({ kind: 'promo', i: sel.i + 1, b: sel.b }); }}><Icon n="copy" s={15} />Çoğalt</button>
+        <button className="btn sm ghost danger" onClick={() => { setL2(list.filter((_, j) => j !== sel.i)); close(); }}><Icon n="trash" s={15} />Sil</button>
       </div>
     </>;
   } else {
@@ -615,7 +626,9 @@ function Inspector(P) {
     </>;
     else if (k === 'promos') body = <>
       <Field label="Başlık"><input value={H.promosTitle || ''} placeholder="Öne çıkanlar" onChange={(e) => S('promosTitle', e.target.value)} /></Field>
-      <p className="fine">Kutuları sayfada tutup sürükleyerek sıralayın; tıklayınca içeriği ve boyutu açılır.</p>
+      <button type="button" className="btn sm outline" onClick={() => P.select('promo', -1)}><Icon n="plus" s={15} />Kutu ekle</button>
+      <PromoSizeGuide />
+      <p className="fine">Kutuları sayfada tutup sürükleyerek sıralayın; tıklayınca içeriği ve boyutu açılır. Bu ızgaradan bir tane daha istiyorsanız: <b>Bölüm ekle › Reklam kutuları</b>.</p>
       <More><GeoMore H={H} k={k} S={S} /></More>
     </>;
     else if (k === 'cta') body = <>
@@ -625,6 +638,14 @@ function Inspector(P) {
     </>;
     else if (k === 'fav' || k === 'sets') body = <p className="fine">Bu raf otomatik dolar. Yerini Katmanlar'dan ya da sayfada sürükleyerek değiştirin, göz simgesiyle gizleyin.</p>;
     else if (k.startsWith('rail:')) { const i = H.sections.findIndex((r) => 'rail:' + r.id === k); const x = H.sections[i]; if (!x) return null; body = <><RailFields x={x} up={(p) => S('sections', H.sections.map((r, j) => (j === i ? { ...r, ...p } : r)))} /><More><GeoMore H={H} k={k} S={S} /></More><BlockActs {...P} k={k} /></>; }
+    else if (k.startsWith('b:') && H.blocks[k.slice(2)]?.t === 'promos') { const id = k.slice(2); const b = H.blocks[id];
+      body = <>
+        <Field label="Başlık" hint="Boşsa başlık görünmez"><input value={b.title || ''} placeholder="ör. Kampanyalar" onChange={(e) => S('blocks', { ...H.blocks, [id]: { ...b, title: e.target.value } })} /></Field>
+        <button type="button" className="btn sm outline" onClick={() => P.select('promo', -1, id)}><Icon n="plus" s={15} />Kutu ekle</button>
+        <PromoSizeGuide />
+        <p className="fine">Kutuları sayfada tutup sürükleyin; tıklayınca içeriği, boyutu ve resim görünümü açılır.</p>
+        <More><GeoMore H={H} k={k} S={S} /></More><BlockActs {...P} k={k} />
+      </>; }
     else if (k.startsWith('b:')) { const id = k.slice(2); const b = H.blocks[id]; if (!b) return null; const geo = ['head', 'banner', undefined].includes(b.t); body = <><BlockFields b={b} up={(p) => S('blocks', { ...H.blocks, [id]: { ...b, ...p } })} />{geo && <More><GeoMore H={H} k={k} S={S} /></More>}<BlockActs {...P} k={k} /></>; }
   }
   return (
@@ -936,7 +957,16 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <Field label="Bölümler arası boşluk"><span className="she-scale"><input type="range" min="0" max="80" step="2" value={Number(H.gap) || 0} onChange={(e) => set('shopHome.gap', Number(e.target.value))} /><code>{Number(H.gap) ? H.gap + ' px' : 'varsayılan'}</code></span></Field>
       <Toggle id="dz-home-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => set('shopHome.enabled', v)} />
     </Disclose>
+    <Disclose label="Logo rengi" value={<small>{({ tint: 'temaya uyar', gray: 'siyah-beyaz', white: 'beyaz' })[L.logoTone] || 'orijinal'}</small>}>
+      <p className="fine">Üst menüdeki logo. <b>Orijinal</b> seçiliyken logonuz hiç değişmez; <b>Temaya uyar</b> derseniz logonun mavisi o anki ana renge (tema rengine) döner.</p>
+      <span className="dz2-logos">{[['', 'Orijinal'], ['tint', 'Temaya uyar'], ['gray', 'Siyah-beyaz'], ['white', 'Beyaz']].map(([k, l]) => (
+        <button key={k} type="button" className={'dz2-logo' + ((L.logoTone || '') === k ? ' on' : '')} onClick={() => set('look.logoTone', k)}>
+          <i style={{ background: k === 'white' ? '#0f172a' : '#fff' }}><img src={d.brand?.logo || LOGO_MARK} alt="" style={{ filter: logoFilter(k, lc.accent || d.brand?.accent) || undefined }} /></i><span>{l}</span>
+        </button>
+      ))}</span>
+    </Disclose>
     <div className="dz2-tiles">
+      <button className="dz2-tile" onClick={() => setSel({ kind: 'style' })}><Icon n="brush" s={20} /><span><b>Stil Stüdyosu</b><small>{L.style?.preset ? 'Açık: ' + (PRESET_BY[L.style.preset]?.n || 'özel') : 'Hazır stiller · yazı tipi · köşe · gölge'}</small></span></button>
       <button className="dz2-tile" onClick={() => setSel({ kind: 'studio' })}><Icon n="sparkle" s={20} /><span><b>Tema Stüdyosu</b><small>{pack ? 'Açık: ' + pack.n : PACKS.length + ' tema · desen, süs, efekt'}</small></span></button>
       <button className="dz2-tile" onClick={openVers}><Icon n="clock" s={20} /><span><b>Sürüm geçmişi</b><small>Önceki yayınlara dön</small></span></button>
     </div>
@@ -953,7 +983,10 @@ function StudioPanel({ d, set, setPeek }) {
   const choose = (id) => set('look.pack', id ? { id, parts: {}, amt: 'md' } : {});
   const peek = (id) => setPeek(id ? { path: 'look.pack', v: { id, parts: {}, amt: 'md' } } : null);
   const [name, setName] = useState('');
+  const [rename, setRename] = useState(null);
   const pk = base ? activePack({ ...L, pack: { ...p, from: '', to: '' } }) : null;
+  // temanın şu anki hâli (seçili tema + üstündeki değişiklikler) tek kayda
+  const bake = (id, n) => ({ id, n, d: 'Kendi temanız', sw: [pk.palette?.accent || base.palette?.accent, pk.palette?.price || base.palette?.price].filter(Boolean), palette: pk.palette || base.palette, hero: pk.hero || base.hero, band: pk.band || null, fx: pk.fx ? { ...pk.fx, amt: undefined } : null, badge: pk.badge || null, tint: pk.tint || base.tint || '', pat: pk.pat || null, orn: pk.orn?.k, ornC: pk.orn?.c });
   const fx = { ...(base?.fx || {}), ...(p.fx || {}) };
   const band = { ...(base?.band || {}), ...(p.band || {}) };
   const badge = { ...(base?.badge || {}), ...(p.badge || {}) };
@@ -990,7 +1023,13 @@ function StudioPanel({ d, set, setPeek }) {
           <Field label="Zemin"><span className="she-color"><input type="color" value={/^#[0-9a-f]{6}$/i.test(band.bg || '') ? band.bg : '#111827'} onChange={(e) => upP({ band: { ...(p.band || {}), bg: e.target.value } })} /></span></Field>
           <Field label="Yazı rengi"><span className="she-color"><input type="color" value={/^#[0-9a-f]{6}$/i.test(band.color || '') ? band.color : '#ffffff'} onChange={(e) => upP({ band: { ...(p.band || {}), color: e.target.value } })} /></span></Field>
         </div>
-      </Disclose>}
+              <Field label="Şerit biçimi"><span className="seg">{[['flat', 'Düz · tam genişlik'], ['round', 'Yuvarlak uçlu']].map(([k, l]) => <button key={k} type="button" className={(band.shape || 'flat') === k ? 'on' : ''} onClick={() => upP({ band: { ...(p.band || {}), shape: k } })}>{l}</button>)}</span></Field>
+        <div className="sxp-row">
+          <Field label="Yazı tipi"><FontSelect v={band.font || ''} onChange={(f) => upP({ band: { ...(p.band || {}), font: f } })} none="Sayfanın yazısı" /></Field>
+          <Field label="Hız"><span className="she-scale"><input type="range" min="0.4" max="2.5" step="0.1" value={band.sp || 1} onChange={(e) => upP({ band: { ...(p.band || {}), sp: Number(e.target.value) } })} /><code>×{band.sp || 1}</code></span></Field>
+        </div>
+        <Toggle id="pk-topall" label="Her sayfada göster" hint="Kapalıyken şerit ve süs dizisi sadece ana sayfada görünür (ürünler, sepet gibi sayfalarda arama kutusunu kapatmaz)" checked={!!p.topAll} onChange={(v) => upP({ topAll: v })} />
+</Disclose>}
       {parts.fx !== false && <Disclose label="Efekt" value={<small>{FX_KINDS[fx.kind || 'none']}</small>}>
         <span className="seg seg-wrap">{Object.entries(FX_KINDS).map(([k, l]) => <button key={k} type="button" className={(fx.kind || 'none') === k ? 'on' : ''} onClick={() => upP({ fx: { ...(p.fx || {}), kind: k, c: fx.c } })}>{l}</button>)}</span>
         {fx.kind && fx.kind !== 'none' && <>
@@ -1028,12 +1067,93 @@ function StudioPanel({ d, set, setPeek }) {
         <span className="dz2-dates"><input type="datetime-local" value={p.from || ''} onChange={(e) => upP({ from: e.target.value })} aria-label="Başlangıç" /><span>→</span><input type="datetime-local" value={p.to || ''} onChange={(e) => upP({ to: e.target.value })} aria-label="Bitiş" /></span>
       </Field>
       {sched && <p className="fine dz2-note">{sched}</p>}
+      {p.id?.startsWith('my-') && (() => {
+        const cur = my.find((x) => x.id === p.id) || {};
+        const dirty = Object.keys(p).some((k) => !['id', 'parts', 'amt', 'from', 'to', 'topAll'].includes(k) && p[k] != null && !(typeof p[k] === 'object' && !Object.keys(p[k]).length));
+        const nm = rename ?? cur.n ?? '';
+        const update = () => { set('look', { ...L, myPacks: my.map((x) => (x.id === p.id ? bake(p.id, nm.trim() || cur.n) : x)), pack: { id: p.id, parts: p.parts || {}, amt: p.amt || 'md', from: p.from, to: p.to, topAll: p.topAll } }); setRename(null); toast('“' + (nm.trim() || cur.n) + '” güncellendi'); };
+        return <div className="dz2-my-upd">
+          <span className="field-l">Kendi temanız</span>
+          <div className="dz2-save-my"><input value={nm} onChange={(e) => setRename(e.target.value)} maxLength={30} aria-label="Tema adı" /><button className="btn sm primary" disabled={!dirty && nm.trim() === cur.n} onClick={update}><Icon n="check" s={14} />Değişiklikleri bu temaya kaydet</button></div>
+          <small className="fine">{dirty ? 'Kaydedilmemiş değişiklik var: kaydedince tema bu hâliyle saklanır (diğer temalara geçip dönseniz de kaybolmaz).' : 'Tema kayıtlı hâliyle.'}</small>
+          <div className="dz2-acts"><button className="btn sm ghost danger" onClick={() => set('look', { ...L, myPacks: my.filter((x) => x.id !== p.id), pack: {} })}><Icon n="trash" s={15} />Bu temayı sil</button></div>
+        </div>;
+      })()}
       <div className="dz2-save-my">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kendi temam olarak kaydet: ad yazın" maxLength={30} />
-        <button className="btn sm outline" disabled={!name.trim()} onClick={() => { const id = 'my-' + rid(); const mine = { id, n: name.trim(), d: 'Kendi temanız', sw: [pk.palette?.accent, pk.palette?.price].filter(Boolean), palette: pk.palette || base.palette, hero: pk.hero || base.hero, band: pk.band, fx: pk.fx, badge: pk.badge, tint: pk.tint || base.tint, pat: pk.pat, orn: pk.orn?.k, ornC: pk.orn?.c }; set('look', { ...L, myPacks: [...my, mine], pack: { id, parts: {}, amt: p.amt || 'md', from: p.from, to: p.to } }); setName(''); toast('Temanız kaydedildi'); }}>Kaydet</button>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={p.id?.startsWith('my-') ? 'Kopyasını yeni tema olarak kaydet: ad yazın' : 'Kendi temam olarak kaydet: ad yazın'} maxLength={30} />
+        <button className="btn sm outline" disabled={!name.trim()} onClick={() => { const id = 'my-' + rid(); set('look', { ...L, myPacks: [...my, bake(id, name.trim())], pack: { id, parts: p.parts || {}, amt: p.amt || 'md', from: p.from, to: p.to, topAll: p.topAll } }); setName(''); toast('Temanız kaydedildi'); }}>Yeni tema olarak kaydet</button>
       </div>
-      {p.id?.startsWith('my-') && <div className="dz2-acts"><button className="btn sm ghost danger" onClick={() => set('look', { ...L, myPacks: my.filter((x) => x.id !== p.id), pack: {} })}><Icon n="trash" s={15} />Bu temayı sil</button></div>}
     </>}
+  </>;
+}
+
+// ---- Stil Stüdyosu: hazır stiller + yazı tipi / köşe / gölge / resim / başlık ayarları (look.style) ---------------------------
+function StRange({ label, hint, v, def, min, max, step, unit = '', show, onChange }) {
+  const val = v ?? def;
+  return <Field label={label} hint={hint}><span className="she-scale"><input type="range" min={min} max={max} step={step} value={val} onChange={(e) => onChange(Number(e.target.value))} /><code>{show ? show(val) : val + unit}</code>{v != null && v !== '' && <button type="button" className="linkish" onClick={() => onChange(null)}>varsayılan</button>}</span></Field>;
+}
+function StSeg({ label, hint, v, opts, onChange }) {
+  return <Field label={label} hint={hint}><span className="seg seg-wrap">{opts.map(([k, l]) => <button key={k} type="button" className={(v || '') === k ? 'on' : ''} onClick={() => onChange(k)}>{l}</button>)}</span></Field>;
+}
+function StylePanel({ d, set, setPeek }) {
+  const L = d.look || {}; const st = L.style || {};
+  const [cols, setCols] = useState(true);
+  const up = (patch) => { const n = { ...st, ...patch }; Object.keys(n).forEach((k) => (n[k] == null || n[k] === '') && delete n[k]); set('look.style', n); };
+  const presetLook = (p) => ({ ...L, style: { ...p.s, preset: p.id }, ...(cols && p.pal ? { shopAccent: p.pal.accent, shopPrice: p.pal.price, bg: p.pal.bg } : {}) });
+  const apply = (p) => set('look', presetLook(p));
+  const peek = (p) => setPeek(p ? { path: 'look', v: presetLook(p) } : null);
+  useEffect(() => { ensureFonts(document, STYLE_PRESETS.flatMap((p) => [p.s.head, p.s.body]).filter(Boolean)); }, []);
+  const changed = st.preset && PRESET_BY[st.preset] && Object.keys(PRESET_BY[st.preset].s).some((k) => st[k] !== PRESET_BY[st.preset].s[k]);
+  return <>
+    <p className="fine">Mağazanın genel duruşu: yazı tipleri, köşeler, gölgeler, ürün resimleri ve bölüm başlıkları. Bir hazır stile basın, sonra aşağıdan istediğinizi ince ayarlayın. Üzerine gelince sayfada denenir; <b>Yayınla</b> deyince müşteriler görür. Yönetim paneli değişmez.</p>
+    <div className="st-presets">
+      <button type="button" className={'st-pre off' + (!st.preset && !Object.keys(st).length ? ' on' : '')} onClick={() => set('look.style', {})}><b>Standart</b><small>Mağazanın şimdiki görünümü</small></button>
+      {STYLE_PRESETS.map((p) => (
+        <button key={p.id} type="button" className={'st-pre' + (st.preset === p.id ? ' on' : '')} onClick={() => apply(p)} onMouseEnter={() => st.preset !== p.id && peek(p)} onMouseLeave={() => peek(null)}>
+          <span className="st-pre-pv" style={{ background: p.pv[0] }}>
+            <i style={{ borderRadius: p.s.rCard, background: p.pv[2], boxShadow: p.s.shadow === 'none' ? 'none' : p.s.shadow === 'strong' ? '0 6px 12px -4px rgb(0 0 0 / .4)' : '0 3px 8px -3px rgb(0 0 0 / .25)', border: p.s.border === 'bold' ? '1.5px solid #00000055' : p.s.border === 'thin' ? '1px solid #00000018' : '0' }}><em /><u style={{ background: p.pv[1] }} /></i>
+            <b style={{ fontFamily: FONT_BY[p.s.head]?.fam ? `'${FONT_BY[p.s.head].fam}'` : undefined, fontWeight: p.s.hw, textTransform: p.s.hup ? 'uppercase' : 'none', letterSpacing: p.s.hls + 'em', color: p.pv[1] }}>Aa</b>
+          </span>
+          <b>{p.n}</b><small>{p.d}</small>
+        </button>
+      ))}
+    </div>
+    <Toggle id="st-cols" label="Hazır stilin renklerini de uygula" hint="Kapalıyken sadece yazı, köşe, gölge gibi biçimler değişir; renkleriniz kalır" checked={cols} onChange={setCols} />
+    {changed && <p className="fine dz2-note">“{PRESET_BY[st.preset].n}” üzerinde değişiklik yaptınız.</p>}
+    <Disclose label="Yazı tipleri" value={<small>{[st.head, st.body].map((f) => FONT_BY[f]?.n).filter(Boolean).join(' + ') || 'varsayılan'}</small>}>
+      <div className="sxp-row">
+        <Field label="Başlıklar" hint="Bölüm başlıkları, kutu ve reklam başlıkları"><FontSelect v={st.head || ''} onChange={(f) => up({ head: f })} none="Varsayılan (Barlow Condensed)" /></Field>
+        <Field label="Metinler" hint="Ürün adları, açıklamalar, menüler"><FontSelect v={st.body || ''} onChange={(f) => up({ body: f })} none="Varsayılan (Barlow)" /></Field>
+      </div>
+      <Field label="Fiyatlar"><FontSelect v={st.price || ''} onChange={(f) => up({ price: f })} none="Başlık yazısıyla aynı" /></Field>
+      <StSeg label="Başlık kalınlığı" v={st.hw ? String(st.hw) : ''} opts={[['', 'Varsayılan'], ['400', 'İnce'], ['500', 'Normal'], ['700', 'Kalın'], ['900', 'Çok kalın']]} onChange={(v) => up({ hw: v ? Number(v) : null })} />
+      <Toggle id="st-hup" label="Başlıklar BÜYÜK HARF" checked={!!st.hup} onChange={(v) => up({ hup: v || null })} />
+      <StRange label="Başlık harf aralığı" v={st.hls} def={0} min={-0.04} max={0.3} step={0.01} show={(x) => (x * 100).toFixed(0)} onChange={(v) => up({ hls: v })} />
+      <StRange label="Başlık büyüklüğü" v={st.hz} def={1} min={0.7} max={1.5} step={0.05} show={(x) => '%' + Math.round(x * 100)} onChange={(v) => up({ hz: v })} />
+      <StSeg label="Fiyat kalınlığı" v={st.pw ? String(st.pw) : ''} opts={[['', 'Varsayılan'], ['400', 'İnce'], ['600', 'Orta'], ['800', 'Kalın']]} onChange={(v) => up({ pw: v ? Number(v) : null })} />
+    </Disclose>
+    <Disclose label="Köşeler" value={<small>{st.rCard != null ? 'kart ' + st.rCard + ' px' : 'varsayılan'}</small>}>
+      <p className="fine">0 = keskin köşe (lüks / sade), büyük sayı = yuvarlak (sevimli).</p>
+      <StRange label="Ürün kartları" v={st.rCard} def={Number(L.cardR ?? 18)} min={0} max={32} step={1} unit=" px" onChange={(v) => up({ rCard: v })} />
+      <StRange label="Reklam, marka ve avantaj kutuları" v={st.rBox} def={24} min={0} max={40} step={1} unit=" px" onChange={(v) => up({ rBox: v })} />
+      <StRange label="Büyük reklam, görsel bant, video" v={st.rHero} def={28} min={0} max={44} step={1} unit=" px" onChange={(v) => up({ rHero: v })} />
+      <StRange label="Düğmeler ve çipler" hint="999 = hap" v={st.rBtn} def={7} min={0} max={40} step={1} show={(x) => (x >= 40 ? 'hap' : x + ' px')} onChange={(v) => up({ rBtn: v != null && v >= 40 ? 999 : v })} />
+    </Disclose>
+    <Disclose label="Gölge, çerçeve, hareket" value={<small>{[SHADOWS.find((x) => x[0] === (st.shadow || ''))?.[1], BORDERS.find((x) => x[0] === (st.border || ''))?.[1]].join(' · ')}</small>}>
+      <StSeg label="Gölge" v={st.shadow} opts={SHADOWS} onChange={(v) => up({ shadow: v })} />
+      <StSeg label="Kart çerçevesi" v={st.border} opts={BORDERS} onChange={(v) => up({ border: v })} />
+      <StSeg label="Fare üstüne gelince" v={st.hover} opts={HOVERS} onChange={(v) => up({ hover: v })} />
+    </Disclose>
+    <Disclose label="Ürün resimleri" value={<small>{st.imgFit === 'cover' ? 'kareyi doldur' : 'tamamı görünsün'}</small>}>
+      <StSeg label="Resim kartta nasıl dursun" hint="Doldur: resim kareyi tamamen kaplar (kenarlar kırpılabilir) — fotoğraf mağazası / Beymen görünümü" v={st.imgFit || ''} opts={[['', 'Tamamı görünsün (varsayılan)'], ['cover', 'Kareyi doldursun']]} onChange={(v) => up({ imgFit: v })} />
+      <Field label="Resim zemini"><span className="she-color"><input type="color" value={st.imgBg || '#ffffff'} onChange={(e) => up({ imgBg: e.target.value })} />{st.imgBg && <button type="button" className="linkish" onClick={() => up({ imgBg: null })}>beyaz</button>}{['#ffffff', '#f4f4f4', '#f6f0e4', '#eef2f6'].map((c) => <button key={c} type="button" className="st-sw" style={{ background: c }} onClick={() => up({ imgBg: c })} aria-label={c} />)}</span></Field>
+      <StRange label="Resmin etrafındaki boşluk" v={st.imgPad} def={12} min={0} max={28} step={1} unit=" px" onChange={(v) => up({ imgPad: v })} />
+    </Disclose>
+    <Disclose label="Bölüm başlıkları ve boşluklar" value={<small>{TITLES.find((x) => x[0] === (st.title || ''))?.[1]}</small>}>
+      <StSeg label="Başlık biçimi" hint="Markalar, raflar, reklam kutuları başlıkları (videonun ve eklenen başlığın kendi ayarı var)" v={st.title} opts={TITLES} onChange={(v) => up({ title: v })} />
+      <StRange label="Bölümler arası boşluk" v={st.gap} def={40} min={12} max={96} step={2} unit=" px" onChange={(v) => up({ gap: v })} />
+    </Disclose>
+    {Object.keys(st).length > 0 && <div className="dz2-acts"><button className="btn sm ghost danger" onClick={() => set('look.style', {})}><Icon n="undo" s={15} />Stili sıfırla (standart görünüm)</button></div>}
   </>;
 }
 
@@ -1048,7 +1168,7 @@ function CommandK({ close, P, setDev, addBlock, undo }) {
     ['Banner arka planı', 'reklam tema zemin renk degrade desen', hero('bg')], ['Banner düzeni', 'reklam yerleşim tam resim ortalı', hero('layout')],
     ['Buton', 'reklam düğme link renk görünüm', hero('cta')], ['Banner resmi', 'reklam görsel fotoğraf resim', hero('img')],
     ['Resmi yakınlaştır / uzaklaştır', 'banner resim boyut küçült büyüt odak çerçevele', hero('frame')], ['Banner yüksekliği', 'reklam boy uzat kısalt', hero('heroH')],
-    ['Sayfa renkleri', 'renk paleti ana renk fiyat rengi zemin', () => setSel(null)], ['Tema Stüdyosu', 'tema yılbaşı efsane cuma bayram kampanya süs', () => setSel({ kind: 'studio' })],
+    ['Sayfa renkleri', 'renk paleti ana renk fiyat rengi zemin', () => setSel(null)], ['Tema Stüdyosu', 'tema yılbaşı efsane cuma bayram kampanya süs şerit', () => setSel({ kind: 'studio' })], ['Stil Stüdyosu', 'stil yazı tipi font köşe yuvarlak gölge çerçeve beymen lüks minimal klasik hazır', () => setSel({ kind: 'style' })], ['Logo rengi', 'logo renk tema filtre', () => setSel(null)],
     ['Telefon görünümü', 'mobil önizleme', () => setDev('phone')], ['Yan yana görünüm', 'telefon bilgisayar birlikte', () => setDev('both')], ['Bilgisayar görünümü', 'masaüstü', () => setDev('desk')],
     ['Geri al', 'undo', undo],
     ...ADD_TYPES.map(([t, l]) => ['Bölüm ekle: ' + l, 'yeni ekle', () => addBlock(L.indexOf('cta') >= 0 ? L.indexOf('cta') : L.length, t)]),
@@ -1123,16 +1243,17 @@ function MobileBar({ pick, setPick, H, d, set, setSel, L, setL, toggleHide, remo
       <B ic="trash" danger on={() => { S('brands', H.brands.filter((_, j) => j !== pick.i)); setPick(null); }}>Kaldır</B>
     </>;
   } else if (pick.kind === 'promo') {
-    const x = H.promos[pick.i]; if (!x) return null;
-    const mv = (dd) => { const j = pick.i + dd; if (j < 0 || j >= H.promos.length) return; S('promos', moveItem(H.promos, pick.i, j)); setPick({ kind: 'promo', i: j }); };
+    const PL = promoList(H, pick.b); const x = PL[pick.i]; if (!x) return null;
+    const setPL = (n) => setPromoList(set, H, pick.b, n);
+    const mv = (dd) => { const j = pick.i + dd; if (j < 0 || j >= PL.length) return; setPL(moveItem(PL, pick.i, j)); setPick({ kind: 'promo', i: j, b: pick.b }); };
     const nxt = SIZES_CYCLE[(SIZES_CYCLE.indexOf(x.size || 'sq') + 1) % 4];
     title = 'Kutu · ' + (x.title || pick.i + 1);
     btns = <>
       <B ic="back" on={() => mv(-1)} disabled={pick.i === 0}>Öne al</B>
-      <B ic="back" rot="flip" on={() => mv(1)} disabled={pick.i === H.promos.length - 1}>Sona al</B>
-      <B ic="expand" on={() => S('promos', H.promos.map((y, j) => (j === pick.i ? { ...y, size: nxt } : y)))}>{SIZE_NAMES[x.size || 'sq']}</B>
-      <B ic="edit" on={() => setSel({ kind: 'promo', i: pick.i })}>Düzenle</B>
-      <B ic="trash" danger on={() => { S('promos', H.promos.filter((_, j) => j !== pick.i)); setPick(null); }}>Sil</B>
+      <B ic="back" rot="flip" on={() => mv(1)} disabled={pick.i === PL.length - 1}>Sona al</B>
+      <B ic="expand" on={() => setPL(PL.map((y, j) => (j === pick.i ? { ...y, size: nxt } : y)))}>{SIZE_NAMES[x.size || 'sq']}</B>
+      <B ic="edit" on={() => setSel({ kind: 'promo', i: pick.i, b: pick.b })}>Düzenle</B>
+      <B ic="trash" danger on={() => { setPL(PL.filter((_, j) => j !== pick.i)); setPick(null); }}>Sil</B>
     </>;
   }
   return (

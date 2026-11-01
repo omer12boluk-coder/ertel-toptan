@@ -12,7 +12,7 @@ import { currentRate } from './listsheet.jsx';
 import { feat, useStats, toggleNotify, outOfStock } from './extras.jsx';
 import { useWin, winOf, onDrag } from './dzframe.jsx';
 import { BG_BY, activePack, BTN_BY, ARROW_BY } from './presets.js';
-import { SlideEls, useSlideFonts } from './slidex.jsx';
+import { SlideEls, useSlideFonts, FONT_BY, FONTS, ensureFonts } from './slidex.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
@@ -21,6 +21,10 @@ export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elekt
 // o da açılmazsa aynı kategoriden açık bir ürünün resmi gösterilir (kutu boş kalmasın).
 const imgCache = new Map();
 export const isProdImg = (v) => typeof v === 'string' && v.startsWith('prod:');
+// reklam kutusundaki resmin görünümü (x.im): card = renkli zeminde eğik beyaz kart · float = kartsız, gölgeli ürün ·
+// cover = kutuyu doldurur (kırpılabilir) · contain = resmin tamamı, boş yer düz renk. Seçilmemişse eskisi gibi: ürün resmi → card,
+// yüklenen resim → yazı varsa cover, yazı yoksa contain.
+export const boxImgMode = (x) => x.im || (isProdImg(x.img) ? 'card' : !x.title && !x.text && !x.tag ? 'contain' : 'cover');
 const prodParts = (v) => { const [id, url, c] = v.slice(5).split('|'); return { id: Number(id), url: url || '', c: Number(c) || 0 }; };
 const prodUrl = (p, S) => (!p ? null : p.img && p.img !== 'fs' ? p.img : p.pi && (p.pi.startsWith('r2:') || isAbsImg(p.pi)) ? picUrl(p.pi, null, true) : p.pi ? (S.catalog.imageLarge || S.catalog.imageThumb).replaceAll('{pi}', p.pi).replaceAll('{kod}', p.k).replaceAll('{id}', p.id) : null);
 function catAlt(c, not) { // aynı kategoriden resimli açık bir ürün
@@ -29,8 +33,10 @@ function catAlt(c, not) { // aynı kategoriden resimli açık bir ürün
   return null;
 }
 function prodImg(v) {
+  // 1.11.2026: seçilen ürün pasif (a:0) olsa da KENDİ resmi gösterilir. Eskiden pasif üründe kategoriden başka bir ürünün resmi
+  // geliyordu (kullanıcı: 'A20 kalıp seçiyorum, bambaşka bir A20 kalıp geliyor'). Müşteride pasif ürün katalogda yok → kayıtlı yedek adres.
   const { id, url, c } = prodParts(v); const p = store.s.byId.get(id);
-  return (p && p.a !== 0 && prodUrl(p, store.s.settings)) || url || catAlt(c || p?.c, id);
+  return (p && prodUrl(p, store.s.settings)) || url || catAlt(c || p?.c, id);
 }
 // kaydetmeden önce (yönetici, tam katalog elde): ürün resmi bağlantılarına yedek adres + kategori eklenir
 export function withProdFallback(S) {
@@ -175,7 +181,7 @@ export function layoutOf(H) {
   for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
   return L;
 }
-export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün rafı · ' + ((H.sections || []).find((r, i) => railKey(r, i) === k)?.title || '') : (H.blocks?.[k.slice(2)]?.t === 'banner' ? 'Görsel bant' : H.blocks?.[k.slice(2)]?.t === 'rate' ? 'Kur kutusu' : H.blocks?.[k.slice(2)]?.t === 'video' ? 'Video' + (H.blocks[k.slice(2)].title ? ' · ' + H.blocks[k.slice(2)].title : '') : 'Başlık · ' + (H.blocks?.[k.slice(2)]?.title || '')));
+export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün rafı · ' + ((H.sections || []).find((r, i) => railKey(r, i) === k)?.title || '') : (H.blocks?.[k.slice(2)]?.t === 'banner' ? 'Görsel bant' : H.blocks?.[k.slice(2)]?.t === 'rate' ? 'Kur kutusu' : H.blocks?.[k.slice(2)]?.t === 'promos' ? 'Reklam kutuları' + (H.blocks[k.slice(2)].title ? ' · ' + H.blocks[k.slice(2)].title : '') : H.blocks?.[k.slice(2)]?.t === 'video' ? 'Video' + (H.blocks[k.slice(2)].title ? ' · ' + H.blocks[k.slice(2)].title : '') : 'Başlık · ' + (H.blocks?.[k.slice(2)]?.title || '')));
 // sürükleyerek sıralama: aynı gruptaki [data-dz][data-i] öğelerinin üstüne gelince yer değiştirir; hiç sürüklenmezse tıklama sayılır
 export function dragSort(e, group, idx, onMove, onClick) {
   if (e.button > 0) return;
@@ -238,15 +244,47 @@ export function ShopHome({ S: Sover }) {
   const blKey = (n) => (BL[n] ? n : Object.keys(BL).find((k) => norm(k) === norm(n || '')) || n);
   const bl = (n) => BL[blKey(n)] || {};
   const brands = (H.brands || []).map((b, idx) => ({ ...b, idx, logo: b.logo || bl(b.name).logo || '', color: bl(b.name).color || b.color, scale: bl(b.name).scale || 1 })).filter((b) => b.name || b.logo);
+  // tasarımda seçilen yazı tipleri (kutu başlıkları, bölüm başlıkları) gerektiğinde yüklenir
+  const W0 = useWin();
+  const fkey = [...(H.promos || []).map((x) => x.f), ...Object.values(H.blocks || {}).flatMap((b) => [b.tf, ...(b.items || []).map((x) => x.f)])].filter(Boolean).sort().join(',');
+  useEffect(() => { if (fkey) ensureFonts(W0.document, fkey.split(',')); }, [fkey, W0]);
   const promos = (H.promos || []).map((x, idx) => ({ ...x, idx })).filter((x) => x.title || x.img || E);
   const slides = (H.slides || []).filter((x) => x.title || x.img || E);
   const hidden = new Set(H.hidden || []);
   const L = layoutOf(H);
   const sel = E?.sel;
-  const pick = (kind, i) => (e) => { e?.stopPropagation?.(); E.select(kind, i); };
+  const pick = (kind, i, b) => (e) => { e?.stopPropagation?.(); E.select(kind, i, b); };
   const ls = Number(H.brandLogoScale) || 1;
   const pk = E?.pack !== undefined ? E.pack : activePack(S.look); // tema stüdyosu (tasarımda önizlenen)
 
+  // kare reklam kutuları: sabit bölüm (H.promos) ya da 'Bölüm ekle'den gelen ek ızgara (blocks {t:'promos', items, title}); bid = blok kimliği
+  const promoGrid = (list, title, bid, onTitle) => {
+    const g = 'promo' + (bid ? '-' + bid : '');
+    const path = bid ? 'shopHome.blocks.' + bid + '.items' : 'shopHome.promos';
+    const cur = () => (bid ? E.get('blocks')?.[bid]?.items || [] : E.get('promos'));
+    return (list.length > 0 || E) && (
+      <section className="sh-sec rv">
+        {title && <SecHead title={title} onTitle={onTitle} />}
+        <div className="sh-bento">
+          {list.map((x, i) => { const im = boxImgMode(x); return (
+            <button key={x.idx} data-dz={g} data-i={x.idx} data-fk={(x.title || '') + (x.img || '')} data-dz-name={x.title || 'Kutu'} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? ' im-' + im + (im === 'card' ? ' prod' : im === 'float' ? ' prod float' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (x.ta ? ' ta-' + x.ta : '') + (sel?.kind === 'promo' && sel.i === x.idx && (sel.b || null) === bid ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i, ...(x.ibg ? { '--ibg': x.ibg } : null), ...(x.iz && x.iz !== 1 ? { '--iz': x.iz } : null), ...(x.ix != null ? { '--ix': x.ix + '%' } : null), ...(x.iy != null ? { '--iy': x.iy + '%' } : null), ...(x.tc ? { '--btc': x.tc } : null), ...(x.f ? { '--bf': `'${FONT_BY[x.f]?.fam || x.f}', var(--f-display)` } : null) }}
+              onClick={E ? (E.mobile ? (e) => { stop(e); E.select('promo', x.idx, bid); } : stop) : link(x.link)} onMouseMove={spot}
+              onPointerDown={E && !E.mobile ? (e) => dragSort(e, g, x.idx, (f, t) => E.set(path, moveItem(cur(), f, t)), () => E.select('promo', x.idx, bid)) : undefined}>
+              {x.img && (im === 'card' || im === 'float' ? <span className="sh-box-prod"><ShopImg v={x.img} /></span> : <ShopImg v={x.img} className="sh-box-img" />)}
+              <span className="sh-box-shade" aria-hidden="true" />
+              <span className="sh-box-t">
+                {x.tag && <span className="sh-tag">{x.tag}</span>}
+                {x.title && <b>{x.title}</b>}
+                {x.text && <small>{x.text}</small>}
+              </span>
+              {x.link && <span className="sh-box-go"><Icon n="back" s={18} className="flip" /></span>}
+            </button>
+          ); })}
+          {E && <button className="sh-box sz-sq dz-add" onClick={pick('promo', -1, bid)}><Icon n="plus" s={26} /><small>Kutu ekle</small></button>}
+        </div>
+      </section>
+    );
+  };
   const render = (k) => {
     if (k === 'hero') return slides.length > 0 ? <Hero slides={slides} pkHero={pk?.hero} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
     if (k === 'usps') return (H.usps || []).some((u) => u.title) ? (
@@ -277,33 +315,13 @@ export function ShopHome({ S: Sover }) {
         </div>
       </section>
     );
-    if (k === 'promos') return (promos.length > 0 || E) && (
-      <section className="sh-sec rv">
-        <SecHead title={H.promosTitle || 'Öne çıkanlar'} onTitle={E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t))} />
-        <div className="sh-bento">
-          {promos.map((x, i) => (
-            <button key={x.idx} data-dz="promo" data-i={x.idx} data-fk={(x.title || '') + (x.img || '')} data-dz-name={x.title || 'Kutu'} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? (isProdImg(x.img) ? ' prod' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (sel?.kind === 'promo' && sel.i === x.idx ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i }}
-              onClick={E ? (E.mobile ? (e) => { stop(e); E.select('promo', x.idx); } : stop) : link(x.link)} onMouseMove={spot}
-              onPointerDown={E && !E.mobile ? (e) => dragSort(e, 'promo', x.idx, (f, t) => E.set('shopHome.promos', moveItem(E.get('promos'), f, t)), () => E.select('promo', x.idx)) : undefined}>
-              {x.img && (isProdImg(x.img) ? <span className="sh-box-prod"><ShopImg v={x.img} /></span> : <ShopImg v={x.img} className="sh-box-img" />)}
-              <span className="sh-box-shade" aria-hidden="true" />
-              <span className="sh-box-t">
-                {x.tag && <span className="sh-tag">{x.tag}</span>}
-                {x.title && <b>{x.title}</b>}
-                {x.text && <small>{x.text}</small>}
-              </span>
-              {x.link && <span className="sh-box-go"><Icon n="back" s={18} className="flip" /></span>}
-            </button>
-          ))}
-          {E && <button className="sh-box sz-sq dz-add" onClick={pick('promo', -1)}><Icon n="plus" s={26} /><small>Kutu ekle</small></button>}
-        </div>
-      </section>
-    );
+    if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)));
     if (k === 'sets') return <SetRail edit={!!E} />;
     if (k === 'fav') return <FavRail onProduct={E ? () => E.select(k) : setProduct} edit={!!E} S={S} />;
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
     if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; const up = E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null;
       if (b.t === 'rate') return <RateBlock b={b} up={up} />;
+      if (b.t === 'promos') return promoGrid((b.items || []).map((x, idx) => ({ ...x, idx })).filter((x) => x.title || x.img || E), b.title, k.slice(2), E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } })));
       return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : b.t === 'video' ? <VideoBlock b={b} edit={!!E} up={E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
     if (k === 'cta') return H.cta?.title ? (
       <section className="sh-cta rv">
@@ -318,7 +336,7 @@ export function ShopHome({ S: Sover }) {
   };
 
   // genişliği / yeri ayarlanabilen bölümler (video ve kur kutusunun kendi ayarı var)
-  const geoOk = (k) => ['hero', 'usps', 'brands', 'promos', 'cta'].includes(k) || k.startsWith('rail:') || (k.startsWith('b:') && ['head', 'banner', undefined].includes(H.blocks?.[k.slice(2)]?.t));
+  const geoOk = (k) => ['hero', 'usps', 'brands', 'promos', 'cta'].includes(k) || k.startsWith('rail:') || (k.startsWith('b:') && ['head', 'banner', 'promos', undefined].includes(H.blocks?.[k.slice(2)]?.t));
   const wrap = (k) => {
     const node = render(k);
     if (!node || !geoOk(k)) return node;
@@ -432,7 +450,12 @@ function TitleText({ as: Tag = 'h2', b, k = 'title', onTitle, extra = {} }) {
   const t = titleStyle(b.tc);
   const ed = editable(onTitle);
   const cls = [ed.className, t.className, extra.className].filter(Boolean).join(' ') || undefined;
-  return <Tag {...extra} {...ed} className={cls} style={{ ...(extra.style || {}), ...(t.style || {}) }}>{b[k] || (onTitle ? 'Başlık yazın' : '')}</Tag>;
+  // başlığa özel yazı tipi / kalınlık / büyük harf / harf aralığı (b.tf, b.tw, b.tu, b.tl) — 1.11.2026
+  const ff = k === 'title' && FONT_BY[b.tf]?.fam ? { fontFamily: `'${FONT_BY[b.tf].fam}', var(--f-display)` } : null;
+  const fw = k === 'title' && b.tw ? { fontWeight: b.tw } : null;
+  const fu = k === 'title' && b.tu ? { textTransform: 'uppercase' } : null;
+  const fl = k === 'title' && b.tl != null ? { letterSpacing: b.tl + 'em' } : null;
+  return <Tag {...extra} {...ed} className={cls} style={{ ...(extra.style || {}), ...(t.style || {}), ...ff, ...fw, ...fu, ...fl }}>{b[k] || (onTitle ? 'Başlık yazın' : '')}</Tag>;
 }
 export function ColorPick({ v = '', onChange, label = 'Başlık rengi', grads = true }) {
   return <Field label={label}>
@@ -480,7 +503,21 @@ export function HeadStyleFields({ b, up, defStyle = 'plain', defAlign = 'left' }
       <Field label="Hizalama"><span className="seg">{[['left', 'Sola'], ['center', 'Ortaya'], ['right', 'Sağa']].map(([x, l]) => <button key={x} type="button" className={(b.ha || defAlign) === x ? 'on' : ''} onClick={() => up({ ha: x })}>{l}</button>)}</span></Field>
       <Field label="Altındaki boşluk"><span className="seg">{[['sm', 'Az'], ['md', 'Orta'], ['lg', 'Çok']].map(([x, l]) => <button key={x} type="button" className={(b.hg || 'md') === x ? 'on' : ''} onClick={() => up({ hg: x })}>{l}</button>)}</span></Field>
     </div>
+    <TitleFontFields b={b} up={up} />
   </>;
+}
+// başlığın yazı tipi, kalınlığı, büyük harf, harf aralığı (boş = Stil Stüdyosu'ndaki genel başlık yazısı)
+export function TitleFontFields({ b, up }) {
+  return <div className="tff">
+    <div className="row2">
+      <Field label="Başlık yazı tipi"><FontSelect v={b.tf || ''} onChange={(tf) => up({ tf })} none="Genel başlık yazısı" /></Field>
+      <Field label="Kalınlık"><select value={b.tw || ''} onChange={(e) => up({ tw: e.target.value ? Number(e.target.value) : '' })}><option value="">Varsayılan</option><option value="400">İnce</option><option value="500">Normal</option><option value="700">Kalın</option><option value="900">Çok kalın</option></select></Field>
+    </div>
+    <div className="row2">
+      <Toggle id={'tu-' + (b.title || '').length} label="BÜYÜK HARF" checked={!!b.tu} onChange={(v) => up({ tu: v })} />
+      <Field label="Harf aralığı"><span className="she-scale"><input type="range" min="-0.04" max="0.3" step="0.01" value={b.tl ?? 0} onChange={(e) => up({ tl: Number(e.target.value) })} /><code>{Math.round((b.tl ?? 0) * 100)}</code></span></Field>
+    </div>
+  </div>;
 }
 
 function HeadBlock({ b, onTitle }) {
@@ -1032,14 +1069,39 @@ export function ImgPick({ v, onChange, alpha, max = 1600, label = 'Görsel', hin
   );
 }
 
+// Ürün arama (tasarım / ayar alanları): eskiden ilk 8 eşleşme rastgele sırada geliyordu → 'amscope' yazınca SM-4NTP çıkmıyordu.
+// Artık puanlı sıralama (stok kodu tam / ad başı / kelime başı), açık ürünler önce, en çok 60 sonuç kendi kutusunda kayar, pasifler işaretli.
+export function rankProducts(catalog, q, max = 60) {
+  const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return { list: [], total: 0 };
+  const hits = [];
+  for (const p of catalog) {
+    const hay = p._s || norm((p.n || '') + ' ' + (p.k || '') + ' ' + (p.b || ''));
+    if (!t.every((x) => hay.includes(x))) continue;
+    const n = norm(p.n || ''); const k = norm(p.k || ''); const b = norm(p.b || '');
+    let sc = 0;
+    for (const x of t) {
+      if (k === x) sc += 60; else if (k.startsWith(x)) sc += 25;
+      if (n.startsWith(x)) sc += 14; else if (new RegExp('(^|[\\s\\-/(])' + x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(n)) sc += 8; else if (n.includes(x)) sc += 4;
+      if (b === x) sc += 6;
+    }
+    if (p.a === 0) sc -= 30;
+    hits.push([sc, n.length, p]);
+  }
+  hits.sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+  return { list: hits.slice(0, max).map((h) => h[2]), total: hits.length };
+}
 function ProductSearch({ onPick, placeholder = 'Ürün ara (ad ya da stok kodu)…' }) {
   const catalog = useStore((s) => s.catalog);
   const [q, setQ] = useState('');
-  const res = useMemo(() => { const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return []; return catalog.filter((p) => t.every((x) => p._s?.includes(x))).slice(0, 8); }, [q, catalog]);
+  const { list: res, total } = useMemo(() => rankProducts(catalog, q), [q, catalog]);
   return (
     <div className="she-ps">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} />
-      {res.length > 0 && <ul className="she-ps-res">{res.map((p) => <li key={p.id}><button type="button" onClick={() => { onPick(p); setQ(''); }}><Thumb p={p} size="sm" /><span>{p.n}<small>{p.k}</small></span></button></li>)}</ul>}
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} autoCorrect="off" autoCapitalize="off" spellCheck={false} />
+      {q.trim() && <ul className="she-ps-res">
+        {res.length === 0 && <li className="she-ps-none">Ürün bulunamadı</li>}
+        {res.map((p) => <li key={p.id}><button type="button" onClick={() => { onPick(p); setQ(''); }}><Thumb p={p} size="sm" /><span>{p.n}<small>{p.k}{p.b ? ' · ' + p.b : ''}{p.a === 0 ? <em className="she-ps-off"> · pasif (müşteri görmez)</em> : null}</small></span></button></li>)}
+        {total > res.length && <li className="she-ps-more">{total} sonuçtan ilk {res.length} gösteriliyor — biraz daha yazın</li>}
+      </ul>}
     </div>
   );
 }
@@ -1195,20 +1257,70 @@ export function UspFields({ u, up }) {
     <Field label="Alt yazı" opt><input value={u.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
   </div>;
 }
+// kutu ölçüleri (bilgisayarda yaklaşık): yüklenecek resmin önerilen piksel ölçüsü
+export const BOX_PX = { sq: [800, 800, 'kare'], wide: [1600, 800, 'yatay, 2:1'], tall: [800, 1600, 'dikey, 1:2'], big: [1600, 1600, 'büyük kare'] };
+export function PromoSizeGuide({ size }) {
+  const list = size ? [[size, BOX_PX[size]]] : Object.entries(BOX_PX);
+  return <div className="pbx-guide">
+    <b><Icon n="image" s={14} />Önerilen resim ölçüsü</b>
+    {list.map(([k, [w, h, t]]) => <span key={k}><i className={'pbx-sh sz-' + k} />{SIZES[k]}: <code>{w} × {h} px</code> <small>({t})</small></span>)}
+    <small>Telefonda kutular küçülür; önemli yazı / ürünü resmin ortasına koyun. JPG ya da WebP, en çok ~1 MB.</small>
+  </div>;
+}
+const IMG_MODES = [
+  ['cover', 'Tam resim · doldur', 'Resim kutunun tamamını kaplar. Kenarları kırpılabilir. Fotoğraf ve hazır banner için.'],
+  ['contain', 'Tam resim · sığdır', 'Resmin tamamı görünür, boş kalan yer düz renk olur. Ürün resmi için en temiz görünüm.'],
+  ['card', 'Renkli zeminde kart', 'Kutunun renginde zemin, üstünde hafif eğik beyaz kart içinde resim.'],
+  ['float', 'Renkli zeminde ürün', 'Kart yok: ürün gölgesiyle doğrudan renkli zeminin üstünde (saydam PNG ürünlerde çok iyi).'],
+];
 export function PromoFields({ x, up }) {
+  const im = boxImgMode(x);
   return <>
     <div className="row3">
       <Field label="Boyut"><select value={x.size || 'sq'} onChange={(e) => up({ size: e.target.value })}>{Object.entries(SIZES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
-      <Field label="Renk"><span className="she-color"><input type="color" value={x.color || '#0f172a'} onChange={(e) => up({ color: e.target.value })} /><code>{x.color}</code></span></Field>
+      <Field label="Zemin rengi"><span className="she-color"><input type="color" value={x.color || '#0f172a'} onChange={(e) => up({ color: e.target.value })} /><code>{x.color}</code></span></Field>
       <Field label="Küçük etiket" opt><input value={x.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. %20 indirim" /></Field>
     </div>
     <div className="row2">
-      <Field label="Başlık"><input value={x.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
+      <Field label="Başlık" hint="Boş bırakırsanız kutuda yazı olmaz (yazısı resmin içinde olan hazır banner için)"><input value={x.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>
       <Field label="Alt yazı" opt><input value={x.text || ''} onChange={(e) => up({ text: e.target.value })} /></Field>
     </div>
     <LinkPick v={x.link} onChange={(link) => up({ link })} />
-    <ImgPick v={x.img} onChange={(img) => up({ img })} max={x.size === 'big' || x.size === 'wide' ? 1400 : 900} hint="Kare kutuya kare, geniş kutuya yatay resim. Yazısı olan hazır banner için başlığı boş bırakın." prodOk />
+    <ImgPick v={x.img} onChange={(img) => up({ img })} max={x.size === 'big' || x.size === 'wide' || x.size === 'tall' ? 1600 : 1000} hint={'Resim yükleyin, link yapıştırın ya da bir ürünün resmini seçin. ' + (BOX_PX[x.size || 'sq'][0] + ' × ' + BOX_PX[x.size || 'sq'][1]) + ' px önerilir.'} prodOk />
+    {x.img && <div className="field">
+      <span className="field-l">Resim nasıl görünsün?</span>
+      <div className="pbx-modes">{IMG_MODES.map(([k, l, h]) => (
+        <button key={k} type="button" className={'pbx-mode' + (im === k ? ' on' : '')} onClick={() => up({ im: k })}>
+          <i className={'pbx-ill m-' + k} aria-hidden="true"><b /></i>
+          <span><b>{l}</b><small>{h}</small></span>
+        </button>
+      ))}</div>
+      {!x.im && <span className="field-h">Şu an otomatik seçili: <b>{IMG_MODES.find((m) => m[0] === im)?.[1]}</b>. Birine basınca sabitlenir.</span>}
+      <div className="row2">
+        <Field label="Yakınlaştır"><span className="she-scale"><input type="range" min="0.5" max="2" step="0.05" value={x.iz || 1} onChange={(e) => up({ iz: Number(e.target.value) })} /><code>%{Math.round((x.iz || 1) * 100)}</code></span></Field>
+        {(im === 'cover' || im === 'contain') && <Field label="Boş yer rengi" hint="Sığdır'da resmin etrafı"><span className="she-color"><input type="color" value={x.ibg || '#ffffff'} onChange={(e) => up({ ibg: e.target.value })} />{x.ibg && <button type="button" className="linkish" onClick={() => up({ ibg: '' })}>beyaz</button>}</span></Field>}
+      </div>
+      {im === 'cover' && <div className="row2">
+        <Field label="Odak · yatay"><span className="she-scale"><input type="range" min="0" max="100" step="1" value={x.ix ?? 50} onChange={(e) => up({ ix: Number(e.target.value) })} /><code>%{x.ix ?? 50}</code></span></Field>
+        <Field label="Odak · dikey"><span className="she-scale"><input type="range" min="0" max="100" step="1" value={x.iy ?? 50} onChange={(e) => up({ iy: Number(e.target.value) })} /><code>%{x.iy ?? 50}</code></span></Field>
+      </div>}
+    </div>}
+    {(x.title || x.text || x.tag) && <Fold title="Yazı biçimi" hint="yazı tipi, renk, yer">
+      <div className="row3">
+        <Field label="Başlık yazı tipi"><FontSelect v={x.f || ''} onChange={(f) => up({ f })} /></Field>
+        <Field label="Yazı rengi"><span className="she-color"><input type="color" value={x.tc || '#ffffff'} onChange={(e) => up({ tc: e.target.value })} />{x.tc && <button type="button" className="linkish" onClick={() => up({ tc: '' })}>beyaz</button>}</span></Field>
+        <Field label="Yazının yeri"><select value={x.ta || ''} onChange={(e) => up({ ta: e.target.value })}><option value="">Sol alt</option><option value="top">Sol üst</option><option value="center">Orta</option><option value="bc">Alt orta</option></select></Field>
+      </div>
+    </Fold>}
   </>;
+}
+// yazı tipi seçici: her seçenek kendi yazı tipiyle görünür
+export function FontSelect({ v, onChange, none = 'Varsayılan' }) {
+  useEffect(() => { ensureFonts(document, FONTS.map((f) => f.id)); }, []);
+  const groups = [...new Set(FONTS.map((f) => f.g))];
+  return <select value={v || ''} onChange={(e) => onChange(e.target.value)} style={FONT_BY[v]?.fam ? { fontFamily: `'${FONT_BY[v].fam}'` } : undefined}>
+    {groups.map((g) => <optgroup key={g} label={g}>{FONTS.filter((f) => f.g === g).map((f) => <option key={f.id} value={f.id} style={f.fam ? { fontFamily: `'${f.fam}'` } : undefined}>{f.id ? f.n : none}</option>)}</optgroup>)}
+  </select>;
 }
 export function RailFields({ x, up }) {
   const catalog = useStore((s) => s.catalog);

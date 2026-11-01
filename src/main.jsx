@@ -1,7 +1,8 @@
 import { LinkCartPage, LinkCartsPage } from './lcart.jsx';
 import { SaveDock } from './savedock.jsx';
 import { StoreDecor } from './decor.jsx';
-import { activePack, lookColors } from './presets.js';
+import { activePack, lookColors, logoFilter } from './presets.js';
+import { applyStyle } from './stylekit.js';
 import { RatePrompt } from './reviews.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -80,6 +81,7 @@ async function boot() {
   let pubAt = Date.now();
   const refreshPub = () => { pubAt = Date.now(); return A.publicInfo().then((pub) => { if (pub) { ls.set('pub-info', pub); if (!store.s.user || store.s.user.role === 'public') applyPub(pub); } }); };
   window.__refreshPub = refreshPub;
+  if (A.mode !== 'firebase') window.__store = store; // sadece demo: otomatik denemeler için
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - pubAt > 45000 && (!store.s.user || store.s.user.role === 'public')) refreshPub().catch(() => {}); });
   if (!cachedPub) await Promise.race([pubP, new Promise((r) => setTimeout(r, 2500))]);
   if (ROUTE.landing) { store.set({ boot: 'landing' }); return; }
@@ -296,10 +298,14 @@ function useTheme() {
     const bd = pk?.badge;
     r.classList.toggle('pk-on', !!bd); if (bd) { r.style.setProperty('--pk-badge', JSON.stringify(bd.text || '')); r.style.setProperty('--pk-bbg', bd.bg || '#111'); r.style.setProperty('--pk-bfg', bd.color || '#fff'); }
     r.style.setProperty('--pcard-r', (Number(L.cardR) >= 0 && L.cardR !== '' ? Number(L.cardR) : 18) + 'px');
+    // logo rengi temaya uysun mu (Tasarım › Renkler ve sayfa › Logo rengi; varsayılan orijinal)
+    const lf = pub ? logoFilter(L.logoTone, lc.accent || S.brand.accent) : '';
+    if (lf) r.style.setProperty('--logo-f', lf); else r.style.removeProperty('--logo-f');
+    applyStyle(r, pub ? L.style : null);
     const t = dev || S.brand.theme;
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
     document.title = seoTitle() || S.brand.appName;
-  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, JSON.stringify(L.keep || null), JSON.stringify(pk)]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {

@@ -4,10 +4,11 @@
 //   Account    Hesabım: giriş, üye ol, şifre sıfırlama, siparişlerim, adreslerim, bilgilerim
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders, setCatalog } from './store.js';
 import { openMenu, CarrierMark, Icon, Thumb, Empty, PhoneInput, phoneDigits, PasswordInput, VatLines, StatusPill, Confirm, Sheet, Field, Avatar, copyText } from './ui.jsx';
 import { fmt, totals, fmtTotals, when, ls, rid, now, cleanUsername, soon, resizeImage } from './utils.js';
-import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf, carrierPublic, carrierInfo, carrierDef, pickCar } from './config.js';
+import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, ILLER, CARRIERS, carrierOf, carrierPublic, carrierInfo, carrierDef, pickCar, LOGO_MARK } from './config.js';
 import TR from './tr-ilce.json';
 import { SwipeLine } from './cart.jsx';
 import { FavGrid, WaitGrid } from './catalog.jsx';
@@ -165,6 +166,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   const [f, setF] = useState(() => initForm(member, methods, ls.get('guest-checkout', null)));
   const [err, setErr] = useState({});
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
   const [auth, setAuth] = useState(false);
   const formRef = useRef(null);
   const prevMember = useRef(member?.uid);
@@ -301,11 +303,12 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       store.set({ justOrder: { id, ...order } }); // sipariş sayfası sunucuyu beklemeden hemen açılsın
       openOrder(id, signedUp ? 'verify' : true);
     } catch (x) { toast('Sipariş gönderilemedi: ' + x.message, 'bad'); }
-    setBusy(false);
+    setBusy(false); setDone(false);
   }
 
   return (
     <div className="page checkout" ref={formRef}>
+      {busy && <OrderWait done={done} logo={S.brand.logo || LOGO_MARK} />}
       <div className="send-bar">
         <button className="back-btn co-back-std" onClick={onBack}><Icon n="back" s={16} />{single ? 'Vazgeç' : 'Sepete dön'}</button>
         <div className="send-t"><b>Siparişi tamamla</b><span className="muted">{items.length} ürün · {fmtTotals(tot)}</span></div>
@@ -1187,4 +1190,25 @@ function MyInfo({ part = 'all' }) {
       <button className="btn primary" disabled={busy} onClick={save}><Icon n="check" s={16} />Kaydet</button>
     </div>
   );
+}
+
+// Sipariş gönderilirken ekranın ortasında bekleme animasyonu (1.11.2026, kullanıcı: 'Beymen güzel yapıyor'): sayfa soluklaşır,
+// ortada logo + etrafında dönen halka, alt satırda sırayla değişen adım yazısı; bitince halka ✓'ye döner.
+const WAIT_STEPS = ['Sepetiniz kontrol ediliyor', 'Fiyatlar doğrulanıyor', 'Siparişiniz oluşturuluyor', 'Neredeyse bitti'];
+function OrderWait({ done, logo }) {
+  const [i, setI] = useState(0);
+  useEffect(() => { const t = setInterval(() => setI((x) => Math.min(x + 1, WAIT_STEPS.length - 1)), 1300); return () => clearInterval(t); }, []);
+  useEffect(() => { document.documentElement.classList.add('ow-lock'); return () => document.documentElement.classList.remove('ow-lock'); }, []);
+  return createPortal(
+    <div className={'ow' + (done ? ' done' : '')} role="status" aria-live="polite">
+      <div className="ow-box">
+        <div className="ow-ring">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle className="ow-track" cx="50" cy="50" r="44" /><circle className="ow-arc" cx="50" cy="50" r="44" /></svg>
+          <img src={logo} alt="" className="ow-logo" />
+          <span className="ow-ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7" /></svg></span>
+        </div>
+        <b className="ow-t">{done ? 'Siparişiniz alındı' : WAIT_STEPS[i]}</b>
+        <span className="ow-dots" aria-hidden="true"><i /><i /><i /></span>
+      </div>
+    </div>, document.body);
 }

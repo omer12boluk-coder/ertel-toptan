@@ -1,9 +1,10 @@
 // Mağaza süsü (tema): sadece müşterinin gördüğü online mağazada (role public) süzülen / yağan süsler, üstte süs şeridi,
 // hafif zemin tonu. Ayar: settings.look.decor = { id, amt: 'sm'|'md'|'lg', front }. Yönetim panelinde / bayide çizilmez.
-import { useMemo } from 'react';
+import { useMemo, useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from './store.js';
 import { activePack, patBg, ornBg } from './presets.js';
 import { useWin } from './dzframe.jsx';
+import { FONT_BY, ensureFonts } from './slidex.jsx';
 
 // p: parçalar (emoji ya da şekil: '.dot' nokta, '.rect' konfeti, '.streak' yağmur, '.bubble' kabarcık, '.star' parıltı)
 // m: hareket fall | rise | float | twinkle · c: şekil renkleri · bg: zemin tonu · band: süs şeridi (emoji tekrarı) · bandBg: şerit zemini
@@ -55,8 +56,11 @@ function Parts({ t, n }) {
 export function StoreDecor({ cfg, preview }) {
   const S = useStore((s) => s.settings);
   const role = useStore((s) => s.user?.role);
+  const tab = useStore((s) => s.tab);
   const pk = !cfg && !preview ? activePack(S.look) : null;
-  if (pk && role === 'public') return <PackDecor pk={pk} />;
+  // 1.11.2026: şerit + süs dizisi varsayılan SADECE ana sayfada (diğer sayfalarda arama kutusunu kapatıyordu). look.pack.topAll = her sayfada
+  const top = tab === 'anasayfa' || !!S.look?.pack?.topAll;
+  if (pk && role === 'public') return <PackDecor pk={pk} top={top} />;
   const c = cfg || S.look?.decor || {};
   const t = DECOR.find((x) => x.id === c.id);
   if (!t || (!preview && role !== 'public')) return null;
@@ -67,7 +71,7 @@ export function StoreDecor({ cfg, preview }) {
     <div className={'decor' + (preview ? ' pv' : '') + (c.front !== false ? ' front' : '')} aria-hidden="true">
       {t.bg && <div className="dc-bg" style={{ background: t.bg }} />}
       <div className="dc-layer"><Parts t={t} n={n} /></div>
-      {band && c.band !== false && <div className="dc-band" style={{ background: t.bandBg || 'transparent', color: t.bandColor || undefined }}><span>{band}</span></div>}
+      {band && c.band !== false && (preview || tab === 'anasayfa') && <div className="dc-band" style={{ background: t.bandBg || 'transparent', color: t.bandColor || undefined }}><span>{band}</span></div>}
     </div>
   );
 }
@@ -75,23 +79,48 @@ export function StoreDecor({ cfg, preview }) {
 // Tema Stüdyosu (look.pack): efekt + duyuru şeridi + sayfa tonu. inFrame: tasarım modunun önizleme çerçevesinde
 const FX_SHAPE = { sparkle: ['.star', 'twinkle'], dust: ['.dot', 'float'], snow: ['.dot', 'fall'], confetti: ['.rect', 'fall'], bubble: ['.bubble', 'rise'], rain: ['.streak', 'rain'], petal: ['.petal', 'fall'],
   hearts: ['♥', 'rise'], flakes: ['❄', 'fall'], stars: ['★', 'float'], leaves: ['🍂', 'fall'], balloons: ['🎈', 'rise'], gears: ['⚙', 'float'] };
-export function PackDecor({ pk, mini }) {
+// Kayan yazı: tek parça ölçülür, ekranı dolduracak kadar kopya iki yarıya konur, yarım genişlik kadar kayar → hiç boşluk kalmaz.
+// (Eski yöntem: 14 kopyalık dev tek satır %50 kayıyordu; iPhone çok geniş katmanı parça parça çizip başta/sonda boşluk bırakıyordu.)
+export function Ticker({ text, speed = 1, W: W0 }) {
+  const W = W0 || window;
+  const unit = useRef(null);
+  const [m, setM] = useState({ w: 0, n: 2 });
+  useLayoutEffect(() => {
+    const el = unit.current; if (!el) return;
+    const fit = () => { const w = el.getBoundingClientRect().width; if (!w) return; const vw = Math.max(W.innerWidth || 0, el.parentElement?.parentElement?.clientWidth || 0, 320); const n = Math.max(1, Math.ceil(vw / w) + 1); setM((o) => (o.w === w && o.n === n ? o : { w, n })); };
+    fit();
+    const ro = new (W.ResizeObserver || ResizeObserver)(fit); ro.observe(el);
+    W.addEventListener('resize', fit);
+    W.document?.fonts?.ready?.then(fit);
+    return () => { ro.disconnect(); W.removeEventListener('resize', fit); };
+  }, [text, W]);
+  const half = m.w * m.n;
+  const dur = half ? half / (38 * (speed || 1)) : 60; // ~38 px/sn
+  const units = Array.from({ length: m.n * 2 }, (_, i) => <span key={i} ref={i === 0 ? unit : undefined} className="tk-u">{text}</span>);
+  return <span className="tk-track" style={half ? { '--tk-x': -half + 'px', animationDuration: dur + 's' } : { animation: 'none' }}>{units}</span>;
+}
+
+export function PackDecor({ pk, mini, top = true }) {
   const W = useWin();
   if (!pk) return null;
   const sh = FX_SHAPE[pk.fx?.kind];
   const phone = W.matchMedia('(max-width: 700px)').matches;
   const n = sh ? Math.round((AMT[pk.fx.amt] || AMT.md) * (phone ? 0.6 : 1) * (mini ? 0.6 : 1)) : 0;
   const t = sh ? { id: pk.id + pk.fx.kind, p: [sh[0]], m: sh[1], c: pk.fx.c?.length ? pk.fx.c : ['#ffffff'] } : null;
-  const band = pk.band?.text ? (pk.band.text + '   ·   ').repeat(mini ? 4 : 14) : '';
+  const band = top && pk.band?.text ? pk.band.text + '\u00a0\u00a0\u00a0·\u00a0\u00a0\u00a0' : '';
+  const round = pk.band?.shape === 'round';
   const pat = pk.pat?.k && pk.pat.k !== 'none' ? patBg(pk.pat.k, pk.pat.c || '#64748b', pk.pat.z || 1) : null;
-  const orn = pk.orn?.k && pk.orn.k !== 'none' ? ornBg(pk.orn.k, pk.orn.c) : null;
+  const orn = top && pk.orn?.k && pk.orn.k !== 'none' ? ornBg(pk.orn.k, pk.orn.c) : null;
+  const fam = FONT_BY[pk.band?.font]?.fam;
+  if (fam) ensureFonts(W.document, [pk.band.font]);
+  const bf = fam ? { fontFamily: `'${fam}', system-ui, sans-serif` } : null;
   return (
-    <div className={'decor pk-decor front' + (mini ? ' pv' : '') + (band ? ' has-band' : '')} aria-hidden="true">
+    <div className={'decor pk-decor front' + (mini ? ' pv' : '') + (band ? ' has-band' : '') + (band && round ? ' band-round' : '')} aria-hidden="true">
       {pat && <div className="dc-bg pk-pat" style={{ ...pat, opacity: pk.pat.o ?? 0.07 }} />}
       {pk.tint && <div className="dc-bg" style={{ background: pk.tint }} />}
       {orn && <div className="pk-orn" style={{ backgroundImage: orn.img, backgroundSize: orn.w + 'px ' + orn.h + 'px', height: orn.h }} />}
       {t && <div className="dc-layer"><Parts t={t} n={n} /></div>}
-      {band && <div className="dc-band pk-band" style={{ background: pk.band.bg || '#111827', color: pk.band.color || '#fff' }}><span>{band}</span></div>}
+      {band && <div className={'dc-band pk-band' + (round ? ' round' : '')} style={{ background: pk.band.bg || '#111827', color: pk.band.color || '#fff', ...bf }}><Ticker text={band} speed={pk.band.sp || 1} W={W} /></div>}
     </div>
   );
 }
