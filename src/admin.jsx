@@ -77,6 +77,7 @@ import { rateLabel } from './listsheet.jsx';
 import { syncNow } from './watch.js';
 import { Members } from './orders.jsx';
 import { KalipSettings } from './kalipfind.jsx';
+import { SeoTextSettings } from './seoedit.jsx';
 import { PreqAdmin, PreqSettings } from './preq.jsx';
 import { IssueAdmin, IssueSettings } from './issue.jsx';
 import { ReviewAdmin } from './reviews.jsx';
@@ -596,6 +597,7 @@ const SECTIONS = [
   ['kategori', 'Kategoriler', 'Kategori adları, sırası, gizleme', 'folder', 'urun'],
   ['setler', 'Setler', 'Set fiyatı gösterimi, sette ürün fiyatları, aramada setler · setleri yayına al / kaldır', 'box', 'urun'],
   ['kalip', 'Kalıp bulucu', 'Telefon modelleri ve işlemcileri · uyan kalıplar', 'chip', 'urun'],
+  ['seo', 'Google tanıtım yazıları', 'Kategori ve marka sayfalarının üstündeki kısa yazı · Google’da çıkmak için', 'search', 'urun'],
   ['resim', 'Resim adresleri', 'Ürün resimlerinin adresi · nadiren değişir', 'image', 'urun'],
   ['ozellik', 'Mağaza özellikleri', 'Tek dokunuşla aç / kapat: paylaşma, gelince haber ver, popüler ürünler, yorumlar', 'toggle', 'ozel'],
   ['urtalep', 'Ürün talebi', 'Müşterinin fotoğraflı ürün isteği · günlük sınır, fotoğraf saklama süresi', 'camera', 'ozel'],
@@ -624,7 +626,7 @@ const SEC_KEYS = {
   sepetlink: ['orders.lcartHours'],
   bildirim: ['orders.push', 'orders.pushTexts', 'orders.doneNote'],
   dokunma: ['shop.touch'], bayiuye: ['access.allowSignup', 'features'],
-  kategori: ['categories'], kalip: ['kalip'], setler: ['setLook', 'sets'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'], kota: ['quota'],
+  kategori: ['categories'], seo: ['seoText'], kalip: ['kalip'], setler: ['setLook', 'sets'], urtalep: ['preq'], sorun: ['issue'], altbilgi: ['footer', 'legal'], ozellik: ['feat'], kota: ['quota'],
 };
 const atPath = (o, p) => p.split('.').reduce((x, k) => (x == null ? x : x[k]), o);
 // "Son açtıklarınız" (cihazda, en çok 3)
@@ -865,6 +867,7 @@ export function Settings() {
 
         {sec === 'altbilgi' && <FooterSettings d={d} set={set} />}
         {sec === 'kalip' && <KalipSettings d={d} set={set} />}
+        {sec === 'seo' && <SeoTextSettings d={d} set={set} catRows={catRows} catalog={catalog} />}
         {sec === 'setler' && <SetSettings d={d} set={set} />}
         {sec === 'urtalep' && <PreqSettings d={d} set={set} />}
         {sec === 'kota' && <QuotaSettings d={d} set={set} />}

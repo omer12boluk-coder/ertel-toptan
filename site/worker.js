@@ -24,7 +24,7 @@ const SITE = 'https://ertelmarket.com';
 const NAME = 'Ertel Market'; // Google'da görünen site adı (kullanıcı, 1.11.2026); dükkânın adı ERTEL GSM ikinci ad olarak verilir
 const BRAND = 'ERTEL GSM';
 const WATCH = 'https://ertel-b2b-watch.omer-12boluk.workers.dev'; // kur (Harem Altın dolar satış) — uygulamadaki fiyatla aynı kaynak
-const VER = 'v5'; // önbellek anahtarı: sayfa düzeni değişince artır
+const VER = 'v6'; // önbellek anahtarı: sayfa düzeni değişince artır
 const BOT = /bot\b|bot\/|crawl|spider|slurp|google|bing|yandex|baidu|duckduck|facebookexternalhit|facebot|whatsapp|telegram|slack|linkedin|discord|pinterest|skypeuripreview|vkshare|embedly|viber|snapchat|petal|applebot|preview/i;
 
 // ---- Firestore REST (herkese açık okuma)
@@ -184,7 +184,7 @@ async function seoFor(path, I) {
     const b = I.brands.get(m[1]); if (!b) return null;
     const inStock = b.ids.filter((id) => I.byId.get(id)?.s > 0).length;
     const bt = seoTxt(I, 'b', b.name);
-    return { title: `${b.name} Ürünleri ve Fiyatları | ${NAME}`, desc: bt ? cut(bt, 158) : `${b.name} marka telefon tamir ekipmanları: ${b.ids.length} ürün${inStock ? `, ${inStock} tanesi stokta` : ''}. ${NAME}, Tahtakale İstanbul. Hızlı kargo.`,
+    return { title: `${b.name} Telefon Tamir Ekipmanları ve Fiyatları | ${NAME}`, desc: bt ? cut(bt, 158) : `${b.name} marka telefon tamir ekipmanları: ${b.ids.length} ürün${inStock ? `, ${inStock} tanesi stokta` : ''}. ${NAME}, Tahtakale İstanbul. Hızlı kargo.`,
       ld: [crumbs([[NAME, '/'], ['Markalar', '/urunler'], [b.name, '/marka/' + b.slug]]), { '@type': 'CollectionPage', name: `${b.name} ürünleri`, url: SITE + '/marka/' + b.slug, about: { '@type': 'Brand', name: b.name } }],
       img: imgUrl(I.byId.get(b.ids[0])?.img), body: `<h1>${esc(b.name)} ürünleri</h1><p>${esc(bt || `${NAME} online mağazada ${b.ids.length} ${b.name} ürünü.`)}</p>${prodList(I, b.ids)}<h2>Diğer markalar</h2>${brandLinks(I)}` };
   }
