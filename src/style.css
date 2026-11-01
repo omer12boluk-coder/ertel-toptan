@@ -6650,3 +6650,7 @@ html.ow-lock { overflow: hidden; }
 @media (max-width: 640px) { .ptable tfoot td.c, .ptable tfoot td.pt-qty, .ptable tfoot td.pt-unit { display: none; } .paper-store .ptable .pt-sum { color: var(--accent); } }
 /* yönetim ödeme kartı: sadece fatura tutarı */
 .pc-amt { margin-top: 8px !important; font: 700 24px/1.1 var(--f-display); color: var(--fg); }
+/* +KDV: çerçevesiz, sayıyla aynı yazı tipinde küçük */
+.ln-tl em { border: 0; padding: 0; margin-left: 3px; font: inherit; font-size: .82em; font-weight: 600; letter-spacing: 0; vertical-align: baseline; }
+.pc-paid { color: var(--accent); }
+.pc-ex { margin-top: 2px !important; font-size: 13.5px; color: var(--muted); }

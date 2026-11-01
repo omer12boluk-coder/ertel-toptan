@@ -92,7 +92,7 @@ export function cardErrors(c) {
   if (String(c.name || '').trim().length < 4) e.cname = 'Kart üzerindeki adı yazın';
   const m = /^(\d{2})\/(\d{2})$/.exec(c.exp || ''); const now = new Date(); const yy = now.getFullYear() % 100, mm = now.getMonth() + 1;
   if (!m || Number(m[1]) < 1 || Number(m[1]) > 12 || Number(m[2]) < yy || (Number(m[2]) === yy && Number(m[1]) < mm) || Number(m[2]) > yy + 20) e.cexp = 'Son kullanma tarihini ay/yıl yazın (ör. 08/29)';
-  if (!/^\d{3,4}$/.test(c.cvv || '')) e.ccvv = 'Kartın arkasındaki 3 haneli kod';
+  if (!/^\d{3}$/.test(c.cvv || '')) e.ccvv = 'Kartın arkasındaki 3 haneli kod';
   return e;
 }
 export const cardOut = (c) => { const d = digitsOf(c.num); return { brand: cardBrand(d) || 'kart', last4: d.slice(-4), bank: 'Demo Bank', demo: true }; };
@@ -101,7 +101,7 @@ export function CardForm({ card, setCard, inc, list, err = {} }) {
   const d = digitsOf(card.num);
   const brand = cardBrand(d);
   const known = d.length >= 6;
-  const set = (k) => (e) => setCard({ ...card, [k]: k === 'num' ? fmtNum(e.target.value) : k === 'exp' ? fmtExp(e.target.value, card.exp) : k === 'cvv' ? digitsOf(e.target.value).slice(0, 4) : e.target.value.toLocaleUpperCase('tr-TR') });
+  const set = (k) => (e) => setCard({ ...card, [k]: k === 'num' ? fmtNum(e.target.value) : k === 'exp' ? fmtExp(e.target.value, card.exp) : k === 'cvv' ? digitsOf(e.target.value).slice(0, 3) : e.target.value.toLocaleUpperCase('tr-TR') });
   const opts = list.length ? list : [{ n: 1, pct: 0 }];
   return (
     <div className="cardf">
@@ -112,7 +112,7 @@ export function CardForm({ card, setCard, inc, list, err = {} }) {
       <label className={'field' + (err.cname ? ' bad' : '')}><span className="field-l">Kart üzerindeki ad soyad</span><input id="co-cname" autoComplete="cc-name" value={card.name} onChange={set('name')} />{err.cname && <span className="field-e">{err.cname}</span>}</label>
       <div className="row2 cardf-row">
         <label className={'field' + (err.cexp ? ' bad' : '')}><span className="field-l">Son kullanma</span><input id="co-cexp" inputMode="numeric" autoComplete="cc-exp" placeholder="AA/YY" value={card.exp} onChange={set('exp')} />{err.cexp && <span className="field-e">{err.cexp}</span>}</label>
-        <label className={'field' + (err.ccvv ? ' bad' : '')}><span className="field-l">Güvenlik kodu (CVV)</span><input id="co-ccvv" inputMode="numeric" autoComplete="cc-csc" placeholder="•••" value={card.cvv} onChange={set('cvv')} />{err.ccvv && <span className="field-e">{err.ccvv}</span>}</label>
+        <label className={'field' + (err.ccvv ? ' bad' : '')}><span className="field-l">Güvenlik kodu (CVV)</span><input id="co-ccvv" inputMode="numeric" autoComplete="cc-csc" placeholder="•••" maxLength={3} value={card.cvv} onChange={set('cvv')} />{err.ccvv && <span className="field-e">{err.ccvv}</span>}</label>
       </div>
       {!known
         ? <p className="cardf-wait">Kart numarasının ilk 6 hanesini yazınca taksit seçenekleri burada çıkar.</p>
@@ -160,6 +160,7 @@ export function AdminPayCard({ o }) {
       <p><b>{how}</b></p>
       {o.card && <p className="muted num">{cardLine(o.card)}</p>}
       <p className="pc-amt num">{tl2(sum.pay)}</p>
+      {o.pay === 'havale' && sum.vatPct > 0 && <p className="pc-ex num">KDV hariç {tl2(invoiceSplit(sum.pay, sum.vatPct).base)}</p>}
       {o.paid?.at && <p className="pc-paid"><Icon n="check" s={14} />Müşteri ödemeyi yaptığını bildirdi · {new Date(o.paid.at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>}
     </div>
   );
