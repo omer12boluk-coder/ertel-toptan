@@ -180,7 +180,6 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   // mağaza: KDV dahil satış + kart (demo) + taksit (storepay.jsx / paycalc.js; bekçi aynı hesabı yapar)
   const sv = useStoreVat(); const sc = useStoreCard();
   const [card, setCard] = useState(emptyCard);
-  const [demo, setDemo] = useState(null); // önizleme adresinde: sipariş kaydedilmez, bekçinin kaydedeceği hâl gösterilir
   const prevMember = useRef(member?.uid);
   // giriş yapılınca bilgileri doldur
   useEffect(() => { if (member?.uid && member.uid !== prevMember.current) setF((x) => ({ ...initForm(member, methods, null), pay: x.pay, note: x.note, method: x.method })); prevMember.current = member?.uid; }, [member?.uid]);
@@ -304,7 +303,13 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       });
       // sunucusuz (demo veri) ve önizleme: tutar burada aynı formülle yazılır; gerçek sitede bekçi kendisi hesaplar
       if (vsum) { const { lines, ...sumDoc } = vsum; order.sum = { ...sumDoc, at: t }; }
-      if (PREVIEW) { const pv = { ...order, id: 'pv_' + id, pv: 1 }; delete pv.seen; delete pv.inst; pvSave(pv); setBusy(false); setDemo(pv); window.scrollTo(0, 0); return; } // önizleme: kaydedilmez, bu cihazda yönetim listesine eklenir
+      // önizleme: veritabanına yazılmaz, bu cihazda saklanır; akış gerçek siteyle AYNI (bekleme ekranı → sipariş sayfası)
+      if (PREVIEW) {
+        const pid = 'pv_' + id; const pv = { ...order, id: pid, pv: 1 }; delete pv.seen; delete pv.inst; pvSave(pv);
+        await new Promise((r) => setTimeout(r, 1300)); setDone(true); await new Promise((r) => setTimeout(r, 750));
+        if (single) store.set({ buyNow: null }); else clearCart();
+        store.set({ justOrder: pv }); openOrder(pid, true); setBusy(false); setDone(false); return;
+      }
       let res = null;
       try { if (srv) res = await A.placeOrderSrv(order, id); else { const { seen, inst, ...o2 } = order; await A.placeOrder(o2, id); } } finally { if (signedUp) await A.memberDone(); }
       if (res && !res.ok) { if (res.code === 'price') { priceFix(res); setBusy(false); return; } if (res.code === 'rate') { rateFix(res); setBusy(false); return; } throw new Error(res.error || 'tekrar deneyin'); }
@@ -335,7 +340,6 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
     setBusy(false); setDone(false);
   }
 
-  if (demo) return <PreviewDone o={demo} onBack={() => setDemo(null)} />;
   return (
     <div className="page checkout" ref={formRef}>
       {busy && <OrderWait done={done} logo={S.brand.logo || LOGO_MARK} />}
@@ -492,26 +496,6 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   );
 }
 
-// Önizleme adresinde "Siparişi tamamla": sipariş KAYDEDİLMEZ; müşterinin ve yönetimin göreceği hâl gösterilir (1.11.2026 demo)
-function PreviewDone({ o, onBack }) {
-  const items = orderItems(o);
-  const sum = o.sum;
-  const tot = sum ? `${tl2(sum.pay)} KDV dahil${o.pay === 'card' && sum.inst ? ' · Kart ' + (sum.inst.n > 1 ? sum.inst.n + ' taksit' : 'tek çekim') : ''}` : fmtTotals(o.total || {});
-  return (
-    <div className="page order-page pv-done">
-      <div className="list-top"><button className="back-btn" onClick={onBack}><Icon n="back" s={16} />Ödeme ekranına dön</button></div>
-      <div className="banner warn"><Icon n="eye" /><div><b>Önizleme · sipariş veritabanına kaydedilmedi.</b> Gerçek sitede bekçi aynı hesabı kendisi yapıp siparişi aşağıdaki gibi kaydeder. Bu demo sipariş SADECE bu cihazda, önizleme adresinin <a className="link" href="/admin/siparisler">yönetim paneli › Siparişler</a> listesinde “Önizleme” etiketiyle de görünür.</div></div>
-      <h2 className="pv-h">Müşterinin sipariş sayfasında</h2>
-      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={<OrderSumFoot o={o} />} />
-      <h2 className="pv-h">Yönetim › Siparişler’de</h2>
-      <div className="pv-row"><span className="num">#{o.no}</span><span><b>{o.contact?.name}</b><small>{items.length} ürün · şimdi</small></span><span className="pay-chip"><Icon n="tag" s={13} />{payLabel(o, PAY)}{o.card ? ' · •••• ' + o.card.last4 : ''}</span><span className="pv-amt num"><b>{sum ? tl2(sum.pay) : fmtTotals(o.total || {})}</b>{sum?.allUsd && <small>KDV dahil · {usd2(sum.vatPct > 0 ? sum.usdInc : sum.usd)}</small>}</span></div>
-      <div className="o-info pv-info"><AdminPayCard o={o} /></div>
-      <h2 className="pv-h">Telegram / e-posta bildirimi</h2>
-      <pre className="pv-msg">{`🛒 Yeni sipariş #${o.no}\n${o.contact?.name || ''} · ${o.contact?.phone || ''}\n${items.length} ürün · ${tot}${o.card ? '\n' + cardLine(o.card) : ''}`}</pre>
-    </div>
-  );
-}
-
 function initForm(m, methods, guest) {
   const g = guest || {};
   const addrs = m?.addresses || [];
@@ -589,6 +573,7 @@ export function OrderPage({ id }) {
         <button className="back-btn" onClick={() => (member ? openAcct('orders') : go('katalog'))}><Icon n="back" s={16} />{member ? 'Siparişlerim' : 'Ürünler'}</button>
         <span className="list-top-r"><PayChip o={o} /><StatusPill status={o.status} map={ORDER_STATUS} /></span>
       </div>
+      {o.pv && <div className="banner warn pv-note"><Icon n="eye" /><div><b>Önizleme siparişi.</b> Veritabanına kaydedilmedi; sadece bu cihazda, önizleme adresinin yönetim paneli › Siparişler listesinde görünür.</div></div>}
       {orderJust && (
         <div className="done-card">
           <span className="sent-ic"><Icon n="check" s={30} /></span>

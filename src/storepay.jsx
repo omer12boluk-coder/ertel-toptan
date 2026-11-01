@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { useStore } from './store.js';
 import { Icon, copyText } from './ui.jsx';
 import { useRate } from './listsheet.jsx';
-import { storeSum, instList, storeVatOn, storeCardOn, cardBrand, luhnOk, digitsOf, invoiceSplit, r2 } from './paycalc.js';
+import { storeSum, instList, storeVatOn, storeCardOn, cardBrand, luhnOk, digitsOf, r2 } from './paycalc.js';
 
 export const tl2 = (v) => (v == null || isNaN(v) ? '—' : Number(v).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺');
 export const usd2 = (v) => '$' + Number(v || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -49,8 +49,9 @@ export function PayableBox({ sum, label = 'Ödenecek tutar', compact }) {
     <div className={'ssum-pay' + (compact ? ' compact' : '')}>
       <span className="ssum-pay-l"><span>{label}</span>{sum.vatPct > 0 && <span>KDV dahil</span>}</span>
       <b className="ssum-pay-v num">{tl2(sum.pay)}</b>
+      {sum.allUsd && <span className="ssum-pay-usd num">{usd2(sum.vatPct > 0 ? sum.usdInc : sum.usd)}{sum.vatPct > 0 && <small>KDV dahil</small>}</span>}
       {sum.inst && <span className="ssum-pay-i num">{sum.inst.n > 1 ? `${sum.inst.n} taksit · ${sum.inst.n} × ${tl2(sum.inst.per)}` : 'Kartla tek çekim'}</span>}
-      <span className="ssum-pay-s num">{sum.allUsd && <>{usd2(sum.vatPct > 0 ? sum.usdInc : sum.usd)} · </>}Kur {rateTxt(sum.rate)}</span>
+      <span className="ssum-pay-s num">Kur {rateTxt(sum.rate)}</span>
     </div>
   );
 }
@@ -149,23 +150,20 @@ export function OrderSumFoot({ o }) {
   );
 }
 
-// Yönetim > sipariş detayı: Ödeme kartı (fatura tutarı, matrah, KDV, kart)
+// Yönetim > sipariş detayı: Ödeme kartı — sade: nasıl ödendi + faturaya yazılacak tutar (ayrıntı üstteki tabloda)
 export function AdminPayCard({ o }) {
   const sum = o?.sum; if (!sum) return null;
-  const inv = invoiceSplit(sum.pay, sum.vatPct);
-  const copy = () => copyText(`Fatura tutarı (KDV dahil): ${tl2(sum.pay)}\nMatrah: ${tl2(inv.base)}\nKDV %${sum.vatPct}: ${tl2(inv.vat)}`, 'Fatura tutarları kopyalandı');
+  const how = o.pay === 'card' ? 'Kredi kartı · ' + (sum.inst?.n > 1 ? sum.inst.n + ' taksit' : 'tek çekim') : o.pay === 'havale' ? 'Havale / EFT' : 'Dükkanda ödeme';
   return (
     <div className="o-card pay-card">
-      <h3>Ödeme{o.card?.demo && <span className="tag warn">Demo ödeme</span>}<button className="oc-copy" onClick={copy} title="Fatura tutarlarını kopyala" aria-label="Fatura tutarlarını kopyala"><Icon n="copy" s={15} /></button></h3>
-      <p><b>{o.pay === 'card' ? 'Kredi / banka kartı' : o.pay === 'havale' ? 'Havale / EFT' : 'Dükkanda ödeme'}</b>{o.pay === 'card' && sum.inst && <> · {sum.inst.n > 1 ? sum.inst.n + ' taksit' : 'tek çekim'}</>}</p>
+      <h3>Ödeme{o.card?.demo && <span className="tag warn">Demo</span>}<button className="oc-copy" onClick={() => copyText(String(sum.pay.toFixed(2)).replace('.', ','), 'Fatura tutarı kopyalandı')} title="Fatura tutarını kopyala" aria-label="Fatura tutarını kopyala"><Icon n="copy" s={15} /></button></h3>
+      <p><b>{how}</b></p>
       {o.card && <p className="muted num">{cardLine(o.card)}</p>}
       <div className="pc-inv num">
-        <span className="pc-inv-l">Fatura tutarı <small>KDV dahil</small></span>
+        <span className="pc-inv-l">{o.pay === 'card' ? 'Müşterinin ödediği' : 'Müşterinin ödeyeceği'}</span>
         <b>{tl2(sum.pay)}</b>
-        <span className="pc-inv-r"><span>Matrah</span><span>{tl2(inv.base)}</span></span>
-        <span className="pc-inv-r"><span>KDV %{sum.vatPct}</span><span>{tl2(inv.vat)}</span></span>
+        <span className="pc-inv-n">Faturayı bu tutara kesin (KDV dahil)</span>
       </div>
-      <p className="fine">Kur {rateTxt(sum.rate)}{sum.inst?.fee > 0 ? ` · ödeme komisyonu ${tl2(sum.inst.fee)} dahil` : ''}</p>
     </div>
   );
 }

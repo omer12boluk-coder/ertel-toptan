@@ -231,7 +231,7 @@ export function Orders() {
                       <span className="or-who"><b>{o.contact?.name}</b><small>{o.invoice?.type === 'company' && o.invoice.company ? o.invoice.company : o.contact?.phone || ''}</small></span>
                       <span className="or-thd"><OrderThumbs o={o} /></span>
                       <span className="or-tags">
-                        <span className={'or-pay' + (o.sum && o.pay === 'card' ? ' card' : '')}>{o.sum && o.pay === 'card' ? (o.sum.inst?.n > 1 ? 'Kart ' + o.sum.inst.n + ' tk' : 'Kart') : PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
+                        <span className="or-pay">{o.sum && o.pay === 'card' ? (o.sum.inst?.n > 1 ? 'Kart · ' + o.sum.inst.n + ' taksit' : 'Kart · tek çekim') : PAY_SHORT[o.pay] || PAY[o.pay] || '—'}</span>
                         {o.delivery?.method === 'pickup' ? <span className="cbadge shop">Dükkândan</span> : <span className={'cbadge ' + (car?.k || 'none')}>{car ? car.short : 'Kargo'}</span>}
                         {needsInvoice(o.invoice) && <span className="otag inv"><Icon n="check" s={11} />Fatura</span>}
                         {o.pv && <span className="otag pvtag">Önizleme</span>}

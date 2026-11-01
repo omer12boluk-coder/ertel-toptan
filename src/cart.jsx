@@ -193,6 +193,12 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
               </div>
             </SwipeLine>
           ))(g))}
+          {vsum && ( // tablonun altı: toplamların toplamı ($ ve altında KDV'siz TL)
+            <li className="gline gline-foot" aria-label="Sepet toplamı">
+              <span className="gf-l"><b>Toplam</b><small>{lineCount(items)} ürün · {nQty} adet</small></span>
+              <span className="gline-ctl"><span /><span /><span className="num gline-sum has-tl">{vsum.allUsd ? fmt(vsum.usd, 'USD') : fmtTotals(tot)}<small className="ln-tl num">{tl2(vsum.tl)}<em>+KDV</em></small></span><span /></span>
+            </li>
+          )}
         </ul>
         <div className="cart-side" ref={sideRef}><aside className="cart-sum" ref={boxRef}>
           <div className="cs-head">

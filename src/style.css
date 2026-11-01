@@ -6595,3 +6595,24 @@ html.ow-lock { overflow: hidden; }
 .co-side .cart-sum.co-tight.co-fixed { overflow-y: auto; scrollbar-width: thin; }
 .co-items.in-sheet { max-height: none; overflow: visible; }
 .otag.pvtag { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font: 700 10.5px/1.5 var(--f-body); letter-spacing: .04em; text-transform: uppercase; color: color-mix(in oklab, var(--warn) 80%, var(--fg)); background: color-mix(in oklab, var(--warn) 14%, var(--surface)); vertical-align: 2px; }
+/* sepet tablosunun altı: toplamların toplamı */
+.gline.gline-foot { background: var(--surface-2); border-top: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r); padding-block: 12px; }
+.gline-foot .gf-l { display: flex; align-items: baseline; gap: 10px; }
+.gline-foot .gf-l b { font: 700 17px/1 var(--f-display); letter-spacing: .02em; text-transform: uppercase; }
+.gline-foot .gf-l small { font-size: 13px; color: var(--muted); }
+.gline-foot .gline-sum { font-size: 23px; }
+@media (max-width: 560px) {
+  .gline.gline-foot { display: flex; justify-content: space-between; align-items: center; }
+  .gline-foot .gline-ctl { display: block; }
+  .gline-foot .gline-ctl > span:not(.gline-sum) { display: none; }
+  .gline-foot .gf-l { flex-direction: column; gap: 4px; }
+}
+/* ödenecek tutar: TL'nin altında dolar (ara toplam satırı gibi) */
+.ssum-pay-usd { font: 600 15px/1.2 var(--f-body); color: var(--fg); opacity: .8; }
+.ssum-pay-usd small { font-size: 11.5px; font-weight: 500; color: var(--muted); margin-left: 6px; }
+@media (min-width: 960px) { .co-side .ssum-pay-usd { font-size: 13.5px; } }
+/* sipariş kâğıdı altı: satırlar ve tutar kutusu dikey ortada (havalede 2 satır kalınca kaymasın) */
+@media (min-width: 700px) { .ssum.foot { align-items: center; } }
+.ssum.foot .ssum-rows { gap: 10px; }
+.pc-inv-n { font-size: 12.5px; color: var(--muted); }
+.pv-note { margin-bottom: 4px; }
