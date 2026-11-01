@@ -6674,3 +6674,7 @@ html.ow-lock { overflow: hidden; }
 @media (min-width: 700px) { .osum-body { grid-template-columns: minmax(0, 1fr) minmax(250px, 300px); align-items: center; gap: 24px; } }
 @media (max-width: 560px) { .osum-mini { font-size: 12.5px; } .osum-mini b { font-size: 16px; } }
 .paper-f.has-foot > .paper-cnt { display: none; }
+/* ödeme özeti açıkken eski düzen: satırlar solda tam genişlik, tutar kutusu sağda */
+.ssum.foot { align-items: stretch !important; }
+.osum-body { width: 100%; }
+@media (min-width: 700px) { .osum-body { grid-template-columns: minmax(0, 1fr) minmax(250px, 300px); align-items: center; } }
