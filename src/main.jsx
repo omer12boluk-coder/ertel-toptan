@@ -12,6 +12,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { ProductsDrop, AdminDrop, ProfileDrop, BrandsDrop } from './navdrop.jsx';
 import { SetPage, SetsAdmin, setIdFromPath } from './sets.jsx';
+import { BrandsPage, SetsPage } from './brandsets.jsx';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
 import { loadFavs, mergeFavs } from './store.js';
 import { linkMember } from './push.js';
@@ -650,8 +651,8 @@ function ShellFull() {
               const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
               return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
             })}
-            <BrandsDrop><button className="topnav-b" onClick={() => { store.set({ catalogGo: {} }); go('katalog'); }} title="Markalar"><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
-            {hasSets && <button className="topnav-b" onClick={() => { store.set({ catalogGo: { sets: true } }); go('katalog'); }} title="Setler"><Icon n="box" s={16} /><span className="topnav-l">Setler</span></button>}
+            <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')} title="Markalar"><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
+            {hasSets && <button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')} title="Setler"><Icon n="box" s={16} /><span className="topnav-l">Setler</span></button>}
           </nav>
         </div>
       </header> : hc ? <header className="topbar hdr-c">
@@ -738,6 +739,8 @@ function ShellFull() {
         {tab === 'urun' && pub && (urunLayer ? <PPLayer pid={pid} /> : <ProductPage id={pid} />)}
         {tab === 'kalip' && pub && <KalipFinder />}
         {tab === 'set' && pub && <SetPage id={setId} />}
+        {tab === 'markalar' && pub && <BrandsPage />}
+        {tab === 'setlist' && pub && <SetsPage />}
         {tab === 'setler' && admin && <SetsAdmin />}
         {tab === 'talep' && pub && <PreqPage />}
         {tab === 'yasal' && pub && <LegalPage />}
@@ -941,7 +944,7 @@ function setupCrispBack() {
 // 3.11.2026 üst menü kaydırınca gizlenir (mağaza, telefon + bilgisayar): ~90px aşağı inince yukarı kayarak kaybolur, sayfanın en üstüne
 // dönünce (ya da 'up' seçiliyse yukarı kaydırmaya başlayınca) geri gelir. Pencere / arama / menü açıkken, sabit yan kutulu sayfalarda
 // (sepet, ödeme, hesap, ürün katmanı) hiç gizlenmez → oralardaki sabit konumlar bozulmaz.
-const HIDE_TABS = new Set(['anasayfa', 'katalog', 'kalip', 'set', 'urun', 'yasal', 'liste']);
+const HIDE_TABS = new Set(['anasayfa', 'katalog', 'kalip', 'set', 'urun', 'yasal', 'liste', 'markalar', 'setlist']);
 // telefon ekranı mı (≤899px) — değişince yeniden çizilir
 const PHONE_MQ = '(max-width: 899px)';
 function usePhoneMQ() {
@@ -1010,9 +1013,8 @@ function setupFlowPills() {
       const an = pillMode() === 'mercury'
         ? gh.animate([
           { ...f(A.x, A.y, A.w, A.h), easing: 'cubic-bezier(.55, 0, .35, 1)' },
-          { ...f(Math.min(A.x, B.x), (A.y + B.y) / 2 + A.h * 0.13, Math.max(A.x + A.w, B.x + B.w) - Math.min(A.x, B.x), (A.h + B.h) / 2 * 0.74), offset: 0.48, easing: 'cubic-bezier(.3, 0, .2, 1)' },
-          { ...f(B.x + (B.x > A.x ? 3 : -3), B.y - 1, B.w * 1.04, B.h + 2), offset: 0.82, easing: 'ease-out' },
-          f(B.x, B.y, B.w, B.h)], { duration: 620 })
+          { ...f(Math.min(A.x, B.x), (A.y + B.y) / 2 + A.h * 0.07, Math.max(A.x + A.w, B.x + B.w) - Math.min(A.x, B.x), (A.h + B.h) / 2 * 0.86), offset: 0.5, easing: 'cubic-bezier(.25, .1, .25, 1)' },
+          f(B.x, B.y, B.w, B.h)], { duration: 560, fill: 'none' })
         : gh.animate([f(A.x, A.y, A.w, A.h), { ...f(mx, (A.y + B.y) / 2 + 1, mw, (A.h + B.h) / 2 - 2), offset: 0.45 }, f(B.x, B.y, B.w, B.h)], { duration: 440, easing: 'cubic-bezier(.3, .7, .25, 1)' });
       const done = () => { gh.remove(); g.classList.remove('flow-g'); btn.classList.remove('flow-on'); };
       an.onfinish = done; an.oncancel = done;
@@ -1375,9 +1377,9 @@ function BotNav({ items, tab, badge }) {
       const o = pill.current; const w = o.offsetWidth || 64; const D = px - a; const sg = Math.sign(D);
       const tx = (c) => `translateX(${c}px) translateX(-50%)`;
       o.style.transition = 'none';
-      o.animate([{ transform: tx(a), easing: 'cubic-bezier(.55, 0, .35, 1)' }, { transform: tx((a + px) / 2), offset: 0.48, easing: 'cubic-bezier(.3, 0, .2, 1)' }, { transform: tx(px + sg * 3), offset: 0.82, easing: 'ease-out' }, { transform: tx(px) }], { duration: 620 })
+      o.animate([{ transform: tx(a), easing: 'cubic-bezier(.55, 0, .35, 1)' }, { transform: tx((a + px) / 2), offset: 0.5, easing: 'cubic-bezier(.25, .1, .25, 1)' }, { transform: tx(px) }], { duration: 560 })
         .finished.finally(() => { o.style.transition = ''; });
-      i.animate([{ transform: 'scale(1, 1)', easing: 'cubic-bezier(.55, 0, .35, 1)' }, { transform: `scale(${((Math.abs(D) + w) / w).toFixed(3)}, .74)`, offset: 0.48, easing: 'cubic-bezier(.3, 0, .2, 1)' }, { transform: 'scale(1.05, 1.03)', offset: 0.82 }, { transform: 'scale(1, 1)' }], { duration: 620 });
+      i.animate([{ transform: 'scale(1, 1)', easing: 'cubic-bezier(.55, 0, .35, 1)' }, { transform: `scale(${((Math.abs(D) + w) / w).toFixed(3)}, .86)`, offset: 0.5, easing: 'cubic-bezier(.25, .1, .25, 1)' }, { transform: 'scale(1, 1)' }], { duration: 560 });
       return;
     }
     const sx = 1 + Math.min(0.6, Math.abs(px - a) / 240);

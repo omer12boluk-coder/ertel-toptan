@@ -62,7 +62,7 @@ export const ROUTE = {
 ROUTE.landing = false;
 // Mağazada tanınmayan adres (/xyz, /urunlerr…): ana sayfa açılır, adres düzeltilir, "sayfa bulunamadı" denir ve
 // Google'a bu adres "dizine ekleme" (noindex) olarak bildirilir (yoksa her yanlış adres ana sayfanın kopyası sayılır).
-const SHOP_SEGS = new Set(['', 'urunler', 'sepet', 'hesap', 'urun', 'kalip', 'talep', 'yasal', 'sorun', 'set', 'marka', 'kategori', 's', 'l', 'k', 't', 'islem']);
+const SHOP_SEGS = new Set(['', 'urunler', 'sepet', 'hesap', 'urun', 'kalip', 'talep', 'yasal', 'sorun', 'set', 'marka', 'markalar', 'setler', 'kategori', 's', 'l', 'k', 't', 'islem']);
 ROUTE.notFound = ROUTE.shop && !hash && !SHOP_SEGS.has(path.split('/')[2] || ''); // giriş sayfası kalktı (31.10.2026): kök adres = mağaza
 
 export const links = {

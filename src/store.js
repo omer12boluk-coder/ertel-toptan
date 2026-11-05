@@ -119,7 +119,7 @@ export function freshStart() {
 // Sekmeler adres çubuğuna da yazılır (/magaza/urunler, /magaza/sepet…): telefonda geri kaydırınca bir önceki ekrana döner,
 // sayfa yeniden yüklenmez (pushState). Geri dönünce kaldığınız yere kaydırılır.
 const SLUGS = {
-  magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap', urun: 'urun', kalip: 'kalip', talep: 'talep', yasal: 'yasal', sorun: 'sorun', set: 'set' },
+  magaza: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', hesap: 'hesap', urun: 'urun', kalip: 'kalip', talep: 'talep', yasal: 'yasal', sorun: 'sorun', set: 'set', markalar: 'markalar', setlist: 'setler' },
   b2b: { anasayfa: '', katalog: 'urunler', sepet: 'sepet', talepler: 'talepler', profil: 'profil' },
   admin: { anasayfa: '', talepler: 'talepler', siparisler: 'siparisler', siparis: 'form', sepetlink: 'sepet-link', sepetler: 'sepetler', setler: 'setler', katalog: 'urunler', musteriler: 'musteriler', tasarim: 'tasarim', ayarlar: 'ayarlar' },
 };

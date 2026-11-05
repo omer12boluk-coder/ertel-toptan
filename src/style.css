@@ -7292,15 +7292,8 @@ html[data-theme="dark"] .hdr-gs .gs-srch .hsearch-box:focus-within { background:
 /* (5) reklam kutusu başlığı: kelime ortadan bölünmez, sığmazsa yazı küçülür (useFitWords) */
 .sh-box-t b { display: block; overflow-wrap: normal; word-break: normal; hyphens: manual; }
 
-/* (10) bildirim paneli de cam (Liquid glass açıkken) */
-html.lg-on .nc-panel { background: rgb(252 252 253 / .84); -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); border-color: rgb(15 23 42 / .1); box-shadow: 0 24px 60px -22px rgb(15 23 42 / .38), 0 1px 0 rgb(255 255 255 / .95) inset; }
-html.lg-on .nc-panel .nc-day { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
-html.lg-on .nc-panel .nc-h, html.lg-on .nc-panel .nc-tabs { background: transparent; }
-html.lg-on .nc-panel .nc-i:hover { background: rgb(118 118 128 / .1); }
-html.lg-on .nc-panel .nc-i.fresh { background: color-mix(in oklab, var(--accent) 9%, transparent); }
-html.lg-on[data-theme="dark"] .nc-panel { background: rgb(24 28 38 / .82); border-color: rgb(255 255 255 / .1); box-shadow: 0 24px 60px -22px rgb(0 0 0 / .7); }
-html.th-dash .nc-panel { background: rgb(30 26 23 / .86) !important; border-color: var(--dgb) !important; }
-html.lg-on .nc-panel .nc-tabs .chip { border-radius: 999px; }
+/* (10) bildirim paneli OPAK (kullanıcı: şeffaf güzel olmadı) */
+html.th-dash .nc-panel { background: #1e1a17 !important; border-color: var(--dgb) !important; }
 
 /* (13) Ürünler yapışkan arama/filtre şeridi: üst menü gizlenip açılırken 'top' yerine transform kayar (ekran kartında, akıcı);
    telefonda bulanıklık yok (her kaydırmada yeniden boyanıp takılıyordu) */
@@ -7403,8 +7396,8 @@ html.adm-apple { --ad-bg: #f2f3f6; --ad-side: rgb(255 255 255 / .74); --ad-line:
 html.adm-apple[data-theme="dark"] { --ad-bg: #0f1012; --ad-side: rgb(30 31 35 / .74); --ad-line: rgb(255 255 255 / .09); --ad-ink: #f2f2f4; --ad-dim: #a1a1a8; --ad-on: #f2f2f4; --ad-on-ink: #111; --ad-hov: rgb(255 255 255 / .08); }
 html.adm-apple:not([data-theme="dark"]) { --bg: #f2f3f6; --surface: #ffffff; --surface-2: #f5f5f7; --line: #e3e4e9; --line-2: #ececf0; }
 html.adm-apple[data-theme="dark"] { --bg: #0f1012; --surface: #1a1b1e; --surface-2: #222327; --line: #2c2d32; --line-2: #25262a; }
-html.adm-apple { background: var(--ad-bg); }
-html.adm-apple body { background: radial-gradient(60% 50% at 100% 0%, rgb(10 102 214 / .07), transparent 70%), radial-gradient(50% 45% at 0% 100%, rgb(242 168 118 / .07), transparent 70%), var(--ad-bg); background-attachment: fixed; }
+html.adm-apple { background: radial-gradient(60% 50% at 100% 0%, rgb(10 102 214 / .06), transparent 70%), var(--ad-bg); }
+html.adm-apple body { background: transparent; }
 html.adm-apple body::before { background: transparent !important; }
 html.adm-apple .shell.admin { -webkit-font-smoothing: antialiased; --f-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, system-ui, sans-serif; --f-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, system-ui, sans-serif; }
 html.adm-apple .shell.admin .topbar { background: var(--ad-side); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); border-bottom: 1px solid var(--ad-line); color: var(--ad-ink); }
@@ -7486,3 +7479,58 @@ html:is(.fr-1, .fr-2) .sheet:not(.ctx-sheet) { background: color-mix(in oklab, v
   html.adm-apple .shell.admin .main { width: auto !important; box-sizing: border-box; min-width: 0; }
   html.adm-apple .shell.admin .send-bar { border-radius: 18px; }
 }
+
+/* ===== 5.11.2026 Markalar / Setler sayfaları + Markalar ▾ menüsünde logolar (Apple Store 'Mağaza' sayfası gibi) ===== */
+.bp-page { display: flex; flex-direction: column; gap: 22px; padding-top: 8px; }
+.bp-head { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 4px; }
+.bp-head h1 { margin: 0; font: 700 clamp(34px, 4.6vw, 56px)/1.04 var(--f-display); letter-spacing: -.03em; }
+.bp-head p { margin: 0; color: var(--muted); font-size: clamp(15px, 1.4vw, 19px); }
+.bp-search { display: flex; align-items: center; gap: 10px; max-width: 420px; height: 44px; padding: 0 14px; margin-top: 10px; border-radius: 22px; background: rgb(118 118 128 / .1); color: var(--muted); }
+.bp-search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: 500 16px var(--f-body); color: var(--fg); padding: 0; }
+.bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+.bp-tile { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; border: 0; border-radius: 22px; background: var(--surface); color: var(--fg); cursor: pointer; overflow: hidden;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .05), 0 12px 30px -22px rgb(0 0 0 / .3); transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s; }
+.bp-tile:hover { transform: translateY(-3px) scale(1.01); box-shadow: 0 2px 4px rgb(0 0 0 / .05), 0 22px 44px -24px color-mix(in oklab, var(--bc, #000) 45%, rgb(0 0 0 / .35)); }
+.bp-logo { display: grid; place-items: center; height: 120px; padding: 20px 24px; }
+.bp-logo img { max-width: 100%; max-height: 58px; object-fit: contain; }
+.bp-logo img.sq { max-height: 72px; }
+.bp-logo > b { font: 800 22px/1.1 var(--f-display); color: var(--bc, var(--fg)); text-align: center; }
+.bp-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid var(--line-2); }
+.bp-meta b { font-size: 14px; } .bp-meta small { font-size: 12.5px; color: var(--muted); }
+.bp-h2 { margin: 12px 0 0; font: 700 22px/1.2 var(--f-display); letter-spacing: -.02em; }
+.bp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.bp-chips .chip small { margin-left: 6px; color: var(--muted); font-weight: 500; }
+html[data-theme="dark"] .bp-logo img.ink { filter: invert(1) hue-rotate(180deg); }
+@media (max-width: 700px) { .bp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .bp-logo { height: 92px; padding: 14px; } .bp-logo img { max-height: 44px; } }
+/* Markalar ▾ açılır menüsü: logo ızgarası + diğer markalar + Tüm markalar */
+.hd-p.hd-brands-p { width: min(640px, calc(100vw - 32px)); min-width: 0; padding: 12px; }
+.hdb-wrap { display: flex; flex-direction: column; gap: 10px; }
+.hdb-logos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.hdb-logos .bp-tile { border-radius: 14px; box-shadow: none; background: var(--surface-2); }
+.hdb-logos .bp-tile:hover { transform: none; background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 8px 20px -12px rgb(0 0 0 / .3); }
+.hdb-logos .bp-logo { height: 62px; padding: 10px 12px; } .hdb-logos .bp-logo img { max-height: 30px; } .hdb-logos .bp-logo img.sq { max-height: 40px; } .hdb-logos .bp-logo > b { font-size: 14px; }
+.hdb-rest { display: flex; flex-wrap: wrap; gap: 4px 6px; padding: 2px 4px; }
+.hdb-n2 { border: 0; background: none; padding: 4px 8px; border-radius: 8px; font: 500 13.5px var(--f-body); color: var(--muted); cursor: pointer; }
+.hdb-n2:hover { background: var(--surface-2); color: var(--fg); }
+.hdb-more { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 6px 8px; border-radius: 10px; font: 600 14px var(--f-body); color: var(--accent); cursor: pointer; }
+.hdb-more:hover { background: color-mix(in oklab, var(--accent) 8%, transparent); }
+
+/* 5.11.2026 (4) yönetim paneli: yan menü opak ve bulanıklıksız (kaydırma akıcı; ayrıca bulanıklık bildirim panelini menünün içine hapsediyordu) */
+@media (min-width: 1100px) {
+  html.adm-apple .shell.admin .topbar { background: color-mix(in oklab, var(--surface) 96%, transparent) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html.adm-apple .shell.admin .nc-panel { left: 256px; right: auto; top: auto; bottom: 12px; width: 420px; max-height: min(640px, calc(100dvh - 24px)); }
+}
+/* kayan hap bitince asıl hap yumuşak geçişle değil anında görünsün (sonda kısa sönük kare 'glitch' gibiydi) */
+.flow-g > .topnav-b, .flow-g > button, .flow-g .topnav-b { transition: color .2s ease !important; }
+/* 5.11.2026 (4) apple.com'dan: iki tonlu bölüm başlığı (koyu başlık + aynı satırda gri açıklama) ve yuvarlak gri raf okları — sadece Apple açık, bilgisayar */
+@media (min-width: 900px) {
+  html.th-apple .shell.public .sh-head > div:first-child { display: block; font: 700 clamp(26px, 2.5vw, 34px)/1.18 var(--f-display); letter-spacing: -.025em; max-width: 900px; }
+  html.th-apple .shell.public .sh-head > div:first-child > h2 { display: inline; font: inherit !important; letter-spacing: inherit; }
+  html.th-apple .shell.public .sh-head > div:first-child > p { display: inline; margin: 0 0 0 .28em !important; font: inherit !important; color: #86868b; letter-spacing: inherit; }
+}
+html.th-apple .shell.public .sh-arrow { width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgb(210 210 215 / .64); color: rgb(0 0 0 / .56); box-shadow: none; }
+html.th-apple .shell.public .sh-arrow:hover:not(:disabled) { background: rgb(223 223 227 / .92); color: rgb(0 0 0 / .72); }
+html.th-apple .shell.public .sh-arrow:disabled { opacity: .36; }
+/* açılır menüler okunur olsun: neredeyse opak (arkadaki banner yazısı görünmesin) */
+html.lg-on .hd-p { background: rgb(252 252 253 / .97) !important; }
+html.lg-on[data-theme="dark"] .hd-p { background: rgb(24 28 38 / .97) !important; }

@@ -180,6 +180,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **5.11.2026 (3):** Üst menü gizlenmesi headroom yöntemi (`useHideTop`: sadece kullanıcı girdisinden ~700 ms içindeki kaydırmaya tepki; sayfa geçişinde menü hep görünür). Cam üst menüde seçili hap = düz beyaz + gölge (çerçeve/mavi dolgu kullanıcı beğenmedi); `.flow-on` kayarken asıl hapı gizler (yüksek özgüllük). Buzlu cam kategori paneline uygulanmaz. Yan menülü panelde `--top-h: 12px` (yapışkan sipariş başlığı).
 
+- **5.11.2026 (4):** Mağazada `/markalar` (tab `markalar`) ve `/setler` (tab `setlist`) sayfaları (`src/brandsets.jsx`: `useBrandList`, `BrandTile`, `BrandsPage`, `SetsPage`); üst menü Markalar/Setler bunlara gider, Markalar ▾ menüsü logo ızgarası + 'Tüm markalar'. Bildirim paneli ve açılır menüler OPAK (kullanıcı şeffafı beğenmedi). Yönetim yan menüsü bulanıklıksız/opak (kaydırma yavaştı; bulanıklık bildirim panelini menüye hapsediyordu), panel arka planı `background-attachment: fixed` KULLANMA. Apple açıkta iki tonlu bölüm başlığı + gri yuvarlak raf okları.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.

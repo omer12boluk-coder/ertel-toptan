@@ -7,6 +7,7 @@ import { Icon } from './ui.jsx';
 import { ls } from './utils.js';
 import { useTree, useVisibleProducts } from './catalog.jsx';
 import { liveSets } from './sets.jsx';
+import { useBrandList, BrandTile, openBrand } from './brandsets.jsx';
 
 const MQ = '(hover: hover) and (pointer: fine) and (min-width: 900px)';
 function useDesk() {
@@ -174,19 +175,15 @@ export function ProductsDrop({ children }) {
 
 // 5.11.2026 üst menü 'Markalar ▾': ürünü olan markalar (çoktan aza), logo varsa logo; tıklayınca o markanın ürünleri
 export function BrandsDrop({ children }) {
-  const vis = useVisibleProducts(false);
-  const BL = useStore((s) => s.settings.brandLogos || {});
-  const list = useMemo(() => {
-    const m = new Map(); for (const p of vis) if (p.b) m.set(p.b, (m.get(p.b) || 0) + 1);
-    const lk = Object.fromEntries(Object.entries(BL).map(([k, v]) => [k.toLocaleLowerCase('tr'), v]));
-    return [...m].sort((a, b) => b[1] - a[1]).slice(0, 24).map(([n, c]) => ({ n, c, logo: lk[n.toLocaleLowerCase('tr')]?.logo }));
-  }, [vis, BL]);
+  const all = useBrandList();
+  const list = all.filter((b) => b.logo).slice(0, 15);
+  const rest = all.filter((b) => !list.includes(b)).slice(0, 8);
   return <HoverDrop cls="hd-brands" panel={(c) => (
-    <div className="hdb-grid">{list.map((b) => (
-      <button key={b.n} type="button" className="hdb" onClick={() => { c(); store.set({ catalogGo: { brand: b.n } }); go('katalog'); }}>
-        <span className="hdb-n">{b.n}</span><small>{b.c}</small>
-      </button>
-    ))}</div>
+    <div className="hdb-wrap">
+      <div className="hdb-logos">{list.map((b) => <BrandTile key={b.n} b={b} small onClick={() => { c(); openBrand(b.n); }} />)}</div>
+      {rest.length > 0 && <div className="hdb-rest">{rest.map((b) => <button key={b.n} type="button" className="hdb-n2" onClick={() => { c(); openBrand(b.n); }}>{b.n}</button>)}</div>}
+      <button type="button" className="hdb-more" onClick={() => { c(); go('markalar'); }}>Tüm markalar ({all.length})<Icon n="back" s={14} className="flip" /></button>
+    </div>
   )}>{children}</HoverDrop>;
 }
 
