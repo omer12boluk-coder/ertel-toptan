@@ -5,6 +5,7 @@ import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js'
 import { applyStyle } from './stylekit.js';
 import { RatePrompt } from './reviews.jsx';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { ProductsDrop, AdminDrop, ProfileDrop, BrandsDrop } from './navdrop.jsx';
 import { SetPage, SetsAdmin, setIdFromPath } from './sets.jsx';
@@ -325,7 +326,16 @@ function ThemeButton() {
   const dev = useStore((s) => s.deviceTheme);
   const cur = dev || S.brand.theme;
   const dark = cur === 'dark' || (cur === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  const flip = () => { const n = dark ? 'light' : 'dark'; ls.set('device-theme', n); store.set({ deviceTheme: n }); };
+  // 5.11.2026: gece/gündüz geçişi düğmenin olduğu yerden daire olarak yayılır (View Transitions; desteklemeyen tarayıcıda anında)
+  const flip = (e) => {
+    const n = dark ? 'light' : 'dark';
+    const apply = () => { ls.set('device-theme', n); document.documentElement.setAttribute('data-theme', n); flushSync(() => store.set({ deviceTheme: n })); };
+    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(); return; }
+    const r = e.currentTarget.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    const t = document.startViewTransition(apply);
+    t.ready.then(() => document.documentElement.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${R}px at ${x}px ${y}px)`] }, { duration: 680, easing: 'cubic-bezier(.4, 0, .2, 1)', pseudoElement: '::view-transition-new(root)' })).catch(() => {});
+  };
   return <button className="icon-btn" data-theme-btn onClick={flip} aria-label={dark ? 'Açık temaya geç' : 'Koyu temaya geç'} title={dark ? 'Açık tema' : 'Koyu tema'}><Icon n={dark ? 'sun' : 'moon'} s={19} /></button>;
 }
 
