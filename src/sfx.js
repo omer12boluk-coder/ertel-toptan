@@ -40,7 +40,7 @@ function tone(c, { f, f2, t0 = 0, d = 0.12, g = 0.05, a = 0.006, h = 0 }) {
 const SOUNDS = {
   tap: (c) => tone(c, { f: 420, f2: 300, d: 0.05, g: 0.035, a: 0.003 }), // ahşap tık: sekme, çip, düğme
   toggle: (c) => tone(c, { f: 560, f2: 470, d: 0.06, g: 0.03, a: 0.003 }),
-  add: (c) => { tone(c, { f: 392, f2: 523, d: 0.09, g: 0.04, a: 0.005 }); tone(c, { f: 784, t0: 0.055, d: 0.11, g: 0.018 }); }, // 6.11.2026 (2): yumuşak, kısa 'tok' + hafif parıltı (marimba sesi beğenilmedi)
+  add: (c) => { tone(c, { f: 210, f2: 140, d: 0.13, g: 0.08, a: 0.004, h: 0.12 }); tone(c, { f: 620, f2: 480, d: 0.035, g: 0.016, a: 0.002 }); }, // 6.11.2026 (3): tok, alçak 'tak' (telefon hoparlöründe de duyulsun diye hafif üst ses)
   remove: (c) => tone(c, { f: 440, f2: 300, d: 0.1, g: 0.032, a: 0.005 }),
   like: (c) => tone(c, { f: 698, f2: 784, d: 0.14, g: 0.04, h: 0.1 }),
   open: (c) => tone(c, { f: 330, f2: 392, d: 0.09, g: 0.025 }),
