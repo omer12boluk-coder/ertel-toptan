@@ -21,25 +21,49 @@ function ac() {
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   return ctx;
 }
-function tone(c, { f, f2, t0 = 0, d = 0.08, type = 'sine', g = 0.05, a = 0.004 }) {
-  const t = c.currentTime + t0;
-  const o = c.createOscillator(); const v = c.createGain();
-  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
-  v.gain.setValueAtTime(0.0001, t); v.gain.exponentialRampToValueAtTime(g, t + a); v.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  o.connect(v).connect(c.destination); o.start(t); o.stop(t + d + 0.02);
+// 6.11.2026: sesler baştan — tiz/cızırtılı bulundu. Hepsi yumuşak sinüs, ana çıkışta alçak geçiren süzgeç (tizleri keser) + sıkıştırıcı;
+// perdeler düşük-orta (marimba / ahşap tık gibi), saldırı 4–8 ms (tık sesi çıkmaz), kısık.
+let bus = null;
+function out(c) {
+  if (bus && bus.context === c) return bus;
+  const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600; lp.Q.value = 0.4;
+  const cp = c.createDynamicsCompressor(); cp.threshold.value = -24; cp.ratio.value = 4;
+  lp.connect(cp).connect(c.destination); bus = lp; return lp;
+}
+function tone(c, { f, f2, t0 = 0, d = 0.12, g = 0.05, a = 0.006, h = 0 }) {
+  const t = c.currentTime + t0; const o = out(c);
+  const v = c.createGain(); v.gain.setValueAtTime(0.0001, t); v.gain.exponentialRampToValueAtTime(g, t + a); v.gain.exponentialRampToValueAtTime(0.0001, t + d); v.connect(o);
+  const osc = (fr, k) => { const x = c.createOscillator(); x.type = 'sine'; x.frequency.setValueAtTime(fr, t); if (f2) x.frequency.exponentialRampToValueAtTime(f2 * (fr / f), t + d);
+    if (k !== 1) { const w = c.createGain(); w.gain.value = k; x.connect(w).connect(v); } else x.connect(v); x.start(t); x.stop(t + d + 0.03); };
+  osc(f, 1); if (h) osc(f * 4, h); // marimba tınısı: temel + hafif 4. üst ses
 }
 const SOUNDS = {
-  tap: (c) => tone(c, { f: 1900, f2: 1500, d: 0.028, type: 'triangle', g: 0.018 }),
-  add: (c) => { tone(c, { f: 880, f2: 1320, d: 0.07, g: 0.045 }); tone(c, { f: 1320, f2: 1760, t0: 0.05, d: 0.1, g: 0.035 }); },
-  remove: (c) => tone(c, { f: 760, f2: 320, d: 0.13, g: 0.035 }),
-  done: (c) => { tone(c, { f: 1046.5, d: 0.28, g: 0.045 }); tone(c, { f: 1568, t0: 0.12, d: 0.42, g: 0.04 }); },
-  ding: (c) => { tone(c, { f: 1975.5, d: 0.45, g: 0.03 }); tone(c, { f: 2637, d: 0.3, g: 0.012 }); },
-  error: (c) => { tone(c, { f: 260, d: 0.09, type: 'triangle', g: 0.05 }); tone(c, { f: 196, t0: 0.11, d: 0.12, type: 'triangle', g: 0.05 }); },
+  tap: (c) => tone(c, { f: 420, f2: 300, d: 0.05, g: 0.035, a: 0.003 }), // ahşap tık: sekme, çip, düğme
+  toggle: (c) => tone(c, { f: 560, f2: 470, d: 0.06, g: 0.03, a: 0.003 }),
+  add: (c) => { tone(c, { f: 587, d: 0.16, g: 0.05, h: 0.12 }); tone(c, { f: 880, t0: 0.07, d: 0.22, g: 0.045, h: 0.1 }); }, // re → la, yukarı
+  remove: (c) => { tone(c, { f: 659, d: 0.12, g: 0.04, h: 0.08 }); tone(c, { f: 440, t0: 0.06, d: 0.18, g: 0.035, h: 0.06 }); }, // aşağı
+  like: (c) => tone(c, { f: 698, f2: 784, d: 0.14, g: 0.04, h: 0.1 }),
+  open: (c) => tone(c, { f: 330, f2: 392, d: 0.09, g: 0.025 }),
+  done: (c) => { tone(c, { f: 523, d: 0.3, g: 0.045, h: 0.1 }); tone(c, { f: 659, t0: 0.1, d: 0.32, g: 0.042, h: 0.1 }); tone(c, { f: 784, t0: 0.2, d: 0.5, g: 0.04, h: 0.08 }); },
+  ding: (c) => { tone(c, { f: 784, d: 0.35, g: 0.035, h: 0.08 }); tone(c, { f: 1047, t0: 0.09, d: 0.45, g: 0.03, h: 0.06 }); },
+  error: (c) => { tone(c, { f: 247, d: 0.11, g: 0.05 }); tone(c, { f: 196, t0: 0.12, d: 0.16, g: 0.05 }); },
 };
 let last = 0;
 export function sfx(name) {
   if (!sfxEnabled()) return;
-  const now = performance.now(); if (name === 'tap' && now - last < 60) return; last = now;
+  const now = performance.now(); if ((name === 'tap' || name === 'toggle') && now - last < 70) return; last = now;
   const c = ac(); if (!c) return;
   try { SOUNDS[name]?.(c); } catch {}
+}
+
+// 6.11.2026 mağazada dokunma sesleri (kullanıcı: çoğu şeyde ses yok): sekmeler, çipler, seçim çubukları, anahtarlar, favori, geri, arama
+const TAP = '.topnav-b, .botnav-b, .seg > button, .chip, .mo-tabs > button, .view-sw > button, .of-seg > button, .back-btn, .hsearch-btn, .cat-link, .hd-i, .hd-ct, .hd-cs, .bp-tile, .icon-btn, .sh-dot, .qty button, .iq-b';
+export function setupSfxTaps() {
+  addEventListener('click', (e) => {
+    const t = e.target instanceof Element ? e.target : null; if (!t || !t.closest('.shell.public, .hd-p')) return;
+    if (t.closest('.fav-btn')) { if (!t.closest('.fav-btn').classList.contains('on')) sfx('like'); return; }
+    if (t.closest('.toggle, [role=switch]')) { sfx('toggle'); return; }
+    if (t.closest('.btn.add, .iq-p, .iq-m, .pbuy-btns')) return; // sepet sesleri setQty'den gelir
+    const b = t.closest(TAP); if (b && !b.disabled) sfx('tap');
+  }, { capture: true, passive: true });
 }

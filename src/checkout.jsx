@@ -997,14 +997,16 @@ function MemberHome() {
   useEffect(() => {
     const side = sideRef.current, ph = phRef.current; if (!side || !ph) return;
     const root = side.parentElement;
+    let natH = 0;
     const fit = () => {
       if (!matchMedia('(min-width: 900px)').matches) { root.classList.remove('side-fixed'); return; }
       const r = (root.classList.contains('side-fixed') ? ph : side).getBoundingClientRect();
       const docTop = r.top + scrollY; // sayfa en üstteyken durduğu yer
       const topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 58;
       // kısa ekran (eski 17" dizüstü vb.): önce sıkı görünüm, sonra menü yukarı (üst menünün hemen altına) alınır
-      if (side.offsetHeight + topH + 24 > innerHeight) root.classList.add('side-tight');
-      else if (side.offsetHeight + topH + 120 < innerHeight) root.classList.remove('side-tight');
+      // 6.11.2026: karar menünün SIKIŞTIRILMAMIŞ boyuna göre (sıkı hâl kısa → hemen geri açılıyor → menü titriyordu)
+      if (!root.classList.contains('side-tight')) natH = side.offsetHeight;
+      root.classList.toggle('side-tight', natH + topH + 24 > innerHeight);
       const h = side.offsetHeight;
       const top = Math.max(topH + 12, Math.min(docTop, innerHeight - h - 12));
       // çok kısa ekranda bile menü yerinde durur; sığmayan kısım menünün kendi içinde kayar (son çare)

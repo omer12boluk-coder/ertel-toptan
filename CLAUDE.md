@@ -184,6 +184,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **5.11.2026 (6):** `look.cartFab` false = sağ alttaki yüzen sepet gizli (Tasarım › Ürün kartları). Sepete ilk eklemede `flycart.js` uçan nokta + `.cart-bump` — `look.flyCart` true ise (varsayılan KAPALI; kullanıcı istediği şey bu değildi). Cam+arama üst menüde yan sütunlar EŞİT `--gs-side` (logo ve simgelerden genişi, JS ölçer) → arama hep ortada, dar ekranda kısalır (eşit olmayan sütun aramayı kaydırdı, kullanıcı kızdı). Hap: üstüne gelince sadece simge accent (arka plan/animasyon DEĞİŞMEDİ — iki deneme kullanıcı tarafından geri aldırıldı, hap rengine ve geçişine dokunma). Telefonda arama açılış animasyonu `hsOpen`.
 
+- **6.11.2026:** `look.addColor` gray (varsayılan) | dark | accent (eski) | #hex → html `addc-*`, `--add-bg/fg/tx` (kart + ürün sayfası Sepete ekle + ürün adı vurgusu). `look.pillTone` 'dark' → `pill-dark` (siyah hap). Buzlu cam (frost) KALDIRILDI. Logo ortalı menü: bilgisayarda solda ses+gece, sağda arama (logoya doğru uzar)+bildirim, Markalar/Setler, keskin açılır menü. Telefon arama margin animasyonuyla simgeden uzar/kapanır (cam şerit `!important` left kullanıyor). Sesler baştan (yumuşak sinüs + alçak geçiren), `setupSfxTaps` mağazada dokunma sesleri. Hesabım: ses anahtarı bilgisayarda yok, side-tight titremesi düzeldi.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.

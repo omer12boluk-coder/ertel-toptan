@@ -555,7 +555,7 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   // telefon çerçevesi 'Telefonda farklı' değerleriyle çizilir
   const LX = (kind) => lookFor(L, kind === 'phone');
   const hdrOf = (kind) => LX(kind).header || 'search';
-  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, pack?.frost ? 'fr-' + pack.frost : null, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts }; };
+  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts }; };
   const inner = (kind) => (
     <div className={'shell public tab-anasayfa dz-fshell' + (pack?.badge?.text ? ' pk-on' : '')}>
       <HeaderPreview S={view} kind={hdrOf(kind)} />
@@ -1103,6 +1103,10 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
     <Disclose label="Ürün kartları" value={<small>{C2.addPos === 'side' ? 'düğme yanda' : 'düğme altta'}</small>}>
       <Field label="Sepete ekle düğmesi"><span className="seg sw">{[['bottom', 'Fiyatın altında, tam genişlik'], ['side', 'Fiyatın yanında (eski)']].map(([x, l]) => <button key={x} type="button" className={(C2.addPos || 'bottom') === x ? 'on' : ''} onClick={() => setC('addPos', x)}>{l}</button>)}</span></Field>
       <Toggle id="dz-stk" label="Kartta “Stokta” yazısı" checked={C2.stockTag !== false} onChange={(v) => setC('stockTag', v)} />
+      <Field label="Sepete ekle rengi" hint="Karttaki ve ürün sayfasındaki 'Sepete ekle' düğmesi ile ürünün üstüne gelince adın aldığı renk. Temadan bağımsız. 'Tema rengi' = eski görünüm.">
+        <span className="seg sw">{[['gray', 'Gri'], ['dark', 'Siyah'], ['accent', 'Tema rengi']].map(([k, l]) => <button key={k} type="button" className={(L.addColor || 'gray') === k ? 'on' : ''} onClick={() => set('look.addColor', k)}>{l}</button>)}
+          <label className={'she-color' + (/^#/.test(L.addColor || '') ? ' on' : '')} title="Özel renk"><input type="color" value={/^#/.test(L.addColor || '') ? L.addColor : '#2f62d6'} onChange={(e) => set('look.addColor', e.target.value)} /></label></span>
+      </Field>
       <Toggle id="dz-fly" label="Sepete eklerken uçan nokta" hint="Ürün sepete ilk eklenince tıklanan yerden üstteki sepete küçük bir nokta uçar, sepet zıplar." checked={L.flyCart === true} onChange={(v) => set('look.flyCart', v)} />
       <Toggle id="dz-fab" label="Sağ alttaki yüzen sepet düğmesi" hint="Ürünler ve ana sayfada sepette ürün varken sağ altta duran yuvarlak sepet düğmesi. Kapalıyken sepet sadece üst menüde." checked={L.cartFab !== false} onChange={(v) => set('look.cartFab', v)} />
       <DevPick L={C2} set={set} base="cards" k="productView" kM="productViewM" def="sheet" label="Ürüne basınca" hint="Pencere: ürün listenin üstünde açılır. Sayfa: ürün kendi sayfasında açılır (paylaşılabilir adres)."
@@ -1117,6 +1121,7 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <Field label="Sayfa geçişi · bilgisayar" hint="Kısa kayma: yeni sayfa hafifçe yandan kayarak ve belirerek gelir (0,2 sn)."><span className="seg sw">{[['soft', 'Kısa kayma'], ['fade', 'Sadece solma'], ['none', 'Yok']].map(([x, l]) => <button key={x} type="button" className={(L.motionD || 'soft') === x ? 'on' : ''} onClick={() => set('look.motionD', x)}>{l}</button>)}</span></Field>
       <DevPick L={L} set={set} k="pill" def="flow" label="Seçili hap hareketi" hint="Alt menü, üst menü ve seçim çubuklarında seçili hap yeni yere nasıl gitsin. Cıva: önce ucu uzanır, sonra arkası toparlanır."
         opts={[['flow', 'Akan'], ['mercury', 'Cıva'], ['none', 'Yok']]} />
+      <Field label="Seçili hap rengi (üst menü)" hint="Beyaz: şu anki. Siyah: yönetim panelindeki gibi siyah hap, beyaz yazı (gecede tersi)."><span className="seg sw">{[['', 'Beyaz'], ['dark', 'Siyah']].map(([x, l]) => <button key={x || 'w'} type="button" className={(L.pillTone || '') === x ? 'on' : ''} onClick={() => set('look.pillTone', x)}>{l}</button>)}</span></Field>
       <Field label="Gece / gündüz geçişi" hint="Ay düğmesine basınca. Apple açık seçiliyse gece görünümü Bakır gece renkleriyle gelir."><span className="seg sw">{[['circle', 'Daireden yayılma'], ['fade', 'Yumuşak solma'], ['curtain', 'Perde'], ['none', 'Anında']].map(([x, l]) => <button key={x} type="button" className={(L.darkFx || 'circle') === x ? 'on' : ''} onClick={() => set('look.darkFx', x)}>{l}</button>)}</span></Field>
       <Field label="Hafif mod (eski bilgisayarlar)" hint="Otomatik: yavaş bilgisayar algılanınca bulanık cam efektleri kapanır, kaydırma akıcılaşır. Telefona dokunmaz."><span className="seg sw">{[['auto', 'Otomatik'], ['on', 'Hep açık'], ['off', 'Kapalı']].map(([x, l]) => <button key={x} type="button" className={(L.lite || 'auto') === x ? 'on' : ''} onClick={() => set('look.lite', x)}>{l}</button>)}</span></Field>
       <Toggle id="dz-sfx" label="Ses efektleri" hint="Sepete ekleme, silme, sekme, sipariş tamamlandı, bildirim. Kısa ve kısık; iPhone sessize alınınca çalmaz. Müşteri kendi cihazında kapatabilir (bilgisayarda üstteki hoparlör, telefonda Hesabım)." checked={L.sound !== false} onChange={(v) => set('look.sound', v)} />
@@ -1279,7 +1284,7 @@ function StudioPanel({ d, set, setPeek }) {
           <Field label="Desen boyu"><span className="she-scale"><input type="range" min="0.5" max="3" step="0.1" value={pk.pat.z || 1} onChange={(e) => upP({ pat: { ...(p.pat || {}), k: pk.pat.k, z: Number(e.target.value) } })} /><code>×{pk.pat.z || 1}</code></span></Field>
         </>}
       </Disclose>}
-      {parts.frost !== false && <Disclose label="Buzlu cam" value={<small>{(FROSTS.find((f) => f[0] === (pk.frost || 0)) || FROSTS[0])[1]}</small>}>
+      {false && <Disclose label="Buzlu cam" value={<small>{(FROSTS.find((f) => f[0] === (pk.frost || 0)) || FROSTS[0])[1]}</small>}>
         <p className="fine">Ürün kartları, avantaj ve marka kutuları, sepet, Hesabım, ödeme ve ürün açıklaması gibi beyaz kutular zemin görünecek şekilde buzlu cam olur. En güzel “renk ağı” ya da “aurora” zeminiyle görünür. Eski bilgisayarlarda (hafif mod) bulanıklık kendiliğinden kapanır.</p>
         <span className="seg sw">{FROSTS.map(([k, l]) => <button key={k} type="button" className={(pk.frost || 0) === k ? 'on' : ''} onClick={() => upP({ frost: k })}>{l}</button>)}</span>
       </Disclose>}

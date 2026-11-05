@@ -4,7 +4,7 @@ import { StoreDecor } from './decor.jsx';
 import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js';
 import { applyStyle } from './stylekit.js';
 import { applyLayout, lookFor } from './dzpresets.js';
-import { sfx, setSfxGlobal } from './sfx.js';
+import { sfx, setSfxGlobal, setupSfxTaps } from './sfx.js';
 import { SoundButton } from './soundui.jsx';
 import { RatePrompt } from './reviews.jsx';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -300,6 +300,7 @@ function useLowEndProbe() {
   }, []);
   return t;
 }
+const hexLight = (h) => { const x = h.replace('#', ''); const f = x.length === 3 ? x.split('').map((c) => c + c).join('') : x; const n = parseInt(f.slice(0, 6), 16); return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 160; };
 function useTheme() {
   const liteTick = useLowEndProbe();
   const isAdm = useStore((s) => s.user?.role === 'admin');
@@ -331,7 +332,12 @@ function useTheme() {
     // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
     r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
     applyLayout(r, pub ? L : {});
-    r.classList.toggle('fr-1', !!pub && pk?.frost === 1); r.classList.toggle('fr-2', !!pub && pk?.frost === 2); // tema stüdyosu › buzlu cam // 5.11.2026 sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (Tasarım › Sayfa)
+    r.classList.remove('fr-1', 'fr-2');
+    r.classList.toggle('pill-dark', !!pub && L.pillTone === 'dark'); // 6.11.2026 siyah hap (Tasarım › Cam ve hareket) // 6.11.2026 buzlu cam kaldırıldı (kullanıcının kastettiği bu değildi)
+    // 6.11.2026 'Sepete ekle' rengi temadan bağımsız (Tasarım › Ürün kartları › Sepete ekle rengi): gray (varsayılan) | accent (eski) | dark | #hex
+    const ac = pub ? (L.addColor || 'gray') : 'accent';
+    ['gray', 'dark', 'hex'].forEach((k) => r.classList.toggle('addc-' + k, ac === k || (k === 'hex' && /^#/.test(ac))));
+    if (/^#/.test(ac)) { r.style.setProperty('--add-hex', ac); r.style.setProperty('--add-hfg', hexLight(ac) ? '#111' : '#fff'); } // 5.11.2026 sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (Tasarım › Sayfa)
     // 3.11.2026 telefon alt menüsü görünümü (Tasarım › Renkler ve sayfa › Telefon alt menüsü); sadece mağazada
     const bn = pub ? (['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass') : 'classic';
     ['glass', 'dark', 'bar'].forEach((k) => r.classList.toggle('bn-' + k, bn === k));
@@ -656,33 +662,36 @@ function ShellFull() {
           </div>
           <nav className="topnav gs-nav" aria-label="Ana menü">
             {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
-              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
               return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
             })}
-            <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')} title="Markalar"><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
-            {hasSets && <button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')} title="Setler"><Icon n="box" s={16} /><span className="topnav-l">Setler</span></button>}
+            <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
+            {hasSets && <button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><Icon n="box" s={16} /><span className="topnav-l">Setler</span></button>}
           </nav>
         </div>
       </header> : hc ? <header className="topbar hdr-c">
         <div className="topbar-in">
-          <span className="hc-l">{pub && <HeaderSearch />}{pub && <ShopBell />}</span>
+          {/* 6.11.2026: bilgisayarda solda ses + gece düğmesi, sağda arama (logoya doğru uzar, diğerlerinin üstüne binmez) + bildirim; telefonda eskisi gibi */}
+          <span className="hc-l">{phoneUI ? <><HeaderSearch /><ShopBell /></> : <><SoundButton /><ThemeButton /></>}</span>
           <button className="hc-mid" onClick={home} aria-label="Ana sayfa" title="Ana sayfa">
             <img className="brand-logo" src={S0.brand.logo || LOGO_MARK} alt="" />
             <b className="hc-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b>
           </button>
           <span className="hc-r">
+            {!phoneUI && <><HeaderSearch /><ShopBell /></>}
             <HeaderCart on={tab === 'sepet'} />
-            <SoundButton />
-            <ThemeButton />
+            {phoneUI && <><SoundButton /><ThemeButton /></>}
             {member
               ? <ProfileDrop><button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button></ProfileDrop>
               : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Giriş yap"><Icon n="user" s={16} /><span className="me-login-l">Giriş yap</span><span className="me-login-s">Giriş yap</span></button>}
           </span>
           <nav className="topnav hc-nav" aria-label="Ana menü">
             {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
-              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)}><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
               return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
             })}
+            <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
+            {hasSets && <button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><span className="topnav-l">Setler</span></button>}
           </nav>
         </div>
       </header> : <header className={'topbar' + (pub && LK.header === 'glass' ? ' hdr-g' : '')}>
@@ -862,6 +871,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   setupCrispBack();
 }
 setupFlowPills(); // akan hap: bilgisayarda da
+setupSfxTaps(); // 6.11.2026 mağazada dokunma sesleri
 
 // Telefonda dokunma hissi: kart/düğmeye basınca yumuşakça içe göçer, çok kısa dokunuşta bile en az ~120 ms basılı görünür,
 // bırakınca hafif yaylanarak geri gelir (CSS :active iPhone'da bir an yanıp sönüyordu, "çiğ" duruyordu).
@@ -1016,9 +1026,15 @@ function setupFlowPills() {
       gh.style.cssText = `left:0;top:0;width:${B.w}px;height:${B.h}px;border-radius:${cs.borderRadius};background:${cs.backgroundImage !== 'none' ? cs.backgroundImage + ',' : ''}${cs.backgroundColor};box-shadow:${cs.boxShadow}`;
       g.insertBefore(gh, g.firstChild); g.classList.add('flow-g'); btn.classList.add('flow-on');
       const dx = Math.abs(B.x - A.x); const mx = Math.min(A.x, B.x) + dx * 0.25; const mw = (A.w + B.w) / 2 + dx * 0.5;
+      // 6.11.2026 dikey grup (yönetim yan menüsü): hap yukarı/aşağı uzayarak gider, kısa sürede (yavaş ve takılır gibiydi)
+      const dy = Math.abs(B.y - A.y); const vert = dy > dx;
+      const my = Math.min(A.y, B.y) + dy * 0.25; const mh = (A.h + B.h) / 2 + Math.min(dy * 0.5, 60);
+      const vdur = Math.round(Math.min(320, 200 + dy * 0.25));
       const f = (x, y, w, h) => ({ transform: `translate(${x}px, ${y}px)`, width: w + 'px', height: h + 'px' });
       // 5.11.2026 'cıva' (look.pill 'mercury'): önce ön ucu yeni sekmeye uzanıp incelir, sonra arkası çekilip toparlanır (hafif taşar)
-      const an = pillMode() === 'mercury'
+      const an = vert
+        ? gh.animate([f(A.x, A.y, A.w, A.h), { ...f(Math.min(A.x, B.x), my, (A.w + B.w) / 2, mh), offset: 0.45 }, f(B.x, B.y, B.w, B.h)], { duration: vdur, easing: 'cubic-bezier(.3, .7, .25, 1)' })
+        : pillMode() === 'mercury'
         ? gh.animate([
           { ...f(A.x, A.y, A.w, A.h), easing: 'cubic-bezier(.55, 0, .35, 1)' },
           { ...f(Math.min(A.x, B.x), (A.y + B.y) / 2 + A.h * 0.07, Math.max(A.x + A.w, B.x + B.w) - Math.min(A.x, B.x), (A.h + B.h) / 2 * 0.86), offset: 0.5, easing: 'cubic-bezier(.25, .1, .25, 1)' },
