@@ -993,7 +993,7 @@ function MemberHome() {
   const removePhoto = () => A.saveMember({ ...m, photo: null }).then(() => toast('Fotoğraf kaldırıldı'));
   // Bilgisayarda sol menü SABİT (position: fixed): sayfa ne kadar kayarsa kaysın hiç oynamaz. Izgarada yerini boş bir
   // yer tutucu (.acct-ph) tutar; menünün sol / genişlik değeri ondan ölçülür. Ekran menüden kısaysa normal akışa döner.
-  const sideRef = useRef(null), phRef = useRef(null);
+  const sideRef = useRef(null), phRef = useRef(null), fitRef = useRef(null);
   useEffect(() => {
     const side = sideRef.current, ph = phRef.current; if (!side || !ph) return;
     const root = side.parentElement;
@@ -1018,11 +1018,15 @@ function MemberHome() {
     };
     // geri dönüşte (sipariş sayfasından) sayfa kaydırması / animasyon sonradan oturur → birkaç kez ve kaydırma bitince yeniden ölç
     let raf = 0; const later = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(fit); };
-    fit(); const ro = new ResizeObserver(later); ro.observe(side); ro.observe(root);
+    fitRef.current = fit; fit(); const ro = new ResizeObserver(later); ro.observe(side); ro.observe(root);
     const ts = [60, 250, 600, 1200].map((ms) => setTimeout(fit, ms));
     addEventListener('resize', later); addEventListener('scroll', later, { passive: true }); root.addEventListener('animationend', later);
     return () => { ro.disconnect(); ts.forEach(clearTimeout); cancelAnimationFrame(raf); removeEventListener('resize', later); removeEventListener('scroll', later); root.removeEventListener('animationend', later); root.classList.remove('side-fixed'); };
   }, []);
+  const view0 = acct && ACCT_T[acct] ? acct : null;
+  // 6.11.2026: bölüm değişince React kapsayıcının sınıfını baştan yazıyor → 'side-fixed' siliniyor, menü bir an akışa düşüp
+  // geri sabitleniyordu (ekran 'sekiyordu'). Çizimden hemen sonra (ekrana çıkmadan) yeniden yerleştirilir.
+  useLayoutEffect(() => { fitRef.current?.(); }, [view0]);
   const active = myOrders.filter((o) => ORDER_OPEN.includes(o.status)).length;
   useStore((st) => st.seenTick);
   const unseen = unseenOrders(myOrders).length;

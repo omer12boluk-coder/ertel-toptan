@@ -1149,6 +1149,13 @@ function setupNavAnim() {
     const ti = navIdx();
     if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : 0; lastIdx = ti; if (d) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 365, 0.6); else play([], 'tab', 180); return; }
     lastIdx = ti;
+    // 6.11.2026: bilgisayarda Hesabım içinde bölüm değişince (sol menü sabit) bütün sayfa kayıp örtü solmasın — ekran 'sekiyordu';
+    // sadece sağdaki içerik kısa ve hafif kayarak belirir, sol menü yerinden oynamaz
+    const pa = prev.split('|'), ka = k.split('|');
+    if (!mob() && pa[0] === 'hesap' && ka[0] === 'hesap' && pa[1] !== ka[1] && pa.slice(2).join() === ka.slice(2).join()) {
+      const m = watched.querySelector('.acct-main'); if (m) m.animate([{ opacity: 0, transform: `translate3d(${h === 'back' ? -14 : 14}px,0,0)` }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      return;
+    }
     play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
   };
   storeListen(() => {

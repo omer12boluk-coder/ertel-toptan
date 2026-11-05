@@ -7803,7 +7803,7 @@ html[data-theme="dark"] .p0-hub-all { background: #f5f5f7; color: #111; }
 html.porc:not([data-theme="dark"]) .shell.public :is(.plist.pgrid > li.prow, .sh-card, .p0-cat:not(.all), .p0-b-sm, .p0-find, .p0-hub-brands button:not(.more), .cart-main, .cart-sum, .acct-side, .o-card, .mo-card, .co-sec, .addr-card, .set-card) {
   background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%) !important; border-color: rgb(255 255 255 / .9) !important;
   box-shadow: inset 0 1px 0 #ffffff, 0 0 0 1px rgb(16 24 40 / .035), 0 1px 2px rgb(16 24 40 / .05), 0 22px 44px -30px rgb(30 50 120 / .32) !important; }
-html.porc:not([data-theme="dark"]) { background: radial-gradient(90% 900px at 80% -10%, #e6ecfb 0%, transparent 60%) no-repeat, radial-gradient(70% 700px at -10% 300px, #f6ede4 0%, transparent 60%) no-repeat, var(--bg, #f5f5f7); } html.porc:not([data-theme="dark"]) body { background: transparent; } html.porc.bgfx-glow body::before { display: none; } /* 6.11.2026: zemin sayfanın tamamında (body kısa kalınca altında beyaz çizgi/bant oluşuyordu) */
+html.porc:not([data-theme="dark"]) { background: radial-gradient(90% 900px at 80% -10%, #e6ecfb 0%, transparent 60%) no-repeat, radial-gradient(70% 700px at -10% 300px, #f6ede4 0%, transparent 60%) no-repeat, var(--bg, #f5f5f7); } html.porc:not([data-theme="dark"]) body { background: transparent; } html.porc.bgfx-glow:not([data-theme="dark"]) body::before { display: none; } /* 6.11.2026: zemin sayfanın tamamında (body kısa kalınca altında beyaz çizgi/bant oluşuyordu) */
 .p0-pan.th-night { --bg: #070c1d; --g1: #2f6bff; --g2: #ff6a1a; }
 /* küçük kutular: resim sağda ortada, yazı solda — başlık resmin altına girmez */
 @media (min-width: 900px) {
@@ -7962,3 +7962,27 @@ html[data-theme="dark"] .p0-hub-big { background: radial-gradient(70% 140% at 90
 .p0-setband.sb-pat-wave::before { opacity: .1; background-image: radial-gradient(circle at 50% 120%, transparent 38%, var(--sb-pc) 39%, var(--sb-pc) 40%, transparent 41%); background-size: 60px 30px; }
 .p0-sw button { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--line); cursor: pointer; }
 .p0-sw button.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--fg); }
+
+/* 6.11.2026 (3) Hesabım (bilgisayar): sol menüde seçili satır yönetim panelindeki gibi SİYAH (tema renginden değil), satırlar yuvarlak hap;
+   menü daha derli toplu; sağdaki içerik menüden daha uzakta ve kalan genişliği kullanır */
+@media (min-width: 900px) {
+  .shell.public .acct2 { column-gap: 48px; }
+  .shell.public .acct2 .acct-nav { padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+  .shell.public .acct2 .acct-nav-i { border: 0 !important; border-radius: 12px; padding: 10px 12px; }
+  .shell.public .acct2 .acct-nav-i::before { display: none !important; }
+  .shell.public .acct2 .acct-nav-i:hover { background: color-mix(in oklab, var(--fg) 5%, transparent); }
+  .shell.public .acct2 .acct-nav-i.on { background: #1d1d1f !important; box-shadow: 0 6px 16px -10px rgb(0 0 0 / .6); }
+  .shell.public .acct2 .acct-nav-i.on .hub-t b, .shell.public .acct2 .acct-nav-i.on .hub-t small, .shell.public .acct2 .acct-nav-i.on .hub-chev { color: #fff !important; }
+  .shell.public .acct2 .acct-nav-i.on .hub-ic { background: rgb(255 255 255 / .14) !important; color: #fff !important; }
+  .shell.public .acct2 .acct-nav-i.on .soon-tag { background: rgb(255 255 255 / .16); color: #fff; }
+  html[data-theme="dark"] .shell.public .acct2 .acct-nav-i.on { background: #f5f5f7 !important; }
+  html[data-theme="dark"] .shell.public .acct2 .acct-nav-i.on :is(.hub-t b, .hub-t small, .hub-chev, .hub-ic) { color: #111 !important; }
+  html[data-theme="dark"] .shell.public .acct2 .acct-nav-i.on .hub-ic { background: rgb(0 0 0 / .08) !important; }
+  .shell.public .acct2 .acct-main { padding-top: 2px; }
+  .shell.public .acct2 .acct-body :is(form, .acct-form, .my-info, .set-card) { max-width: none; }
+}
+@media (min-width: 1300px) { .shell.public .acct2 { max-width: 1400px; grid-template-columns: 320px minmax(0, 1fr); } }
+/* 6.11.2026: 'zemin ışığı' + Bakır gece: gece modunda zemin açık kalıyordu (Paket 0 zemin ışığını açıyor) */
+html.bgfx-glow.th-dash[data-theme="dark"] { background: var(--bg, #121110); }
+html.bgfx-glow.th-dash[data-theme="dark"] body::before { background: radial-gradient(42% 38% at 8% -4%, rgb(242 184 128 / .08), transparent 70%), radial-gradient(40% 36% at 98% 18%, rgb(110 140 255 / .06), transparent 70%), var(--bg, #121110); }
+@media (min-width: 900px) { .shell.public .acct2 .acct-body > :not(.mo-list), .shell.public .acct2 .acct-body > .set-card, .shell.public .acct2 .acct-body .addr-list, .shell.public .acct2 .acct-body .push-card { max-width: 980px; } }
