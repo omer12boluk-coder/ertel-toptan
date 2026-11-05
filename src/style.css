@@ -6735,7 +6735,7 @@ html.st-imgpad .plist.pgrid .prow-main .thumb { --tpad: var(--st-imgpad); }
 .sh-pslide.all::-webkit-scrollbar { display: none; }
 .sh-pslide.all > .sh-box { flex: 0 0 var(--pw); grid-column: auto; grid-row: auto; scroll-snap-align: start; aspect-ratio: var(--par, 4 / 5); }
 .sh-pslide.all > .sh-box .sh-box-t b { font-size: min(40px, 9cqw); }
-.sh-pwrap:has(> .sh-pslide.all) > .sh-pfoot { display: flex; }
+.sh-pwrap.all > .sh-pfoot { display: flex; }
 .sh-pslide.pw-sm { --pw: 23%; } .sh-pslide.pw-md { --pw: 31%; } .sh-pslide.pw-lg { --pw: 40%; }
 .sh-pslide.ar-tall { --par: 4 / 5; } .sh-pslide.ar-sq { --par: 1 / 1; } .sh-pslide.ar-wide { --par: 16 / 10; } .sh-pslide.ar-story { --par: 2 / 3; }
 .sh-pfoot { align-items: center; gap: 16px; margin-top: 16px; }
@@ -6751,7 +6751,7 @@ html.st-imgpad .plist.pgrid .prow-main .thumb { --tpad: var(--st-imgpad); }
   .sh-pslide > .sh-box { flex: 0 0 var(--pw); grid-column: auto !important; grid-row: auto !important; scroll-snap-align: start; aspect-ratio: var(--par, 4 / 5); }
   .sh-pslide > .sh-box .sh-box-t b, .sh-pslide.all > .sh-box .sh-box-t b { font-size: min(34px, 9cqw); }
   .sh-pslide.pw-sm { --pw: 64%; } .sh-pslide.pw-md { --pw: 82%; } .sh-pslide.pw-lg { --pw: 90%; }
-  .sh-pwrap:has(> .sh-pslide) > .sh-pfoot { display: flex; margin-top: 14px; }
+  .sh-pwrap > .sh-pfoot { display: flex; margin-top: 14px; }
 }
 
 /* 3.11.2026 Banner gezinme görünümü (shopHome.heroNav {dots, dpos, arr, full}); hiçbiri seçilmezse eski hâl (nd-bars, na-glass) */
@@ -6778,9 +6778,9 @@ html.st-imgpad .plist.pgrid .prow-main .thumb { --tpad: var(--st-imgpad); }
 .sh-hero.na-side .sh-hero-nav { width: 34px; height: 84px; border-radius: 18px; background: rgb(255 255 255 / .16); }
 .sh-hero.na-side .sh-hero-nav.prev { left: 10px; } .sh-hero.na-side .sh-hero-nav.next { right: 10px; }
 /* boydan boya: sayfanın yatay kenarından kenarına (köşesiz, gölgesiz) */
-html:has(.sh-hero[class*=" hf-"]) body { overflow-x: clip; }
+html.hf-on body { overflow-x: clip; }
 @media (min-width: 701px) {
-  .sh:has(.sh-hero.hf-pc, .sh-hero.hf-all) { overflow-x: visible; }
+  html.hf-wide .sh { overflow-x: visible; }
   .sh-hero.hf-pc, .sh-hero.hf-all { margin-inline: calc(50% - 50vw); border-radius: 0; box-shadow: none; }
   .sh-hero.hf-pc.dp-left .sh-dots, .sh-hero.hf-all.dp-left .sh-dots { left: max(clamp(28px, 5vw, 64px), calc(50vw - 660px + 28px)); }
   .sh-hero.hf-pc.dp-right .sh-dots, .sh-hero.hf-all.dp-right .sh-dots { right: max(clamp(28px, 5vw, 64px), calc(50vw - 660px + 28px)); }
@@ -6850,7 +6850,7 @@ html.top-hide .shell.public .topbar { transform: translateY(calc(-100% - env(saf
 .hdr-c .hc-nav { display: none; }
 .hdr-c .hsearch-res { right: auto; left: 0; }
 @media (min-width: 900px) {
-  :root:has(.hdr-c) { --top-h: 112px; }
+  html.hdr-c-on { --top-h: 112px; }
   .hdr-c .topbar-in { grid-template-rows: 70px 42px; }
   .hdr-c .hc-mid .brand-logo { width: 42px !important; height: 42px !important; }
   .hdr-c .hc-name { font-size: 26px; letter-spacing: .14em; }
@@ -6982,7 +6982,7 @@ html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { color: #6ea8ff; background:
 .hdr-gs .gs-srch .hsearch { width: 100%; max-width: 640px; }
 .hdr-gs .gs-srch .hsearch-btn { display: none !important; }
 .hdr-gs .gs-srch .hsearch-box { display: flex !important; width: 100% !important; height: 42px; border-radius: 21px; padding: 0 10px 0 16px; background: rgb(255 255 255 / .7); border: 1px solid rgb(15 23 42 / .08); box-shadow: 0 1px 0 rgb(255 255 255 / .9) inset; animation: none !important; }
-.hdr-gs .gs-srch .hsearch-box:focus-within { background: #fff; border-color: var(--lg-blue); box-shadow: 0 0 0 3px rgb(10 108 255 / .14); }
+.hdr-gs .gs-srch .hsearch-box:focus-within { background: #fff; border-color: var(--lg-blue); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent); }
 .hdr-gs .gs-srch .hsearch-res { left: 0; right: 0; width: auto; }
 .hdr-gs .gs-icons { display: flex; align-items: center; gap: 4px; flex: none; }
 .hdr-gs .gs-icons > * { margin: 0 !important; }
@@ -6991,9 +6991,9 @@ html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { color: #6ea8ff; background:
 .hdr-gs .gs-cats { display: flex; align-items: center; gap: 2px; margin-left: 6px; padding-left: 10px; border-left: 1px solid rgb(15 23 42 / .1); height: 22px; min-width: 0; overflow: hidden; }
 .hdr-gs .gs-cat { height: 34px; padding: 0 11px; border: 0; border-radius: 17px; background: none; color: var(--muted); font: 500 13.5px/1 var(--f-body); white-space: nowrap; cursor: pointer; display: inline-flex; align-items: center; }
 .hdr-gs .gs-cat:hover { color: var(--fg); background: rgb(15 23 42 / .05); }
-:root:has(.hdr-gs) { --top-h: 108px; }
+html.hdr-gs-on { --top-h: 108px; }
 @media (max-width: 899px) {
-  :root:has(.hdr-gs) { --top-h: 58px; }
+  html.hdr-gs-on { --top-h: 58px; }
   .hdr-gs .gs-r1 { height: calc(var(--top-h) - 6px); gap: 6px; padding: 0 6px 0 8px; }
   .hdr-gs .gs-srch { order: 2; flex: none; } .hdr-gs .gs-icons { order: 3; } .hdr-gs .gs-brand { order: 1; margin-right: auto; }
   .hdr-gs .gs-brand b { font-size: 16px; }
@@ -7021,7 +7021,7 @@ html[data-theme="dark"] .hdr-gs .gs-srch :is(.hsearch-box, .hsearch-btn) { backg
 
 /* 5.11.2026 akan hap (setupFlowPills): hayalet hap grubun içinde yazıların altında; yeni seçilinin kendi zemini o sırada gizli */
 .flow-ghost { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; will-change: transform, width; }
-:is(.topnav, .seg, .mo-tabs, .view-sw, .of-seg):has(> .flow-ghost) > :not(.flow-ghost) { position: relative; z-index: 1; }
+.flow-g > :not(.flow-ghost) { position: relative; z-index: 1; }
 .flow-on { background: transparent !important; background-image: none !important; box-shadow: none !important; }
 
 /* 5.11.2026 mağaza sayfaları yatayda daha geniş (kullanıcı: ekranın küçük bir kısmı kullanılıyordu): 1320 → 1640 px */
@@ -7029,22 +7029,56 @@ html[data-theme="dark"] .hdr-gs .gs-srch :is(.hsearch-box, .hsearch-btn) { backg
 .sfoot-in, .sfoot-mini { max-width: 1640px; }
 @media (min-width: 1500px) { .shell.public .plist.pgrid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); } }
 
-/* 5.11.2026 cam görünüm beyaz zeminde de belli olsun: camın içinde hafif mavi-mor ışık (arka planda kırılacak bir şey yokken bile
-   'cam' hissi), ince renkli kenar ve yumuşak renkli gölge. Üst menü + alt menü + açılır menüler + sepet balonu. */
-.topbar.hdr-g .topbar-in { position: relative; isolation: isolate; } html.bn-glass .shell.public .botnav { isolation: isolate; }
-.topbar.hdr-g .topbar-in::before, html.bn-glass .shell.public .botnav::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(120% 140% at 8% 0%, rgb(98 120 255 / .14), transparent 55%), radial-gradient(90% 130% at 96% 100%, rgb(160 100 255 / .12), transparent 60%), linear-gradient(180deg, rgb(255 255 255 / .5), rgb(255 255 255 / 0) 60%); }
-.topbar.hdr-g .topbar-in, html.bn-glass .shell.public .botnav { border-color: rgb(120 130 220 / .22) !important; box-shadow: 0 12px 34px -16px rgb(60 70 160 / .38), 0 1px 0 rgb(255 255 255 / .9) inset, 0 -1px 0 rgb(80 90 180 / .06) inset !important; }
-html[data-theme="dark"] .topbar.hdr-g .topbar-in::before, html[data-theme="dark"].bn-glass .shell.public .botnav::before { background: radial-gradient(120% 140% at 8% 0%, rgb(98 120 255 / .18), transparent 55%), radial-gradient(90% 130% at 96% 100%, rgb(160 100 255 / .16), transparent 60%); }
-/* açılır menüler (Ürünler / Markalar / profil) cam */
-.shell.public ~ .hd-p, body:has(.shell.public) .hd-p { background: rgb(255 255 255 / .78); -webkit-backdrop-filter: blur(24px) saturate(1.8); backdrop-filter: blur(24px) saturate(1.8); border-color: rgb(120 130 220 / .22); box-shadow: 0 24px 60px -20px rgb(40 50 130 / .4), 0 1px 0 rgb(255 255 255 / .9) inset; }
-html[data-theme="dark"] body:has(.shell.public) .hd-p { background: rgb(24 28 40 / .78); border-color: rgb(255 255 255 / .1); }
-/* sağ alttaki sepet balonu cam */
-.shell.public .cart-fab { background: linear-gradient(135deg, rgb(79 91 255 / .92), rgb(130 90 255 / .9)); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 14px 30px -12px rgb(70 70 220 / .6), 0 1px 0 rgb(255 255 255 / .35) inset; color: #fff; }
 /* Markalar açılır menüsü */
 .hdb-grid { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 2px; padding: 4px; max-width: 620px; }
 .hdb { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 9px 12px; border: 0; border-radius: 12px; background: none; color: var(--fg); font: 600 14px/1.2 var(--f-body); text-align: left; cursor: pointer; }
 .hdb small { color: var(--muted); font-weight: 500; font-size: 12px; }
-.hdb:hover { background: rgb(98 112 255 / .1); color: var(--lg-blue); }
+.hdb:hover { background: var(--accent-soft); color: var(--accent); }
 /* Cam + arama: alt satır menü ortalı */
 .topbar.hdr-gs .gs-nav { justify-content: center; padding-left: 10px; }
+
+
+/* ===== 5.11.2026 (5) kullanıcı düzeltmeleri =====
+   Mor renkler kaldırıldı: seçili hap ve seçili yazı yine TEMA (ana) rengi; cam nötr beyaz/gri (Beymen gibi sade).
+   Beyaz zeminde camın belli olması renkle değil: ince nötr kenar + yumuşak gölge + üstte parlama çizgisi. */
+:root { --lg-blue: var(--accent); --lg-pill: linear-gradient(180deg, rgb(255 255 255 / .62), rgb(255 255 255 / .18)), color-mix(in oklab, var(--accent) 13%, transparent); }
+.topbar.hdr-g .topbar-in { background: rgb(252 252 253 / .74); border-color: rgb(15 23 42 / .08) !important;
+  box-shadow: 0 10px 30px -14px rgb(15 23 42 / .28), 0 1px 0 rgb(255 255 255 / .95) inset, 0 -1px 0 rgb(15 23 42 / .04) inset !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5); }
+@media (max-width: 899px) {
+  html:is(.bn-glass) .shell:not(.admin) .botnav { background: rgb(252 252 253 / .7); border-color: rgb(15 23 42 / .08); box-shadow: 0 10px 30px -14px rgb(15 23 42 / .3), 0 1px 0 rgb(255 255 255 / .95) inset;
+    -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5); }
+  html.bn-glass .shell:not(.admin) .botnav-pill i, html.bn-glass .shell:not(.admin) .botnav.pressing .botnav-pill i { background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .9) inset, 0 1px 1px rgb(255 255 255 / .9) inset, 0 3px 10px -6px rgb(15 23 42 / .25); }
+  html[data-theme="dark"].bn-glass .shell:not(.admin) .botnav-pill i, html.bn-dark .shell:not(.admin) .botnav-pill i { background: linear-gradient(180deg, rgb(255 255 255 / .14), rgb(255 255 255 / .04)), color-mix(in oklab, var(--accent) 26%, transparent); box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset; }
+  html[data-theme="dark"]:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b.on, html.bn-dark .shell:not(.admin) .botnav-b.on { color: color-mix(in oklab, var(--accent) 70%, #fff); }
+}
+html[data-theme="dark"] .topbar.hdr-g .topbar-in { background: rgb(26 30 40 / .7); border-color: rgb(255 255 255 / .09) !important; }
+html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { color: color-mix(in oklab, var(--accent) 70%, #fff); background: color-mix(in oklab, var(--accent) 24%, transparent); }
+
+/* ===== Liquid glass teması (look.glass, varsayılan açık; html.lg-on, sadece mağaza) =====
+   Kartlardaki düğmeler, filtre çipleri, kategori listesi, Hesabım menüsü, seçim çubukları ve açılır menüler cam görünümünde.
+   Performans: onlarca kartta bulanıklaştırma (backdrop-filter) YOK — cam hissi parlama, ince kenar ve yarı saydam zeminle; gerçek
+   bulanıklık sadece üst/alt menü ve açılır menülerde. */
+html.lg-on .shell.public :is(.plist .btn.add, .toolbar .chip, .view-sw, .seg, .mo-tabs, .back-btn) {
+  background: linear-gradient(180deg, rgb(255 255 255 / .78), rgb(255 255 255 / .42)), color-mix(in oklab, var(--accent) 8%, transparent);
+  border: 1px solid rgb(15 23 42 / .08); box-shadow: 0 1px 0 rgb(255 255 255 / .95) inset, 0 4px 14px -8px rgb(15 23 42 / .22); }
+html.lg-on .shell.public .plist .btn.add { color: var(--accent); }
+html.lg-on .shell.public .toolbar .chip.on { background: var(--lg-pill); border-color: color-mix(in oklab, var(--accent) 30%, transparent); color: var(--accent); }
+html.lg-on .shell.public :is(.view-sw, .seg, .mo-tabs) > button.on { background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .9) inset, 0 2px 8px -4px rgb(15 23 42 / .22); color: var(--accent); }
+html.lg-on .shell.public .stepper { background: linear-gradient(180deg, rgb(255 255 255 / .8), rgb(255 255 255 / .45)); border-color: rgb(15 23 42 / .09); box-shadow: 0 1px 0 rgb(255 255 255 / .95) inset, 0 4px 14px -8px rgb(15 23 42 / .2); }
+html.lg-on .shell.public .cat-link.on { background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .9) inset, 0 2px 8px -5px rgb(15 23 42 / .2); color: var(--accent); }
+html.lg-on .shell.public .acct-side { background: linear-gradient(180deg, rgb(255 255 255 / .8), rgb(255 255 255 / .55)); border: 1px solid rgb(15 23 42 / .07); border-radius: 22px; padding: 10px; box-shadow: 0 12px 30px -18px rgb(15 23 42 / .3), 0 1px 0 rgb(255 255 255 / .95) inset; }
+html.lg-on .shell.public .acct-side .on { background: var(--lg-pill); color: var(--accent); }
+html.lg-on .hd-p { background: rgb(252 252 253 / .82); -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5); border-color: rgb(15 23 42 / .08); box-shadow: 0 24px 60px -22px rgb(15 23 42 / .35), 0 1px 0 rgb(255 255 255 / .95) inset; }
+html.lg-on[data-theme="dark"] .hd-p { background: rgb(24 28 38 / .82); border-color: rgb(255 255 255 / .08); }
+html.lg-on[data-theme="dark"] .shell.public :is(.plist .btn.add, .toolbar .chip, .view-sw, .seg, .mo-tabs, .back-btn, .stepper, .acct-side) { background: rgb(255 255 255 / .06); border-color: rgb(255 255 255 / .1); box-shadow: 0 1px 0 rgb(255 255 255 / .06) inset; }
+
+/* kart sepet düğmesi: yazı yok, ortada sepet simgesi (tam genişlik); − 1 + ortadan açılır, silince düğme ortadan yaylanarak geri gelir */
+.plist.pgrid.ab .prow-side .btn.add .add-l, .plist.pgrid.ab .prow-side .btn.add .add-plus { display: none !important; }
+.plist.pgrid.ab .prow-side .btn.add .add-cart { display: inline-grid !important; }
+.plist.pgrid.ab .prow-side .btn.add { justify-content: center; }
+.plist.pgrid.ab .prow-side .btn.add.back { animation: abBack .42s cubic-bezier(.3, 1.35, .5, 1) backwards; }
+.plist.pgrid.ab .prow-side .btn.add.back .add-cart { animation: abIcon .42s .05s cubic-bezier(.3, 1.5, .5, 1) backwards; }
+@keyframes abBack { from { opacity: 0; transform: scaleX(.55) scaleY(.85); } 60% { opacity: 1; } }
+@keyframes abIcon { from { transform: scale(.4) rotate(-18deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .plist.pgrid.ab .prow-side .btn.add.back, .plist.pgrid.ab .prow-side .btn.add.back .add-cart { animation: none; } }

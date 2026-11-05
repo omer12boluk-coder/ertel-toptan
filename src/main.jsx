@@ -562,6 +562,9 @@ function ShellFull() {
   // 3.11.2026 mağaza üst menüsü: 'classic' (eski) · 'center' (logo ortada, menü altında — Tasarım › Renkler ve sayfa › Üst menü)
   const hc = pub && S0.look?.header === 'center';
   const hs = pub && (S0.look?.header || 'search') === 'search';
+  // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
+  const lgOn = pub && S0.look?.glass !== false;
+  useEffect(() => { const c = document.documentElement.classList; c.toggle('hdr-gs-on', hs); c.toggle('hdr-c-on', hc); c.toggle('lg-on', lgOn); return () => c.remove('hdr-gs-on', 'hdr-c-on', 'lg-on'); }, [hs, hc, lgOn]);
   const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && S0.look?.hideTop !== false, S0.look?.hideTop === 'up', tab, urunLayer);
   const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
@@ -923,11 +926,11 @@ function setupFlowPills() {
       if (getComputedStyle(g).position === 'static') g.style.position = 'relative';
       const gh = document.createElement('span'); gh.className = 'flow-ghost'; gh.setAttribute('aria-hidden', 'true');
       gh.style.cssText = `left:0;top:0;width:${B.w}px;height:${B.h}px;border-radius:${cs.borderRadius};background:${cs.backgroundImage !== 'none' ? cs.backgroundImage + ',' : ''}${cs.backgroundColor};box-shadow:${cs.boxShadow}`;
-      g.insertBefore(gh, g.firstChild); btn.classList.add('flow-on');
+      g.insertBefore(gh, g.firstChild); g.classList.add('flow-g'); btn.classList.add('flow-on');
       const dx = Math.abs(B.x - A.x); const mx = Math.min(A.x, B.x) + dx * 0.25; const mw = (A.w + B.w) / 2 + dx * 0.5;
       const f = (x, y, w, h) => ({ transform: `translate(${x}px, ${y}px)`, width: w + 'px', height: h + 'px' });
       const an = gh.animate([f(A.x, A.y, A.w, A.h), { ...f(mx, (A.y + B.y) / 2 + 1, mw, (A.h + B.h) / 2 - 2), offset: 0.45 }, f(B.x, B.y, B.w, B.h)], { duration: 440, easing: 'cubic-bezier(.3, .7, .25, 1)' });
-      const done = () => { gh.remove(); btn.classList.remove('flow-on'); };
+      const done = () => { gh.remove(); g.classList.remove('flow-g'); btn.classList.remove('flow-on'); };
       an.onfinish = done; an.oncancel = done;
     };
     requestAnimationFrame(wait);

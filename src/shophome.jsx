@@ -249,7 +249,7 @@ function PromoTrack({ on, cls, bar, children }) {
   }, [on]);
   if (!on) return <div className={cls}>{children}</div>;
   const by = (d) => { const el = ref.current; if (el) el.scrollBy({ left: d * el.clientWidth * 0.82, behavior: 'smooth' }); };
-  return <div ref={wrap} className="sh-pwrap">
+  return <div ref={wrap} className={'sh-pwrap' + (cls.includes('m-only') ? ' m-only' : ' all')}>
     <div ref={ref} className={cls}>{children}</div>
     <div className="sh-pfoot">
       {bar && <span className="sh-pbar" aria-hidden="true"><i ref={th} /></span>}
@@ -814,6 +814,8 @@ const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
 function Hero({ slides, open, brands, heroH, pkHero, nv = {} }) {
+  // boydan boya banner: sayfa kırpması html sınıfıyla (eskiden :has() seçiciydi — her DOM değişikliğinde bütün sayfanın stilini yeniden hesaplatıyordu)
+  useEffect(() => { const c = document.documentElement.classList; c.toggle('hf-on', !!nv.full); c.toggle('hf-wide', nv.full === 'pc' || nv.full === 'all'); return () => c.remove('hf-on', 'hf-wide'); }, [nv.full]);
   useSlideFonts(slides);
   const E = useContext(DesignCtx);
   const [i, setI] = useState(0);
