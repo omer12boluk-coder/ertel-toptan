@@ -6970,3 +6970,41 @@ html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { background: rgb(255 255 255
 }
 .topbar.hdr-g .topnav-b.on { color: var(--lg-blue); background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .85) inset, 0 2px 8px -4px rgb(70 90 220 / .3); }
 html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { color: #6ea8ff; background: linear-gradient(120deg, rgb(64 132 255 / .3), rgb(134 98 255 / .26)); }
+
+/* 5.11.2026 üst menü 'Cam + arama' (look.header 'search'; B + C): yüzen cam kutu; üst satır logo · HEP AÇIK geniş arama · simgeler,
+   alt satır menü + kategori kısayolları (hepsi aynı 34px boy, ortalı → hiza tutarlı). Telefonda arama kutusu logonun altında. */
+.hdr-gs .topbar-in { height: auto !important; min-height: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0 !important; }
+.hdr-gs .gs-r1 { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 8px 0 12px; }
+.hdr-gs .gs-brand { display: inline-flex; align-items: center; gap: 9px; flex: none; background: none; border: 0; padding: 0; color: var(--fg); cursor: pointer; }
+.hdr-gs .gs-brand b { font: 700 18px/1 var(--f-display); letter-spacing: .02em; white-space: nowrap; }
+.hdr-gs .gs-brand .brand-logo { width: 34px !important; height: 34px !important; }
+.hdr-gs .gs-srch { flex: 1; min-width: 0; display: flex; justify-content: center; }
+.hdr-gs .gs-srch .hsearch { width: 100%; max-width: 640px; }
+.hdr-gs .gs-srch .hsearch-btn { display: none !important; }
+.hdr-gs .gs-srch .hsearch-box { display: flex !important; width: 100% !important; height: 42px; border-radius: 21px; padding: 0 10px 0 16px; background: rgb(255 255 255 / .7); border: 1px solid rgb(15 23 42 / .08); box-shadow: 0 1px 0 rgb(255 255 255 / .9) inset; animation: none !important; }
+.hdr-gs .gs-srch .hsearch-box:focus-within { background: #fff; border-color: var(--lg-blue); box-shadow: 0 0 0 3px rgb(10 108 255 / .14); }
+.hdr-gs .gs-srch .hsearch-res { left: 0; right: 0; width: auto; }
+.hdr-gs .gs-icons { display: flex; align-items: center; gap: 4px; flex: none; }
+.hdr-gs .gs-icons > * { margin: 0 !important; }
+.hdr-gs .gs-nav { display: flex; align-items: center; gap: 4px; height: 44px; padding: 0 10px; border-top: 1px solid rgb(15 23 42 / .06); overflow: hidden; }
+.hdr-gs .gs-nav .topnav-b { height: 34px; padding: 0 12px; gap: 6px; border-radius: 17px; font: 600 13.5px/1 var(--f-body); display: inline-flex; align-items: center; }
+.hdr-gs .gs-cats { display: flex; align-items: center; gap: 2px; margin-left: 6px; padding-left: 10px; border-left: 1px solid rgb(15 23 42 / .1); height: 22px; min-width: 0; overflow: hidden; }
+.hdr-gs .gs-cat { height: 34px; padding: 0 11px; border: 0; border-radius: 17px; background: none; color: var(--muted); font: 500 13.5px/1 var(--f-body); white-space: nowrap; cursor: pointer; display: inline-flex; align-items: center; }
+.hdr-gs .gs-cat:hover { color: var(--fg); background: rgb(15 23 42 / .05); }
+:root:has(.hdr-gs) { --top-h: 108px; }
+@media (max-width: 899px) {
+  :root:has(.hdr-gs) { --top-h: 104px; }
+  .hdr-gs .gs-r1 { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "b i" "s s"; height: auto; row-gap: 8px; column-gap: 8px; padding: 8px 8px 10px 10px; }
+  .hdr-gs .gs-brand { grid-area: b; } .hdr-gs .gs-icons { grid-area: i; justify-self: end; } .hdr-gs .gs-srch { grid-area: s; }
+  .hdr-gs .gs-brand b { font-size: 16px; }
+  .hdr-gs .gs-icons [data-theme-btn] { display: none; }
+  .hdr-gs .gs-nav { display: none; }
+  /* telefonda arama: tam genişlik alan görünümlü düğme; basınca her zamanki üstte açılan arama kutusu */
+  .hdr-gs .gs-srch .hsearch-box { display: none !important; }
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box { display: flex !important; }
+  .hdr-gs .gs-srch .hsearch-btn { display: flex !important; width: 100%; height: 40px; border-radius: 20px; justify-content: flex-start; gap: 8px; padding: 0 14px; background: rgb(255 255 255 / .72); border: 1px solid rgb(15 23 42 / .08); color: var(--muted); }
+  .hdr-gs .gs-srch .hsearch-btn::after { content: "Ürün, marka ya da model ara…"; font: 500 14.5px/1 var(--f-body); }
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-btn { visibility: hidden; }
+}
+html[data-theme="dark"] .hdr-gs .gs-srch :is(.hsearch-box, .hsearch-btn) { background: rgb(255 255 255 / .08); border-color: rgb(255 255 255 / .1); }
+.topbar.hdr-gs .gs-nav { justify-content: flex-start; padding-left: 8px; }

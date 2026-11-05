@@ -63,7 +63,7 @@ export class DemoBackend {
   pub(u) { if (!u) return null; const { pw, ...rest } = u; return rest; }
 
   async init() {}
-  async publicInfo() { return this.db.settings || { pricing: { showTL: true, showVatInc: true, plusVat: true } }; }
+  async publicInfo() { return this.db.settings || { pricing: { showTL: true, showVatInc: true, plusVat: true }, look: { header: 'search' } }; }
   async needsSetup() { return false; }
   onAuth(cb) {
     this.authCb = cb;
@@ -88,7 +88,7 @@ export class DemoBackend {
   async reset() { this.db = freshDb(this.seed); this.persist(); location.reload(); }
 
   // demo: kartlarda TL ve KDV dahil satırları canlıdaki gibi açık gelsin (kaydedilmiş demo ayarı yoksa)
-  async loadSettings() { return this.db.settings || { pricing: { showTL: true, showVatInc: true, plusVat: true } }; }
+  async loadSettings() { return this.db.settings || { pricing: { showTL: true, showVatInc: true, plusVat: true }, look: { header: 'search' } }; }
   async saveSettings(s) { this.db.settings = s; this.persist(); }
 
   async loadCatalog() { return this.db.catalog; }

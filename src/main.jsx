@@ -19,7 +19,7 @@ import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS, SPLASH_STYLES } from './config.
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
-import { Catalog, ProductPage } from './catalog.jsx';
+import { Catalog, ProductPage, useTree } from './catalog.jsx';
 import { KalipFinder } from './kalipfind.jsx';
 import { PreqPage, PreqAdmin } from './preq.jsx';
 import { LegalPage } from './legalui.jsx';
@@ -519,6 +519,13 @@ function DemoSwitch({ admin }) {
     <Icon n={admin ? 'store' : 'shield'} s={15} /><span>{admin ? 'Mağazaya dön' : 'Yönetim paneli'}</span>{!admin && <small>admin / admin</small>}
   </button>;
 }
+// 'Cam + arama' üst menüsünün alt satırında ilk ana kategoriler (bilgisayarda; sığmayan gizlenir)
+function GsCats() {
+  const tree = useTree();
+  const roots = (tree.roots || []).slice(0, 6);
+  if (!roots.length) return null;
+  return <span className="gs-cats">{roots.map((n) => <button key={n.id} type="button" className="gs-cat" onClick={() => { store.set({ catalogGo: { cat: n.id } }); go('katalog'); }}>{n.name}</button>)}</span>;
+}
 function ShellFull() {
   const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom, urunLayer, setId } = useStore();
   const admin = user.role === 'admin';
@@ -561,12 +568,35 @@ function ShellFull() {
   const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders + lcNew : 0);
   // 3.11.2026 mağaza üst menüsü: 'classic' (eski) · 'center' (logo ortada, menü altında — Tasarım › Renkler ve sayfa › Üst menü)
   const hc = pub && S0.look?.header === 'center';
+  const hs = pub && S0.look?.header === 'search'; // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && S0.look?.hideTop !== false, S0.look?.hideTop === 'up', tab, urunLayer);
   const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
-      {hc ? <header className="topbar hdr-c">
+      {hs ? <header className="topbar hdr-g hdr-gs">
+        <div className="topbar-in">
+          <div className="gs-r1">
+            <button className="gs-brand" onClick={home} aria-label="Ana sayfa" title="Ana sayfa"><img className="brand-logo" src={S0.brand.logo || LOGO_MARK} alt="" /><b style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b></button>
+            <span className="gs-srch"><HeaderSearch /></span>
+            <span className="gs-icons">
+              <ShopBell />
+              <HeaderCart on={tab === 'sepet'} />
+              <ThemeButton />
+              {member
+                ? <ProfileDrop><button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button></ProfileDrop>
+                : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Giriş yap"><Icon n="user" s={16} /><span className="me-login-l">Giriş yap</span><span className="me-login-s">Giriş yap</span></button>}
+            </span>
+          </div>
+          <nav className="topnav gs-nav" aria-label="Ana menü">
+            {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
+              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+              return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
+            })}
+            <GsCats />
+          </nav>
+        </div>
+      </header> : hc ? <header className="topbar hdr-c">
         <div className="topbar-in">
           <span className="hc-l">{pub && <HeaderSearch />}{pub && <ShopBell />}</span>
           <button className="hc-mid" onClick={home} aria-label="Ana sayfa" title="Ana sayfa">
