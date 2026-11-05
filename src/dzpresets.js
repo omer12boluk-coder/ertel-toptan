@@ -59,7 +59,8 @@ export function applyPreset(d, p) {
     if (!src?.length) return x;
     return { ...strip(x, keys), ...clone(src[i % src.length] || {}) };
   });
-  H.slides = each(H.slides, p.slides, SLIDE_KEYS);
+  // hazır pakette (merge) kullanıcının KENDİ seçtiği banner arka planı (ör. Altın varak) korunur; sadece arka planı seçilmemiş banner renk alır
+  H.slides = p.merge ? (H.slides || []).map((x, i) => (x.bg || !p.slides?.length ? x : { ...x, ...clone(p.slides[i % p.slides.length]) })) : each(H.slides, p.slides, SLIDE_KEYS);
   H.promos = each(H.promos, p.promos, PROMO_KEYS);
   if (H.blocks) Object.entries(H.blocks).forEach(([id, b]) => { if (b?.t !== 'promos') return; const src = p.blocks?.[id] || p.promos; H.blocks[id] = { ...b, items: each(b.items, src, PROMO_KEYS) }; });
   return n;
