@@ -352,7 +352,21 @@ export const ARROW_BY = Object.fromEntries(ARROWS.map((x) => [x.id, x]));
 // ---- Logo rengi (look.logoTone): 'orig' (varsayılan) · 'tint' temanın ana rengine kaydır · 'gray' siyah-beyaz · 'white' beyaz
 // ERT logosu mavi-camgöbeği (ortalama ton ~197°, açıklık ~%42): tint = renk tonunu ana renge çevirir, doygunluk / açıklık yaklaştırılır.
 const toHsl = (hex) => { const r0 = hexRgb(hex); if (!r0) return null; const [r, g, b] = r0.map((v) => v / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); const l = (mx + mn) / 2; let h = 0, s = 0; if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; } return { h, s, l }; };
+// 3.11.2026 kullanıcı: 'temaya uyar' filtre gibi çirkin duruyordu → rengi kendisi seçer. 'color' = logonun gölgeleri korunur, seçilen
+// renk tonlarına boyanır (koyu kısım = seçilen renk, açık kısım = rengin açığı); 'flat' = tek düz renk. SVG filtresi belgeye bir kez eklenir.
+export function ensureLogoSvg(doc, color) {
+  if (!doc?.body) return;
+  const c = hexRgb(/^#[0-9a-f]{6}$/i.test(color || '') ? color : '#1f6feb') || [31, 111, 235];
+  const d = c.map((v) => (v / 255) * 0.72), l = c.map((v) => (v / 255) * 0.45 + 0.55); // koyu uç / açık uç
+  let el = doc.getElementById('logo-svg-f');
+  if (!el) { el = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); el.id = 'logo-svg-f'; el.setAttribute('aria-hidden', 'true'); el.setAttribute('width', '0'); el.setAttribute('height', '0'); el.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden'; doc.body.appendChild(el); }
+  const tv = (i) => `${d[i].toFixed(3)} ${(c[i] / 255).toFixed(3)} ${l[i].toFixed(3)}`;
+  el.innerHTML = `<filter id="logo-tone" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="table" tableValues="${tv(0)}"/><feFuncG type="table" tableValues="${tv(1)}"/><feFuncB type="table" tableValues="${tv(2)}"/></feComponentTransfer></filter>`
+    + `<filter id="logo-flat" color-interpolation-filters="sRGB"><feFlood flood-color="rgb(${c.join(',')})"/><feComposite in2="SourceAlpha" operator="in"/></filter>`;
+}
 export function logoFilter(mode, accent) {
+  if (mode === 'color') return 'url(#logo-tone)';
+  if (mode === 'flat') return 'url(#logo-flat)';
   if (mode === 'gray') return 'grayscale(1) contrast(1.1)';
   if (mode === 'white') return 'brightness(0) invert(1)';
   if (mode !== 'tint') return '';

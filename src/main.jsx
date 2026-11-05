@@ -1,10 +1,10 @@
 import { LinkCartPage, LinkCartsPage } from './lcart.jsx';
 import { SaveDock } from './savedock.jsx';
 import { StoreDecor } from './decor.jsx';
-import { activePack, lookColors, logoFilter } from './presets.js';
+import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js';
 import { applyStyle } from './stylekit.js';
 import { RatePrompt } from './reviews.jsx';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ProductsDrop, AdminDrop, ProfileDrop } from './navdrop.jsx';
 import { SetPage, SetsAdmin, setIdFromPath } from './sets.jsx';
@@ -300,12 +300,16 @@ function useTheme() {
     r.style.setProperty('--pcard-r', (Number(L.cardR) >= 0 && L.cardR !== '' ? Number(L.cardR) : 18) + 'px');
     // logo rengi temaya uysun mu (Tasarım › Renkler ve sayfa › Logo rengi; varsayılan orijinal)
     const lf = pub ? logoFilter(L.logoTone, lc.accent || S.brand.accent) : '';
+    if (pub && (L.logoTone === 'color' || L.logoTone === 'flat')) ensureLogoSvg(document, L.logoColor || lc.accent || S.brand.accent);
     if (lf) r.style.setProperty('--logo-f', lf); else r.style.removeProperty('--logo-f');
     applyStyle(r, pub ? L.style : null);
+    // 3.11.2026 telefon alt menüsü görünümü (Tasarım › Renkler ve sayfa › Telefon alt menüsü); sadece mağazada
+    const bn = pub ? (['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass') : 'classic';
+    ['glass', 'dark', 'bar'].forEach((k) => r.classList.toggle('bn-' + k, bn === k));
     const t = dev || S.brand.theme;
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
     document.title = seoTitle() || S.brand.appName;
-  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {
@@ -504,12 +508,32 @@ function PPLayer({ pid }) {
   useLayoutEffect(() => { if (ref.current) ref.current.scrollTop = 0; }, [pid]); // üründen ürüne geçince başa
   return <div className="pp-layer" ref={ref}><ProductPage id={pid} /></div>;
 }
+// 3.11.2026: arkada açık tutulan ana sayfa ve Ürünler, kabuk (sekme değişimi) yeniden çizilince BAŞTAN çizilmesin — kendi store
+// abonelikleriyle zaten güncellenirler. Ölçüm: Ürünler'e geçişte dokunuş işleyicisi ~45 ms → çok daha az.
+const HomeM = memo(ShopHome);
+const CatalogM = memo(Catalog);
 function ShellFull() {
   const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom, urunLayer, setId } = useStore();
   const admin = user.role === 'admin';
   const pub = user.role === 'public';
   // telefonda: ana sayfa ve Tüm ürünler bir kez açılınca arkada gizli açık kalır → geri dönünce anında, filtreler ve kaydırma yerinde
   const kept = useRef(new Set()); if ((pub && (tab === 'anasayfa' || tab === 'katalog')) || (admin && tab === 'katalog')) kept.current.add(tab); // yönetici: Ürünler de arkada açık kalır
+  // 3.11.2026: telefonda Ürünler'e İLK geçiş takılıyordu (yüzlerce kart ilk kez çiziliyordu, ölçüm: tek kare ~0,15 sn) → mağaza açıldıktan
+  // birkaç saniye sonra, telefon boşta ve sayfa kaydırılmıyorken Ürünler arkada gizli hazırlanır; ilk geçiş de anında olur.
+  const [, warm] = useState(0);
+  useEffect(() => {
+    if (!pub || kept.current.has('katalog')) return;
+    let t = 0, idle = 0, lastScroll = 0; const onS = () => { lastScroll = Date.now(); };
+    addEventListener('scroll', onS, { passive: true });
+    const tryWarm = () => {
+      if (kept.current.has('katalog')) return;
+      if (Date.now() - lastScroll < 900 || document.body.classList.contains('noscroll')) { t = setTimeout(tryWarm, 1200); return; }
+      const go2 = () => { kept.current.add('katalog'); warm((x) => x + 1); };
+      idle = window.requestIdleCallback ? requestIdleCallback(go2, { timeout: 2500 }) : setTimeout(go2, 50);
+    };
+    t = setTimeout(tryWarm, 3500);
+    return () => { clearTimeout(t); window.cancelIdleCallback?.(idle); removeEventListener('scroll', onS); };
+  }, [pub]);
   const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
@@ -528,11 +552,35 @@ function ShellFull() {
   useEffect(() => { if (admin && newOrders > prevOrders.current) toast('Mağazadan yeni sipariş geldi', 'info'); prevOrders.current = newOrders; }, [newOrders]);
   const lcNew = useStore((st) => (admin ? (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length : 0));
   const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders + lcNew : 0);
+  // 3.11.2026 mağaza üst menüsü: 'classic' (eski) · 'center' (logo ortada, menü altında — Tasarım › Renkler ve sayfa › Üst menü)
+  const hc = pub && S0.look?.header === 'center';
+  useHideTop(pub && S0.look?.hideTop !== false, S0.look?.hideTop === 'up', tab, urunLayer);
   const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
-      <header className="topbar">
+      {hc ? <header className="topbar hdr-c">
+        <div className="topbar-in">
+          <span className="hc-l">{pub && <HeaderSearch />}{pub && <ShopBell />}</span>
+          <button className="hc-mid" onClick={home} aria-label="Ana sayfa" title="Ana sayfa">
+            <img className="brand-logo" src={S0.brand.logo || LOGO_MARK} alt="" />
+            <b className="hc-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b>
+          </button>
+          <span className="hc-r">
+            <HeaderCart on={tab === 'sepet'} />
+            <ThemeButton />
+            {member
+              ? <ProfileDrop><button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button></ProfileDrop>
+              : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Giriş yap"><Icon n="user" s={16} /><span className="me-login-l">Giriş yap</span><span className="me-login-s">Giriş yap</span></button>}
+          </span>
+          <nav className="topnav hc-nav" aria-label="Ana menü">
+            {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
+              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+              return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
+            })}
+          </nav>
+        </div>
+      </header> : <header className="topbar">
         <div className="topbar-in">
           <Brand small onClick={home} />
           {admin && <span className="admin-badge" title="Yönetim paneli"><Icon n="shield" s={14} /><span className="badge-t">Yönetim paneli</span></span>}
@@ -566,7 +614,7 @@ function ShellFull() {
           )}
           {!pub && <button className="icon-btn logout-btn" onClick={() => A.logout()} aria-label="Çıkış yap" title="Çıkış yap"><Icon n="out" s={18} /></button>}
         </div>
-      </header>
+      </header>}
       {A.mode === 'demo' && admin && demoNote && (
         <div className="demo-strip">
           <span><b>Demo modu.</b> Veriler sadece bu tarayıcıda. Bayi tarafını görmek için çıkış yapıp <code>ahmet / 1234</code> ile girin.</span>
@@ -576,12 +624,12 @@ function ShellFull() {
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
         {tab === 'anasayfa' && admin && <AdminHome />}
-        {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><ShopHome /></section>}
+        {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><HomeM /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'lsepet' && pub && <LinkCartPage id={ROUTE.lcartId} />}
         {tab === 'sepetlink' && admin && <OrderForm linkMode />}
         {tab === 'sepetler' && admin && <LinkCartsPage />}
-        {(tab === 'katalog' || ((pub || admin) && kept.current.has('katalog'))) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><Catalog admin={admin} /></section>}
+        {(tab === 'katalog' || ((pub || admin) && kept.current.has('katalog'))) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><CatalogM admin={admin} /></section>}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
         {tab === 'profil' && !pub && <Profile />}
@@ -791,6 +839,29 @@ function setupCrispBack() {
   }, true);
 }
 
+// 3.11.2026 üst menü kaydırınca gizlenir (mağaza, telefon + bilgisayar): ~90px aşağı inince yukarı kayarak kaybolur, sayfanın en üstüne
+// dönünce (ya da 'up' seçiliyse yukarı kaydırmaya başlayınca) geri gelir. Pencere / arama / menü açıkken, sabit yan kutulu sayfalarda
+// (sepet, ödeme, hesap, ürün katmanı) hiç gizlenmez → oralardaki sabit konumlar bozulmaz.
+const HIDE_TABS = new Set(['anasayfa', 'katalog', 'kalip', 'set', 'urun', 'yasal', 'liste']);
+function useHideTop(on, upShow, tab, layer) {
+  useEffect(() => {
+    const r = document.documentElement; const ok = on && HIDE_TABS.has(tab) && !(tab === 'urun' && layer);
+    if (!ok) { r.classList.remove('top-hide'); return; }
+    let last = scrollY, acc = 0, raf = 0;
+    const busy = () => document.body.classList.contains('noscroll') || document.querySelector('.hsearch.mob-open, .hd-mega, .hd-pop, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
+    const f = () => {
+      raf = 0; const y = scrollY; const d = y - last; last = y;
+      if (y < 70) { acc = 0; r.classList.remove('top-hide'); return; }
+      if (busy()) { r.classList.remove('top-hide'); return; }
+      acc = (d > 0) === (acc > 0) ? acc + d : d;
+      if (acc > 24) r.classList.add('top-hide');
+      else if (upShow && acc < -14) r.classList.remove('top-hide');
+    };
+    const q = () => { if (!raf) raf = requestAnimationFrame(f); };
+    addEventListener('scroll', q, { passive: true });
+    return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); r.classList.remove('top-hide'); };
+  }, [on, upShow, tab, layer]);
+}
 function setupNavAnim() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
   const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar';
@@ -816,10 +887,20 @@ function setupNavAnim() {
   // Animasyon ilk karede başlangıç hâlinde DURAKLATILIR, o (bazen ağır) kare ekrana çıktıktan sonraki karede oynatılır.
   let cover = null;
   const getCover = () => { if (!cover || !cover.isConnected) { cover = document.createElement('div'); cover.className = 'nav-cover'; cover.setAttribute('aria-hidden', 'true'); document.body.appendChild(cover); } return cover; };
-  const play = (els, kind, ms) => {
-    const as = [];
-    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -14 : 14}px,0,0)` }, { transform: 'none' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: EASE })); }
-    as.push(getCover().animate([{ opacity: kind === 'tab' ? 0.65 : 1 }, { opacity: 0 }], { duration: ms, easing: EASE }));
+  // 3.11.2026 hareket ayarı (Tasarım › Renkler ve sayfa › Sayfa geçişleri, look.motion): 'soft' eski hafif kayma · 'clear' belirgin
+  // (daha uzun kayma, hafif büyüme, yaylı yavaşlama; varsayılan) · 'glass' cam (sayfa buzlu camın arkasından netleşerek gelir) · 'slow' deneme için yavaş.
+  const MOT = {
+    soft: { dx: 14, sc: 1, ms: 1, ease: EASE, tabSc: 1 },
+    clear: { dx: 34, sc: 0.985, ms: 1.35, ease: 'cubic-bezier(.22,1,.36,1)', tabSc: 0.985 },
+    glass: { dx: 26, sc: 0.975, ms: 1.5, ease: 'cubic-bezier(.2,1.1,.3,1)', tabSc: 0.98, glass: true },
+    slow: { dx: 34, sc: 0.985, ms: 3, ease: 'cubic-bezier(.22,1,.36,1)', tabSc: 0.985 },
+  };
+  const play = (els, kind, ms0) => {
+    const as = []; const M = MOT[store.s.settings?.look?.motion] || MOT.clear; const ms = Math.round(ms0 * M.ms);
+    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -M.dx : M.dx}px,0,0) scale(${M.sc})` }, { transform: 'none' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: M.ease })); }
+    else if (M.tabSc < 1) for (const el of els) as.push(el.animate([{ transform: `scale(${M.tabSc})` }, { transform: 'none' }], { duration: ms, easing: M.ease }));
+    const cv = getCover(); cv.classList.toggle('glass', !!M.glass);
+    as.push(cv.animate(M.glass ? [{ opacity: kind === 'tab' ? 0.8 : 1 }, { opacity: 0.6, offset: 0.35 }, { opacity: 0 }] : [{ opacity: kind === 'tab' ? 0.65 : 1 }, { opacity: 0 }], { duration: ms, easing: M.glass ? 'ease-out' : M.ease }));
     as.forEach((a) => a.pause());
     requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
   };
@@ -849,7 +930,7 @@ function setupNavAnim() {
     const prev = last; last = k; click = null;
     if (!mob() || !watched?.isConnected) return;
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
-    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play([], 'tab', 180);
+    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play((store.s.settings?.look?.motion || 'clear') === 'soft' ? [] : pageTargets(watched), 'tab', 200);
     else play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
   };
   storeListen(() => {

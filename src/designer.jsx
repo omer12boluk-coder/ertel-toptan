@@ -14,7 +14,7 @@ import {
   ScaleField, MQ_STYLES, ShopImg, useShopImg, CtaButton, btnStyleOf, GeoFields, geoOf, withProdFallback, THEMES, SLIDE_LAYOUTS, COVER_LY, ColorPick, LinkPick, LogoPick, ImgPick, ImgLook, Rows,
 } from './shophome.jsx';
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
-import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter } from './presets.js';
+import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter, ensureLogoSvg } from './presets.js';
 import { STYLE_PRESETS, PRESET_BY, SHADOWS, BORDERS, HOVERS, TITLES, styleOut } from './stylekit.js';
 import { PackDecor, DECOR } from './decor.jsx';
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
@@ -627,6 +627,7 @@ function Inspector(P) {
     else if (k === 'promos') body = <>
       <Field label="Başlık"><input value={H.promosTitle || ''} placeholder="Öne çıkanlar" onChange={(e) => S('promosTitle', e.target.value)} /></Field>
       <button type="button" className="btn sm outline" onClick={() => P.select('promo', -1)}><Icon n="plus" s={15} />Kutu ekle</button>
+      <PromoLayFields lo={H.promosLay || {}} up={(p) => S('promosLay', { ...(H.promosLay || {}), ...p })} />
       <PromoSizeGuide />
       <p className="fine">Kutuları sayfada tutup sürükleyerek sıralayın; tıklayınca içeriği ve boyutu açılır. Bu ızgaradan bir tane daha istiyorsanız: <b>Bölüm ekle › Reklam kutuları</b>.</p>
       <More><GeoMore H={H} k={k} S={S} /></More>
@@ -642,6 +643,7 @@ function Inspector(P) {
       body = <>
         <Field label="Başlık" hint="Boşsa başlık görünmez"><input value={b.title || ''} placeholder="ör. Kampanyalar" onChange={(e) => S('blocks', { ...H.blocks, [id]: { ...b, title: e.target.value } })} /></Field>
         <button type="button" className="btn sm outline" onClick={() => P.select('promo', -1, id)}><Icon n="plus" s={15} />Kutu ekle</button>
+        <PromoLayFields lo={b.lay || {}} up={(p) => S('blocks', { ...H.blocks, [id]: { ...b, lay: { ...(b.lay || {}), ...p } } })} />
         <PromoSizeGuide />
         <p className="fine">Kutuları sayfada tutup sürükleyin; tıklayınca içeriği, boyutu ve resim görünümü açılır.</p>
         <More><GeoMore H={H} k={k} S={S} /></More><BlockActs {...P} k={k} />
@@ -664,6 +666,58 @@ function BlockActs({ k, dupBlock, removeBlock }) {
     <button className="btn sm ghost" onClick={() => dupBlock(k)}><Icon n="copy" s={15} />Çoğalt</button>
     <button className="btn sm ghost danger" onClick={() => removeBlock(k)}><Icon n="trash" s={15} />Bölümü sil</button>
   </div>;
+}
+// 3.11.2026 logo dosyası burada da görünür: kullanıcı logosunun nerede olduğunu bulamıyordu (Ayarlar › Sistem › Uygulama adı ve logo).
+// Yükle / indir / ERT logosuna dön.
+function LogoFile({ d, set }) {
+  const src = d.brand?.logo || LOGO_MARK;
+  const up = async (e) => { const f = e.target.files?.[0]; if (!f) return; const { resizeImage } = await import('./utils.js'); set('brand.logo', await resizeImage(f, 160, 0.85, true)); e.target.value = ''; };
+  return <div className="dz2-logofile">
+    <i><img src={src} alt="" /></i>
+    <span><b>{d.brand?.logo ? 'Kendi yüklediğiniz logo' : 'ERT Mobile logosu (hazır)'}</b><small>Ayarlar › Sistem › Uygulama adı ve logo ile aynı</small></span>
+    <span className="dz2-logofile-b">
+      <label className="btn sm outline"><Icon n="upload" s={14} />Değiştir<input type="file" accept="image/*" hidden onChange={up} /></label>
+      <a className="btn sm ghost" href={src} download="logo.png"><Icon n="dl" s={14} />İndir</a>
+      {d.brand?.logo && <button type="button" className="btn sm ghost" onClick={() => set('brand.logo', '')}>Hazır logoya dön</button>}
+    </span>
+  </div>;
+}
+function LogoSvgSync({ color }) { useEffect(() => { ensureLogoSvg(document, color); }, [color]); return null; }
+// 3.11.2026 telefon alt menüsü görünümü (look.botnav): cam (yüzen, varsayılan) · koyu cam · şerit cam (kenara yapışık) · klasik (eski)
+export const BOTNAVS = [['glass', 'Yüzen cam', 'Kenarlardan ayrık, yarı saydam, buzlu cam (Beymen gibi)'], ['dark', 'Koyu cam', 'Yüzen, koyu buzlu cam'], ['bar', 'Şerit cam', 'Alta yapışık ama yarı saydam'], ['classic', 'Klasik', 'Eski görünüm: beyaz, alta yapışık']];
+function BotNavPick({ v, set }) {
+  const cur = v || 'glass';
+  return <Disclose label="Telefon alt menüsü" value={<small>{BOTNAVS.find((x) => x[0] === cur)?.[1]}</small>}>
+    <span className="dz2-bns">{BOTNAVS.map(([k, n, h]) => (
+      <button key={k} type="button" className={'dz2-bn bn-' + k + (cur === k ? ' on' : '')} onClick={() => set(k)} title={h}>
+        <i aria-hidden="true"><em><b className="on" /><b /><b /><b /></em></i><span>{n}</span>
+      </button>
+    ))}</span>
+    <p className="fine">Sadece telefonda, mağazada görünür. Beğenmezseniz <b>Klasik</b> eski hâline döndürür.</p>
+  </Disclose>;
+}
+// 3.11.2026 banner: boydan boya + geçiş göstergesi (çizgiler / noktalar / hap / sayı / yok) + bilgisayardaki oklar (tüm reklamlar için ortak)
+function HeroNavFields({ nv, up }) {
+  const seg = (k, opts, def) => <span className="seg sw">{opts.map(([x, l]) => <button key={x} type="button" className={(nv[k] || def) === x ? 'on' : ''} onClick={() => up({ [k]: x })}>{l}</button>)}</span>;
+  return <div data-f="heroNav" className="dz2-frame-box"><h4><Icon n="grid" s={15} />Banner genişliği ve geçişler <small>(tüm reklamlar)</small></h4>
+    <Field label="Boydan boya" hint="Banner sayfanın sağ ve sol kenarına kadar uzar, köşeler düz olur">{seg('full', [['', 'Kapalı'], ['pc', 'Bilgisayarda'], ['m', 'Telefonda'], ['all', 'İkisinde']], '')}</Field>
+    <Field label="Reklam göstergesi" hint="Alttaki hangi reklamda olduğunu gösteren işaret">{seg('dots', [['bars', 'Çizgiler'], ['dots', 'Noktalar'], ['pill', 'Hap'], ['num', '1 / 5'], ['none', 'Yok']], 'bars')}</Field>
+    {nv.dots !== 'none' && <Field label="Göstergenin yeri">{seg('dpos', [['left', 'Solda'], ['center', 'Ortada'], ['right', 'Sağda']], 'left')}</Field>}
+    <Field label="Oklar · bilgisayar" hint="Telefonda ok yok, parmakla kaydırılır">{seg('arr', [['glass', 'Cam (eski)'], ['solid', 'Beyaz yuvarlak'], ['min', 'Sade ok'], ['side', 'Kenar çubuğu'], ['none', 'Yok']], 'glass')}</Field>
+  </div>;
+}
+// 3.11.2026 reklam kutularının düzeni: ızgara (eski) ya da yana kaydırmalı büyük kartlar
+function PromoLayFields({ lo, up }) {
+  const seg = (k, opts, def) => <span className="seg sw">{opts.map(([x, l]) => <button key={x} type="button" className={(lo[k] || def) === x ? 'on' : ''} onClick={() => up({ [k]: x })}>{l}</button>)}</span>;
+  const sl = lo.lay === 'slide' || lo.lay === 'slideM';
+  return <>
+    <Field label="Düzen" hint="Kaydırmalı: kutular büyük kart olarak yan yana dizilir, parmakla kaydırılır; altta ilerleme çizgisi (Beymen gibi). Izgara = eski görünüm.">{seg('lay', [['grid', 'Izgara'], ['slideM', 'Telefonda kaydır'], ['slide', 'Her yerde kaydır']], 'grid')}</Field>
+    {sl && <>
+      <Field label="Kart biçimi">{seg('ar', [['tall', 'Dikey'], ['story', 'Uzun'], ['sq', 'Kare'], ['wide', 'Yatay']], 'tall')}</Field>
+      <Field label="Kart genişliği" hint="Telefonda: Dar ~%64 · Orta ~%82 · Geniş ~%90 ekran (yanında bir sonrakinin ucu görünür)">{seg('w', [['sm', 'Dar'], ['md', 'Orta'], ['lg', 'Geniş']], 'md')}</Field>
+      <Toggle id="dz-pbar" label="Altta ilerleme çizgisi" checked={lo.bar !== false} onChange={(v) => up({ bar: v })} />
+    </>}
+  </>;
 }
 function GeoMore({ H, k, S }) {
   return <div className="dz-geo"><h4>Genişlik ve yer</h4><GeoFields {...geoOf(H, k)} up={(p) => S('geo', { ...(H.geo || {}), [k]: p })} note="Seçiliyken bölümün kenarlarındaki tutamaçlarla da çekebilirsiniz. Telefonda hep tam genişlik." /></div>;
@@ -757,6 +811,7 @@ function HeroPanel(P) {
     {cover && s.img && <div data-f="imgM"><ImgPick v={s.imgM || ''} onChange={(imgM) => up({ imgM })} max={1200} label="Telefon için ayrı resim" hint="İsteğe bağlı. Telefonda bu resim görünür; dikey (ör. 900×1180) hazırlayın. Boşsa bilgisayardaki resim kullanılır." /></div>}
     {cover && s.img && <SizeGuide s={s} i={i} measure={P.measure} H={H} />}
     {s.img && cover && <div data-f="frame" className="dz2-frame-box"><h4><Icon n="zoom" s={15} />Resmi çerçevele</h4><ImgLook s={s} up={up} cover phone={false} /></div>}
+    <HeroNavFields nv={H.heroNav || {}} up={(p) => S('heroNav', { ...(H.heroNav || {}), ...p })} />
     <More>
       <Field label="Küçük etiket" opt><input value={s.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. Yeni · Stokta" /></Field>
       <LogoPick s={s} up={up} />
@@ -957,13 +1012,25 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <Field label="Bölümler arası boşluk"><span className="she-scale"><input type="range" min="0" max="80" step="2" value={Number(H.gap) || 0} onChange={(e) => set('shopHome.gap', Number(e.target.value))} /><code>{Number(H.gap) ? H.gap + ' px' : 'varsayılan'}</code></span></Field>
       <Toggle id="dz-home-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => set('shopHome.enabled', v)} />
     </Disclose>
-    <Disclose label="Logo rengi" value={<small>{({ tint: 'temaya uyar', gray: 'siyah-beyaz', white: 'beyaz' })[L.logoTone] || 'orijinal'}</small>}>
-      <p className="fine">Üst menüdeki logo. <b>Orijinal</b> seçiliyken logonuz hiç değişmez; <b>Temaya uyar</b> derseniz logonun mavisi o anki ana renge (tema rengine) döner.</p>
-      <span className="dz2-logos">{[['', 'Orijinal'], ['tint', 'Temaya uyar'], ['gray', 'Siyah-beyaz'], ['white', 'Beyaz']].map(([k, l]) => (
+    <Disclose label="Logo ve logo rengi" value={<small>{({ tint: 'temaya uyar', gray: 'siyah-beyaz', white: 'beyaz', color: 'seçilen renk', flat: 'düz renk' })[L.logoTone] || 'orijinal'}</small>}>
+      <LogoFile d={d} set={set} />
+      <p className="fine">Üst menüdeki logonun rengi. <b>Orijinal</b> seçiliyken logonuz hiç değişmez. <b>Renk seç</b>: logonun gölgeleri korunur, istediğiniz renge boyanır. <b>Düz renk</b>: logo tek renk olur.</p>
+      <LogoSvgSync color={L.logoColor || lc.accent || d.brand?.accent} />
+      <span className="dz2-logos">{[['', 'Orijinal'], ['color', 'Renk seç'], ['flat', 'Düz renk'], ['gray', 'Siyah-beyaz'], ['white', 'Beyaz'], ['tint', 'Temaya uyar']].map(([k, l]) => (
         <button key={k} type="button" className={'dz2-logo' + ((L.logoTone || '') === k ? ' on' : '')} onClick={() => set('look.logoTone', k)}>
           <i style={{ background: k === 'white' ? '#0f172a' : '#fff' }}><img src={d.brand?.logo || LOGO_MARK} alt="" style={{ filter: logoFilter(k, lc.accent || d.brand?.accent) || undefined }} /></i><span>{l}</span>
         </button>
       ))}</span>
+      {(L.logoTone === 'color' || L.logoTone === 'flat') && <Field label="Logo rengi"><span className="she-color"><input type="color" value={/^#[0-9a-f]{6}$/i.test(L.logoColor || '') ? L.logoColor : (lc.accent || '#1f6feb')} onChange={(e) => set('look.logoColor', e.target.value)} aria-label="Logo rengi" /><code>{L.logoColor || 'ana renk'}</code>{L.logoColor && <button type="button" className="linkish" onClick={() => set('look.logoColor', '')}>ana renk</button>}</span></Field>}
+    </Disclose>
+    <BotNavPick v={L.botnav} set={(v) => set('look.botnav', v)} />
+    <Disclose label="Sayfa geçişleri (telefon)" value={<small>{({ soft: 'hafif', glass: 'cam', slow: 'yavaş (deneme)' })[L.motion] || 'belirgin'}</small>}>
+      <Field label="Telefonda sayfadan sayfaya geçerken" hint="Belirgin: kayma ve yaylanma daha görünür. Cam: yeni sayfa buzlu camın arkasından netleşerek gelir (Apple'ın cam görünümüne yakın). Yavaş: geçişi rahatça izlemek için 3 kat yavaş — denedikten sonra geri alın."><span className="seg sw">{[['soft', 'Hafif (eski)'], ['clear', 'Belirgin'], ['glass', 'Cam'], ['slow', 'Yavaş · deneme']].map(([x, l]) => <button key={x} type="button" className={(L.motion || 'clear') === x ? 'on' : ''} onClick={() => set('look.motion', x)}>{l}</button>)}</span></Field>
+    </Disclose>
+    <Disclose label="Üst menü" value={<small>{L.header === 'center' ? 'logo ortada' : 'klasik'}{L.hideTop === false ? '' : ' · kayınca gizlenir'}</small>}>
+      <Field label="Düzen" hint="Ortada logo: logo ve ad ortada, solda arama + zil, sağda sepet ve hesap; bilgisayarda menü altta ortalı, sade büyük harfli."><span className="seg sw">{[['classic', 'Klasik'], ['center', 'Ortada logo']].map(([x, l]) => <button key={x} type="button" className={(L.header || 'classic') === x ? 'on' : ''} onClick={() => set('look.header', x)}>{l}</button>)}</span></Field>
+      <Field label="Aşağı kaydırınca" hint="Gizlenince sayfa daha geniş görünür. Sepet, ödeme ve Hesabım sayfalarında menü hep görünür."><span className="seg sw">{[['top', 'Gizlen · en üstte gelsin'], ['up', 'Gizlen · yukarı kayınca gelsin'], ['off', 'Hep görünsün']].map(([x, l]) => <button key={x} type="button" className={((L.hideTop === false ? 'off' : L.hideTop) || 'top') === x ? 'on' : ''} onClick={() => set('look.hideTop', x === 'off' ? false : x)}>{l}</button>)}</span></Field>
+      <p className="fine">Üst menü tasarım çerçevesinde çizilmez; değişikliği Yayınla'dan sonra mağazada görürsünüz.</p>
     </Disclose>
     <div className="dz2-tiles">
       <button className="dz2-tile" onClick={() => setSel({ kind: 'style' })}><Icon n="brush" s={20} /><span><b>Stil Stüdyosu</b><small>{L.style?.preset ? 'Açık: ' + (PRESET_BY[L.style.preset]?.n || 'özel') : 'Hazır stiller · yazı tipi · köşe · gölge'}</small></span></button>

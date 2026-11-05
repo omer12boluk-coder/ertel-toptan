@@ -291,6 +291,29 @@ async function merchantFeed(ctx) {
   return new Response(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'max-age=900' } });
 }
 
+// 3.11.2026 sepet linki (/k/<id>) önizlemesi: WhatsApp / Telegram'da linkin altında siparişin o anki durumu (sepet hazır / onaylandı /
+// kargoda + takip no / teslim edildi), ürün sayısı, toplam ve ilk ürünün resmi. Kayıt herkese açık okunur (kimlik tahmin edilemez); ad,
+// adres, telefon yazılmaz. Sadece önizleme botlarına; durum değişebildiği için 5 dk önbellek. WhatsApp aynı linkin önizlemesini kendisi de
+// saklar → uygulama özet mesajında linke durum harfi ekler (?d=o|k|t) ki her aşamada yeni önizleme alınsın.
+async function lcartSeo(id, ctx) {
+  const key = new Request('https://seo-lcart.cache/' + VER + '/' + id);
+  try { const r = await caches.default.match(key); if (r) return await r.json(); } catch {}
+  const c = await doc('lcarts/' + encodeURIComponent(id)); if (!c) return null;
+  const q = c.sub?.q && typeof c.sub.q === 'object' ? c.sub.q : null;
+  const its = (c.items || []).map((it) => ({ ...it, qty: q ? Number(q[String(it.id)]) || 0 : (c.sub?.items?.find?.((x) => x.id === it.id)?.qty ?? it.qty) })).filter((it) => it.qty > 0);
+  const n = its.reduce((a, it) => a + Number(it.qty || 0), 0);
+  const tot = its.reduce((a, it) => a + Number(it.price || 0) * Number(it.qty || 0), 0);
+  const cg = c.cargo || {}; const pickup = c.sub?.delivery?.method === 'pickup';
+  const done = c.status === 'done' || !!cg.delivered; const shipped = !done && !!cg.code;
+  const head = c.status === 'open' ? 'Sepetiniz hazır' : done ? 'Siparişiniz teslim edildi ✓' : shipped ? 'Siparişiniz kargoda 🚚' : pickup ? 'Siparişiniz hazırlanıyor' : 'Siparişiniz onaylandı ✓';
+  const names = its.slice(0, 3).map((it) => (it.qty > 1 ? it.qty + '× ' : '') + cut(it.n, 38)).join(', ') + (its.length > 3 ? ` ve ${its.length - 3} ürün daha` : '');
+  const desc = [shipped ? `${cg.company || 'Kargo'} takip no: ${cg.code}` : '', c.status === 'open' ? 'Ürünleri görüp onaylamak için dokunun' : '', `${n} ürün${tot > 0 ? ' · Toplam ' + usd(tot) + ' + KDV' : ''}`, names].filter(Boolean).join(' · ');
+  const pi = its.find((it) => it.pi && !isWebp(it.pi))?.pi || its[0]?.pi;
+  const o = { title: `${head} · #${c.no || ''} · ${BRAND}`, desc: cut(desc, 280), img: pi ? imgUrl(pi) : null };
+  ctx.waitUntil(caches.default.put(key, new Response(JSON.stringify(o), { headers: { 'Cache-Control': 'max-age=300', 'Content-Type': 'application/json' } })).catch(() => {}));
+  return o;
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -304,6 +327,17 @@ export default {
     if (req.method !== 'GET' || !(page.headers.get('content-type') || '').includes('text/html')) return page;
     // asıl adres: /magaza öneki ve sondaki / atılır, sorgu (?q=…) asıl adresin parçası değil
     const path = (url.pathname.replace(/^\/magaza(?=\/|$)/, '') || '/').replace(/(.)\/+$/, '$1');
+    const km = /^\/k\/([\w-]{6,60})$/.exec(path);
+    if (km) {
+      if (!BOT.test(req.headers.get('user-agent') || '')) return page;
+      let k = null; try { k = await lcartSeo(km[1], ctx); } catch {}
+      if (!k) return page;
+      const tags = `<meta name="robots" content="noindex"><meta name="description" content="${esc(k.desc)}"><meta property="og:type" content="website"><meta property="og:site_name" content="${NAME}"><meta property="og:locale" content="tr_TR">`
+        + `<meta property="og:title" content="${esc(k.title)}"><meta property="og:description" content="${esc(k.desc)}"><meta property="og:url" content="${esc(SITE + path)}">${k.img ? `<meta property="og:image" content="${esc(k.img)}">` : ''}<meta name="twitter:card" content="summary">`;
+      const res = new HTMLRewriter().on('title', { element(e) { e.setInnerContent(k.title); e.after(tags, { html: true }); } }).transform(page);
+      const h = new Headers(res.headers); h.set('Vary', 'User-Agent'); h.set('Cache-Control', 'no-store');
+      return new Response(res.body, { status: res.status, headers: h });
+    }
     let o = null;
     try { o = await pageSeo(path, ctx); } catch { return page; }
     if (!o) return page;

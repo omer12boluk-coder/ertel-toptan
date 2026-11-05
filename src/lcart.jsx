@@ -128,7 +128,7 @@ export function lcSummary(c, S) {
     s.pay ? `Ödeme: ${PAY[s.pay] || s.pay}` : null,
     s.note ? `Notunuz: ${s.note}` : null,
     '',
-    `Siparişinizin kaydı ve kargo takibi: ${lcartLink(c.id)}`,
+    `Siparişinizin kaydı ve kargo takibi: ${lcartLink(c.id)}?d=${c.status === 'done' || c.cargo?.delivered ? 't' : c.cargo?.code ? 'k' : 'o'}`, // ?d: her aşamada WhatsApp yeni önizleme alsın
   ].filter((x) => x !== null).join('\n');
 }
 // Yönetim: /admin/sepetler — linkle gelen sepetler ayrı sayfa (Siparişler sekmesinin üstündeki geçişten)

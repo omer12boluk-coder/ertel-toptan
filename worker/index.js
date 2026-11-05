@@ -580,7 +580,7 @@ function lcWaShort(c, its, id) {
   const s = c.sub || {};
   const at = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   return [`Merhaba ${s.contact?.name || ''}, ERTEL GSM siparişiniz bize ulaştı ✅`, `Sipariş #${c.no} · Onay: ${at}`, `${its.length} ürün · Toplam: ${tot}${pct ? ` + KDV %${pct} = ${inc}` : ''}`,
-    s.delivery?.method === 'pickup' ? 'Teslimat: Dükkandan teslim' : 'Teslimat: Kargo', '', `Siparişinizin tamamı ve kargo takibi: https://ertelmarket.com/k/${id}`].join('\n');
+    s.delivery?.method === 'pickup' ? 'Teslimat: Dükkandan teslim' : 'Teslimat: Kargo', '', `Siparişinizin tamamı ve kargo takibi: https://ertelmarket.com/k/${id}?d=o`].join('\n');
 }
 // Süresi dolan, onaylanmamış sepet linklerini sil. Sadece 'open' olanlar sorgulanır (az sayıda); exp yoksa oluşturma + 12 saat.
 async function lcartSweep(env) {

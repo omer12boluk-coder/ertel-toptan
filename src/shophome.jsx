@@ -1,7 +1,7 @@
 // Online mağaza ana sayfası (/magaza → Ana sayfa): büyük reklam alanı, avantajlar, marka kutuları,
 // kare reklam kutuları (bento), ürün rafları ve alt WhatsApp bandı. İçerik: Ayarlar > Mağaza ana sayfası (settings.shopHome).
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { SetRail, searchSets, setView, openSet, setLookOf } from './sets.jsx';
+import { SetRail, searchSets, setView, openSet, setLookOf, setsOf, liveSets } from './sets.jsx';
 import { flushSync } from 'react-dom';
 import { useStore, store, setQty, go, api, toast } from './store.js';
 import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
@@ -127,6 +127,9 @@ export function useOpenLink() {
     if (/^https?:/.test(link)) { window.open(link, '_blank', 'noopener'); return; }
     const [k, ...rest] = link.split(':'); const v = rest.join(':');
     if (k === 'p') { const p = store.s.byId.get(Number(v)); if (p) setProduct(p); return; }
+    // 3.11.2026: set linkleri — 'set:<id>' o setin sayfası (yayında değilse Setler listesi), 'sets:' Ürünler'de Setler
+    if (k === 'set') { if (v && liveSets(store.s.settings).some((x) => x.id === v)) openSet(v); else { store.set({ catalogGo: { sets: true } }); go('katalog'); } return; }
+    if (k === 'sets') { store.set({ catalogGo: { sets: true } }); go('katalog'); return; }
     let browse = {};
     if (k === 'brand') { const real = catalog.find((p) => p.b && norm(p.b) === norm(v))?.b || v; browse = { brand: real }; }
     else if (k === 'cat') browse = { cat: Number(v) };
@@ -228,6 +231,33 @@ export function dragSort(e, group, idx, onMove, onClick) {
 }
 export const moveItem = (list, from, to) => { const n = [...list]; const [x] = n.splice(from, 1); n.splice(to, 0, x); return n; };
 
+// Reklam kutuları kaydırmalı düzeni: kutular yan yana kayar; altta Beymen'deki gibi ince ilerleme çizgisi (görünen kısım / konum),
+// bilgisayarda yanında oklar. Kaydırırken React çizmez: çizgi doğrudan stile yazılır.
+function PromoTrack({ on, cls, bar, children }) {
+  const ref = useRef(null); const th = useRef(null); const wrap = useRef(null);
+  useEffect(() => {
+    const el = ref.current; if (!on || !el) return;
+    let raf = 0;
+    const f = () => { raf = 0; const sw = el.scrollWidth, cw = el.clientWidth; const w = sw > cw + 2 ? cw / sw : 1;
+      const x = sw > cw + 2 ? el.scrollLeft / (sw - cw) : 0;
+      wrap.current?.classList.toggle('one', w >= 1);
+      if (th.current) th.current.style.transform = `translateX(${(x * (1 - w) / w) * 100}%) scaleX(1)`, th.current.style.width = (w * 100) + '%';
+      wrap.current?.style.setProperty('--px', x.toFixed(3)); };
+    const q = () => { if (!raf) raf = requestAnimationFrame(f); };
+    f(); el.addEventListener('scroll', q, { passive: true }); const ro = new ResizeObserver(q); ro.observe(el);
+    return () => { el.removeEventListener('scroll', q); ro.disconnect(); cancelAnimationFrame(raf); };
+  }, [on]);
+  if (!on) return <div className={cls}>{children}</div>;
+  const by = (d) => { const el = ref.current; if (el) el.scrollBy({ left: d * el.clientWidth * 0.82, behavior: 'smooth' }); };
+  return <div ref={wrap} className="sh-pwrap">
+    <div ref={ref} className={cls}>{children}</div>
+    <div className="sh-pfoot">
+      {bar && <span className="sh-pbar" aria-hidden="true"><i ref={th} /></span>}
+      <span className="sh-parr"><button type="button" className="sh-arrow" aria-label="Önceki" onClick={() => by(-1)}><Icon n="back" s={16} /></button><button type="button" className="sh-arrow" aria-label="Sonraki" onClick={() => by(1)}><Icon n="back" s={16} className="flip" /></button></span>
+    </div>
+  </div>;
+}
+
 export function ShopHome({ S: Sover }) {
   const E = useContext(DesignCtx);
   // tek tek seçilir (bütün store'a abone olunca her sekme değişiminde bütün ana sayfa yeniden çiziliyordu → geçiş takılıyordu)
@@ -258,14 +288,16 @@ export function ShopHome({ S: Sover }) {
   const pk = E?.pack !== undefined ? E.pack : activePack(S.look); // tema stüdyosu (tasarımda önizlenen)
 
   // kare reklam kutuları: sabit bölüm (H.promos) ya da 'Bölüm ekle'den gelen ek ızgara (blocks {t:'promos', items, title}); bid = blok kimliği
-  const promoGrid = (list, title, bid, onTitle) => {
+  const promoGrid = (list, title, bid, onTitle, lo = {}) => {
     const g = 'promo' + (bid ? '-' + bid : '');
+    // 3.11.2026: yana kaydırmalı düzen (Beymen gibi büyük kartlar + altta ilerleme çizgisi): lo.lay 'slide' her yerde · 'slideM' sadece telefonda
+    const sl = lo.lay === 'slide' || lo.lay === 'slideM';
     const path = bid ? 'shopHome.blocks.' + bid + '.items' : 'shopHome.promos';
     const cur = () => (bid ? E.get('blocks')?.[bid]?.items || [] : E.get('promos'));
     return (list.length > 0 || E) && (
       <section className="sh-sec rv">
         {title && <SecHead title={title} onTitle={onTitle} />}
-        <div className="sh-bento">
+        <PromoTrack on={sl} cls={sl ? 'sh-bento sh-pslide ' + (lo.lay === 'slideM' ? 'm-only' : 'all') + ' ar-' + (lo.ar || 'tall') + ' pw-' + (lo.w || 'md') : 'sh-bento'} bar={lo.bar !== false}>
           {list.map((x, i) => { const im = boxImgMode(x); return (
             <button key={x.idx} data-dz={g} data-i={x.idx} data-fk={(x.title || '') + (x.img || '')} data-dz-name={x.title || 'Kutu'} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? ' im-' + im + (im === 'card' ? ' prod' : im === 'float' ? ' prod float' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (x.ta ? ' ta-' + x.ta : '') + (sel?.kind === 'promo' && sel.i === x.idx && (sel.b || null) === bid ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i, ...(x.ibg ? { '--ibg': x.ibg } : null), ...(x.iz && x.iz !== 1 ? { '--iz': x.iz } : null), ...(x.ix != null ? { '--ix': x.ix + '%' } : null), ...(x.iy != null ? { '--iy': x.iy + '%' } : null), ...(x.tc ? { '--btc': x.tc } : null), ...(x.f ? { '--bf': `'${FONT_BY[x.f]?.fam || x.f}', var(--f-display)` } : null) }}
               onClick={E ? (E.mobile ? (e) => { stop(e); E.select('promo', x.idx, bid); } : stop) : link(x.link)} onMouseMove={spot}
@@ -281,12 +313,12 @@ export function ShopHome({ S: Sover }) {
             </button>
           ); })}
           {E && <button className="sh-box sz-sq dz-add" onClick={pick('promo', -1, bid)}><Icon n="plus" s={26} /><small>Kutu ekle</small></button>}
-        </div>
+        </PromoTrack>
       </section>
     );
   };
   const render = (k) => {
-    if (k === 'hero') return slides.length > 0 ? <Hero slides={slides} pkHero={pk?.hero} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'hero') return slides.length > 0 ? <Hero slides={slides} pkHero={pk?.hero} nv={H.heroNav || {}} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
     if (k === 'usps') return (H.usps || []).some((u) => u.title) ? (
       <section className="sh-usps rv" aria-label="Avantajlar">
         {(H.usps || []).filter((u) => u.title).map((u, i) => (
@@ -315,13 +347,13 @@ export function ShopHome({ S: Sover }) {
         </div>
       </section>
     );
-    if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)));
+    if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)), H.promosLay);
     if (k === 'sets') return <SetRail edit={!!E} />;
     if (k === 'fav') return <FavRail onProduct={E ? () => E.select(k) : setProduct} edit={!!E} S={S} />;
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
     if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; const up = E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null;
       if (b.t === 'rate') return <RateBlock b={b} up={up} />;
-      if (b.t === 'promos') return promoGrid((b.items || []).map((x, idx) => ({ ...x, idx })).filter((x) => x.title || x.img || E), b.title, k.slice(2), E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } })));
+      if (b.t === 'promos') return promoGrid((b.items || []).map((x, idx) => ({ ...x, idx })).filter((x) => x.title || x.img || E), b.title, k.slice(2), E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } })), b.lay);
       return b.t === 'banner' ? <BannerBlock b={b} open={link} edit={!!E} /> : b.t === 'video' ? <VideoBlock b={b} edit={!!E} up={E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null} /> : <HeadBlock b={b} onTitle={E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } }))} />; }
     if (k === 'cta') return H.cta?.title ? (
       <section className="sh-cta rv">
@@ -387,6 +419,9 @@ export function HeaderSearch() {
   const closeT = useRef(0);
   const measure = () => {
     if (!matchMedia('(min-width: 900px)').matches || !wrap.current) return setFit(null);
+    // ortada logolu üst menü: kutu soldan sağa açılır, logoya kadar
+    const mid = document.querySelector('.hdr-c .hc-mid');
+    if (mid) return setFit({ w: Math.max(200, Math.min(340, Math.floor(mid.getBoundingClientRect().left - wrap.current.getBoundingClientRect().left - 24))), drop: false });
     const navs = document.querySelectorAll('.topnav .topnav-b'); const last = navs[navs.length - 1];
     if (!last) return setFit(null);
     const avail = Math.floor(wrap.current.getBoundingClientRect().right - last.getBoundingClientRect().right - 22);
@@ -778,7 +813,7 @@ function Marquee({ items, style, speed, speedM, ls = 1, z, zm }) { // speed: mas
 const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
-function Hero({ slides, open, brands, heroH, pkHero }) {
+function Hero({ slides, open, brands, heroH, pkHero, nv = {} }) {
   useSlideFonts(slides);
   const E = useContext(DesignCtx);
   const [i, setI] = useState(0);
@@ -839,13 +874,14 @@ function Hero({ slides, open, brands, heroH, pkHero }) {
   const grab = () => { target.current = null; clearTimeout(targetT.current); touching.current = true; clearTimeout(settleT.current); };
   const release = () => { touching.current = false; settle(); };
   return (
-    <section className="sh-hero" style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
+    <section className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
         {slides.map((s, k) => <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>
-        <div className="sh-dots">{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>
+        {nv.dots === 'num' ? <div className="sh-dots sh-num" aria-live="polite"><b>{i + 1}</b><span>/</span>{n}</div>
+          : nv.dots !== 'none' && <div className="sh-dots">{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>}
         <button className="sh-hero-nav prev" onClick={() => goTo((i - 1 + n) % n)} aria-label="Önceki"><Icon n="back" s={20} /></button>
         <button className="sh-hero-nav next" onClick={() => goTo((i + 1) % n)} aria-label="Sonraki"><Icon n="back" s={20} className="flip" /></button>
       </>}
@@ -1123,6 +1159,7 @@ export function LinkPick({ v = '', onChange, label = 'Tıklanınca' }) {
   const tree = useTree();
   const brands = useMemo(() => [...new Set(catalog.map((p) => p.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr')), [catalog]);
   const cats = useMemo(() => { const out = []; const walk = (ns, d) => ns.forEach((n) => { out.push([n.id, '— '.repeat(d) + n.name]); walk(n.children, d + 1); }); walk(tree.roots, 0); return out; }, [tree]);
+  const sets = useStore((s) => setsOf(s.settings));
   const type = !v ? '' : /^https?:/.test(v) ? 'url' : v.split(':')[0];
   const val = type === 'url' ? v : v.split(':').slice(1).join(':');
   const setT = (t) => onChange(t === '' ? '' : t === 'url' ? 'https://' : t + ':');
@@ -1131,10 +1168,12 @@ export function LinkPick({ v = '', onChange, label = 'Tıklanınca' }) {
       <span className="field-l">{label}</span>
       <div className="she-link">
         <select value={type} onChange={(e) => setT(e.target.value)} aria-label="Link türü">
-          <option value="">Hiçbir yere gitmesin</option><option value="brand">Marka ürünleri</option><option value="cat">Kategori</option><option value="new">Yeni gelenler</option><option value="all">Tüm ürünler</option><option value="q">Arama sonucu</option><option value="p">Bir ürün</option><option value="url">Web adresi</option>
+          <option value="">Hiçbir yere gitmesin</option><option value="brand">Marka ürünleri</option><option value="cat">Kategori</option><option value="new">Yeni gelenler</option><option value="all">Tüm ürünler</option><option value="q">Arama sonucu</option><option value="p">Bir ürün</option><option value="set">Bir set</option><option value="sets">Tüm setler</option><option value="url">Web adresi</option>
         </select>
         {type === 'brand' && <select value={val} onChange={(e) => onChange('brand:' + e.target.value)}><option value="">Marka seçin</option>{brands.map((b) => <option key={b}>{b}</option>)}</select>}
         {type === 'cat' && <select value={val} onChange={(e) => onChange('cat:' + e.target.value)}><option value="">Kategori seçin</option>{cats.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>}
+        {type === 'set' && <select value={val} onChange={(e) => onChange('set:' + e.target.value)}><option value="">Set seçin</option>{sets.map((x) => <option key={x.id} value={x.id}>{x.name || 'Adsız set'}{x.on ? '' : ' (taslak — yayınlanınca açılır)'}</option>)}</select>}
+        {type === 'set' && !sets.length && <small className="fine">Henüz set yok — Ürünler › Setler'den ekleyin.</small>}
         {type === 'q' && <input value={val} onChange={(e) => onChange('q:' + e.target.value)} placeholder="Aranacak kelime (ör. havya ucu)" />}
         {type === 'url' && <input value={val} onChange={(e) => onChange(e.target.value)} placeholder="https://…" />}
         {type === 'p' && (byId.get(Number(val))
