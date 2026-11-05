@@ -568,7 +568,7 @@ function ShellFull() {
   const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders + lcNew : 0);
   // 3.11.2026 mağaza üst menüsü: 'classic' (eski) · 'center' (logo ortada, menü altında — Tasarım › Renkler ve sayfa › Üst menü)
   const hc = pub && S0.look?.header === 'center';
-  const hs = pub && S0.look?.header === 'search'; // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
+  const hs = pub && (S0.look?.header || 'search') === 'search'; // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && S0.look?.hideTop !== false, S0.look?.hideTop === 'up', tab, urunLayer);
   const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
@@ -617,7 +617,7 @@ function ShellFull() {
             })}
           </nav>
         </div>
-      </header> : <header className={'topbar' + (pub && (S0.look?.header || 'glass') === 'glass' ? ' hdr-g' : '')}>
+      </header> : <header className={'topbar' + (pub && S0.look?.header === 'glass' ? ' hdr-g' : '')}>
         <div className="topbar-in">
           <Brand small onClick={home} />
           {admin && <span className="admin-badge" title="Yönetim paneli"><Icon n="shield" s={14} /><span className="badge-t">Yönetim paneli</span></span>}

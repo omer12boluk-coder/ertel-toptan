@@ -6993,18 +6993,28 @@ html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { color: #6ea8ff; background:
 .hdr-gs .gs-cat:hover { color: var(--fg); background: rgb(15 23 42 / .05); }
 :root:has(.hdr-gs) { --top-h: 108px; }
 @media (max-width: 899px) {
-  :root:has(.hdr-gs) { --top-h: 104px; }
-  .hdr-gs .gs-r1 { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "b i" "s s"; height: auto; row-gap: 8px; column-gap: 8px; padding: 8px 8px 10px 10px; }
-  .hdr-gs .gs-brand { grid-area: b; } .hdr-gs .gs-icons { grid-area: i; justify-self: end; } .hdr-gs .gs-srch { grid-area: s; }
+  :root:has(.hdr-gs) { --top-h: 58px; }
+  .hdr-gs .gs-r1 { height: calc(var(--top-h) - 6px); gap: 6px; padding: 0 6px 0 8px; }
+  .hdr-gs .gs-srch { order: 2; flex: none; } .hdr-gs .gs-icons { order: 3; } .hdr-gs .gs-brand { order: 1; margin-right: auto; }
   .hdr-gs .gs-brand b { font-size: 16px; }
   .hdr-gs .gs-icons [data-theme-btn] { display: none; }
   .hdr-gs .gs-nav { display: none; }
-  /* telefonda arama: tam genişlik alan görünümlü düğme; basınca her zamanki üstte açılan arama kutusu */
+  /* telefonda (5.11.2026 kullanıcı: telefonda sadece yüzen cam): büyüteç simgesi, basınca kutu cam şeridin TAM üstünde açılır */
+  .hdr-gs .gs-srch .hsearch { width: auto; }
   .hdr-gs .gs-srch .hsearch-box { display: none !important; }
-  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box { display: flex !important; }
-  .hdr-gs .gs-srch .hsearch-btn { display: flex !important; width: 100%; height: 40px; border-radius: 20px; justify-content: flex-start; gap: 8px; padding: 0 14px; background: rgb(255 255 255 / .72); border: 1px solid rgb(15 23 42 / .08); color: var(--muted); }
-  .hdr-gs .gs-srch .hsearch-btn::after { content: "Ürün, marka ya da model ara…"; font: 500 14.5px/1 var(--f-body); }
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box { display: flex !important; width: auto !important; }
+  .hdr-gs .gs-srch .hsearch-btn { display: grid !important; }
   .hdr-gs .gs-srch .hsearch.mob-open .hsearch-btn { visibility: hidden; }
 }
 html[data-theme="dark"] .hdr-gs .gs-srch :is(.hsearch-box, .hsearch-btn) { background: rgb(255 255 255 / .08); border-color: rgb(255 255 255 / .1); }
 .topbar.hdr-gs .gs-nav { justify-content: flex-start; padding-left: 8px; }
+
+/* 5.11.2026 telefonda cam üst menülerde açılan arama kutusu cam şeridin birebir üstüne oturur (altından menü görünmesin) */
+@media (max-width: 899px) {
+  /* cam şerit (backdrop-filter) 'fixed' öğelerin kutusu olur → konum şeride göre: tam üstüne */
+  .topbar.hdr-g .hsearch.mob-open .hsearch-box { top: -1px !important; left: -1px !important; right: -1px !important;
+    height: calc(var(--top-h) - 6px + 2px) !important; border-radius: 22px !important; padding: 0 10px 0 16px; background: var(--surface) !important; border: 1px solid color-mix(in oklab, var(--lg-blue) 45%, transparent) !important; box-shadow: 0 10px 30px -14px rgb(10 20 40 / .4) !important; }
+  .topbar.hdr-g .hsearch.mob-open .hsearch-res { top: calc(var(--top-h) + 4px) !important; left: -1px !important; right: -1px !important; border-radius: 18px; }
+}
+/* hap biraz daha mor */
+:root { --lg-blue: #4f5bff; --lg-pill: linear-gradient(180deg, rgb(255 255 255 / .55), rgb(255 255 255 / .12)), linear-gradient(120deg, rgb(98 112 255 / .24), rgb(150 92 255 / .26)); }
