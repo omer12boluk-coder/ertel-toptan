@@ -1436,6 +1436,8 @@ function LookSettings({ d, set }) {
       <ThemePreview S={S} role="customer" title="Bayi uygulaması" accent={S.brand.accent} price={S.brand.priceAccent} />
     </div>
     <div className="dz-goto"><Icon n="brush" s={22} /><span><b>Mağazanın görünümü Tasarım modunda</b><small>Paketler, renkler, site teması, üst ve alt menü, Liquid glass, sayfa geçişleri, kartlar — hepsi tek yerde, bilgisayar ve telefon ayrı ayarlanabilir.</small></span><button type="button" className="btn primary sm" onClick={() => go('tasarim')}>Tasarım modunu aç</button></div>
+    <h3>Yönetim paneli</h3>
+    <Field label="Yönetim paneli görünümü" hint="Apple: bilgisayarda solda sabit cam menü, açık gri zemin, beyaz kartlar; gece modunda koyu grafit. Klasik: eski lacivert üst menü."><span className="seg seg-wrap">{[['apple', 'Apple (yeni)'], ['classic', 'Klasik (eski)']].map(([x, l]) => <button key={x} type="button" className={(L.admin || 'apple') === x ? 'on' : ''} onClick={() => set('look.admin', x)}>{l}</button>)}</span></Field>
     <h3>Bayi uygulaması ve yönetim</h3>
     <ColorRow label="Ana renk" v={S.brand.accent} def="#2f55b0" onChange={(v) => set('brand.accent', v)} />
     <ColorRow label="Toptan fiyat rengi" v={S.brand.priceAccent} def="#c2410c" onChange={(v) => set('brand.priceAccent', v)} />

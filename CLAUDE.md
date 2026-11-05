@@ -174,6 +174,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **5.11.2026 hareket/ses/gece:** Apple açık + gece = `th-dash` (Bakır gece renkleri; `th-dash-force` sadece site 'dash'ta, ay düğmesini gizler). `look.darkFx` circle|fade|curtain|none (geçişte `html.vt-lite` camları kapatır). `look.motionD` soft|fade|none (bilgisayar sayfa geçişi, setupNavAnim `desk`/`dfade`). `look.pill`/`pillM` flow|mercury|none (`pillMode()`, setupFlowPills + BotNav). Ses `src/sfx.js` (Web Audio, `navigator.audioSession='ambient'`), `look.sound`, cihazda ls `sfx-off`; `soundui.jsx` SoundButton (bilgisayar üst menü) / SoundToggle (Hesabım). Hafif mod `look.lite` auto|on|off → html.lite (bulanıklık yok; auto: pointer fine + ≤4 çekirdek/GB ya da açılışta yavaş kare). Ana sayfa ilk 4 bölüm önce, gerisi boşta (`HOME_FULL`). `.thumb img` artık sadece ilk inişte belirir (`.ld`).
 
+- **Yönetim paneli teması (5.11.2026):** `look.admin` apple (varsayılan) | classic → html `adm-on` + `adm-apple` (useTheme). ≥1100px üst menü CSS ile solda sabit cam menüye döner (topbar fixed, grid; navdrop açılır menüler düğmenin sağında), <1100px açık cam üst şerit + yüzen cam alt menü; gece koyu grafit (`--ad-*`). Ayar: Ayarlar › Bayi ve panel renkleri.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.
@@ -206,7 +208,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 13. WhatsApp bilgilendirme (Meta Cloud API, kargoya verildi / teslim edildi) — önce Meta işletme doğrulaması.
 14. Siparişleri okuma yükü: tek 'özet belge' (son 7 gün) — kullanıcı kararı bekliyor.
 15. Yurtiçi Kargo entegrasyonu; sepet linkinden gelen siparişi normal siparişe çevirme + yasal onay + üye adres önerisi.
-16. Sıradaki tasarım adımı: **yönetim paneli Apple açık / yeni tasarım dili** (kullanıcının sırası: mağaza bitti → panel).
+16. Yönetim paneli Apple teması yayında (5.11.2026); kullanıcı geri bildirimi bekleniyor.
 17. (5.11 akşam düzeltmeleri yayında: arama/menü ortalı grid, bildirim paneli camı, tasarım önizlemesinde site teması + üst/alt menü `HeaderPreview`/`BotNavPreview`, reklam kutusu başlığı `useFitWords`, telefonda sayfa modunda açıklama kısa, yapışkan şerit transform ile kayar.) Banner yazısının arka plandan dönünce görünmemesi düzeltmesi yayında, gerçek iPhone'da doğrulanmadı.
 
 **Karar bekleyen:** ödeme özeti 2 üründe kayıyor (çözüm önerildi) · elde kalan mal için dürüst raf/rozet · ana sayfa 'imza' etkileşimi · SMS (Netgsm) · Ürünler ve Bayi siparişleri PageHead/SubNav'a alınsın mı · "Birlikte iyi gider" rafı açıklamanın altında kalıyor.

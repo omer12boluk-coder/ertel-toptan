@@ -45,6 +45,10 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
       const w = el.offsetWidth, vw = document.documentElement.clientWidth;
       let x = align === 'right' ? b.right - w : b.left - (cls.includes('hd-mega') ? 40 : 6);
       x = Math.max(16, Math.min(x, vw - w - 16));
+      // 5.11.2026 yönetim paneli bilgisayarda solda sabit menü (html.adm-apple): menü düğmenin SAĞINDA açılır
+      if (document.documentElement.classList.contains('adm-apple') && innerWidth >= 1100 && wrap.current?.closest('.shell.admin')) {
+        el.style.left = Math.round(b.right + 12) + 'px'; el.style.top = Math.max(12, Math.min(Math.round(b.top - 8), innerHeight - el.offsetHeight - 12)) + 'px'; return;
+      }
       el.style.left = x + 'px'; el.style.top = Math.round(b.bottom + 10) + 'px';
     };
     place(); addEventListener('resize', place); addEventListener('scroll', place, true);

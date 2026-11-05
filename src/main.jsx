@@ -301,6 +301,7 @@ function useLowEndProbe() {
 }
 function useTheme() {
   const liteTick = useLowEndProbe();
+  const isAdm = useStore((s) => s.user?.role === 'admin');
   const S = useStore((s) => s.settings);
   const dev = useStore((s) => s.deviceTheme);
   const pub = useStore((s) => s.user?.role === 'public');
@@ -324,6 +325,8 @@ function useTheme() {
     if (lf) r.style.setProperty('--logo-f', lf); else r.style.removeProperty('--logo-f');
     applyStyle(r, pub ? L.style : null);
     setSfxGlobal(L.sound !== false);
+    // 5.11.2026 yönetim paneli teması (Ayarlar › Bayi ve panel renkleri › Yönetim paneli görünümü, look.admin: apple | classic)
+    r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic');
     // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
     r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
     applyLayout(r, pub ? L : {}); // 5.11.2026 sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (Tasarım › Sayfa)
@@ -341,7 +344,7 @@ function useTheme() {
     r.classList.toggle('th-dash', dash); r.classList.toggle('th-dash-force', forced);
     r.classList.toggle('th-apple', !!pub && (L.site || 'apple') === 'apple' && !effDark); // varsayılan Apple açık (5.11.2026, kullanıcı onayı)
     document.title = seoTitle() || S.brand.appName;
-  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.width, L.edge, L.boxPat, L.bgFx, L.sound, L.lite, liteTick, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.width, L.edge, L.boxPat, L.bgFx, L.sound, L.lite, liteTick, isAdm, L.admin, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {
