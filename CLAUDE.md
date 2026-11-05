@@ -194,6 +194,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **6.11.2026 (3):** Ders: `bgFx glow` + `th-dash` gecede zemini açık bırakıyordu (düzeldi) → zemin/arka plan değişikliğinden sonra GECE MODUNU da aç, bak. Hesabım: React className'i yazınca `side-fixed` siliniyordu → `useLayoutEffect([view])` ile `fitRef`; bilgisayarda Hesabım içi geçişte sadece `.acct-main` belirir (setupNavAnim). Seçili satır siyah.
 
+- **6.11.2026 Akıllı ürün ekle** (dal `akilli-urun`, yayında DEĞİL): `/admin/urun-ekle` (tab `aiekle`, `src/aiadd.jsx`) ad yaz → bekçi `worker/ai.js` `/ai/draft` (ANTHROPIC_KEY varsa Claude + web araması, yoksa Workers AI `[ai]`), `/ai/pics` (sayfadan resim), `/ai/pic` (resim vekili). Taslaklar cihazda ls `ai-drafts`; onay = `ProductEdit draft` (fiyat+stok zorunlu, dış resimler onayda R2'ye alınır). Günde 80 taslak sınırı (KV `aiday:`). Marka mağazaları `SHOPS` (2UUL=2uul.com, Shopify).
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.

@@ -17,6 +17,7 @@ export function ProductsSwitch({ on }) {
   const nS = useStore((st) => (st.settings.sets || []).length);
   return <SubNav label="Ürünler" items={[
     { k: 'products', icon: 'grid', label: 'Ürünler', count: nP, on: on === 'products', onClick: () => go('katalog') },
+    { k: 'ai', icon: 'sparkle', label: 'Akıllı ekle', on: on === 'ai', onClick: () => go('aiekle') },
     { k: 'sets', icon: 'box', label: 'Setler', count: nS, on: on === 'sets', onClick: () => go('setler') },
   ]} />;
 }

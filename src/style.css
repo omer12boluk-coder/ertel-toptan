@@ -8046,3 +8046,39 @@ html[data-theme="dark"] .p0-brands.mc-gray .p0-logo img { filter: grayscale(1) !
 html[data-theme="dark"] .shell.public .plist.pgrid > li.prow .prow-side { background: transparent !important; }
 html.th-dash .shell.public .plist.pgrid .prow-main .thumb, html.th-dash .shell.public .plist.pgrid .prow-main .thumb img, html.th-dash .shell.public :is(.sh-card-img, .sh-card-img .thumb, .sh-card-img .thumb img) { background: #f4f1ec !important; }
 html.th-dash .shell.public .sh-card-img { border-radius: 16px; overflow: hidden; }
+
+/* Akıllı ürün ekle (aiadd.jsx, 6.11.2026) */
+.ai-add .ai-box { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px; margin: 14px 0 18px; }
+.ai-add .ai-l { font-weight: 600; }
+.ai-add .ai-l small { font-weight: 400; color: var(--muted); }
+.ai-add textarea { width: 100%; font-size: 16px; resize: vertical; min-height: 84px; }
+.ai-add .ai-row { display: flex; gap: 10px; }
+.ai-add .ai-row input { flex: 1; min-width: 0; font-size: 16px; }
+.ai-add .ai-box .fine { margin: 0; }
+.ai-list-h { display: flex; align-items: baseline; gap: 6px; margin: 4px 2px 10px; }
+.ai-list-h .link { margin-left: auto; }
+.ai-list { display: grid; gap: 8px; }
+.ai-row-c { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.ai-row-c.st-ok { cursor: pointer; }
+.ai-row-c.st-ok:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.ai-cov { width: 64px; height: 64px; border-radius: 12px; background: var(--bg2, #f2f2f4); display: grid; place-items: center; overflow: hidden; color: var(--muted); }
+.ai-cov img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.ai-t { display: grid; gap: 2px; min-width: 0; }
+.ai-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-t small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-err { color: var(--bad, #c0392b); white-space: normal !important; }
+.ai-spin { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid color-mix(in srgb, var(--accent) 25%, transparent); border-top-color: var(--accent); animation: aiSpin .9s linear infinite; }
+@keyframes aiSpin { to { transform: rotate(360deg); } }
+.ai-banner { align-items: flex-start; }
+.ai-banner .ai-note { margin-top: 4px; font-size: 13px; }
+.ai-banner .ai-src { margin-top: 6px; font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); }
+.ai-banner .ai-src a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.ai-more { display: flex; gap: 8px; margin-top: 10px; }
+.ai-more input { flex: 1; min-width: 0; font-size: 16px; }
+@media (max-width: 700px) {
+  .ai-add .ai-row { flex-direction: column; }
+  .ai-row-c { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; }
+  .ai-row-c .ai-cov { width: 52px; height: 52px; }
+  .ai-row-c > .btn { grid-column: 2 / 4; justify-self: start; }
+  .ai-more { flex-direction: column; }
+}

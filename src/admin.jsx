@@ -109,13 +109,15 @@ function editLists(catalog, S) {
   const brands = [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
   const v = { S, catOpts, brands }; editListsCache.set(catalog, v); return v;
 }
-export function ProductEdit({ p, copy, onClose }) {
+export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
   const { catalog, settings: S } = useStore();
   const isNew = !p;
   const [delC, setDelC] = useState(false);
   const [f, setF] = useState(() => {
     if (p) return { ...p };
     const base = { id: Math.max(9000000, ...catalog.map((x) => x.id)) + 1, k: nextCode(catalog), c: 0, r: 0, w: null, n: '', cur: 'USD', s: 0, a: 1, man: 1 };
+    // Akıllı ürün ekle taslağı (aiadd.jsx): fiyat ve stok boş gelir, yönetici girer
+    if (draft) { const m = draft.media || []; return { ...base, n: draft.n || '', b: draft.b || '', c: draft.c ?? 0, ...(draft.c2 != null && draft.c2 !== draft.c ? { c2: draft.c2 } : {}), t: draft.t || '', r: '', s: '', pi: m[0] || '', im: m.slice(1), ie: 1 }; }
     if (!copy) return base;
     // kopya: kategori, marka, etiket, fiyat, para birimi, resimler, video gelir; kimlik, stok kodu, site bağlantısı ve geçmiş gelmez
     const { id, k, u, ut, ur, pc, nw, so, sg, sgr, pf, man, _s, _t, img, ...rest } = copy;
@@ -130,13 +132,13 @@ export function ProductEdit({ p, copy, onClose }) {
   const auto = priceFor({ ...f, w: null }, S, null, null).mine;
   // kategori / marka listeleri katalog başına bir kez hesaplanır (her açılışta 10 bin ürünü taramak pencereyi geç açıyordu)
   const { catOpts, brands } = editLists(catalog, S);
-  const [brandNew, setBrandNew] = useState(false);
+  const [brandNew, setBrandNew] = useState(() => !!(draft?.b && !brands.includes(draft.b)));
   const [desc, setDesc] = useState(null);
   const [desc0, setDesc0] = useState('');
   const [preview, setPreview] = useState(false);
   const [newImg, setNewImg] = useState('');
   const [pcOk, setPcOk] = useState(false);
-  useEffect(() => { if (!isNew) api().getDesc(f.id).then((h) => { setDesc(h || ''); setDesc0(h || ''); }); else if (copy) api().getDesc(copy.id).then((h) => setDesc(h || '')).catch(() => setDesc('')); else setDesc(''); }, []);
+  useEffect(() => { if (draft) setDesc(draft.desc || ''); else if (!isNew) api().getDesc(f.id).then((h) => { setDesc(h || ''); setDesc0(h || ''); }); else if (copy) api().getDesc(copy.id).then((h) => setDesc(h || '')).catch(() => setDesc('')); else setDesc(''); }, []);
   // Resimler + videolar tek sıra (MediaEditor): pi = kapak (resim), im = geri kalanlar ('v:' video). Eski vd/vdp bu sıraya katılır.
   const media = mediaOf(f);
   // pencere boş yere basınca / Esc ile kapanmaz (sticky); × ya da Vazgeç'te kaydedilmemiş değişiklik varsa sorulur
@@ -145,13 +147,43 @@ export function ProductEdit({ p, copy, onClose }) {
   const tryClose = () => { if (JSON.stringify(f) !== f0.current || (desc != null && desc !== desc0 && !isNew)) setAskClose(true); else onClose(); };
   const setMedia = (arr) => setF((x) => { const { vd, vdp, ...r } = x; return { ...r, pi: arr[0] || '', im: arr.slice(1), ie: 1 }; });
   const mediaOpen = useRef(null);
+  // taslaktaki dış adresli resimler (marka sitesi, AliExpress…) onayda kendi depomuza (R2) alınır → site kapansa da resim kalır
+  const [pull, setPull] = useState('');
+  async function pullExternal(arr) {
+    const ext = (x) => /^https?:\/\//.test(x) && !/(ertelmarket\.com|platincdn\.com|r2\.dev)/.test(x);
+    const todo = arr.filter((x) => !isVid(x) && (ext(x) || /^data:image\//.test(x))); if (!todo.length) return arr;
+    let i = 0, bad = 0; const out = [];
+    for (const x of arr) {
+      if (!todo.includes(x)) { out.push(x); continue; }
+      setPull(`Resimler depoya alınıyor ${++i}/${todo.length}…`);
+      try {
+        const blob = /^data:/.test(x) ? await (await fetch(x)).blob() : await api().aiPicBlob(x);
+        const h = await fileHash(blob);
+        const ref = (await api().findUpload(h)) || await (async () => { const [big, th] = await Promise.all([imageBlob(blob, 1600, 0.85), imageBlob(blob, 420, 0.8)]); return api().uploadImage(big, th, h); })();
+        out.push(ref);
+      } catch { bad++; }
+    }
+    setPull(''); if (bad) toast(`${bad} resim alınamadı, listeden çıkarıldı`, 'bad');
+    return out;
+  }
+  const [more, setMore] = useState('');
+  async function morePics() {
+    const u = more.trim(); if (!/^https?:\/\//.test(u)) return toast('Ürün sayfasının adresini yapıştırın', 'bad');
+    setPull('Sayfadaki resimler aranıyor…');
+    try { const l = await api().aiPics(u); const cur = mediaOf(f); const add = l.filter((x) => !cur.includes(x)); if (!add.length) toast('Bu sayfada yeni resim bulunamadı', 'bad'); else { setMedia([...cur, ...add]); setMore(''); toast(add.length + ' resim eklendi; istemediklerinizi × ile kaldırın'); } }
+    catch (e) { toast('Sayfa okunamadı: ' + e.message, 'bad'); }
+    setPull('');
+  }
   async function save() {
     if (!f.n.trim()) return toast('Ürün adı boş olamaz', 'bad');
+    if (draft && !(num(f.r) > 0)) { document.getElementById('pe-r')?.focus(); return toast('Satış fiyatını girin', 'bad'); }
+    if (draft && String(f.s).trim() === '') { document.getElementById('pe-s')?.focus(); return toast('Stok adedini girin (yoksa 0)', 'bad'); }
     if (document.querySelector('.md-t.up')) return toast('Yükleme sürüyor, biraz bekleyin', 'bad');
     if (f.k && catalog.some((x) => x.id !== f.id && String(x.k || '').toLowerCase() === String(f.k).trim().toLowerCase())) return toast('Bu stok kodu başka üründe var: ' + f.k, 'bad');
     setBusy(true);
     try {
-      const rec = { ...f, n: f.n.trim(), r: num(f.r) || 0, w: num(f.w), s: Number(f.s) || 0, c: Number(f.c) || 0, ut: Date.now(), ur: 'edit' };
+      let ff = f; if (draft) { const m = await pullExternal(mediaOf(f)); ff = { ...f, pi: m[0] || '', im: m.slice(1), ie: 1 }; }
+      const rec = { ...ff, n: f.n.trim(), r: num(f.r) || 0, w: num(f.w), s: Number(f.s) || 0, c: Number(f.c) || 0, ut: Date.now(), ur: 'edit' };
       if (imgUrl.trim() && rec.img !== 'fs') rec.img = imgUrl.trim();
       if (!imgUrl.trim() && rec.img && rec.img !== 'fs') delete rec.img;
       delete rec._s; delete rec._t;
@@ -166,7 +198,7 @@ export function ProductEdit({ p, copy, onClose }) {
       if (rec.c2 === '' || rec.c2 === rec.c) delete rec.c2; else if (rec.c2 != null) rec.c2 = Number(rec.c2);
       const list = isNew ? [rec, ...catalog] : catalog.map((x) => (x.id === rec.id ? rec : x));
       // hemen kapanır; kayıt arka plan kuyruğunda (saveq.js), durum sağ altta / hata olursa tekrar dener
-      setCatalog(list); toast('Ürün kaydedildi'); onClose();
+      setCatalog(list); toast(draft ? 'Ürün eklendi' : 'Ürün kaydedildi'); onSaved?.(rec); onClose();
       saveCatalogLater();
       if (desc != null && desc !== desc0) { const id = rec.id, h = desc; queueSave('desc:' + id, () => api().setDesc(id, h)); }
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
@@ -191,11 +223,21 @@ export function ProductEdit({ p, copy, onClose }) {
   }
 
   return (
-    <Sheet wide title={copy ? 'Kopyadan yeni ürün' : isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={copy ? `“${copy.n}” kopyalandı · yeni stok kodu ${f.k}` : isNew ? '' : `#${f.id} · ${f.k}`} sticky cls="pe-sheet" onClose={tryClose} footer={<>
+    <Sheet wide title={draft ? 'Taslağı incele' : copy ? 'Kopyadan yeni ürün' : isNew ? 'Yeni ürün' : 'Ürünü düzenle'} sub={draft ? `“${draft.q}” · stok kodu ${f.k}` : copy ? `“${copy.n}” kopyalandı · yeni stok kodu ${f.k}` : isNew ? '' : `#${f.id} · ${f.k}`} sticky cls="pe-sheet" onClose={tryClose} footer={<>
       {!isNew && <button className="btn ghost danger pe-del" onClick={() => setDelC(true)}><Icon n="trash" s={16} />Ürünü sil</button>}
       <button className="btn ghost" onClick={tryClose}>Vazgeç</button>
-      <button className="btn primary" onClick={save} disabled={busy}><Icon n="check" s={16} />Kaydet</button>
+      <button className="btn primary" onClick={save} disabled={busy || !!pull}><Icon n="check" s={16} />{pull || (draft ? 'Onayla ve ekle' : 'Kaydet')}</button>
     </>}>
+      {draft && (
+        <div className="banner ai-banner">
+          <Icon n="sparkle" />
+          <div>
+            <b>Yapay zekâ hazırladı — kontrol edin, fiyat ve stok girip onaylayın.</b>
+            {draft.note && <div className="ai-note">{draft.note}</div>}
+            {draft.src?.length > 0 && <div className="ai-src">Kaynaklar: {draft.src.slice(0, 6).map((x, i) => <a key={i} href={x.url} target="_blank" rel="noopener noreferrer">{x.title || x.url}</a>)}</div>}
+          </div>
+        </div>
+      )}
       {askClose && <Confirm title="Değişiklikler kaydedilmedi" text="Yaptığınız değişiklikler (yüklenen resim / videolar dahil) bu ürüne kaydedilmeyecek. Çıkılsın mı?" okLabel="Kaydetmeden çık" tone="danger" onOk={onClose} onClose={() => setAskClose(false)} />}
       {delC && <Confirm title="Ürün silinsin mi?" text={delText(p)} okLabel="Sil" tone="danger" onOk={() => removeProduct(p).then((ok) => ok && onClose())} onClose={() => setDelC(false)} />}
       {f.pc && (
@@ -264,6 +306,7 @@ export function ProductEdit({ p, copy, onClose }) {
           {f.u && <a className="link" href={S.catalog.siteUrl + f.u} target="_blank" rel="noopener">Sitede aç ↗</a>}
         </div>
         <MediaEditor list={media} onChange={setMedia} S={S} openRef={mediaOpen} />
+        {draft && <div className="ai-more"><input id="pe-more" placeholder="Başka bir sayfadan resim al: ürün sayfasının linkini yapıştırın (AliExpress, marka sitesi…)" value={more} onChange={(e) => setMore(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && morePics()} /><button type="button" className="btn sm ghost" onClick={morePics} disabled={!!pull}>Resimleri getir</button></div>}
       </section>
 
       <section className="pe-sec">

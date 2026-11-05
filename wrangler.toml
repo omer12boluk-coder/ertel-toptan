@@ -22,6 +22,10 @@ bucket_name = "ertel"
 binding = "R2Y"
 bucket_name = "ertel-yedek"
 
+# Akıllı ürün ekle: ANTHROPIC_KEY yoksa ücretsiz Cloudflare Workers AI kullanılır (worker/ai.js)
+[ai]
+binding = "AI"
+
 [[kv_namespaces]]
 binding = "KV"
 id = "__KV_ID__"

@@ -98,6 +98,24 @@ export class DemoBackend {
   async uploadImage(big, th, h) { const ref = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(big); }); (this._ups = this._ups || []).unshift({ ref, v: false, t: Date.now(), s: big.size, h }); return ref; }
   async findUpload(h) { return (this._ups || []).find((x) => x.h && x.h === h)?.ref || null; }
   async listUploads() { return { items: this._ups || [], cursor: null }; }
+  // demo: Akıllı ürün ekle — gerçek yapay zekâ yok, örnek taslak (canlıda bekçi /ai/draft)
+  async aiDraft({ name }) {
+    await new Promise((r) => setTimeout(r, 1800));
+    const q = String(name || '').trim(); const up = q.toUpperCase();
+    const brand = /2UUL/.test(up) ? '2UUL' : (q.split(/\s+/)[0] || '').toUpperCase();
+    const model = (up.replace(brand, '').replace(/\s+/g, '').match(/[A-Z]+\d+[A-Z]*/) || [''])[0];
+    const pic = (t, c) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800"><rect width="800" height="800" fill="${c}"/><text x="400" y="420" font-family="Arial" font-size="64" text-anchor="middle" fill="#fff">${t}</text></svg>`);
+    return { ok: true, left: 79, draft: {
+      q, engine: 'demo', n: `${brand} ${model} Ürün Adı (demo taslak)`, b: brand, model, c: 42, c2: null,
+      t: [brand, `${brand} ${model}`, model, model.replace(/(\D)(\d)/, '$1 $2'), model.replace(/(\D)(\d)/, '$1-$2'), 'Telefon Tamir', `${brand} ${model} Fiyat`, `${brand} ${model} Ne İşe Yarar`, `${brand} ${model} Türkiye Satıcısı`].join(','),
+      desc: `<p dir="ltr">${brand} ${model}, cep telefonu tamirinde kullanılan … (demo: canlıda yapay zekâ ürünü araştırıp gerçek açıklamayı yazar).</p><p dir="ltr"><strong>Özellikler</strong></p><ul dir="ltr"><li>Örnek özellik</li></ul><p dir="ltr"><strong>Teknik Özellikler</strong></p><table><thead><tr><th scope="col">Özellik</th><th scope="col">Değer</th></tr></thead><tbody><tr><td>Marka / Model</td><td>${brand} ${model}</td></tr></tbody></table>`,
+      note: 'Demo taslak: canlı sitede ürün web’de araştırılır.',
+      imgs: [pic(model || 'Resim 1', '#3b6ea8'), pic('Resim 2', '#6a8f3b'), pic('Resim 3', '#a8653b')].map((u) => ({ u, from: brand.toLowerCase() + '.com' })),
+      src: [{ url: 'https://' + brand.toLowerCase() + '.com/', title: brand.toLowerCase() + '.com' }],
+    } };
+  }
+  async aiPics() { return []; }
+  async aiPicBlob(u) { return (await fetch(u)).blob(); }
   async saveCatalog(items) { this.db.catalog = items.map((p) => { const o = {}; for (const k in p) if (!k.startsWith('_')) o[k] = p[k]; return o; }); this.db.catalogVersion = now(); if (!ls.set(KEY, this.db)) console.warn('localStorage dolu'); this.emit(); }
   async getDesc(id) {
     const e = this.db.descEdits || {};

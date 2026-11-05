@@ -21,6 +21,7 @@ function safeEnv(env) {
     delete: (...a) => kv.delete(...a).catch((e) => console.log('KV silme atlandı', a[0], String(e.message || e))) };
   return { ...env, KV };
 }
+import { aiRoute, aiStatus } from './ai.js';
 export default {
   async scheduled(event, env, ctx) {
     env = safeEnv(env);
@@ -44,6 +45,7 @@ export default {
         return r ? json(r, 200, { 'Cache-Control': 'public, max-age=30' }) : json({ error: 'kur alınamadı' }, 502);
       }
       // Yönetici resim yükleme (Ürünü düzenle > +) ve yüklenen / kopyalanan resimleri gösterme (Cloudflare R2 deposu)
+      if (url.pathname.startsWith('/ai/')) return await aiRoute(req, env, url, adminOf, json);
       if (url.pathname === '/up' && req.method === 'POST') return json(await upImage(req, env));
       if (url.pathname === '/upv' && req.method === 'POST') return json(await upVideo(req, env));
       if (url.pathname === '/up/has' && req.method === 'GET') return json(await upHas(env, url));
@@ -76,7 +78,7 @@ export default {
       if (url.pathname === '/notify' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyOrder(env, String(b.id || ''))); }
       if (url.pathname === '/notify-test' && req.method === 'POST') { if (await env.KV.get('ntest')) return json({ ok: false, error: 'Biraz bekleyip tekrar deneyin' }); await env.KV.put('ntest', '1', { expirationTtl: 120 }); return json(await notifySend(env, { subject: 'ERTEL GSM · bildirim denemesi', text: 'Bu bir deneme bildirimidir. Mağazadan sipariş gelince buna benzer bir mesaj alacaksınız.' })); }
       if (url.pathname === '/tg-link' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await tgLink(env, String(b.code || ''))); }
-      if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: await notifyStatus(env) });
+      if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: await notifyStatus(env), ai: aiStatus(env) });
       // müşteriye sipariş durumu bildirimi (web push)
       if (url.pathname === '/push/key') return json({ key: (await vapidKeys(env)).pub });
       if (url.pathname === '/push/sub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); const r = await pushSub(env, b); if (r.ok && b.hello && !(await env.KV.get('ph:' + b.id))) { await env.KV.put('ph:' + b.id, '1', { expirationTtl: 60 }); r.test = await pushStatus(env, String(b.id), true).catch((e) => ({ error: e.message })); } return json(r); }

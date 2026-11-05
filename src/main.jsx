@@ -43,6 +43,7 @@ import { AdminHome } from './dashboard.jsx';
 import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
+import { AiAdd } from './aiadd.jsx';
 import { startRate, syncNow, startVersionCheck } from './watch.js';
 import { idbGet, idbSet } from './idb.js';
 
@@ -654,7 +655,7 @@ function ShellFull() {
   }, [hs]);
   const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && LK.hideTop !== false, LK.hideTop === 'up', tab, urunLayer);
-  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
+  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
@@ -774,6 +775,7 @@ function ShellFull() {
         {tab === 'markalar' && pub && <BrandsPage />}
         {tab === 'setlist' && pub && <SetsPage />}
         {tab === 'setler' && admin && <SetsAdmin />}
+        {tab === 'aiekle' && admin && <AiAdd />}
         {tab === 'talep' && pub && <PreqPage />}
         {tab === 'yasal' && pub && <LegalPage />}
         {tab === 'yok' && pub && <NotFound />}

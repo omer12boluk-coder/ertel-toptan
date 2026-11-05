@@ -379,6 +379,18 @@ export class FirebaseBackend {
   }
   async idToken() { try { return await this.auth.currentUser?.getIdToken(); } catch { return null; } }
   // ---- Ürün talebi (mağaza üyesi: fotoğraf + açıklama; yönetici yanıtlar). Fotoğraflar bekçi üzerinden R2'ye (kotalı), kayıt preq/{id}
+  // Akıllı ürün ekle (worker/ai.js): yapay zekâ taslağı birkaç dakika sürebilir → uzun bekleme
+  async aiDraft(body) {
+    const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı, yeniden giriş yapın');
+    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/ai/draft', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), 240000);
+    const j = await r.json().catch(() => ({})); if (!j.ok) throw new Error(j.error || 'Hazırlanamadı (' + r.status + ')'); return j;
+  }
+  async aiPics(url) { return (await this._watchPost('/ai/pics', { url })).imgs || []; }
+  async aiPicBlob(u) {
+    const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı');
+    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/ai/pic?u=' + encodeURIComponent(u), { headers: { Authorization: 'Bearer ' + tok } }), 45000);
+    if (!r.ok) throw new Error('Resim alınamadı'); return r.blob();
+  }
   async _watchPost(path, body, isForm) {
     const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı, yeniden giriş yapın');
     const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + path, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, ...(isForm ? {} : { 'Content-Type': 'application/json' }) }, body: isForm ? body : JSON.stringify(body) }), 60000);

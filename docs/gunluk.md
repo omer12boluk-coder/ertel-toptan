@@ -113,3 +113,13 @@ Tarama sonucu: ertelmarket.com/www/resim DNS + dosyalar + derin linkler + bekçi
 - Akan hap: hedef zemin geçişle geliyorsa ilk karede saydam okunuyordu → okurken `transition: none`; bitince asıl hap anında görünür.
 
 **Gece modu dersleri:** `bgFx glow` + `th-dash` zemini açık bırakıyordu; Paket 0 bölümlerine gece rengi verilmemişti; ürün kartında `.prow-side` düz `--surface` ayrı şerit gibiydi (gecede saydam); Stil Stüdyosu `imgBg #fff` gecede bembeyaz → th-dash'te `#f4f1ec`. **Her zemin/kutu değişikliğinden sonra gece modunda ana sayfa + Ürünler + Hesabım'a bak.**
+
+
+## 6.11.2026 — Akıllı ürün ekle (dal `akilli-urun`)
+Kullanıcı: "ürün adını yazayım (ör. 2uul da 88), etiketleri benim tarzımda, açıklamayı yapay zekâ yazsın, resimleri 2UUL/AliExpress/martview'dan bulsun; ben bakıp fiyat + stok girip onaylayayım."
+- Sayfa: Ürünler › Akıllı ekle (`src/aiadd.jsx`). Her satıra bir ürün; sıra modül düzeyinde (sayfadan çıkınca da sürer), tek tek hazırlanır.
+- Örnek tarz: addaki kelimelere en çok benzeyen, etiketi >20 olan 2 ürünün adı + etiketi + açıklaması (resim/iframe çıkarılmış) yapay zekâya örnek gider.
+- Bekçi `worker/ai.js`: Claude (`AI_MODEL` varsayılan claude-sonnet-5-5, web_search 6 kez) JSON döndürür {name, brand, model, cat, cat2, tags, desc, pages, note}; resimler: marka Shopify mağazası (`/search/suggest.json` + `/products/<ad>.js`), `pages` + arama sonuçlarındaki sayfalar (AliExpress `imagePathList`, JSON-LD, og:image, galeri resimleri).
+- Onay: `ProductEdit` taslak modu (banner + kaynaklar + 'Başka sayfadan resim al'), dış adresli resimler `/ai/pic` üzerinden indirilip `uploadImage` ile R2'ye.
+- Kurulum: GitHub Secrets'a `ANTHROPIC_KEY` (console.anthropic.com) → main'e birleşince `worker.yml` gizli ayarı yükler. Anahtar yoksa ücretsiz Workers AI (web araması yok, sonuç zayıf).
+- Not: ücretsiz Workers planında 10 ms CPU sınırı büyük sayfa ayrıştırmada aşılabilir → Workers Paid önerilir.
