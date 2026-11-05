@@ -116,7 +116,7 @@ export function PackDecor({ pk, mini, top = true }) {
   const bf = fam ? { fontFamily: `'${fam}', system-ui, sans-serif` } : null;
   return (
     <div className={'decor pk-decor front' + (mini ? ' pv' : '') + (band ? ' has-band' : '') + (band && round ? ' band-round' : '')} aria-hidden="true">
-      {pat && <div className="dc-bg pk-pat" style={{ ...pat, opacity: pk.pat.o ?? 0.07 }} />}
+      {pat && (() => { const { full, ...st } = pat; return <div className={'dc-bg pk-pat' + (full ? ' full' : '')} style={{ ...st, opacity: full ? 1 : pk.pat.o ?? 0.07 }} />; })()}
       {pk.tint && <div className="dc-bg" style={{ background: pk.tint }} />}
       {orn && <div className="pk-orn" style={{ backgroundImage: orn.img, backgroundSize: orn.w + 'px ' + orn.h + 'px', height: orn.h }} />}
       {t && <div className="dc-layer"><Parts t={t} n={n} /></div>}

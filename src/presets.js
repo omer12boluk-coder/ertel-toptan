@@ -124,12 +124,25 @@ export const FX_KINDS = {
   hearts: 'Kalpler', flakes: 'Kar tanesi', stars: 'Yıldızlar', leaves: 'Sonbahar yaprağı', balloons: 'Balonlar', gears: 'Dişliler',
 };
 // ---- Sayfa deseni (1.11.2026, tema parçası 'pat'): sayfanın zemininde çok hafif tekrar eden desen {k, c, o (0-1), z (ölçek)}
-export const PATTERNS = { none: 'Yok', dots: 'Noktalar', grid: 'Kareli', diag: 'Çapraz çizgi', checks: 'Dama', plus: 'Artılar', waves: 'Dalgalar', zigzag: 'Zikzak',
+export const PATTERNS = { none: 'Yok',
+  // 5.11.2026 Apple temaları için tam sayfa zeminler (desen değil; tüm sayfayı kaplar, gece modunda kendiliğinden koyulaşır)
+  'z-mesh': 'Renk ağı', 'z-aurora': 'Aurora', 'z-white': 'Beyazdan griye', 'z-mono': 'Gri ışık', 'z-spot': 'Tepe ışığı', 'z-sand': 'Kum', 'z-dark': 'Grafit', grain: 'İnce doku',
+  dots: 'Noktalar', grid: 'Kareli', diag: 'Çapraz çizgi', checks: 'Dama', plus: 'Artılar', waves: 'Dalgalar', zigzag: 'Zikzak',
   stars: 'Yıldızlar', hearts: 'Kalpler', snow: 'Kar taneleri', circuit: 'Devre kartı', moons: 'Hilal ve yıldız', tools: 'Tamir aletleri' };
 const svgUrl = (w, h, body) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>${body}</svg>`)}")`;
 export function patBg(k, c = '#64748b', z = 1) {
   const S = Math.round(28 * (z || 1));
+  const A = (a) => hexA(c, a);
+  const full = (bg) => ({ backgroundImage: bg, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat', full: true });
   switch (k) {
+    case 'z-mesh': return full(`radial-gradient(42% 48% at 8% 6%, ${A(0.2)}, transparent 70%), radial-gradient(38% 44% at 94% 12%, rgb(242 168 118 / .2), transparent 70%), radial-gradient(46% 52% at 72% 98%, ${A(0.14)}, transparent 70%), radial-gradient(40% 46% at 12% 92%, rgb(110 200 185 / .16), transparent 70%), linear-gradient(180deg, #f8f8fa, #eeeff3)`);
+    case 'z-aurora': return full(`radial-gradient(60% 42% at 18% 0%, ${A(0.32)}, transparent 72%), radial-gradient(50% 40% at 88% 8%, rgb(94 214 200 / .26), transparent 72%), radial-gradient(60% 46% at 50% 104%, rgb(251 191 36 / .16), transparent 72%), linear-gradient(180deg, #f5f6f9, #eef0f4)`);
+    case 'z-white': return full('linear-gradient(180deg, #ffffff 0%, #f5f5f7 45%, #e8e8ed 100%)');
+    case 'z-mono': return full('radial-gradient(120% 80% at 50% -12%, #ffffff 0%, #f1f1f3 45%, #dcdce1 100%)');
+    case 'z-spot': return full(`radial-gradient(70% 45% at 50% -6%, #ffffff 0%, ${A(0.06)} 55%, transparent 80%), linear-gradient(180deg, #f2f2f5, #e9e9ee)`);
+    case 'z-sand': return full('radial-gradient(90% 60% at 85% 0%, #fffaf3 0%, transparent 60%), linear-gradient(180deg, #f7f3ec, #ece4d8)');
+    case 'z-dark': return full('radial-gradient(80% 60% at 80% 0%, #3a3a40 0%, transparent 65%), linear-gradient(180deg, #1c1c1f, #0e0e10)');
+    case 'grain': return { backgroundImage: `radial-gradient(${c} .6px, transparent .8px)`, backgroundSize: `${Math.max(3, Math.round(4 * (z || 1)))}px ${Math.max(3, Math.round(4 * (z || 1)))}px` };
     case 'dots': return { backgroundImage: `radial-gradient(${c} 1.4px, transparent 1.6px)`, backgroundSize: `${S}px ${S}px` };
     case 'grid': return { backgroundImage: `linear-gradient(${c} 1px, transparent 1px), linear-gradient(90deg, ${c} 1px, transparent 1px)`, backgroundSize: `${S}px ${S}px` };
     case 'diag': return { backgroundImage: `repeating-linear-gradient(45deg, ${c} 0 1.2px, transparent 1.2px ${Math.round(S / 2.2)}px)` };
@@ -161,6 +174,17 @@ export function ornBg(k, cs = []) {
   }
 }
 export const PACKS = [
+  // 5.11.2026 Apple temaları (Claude): sakin zemin + buzlu cam kartlar + tek vurgu rengi; banner renklerinize dokunmaz
+  { id: 'apple-mesh', n: 'Apple · renk ağı', d: 'Açık zemin üstünde yumuşak mavi-şeftali ışık ağı, buzlu cam kartlar', sw: ['#f5f5f7', '#0a66d6', '#f2a876'], apple: true,
+    palette: { accent: '#0a66d6', price: '#1d1d1f', bg: '#f5f5f7' }, pat: { k: 'z-mesh', c: '#0a66d6', o: 1 }, frost: 1, tint: '' },
+  { id: 'apple-aurora', n: 'Apple · aurora', d: 'Mavi, turkuaz ve altın ışık; belirgin buzlu cam', sw: ['#eef0f4', '#0a84ff', '#5ed6c8'], apple: true,
+    palette: { accent: '#0a7ae6', price: '#1d1d1f', bg: '#f3f4f7' }, pat: { k: 'z-aurora', c: '#0a84ff', o: 1 }, frost: 2, tint: '' },
+  { id: 'apple-mono', n: 'Apple · siyah beyaz', d: 'Beyazdan griye geçiş, siyah vurgu, sade', sw: ['#ffffff', '#1d1d1f', '#d2d2d7'], apple: true,
+    palette: { accent: '#1d1d1f', price: '#1d1d1f', bg: '#f5f5f7' }, pat: { k: 'z-mono', c: '#1d1d1f', o: 1 }, frost: 1, tint: '' },
+  { id: 'apple-sand', n: 'Apple · kum', d: 'Sıcak kum zemin, bakır vurgu, hafif buzlu', sw: ['#f7f3ec', '#a8642e', '#e8dfd1'], apple: true,
+    palette: { accent: '#a8642e', price: '#3b2a1c', bg: '#f7f3ec' }, pat: { k: 'z-sand', c: '#a8642e', o: 1 }, frost: 1, tint: '' },
+  { id: 'apple-spot', n: 'Apple · tepe ışığı', d: 'Gri zemin, üstten beyaz ışık, grafit vurgu', sw: ['#f2f2f5', '#3a3a3c', '#ffffff'], apple: true,
+    palette: { accent: '#3a3a3c', price: '#1d1d1f', bg: '#f2f2f5' }, pat: { k: 'z-spot', c: '#0a66d6', o: 1 }, frost: 1, tint: '' },
   { id: 'efsane', n: 'Efsane Cuma', d: 'Siyah-altın, ışıltı, indirim rozeti', sw: ['#0a0a0b', '#f5c542', '#3a2f12'],
     palette: { accent: '#111827', price: '#a16207', bg: '#f7f6f2' }, hero: 'a-gold', band: { text: 'EFSANE CUMA · SEÇİLİ ÜRÜNLERDE BÜYÜK İNDİRİM', bg: 'linear-gradient(90deg, #0a0a0b, #3a2f12, #0a0a0b)', color: '#f5c542' },
     fx: { kind: 'sparkle', c: ['#f5c542', '#fde68a', '#ffffff'] }, badge: { text: 'FIRSAT', bg: '#f5c542', color: '#111' }, tint: 'linear-gradient(180deg, rgb(17 24 39 / .07), transparent 55%)' },
@@ -239,7 +263,8 @@ export const PACKS = [
     fx: { kind: 'none' }, badge: null, tint: '', pat: { k: 'plus', c: '#15803d', o: 0.06 } },
 ];
 export const PACK_BY = Object.fromEntries(PACKS.map((x) => [x.id, x]));
-export const PACK_PARTS = [['palette', 'Renkler'], ['hero', 'Banner zemini'], ['band', 'Duyuru şeridi'], ['fx', 'Efekt'], ['badge', 'Ürün rozeti'], ['tint', 'Sayfa tonu'], ['pat', 'Sayfa deseni'], ['orn', 'Süs dizisi']];
+export const PACK_PARTS = [['palette', 'Renkler'], ['hero', 'Banner zemini'], ['band', 'Duyuru şeridi'], ['fx', 'Efekt'], ['badge', 'Ürün rozeti'], ['tint', 'Sayfa tonu'], ['pat', 'Sayfa zemini / deseni'], ['frost', 'Buzlu cam'], ['orn', 'Süs dizisi']];
+export const FROSTS = [[0, 'Kapalı'], [1, 'Hafif buzlu'], [2, 'Belirgin buzlu']];
 
 // Etkin tema: kayıttaki pack + (varsa) kullanıcının kendi ayarları; tarih aralığı dışındaysa null
 export function activePack(look, now = Date.now()) {
@@ -259,6 +284,7 @@ export function activePack(look, now = Date.now()) {
     tint: on('tint') ? (p.tintC ? `linear-gradient(180deg, ${hexA(p.tintC, p.tintO ?? 0.1)}, transparent 62%)` : base.tint) : '',
     pat: on('pat') ? { ...(base.pat || {}), ...(p.pat || {}) } : null,
     orn: on('orn') ? { k: p.orn ?? base.orn ?? 'none', c: p.ornC || base.ornC || [] } : null,
+    frost: on('frost') ? Number(p.frost ?? base.frost ?? 0) || 0 : 0, // 5.11.2026 kartlar / sayfa kutuları buzlu cam (html.fr-1 / fr-2)
   };
 }
 const hexA = (h, a) => { const m = /^#([\da-f]{6})$/i.exec(h || ''); if (!m) return h; const n = parseInt(m[1], 16); return `rgb(${n >> 16} ${(n >> 8) & 255} ${n & 255} / ${a})`; };

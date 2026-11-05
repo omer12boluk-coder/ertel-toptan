@@ -329,7 +329,8 @@ function useTheme() {
     r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic');
     // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
     r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
-    applyLayout(r, pub ? L : {}); // 5.11.2026 sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (Tasarım › Sayfa)
+    applyLayout(r, pub ? L : {});
+    r.classList.toggle('fr-1', !!pub && pk?.frost === 1); r.classList.toggle('fr-2', !!pub && pk?.frost === 2); // tema stüdyosu › buzlu cam // 5.11.2026 sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (Tasarım › Sayfa)
     // 3.11.2026 telefon alt menüsü görünümü (Tasarım › Renkler ve sayfa › Telefon alt menüsü); sadece mağazada
     const bn = pub ? (['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass') : 'classic';
     ['glass', 'dark', 'bar'].forEach((k) => r.classList.toggle('bn-' + k, bn === k));
@@ -1019,7 +1020,7 @@ function setupNavAnim() {
   const key = (s) => [s.tab, s.acct || '', s.pid || '', s.openOrder || '', s.openReq || '', s.lcOpen || ''].join('|');
   let last = key(store.s), hint = '', hintAt = 0, click = null, mo = null, watched = null;
   const mark = (h) => { hint = h; hintAt = Date.now(); };
-  const navIdx = () => { const bs = [...document.querySelectorAll('.botnav .botnav-b')]; return bs.findIndex((b) => b.classList.contains('on')); };
+  const navIdx = () => { const bs = [...document.querySelectorAll(matchMedia('(max-width: 899px)').matches ? '.botnav .botnav-b' : '.topbar .topnav .topnav-b')]; return bs.findIndex((b) => b.classList.contains('on')); };
   let lastIdx = -1;
   const mob = () => matchMedia('(max-width: 899px)').matches;
   // 5.11.2026 bilgisayarda da sayfa geçişi (look.motionD): 'soft' kısa kayma + solma (varsayılan) · 'fade' sadece solma · 'none' yok
@@ -1028,7 +1029,7 @@ function setupNavAnim() {
   addEventListener('popstate', () => mark('back'), true);
   addEventListener('pointerdown', (e) => {
     const t = e.target instanceof Element ? e.target : null; if (!t) return;
-    if (t.closest('.back-btn, .oa-back')) mark('back'); else if (t.closest('.botnav')) { mark('tab'); lastIdx = navIdx(); }
+    if (t.closest('.back-btn, .oa-back')) mark('back'); else if (t.closest('.botnav, .topbar .topnav')) { mark('tab'); lastIdx = navIdx(); }
   }, { capture: true, passive: true });
   // sayfa içi geçişler (sepet → ödeme, sipariş detayı, adımlar…): adres değişmese de tıklanan düğme kaybolup yerine büyük bir bölüm gelirse
   addEventListener('click', (e) => {
@@ -1051,7 +1052,7 @@ function setupNavAnim() {
     clear: { dx: () => Math.round(innerWidth * 0.24), ms: 1.15, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 },
     glass: { dx: 26, ms: 1.4, ease: 'cubic-bezier(.32,.72,0,1)', glass: true },
     slow: { dx: () => Math.round(innerWidth * 0.24), ms: 3, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 },
-    desk: { dx: 22, ms: 0.85, ease: 'cubic-bezier(.22,.8,.24,1)', cv: 0.7 }, // bilgisayar: kısa, sakin
+    desk: { dx: () => Math.round(Math.min(200, innerWidth * 0.13)), ms: 1.15, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 }, // bilgisayar: telefondaki gibi yönlü yandan kayma (ekranın ~%13'ü)
     dfade: { dx: 0, ms: 0.7, ease: EASE },
   };
   const play = (els, kind, ms0, dk = 1) => {

@@ -14,9 +14,9 @@ import {
   ScaleField, MQ_STYLES, ShopImg, useShopImg, CtaButton, btnStyleOf, GeoFields, geoOf, withProdFallback, THEMES, SLIDE_LAYOUTS, COVER_LY, ColorPick, LinkPick, LogoPick, ImgPick, ImgLook, Rows,
 } from './shophome.jsx';
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
-import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter, ensureLogoSvg } from './presets.js';
+import { FROSTS, BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter, ensureLogoSvg } from './presets.js';
 import { STYLE_PRESETS, PRESET_BY, SHADOWS, BORDERS, HOVERS, TITLES, styleOut } from './stylekit.js';
-import { snapshot, applyPreset, sameAs, APPLE, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
+import { snapshot, applyPreset, sameAs, APPLE, CLAUDE_CHANGES, upgradePresets, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
 
@@ -149,7 +149,7 @@ export function ShopDesigner() {
 
   // 5.11.2026: paketler gelmeden önceki görünüm bir kez 'Paket 2 · Eski düzenim' olarak saklanır (tek tıkla geri dönülsün)
   useEffect(() => {
-    if (Array.isArray(store.s.settings.dzPresets)) return;
+    if (Array.isArray(store.s.settings.dzPresets)) { const up = upgradePresets(store.s.settings.dzPresets, prepare(store.s.settings).shopHome); if (up) savePresets(up, A); return; }
     savePresets([{ id: 'p' + Date.now().toString(36), name: 'Eski düzenim', note: 'Paketlerden önceki hâlin (5.11.2026): renkler, tema, stil, menüler aynen', at: Date.now(), data: snapshot(prepare(store.s.settings)) }], A);
   }, []);
   const L = H.layout;
@@ -555,7 +555,7 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   // telefon çerçevesi 'Telefonda farklı' değerleriyle çizilir
   const LX = (kind) => lookFor(L, kind === 'phone');
   const hdrOf = (kind) => LX(kind).header || 'search';
-  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts }; };
+  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, pack?.frost ? 'fr-' + pack.frost : null, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts }; };
   const inner = (kind) => (
     <div className={'shell public tab-anasayfa dz-fshell' + (pack?.badge?.text ? ' pk-on' : '')}>
       <HeaderPreview S={view} kind={hdrOf(kind)} />
@@ -1168,6 +1168,7 @@ function PresetPanel({ d, setAll, setPeek }) {
   const [edit, setEdit] = useState(null); const [confirm, setConfirm] = useState(null);
   const all = [APPLE, ...saved];
   const use = (p) => { setAll(applyPreset(d, p.data), 'Paket: ' + p.name); toast(p.name + ' yüklendi. Beğenirseniz Yayınla; vazgeçmek için Geri al (Ctrl Z).'); };
+  const onApple = sameAs(d, APPLE.data);
   const add = () => { const n = name.trim() || 'Paketim ' + (saved.length + 1); savePresets([...saved, { id: 'p' + Date.now().toString(36), name: n, at: Date.now(), data: snapshot(d) }], A); setName(''); toast('“' + n + '” paketi kaydedildi'); };
   const upd = (id, f) => savePresets(saved.map((p) => (p.id === id ? { ...p, ...f } : p)), A);
   return <>
@@ -1188,6 +1189,7 @@ function PresetPanel({ d, setAll, setPeek }) {
         </span>}
       </div>;
     })}</div>
+    {onApple && <div className="pz-notes"><b>Claude’un tasarımında sayfada yaptıklarım</b><ul>{CLAUDE_CHANGES.map((t) => <li key={t}>{t}</li>)}</ul><small>Hiçbir bölüm silinmedi; gizlenen bölümü Katmanlar’dan göz simgesiyle geri açabilirsiniz.</small></div>}
     <div className="pz-new">
       <span className="field-l">Şu anki görünümü paket olarak kaydet</span>
       <span className="pz-row"><input value={name} onChange={(e) => setName(e.target.value)} placeholder={'Paketim ' + (saved.length + 1)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} /><button type="button" className="btn sm" onClick={add}><Icon n="plus" s={15} />Kaydet</button></span>
@@ -1208,7 +1210,7 @@ function StudioPanel({ d, set, setPeek }) {
   const [rename, setRename] = useState(null);
   const pk = base ? activePack({ ...L, pack: { ...p, from: '', to: '' } }) : null;
   // temanın şu anki hâli (seçili tema + üstündeki değişiklikler) tek kayda
-  const bake = (id, n) => ({ id, n, d: 'Kendi temanız', sw: [pk.palette?.accent || base.palette?.accent, pk.palette?.price || base.palette?.price].filter(Boolean), palette: pk.palette || base.palette, hero: pk.hero || base.hero, band: pk.band || null, fx: pk.fx ? { ...pk.fx, amt: undefined } : null, badge: pk.badge || null, tint: pk.tint || base.tint || '', pat: pk.pat || null, orn: pk.orn?.k, ornC: pk.orn?.c });
+  const bake = (id, n) => ({ frost: pk.frost || 0, id, n, d: 'Kendi temanız', sw: [pk.palette?.accent || base.palette?.accent, pk.palette?.price || base.palette?.price].filter(Boolean), palette: pk.palette || base.palette, hero: pk.hero || base.hero, band: pk.band || null, fx: pk.fx ? { ...pk.fx, amt: undefined } : null, badge: pk.badge || null, tint: pk.tint || base.tint || '', pat: pk.pat || null, orn: pk.orn?.k, ornC: pk.orn?.c });
   const fx = { ...(base?.fx || {}), ...(p.fx || {}) };
   const band = { ...(base?.band || {}), ...(p.band || {}) };
   const badge = { ...(base?.badge || {}), ...(p.badge || {}) };
@@ -1274,6 +1276,10 @@ function StudioPanel({ d, set, setPeek }) {
           <Field label="Belirginlik"><span className="she-scale"><input type="range" min="2" max="30" step="1" value={Math.round((pk.pat.o ?? 0.07) * 100)} onChange={(e) => upP({ pat: { ...(p.pat || {}), k: pk.pat.k, o: Number(e.target.value) / 100 } })} /><code>%{Math.round((pk.pat.o ?? 0.07) * 100)}</code></span></Field>
           <Field label="Desen boyu"><span className="she-scale"><input type="range" min="0.5" max="3" step="0.1" value={pk.pat.z || 1} onChange={(e) => upP({ pat: { ...(p.pat || {}), k: pk.pat.k, z: Number(e.target.value) } })} /><code>×{pk.pat.z || 1}</code></span></Field>
         </>}
+      </Disclose>}
+      {parts.frost !== false && <Disclose label="Buzlu cam" value={<small>{(FROSTS.find((f) => f[0] === (pk.frost || 0)) || FROSTS[0])[1]}</small>}>
+        <p className="fine">Ürün kartları, avantaj ve marka kutuları, sepet, Hesabım, ödeme ve ürün açıklaması gibi beyaz kutular zemin görünecek şekilde buzlu cam olur. En güzel “renk ağı” ya da “aurora” zeminiyle görünür. Eski bilgisayarlarda (hafif mod) bulanıklık kendiliğinden kapanır.</p>
+        <span className="seg sw">{FROSTS.map(([k, l]) => <button key={k} type="button" className={(pk.frost || 0) === k ? 'on' : ''} onClick={() => upP({ frost: k })}>{l}</button>)}</span>
       </Disclose>}
       {parts.orn !== false && <Disclose label="Süs dizisi" value={<small>{ORNS[pk.orn?.k || 'none']}</small>}>
         <p className="fine">Menünün hemen altında sarkan ince süs (flama, ampul, çelenk…).</p>

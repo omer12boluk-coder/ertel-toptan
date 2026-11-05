@@ -176,6 +176,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **Yönetim paneli teması (5.11.2026):** `look.admin` apple (varsayılan) | classic → html `adm-on` + `adm-apple` (useTheme). ≥1100px üst menü CSS ile solda sabit cam menüye döner (topbar fixed, grid; navdrop açılır menüler düğmenin sağında), <1100px açık cam üst şerit + yüzen cam alt menü; gece koyu grafit (`--ad-*`). Ayar: Ayarlar › Bayi ve panel renkleri.
 
+- **5.11.2026 (2):** Hazır paket `merge: true` = sadece yazdığı ayarları değiştirir (önceki Apple sade 'Ürüne basınca'yı sıfırlayıp pencereye çeviriyordu — kullanıcı kızdı; hazır pakette cards'a dokunma). Paket 1 = 'Claude’un tasarımı' (`layoutFn: 'claude'` → `claudeLayout`: marka ızgarası gizli, sıra değişir; `CLAUDE_CHANGES` panelde listelenir). Kayıtlı paketler artık `layout/hidden/geo` da saklar (`ks`), eskiler `upgradePresets` ile yayındaki sırayla tamamlandı. Tema Stüdyosu'nda 5 Apple teması (`apple-*`), tam sayfa zeminler `z-*` (patBg `full`, gecede koyulaşır), yeni parça `frost` 0/1/2 → html `fr-1/fr-2` (beyaz kutular buzlu cam). Bilgisayarda sayfa geçişi telefondaki gibi yönlü (üst menü sırası). Cam üst menüde seçili hap accent tonlu, belirgin.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.
