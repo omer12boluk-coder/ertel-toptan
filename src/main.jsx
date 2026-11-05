@@ -999,11 +999,7 @@ function setupFlowPills() {
     const wait = () => {
       if (++n > 40) return;
       if (!btn.isConnected || !btn.classList.contains('on')) { requestAnimationFrame(wait); return; }
-      // renk geçişin ortasında değil SON hâlinden okunur (üstüne gelme rengi karışıp hap açık renkli kayıyordu)
-      const tr0 = btn.style.transition; btn.style.transition = 'none';
-      const cs0 = getComputedStyle(btn); const cs = { backgroundImage: cs0.backgroundImage, backgroundColor: cs0.backgroundColor, borderRadius: cs0.borderRadius, boxShadow: cs0.boxShadow };
-      btn.style.transition = tr0;
-      const bg = cs.backgroundImage !== 'none' ? cs.backgroundImage : cs.backgroundColor;
+      const cs = getComputedStyle(btn); const bg = cs.backgroundImage !== 'none' ? cs.backgroundImage : cs.backgroundColor;
       if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return; // seçili hâlinde zemini olmayan (alt çizgili) grup
       const gr2 = g.getBoundingClientRect(); const b = btn.getBoundingClientRect();
       const B = { x: b.left - gr2.left + g.scrollLeft, y: b.top - gr2.top + g.scrollTop, w: b.width, h: b.height };
