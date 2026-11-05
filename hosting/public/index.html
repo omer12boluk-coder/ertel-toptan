@@ -7435,7 +7435,7 @@ html.adm-apple .shell.admin :is(.card, .o-card, .dash-card, .set-card, .set-sec,
 html.adm-apple .shell.admin :is(.btn.primary) { border-radius: 999px; }
 /* telefon alt menüsü: yüzen cam */
 @media (max-width: 1099px) {
-  html.adm-apple .shell.admin .botnav { left: 10px; right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); padding-bottom: 0; border-radius: 26px; background: var(--ad-side); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); border: 1px solid var(--ad-line); box-shadow: 0 14px 34px -18px rgb(0 0 0 / .4); }
+  html.adm-apple .shell.admin .botnav { left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px)); padding-bottom: 0; border-radius: 26px; background: var(--ad-side); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); border: 1px solid var(--ad-line); box-shadow: 0 14px 34px -18px rgb(0 0 0 / .4); }
   html.adm-apple .shell.admin .botnav-b { color: var(--ad-dim); } html.adm-apple .shell.admin .botnav-b.on { color: var(--ad-ink); }
   html.adm-apple .shell.admin .botnav-pill i { background: var(--ad-hov) !important; box-shadow: 0 0 0 .5px var(--ad-line) inset; border-radius: 18px; }
   /* hap sekmeyi (simge + yazı) tam sarar, menünün ortasında */
@@ -7806,7 +7806,11 @@ html.lite .p0-brands-in, .shell.reduce .p0-brands-in { animation: none; }
 .p0-tr { display: flex; align-items: center; gap: 14px; color: var(--fg); }
 .p0-tr > .ic { flex: none; width: 46px; height: 46px; padding: 12px; border-radius: 50%; background: color-mix(in oklab, var(--fg) 6%, transparent); box-sizing: border-box; }
 .p0-tr span { display: flex; flex-direction: column; gap: 3px; } .p0-tr b { font: 650 15px/1.2 var(--f-body); } .p0-tr small { font-size: 13px; color: var(--muted); }
-@media (max-width: 899px) { .p0-trust { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 22px 2px; } .p0-tr { flex-direction: column; align-items: flex-start; gap: 10px; } }
+@media (max-width: 899px) { .p0-trust { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0; border: 0; }
+  .p0-tr { gap: 10px; padding: 12px; border-radius: 18px; background: var(--surface, #fff); box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 10px 24px -20px rgb(0 0 0 / .3); }
+  .p0-tr > .ic { width: 36px; height: 36px; padding: 9px; } .p0-tr span { min-width: 0; gap: 2px; } .p0-tr b { font-size: 13.5px; } .p0-tr small { font-size: 11.5px; line-height: 1.25; } }
+html[data-theme="dark"] .p0-tr { background: rgb(255 255 255 / .05); }
+@media (min-width: 900px) { html[data-theme="dark"] .p0-tr { background: none; } }
 
 /* ---- Ürünler açılış sayfası (look.prodHub) ---- */
 .p0-hub { padding: 10px 0 80px; }
@@ -8105,7 +8109,7 @@ html:not(.addc-gray):not(.addc-dark):not(.addc-hex) .shell.public .abx .btn.add 
 .sh-card-f.abx .sh-bell { width: 100%; height: 38px; border-radius: 999px; }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'df097cb44b';</script>
+<script>window.__BUILD = '7a518f097b';</script>
 </head>
 <body>
 <div id="root"></div>
