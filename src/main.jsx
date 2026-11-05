@@ -77,7 +77,10 @@ async function boot() {
   startRate(A);
   startVersionCheck();
   // Logo / dükkan bilgisi: cihazda kayıtlıysa hemen kullan, sunucudakini arkadan al
-  const applyPub = (pub) => pub && store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub, v: pub.v || 0 })) });
+  // 6.11.2026 önizleme adresinde (adında '--'): Tasarım modunda 'Yayınla' canlıya değil bu tarayıcıya kaydedilir (ls 'pv-design');
+  // mağaza tarafı açılınca o tasarım üstüne yazılır → yöneticisiz mağaza görünümünde denenir, canlı mağaza değişmez
+  const pvd = PV_HOST ? ls.get('pv-design', null) : null;
+  const applyPub = (pub) => pub && store.set({ settings: migrate(withDefaults({ ...store.s.settings, ...pub, ...(pvd || {}), v: pub.v || 0 })) });
   const cachedPub = ls.get('pub-info', null);
   applyPub(cachedPub);
   const pubP = A.publicInfo().then((pub) => { if (pub) { ls.set('pub-info', pub); if (!store.s.user || store.s.user.role === 'public') applyPub(pub); } }).catch(() => {});
@@ -301,6 +304,12 @@ function useLowEndProbe() {
   return t;
 }
 const hexLight = (h) => { const x = h.replace('#', ''); const f = x.length === 3 ? x.split('').map((c) => c + c).join('') : x; const n = parseInt(f.slice(0, 6), 16); return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 160; };
+const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
+// önizleme adresinde, bu tarayıcıya kaydedilmiş deneme tasarımı açıkken mağazada küçük bir uyarı + kaldır düğmesi
+function PvBadge() {
+  if (!PV_HOST || !ls.get('pv-design', null) || store.s.user?.role !== 'public') return null;
+  return <div className="pv-badge"><b>Önizleme tasarımı</b><small>Sadece bu tarayıcıda</small><button type="button" onClick={() => { ls.set('pv-design', null); location.reload(); }}>Kaldır</button></div>;
+}
 function useTheme() {
   const liteTick = useLowEndProbe();
   const isAdm = useStore((s) => s.user?.role === 'admin');
@@ -731,6 +740,7 @@ function ShellFull() {
         </div>
       </header>}
       {A.mode === 'demo' && <DemoSwitch admin={admin} />}
+      {pub && <PvBadge />}
       {A.mode === 'demo' && admin && demoNote && (
         <div className="demo-strip">
           <span><b>Demo modu.</b> Veriler sadece bu tarayıcıda. Bayi tarafını görmek için çıkış yapıp <code>ahmet / 1234</code> ile girin.</span>

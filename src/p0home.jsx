@@ -131,7 +131,7 @@ export function P0Finder({ S, onProduct }) {
 }
 
 // ---- 3 · Kategori karoları: ana kategoriler, her birinin resmi o kategorideki (öne çıkan / yeni / stoktaki) bir üründen
-export function useCatTiles() {
+export function useCatTiles(imgs) {
   const tree = useTree(); const vis = useVisibleProducts(false);
   return useMemo(() => {
     const roots = tree.roots.filter((n) => !n.hidden);
@@ -144,18 +144,18 @@ export function useCatTiles() {
       const cur = pic.get(r); const score = (hasImg(p) ? 4 : 0) + (p.s > 0 ? 2 : 0) + (p.nw ? 1 : 0);
       if (!cur || score > cur.score) pic.set(r, { p, score });
     }
-    return roots.map((n) => ({ id: n.id, name: n.name, n: cnt.get(n.id) || 0, p: pic.get(n.id)?.p })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
-  }, [tree, vis]);
+    return roots.map((n) => ({ id: n.id, name: n.name, n: cnt.get(n.id) || 0, p: pic.get(n.id)?.p, img: imgs?.[n.id] || '' })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+  }, [tree, vis, imgs]);
 }
 const openCat = (id) => { store.set({ catalogGo: { cat: id } }); go('katalog'); };
 export function CatTile({ c, i = 0 }) {
   return <button type="button" className="p0-cat" style={{ '--i': i }} onClick={() => openCat(c.id)}>
-    <span className="p0-cat-im">{c.p && <Thumb p={c.p} size="md" />}</span>
+    <span className={'p0-cat-im' + (c.img ? ' own' : '')}>{c.img ? <ShopImg v={c.img} className="p0-cat-cov" alt={c.name} /> : c.p && <Thumb p={c.p} size="md" />}</span>
     <span className="p0-cat-t"><b>{c.name}</b><small>{c.n} ürün</small></span>
   </button>;
 }
-export function P0Cats() {
-  const tiles = useCatTiles();
+export function P0Cats({ H }) {
+  const tiles = useCatTiles(H?.p0catImg);
   if (!tiles.length) return null;
   const show = tiles.slice(0, 7);
   return (
@@ -250,7 +250,7 @@ export function P0Trust({ H }) {
 
 // ---- Ürünler açılış sayfası (look.prodHub): önce kategoriler + markalar, 'Tüm ürünler' hep sağ üstte
 export function ProdHub({ onAll, total }) {
-  const tiles = useCatTiles(); const brands = useBrandList();
+  const tiles = useCatTiles(useStore((s) => s.settings.shopHome?.p0catImg)); const brands = useBrandList();
   return (
     <div className="p0-hub">
       <header className="p0-hub-h"><div><span className="p0-eye">Ürünler</span><h1>Ne arıyorsun?</h1></div>
@@ -264,3 +264,21 @@ export function ProdHub({ onAll, total }) {
     </div>
   );
 }
+
+// ---- Tasarım modu paneli: kategori karolarının kapak resimleri (boşsa kategorideki bir ürünün resmi)
+export function P0CatsPanel({ H, S: set, ImgPick }) {
+  const tiles = useCatTiles(H.p0catImg);
+  const up = (id, v) => { const m = { ...(H.p0catImg || {}) }; if (v) m[id] = v; else delete m[id]; set('p0catImg', m); };
+  return <>
+    <p className="fine">Her kategoriye kapak resmi seçebilirsiniz. Boş bırakılan kategoride o kategorideki bir ürünün resmi kullanılır. Ürünler sayfasının açılışındaki karolar da aynı resimleri kullanır.</p>
+    {tiles.map((c) => <ImgPick key={c.id} v={c.img} onChange={(v) => up(c.id, v)} label={c.name + ' · ' + c.n + ' ürün'} hint="Kare ya da yatay resim; ürün resmi de seçilebilir" prodOk />)}
+  </>;
+}
+export const P0_NOTES = {
+  'p0:hero': 'İlk reklam büyük kutuda (birden çok reklam varsa onlarla sırayla döner), 2. ve 3. reklam yandaki küçük kutularda. Reklamların yazısı, resmi ve zemini “Büyük reklam alanı” bölümünden düzenlenir.',
+  'p0:find': 'Müşteri telefon modelini yazar, o modele uyan kalıplar ve parçalar burada çıkar. Altında en çok ürünü olan kategori ve markalara hızlı geçiş.',
+  'p0:pick': 'Ürünün ⋮ menüsünden “Kategoride öne çıkar” dediğiniz ürünler; yoksa yeni gelenler. İlk ürün büyük kutuda.',
+  'p0:sets': 'Açık setlerinizin ilk üçü. Set yoksa bölüm görünmez.',
+  'p0:brands': 'Logosu olan markalar yavaşça akar; üstüne gelince durur ve renklenir.',
+  'p0:trust': 'Avantaj şeridinin yazıları (Avantaj şeridi bölümünden düzenlenir).',
+};

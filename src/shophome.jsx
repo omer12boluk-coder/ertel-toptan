@@ -381,7 +381,7 @@ export function ShopHome({ S: Sover }) {
     if (k === 'sets') return <SetRail edit={!!E} />;
     if (k === 'p0:hero') return slides.length ? <P0Hero slides={slides} open={link} /> : E && <Empty label="Reklam yok" />;
     if (k === 'p0:find') return <P0Finder S={S} onProduct={E ? () => E.select(k) : setProduct} />;
-    if (k === 'p0:cats') return <P0Cats />;
+    if (k === 'p0:cats') return <P0Cats H={H} />;
     if (k === 'p0:pick') return <P0Pick S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'p0:sets') return <P0Sets S={S} />;
     if (k === 'p0:brands') return <P0Brands />;

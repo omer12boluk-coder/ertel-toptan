@@ -16,6 +16,7 @@ import {
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
 import { FROSTS, BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter, ensureLogoSvg } from './presets.js';
 import { STYLE_PRESETS, PRESET_BY, SHADOWS, BORDERS, HOVERS, TITLES, styleOut } from './stylekit.js';
+import { P0CatsPanel, P0_NOTES } from './p0home.jsx';
 import { snapshot, applyPreset, sameAs, APPLE, CLAUDE_CHANGES, P0, P0_CHANGES, upgradePresets, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
@@ -135,7 +136,11 @@ export function ShopDesigner() {
   const redo = () => { const h = hist.current; const nx = h.redo.pop(); if (!nx) return; h.list.push({ d: store.s.designDraft || prepare(store.s.settings), n: nx.n }); store.set({ designDraft: nx.d }); h.t = 0; toast('Yeniden yapıldı: ' + nx.n); bump((x) => x + 1); };
 
   async function save() {
-    if (PREVIEW) { toast('Bu bir önizleme adresi: Yayınla kapalı (veriler canlı mağazayla ortak). Beğenirseniz yeni sürüm canlıya alınınca yayınlarsınız.', 'bad'); return; }
+    if (PREVIEW) { // 6.11.2026: önizlemede yayın canlıya gitmez, bu tarayıcıya kaydedilir → mağaza tarafında (yöneticisiz) görünür
+      const d = JSON.parse(JSON.stringify(store.s.designDraft || prepare(store.s.settings)));
+      ls.set('pv-design', { look: d.look, shopHome: d.shopHome, brand: d.brand, cards: d.cards, brandLogos: d.brandLogos });
+      toast('Önizleme tasarımı bu tarayıcıya kaydedildi (canlı mağaza değişmedi). Mağaza görünümü yeni sekmede açılıyor.');
+      setTimeout(() => window.open('/', '_blank'), 400); return; }
     setBusy(true);
     try {
       // yayından önceki hâl sürüm geçmişine (bu bilgisayarda, son 12)
@@ -465,7 +470,7 @@ export function ShopDesigner() {
     <div className="dz2">
       <div className="dz2-top">
         <button className="dz2-ib" onClick={() => go('ayarlar')} title="Tasarım modundan çık (taslak kaybolmaz)"><Icon n="back" s={18} /></button>
-        <span className="dz2-title"><b>Tasarım modu</b><small>{PREVIEW ? 'Önizleme · yayın kapalı' : 'Mağaza ana sayfası' + (dirty ? ' · taslak' : '')}</small></span>
+        <span className="dz2-title"><b>Tasarım modu</b><small>{PREVIEW ? 'Önizleme · Yayınla = sadece bu tarayıcıda dene' : 'Mağaza ana sayfası' + (dirty ? ' · taslak' : '')}</small></span>
         <span className="dz2-dev" role="group" aria-label="Önizleme">
           {[['desk', 'monitor', 'Bilgisayar'], ['phone', 'mobile', 'Telefon'], ['both', 'grid', 'Yan yana']].map(([k, ic, l]) => <button key={k} className={dev === k ? 'on' : ''} onClick={() => setDev(k)}><Icon n={ic} s={16} /><span>{l}</span></button>)}
         </span>
@@ -694,6 +699,8 @@ function Inspector(P) {
       <Field label="Yazı" opt><input value={H.cta?.text || ''} onChange={(e) => S('cta', { ...(H.cta || {}), text: e.target.value })} /></Field>
       <More><GeoMore H={H} k={k} S={S} /></More>
     </>;
+    else if (k === 'p0:cats') body = <><P0CatsPanel H={H} S={S} ImgPick={ImgPick} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
+    else if (k.startsWith('p0:')) body = <><p className="fine">{P0_NOTES[k]}</p><p className="fine">Gizlemek için aşağıdaki düğme ya da Katmanlar’daki göz simgesi.</p><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
     else if (k === 'fav' || k === 'sets') body = <p className="fine">Bu raf otomatik dolar. Yerini Katmanlar'dan ya da sayfada sürükleyerek değiştirin, göz simgesiyle gizleyin.</p>;
     else if (k.startsWith('rail:')) { const i = H.sections.findIndex((r) => 'rail:' + r.id === k); const x = H.sections[i]; if (!x) return null; body = <><RailFields x={x} up={(p) => S('sections', H.sections.map((r, j) => (j === i ? { ...r, ...p } : r)))} /><More><GeoMore H={H} k={k} S={S} /></More><BlockActs {...P} k={k} /></>; }
     else if (k.startsWith('b:') && H.blocks[k.slice(2)]?.t === 'promos') { const id = k.slice(2); const b = H.blocks[id];
