@@ -878,11 +878,13 @@ function setupNavAnim() {
   const key = (s) => [s.tab, s.acct || '', s.pid || '', s.openOrder || '', s.openReq || '', s.lcOpen || ''].join('|');
   let last = key(store.s), hint = '', hintAt = 0, click = null, mo = null, watched = null;
   const mark = (h) => { hint = h; hintAt = Date.now(); };
+  const navIdx = () => { const bs = [...document.querySelectorAll('.botnav .botnav-b')]; return bs.findIndex((b) => b.classList.contains('on')); };
+  let lastIdx = -1;
   const mob = () => matchMedia('(max-width: 899px)').matches;
   addEventListener('popstate', () => mark('back'), true);
   addEventListener('pointerdown', (e) => {
     const t = e.target instanceof Element ? e.target : null; if (!t) return;
-    if (t.closest('.back-btn, .oa-back')) mark('back'); else if (t.closest('.botnav')) mark('tab');
+    if (t.closest('.back-btn, .oa-back')) mark('back'); else if (t.closest('.botnav')) { mark('tab'); lastIdx = navIdx(); }
   }, { capture: true, passive: true });
   // sayfa içi geçişler (sepet → ödeme, sipariş detayı, adımlar…): adres değişmese de tıklanan düğme kaybolup yerine büyük bir bölüm gelirse
   addEventListener('click', (e) => {
@@ -898,18 +900,22 @@ function setupNavAnim() {
   const getCover = () => { if (!cover || !cover.isConnected) { cover = document.createElement('div'); cover.className = 'nav-cover'; cover.setAttribute('aria-hidden', 'true'); document.body.appendChild(cover); } return cover; };
   // 3.11.2026 hareket ayarı (Tasarım › Renkler ve sayfa › Sayfa geçişleri, look.motion): 'soft' eski hafif kayma · 'clear' belirgin
   // (daha uzun kayma, hafif büyüme, yaylı yavaşlama; varsayılan) · 'glass' cam (sayfa buzlu camın arkasından netleşerek gelir) · 'slow' deneme için yavaş.
+  // 5.11.2026 (kullanıcı: 'belirgin' takılıyordu, yandan kaymalı pürüzsüz istedi): ölçek (scale) KALDIRILDI — büyük katmanı her karede
+  // yeniden çizdiriyordu; sadece yatay kayma (ekran kartında) + örtü solması. 'clear' = iOS gibi yandan kayma (ekranın ~%24'ü, iOS eğrisi).
   const MOT = {
-    soft: { dx: 14, sc: 1, ms: 1, ease: EASE, tabSc: 1 },
-    clear: { dx: 34, sc: 0.985, ms: 1.35, ease: 'cubic-bezier(.22,1,.36,1)', tabSc: 0.985 },
-    glass: { dx: 26, sc: 0.975, ms: 1.5, ease: 'cubic-bezier(.2,1.1,.3,1)', tabSc: 0.98, glass: true },
-    slow: { dx: 34, sc: 0.985, ms: 3, ease: 'cubic-bezier(.22,1,.36,1)', tabSc: 0.985 },
+    soft: { dx: 14, ms: 1, ease: EASE },
+    clear: { dx: () => Math.round(innerWidth * 0.24), ms: 1.15, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 },
+    glass: { dx: 26, ms: 1.4, ease: 'cubic-bezier(.32,.72,0,1)', glass: true },
+    slow: { dx: () => Math.round(innerWidth * 0.24), ms: 3, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 },
   };
-  const play = (els, kind, ms0) => {
+  const play = (els, kind, ms0, dk = 1) => {
     const as = []; const M = MOT[store.s.settings?.look?.motion] || MOT.clear; const ms = Math.round(ms0 * M.ms);
-    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -M.dx : M.dx}px,0,0) scale(${M.sc})` }, { transform: 'none' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: M.ease })); }
-    else if (M.tabSc < 1) for (const el of els) as.push(el.animate([{ transform: `scale(${M.tabSc})` }, { transform: 'none' }], { duration: ms, easing: M.ease }));
+    const dx = Math.round((typeof M.dx === 'function' ? M.dx() : M.dx) * dk);
+    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -dx : dx}px,0,0)` }, { transform: 'translate3d(0,0,0)' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: M.ease })); }
     const cv = getCover(); cv.classList.toggle('glass', !!M.glass);
-    as.push(cv.animate(M.glass ? [{ opacity: kind === 'tab' ? 0.8 : 1 }, { opacity: 0.6, offset: 0.35 }, { opacity: 0 }] : [{ opacity: kind === 'tab' ? 0.65 : 1 }, { opacity: 0 }], { duration: ms, easing: M.glass ? 'ease-out' : M.ease }));
+    const k0 = kind === 'tab' ? 0.65 : 1;
+    as.push(cv.animate(M.glass ? [{ opacity: kind === 'tab' ? 0.8 : 1 }, { opacity: 0.6, offset: 0.35 }, { opacity: 0 }]
+      : M.cv && kind !== 'tab' ? [{ opacity: k0 }, { opacity: 0, offset: M.cv }, { opacity: 0 }] : [{ opacity: k0 }, { opacity: 0 }], { duration: kind === 'tab' ? Math.min(ms, 220) : ms, easing: M.glass ? 'ease-out' : kind === 'tab' ? EASE : 'cubic-bezier(.2,.6,.3,1)' }));
     as.forEach((a) => a.pause());
     requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
   };
@@ -939,8 +945,11 @@ function setupNavAnim() {
     const prev = last; last = k; click = null;
     if (!mob() || !watched?.isConnected) return;
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
-    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) play((store.s.settings?.look?.motion || 'clear') === 'soft' ? [] : pageTargets(watched), 'tab', 200);
-    else play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
+    // 5.11.2026 alt menüyle sekme değişimi de yandan kayar: sağdaki sekmeye geçince sağdan, soldakine geçince soldan (iOS sekme hissi)
+    const ti = navIdx();
+    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : 0; lastIdx = ti; if (d) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 300, 0.6); else play([], 'tab', 180); return; }
+    lastIdx = ti;
+    play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
   };
   storeListen(() => {
     if (!pend && key(store.s) !== last) pend = requestAnimationFrame(() => runKey(0));

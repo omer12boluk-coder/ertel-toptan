@@ -6899,13 +6899,8 @@ html.top-hide .shell.public .topbar > :not(.topbar-in) { visibility: hidden; }
   html.bn-dark .shell:not(.admin) .botnav-pill i { border-radius: 23px; }
 }
 
-/* 5.11.2026 kart sepet düğmesi (kullanıcı): sepete eklenmeden önce KÜÇÜK sepet simgesi, kartın en altında sağda; eklenince aynı satırda
-   − 1 + tam genişlik açılır. Fiyat her iki hâlde de aynı yerde (aynı sıradaki kartlarda fiyatlar hizalı), TL / KDV satırlarına binmez. */
-.plist.pgrid.ab .prow-side:not(:has(.qty-morph)) > .btn.add { align-self: flex-end; width: 44px !important; height: 38px !important; padding: 0 !important; border-radius: 12px; }
-.plist.pgrid.ab .prow-side:not(:has(.qty-morph)) > .btn.add .add-l, .plist.pgrid.ab .prow-side:not(:has(.qty-morph)) > .btn.add .add-plus { display: none !important; }
-.plist.pgrid.ab .prow-side:not(:has(.qty-morph)) > .btn.add .add-cart { display: inline-grid !important; }
+/* 5.11.2026 (2) kart: telefon ve bilgisayarda 'Sepete ekle' yazılı, tam genişlik, − 1 + ile AYNI boy (38px) → ekleyince kart boyu değişmez */
 .plist.pgrid.ab .prow-side { justify-content: flex-start !important; }
-.plist.pgrid.ab .prow-side .btn.add.back { animation: none; }
 /* yüzen alt menü: seçili hap daha küçük ve menünün içinde tam ortalı, gölgesiz (kullanıcı: oturmamış duruyordu) */
 @media (max-width: 899px) {
   html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav { padding: 0 6px; }
@@ -6918,4 +6913,15 @@ html.top-hide .shell.public .topbar > :not(.topbar-in) { visibility: hidden; }
 @media (max-width: 899px) {
   html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 4px !important; width: calc(var(--tw, 72px) - 6px); height: 48px; }
   html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill i { border-radius: 24px; }
+}
+/* 5.11.2026 (3) hap: temadan bağımsız iPhone cam rengi (nötr gri cam + üst parlama), sekmeden biraz geniş */
+@media (max-width: 899px) {
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav { padding: 0 5px; }
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 3px !important; width: calc(var(--tw, 72px) - 1px); height: 50px; }
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill i { border-radius: 25px; }
+  html.bn-glass .shell:not(.admin) .botnav-pill i, html.bn-glass .shell:not(.admin) .botnav.pressing .botnav-pill i {
+    background: linear-gradient(180deg, rgb(255 255 255 / .55), rgb(255 255 255 / .2)), rgb(120 120 128 / .14);
+    box-shadow: 0 0 0 .5px rgb(255 255 255 / .8) inset, 0 1px 1px rgb(255 255 255 / .9) inset, 0 2px 8px -4px rgb(0 0 0 / .18); }
+  html[data-theme="dark"].bn-glass .shell:not(.admin) .botnav-pill i, html.bn-dark .shell:not(.admin) .botnav-pill i {
+    background: linear-gradient(180deg, rgb(255 255 255 / .16), rgb(255 255 255 / .06)), rgb(120 120 128 / .24); box-shadow: 0 0 0 .5px rgb(255 255 255 / .18) inset, 0 1px 1px rgb(255 255 255 / .2) inset; }
 }
