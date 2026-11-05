@@ -1154,6 +1154,7 @@ function BotNav({ items, tab, badge }) {
     const bs = [...el.querySelectorAll('.botnav-b')];
     const ic = el.querySelector('.botnav-i');
     if (!bs.length || !ic) return;
+    el.style.setProperty('--tw', bs[0].getBoundingClientRect().width + 'px'); // sekme genişliği: cam menüde hap sekmeyi (yazısıyla) tam sarar
     const bl = el.clientLeft || 0; // yüzen menünün kenarlığı: hap kenarlığın içinden konumlanır
     setGeo({ cs: bs.map((b) => { const q = b.getBoundingClientRect(); return q.left - r.left - bl + q.width / 2; }), top: ic.getBoundingClientRect().top - r.top });
   };
@@ -1162,7 +1163,7 @@ function BotNav({ items, tab, badge }) {
   live.current = { geo, items };
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    const place = (x) => { if (pill.current) pill.current.style.transform = `translateX(${x - 32}px)`; };
+    const place = (x) => { if (pill.current) pill.current.style.transform = `translateX(${x}px) translateX(-50%)`; };
     const track = (cx) => {
       const { geo: g } = live.current; if (!g) return;
       const r = el.getBoundingClientRect(); const lx = cx - r.left;
@@ -1175,7 +1176,7 @@ function BotNav({ items, tab, badge }) {
     const finish = (go_) => {
       const s = st.current; st.current = null;
       el.classList.remove('dragging', 'pressing'); setHov(-1);
-      if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x - 32}px)`; // aktif sekmeye yumuşakça döner
+      if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x}px) translateX(-50%)`; // aktif sekmeye yumuşakça döner
       if (s && s.i != null && go_) go(live.current.items[s.i][0]);
     };
     // iPhone'da ekranın altındaki çizgiden yukarı kaydırma (uygulamadan çıkma / uygulama değiştirici) menünün alt boşluğundan başlar:
@@ -1200,7 +1201,7 @@ function BotNav({ items, tab, badge }) {
   const px = geo && ai >= 0 ? geo.cs[ai] : null;
   return (
     <nav ref={ref} className="botnav" aria-label="Alt menü">
-      {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px - 32}px)` }} aria-hidden="true"><i /></span>}
+      {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px}px) translateX(-50%)` }} aria-hidden="true"><i /></span>}
       {items.map(([k, l, i, sh], n) => (
         <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => go(k)}>
           <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
