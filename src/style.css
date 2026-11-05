@@ -6898,3 +6898,19 @@ html.top-hide .shell.public .topbar > :not(.topbar-in) { visibility: hidden; }
   html.bn-glass .shell:not(.admin) .botnav-pill i { border-radius: 23px; background: rgb(255 255 255 / .55); box-shadow: 0 1px 0 rgb(255 255 255 / .85) inset, 0 3px 10px -6px rgb(10 20 40 / .3); }
   html.bn-dark .shell:not(.admin) .botnav-pill i { border-radius: 23px; }
 }
+
+/* 5.11.2026 kart sepet düğmesi (kullanıcı): sepete eklenmeden önce KÜÇÜK sepet simgesi, kartın en altında sağda; eklenince aynı satırda
+   − 1 + tam genişlik açılır. Fiyat her iki hâlde de aynı yerde (aynı sıradaki kartlarda fiyatlar hizalı), TL / KDV satırlarına binmez. */
+.plist.pgrid.ab .prow-side:not(:has(.qty-morph)) > .btn.add { align-self: flex-end; width: 44px !important; height: 38px !important; padding: 0 !important; border-radius: 12px; }
+.plist.pgrid.ab .prow-side:not(:has(.qty-morph)) > .btn.add .add-l, .plist.pgrid.ab .prow-side:not(:has(.qty-morph)) > .btn.add .add-plus { display: none !important; }
+.plist.pgrid.ab .prow-side:not(:has(.qty-morph)) > .btn.add .add-cart { display: inline-grid !important; }
+.plist.pgrid.ab .prow-side { justify-content: flex-start !important; }
+.plist.pgrid.ab .prow-side .btn.add.back { animation: none; }
+/* yüzen alt menü: seçili hap daha küçük ve menünün içinde tam ortalı, gölgesiz (kullanıcı: oturmamış duruyordu) */
+@media (max-width: 899px) {
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav { padding: 0 6px; }
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 7px !important; width: 60px; height: 42px; }
+  html.bn-glass .shell:not(.admin) .botnav-pill i { border-radius: 21px; background: color-mix(in oklab, var(--accent) 11%, rgb(255 255 255 / .35)); box-shadow: 0 0 0 1px rgb(255 255 255 / .55) inset; }
+  html.bn-glass .shell:not(.admin) .botnav.pressing .botnav-pill i { box-shadow: 0 0 0 1px rgb(255 255 255 / .55) inset, 0 4px 14px -6px color-mix(in oklab, var(--accent) 45%, transparent); }
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b .ic { transform: none; }
+}
