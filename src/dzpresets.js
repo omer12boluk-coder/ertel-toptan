@@ -42,6 +42,7 @@ export function applyPreset(d, p) {
     n.cards = { ...(n.cards || {}), ...clone(p.cards || {}) };
     Object.assign(H, clone(p.home || {}));
     if (p.layoutFn === 'claude') Object.assign(H, claudeLayout(H));
+    if (p.layoutFn === 'p0') Object.assign(H, p0Layout(H));
   } else {
     n.look = { ...clone(p.look || {}), ...(d.look?.myPacks ? { myPacks: clone(d.look.myPacks) } : {}) };
     n.brand = { ...strip(n.brand, BRAND_KEYS), ...clone(p.brand || {}) };
@@ -103,6 +104,37 @@ export const APPLE = {
     slides: APPLE_SLIDES.map((s) => ({ ...s, xc: '', bs: '' })),
     promos: APPLE_BOXES.map((c) => ({ color: c })),
     blocks: {},
+  },
+};
+
+// ---- Paket 0 (6.11.2026): sıfırdan yeni ana sayfa ------------------------------------------------------------------------------
+// Yeni bölümler (p0:*) eklenir; eski bölümler GİZLENİR (silinmez, Katmanlar'dan göz simgesiyle açılır). Paket 2'ye basınca birebir eski hâl.
+const P0_ORDER = ['p0:hero', 'p0:find', 'p0:cats', '@rail0', 'p0:pick', '@rail1', 'p0:sets', 'p0:brands', 'p0:trust'];
+const OLD_FIXED = ['hero', 'usps', 'marquee', 'brands', 'promos', 'fav', 'sets'];
+export function p0Layout(H) {
+  const L0 = (Array.isArray(H.layout) ? H.layout : []).filter((k) => !k.startsWith('p0:'));
+  const rails = (H.sections || []).map((r, i) => 'rail:' + (r.id || i)).filter((k) => !L0.length || L0.includes(k));
+  const want = P0_ORDER.map((k) => (k === '@rail0' ? rails[0] : k === '@rail1' ? rails[1] : k)).filter(Boolean);
+  const rest = L0.filter((k) => !want.includes(k) && k !== 'cta');
+  const layout = [...want, ...rest, 'cta'];
+  const hidden = [...new Set([...(H.hidden || []).filter((k) => !want.includes(k)), ...OLD_FIXED, ...rest.filter((k) => k.startsWith('rail:') || k.startsWith('b:'))])];
+  return { layout, hidden };
+}
+export const P0_CHANGES = ['Üçlü vitrin: ilk reklam büyük kutuda (sonrakilerle sırayla döner), 2. ve 3. reklam yanda', 'Hızlı bulucu: arama + telefon modeline göre bul (kalıp bulucu) + sık arananlar', 'Kategori karoları (resimler kategorideki ürünlerden)', 'Tamircinin seçimi: öne çıkanlardan bir büyük + dört küçük', 'Atölyeni kur: setler tek bantta', 'Akan marka bandı (gri logolar, üstüne gelince renkli)', 'Güven şeridi (avantaj yazıların)', 'Porselen beyaz kutular, siyah seçili hap, gri Sepete ekle', 'Ürünler’e basınca önce kategoriler (Tüm ürünler sağ üstte)', 'Eski bölümler gizlendi, silinmedi (Katmanlar › göz simgesi)'];
+export const P0 = {
+  id: 'p0', builtin: true, merge: true, layoutFn: 'p0', num: 0, name: 'Yeni mağaza', note: 'Sıfırdan yeni ana sayfa: üçlü vitrin, hızlı bulucu, kategori karoları, seçki ızgarası, set bandı, marka bandı · porselen kutular',
+  sw: ['#f5f5f4', '#16181d', '#2f62d6', '#c97a3a'],
+  data: {
+    merge: true, layoutFn: 'p0',
+    look: {
+      site: 'apple', glass: true, header: 'search', hideTop: 'top', botnav: 'glass', motion: 'clear', motionD: 'soft', pill: 'flow', pillTone: 'dark', addColor: 'gray', porc: true, prodHub: true,
+      width: '', edge: 28, boxPat: 'glow', bgFx: 'glow', logoTone: '', decor: { id: '', amt: 'md', front: true }, pack: {}, keep: {}, shopAccent: '#2f62d6', bg: '#f5f5f4',
+      style: { head: 'manrope', body: 'inter', price: 'manrope', hw: 800, hls: -0.025, rCard: 20, rBox: 28, rHero: 32, rBtn: 999, shadow: 'soft', border: 'none', imgFit: 'contain', imgBg: '#ffffff', imgPad: 12, hover: 'lift', title: 'plain', gap: 56 },
+    },
+    brand: { theme: 'light' },
+    home: { gap: 56 },
+    slides: [{ bg: 'p-midnight' }, { bg: 'p-copper' }, { bg: 'p-mist' }, { bg: 'p-graphite' }, { bg: 'p-ink' }].map((x) => ({ ...x, xc: '', bs: '' })),
+    promos: [], blocks: {},
   },
 };
 

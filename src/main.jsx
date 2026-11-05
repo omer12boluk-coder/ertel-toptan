@@ -333,7 +333,8 @@ function useTheme() {
     r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
     applyLayout(r, pub ? L : {});
     r.classList.remove('fr-1', 'fr-2');
-    r.classList.toggle('pill-dark', !!pub && L.pillTone === 'dark'); // 6.11.2026 siyah hap (Tasarım › Cam ve hareket) // 6.11.2026 buzlu cam kaldırıldı (kullanıcının kastettiği bu değildi)
+    r.classList.toggle('pill-dark', !!pub && L.pillTone === 'dark');
+    r.classList.toggle('porc', !!pub && L.porc === true); // 6.11.2026 Paket 0 porselen kutular (bulanıklıksız parlak beyaz) // 6.11.2026 siyah hap (Tasarım › Cam ve hareket) // 6.11.2026 buzlu cam kaldırıldı (kullanıcının kastettiği bu değildi)
     // 6.11.2026 'Sepete ekle' rengi temadan bağımsız (Tasarım › Ürün kartları › Sepete ekle rengi): gray (varsayılan) | accent (eski) | dark | #hex
     const ac = pub ? (L.addColor || 'gray') : 'accent';
     ['gray', 'dark', 'hex'].forEach((k) => r.classList.toggle('addc-' + k, ac === k || (k === 'hex' && /^#/.test(ac))));

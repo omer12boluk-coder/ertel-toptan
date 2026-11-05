@@ -14,6 +14,8 @@ import { useWin, winOf, onDrag } from './dzframe.jsx';
 import { BG_BY, activePack, BTN_BY, ARROW_BY } from './presets.js';
 import { SlideEls, useSlideFonts, FONT_BY, FONTS, ensureFonts } from './slidex.jsx';
 import { BOX_COLORS, BOX_PATS } from './dzpresets.js';
+import { P0_KEYS } from './p0keys.js';
+import { P0Hero, P0Finder, P0Cats, P0Pick, P0Sets, P0Brands, P0Trust } from './p0home.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
@@ -200,13 +202,14 @@ const spot = (e) => { const r = e.currentTarget.getBoundingClientRect(); e.curre
 // Tasarım modu: ShopHome bu bağlamla sarılınca bölümler seçilebilir / sürüklenebilir olur (designer.jsx)
 export const DesignCtx = createContext(null);
 export const rid = () => Math.random().toString(36).slice(2, 8);
-export const FIXED = { hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', fav: 'Herkesin favorisi (otomatik raf)', sets: 'Setler (otomatik raf)', cta: 'Alt bant' };
+export const FIXED = { hero: 'Büyük reklam alanı', usps: 'Avantaj şeridi', marquee: 'Kayan marka şeridi', brands: 'Marka kutuları', promos: 'Kare reklam kutuları', fav: 'Herkesin favorisi (otomatik raf)', sets: 'Setler (otomatik raf)', cta: 'Alt bant' , ...P0_KEYS };
 const railKey = (r, i) => 'rail:' + (r.id || i);
 // Bölüm sırası: kayıtlı sıra + sonradan eklenenler; silinmiş olanlara ait kayıtlar atılır
 export function layoutOf(H) {
   const rails = H.sections || [];
   const valid = ['hero', 'usps', 'marquee', 'brands', 'promos', 'fav', 'sets', ...rails.map(railKey), ...Object.keys(H.blocks || {}).map((id) => 'b:' + id), 'cta'];
-  const L = (Array.isArray(H.layout) ? H.layout : []).filter((k) => valid.includes(k));
+  // Paket 0 bölümleri (p0:*) sadece kayıtlı sırada varsa gösterilir, kendiliğinden eklenmez (eski düzen değişmesin)
+  const L = (Array.isArray(H.layout) ? H.layout : []).filter((k) => valid.includes(k) || P0_KEYS[k]);
   for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
   return L;
 }
@@ -376,6 +379,13 @@ export function ShopHome({ S: Sover }) {
     );
     if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)), H.promosLay);
     if (k === 'sets') return <SetRail edit={!!E} />;
+    if (k === 'p0:hero') return slides.length ? <P0Hero slides={slides} open={link} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'p0:find') return <P0Finder S={S} />;
+    if (k === 'p0:cats') return <P0Cats />;
+    if (k === 'p0:pick') return <P0Pick S={S} onProduct={E ? () => E.select(k) : setProduct} />;
+    if (k === 'p0:sets') return <P0Sets S={S} />;
+    if (k === 'p0:brands') return <P0Brands />;
+    if (k === 'p0:trust') return <P0Trust H={H} />;
     if (k === 'fav') return <FavRail onProduct={E ? () => E.select(k) : setProduct} edit={!!E} S={S} />;
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
     if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; const up = E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null;

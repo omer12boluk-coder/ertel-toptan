@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
+import { ProdHub } from './p0home.jsx';
 import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
@@ -393,6 +394,7 @@ export function Catalog({ admin }) {
   const [imgOnly, setImgOnly] = useState(false);
   const [favOnly, setFavOnly] = useState(false);
   const [setsOnly, setSetsOnly] = useState(false);
+  const [hubOff, setHubOff] = useState(false); // 6.11.2026 Ürünler açılış sayfası (look.prodHub) geçildi mi
   const [asort, setAsort] = useState({ k: null, d: null }); // yönetici tablosu başlık sıralaması
   const sortBy = (k) => setAsort((s) => (s.k !== k ? { k, d: k === 'code' || k === 'name' ? 'asc' : 'desc' } : s.d === (k === 'code' || k === 'name' ? 'asc' : 'desc') ? { k, d: k === 'code' || k === 'name' ? 'desc' : 'asc' } : { k: null, d: null }));
   const favs = useStore((s) => s.favs);
@@ -416,7 +418,7 @@ export function Catalog({ admin }) {
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
   // useLayoutEffect: marka / kategori linkinden gelince süzme EKRANA ÇİZİLMEDEN uygulanır (önce eski liste görünüp 'patlamasın')
-  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); if (browse.all || browse.q || browse.cat != null || browse.brand) setHubOff(true); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   // Google'dan gelen /marka/<ad> ya da /kategori/<ad> adresi → ürünler yüklenince o marka / kategori seçili açılır
   const seoGo = useStore((s) => s.seoGo);
   useEffect(() => {
@@ -527,6 +529,8 @@ export function Catalog({ admin }) {
     </ul>
   ), [list, limit, view, admin, addCls, asort, pinKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!admin && user?.role === 'public' && S.look?.prodHub && !hubOff && actives.length === 0) return <div className="catalog"><ProdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} /></div>;
   return (
     <div className="catalog">
       {admin && <div className="prod-switch"><ProductsSwitch on="products" /></div>}
