@@ -3,6 +3,7 @@ import { withDefaults, ls, norm, now, cleanText } from './utils.js';
 import { lpath } from './route.js';
 import { prodPath, prodIdOf } from './seo.js';
 import { sfx } from './sfx.js';
+import { flyToCart } from './flycart.js';
 
 const subs = new Set();
 export const store = {
@@ -106,6 +107,7 @@ export function setQty(id, qty) {
   const was = cart[id] || 0;
   if (qty > 0) cart[id] = Math.min(9999, Math.floor(qty)); else delete cart[id];
   sfx(!(qty > 0) ? 'remove' : qty > was ? 'add' : 'tap'); // 5.11.2026 ses efektleri
+  if (qty > 0 && was === 0) flyToCart(Math.floor(qty)); // sadece ilk eklemede (adet artırmada uçmaz)
   store.set({ cart }); cs.set(cartKey(), cart);
 }
 export function clearCart() { store.set({ cart: {} }); cs.set(cartKey(), {}); }

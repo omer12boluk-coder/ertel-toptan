@@ -7534,3 +7534,24 @@ html.th-apple .shell.public .sh-arrow:disabled { opacity: .36; }
 /* açılır menüler okunur olsun: neredeyse opak (arkadaki banner yazısı görünmesin) */
 html.lg-on .hd-p { background: rgb(252 252 253 / .97) !important; }
 html.lg-on[data-theme="dark"] .hd-p { background: rgb(24 28 38 / .97) !important; }
+
+/* 5.11.2026 (6): dar ekranda üst menüde sepet / simgeler arama kutusunun üstüne binmesin (sağ-sol sütun en az içeriği kadar) */
+@media (min-width: 900px) {
+  .hdr-gs .gs-r1 { grid-template-columns: minmax(max-content, 1fr) minmax(220px, 560px) minmax(max-content, 1fr) !important; column-gap: 14px; }
+}
+@media (min-width: 900px) and (max-width: 1280px) { .hdr-gs .gs-icons .me-t, .hdr-gs .gs-icons .hcart-t small { display: none; } }
+/* üst menü: üstüne gelince simge ve yazı seçili hâldeki renginde (hap rengi ve kayma animasyonu aynen) */
+@media (hover: hover) { .topbar.hdr-g .topnav-b:not(.on):hover .ic { color: var(--accent); } }
+/* telefonda arama kutusu açılırken / sonuçlar belirirken animasyon */
+@media (max-width: 899px) {
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box { animation: hsOpen .34s cubic-bezier(.32, .72, 0, 1) both !important; transform-origin: 85% 50%; }
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-res { animation: hsRes .28s .06s cubic-bezier(.32, .72, 0, 1) both; transform-origin: 50% 0; }
+}
+@keyframes hsOpen { from { opacity: 0; transform: scale(.82, .9); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes hsRes { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
+/* sepete atınca: düğmeden sepete uçan nokta + sepet zıplar */
+.fly-dot { position: fixed; z-index: 200; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; pointer-events: none;
+  background: var(--accent); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--accent) 70%, transparent); display: grid; place-items: center; color: #fff; font: 800 12px/1 var(--f-body); }
+.cart-bump { animation: cartBump .5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes cartBump { 0% { transform: scale(1); } 35% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@media (min-width: 900px) { .hdr-gs .gs-nav .topnav-b .topnav-l { display: inline !important; } .hdr-gs .gs-nav .topnav-b { padding: 0 12px !important; } }

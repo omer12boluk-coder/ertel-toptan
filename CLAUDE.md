@@ -182,6 +182,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **5.11.2026 (4):** Mağazada `/markalar` (tab `markalar`) ve `/setler` (tab `setlist`) sayfaları (`src/brandsets.jsx`: `useBrandList`, `BrandTile`, `BrandsPage`, `SetsPage`); üst menü Markalar/Setler bunlara gider, Markalar ▾ menüsü logo ızgarası + 'Tüm markalar'. Bildirim paneli ve açılır menüler OPAK (kullanıcı şeffafı beğenmedi). Yönetim yan menüsü bulanıklıksız/opak (kaydırma yavaştı; bulanıklık bildirim panelini menüye hapsediyordu), panel arka planı `background-attachment: fixed` KULLANMA. Apple açıkta iki tonlu bölüm başlığı + gri yuvarlak raf okları.
 
+- **5.11.2026 (6):** `look.cartFab` false = sağ alttaki yüzen sepet gizli (Tasarım › Ürün kartları). Sepete ilk eklemede `flycart.js` uçan nokta + `.cart-bump`. Dar ekranda cam+arama üst menü sütunları `minmax(max-content,1fr)` (sepet aramaya binmesin). Hap: üstüne gelince sadece simge accent (arka plan/animasyon DEĞİŞMEDİ — iki deneme kullanıcı tarafından geri aldırıldı, hap rengine ve geçişine dokunma). Telefonda arama açılış animasyonu `hsOpen`.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.

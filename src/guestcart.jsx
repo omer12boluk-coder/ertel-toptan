@@ -9,8 +9,9 @@ import { lineCount } from './sets.jsx';
 // Ekranın sağ altında küçük sepet düğmesi (ürünler ve ana sayfada, sepette ürün varken)
 export function CartBar() {
   const tab = useStore((s) => s.tab);
+  const fab = useStore((s) => s.settings.look?.cartFab); // 5.11.2026 Tasarım › Ürün kartları › 'Sağ alttaki sepet düğmesi' (false = gizli)
   const items = useCartItems();
-  if (!['katalog', 'anasayfa'].includes(tab) || !items.length) return null;
+  if (fab === false || !['katalog', 'anasayfa'].includes(tab) || !items.length) return null;
   const tot = totals(items, 'offer');
   return (
     <button className="cart-fab" onClick={() => go('sepet')} aria-label={`Sepete git: ${lineCount(items)} ürün, ${fmtTotals(tot)}`} title="Sepete git">
