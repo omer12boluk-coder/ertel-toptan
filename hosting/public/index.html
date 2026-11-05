@@ -8008,15 +8008,8 @@ html.bgfx-glow.th-dash[data-theme="dark"] { background: var(--bg, #121110); }
 html.bgfx-glow.th-dash[data-theme="dark"] body::before { background: radial-gradient(42% 38% at 8% -4%, rgb(242 184 128 / .08), transparent 70%), radial-gradient(40% 36% at 98% 18%, rgb(110 140 255 / .06), transparent 70%), var(--bg, #121110); }
 @media (min-width: 900px) { .shell.public .acct2 .acct-body > :not(.mo-list), .shell.public .acct2 .acct-body > .set-card, .shell.public .acct2 .acct-body .addr-list, .shell.public .acct2 .acct-body .push-card { max-width: 980px; } }
 
-/* 6.11.2026 sipariş durumu: yarıda kalmış çizgi yerine 5 adım (Onay bekliyor → Onaylandı → Hazırlanıyor → Kargoda → Tamamlandı) */
-@media (min-width: 861px) {
-  .otable .ost { --stp: .2; }
-  .otable .ost-confirmed { --stp: .4; } .otable .ost-preparing { --stp: .6; } .otable .ost-shipped, .otable .ost-ready { --stp: .8; } .otable .ost-done, .otable .ost-cancelled { --stp: 1; }
-  .otable .ost::before, .otable .ost::after { left: 11px !important; right: 8px !important; width: auto !important; bottom: 5px; height: 4px; border-radius: 0;
-    -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 calc(20% - 3px), transparent calc(20% - 3px) 20%); mask-image: repeating-linear-gradient(90deg, #000 0 calc(20% - 3px), transparent calc(20% - 3px) 20%); }
-  .otable .ost::after { background: linear-gradient(90deg, var(--stc) calc(var(--stp) * 100%), transparent 0) !important; transition: none; }
-  .otable .ost-cancelled::after { opacity: .35; }
-}
+/* 6.11.2026 sipariş durumu: soldaki renkli noktanın halkası yazı kutusunda kırpılıp yarım görünüyordu → halkaya yer açıldı */
+@media (min-width: 861px) { .otable .ost > span { padding: 3px 0 3px 3px; margin: -3px 0 -3px -3px; } }
 
 /* 6.11.2026 yönetim yan menüsü daraltılabilir (html.adm-mini, düğme menünün sağ kenarında; cihazda hatırlanır) */
 .adm-fold { display: none; }
@@ -8041,7 +8034,7 @@ html.bgfx-glow.th-dash[data-theme="dark"] body::before { background: radial-grad
 @media (min-width: 1100px) { html.adm-mini.adm-apple .shell.admin .topbar-in > .me .me-t { display: none !important; } html.adm-mini.adm-apple .shell.admin .topbar-in > .me { flex-direction: row; justify-content: center; } }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'd2ad8f65be';</script>
+<script>window.__BUILD = 'ca182d6134';</script>
 </head>
 <body>
 <div id="root"></div>
