@@ -7098,3 +7098,74 @@ html[data-theme="dark"] .topbar.hdr-g :is(.hcart, .hcart.full) { background: rgb
   html[data-theme="dark"].bn-glass .shell.public .cart-bar, html.bn-dark .shell.public .cart-bar { background: rgb(26 30 40 / .72); border-color: rgb(255 255 255 / .09); }
   html:is(.bn-glass, .bn-dark) .shell.public .cart-page { padding-bottom: 96px; }
 }
+
+/* ===== 5.11.2026 SİTE TEMASI 'Apple açık' (look.site 'apple' → html.th-apple; sadece mağaza, sadece gündüz) =====
+   Apple Store gündüz dili: açık gri zemin (#f5f5f7), üstte beyaz parlama; çizgisiz beyaz kartlar, çok yumuşak gölge; sistem yazı tipi
+   (iPhone'da SF Pro), sıkı başlıklar; koyu hap düğmeler; açık gri çipler. Ana renk ve fiyat rengi kullanıcının teması olarak kalır. */
+html.th-apple {
+  --bg: #f5f5f7; --surface: #ffffff; --surface-2: #f5f5f7; --fg: #1d1d1f; --muted: #6e6e73; --line: #e3e3e8; --line-2: #ececf0;
+  --f-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  --f-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  --ap-card: 0 1px 2px rgb(0 0 0 / .04), 0 14px 34px -22px rgb(0 0 0 / .22);
+  --ap-card-h: 0 2px 4px rgb(0 0 0 / .05), 0 22px 44px -24px rgb(0 0 0 / .3);
+  --ap-btn: #1d1d1f; --ap-chip: #e8e8ed;
+}
+html.th-apple body { background: var(--bg); }
+html.th-apple body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(120% 70% at 15% -10%, #ffffff 0%, rgb(255 255 255 / 0) 55%), radial-gradient(90% 60% at 100% 110%, #ebe7e1 0%, rgb(235 231 225 / 0) 60%); }
+html.th-apple .shell.public { -webkit-font-smoothing: antialiased; letter-spacing: -.01em; }
+/* başlıklar */
+html.th-apple .shell.public .sh-head h2 { font-weight: 700; letter-spacing: -.025em; font-size: clamp(26px, 3vw, 40px); }
+html.th-apple .shell.public .sh-head h2::before { display: none; }
+html.th-apple .shell.public .sh-head p { margin-left: 0; font-size: 15px; }
+html.th-apple .shell.public :is(h1, h2, .page-t, .ph-t) { letter-spacing: -.02em; }
+/* ürün kartları: çizgisiz beyaz, büyük köşe, yumuşak gölge, resim zemini açık gri */
+html.th-apple .shell.public .plist.pgrid > li.prow { border: 0; border-radius: 22px; box-shadow: var(--ap-card); }
+html.th-apple .shell.public .plist.pgrid > li.prow:hover { box-shadow: var(--ap-card-h); transform: translateY(-2px); }
+html.th-apple .shell.public .plist.pgrid .prow-main .thumb { background: #fafafa; border: 0; }
+html.th-apple .shell.public .plist.pgrid .cimg-sw { border-bottom: 0; }
+html.th-apple .shell.public .prow-name { font-weight: 600; letter-spacing: -.01em; }
+/* sepete ekle: koyu hap, − 1 + açık gri hap */
+html.th-apple .shell.public .plist .btn.add { background: var(--ap-btn); color: #fff; border: 0; border-radius: 999px !important; font-weight: 600; }
+html.th-apple .shell.public .plist .btn.add:hover { background: #000; color: #fff; }
+html.th-apple .shell.public .stepper { background: var(--ap-chip); border: 0; border-radius: 999px !important; }
+html.th-apple .shell.public .stepper > button, html.th-apple .shell.public .stepper > input { background: transparent; border: 0 !important; }
+/* çipler ve seçim çubukları */
+html.th-apple .shell.public .chip { background: var(--surface); border: 0; box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 0 0 1px rgb(0 0 0 / .04) inset; }
+html.th-apple .shell.public .chip.on { background: var(--ap-btn); color: #fff; box-shadow: none; }
+html.th-apple .shell.public :is(.view-sw, .seg, .mo-tabs) { background: var(--ap-chip); border: 0; box-shadow: none; border-radius: 999px; padding: 3px; }
+html.th-apple .shell.public :is(.view-sw, .seg, .mo-tabs) > button { border-radius: 999px; }
+html.th-apple .shell.public :is(.view-sw, .seg, .mo-tabs) > button.on { background: #fff; color: var(--fg); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
+/* arama kutuları */
+html.th-apple .shell.public :is(.toolbar .search, .kf-search) { background: var(--surface); border: 0; border-radius: 14px; box-shadow: 0 1px 2px rgb(0 0 0 / .05), 0 0 0 1px rgb(0 0 0 / .05) inset; }
+html.th-apple .shell.public .toolbar { background: transparent; }
+/* kategori listesi */
+html.th-apple .shell.public .cat-link { border-radius: 12px; }
+html.th-apple .shell.public .cat-link.on { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: var(--ap-card); }
+/* ana sayfa kutuları */
+html.th-apple .shell.public :is(.sh-usp, .sh-brand, .sh-card) { border: 0; box-shadow: var(--ap-card); }
+html.th-apple .shell.public .sh-usp { border-radius: 20px; }
+html.th-apple .shell.public .sh-brand { border-radius: 24px; background: #fff; }
+html.th-apple .shell.public .sh-card { border-radius: 22px; }
+html.th-apple .shell.public .sh-card-img { background: #fafafa; border-bottom: 0; }
+html.th-apple .shell.public .sh-box { border-radius: 28px; }
+html.th-apple .shell.public .sh-hero { border-radius: 30px; }
+html.th-apple .shell.public .marq, html.th-apple .shell.public .sh-mq { border: 0; box-shadow: var(--ap-card); }
+/* sepet */
+html.th-apple .shell.public :is(.cart-main, .cart-sum, .cart-subtot) { background: var(--surface); border: 0; border-radius: 24px; box-shadow: var(--ap-card); }
+html.th-apple .shell.public .gline { border-bottom-color: var(--line-2); }
+html.th-apple .shell.public .cart-sum .btn.primary, html.th-apple .shell.public .cart-bar .btn.primary { background: var(--ap-btn); border-color: var(--ap-btn); color: #fff; border-radius: 999px; }
+html.th-apple .shell.public .back-btn { background: var(--surface); border: 0; box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 0 0 1px rgb(0 0 0 / .04) inset; border-radius: 999px; }
+html.th-apple .shell.public .cart-clear { border-radius: 999px; }
+/* Hesabım ve sipariş sayfaları: beyaz kartlar */
+html.th-apple .shell.public :is(.acct-side, .o-card, .acct-card, .mo-card, .co-sec, .addr-card) { background: var(--surface); border: 0 !important; border-radius: 22px; box-shadow: var(--ap-card); }
+html.th-apple .shell.public .acct-side { padding: 12px; }
+html.th-apple .shell.public .acct-side .on { background: var(--ap-chip); color: var(--fg); }
+/* genel birincil düğmeler */
+html.th-apple .shell.public .btn.primary { background: var(--ap-btn); border-color: var(--ap-btn); color: #fff; border-radius: 999px; }
+html.th-apple .shell.public .btn.primary:hover { background: #000; }
+html.th-apple .shell.public .btn.outline { border-radius: 999px; }
+/* alt bilgi */
+html.th-apple .sfoot { background: transparent; border-top: 1px solid var(--line); }
+html.th-apple .shell.public .ssum-pay { background: #f5f5f7; border: 0; border-radius: 18px; }
+html.th-apple .shell.public .ssum-pay :is(small, .ssum-pay-l) { color: var(--muted); }
