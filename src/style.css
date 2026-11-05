@@ -7522,12 +7522,7 @@ html[data-theme="dark"] .bp-logo img.ink { filter: invert(1) hue-rotate(180deg);
 }
 /* kayan hap bitince asıl hap yumuşak geçişle değil anında görünsün (sonda kısa sönük kare 'glitch' gibiydi) */
 .flow-g > .topnav-b, .flow-g > button, .flow-g .topnav-b { transition: color .2s ease !important; }
-/* 5.11.2026 (4) apple.com'dan: iki tonlu bölüm başlığı (koyu başlık + aynı satırda gri açıklama) ve yuvarlak gri raf okları — sadece Apple açık, bilgisayar */
-@media (min-width: 900px) {
-  html.th-apple .shell.public .sh-head > div:first-child { display: block; font: 700 clamp(26px, 2.5vw, 34px)/1.18 var(--f-display); letter-spacing: -.025em; max-width: 900px; }
-  html.th-apple .shell.public .sh-head > div:first-child > h2 { display: inline; font: inherit !important; letter-spacing: inherit; }
-  html.th-apple .shell.public .sh-head > div:first-child > p { display: inline; margin: 0 0 0 .28em !important; font: inherit !important; color: #86868b; letter-spacing: inherit; }
-}
+/* 5.11.2026 (4) apple.com'dan: yuvarlak gri raf okları (iki tonlu başlık kaldırıldı — kullanıcı beğenmedi) */
 html.th-apple .shell.public .sh-arrow { width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgb(210 210 215 / .64); color: rgb(0 0 0 / .56); box-shadow: none; }
 html.th-apple .shell.public .sh-arrow:hover:not(:disabled) { background: rgb(223 223 227 / .92); color: rgb(0 0 0 / .72); }
 html.th-apple .shell.public .sh-arrow:disabled { opacity: .36; }
@@ -7555,3 +7550,8 @@ html.lg-on[data-theme="dark"] .hd-p { background: rgb(24 28 38 / .97) !important
 .cart-bump { animation: cartBump .5s cubic-bezier(.3, 1.6, .5, 1); }
 @keyframes cartBump { 0% { transform: scale(1); } 35% { transform: scale(1.18); } 100% { transform: scale(1); } }
 @media (min-width: 900px) { .hdr-gs .gs-nav .topnav-b .topnav-l { display: inline !important; } .hdr-gs .gs-nav .topnav-b { padding: 0 12px !important; } }
+
+/* 5.11.2026 (7): Stil Stüdyosu'nda seçilen yazı tipleri Apple açık / Bakır gece temasının yazı tipinin ÜSTÜNE yazsın (önceden tema eziyordu, yazı tipi hiç değişmiyordu) */
+html.st-fh.st-fh { --f-display: var(--st-head); }
+html.st-fb.st-fb, html.st-fb.st-fb .shell.public { --f-body: var(--st-body); }
+html.st-fb.st-fb body { font-family: var(--f-body); }
