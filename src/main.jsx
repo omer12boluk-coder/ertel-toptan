@@ -6,7 +6,7 @@ import { applyStyle } from './stylekit.js';
 import { RatePrompt } from './reviews.jsx';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ProductsDrop, AdminDrop, ProfileDrop } from './navdrop.jsx';
+import { ProductsDrop, AdminDrop, ProfileDrop, BrandsDrop } from './navdrop.jsx';
 import { SetPage, SetsAdmin, setIdFromPath } from './sets.jsx';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
 import { loadFavs, mergeFavs } from './store.js';
@@ -19,7 +19,7 @@ import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS, SPLASH_STYLES } from './config.
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
-import { Catalog, ProductPage, useTree } from './catalog.jsx';
+import { Catalog, ProductPage } from './catalog.jsx';
 import { KalipFinder } from './kalipfind.jsx';
 import { PreqPage, PreqAdmin } from './preq.jsx';
 import { LegalPage } from './legalui.jsx';
@@ -519,13 +519,6 @@ function DemoSwitch({ admin }) {
     <Icon n={admin ? 'store' : 'shield'} s={15} /><span>{admin ? 'Mağazaya dön' : 'Yönetim paneli'}</span>{!admin && <small>admin / admin</small>}
   </button>;
 }
-// 'Cam + arama' üst menüsünün alt satırında ilk ana kategoriler (bilgisayarda; sığmayan gizlenir)
-function GsCats() {
-  const tree = useTree();
-  const roots = (tree.roots || []).slice(0, 6);
-  if (!roots.length) return null;
-  return <span className="gs-cats">{roots.map((n) => <button key={n.id} type="button" className="gs-cat" onClick={() => { store.set({ catalogGo: { cat: n.id } }); go('katalog'); }}>{n.name}</button>)}</span>;
-}
 function ShellFull() {
   const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom, urunLayer, setId } = useStore();
   const admin = user.role === 'admin';
@@ -568,7 +561,8 @@ function ShellFull() {
   const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders + lcNew : 0);
   // 3.11.2026 mağaza üst menüsü: 'classic' (eski) · 'center' (logo ortada, menü altında — Tasarım › Renkler ve sayfa › Üst menü)
   const hc = pub && S0.look?.header === 'center';
-  const hs = pub && (S0.look?.header || 'search') === 'search'; // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
+  const hs = pub && (S0.look?.header || 'search') === 'search';
+  const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && S0.look?.hideTop !== false, S0.look?.hideTop === 'up', tab, urunLayer);
   const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
@@ -593,7 +587,8 @@ function ShellFull() {
               const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
               return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
             })}
-            <GsCats />
+            <BrandsDrop><button className="topnav-b" onClick={() => { store.set({ catalogGo: {} }); go('katalog'); }} title="Markalar"><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
+            {hasSets && <button className="topnav-b" onClick={() => { store.set({ catalogGo: { sets: true } }); go('katalog'); }} title="Setler"><Icon n="box" s={16} /><span className="topnav-l">Setler</span></button>}
           </nav>
         </div>
       </header> : hc ? <header className="topbar hdr-c">
@@ -791,6 +786,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   setupNavAnim();
   setupCrispBack();
 }
+setupFlowPills(); // akan hap: bilgisayarda da
 
 // Telefonda dokunma hissi: kart/düğmeye basınca yumuşakça içe göçer, çok kısa dokunuşta bile en az ~120 ms basılı görünür,
 // bırakınca hafif yaylanarak geri gelir (CSS :active iPhone'da bir an yanıp sönüyordu, "çiğ" duruyordu).
@@ -887,7 +883,7 @@ function useHideTop(on, upShow, tab, layer) {
     const r = document.documentElement; const ok = on && HIDE_TABS.has(tab) && !(tab === 'urun' && layer);
     if (!ok) { r.classList.remove('top-hide'); return; }
     let last = scrollY, acc = 0, raf = 0;
-    const busy = () => document.body.classList.contains('noscroll') || document.querySelector('.hsearch.mob-open, .hd-mega, .hd-pop, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
+    const busy = () => document.body.classList.contains('noscroll') || document.querySelector('.hsearch.mob-open, .hd-p, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
     const f = () => {
       raf = 0; const y = scrollY; const d = y - last; last = y;
       if (y < 70) { acc = 0; r.classList.remove('top-hide'); return; }
@@ -900,6 +896,42 @@ function useHideTop(on, upShow, tab, layer) {
     addEventListener('scroll', q, { passive: true });
     return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); r.classList.remove('top-hide'); };
   }, [on, upShow, tab, layer]);
+}
+// 5.11.2026 'akan hap' (kullanıcı: bir şeye tıklayınca seçili hap eskisinden yenisine akıyormuş gibi gitsin): tek seçimli düğme
+// gruplarında (üst menü sekmeleri, seçim çubukları, alt sayfa çubukları, Siparişlerim sekmeleri, görünüm seçici) seçim değişince
+// eski seçilinin yerinden yenisine, yolun ortasında uzayarak kayan bir hap çizilir; yeni düğmenin kendi zemini o sırada gizlenir.
+// Hap grubun İÇİNE (yazıların altına) konur. Sadece transform/opacity değil ama tek küçük kutu → telefonda da hafif.
+function setupFlowPills() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
+  const SEL = '.topnav .topnav-b, .seg > button, .mo-tabs > button, .view-sw > button, .of-seg > button';
+  const groupOf = (b) => b.closest('.topnav') || b.parentElement;
+  addEventListener('pointerdown', (e) => {
+    const t = e.target instanceof Element ? e.target : null; const btn = t?.closest(SEL);
+    if (!btn || btn.classList.contains('on') || btn.disabled) return;
+    const g = groupOf(btn); const old = [...g.querySelectorAll('.on')].find((x) => x.matches(SEL) && groupOf(x) === g);
+    if (!old) return;
+    const gr = g.getBoundingClientRect(); const a = old.getBoundingClientRect();
+    const A = { x: a.left - gr.left + g.scrollLeft, y: a.top - gr.top + g.scrollTop, w: a.width, h: a.height };
+    let n = 0;
+    const wait = () => {
+      if (++n > 40) return;
+      if (!btn.isConnected || !btn.classList.contains('on')) { requestAnimationFrame(wait); return; }
+      const cs = getComputedStyle(btn); const bg = cs.backgroundImage !== 'none' ? cs.backgroundImage : cs.backgroundColor;
+      if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return; // seçili hâlinde zemini olmayan (alt çizgili) grup
+      const gr2 = g.getBoundingClientRect(); const b = btn.getBoundingClientRect();
+      const B = { x: b.left - gr2.left + g.scrollLeft, y: b.top - gr2.top + g.scrollTop, w: b.width, h: b.height };
+      if (getComputedStyle(g).position === 'static') g.style.position = 'relative';
+      const gh = document.createElement('span'); gh.className = 'flow-ghost'; gh.setAttribute('aria-hidden', 'true');
+      gh.style.cssText = `left:0;top:0;width:${B.w}px;height:${B.h}px;border-radius:${cs.borderRadius};background:${cs.backgroundImage !== 'none' ? cs.backgroundImage + ',' : ''}${cs.backgroundColor};box-shadow:${cs.boxShadow}`;
+      g.insertBefore(gh, g.firstChild); btn.classList.add('flow-on');
+      const dx = Math.abs(B.x - A.x); const mx = Math.min(A.x, B.x) + dx * 0.25; const mw = (A.w + B.w) / 2 + dx * 0.5;
+      const f = (x, y, w, h) => ({ transform: `translate(${x}px, ${y}px)`, width: w + 'px', height: h + 'px' });
+      const an = gh.animate([f(A.x, A.y, A.w, A.h), { ...f(mx, (A.y + B.y) / 2 + 1, mw, (A.h + B.h) / 2 - 2), offset: 0.45 }, f(B.x, B.y, B.w, B.h)], { duration: 440, easing: 'cubic-bezier(.3, .7, .25, 1)' });
+      const done = () => { gh.remove(); btn.classList.remove('flow-on'); };
+      an.onfinish = done; an.oncancel = done;
+    };
+    requestAnimationFrame(wait);
+  }, { capture: true, passive: true });
 }
 function setupNavAnim() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;

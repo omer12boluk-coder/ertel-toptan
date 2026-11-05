@@ -168,6 +168,24 @@ export function ProductsDrop({ children }) {
   )}>{children}</HoverDrop>;
 }
 
+// 5.11.2026 üst menü 'Markalar ▾': ürünü olan markalar (çoktan aza), logo varsa logo; tıklayınca o markanın ürünleri
+export function BrandsDrop({ children }) {
+  const vis = useVisibleProducts(false);
+  const BL = useStore((s) => s.settings.brandLogos || {});
+  const list = useMemo(() => {
+    const m = new Map(); for (const p of vis) if (p.b) m.set(p.b, (m.get(p.b) || 0) + 1);
+    const lk = Object.fromEntries(Object.entries(BL).map(([k, v]) => [k.toLocaleLowerCase('tr'), v]));
+    return [...m].sort((a, b) => b[1] - a[1]).slice(0, 24).map(([n, c]) => ({ n, c, logo: lk[n.toLocaleLowerCase('tr')]?.logo }));
+  }, [vis, BL]);
+  return <HoverDrop cls="hd-brands" panel={(c) => (
+    <div className="hdb-grid">{list.map((b) => (
+      <button key={b.n} type="button" className="hdb" onClick={() => { c(); store.set({ catalogGo: { brand: b.n } }); go('katalog'); }}>
+        <span className="hdb-n">{b.n}</span><small>{b.c}</small>
+      </button>
+    ))}</div>
+  )}>{children}</HoverDrop>;
+}
+
 // büyük başlıklar tek sütun (kaydırma yok); üstüne gelince alt başlıklar yanda açılır
 function MegaCats({ cats, close }) {
   const [hov, setHov] = useState(null); const [top, setTop] = useState(0);
