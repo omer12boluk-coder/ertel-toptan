@@ -947,7 +947,7 @@ function setupNavAnim() {
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
     // 5.11.2026 alt menüyle sekme değişimi de yandan kayar: sağdaki sekmeye geçince sağdan, soldakine geçince soldan (iOS sekme hissi)
     const ti = navIdx();
-    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : 0; lastIdx = ti; if (d) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 300, 0.6); else play([], 'tab', 180); return; }
+    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : 0; lastIdx = ti; if (d) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 365, 0.6); else play([], 'tab', 180); return; }
     lastIdx = ti;
     play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
   };
@@ -1208,6 +1208,15 @@ function BotNav({ items, tab, badge }) {
   }, []);
   const ai = items.findIndex((x) => x[0] === tab);
   const px = geo && ai >= 0 ? geo.cs[ai] : null;
+  // 5.11.2026 sıvı geçiş: hap yeni sekmeye kayarken yolun ortasında uzayıp hafif basıklaşır, varınca toplanır (iOS cam sekme çubuğu hissi)
+  const prevPx = useRef(px);
+  useEffect(() => {
+    const a = prevPx.current; prevPx.current = px;
+    if (a == null || px == null || Math.abs(a - px) < 2) return;
+    const i = pill.current?.firstElementChild; if (!i?.animate || ref.current?.classList.contains('dragging') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const sx = 1 + Math.min(0.6, Math.abs(px - a) / 240);
+    i.animate([{ transform: 'scale(1, 1)' }, { transform: `scale(${sx.toFixed(3)}, ${(1 - (sx - 1) * 0.22).toFixed(3)})`, offset: 0.4 }, { transform: 'scale(1, 1)' }], { duration: 460, easing: 'cubic-bezier(.3, .7, .3, 1)' });
+  }, [px]);
   return (
     <nav ref={ref} className="botnav" aria-label="Alt menü">
       {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px}px) translateX(-50%)` }} aria-hidden="true"><i /></span>}

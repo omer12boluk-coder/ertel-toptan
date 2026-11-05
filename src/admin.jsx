@@ -580,7 +580,7 @@ const GROUPS = [
 const SECTIONS = [
   ['magazaana', 'Mağaza ana sayfası', 'Tasarım modunda düzenlenir: reklamlar, kutular, raflar, renkler', 'monitor', 'vitrin'],
   ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star', 'vitrin'],
-  ['gorunum', 'Renkler ve görünüm', 'Mağaza ve bayi renkleri, fiyat renkleri, tema · önizlemeli', 'palette', 'vitrin'],
+  ['gorunum', 'Renkler ve görünüm', 'Renkler, alt menü, üst menü, sayfa geçişleri · önizlemeli', 'palette', 'vitrin'],
   ['kart', 'Ürün kartları', 'Fiyat gösterimi, sepete ekle düğmesi, resimler, ürün açılışı · önizlemeli', 'grid', 'vitrin'],
   ['tema', 'Süsleme teması (eski)', 'Yenisi: Tasarım modu › Tema Stüdyosu', 'sparkle', 'vitrin'],
   ['altbilgi', 'Alt bilgi ve sayfalar', 'İletişim, sosyal medya, Kargo / İade sayfaları, KVKK ve sözleşmeler', 'list', 'vitrin'],
@@ -1435,6 +1435,12 @@ function LookSettings({ d, set }) {
       <ThemePreview S={S} role="public" title="Online mağaza" accent={L.shopAccent || S.brand.accent} price={L.shopPrice || S.brand.priceAccent} bg={L.bg} />
       <ThemePreview S={S} role="customer" title="Bayi uygulaması" accent={S.brand.accent} price={S.brand.priceAccent} />
     </div>
+    <h3>Mağaza menüleri ve geçişler</h3>
+    <p className="fine">Aynı ayarlar Tasarım modu › Renkler ve sayfa'da da var.</p>
+    <Field label="Telefon alt menüsü"><span className="seg seg-wrap">{[['glass', 'Yüzen cam'], ['dark', 'Koyu cam'], ['bar', 'Şerit cam'], ['classic', 'Klasik (eski)']].map(([x, l]) => <button key={x} type="button" className={(L.botnav || 'glass') === x ? 'on' : ''} onClick={() => set('look.botnav', x)}>{l}</button>)}</span></Field>
+    <Field label="Telefonda sayfa geçişi" hint="Yandan kayma: yeni sayfa yandan kayarak gelir, alt menüde sağdaki sekmeye geçince sağdan. Yavaş: denemek için 3 kat yavaş."><span className="seg seg-wrap">{[['clear', 'Yandan kayma'], ['glass', 'Cam'], ['soft', 'Hafif (eski)'], ['slow', 'Yavaş · deneme']].map(([x, l]) => <button key={x} type="button" className={(L.motion || 'clear') === x ? 'on' : ''} onClick={() => set('look.motion', x)}>{l}</button>)}</span></Field>
+    <Field label="Üst menü düzeni"><span className="seg seg-wrap">{[['classic', 'Klasik'], ['center', 'Ortada logo']].map(([x, l]) => <button key={x} type="button" className={(L.header || 'classic') === x ? 'on' : ''} onClick={() => set('look.header', x)}>{l}</button>)}</span></Field>
+    <Field label="Aşağı kaydırınca üst menü"><span className="seg seg-wrap">{[['top', 'Gizlen · en üstte gelsin'], ['up', 'Gizlen · yukarı kayınca gelsin'], ['off', 'Hep görünsün']].map(([x, l]) => <button key={x} type="button" className={((L.hideTop === false ? 'off' : L.hideTop) || 'top') === x ? 'on' : ''} onClick={() => set('look.hideTop', x === 'off' ? false : x)}>{l}</button>)}</span></Field>
     <h3>Online mağaza</h3>
     <ColorRow label="Mağaza ana rengi" hint="Düğmeler, seçili sekme, bağlantılar" v={L.shopAccent} def={S.brand.accent} allowEmpty emptyLabel="Ana renk ile aynı" onChange={(v) => set('look.shopAccent', v)} />
     <ColorRow label="Mağaza fiyat rengi" v={L.shopPrice} def="#c2410c" onChange={(v) => set('look.shopPrice', v)} />

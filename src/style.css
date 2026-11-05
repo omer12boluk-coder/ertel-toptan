@@ -6925,3 +6925,16 @@ html.top-hide .shell.public .topbar > :not(.topbar-in) { visibility: hidden; }
   html[data-theme="dark"].bn-glass .shell:not(.admin) .botnav-pill i, html.bn-dark .shell:not(.admin) .botnav-pill i {
     background: linear-gradient(180deg, rgb(255 255 255 / .16), rgb(255 255 255 / .06)), rgb(120 120 128 / .24); box-shadow: 0 0 0 .5px rgb(255 255 255 / .18) inset, 0 1px 1px rgb(255 255 255 / .2) inset; }
 }
+/* 5.11.2026 kart sepete ekle ⇄ − 1 + geçişi (kullanıcı: telefonda pürüzlü): kırpma (clip-path) animasyonu yerine sadece transform + opacity
+   (ekran kartında, her karede yeniden çizim yok). Düğme ve seçici aynı boyda olduğu için yerinde 'açılır': − ve + ortadan yanlara kayar. */
+.plist.pgrid.ab .qty-morph.grow > .stepper { animation: abIn .3s cubic-bezier(.2, .8, .2, 1) backwards; transform-origin: center; will-change: transform, opacity; }
+.plist.pgrid.ab .qty-morph.grow > .stepper > * { animation: none; }
+.plist.pgrid.ab .qty-morph.grow > .stepper > :first-child { animation: abL .36s cubic-bezier(.2, .8, .2, 1) backwards; }
+.plist.pgrid.ab .qty-morph.grow > .stepper > :last-child { animation: abR .36s cubic-bezier(.2, .8, .2, 1) backwards; }
+.plist.pgrid.ab .qty-morph.grow > .stepper > input { animation: abFade .3s .06s ease backwards; }
+.plist.pgrid.ab .prow-side .btn.add.back { animation: abIn .26s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes abIn { from { opacity: .35; transform: scale(.97); } }
+@keyframes abL { from { transform: translateX(110%); opacity: 0; } }
+@keyframes abR { from { transform: translateX(-110%); opacity: 0; } }
+@keyframes abFade { from { opacity: 0; transform: scale(.8); } }
+@media (prefers-reduced-motion: reduce) { .plist.pgrid.ab .qty-morph.grow > .stepper, .plist.pgrid.ab .qty-morph.grow > .stepper > *, .plist.pgrid.ab .prow-side .btn.add.back { animation: none; } }
