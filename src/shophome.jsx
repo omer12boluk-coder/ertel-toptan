@@ -379,12 +379,12 @@ export function ShopHome({ S: Sover }) {
     );
     if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)), H.promosLay);
     if (k === 'sets') return <SetRail edit={!!E} />;
-    if (k === 'p0:hero') return slides.length ? <P0Hero slides={slides} open={link} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'p0:hero') return (H.slides || []).length ? <P0Hero slides={H.slides} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
     if (k === 'p0:find') return <P0Finder S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'p0:cats') return <P0Cats H={H} />;
     if (k === 'p0:pick') return <P0Pick S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'p0:sets') return <P0Sets S={S} />;
-    if (k === 'p0:brands') return <P0Brands />;
+    if (k === 'p0:brands') return <P0Brands H={H} />;
     if (k === 'p0:trust') return <P0Trust H={H} />;
     if (k === 'fav') return <FavRail onProduct={E ? () => E.select(k) : setProduct} edit={!!E} S={S} />;
     if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
@@ -1202,7 +1202,7 @@ export function rankProducts(catalog, q, max = 60) {
   hits.sort((a, b) => b[0] - a[0] || a[1] - b[1]);
   return { list: hits.slice(0, max).map((h) => h[2]), total: hits.length };
 }
-function ProductSearch({ onPick, placeholder = 'Ürün ara (ad ya da stok kodu)…' }) {
+export function ProductSearch({ onPick, placeholder = 'Ürün ara (ad ya da stok kodu)…' }) {
   const catalog = useStore((s) => s.catalog);
   const [q, setQ] = useState('');
   const { list: res, total } = useMemo(() => rankProducts(catalog, q), [q, catalog]);

@@ -418,7 +418,7 @@ export function Catalog({ admin }) {
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
   // useLayoutEffect: marka / kategori linkinden gelince süzme EKRANA ÇİZİLMEDEN uygulanır (önce eski liste görünüp 'patlamasın')
-  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); if (browse.all || browse.q || browse.cat != null || browse.brand) setHubOff(true); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); if (browse.hub) setHubOff(false); else if (browse.all || browse.q || browse.cat != null || browse.brand) setHubOff(true); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   // Google'dan gelen /marka/<ad> ya da /kategori/<ad> adresi → ürünler yüklenince o marka / kategori seçili açılır
   const seoGo = useStore((s) => s.seoGo);
   useEffect(() => {
@@ -531,8 +531,10 @@ export function Catalog({ admin }) {
 
   useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!admin && user?.role === 'public' && S.look?.prodHub && !hubOff && actives.length === 0) return <div className="catalog"><ProdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} /></div>;
+  const hubBack = !admin && user?.role === 'public' && S.look?.prodHub && hubOff;
   return (
     <div className="catalog">
+      {hubBack && <button className="back-btn cat-hub-back" onClick={() => store.set({ catalogGo: { hub: true } })}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
       {admin && <div className="prod-switch"><ProductsSwitch on="products" /></div>}
       <div className={'cat-layout' + (admin ? ' resizable' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
         <aside className="cat-side" aria-label="Kategoriler">

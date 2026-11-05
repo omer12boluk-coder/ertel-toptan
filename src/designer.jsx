@@ -16,7 +16,8 @@ import {
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
 import { FROSTS, BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter, ensureLogoSvg } from './presets.js';
 import { STYLE_PRESETS, PRESET_BY, SHADOWS, BORDERS, HOVERS, TITLES, styleOut } from './stylekit.js';
-import { P0CatsPanel, P0_NOTES } from './p0home.jsx';
+import { P0HeroPanel, P0CatsPanel, P0PickPanel, P0SetsPanel, P0FindPanel, P0BrandsPanel, P0HubPanel, P0_NOTES } from './p0home.jsx';
+import { ProductSearch } from './shophome.jsx';
 import { snapshot, applyPreset, sameAs, APPLE, CLAUDE_CHANGES, P0, P0_CHANGES, upgradePresets, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
@@ -596,6 +597,7 @@ function Layers({ get, H, L, setL, sel, setSel, toggleHide, reveal, addBlock, bl
       <button className={'dz2-ly page' + (!sel ? ' on' : '')} onClick={() => setSel(null)}><Icon n="palette" s={16} /><span className="dz2-lyn">Renkler ve sayfa</span></button>
       <button className={'dz2-ly page' + (sel?.kind === 'style' ? ' on' : '')} onClick={() => setSel({ kind: 'style' })}><Icon n="brush" s={16} /><span className="dz2-lyn">Stil Stüdyosu</span></button>
       <button className={'dz2-ly page' + (sel?.kind === 'studio' ? ' on' : '')} onClick={() => setSel({ kind: 'studio' })}><Icon n="sparkle" s={16} /><span className="dz2-lyn">Tema Stüdyosu</span></button>
+      <button className={'dz2-ly page' + (sel?.kind === 'hub' ? ' on' : '')} onClick={() => setSel({ kind: 'hub' })}><Icon n="grid" s={16} /><span className="dz2-lyn">Ürünler açılış sayfası</span></button>
       <div className="dz2-lh">Bölümler <small>tutup sürükleyin</small></div>
       <div className="dz2-lylist">
         {L.map((k, i) => (
@@ -628,6 +630,7 @@ function Inspector(P) {
   let title = '', sub = '', body = null, back = null;
   if (!sel) { title = 'Renkler ve sayfa'; sub = 'Hiçbir şey seçili değilken burası açık'; body = <PagePanel {...P} />; }
   else if (sel.kind === 'presets') { title = 'Tasarım paketleri'; sub = 'Bütün görünüm tek tıkla'; body = <PresetPanel {...P} />; }
+  else if (sel.kind === 'hub') { title = 'Ürünler açılış sayfası'; sub = 'Üst menüden Ürünler’e basınca'; body = <P0HubPanel H={H} S={(k, v) => set('shopHome.' + k, v)} ImgPick={ImgPick} L={d.look || {}} setLook={set} />; }
   else if (sel.kind === 'studio') { title = 'Tema Stüdyosu'; sub = 'Kampanya ve sezon görünümü'; body = <StudioPanel {...P} />; }
   else if (sel.kind === 'style') { title = 'Stil Stüdyosu'; sub = 'Yazı tipleri, köşeler, hazır stiller'; body = <StylePanel {...P} />; }
   else if (sel.kind === 'brand') {
@@ -699,9 +702,14 @@ function Inspector(P) {
       <Field label="Yazı" opt><input value={H.cta?.text || ''} onChange={(e) => S('cta', { ...(H.cta || {}), text: e.target.value })} /></Field>
       <More><GeoMore H={H} k={k} S={S} /></More>
     </>;
-    else if (k === 'p0:hero') body = <><p className="fine">Kutulara giren reklamlar: 1. reklam büyük kutuda (4. ve sonraki reklamlar da onunla sırayla döner), 2. ve 3. reklam yandaki küçük kutularda. Aşağıdan seçip yazısını, resmini, düğmesini ve zeminini düzenleyin; sırayı oklarla değiştirin.</p><HeroPanel {...P} /></>;
+    else if (k === 'p0:hero') body = <><h4 className="dz2-sub">Vitrin yerleşimi</h4><P0HeroPanel H={H} S={S} onPick={(i) => { P.goSlide?.(i); P.heroI.current = i; }} /><h4 className="dz2-sub">Reklamı düzenle</h4><HeroPanel {...P} /></>;
     else if (k === 'p0:cats') body = <><P0CatsPanel H={H} S={S} ImgPick={ImgPick} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
-    else if (k.startsWith('p0:')) body = <><p className="fine">{P0_NOTES[k]}</p><p className="fine">Gizlemek için aşağıdaki düğme ya da Katmanlar’daki göz simgesi.</p><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
+    else if (k === 'p0:pick') body = <><P0PickPanel H={H} S={S} ProductSearch={ProductSearch} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
+    else if (k === 'p0:sets') body = <><P0SetsPanel H={H} S={S} sets={d.sets || []} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
+    else if (k === 'p0:find') body = <><P0FindPanel H={H} S={S} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
+    else if (k === 'p0:brands') body = <><P0BrandsPanel H={H} S={S} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
+    else if (k === 'p0:trust') body = <><p className="fine">{P0_NOTES[k]}</p><Rows list={H.usps || []} set={(v) => S('usps', v)} max={4} sub="Avantaj ekle" openIdx={0} title={(u, i) => u.title || `${i + 1}. avantaj`} add={() => S('usps', [...(H.usps || []), NEW.usp()])} render={(u, up) => <UspFields u={u} up={up} />} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
+    else if (k.startsWith('p0:')) body = <><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
     else if (k === 'fav' || k === 'sets') body = <p className="fine">Bu raf otomatik dolar. Yerini Katmanlar'dan ya da sayfada sürükleyerek değiştirin, göz simgesiyle gizleyin.</p>;
     else if (k.startsWith('rail:')) { const i = H.sections.findIndex((r) => 'rail:' + r.id === k); const x = H.sections[i]; if (!x) return null; body = <><RailFields x={x} up={(p) => S('sections', H.sections.map((r, j) => (j === i ? { ...r, ...p } : r)))} /><More><GeoMore H={H} k={k} S={S} /></More><BlockActs {...P} k={k} /></>; }
     else if (k.startsWith('b:') && H.blocks[k.slice(2)]?.t === 'promos') { const id = k.slice(2); const b = H.blocks[id];
@@ -1132,6 +1140,8 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <DevPick L={L} set={set} k="pill" def="flow" label="Seçili hap hareketi" hint="Alt menü, üst menü ve seçim çubuklarında seçili hap yeni yere nasıl gitsin. Cıva: önce ucu uzanır, sonra arkası toparlanır."
         opts={[['flow', 'Akan'], ['mercury', 'Cıva'], ['none', 'Yok']]} />
       <Field label="Seçili hap rengi (üst menü)" hint="Beyaz: şu anki. Siyah: yönetim panelindeki gibi siyah hap, beyaz yazı (gecede tersi)."><span className="seg sw">{[['', 'Beyaz'], ['dark', 'Siyah']].map(([x, l]) => <button key={x || 'w'} type="button" className={(L.pillTone || '') === x ? 'on' : ''} onClick={() => set('look.pillTone', x)}>{l}</button>)}</span></Field>
+      <Field label="Üst menüde üstüne gelince simge rengi" hint="Seçili olmayan sekmenin üstüne gelince simgesinin rengi. Hap rengine ve kayma hareketine dokunmaz."><span className="seg sw">{[['', 'Tema rengi'], ['ink', 'Koyu'], ['none', 'Değişmesin']].map(([x, l]) => <button key={x || 't'} type="button" className={(L.pillHov || '') === x ? 'on' : ''} onClick={() => set('look.pillHov', x)}>{l}</button>)}
+        <label className={'she-color' + (/^#/.test(L.pillHov || '') ? ' on' : '')} title="Özel renk"><input type="color" value={/^#/.test(L.pillHov || '') ? L.pillHov : '#2f62d6'} onChange={(e) => set('look.pillHov', e.target.value)} /></label></span></Field>
       <Field label="Gece / gündüz geçişi" hint="Ay düğmesine basınca. Apple açık seçiliyse gece görünümü Bakır gece renkleriyle gelir."><span className="seg sw">{[['circle', 'Daireden yayılma'], ['fade', 'Yumuşak solma'], ['curtain', 'Perde'], ['none', 'Anında']].map(([x, l]) => <button key={x} type="button" className={(L.darkFx || 'circle') === x ? 'on' : ''} onClick={() => set('look.darkFx', x)}>{l}</button>)}</span></Field>
       <Field label="Hafif mod (eski bilgisayarlar)" hint="Otomatik: yavaş bilgisayar algılanınca bulanık cam efektleri kapanır, kaydırma akıcılaşır. Telefona dokunmaz."><span className="seg sw">{[['auto', 'Otomatik'], ['on', 'Hep açık'], ['off', 'Kapalı']].map(([x, l]) => <button key={x} type="button" className={(L.lite || 'auto') === x ? 'on' : ''} onClick={() => set('look.lite', x)}>{l}</button>)}</span></Field>
       <Toggle id="dz-sfx" label="Ses efektleri" hint="Sepete ekleme, silme, sekme, sipariş tamamlandı, bildirim. Kısa ve kısık; iPhone sessize alınınca çalmaz. Müşteri kendi cihazında kapatabilir (bilgisayarda üstteki hoparlör, telefonda Hesabım)." checked={L.sound !== false} onChange={(v) => set('look.sound', v)} />

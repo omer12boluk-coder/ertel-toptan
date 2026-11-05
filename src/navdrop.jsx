@@ -164,7 +164,7 @@ export function ProductsDrop({ children }) {
   return <HoverDrop cls="hd-mega" panel={(c) => (
     <div className="hd-mega-in">
       <div className="hd-side">
-        <Item close={c} icon="grid" label="Tüm ürünler" onClick={() => { store.set({ catalogGo: {} }); go('katalog'); }} />
+        <Item close={c} icon="grid" label="Tüm ürünler" onClick={() => { store.set({ catalogGo: { all: true } }); go('katalog'); }} />
         {hasSets && <Item close={c} icon="box" label="Setler" onClick={() => { store.set({ catalogGo: { sets: true } }); go('katalog'); }} />}
         <Item close={c} icon="heart" label="Favorilerim" onClick={() => { store.set({ catalogGo: { fav: true } }); go('katalog'); }} />
       </div>

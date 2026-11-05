@@ -310,6 +310,8 @@ function PvBadge() {
   if (!PV_HOST || !ls.get('pv-design', null) || store.s.user?.role !== 'public') return null;
   return <div className="pv-badge"><b>Önizleme tasarımı</b><small>Sadece bu tarayıcıda</small><button type="button" onClick={() => { ls.set('pv-design', null); location.reload(); }}>Kaldır</button></div>;
 }
+// 6.11.2026: üst/alt menüden Ürünler'e basınca 'Ürünler açılış sayfası' açıksa her seferinde o sayfa gelir (Tüm ürünler'e bir kez basınca kaybolmasın)
+const navGo = (k) => { if (k === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub) store.set({ catalogGo: { hub: true } }); go(k); };
 function useTheme() {
   const liteTick = useLowEndProbe();
   const isAdm = useStore((s) => s.user?.role === 'admin');
@@ -343,6 +345,7 @@ function useTheme() {
     applyLayout(r, pub ? L : {});
     r.classList.remove('fr-1', 'fr-2');
     r.classList.toggle('pill-dark', !!pub && L.pillTone === 'dark');
+    { const ph = pub ? L.pillHov : ''; if (ph === 'ink') r.style.setProperty('--pill-hov', 'var(--fg)'); else if (ph === 'none') r.style.setProperty('--pill-hov', 'currentColor'); else if (/^#/.test(ph || '')) r.style.setProperty('--pill-hov', ph); else r.style.removeProperty('--pill-hov'); } // üstüne gelince simge rengi
     r.classList.toggle('porc', !!pub && L.porc === true); // 6.11.2026 Paket 0 porselen kutular (bulanıklıksız parlak beyaz) // 6.11.2026 siyah hap (Tasarım › Cam ve hareket) // 6.11.2026 buzlu cam kaldırıldı (kullanıcının kastettiği bu değildi)
     // 6.11.2026 'Sepete ekle' rengi temadan bağımsız (Tasarım › Ürün kartları › Sepete ekle rengi): gray (varsayılan) | accent (eski) | dark | #hex
     const ac = pub ? (L.addColor || 'gray') : 'accent';
@@ -672,7 +675,7 @@ function ShellFull() {
           </div>
           <nav className="topnav gs-nav" aria-label="Ana menü">
             {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
-              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
               return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
             })}
             <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
@@ -697,7 +700,7 @@ function ShellFull() {
           </span>
           <nav className="topnav hc-nav" aria-label="Ana menü">
             {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
-              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)}><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
               return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
             })}
             <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
@@ -713,7 +716,7 @@ function ShellFull() {
             {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet') && k !== 'tasarim').map(([k, l, i]) => {
               const drop = (pub && k === 'katalog') || (admin && ['siparisler', 'siparis', 'katalog', 'musteriler'].includes(k));
               const b = (
-                <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => go(k)} title={l}>
+                <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)} title={l}>
                   <Icon n={i} s={18} /><span className="topnav-l">{l}</span>{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}{drop && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}
                 </button>
               );
@@ -1028,7 +1031,12 @@ function setupFlowPills() {
     const wait = () => {
       if (++n > 40) return;
       if (!btn.isConnected || !btn.classList.contains('on')) { requestAnimationFrame(wait); return; }
-      const cs = getComputedStyle(btn); const bg = cs.backgroundImage !== 'none' ? cs.backgroundImage : cs.backgroundColor;
+      // 6.11.2026: düğmenin zemini geçişle (transition) geliyorsa ilk karede saydam okunuyordu → hap hiç kaymıyordu (siyah hapta belirgindi).
+      // Geçiş bir anlığına kapatılıp son renk okunur.
+      const tr0 = btn.style.transition; btn.style.transition = 'none';
+      const cs0 = getComputedStyle(btn); const cs = { backgroundImage: cs0.backgroundImage, backgroundColor: cs0.backgroundColor, borderRadius: cs0.borderRadius, boxShadow: cs0.boxShadow };
+      btn.style.transition = tr0;
+      const bg = cs.backgroundImage !== 'none' ? cs.backgroundImage : cs.backgroundColor;
       if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return; // seçili hâlinde zemini olmayan (alt çizgili) grup
       const gr2 = g.getBoundingClientRect(); const b = btn.getBoundingClientRect();
       const B = { x: b.left - gr2.left + g.scrollLeft, y: b.top - gr2.top + g.scrollTop, w: b.width, h: b.height };
@@ -1051,7 +1059,7 @@ function setupFlowPills() {
           { ...f(Math.min(A.x, B.x), (A.y + B.y) / 2 + A.h * 0.07, Math.max(A.x + A.w, B.x + B.w) - Math.min(A.x, B.x), (A.h + B.h) / 2 * 0.86), offset: 0.5, easing: 'cubic-bezier(.25, .1, .25, 1)' },
           f(B.x, B.y, B.w, B.h)], { duration: 560, fill: 'none' })
         : gh.animate([f(A.x, A.y, A.w, A.h), { ...f(mx, (A.y + B.y) / 2 + 1, mw, (A.h + B.h) / 2 - 2), offset: 0.45 }, f(B.x, B.y, B.w, B.h)], { duration: 440, easing: 'cubic-bezier(.3, .7, .25, 1)' });
-      const done = () => { gh.remove(); g.classList.remove('flow-g'); btn.classList.remove('flow-on'); };
+      const done = () => { const t1 = btn.style.transition; btn.style.transition = 'none'; gh.remove(); g.classList.remove('flow-g'); btn.classList.remove('flow-on'); void btn.offsetWidth; requestAnimationFrame(() => { btn.style.transition = t1; }); }; // hap yerine oturunca asıl hap anında görünür (solarak gelip titremesin)
       an.onfinish = done; an.oncancel = done;
     };
     requestAnimationFrame(wait);
@@ -1424,7 +1432,7 @@ function BotNav({ items, tab, badge }) {
     <nav ref={ref} className="botnav" aria-label="Alt menü">
       {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px}px) translateX(-50%)` }} aria-hidden="true"><i /></span>}
       {items.map(([k, l, i, sh], n) => (
-        <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => { if (tab !== k) sfx('tap'); go(k); }}>
+        <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => { if (tab !== k) sfx('tap'); navGo(k); }}>
           <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
           <span>{sh || l}</span>
         </button>
