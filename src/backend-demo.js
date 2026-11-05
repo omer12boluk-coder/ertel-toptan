@@ -63,7 +63,7 @@ export class DemoBackend {
   pub(u) { if (!u) return null; const { pw, ...rest } = u; return rest; }
 
   async init() {}
-  async publicInfo() { const st = this.db.settings; if (st && !st.look?.site) st.look = { ...(st.look || {}), site: 'dash' }; return st || { pricing: { showTL: true, showVatInc: true, plusVat: true }, look: { site: 'dash' } }; }
+  async publicInfo() { const st = this.db.settings; if (st && !st.look?.site) st.look = { ...(st.look || {}), site: 'apple' }; return st || { pricing: { showTL: true, showVatInc: true, plusVat: true }, look: { site: 'apple' } }; }
   async needsSetup() { return false; }
   onAuth(cb) {
     this.authCb = cb;
@@ -88,7 +88,7 @@ export class DemoBackend {
   async reset() { this.db = freshDb(this.seed); this.persist(); location.reload(); }
 
   // demo: kartlarda TL ve KDV dahil satırları canlıdaki gibi açık gelsin (kaydedilmiş demo ayarı yoksa)
-  async loadSettings() { const st = this.db.settings; if (st && !st.look?.site) st.look = { ...(st.look || {}), site: 'dash' }; return st || { pricing: { showTL: true, showVatInc: true, plusVat: true }, look: { site: 'dash' } }; }
+  async loadSettings() { const st = this.db.settings; if (st && !st.look?.site) st.look = { ...(st.look || {}), site: 'apple' }; return st || { pricing: { showTL: true, showVatInc: true, plusVat: true }, look: { site: 'apple' } }; }
   async saveSettings(s) { this.db.settings = s; this.persist(); }
 
   async loadCatalog() { return this.db.catalog; }

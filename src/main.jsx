@@ -309,7 +309,8 @@ function useTheme() {
     ['glass', 'dark', 'bar'].forEach((k) => r.classList.toggle('bn-' + k, bn === k));
     // 5.11.2026 site teması 'dash' (CRM paneli gibi bakır gece): her zaman koyu → mağazada gece modu zorlanır
     const dash = !!pub && L.site === 'dash';
-    const t = dash ? 'dark' : (dev || S.brand.theme);
+    // 5.11.2026 kullanıcı: mağaza varsayılan AYDINLIK açılsın (telefon gece modunda olsa da); gece modu sadece düğmeyle
+    const t = dash ? 'dark' : (dev || (pub && S.brand.theme === 'auto' ? 'light' : S.brand.theme));
     r.classList.toggle('th-dash', dash);
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
     // 5.11.2026 site teması (look.site): 'apple' = Apple açık gündüz görünümü (sadece mağaza, sadece gündüz; gece modunda eski koyu tema)
@@ -330,7 +331,8 @@ store.set({ deviceTheme: ls.get('device-theme', null) });
 function ThemeButton() {
   const S = useStore((s) => s.settings);
   const dev = useStore((s) => s.deviceTheme);
-  const cur = dev || S.brand.theme;
+  const pubT = useStore((s) => s.user?.role === 'public');
+  const cur = dev || (pubT && S.brand.theme === 'auto' ? 'light' : S.brand.theme);
   const dark = cur === 'dark' || (cur === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   // 5.11.2026: gece/gündüz geçişi düğmenin olduğu yerden daire olarak yayılır (View Transitions; desteklemeyen tarayıcıda anında)
   const flip = (e) => {

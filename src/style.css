@@ -7253,3 +7253,9 @@ html.th-dash .shell.public .cat-link.on { background: rgb(255 255 255 / .12); co
 /* sepet tutar kutusu */
 html.th-dash .shell.public .ssum-pay { background: linear-gradient(135deg, rgb(242 184 128 / .16), rgb(242 184 128 / .05)); border: 1px solid rgb(242 184 128 / .22); border-radius: 20px; }
 html.th-dash .sfoot { background: transparent; border-top: 1px solid var(--dgb); color: var(--muted); }
+
+/* 5.11.2026 Ürünler'deki yapışkan arama + çip satırı: yapışınca tek başına havada kalıyordu → cam şerit (menülerle aynı dil), kenardan kenara */
+html:is(.th-apple, .th-dash) .shell.public .toolbar { background: color-mix(in oklab, var(--bg) 80%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5);
+  margin-inline: -16px; padding: 10px 16px; border-bottom: 1px solid color-mix(in oklab, var(--line) 70%, transparent); box-shadow: 0 10px 24px -20px rgb(15 23 42 / .35); }
+@media (min-width: 900px) { html:is(.th-apple, .th-dash) .shell.public .toolbar { margin-inline: 0; padding: 10px 12px; border: 1px solid color-mix(in oklab, var(--line) 70%, transparent); border-radius: 22px; } }
+html.th-dash .shell.public .toolbar { background: rgb(26 22 20 / .7); border-color: var(--dgb); }
