@@ -742,7 +742,18 @@ function AuthForm({ onDone, compact }) {
   const canSignup = S.orders?.signup !== false;
   // görünüm geçişi: mağazadaki sayfa geçişleri gibi hafif kayma + soluş (girişe dönüş soldan, diğerleri sağdan)
   const [dir, setDir] = useState('');
-  const go2 = (v) => { setErr(''); setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
+  // 3.11.2026: kutunun BOYU da yumuşakça değişir (giriş ⇄ üye ol arasında boy farkı ani zıplıyor, sonra yerine oturuyordu);
+  // içerik yana kaymaz, sadece solup gelir
+  const formRef = useRef(null); const prevH = useRef(0);
+  const go2 = (v) => { setErr(''); prevH.current = formRef.current?.offsetHeight || 0; setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
+  useLayoutEffect(() => {
+    const el = formRef.current; const h0 = prevH.current; prevH.current = 0;
+    if (!el || !h0 || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const h1 = el.offsetHeight; if (Math.abs(h1 - h0) < 2) return;
+    el.style.overflow = 'clip';
+    const a = el.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' });
+    a.onfinish = a.oncancel = () => { el.style.overflow = ''; };
+  }, [view]);
   const social = { google: S.orders?.loginGoogle === true, facebook: S.orders?.loginFacebook === true };
   useEffect(() => { if (social.google || social.facebook) A.prepSocial?.(); }, [social.google, social.facebook]);
   async function socialIn(kind) {
@@ -799,7 +810,7 @@ function AuthForm({ onDone, compact }) {
     </div>
   );
   return (
-    <form className="auth-form" onSubmit={submit}>
+    <form ref={formRef} className="auth-form" onSubmit={submit}>
       <div key={view} className={'auth-view' + (dir ? ' ' + dir : '')}>
       {!compact && <h2 className="auth-h">{{ login: 'Giriş yapın', signup: 'Üye olun', bayi: 'Bayi girişi', reset: 'Şifremi unuttum', unverified: 'Giriş yapın' }[view]}</h2>}
       {['login', 'signup'].includes(view) && (social.google || social.facebook) && <>

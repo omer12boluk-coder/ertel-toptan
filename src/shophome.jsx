@@ -789,12 +789,23 @@ function Hero({ slides, open, brands, heroH, pkHero }) {
   // otomatik geçiş: fare üstüne gelince durur, çekilince KALDIĞI YERDEN devam eder (süre sıfırlanmaz)
   const left = useRef(6500); const since = useRef(0);
   useEffect(() => { left.current = 6500; }, [i]);
+  // görünmezken (başka sayfadayken ana sayfa arkada gizli açık kalıyor) otomatik geçiş DURUR; geri gelince görünen reklamla eşitlenir.
+  // Eskiden arkada sayaç ilerliyor ama kaydırma yerinde kalıyordu → iPhone'da dönünce görünen reklamın yazısı gizli kalıyordu.
+  const [vis, setVis] = useState(true);
   useEffect(() => {
-    if (n < 2 || paused || E) return;
+    const el = track.current; if (!el || !('IntersectionObserver' in window)) return;
+    const io = new IntersectionObserver(([e]) => {
+      const v = e.isIntersecting && e.boundingClientRect.height > 0; setVis(v);
+      if (v) { const k = Math.max(0, Math.min(n - 1, Math.round(el.scrollLeft / (step(el) || 1)))); target.current = null; setI(k); setPlay(k); }
+    });
+    io.observe(el); return () => io.disconnect();
+  }, [n]);
+  useEffect(() => {
+    if (n < 2 || paused || E || !vis) return;
     since.current = Date.now();
     const t = setTimeout(() => goTo((i + 1) % n), Math.max(300, left.current));
     return () => { clearTimeout(t); left.current -= Date.now() - since.current; };
-  }, [i, paused, n]);
+  }, [i, paused, n, vis]);
   // telefonda reklamlar arasında boşluk var (ayrık kartlar) → bir adım = genişlik + boşluk
   const step = (el) => el.clientWidth + (parseFloat(getComputedStyle(el).columnGap) || 0);
   // yazı giriş animasyonu (play): sadece reklam kendiliğinden / nokta-ok ile geldiğinde oynar. Parmakla kaydırırken yazı zaten

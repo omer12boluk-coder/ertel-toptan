@@ -54,6 +54,9 @@ export function priceShow(S, role) {
 }
 // "Sepete ekle" düğmesinin görünümü (Ayarlar > Ürün kartları): auto | text | icon | plus
 export const cardAdd = (S, role) => (role === 'public' || !role ? S.cards?.add : S.cards?.addB2b) || (role === 'public' || !role ? 'auto' : 'text');
+// 3.11.2026: mağaza kartında sepet düğmesinin yeri (Ayarlar > Ürün kartları): 'bottom' fiyatın altında tam genişlik (varsayılan; − 1 +
+// açılınca TL / KDV satırlarıyla çakışmaz) · 'side' fiyatın sağında (eski). Kart sınıfı: add-<tür> + ab (altta)
+export const cardCls = (S, role) => 'add-' + cardAdd(S, role) + ((role === 'public' || !role) && (S.cards?.addPos || 'bottom') === 'bottom' ? ' ab' : '') + (S.cards?.stockTag === false ? ' no-stk' : '');
 function PriceExtras({ v, cur, S: So, role: ro }) {
   const S0 = useStore((s) => s.settings);
   const r0 = useStore((s) => s.user?.role);
@@ -321,7 +324,7 @@ export function PriceBlock({ p, big, S: So, role: ro }) {
 export function CardPreview({ p, S, role }) {
   const st = stockInfo(p, S);
   return (
-    <ul className={'plist pgrid pv-cards add-' + cardAdd(S, role)}>
+    <ul className={'plist pgrid pv-cards ' + cardCls(S, role)}>
       <li className="prow">
         <span className="prow-main">
           <span className="cimg"><Thumb p={p} /></span>
@@ -346,7 +349,7 @@ function SetHits({ q }) {
   const hits = useMemo(() => searchSets(S, byId, q).slice(0, 4), [S, byId, q]);
   if (!hits.length) return null;
   return <div className="set-hits"><div className="set-hits-h"><Icon n="box" s={15} /><b>Setler</b><small>{hits.length} set</small></div>
-    <ul className={'plist pgrid add-' + cardAdd(S, 'public')}>{hits.map((x) => <SetCard key={x.id} set={x} />)}</ul></div>;
+    <ul className={'plist pgrid ' + cardCls(S, 'public')}>{hits.map((x) => <SetCard key={x.id} set={x} />)}</ul></div>;
 }
 // Filtre çipleri tek satır (1.11.2026): satıra sığmazsa önce boşluklar, sonra yazı, sonra simgeler adım adım küçülür
 // (fit-1 … fit-3); yine sığmazsa (dar telefon) satır yana kayar. Sıralama alt satıra düşmez.
@@ -515,10 +518,10 @@ export function Catalog({ admin }) {
   const setN = useStore((st) => (st.user?.role === 'public' ? liveSets(st.settings).length : 0));
   // 31.10.2026: ürün listesi ayrı tutulur → ürüne dokunup pencere açılınca (setOpen / setEdit) bütün liste yeniden çizilmez
   // (telefonda dokunuşu 'takılmış' hissettiren asıl sebep buydu). Satırlar sepet/favori gibi değişiklikleri kendileri izler.
-  const addCls = cardAdd(S, user?.role);
+  const addCls = cardCls(S, user?.role);
   const pinKey = pinShow ? [...pinShow].join(',') : '';
   const listEl = useMemo(() => (
-    <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' add-' + addCls}>
+    <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' ' + addCls}>
       {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
         : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} pinned={!!pinShow?.has(p.id)} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
     </ul>
@@ -770,7 +773,7 @@ export function FavGrid() {
   const list = favs.map((id) => byId.get(id)).filter((p) => p && p.a !== 0 && !p.so);
   if (!list.length) return <Empty icon="heart" title={favs.length ? 'Favorilerinizdeki ürünler şu an satışta değil' : 'Henüz favoriniz yok'}><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere göz at</button></Empty>;
   return <>
-    <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>
+    <ul className={'plist pgrid fav-grid ' + cardCls(S, user?.role)}>
       {list.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}
     </ul>
     {open && <ProductSheet p={open} onClose={() => setOpen(null)} />}
@@ -791,7 +794,7 @@ export function WaitGrid() {
   if (!list.length) return <>{cameLine}<Empty icon="bell" title="Haber beklediğiniz ürün yok"><p>Stokta olmayan ürünlerde <b>Gelince haber ver</b>’e dokunun; ürün gelince telefonunuza bildirim gönderelim.</p><button className="btn primary" onClick={() => go('katalog')}>Ürünlere göz at</button></Empty>{open && <ProductSheet p={open} onClose={() => setOpen(null)} />}</>;
   return <>
     {cameLine}
-    <ul className={'plist pgrid fav-grid add-' + cardAdd(S, user?.role)}>{list.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}</ul>
+    <ul className={'plist pgrid fav-grid ' + cardCls(S, user?.role)}>{list.map((p) => <ProductRow key={p.id} p={p} onOpen={() => setOpen(p)} />)}</ul>
     <p className="fine wait-note">Ürün stoğa girince telefonunuza bildirim gelir. Bildirime dokunduğunuzda ya da bu sayfayı açtığınızda ürün listeden çıkar; o zamana kadar her stoğa girişinde yeniden haber veririz. Çana dokunarak takibi kapatabilirsiniz.</p>
     {open && <ProductSheet p={open} onClose={() => setOpen(null)} />}
   </>;
@@ -1384,7 +1387,9 @@ function Description({ id }) {
   useEffect(() => { let live = true; api().getDesc(id).then((h) => live && setHtml(h ? cleanHtml(h) : '')).catch(() => live && setHtml('')); return () => { live = false; }; }, [id]);
   useEffect(() => {
     if (!short || !html || !body.current) return;
-    const el = body.current; const check = () => setLong(el.scrollHeight > 244);
+    // 3.11.2026: tek yönlü (bir kez uzun bulunca geri dönmez) — iPhone'da kısalt/aç ölçümü birbirini tetikleyip titriyordu
+    setLong(false);
+    const el = body.current; let done = false; const check = () => { if (!done && el.scrollHeight > 260) { done = true; setLong(true); } };
     check(); const ro = new ResizeObserver(check); ro.observe(el); el.querySelectorAll('img').forEach((im) => im.addEventListener('load', check, { once: true }));
     return () => ro.disconnect();
   }, [short, html]);

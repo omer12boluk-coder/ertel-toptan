@@ -160,7 +160,7 @@ export function ProductsDrop({ children }) {
     <div className="hd-mega-in">
       <div className="hd-side">
         <Item close={c} icon="grid" label="Tüm ürünler" onClick={() => { store.set({ catalogGo: {} }); go('katalog'); }} />
-        {hasSets && <Item close={c} icon="box" label="Setler" pill="Yeni" tone="green" onClick={() => { store.set({ catalogGo: { sets: true } }); go('katalog'); }} />}
+        {hasSets && <Item close={c} icon="box" label="Setler" onClick={() => { store.set({ catalogGo: { sets: true } }); go('katalog'); }} />}
         <Item close={c} icon="heart" label="Favorilerim" onClick={() => { store.set({ catalogGo: { fav: true } }); go('katalog'); }} />
       </div>
       <MegaCats cats={cats} close={c} />

@@ -89,7 +89,7 @@ export function NotifBell() {
   const close = () => { setOpen(false); const t = Date.now(); ls.set('notif-seen', t); setSeen(t); };
   useEffect(() => {
     if (!open) return;
-    const out = (e) => { if (box.current && !box.current.contains(e.target)) close(); };
+    const out = (e) => { if (box.current && !box.current.contains(e.target) && !e.target.closest?.('.sheet-bg, .ctx-catch, .confirm-bg')) close(); }; // üstünde açılan pencereye (Nasıl açılır?) dokunmak paneli kapatmasın
     const esc = (e) => e.key === 'Escape' && close();
     const t = setTimeout(() => { addEventListener('pointerdown', out); addEventListener('keydown', esc); });
     return () => { clearTimeout(t); removeEventListener('pointerdown', out); removeEventListener('keydown', esc); };
@@ -251,7 +251,7 @@ export function ShopBell() {
   const close = () => { setOpen(false); const t = Date.now(); ls.set('cnotif-seen', t); setSeen(t); };
   useEffect(() => {
     if (!open) return;
-    const out = (e) => { if (box.current && !box.current.contains(e.target)) close(); };
+    const out = (e) => { if (box.current && !box.current.contains(e.target) && !e.target.closest?.('.sheet-bg, .ctx-catch, .confirm-bg')) close(); }; // üstünde açılan pencereye (Nasıl açılır?) dokunmak paneli kapatmasın
     const esc = (e) => e.key === 'Escape' && close();
     const t = setTimeout(() => { addEventListener('pointerdown', out); addEventListener('keydown', esc); });
     return () => { clearTimeout(t); removeEventListener('pointerdown', out); removeEventListener('keydown', esc); };

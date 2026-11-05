@@ -1534,6 +1534,7 @@ function CardSettings({ d, set }) {
     <h3>“Sepete ekle” düğmesi</h3>
     <Field label="Online mağaza" hint="Otomatik: bilgisayarda kutu görünümünde Sepet + simgesi, telefonda yazılı düğme">{addSeg('add')}</Field>
     <Field label="Bayiler">{addSeg('addB2b')}</Field>
+    <Field label="Mağaza kartında düğmenin yeri" hint="Altta: fiyatın altında tam genişlik — sepete ekleyince çıkan − 1 + fiyat / TL / KDV satırlarına binmez (önerilen). Sağda: fiyatın yanında (eski görünüm)."><span className="seg">{[['bottom', 'Altta'], ['side', 'Fiyatın sağında']].map(([x, l]) => <button key={x} type="button" className={(C.addPos || 'bottom') === x ? 'on' : ''} onClick={() => set('cards.addPos', x)}>{l}</button>)}</span></Field>
     <h3>Ürün açılışı</h3>
     <Field label="Online mağazada ürüne basınca · bilgisayarda" hint="Pencere: sayfanın üstünde açılır (varsayılan). Sayfa: ayrı ürün sayfası, adres çubuğunda ürün linki olur."><span className="seg">{[['sheet', 'Pencere'], ['page', 'Sayfa']].map(([x, l]) => <button key={x} type="button" className={(C.productView || 'sheet') === x ? 'on' : ''} onClick={() => set('cards.productView', x)}>{l}</button>)}</span></Field>
     <Field label="Online mağazada ürüne basınca · telefonda" hint="Telefon ve tablette ayrı seçebilirsiniz. Kalıp bulucudan açılan ürünler her zaman pencerede açılır."><span className="seg">{[['sheet', 'Pencere'], ['page', 'Sayfa']].map(([x, l]) => <button key={x} type="button" className={(C.productViewM || C.productView || 'sheet') === x ? 'on' : ''} onClick={() => set('cards.productViewM', x)}>{l}</button>)}</span></Field>
@@ -1542,6 +1543,7 @@ function CardSettings({ d, set }) {
     <Toggle id="s-chov" label="Bilgisayarda küçük resimler" hint="Birden çok resmi olan ürünün üstüne gelince yazılar aşağı kayar, küçük resimler çıkar; üstlerinde gezince büyük resim değişir" checked={C.hoverImgs !== false} onChange={(v) => set('cards.hoverImgs', v)} />
     <Toggle id="s-cswipe" label="Telefonda kaydırarak resimler" hint="Kartı açmadan resimler yana kaydırılır, altta hangi resimde olduğunu gösteren çizgiler" checked={C.swipeImgs !== false} onChange={(v) => set('cards.swipeImgs', v)} />
     <Toggle id="s-cbrand" label="Marka adı" checked={d.catalog.showBrand !== false} onChange={(v) => set('catalog.showBrand', v)} />
+    <Toggle id="s-cstock" label="“Stokta” yazısı" hint="Kapalıyken kartlarda yeşil “Stokta” yazısı görünmez; “Az kaldı” ve “Stok yok” yine görünür." checked={C.stockTag !== false} onChange={(v) => set('cards.stockTag', v)} />
   </>;
 }
 function PriceShowPreview({ d }) {

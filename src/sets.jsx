@@ -8,7 +8,7 @@ import { PageHead, SubNav, Icon, Thumb, Stepper, Sheet, Empty, Toggle, Confirm, 
 import { fmt, norm, now } from './utils.js';
 import { queueSave } from './saveq.js';
 import { ShareBtn } from './extras.jsx';
-import { PriceBlock, cardAdd, ProductSheet } from './catalog.jsx';
+import { PriceBlock, cardAdd, cardCls, ProductSheet } from './catalog.jsx';
 import { LineTL } from './storepay.jsx';
 
 // Yönetim: Ürünler ⇄ Setler (31.10.2026, kullanıcı: Setler Ürünler'in içinde; Siparişler'deki seçicinin aynısı)
@@ -161,7 +161,7 @@ export function SetGrid() {
   const S = useStore((s) => s.settings);
   const sets = liveSets(S);
   if (!sets.length) return <Empty icon="box" title="Şu an set yok"><p>Yakında ürün paketleri burada olacak.</p></Empty>;
-  return <ul className={'plist pgrid add-' + cardAdd(S, 'public')}>{sets.map((x) => <SetCard key={x.id} set={x} />)}</ul>;
+  return <ul className={'plist pgrid ' + cardCls(S, 'public')}>{sets.map((x) => <SetCard key={x.id} set={x} />)}</ul>;
 }
 // Ana sayfa rafındaki kart = raftaki ürün kartının (PCard) aynısı
 function SetRailCard({ set, i }) {

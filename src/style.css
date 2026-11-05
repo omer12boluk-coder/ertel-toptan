@@ -4964,10 +4964,10 @@ html:has(.kf) { scrollbar-gutter: stable; }
 
 /* Giriş kutusu (31.10.2026): sekme yok; başlık + Google/Facebook + alt bağlantılar; görünümler arası hafif kayma */
 .auth-view { display: flex; flex-direction: column; gap: 12px; }
-.auth-view.fwd { animation: authFwd .26s cubic-bezier(.22, 1, .36, 1) both; }
-.auth-view.back { animation: authBack .26s cubic-bezier(.22, 1, .36, 1) both; }
-@keyframes authFwd { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
-@keyframes authBack { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+.auth-view.fwd { animation: authFwd .24s ease-out both; }
+.auth-view.back { animation: authBack .24s ease-out both; }
+@keyframes authFwd { from { opacity: 0; } to { opacity: 1; } }
+@keyframes authBack { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .auth-view.fwd, .auth-view.back { animation: none; } }
 .auth-h { margin: 0 0 2px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .auth-social { display: flex; flex-direction: column; gap: 8px; }
@@ -6688,3 +6688,41 @@ html.ow-lock { overflow: hidden; }
 .iban-ed-r { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr) minmax(0, 1.6fr) auto; gap: 8px; align-items: center; }
 .iban-ed-r input { height: 38px; min-width: 0; }
 @media (max-width: 560px) { .iban-ed-r { grid-template-columns: minmax(0, 1fr) auto; } .iban-ed-r input:nth-child(3) { grid-column: 1; } .iban-ed-r .icon-btn { grid-row: 1; grid-column: 2; } .iban-row { flex-direction: column; align-items: stretch; } }
+
+/* 3.11.2026 Ustaların tercihi: uzun ürün adı telefonda kutudan taşıyordu (flex çocuğu min-width:auto) → ad kısalır, fiyat sağda kalır */
+.cat-top li, .cat-top li button, .cat-top-l { min-width: 0; }
+.cat-top-l { align-items: baseline; }
+.cat-top-l b { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 700px) {
+  .cat-top { padding: 12px; }
+  .cat-top-l b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+}
+
+/* 3.11.2026 kart resmi her zaman AYNI kare kutu: resim kutunun içine sığar (dikey/yatay resim kartı uzatıp kısaltmaz).
+   Kaydırmalı (telefon, çok resimli) kartta yüzde boyu tanımsız kalıp resim kutuyu uzatıyordu → resimler mutlak konumlu. */
+.plist.pgrid .prow-main .thumb { position: relative; --tpad: 12px; }
+html.st-imgpad .plist.pgrid .prow-main .thumb { --tpad: var(--st-imgpad); }
+.plist.pgrid .prow-main .thumb > img { position: absolute; inset: var(--tpad); width: calc(100% - 2 * var(--tpad)); height: calc(100% - 2 * var(--tpad)); }
+.cimg-sw-i { position: relative; display: block; padding: 0; min-height: 0; overflow: hidden; }
+.cimg-sw-i > img { position: absolute; inset: 12px; width: calc(100% - 24px); height: calc(100% - 24px); }
+.plist.pgrid .cimg-sw-i .thumb { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; padding: 0 !important; }
+.plist.pgrid .cimg-sw-i .thumb > img { inset: 12px; width: calc(100% - 24px); height: calc(100% - 24px); }
+.plist.pgrid .cimg-sw { border-bottom: 1px solid var(--line-2); }
+
+/* 3.11.2026 mağaza kartında sepet düğmesi ALTTA (cards.addPos 'bottom', sınıf .ab): fiyat üstte tam genişlik, düğme / − 1 + altında
+   tam genişlik → TL ve KDV dahil satırları ne kadar uzun olursa olsun hiçbir şey üst üste binmez; tüm kartlarda aynı hiza */
+.plist.pgrid.ab .prow-side { flex-direction: column !important; align-items: stretch !important; justify-content: flex-end; gap: 8px; min-height: 0 !important; }
+.plist.pgrid.ab .prow-side .price { min-height: 0; flex: none; }
+.plist.pgrid.ab .prow-side .btn.add { width: 100% !important; height: 38px !important; padding: 0 12px !important; justify-content: center; border-radius: 11px; flex: none; }
+.plist.pgrid.ab .prow-side .btn.add .add-l, .plist.pgrid.ab .prow-side .btn.add .add-plus { display: inline-flex !important; }
+.plist.pgrid.ab .prow-side .btn.add .add-cart { display: none !important; }
+.plist.pgrid.ab .prow-side .qty-morph { display: block; width: 100%; }
+.plist.pgrid.ab .prow-side .stepper { width: 100% !important; height: 38px !important; display: flex; border-radius: 11px; overflow: hidden; }
+.plist.pgrid.ab .prow-side .stepper > button { flex: 1 1 0; width: auto !important; height: 100% !important; }
+.plist.pgrid.ab .prow-side .stepper > input { flex: 1.2 1 0; width: auto !important; min-width: 0; height: 100% !important; }
+.plist.pgrid.ab .prow-side .notify-btn { width: 100%; height: 38px; border-radius: 11px; }
+.plist.pgrid.ab .prow-side:has(> .notify-btn) { min-height: 0; }
+/* kart ayarı açılıp kapanınca hiza bozulmasın: marka/stok satırı her kartta aynı yer kaplar */
+.plist.pgrid .prow-meta { min-height: 1.45em; }
+/* "Stokta" yazısı gizli (cards.stockTag false): sadece olumlu 'Stokta' gizlenir, 'Az kaldı' / 'Stok yok' görünür */
+.plist.no-stk > li.prow:not(.adm) .prow-meta .dot.tone-ok { display: none; }
