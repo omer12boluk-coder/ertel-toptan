@@ -8077,7 +8077,8 @@ html:not(.addc-gray):not(.addc-dark):not(.addc-hex) .shell.public .abx .btn.add 
 /* Tamircinin seçimi kutularında düğme tam genişlik */
 .p0-b-p:has(> .p0-addw) { flex-direction: column; align-items: stretch; gap: 10px; }
 .p0-addw, .p0-addw > .abx { display: block; width: 100%; }
-.p0-b-f .p0-b-p:has(> .p0-addw) { min-width: 200px; align-items: stretch; }
-.p0-addw.big .btn.add, .p0-addw.big .stepper { height: 44px !important; }
+.p0-b-f .p0-b-p:has(> .p0-addw) { width: 250px; min-width: 0; flex: none; align-items: stretch; }
+@media (max-width: 899px) { .p0-b-f .p0-b-p:has(> .p0-addw) { width: auto; } }
+.p0-addw.big .btn.add, .shell .p0-addw.big .abx .qty-morph > .stepper { height: 44px !important; }
 .p0-addw.big .btn.add { background: var(--accent) !important; color: var(--btn-ink, #fff) !important; }
 .sh-card-f.abx .sh-bell { width: 100%; height: 38px; border-radius: 999px; }
