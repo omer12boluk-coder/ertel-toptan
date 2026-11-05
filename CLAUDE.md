@@ -190,6 +190,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **6.11.2026 (2):** Paket 0 ayarları `shopHome.p0` {find, cats{hide,n}, pick{ids,auto}, sets{ids}, mq{color,speed,h,pause}, hub}; reklam yeri `slides[i].p0` big|top|bot|off (`p0Role`, panel `P0HeroPanel`). Tasarım › 'Ürünler açılış sayfası' (`sel.kind 'hub'`). Menüden Ürünler = `navGo` → `catalogGo {hub:true}`. `look.pillHov` (--pill-hov). Akan hap: hedef rengi geçiş kapatılıp okunur (yoksa siyah hap kaymıyordu). Stepper/sh-card renkleri `--add-*`.
 
+- **6.11.2026 (4):** Mağazada TÜM düğmeler tema renginde (`--ap-btn: var(--accent)`; kullanıcı: bir yer mavi bir yer siyah olmasın) — siyah hap ve gri Sepete ekle sadece kullanıcı seçerse. Yönetim yan menüsü daraltılır `html.adm-mini`. Gece: kart `.prow-side` saydam, resim kutusu `#f4f1ec`. Ayrıntı `docs/gunluk.md` '6.11.2026'.
+
 - **6.11.2026 (3):** Ders: `bgFx glow` + `th-dash` gecede zemini açık bırakıyordu (düzeldi) → zemin/arka plan değişikliğinden sonra GECE MODUNU da aç, bak. Hesabım: React className'i yazınca `side-fixed` siliniyordu → `useLayoutEffect([view])` ile `fitRef`; bilgisayarda Hesabım içi geçişte sadece `.acct-main` belirir (setupNavAnim). Seçili satır siyah.
 
 ## 9. Önemli kararlar (neden böyle)
@@ -227,6 +229,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 16. Yönetim paneli Apple teması yayında (5.11.2026); kullanıcı geri bildirimi bekleniyor.
 17. (5.11 akşam düzeltmeleri yayında: arama/menü ortalı grid, bildirim paneli camı, tasarım önizlemesinde site teması + üst/alt menü `HeaderPreview`/`BotNavPreview`, reklam kutusu başlığı `useFitWords`, telefonda sayfa modunda açıklama kısa, yapışkan şerit transform ile kayar.) Banner yazısının arka plandan dönünce görünmemesi düzeltmesi yayında, gerçek iPhone'da doğrulanmadı.
 
+18. Paket 0 yayında (kullanıcı deniyor); Ürünler açılış sayfası askıda (ayardan kapalı tutulabilir); gerçek iPhone'da sesler / arama animasyonu / gece modu doğrulanmadı.
+
 **Karar bekleyen:** ödeme özeti 2 üründe kayıyor (çözüm önerildi) · elde kalan mal için dürüst raf/rozet · ana sayfa 'imza' etkileşimi · SMS (Netgsm) · Ürünler ve Bayi siparişleri PageHead/SubNav'a alınsın mı · "Birlikte iyi gider" rafı açıklamanın altında kalıyor.
 **Tartışılacak:** Blaze sonrası açılış penceresi 14 → 30 → 62 gün; Workers Paid sonrası DHL sorgusu 30 → 5 dk.
 **Küçük işler / bakım:** banner videosu (Santral Center dosyası), logosu olmayan markalar, Qianli gece rengi, sipariş formu uzun ad, Platin'e kalan bağlar (`u`, 'Sitede aç', XML eşitleme), eski GitHub dallarını sil (cf-site, eposta, resim-adresi, platin-kopma, sunucu-siparis, peek-out, mng-probe, tr-data, kalip-data, kalip-bulucu, linkli-siparis, blaze-hazirlik, tasarim-*), Actions Node 20 → 24.
@@ -245,7 +249,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 | Konu | Dosya | Grep için anahtar |
 |---|---|---|
-| Son günlerin işleri (30.10–5.11), devir notları | `docs/gunluk.md` | tarih (`5.11.2026`, `1.11.2026`), `TASARIM`, `Word listesi` |
+| Son günlerin işleri (30.10–6.11), devir notları, Paket 0 | `docs/gunluk.md` | tarih (`6.11.2026`, `5.11.2026`), `Paket 0`, `TASARIM`, `Word listesi` |
 | Apple açık / Bakır gece / Liquid glass / üst menü varyantları / alt menü / sayfa geçişi profilleri | `docs/gunluk.md` | `th-apple`, `th-dash`, `lg-on`, `hdr-gs`, `botnav`, `look.motion` |
 | Tasarım modu 2, Tema Stüdyosu, Stil Stüdyosu, banner öğeleri, buton stüdyosu, telefon yerleşimi (fxm) | `docs/gunluk.md` | `designer.jsx`, `look.pack`, `stylekit`, `slidex`, `ButtonStudio`, `fxm`, `phoneAbs` |
 | KDV dahil ödeme, taksit, önizleme siparişleri, havale 'Ödemeyi yaptım' | `docs/gunluk.md` | `paycalc`, `storepay`, `storeVatInc`, `PaidNotice` |
