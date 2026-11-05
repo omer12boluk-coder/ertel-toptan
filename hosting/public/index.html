@@ -7904,7 +7904,8 @@ html.porc .shell.public .pbuy { background: none !important; box-shadow: none !i
 /* − 1 + adet seçici de Sepete ekle renginde (kart, ürün sayfası, raflar) */
 html:is(.addc-gray, .addc-dark, .addc-hex) .shell.public .stepper { background: var(--add-bg) !important; border-color: transparent !important; box-shadow: none !important; }
 html:is(.addc-gray, .addc-dark, .addc-hex) .shell.public .stepper :is(button, input) { color: var(--add-fg) !important; background: transparent !important; }
-@media (hover: hover) { html:is(.addc-gray, .addc-dark, .addc-hex) .shell.public .stepper button:hover { background: var(--add-bgh) !important; } }
+html:is(.addc-gray, .addc-dark, .addc-hex) .shell.public .stepper button { border-radius: 999px !important; }
+@media (hover: hover) { html:is(.addc-gray, .addc-dark, .addc-hex) .shell.public .stepper button:hover { background: color-mix(in oklab, var(--add-fg) 9%, transparent) !important; } } /* üstüne gelince düğmenin kendi şeklinde yuvarlak (kare değil) */
 
 /* ana sayfa raf kartları (sh-card): sepet düğmesi, adet seçici ve ad vurgusu Sepete ekle renginde; mavi ışık yok; düğmeler biraz büyük */
 html:is(.addc-gray, .addc-dark, .addc-hex) .shell.public .sh-add { background: var(--add-bg); color: var(--add-fg); }
@@ -7963,7 +7964,7 @@ html[data-theme="dark"] .p0-hub-big { background: radial-gradient(70% 140% at 90
 .p0-pn-cat { padding: 8px 0; border-top: 1px solid var(--line); } .p0-pn-cat.off { opacity: .65; }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'c23b2f3b48';</script>
+<script>window.__BUILD = '7cf15eff29';</script>
 </head>
 <body>
 <div id="root"></div>
