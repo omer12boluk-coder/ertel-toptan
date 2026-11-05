@@ -7455,12 +7455,14 @@ html.adm-apple .shell.admin .dash-hero { background: radial-gradient(80% 140% at
 html.adm-apple[data-theme="dark"] .shell.admin .dash-hero { background: radial-gradient(80% 140% at 100% 0%, #2c2d33 0%, #1a1b1f 60%) !important; border: 1px solid var(--ad-line); }
 @media (min-width: 1100px) { html.adm-apple .shell.admin ~ .demo-sw, html.adm-apple .demo-sw { left: 20px; bottom: 130px; } }
 
-/* 5.11.2026 (2): bilgisayar üst menüsünde seçili hap belirgin (şeffaf camda kayboluyordu) */
-.topbar.hdr-g .topnav-b.on { background: color-mix(in oklab, var(--accent) 13%, #ffffff) !important; color: var(--accent) !important;
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 24%, transparent), 0 6px 16px -10px color-mix(in oklab, var(--accent) 60%, transparent), 0 1px 0 rgb(255 255 255 / .9) inset !important; }
-.topbar.hdr-g .topnav-b:not(.on):hover { background: rgb(118 118 128 / .12); color: var(--fg); }
-html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { background: rgb(255 255 255 / .16) !important; color: #fff !important; box-shadow: 0 0 0 1px rgb(255 255 255 / .14) !important; }
-html.th-dash .topbar.hdr-g .topnav-b.on { background: rgb(242 184 128 / .18) !important; color: #f6c28e !important; box-shadow: 0 0 0 1px rgb(242 184 128 / .3) !important; }
+/* 5.11.2026 (3): bilgisayar üst menüsünde seçili hap = düz beyaz hap + yumuşak gölge (iOS seçim çubuğu gibi); çerçeve / mavi dolgu YOK */
+.topbar.hdr-g .topnav-b.on { background: #ffffff !important; color: var(--fg) !important; box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 4px 14px -6px rgb(15 23 42 / .22) !important; }
+.topbar.hdr-g .topnav-b.on .ic { color: var(--accent); }
+.topbar.hdr-g .topnav-b:not(.on):hover { background: rgb(118 118 128 / .1); color: var(--fg); }
+html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { background: rgb(255 255 255 / .16) !important; color: #fff !important; box-shadow: 0 1px 0 rgb(255 255 255 / .12) inset, 0 6px 16px -8px rgb(0 0 0 / .6) !important; }
+html.th-dash .topbar.hdr-g .topnav-b.on .ic { color: #f6c28e; }
+/* kayarken asıl hap gizli kalsın (yoksa iki hap görünüyordu) */
+html .shell .flow-on.flow-on.flow-on { background: transparent !important; background-image: none !important; box-shadow: none !important; }
 
 /* ===== 5.11.2026 (2) Tema Stüdyosu: tam sayfa zemin + buzlu cam (html.fr-1 / fr-2) ===== */
 .decor .pk-pat.full { background-repeat: no-repeat; }
@@ -7468,7 +7470,7 @@ html[data-theme="dark"] .decor .pk-pat.full { filter: brightness(.2) saturate(1.
 html:is(.fr-1, .fr-2) { --fr-bg: rgb(255 255 255 / .6); --fr-bd: rgb(255 255 255 / .7); --fr-blur: 14px; --fr-sh: 0 1px 0 rgb(255 255 255 / .8) inset, 0 10px 30px -22px rgb(15 23 42 / .35); }
 html.fr-2 { --fr-bg: rgb(255 255 255 / .42); --fr-blur: 22px; }
 html:is(.fr-1, .fr-2)[data-theme="dark"] { --fr-bg: rgb(40 34 30 / .5); --fr-bd: rgb(255 255 255 / .1); --fr-sh: 0 1px 0 rgb(255 255 255 / .06) inset, 0 14px 34px -22px rgb(0 0 0 / .7); }
-html:is(.fr-1, .fr-2) .shell.public :is(.plist.pgrid > li.prow, .plist:not(.pgrid) > li, .sh-usp, .sh-brand, .sh-card, .mini-card, .cart-main, .cart-sum, .cart-subtot, .acct-side, .acct-body > section, .o-card, .mo-card, .co-sec, .addr-card, .kf-res, .set-hits, .set-card, .cat-side, .pq-card, .legal-doc, .ow-card, .pdesc, .pbuy, .sh-rate, .auth-card) {
+html:is(.fr-1, .fr-2) .shell.public :is(.plist.pgrid > li.prow, .plist:not(.pgrid) > li, .sh-usp, .sh-brand, .sh-card, .mini-card, .cart-main, .cart-sum, .cart-subtot, .acct-side, .acct-body > section, .o-card, .mo-card, .co-sec, .addr-card, .kf-res, .set-hits, .set-card, .pq-card, .legal-doc, .ow-card, .pdesc, .pbuy, .sh-rate, .auth-card) {
   background: var(--fr-bg) !important; border-color: var(--fr-bd) !important; box-shadow: var(--fr-sh) !important;
   -webkit-backdrop-filter: blur(var(--fr-blur)) saturate(1.6); backdrop-filter: blur(var(--fr-blur)) saturate(1.6); }
 html:is(.fr-1, .fr-2) .shell.public .plist.pgrid .prow-main .thumb { background: rgb(255 255 255 / .85); }
@@ -7476,3 +7478,11 @@ html:is(.fr-1, .fr-2) .shell.public .toolbar { background: var(--fr-bg) !importa
 html:is(.fr-1, .fr-2) .sheet:not(.ctx-sheet) { background: color-mix(in oklab, var(--surface) 82%, transparent); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); }
 .pz-notes { padding: 12px 14px; border-radius: 14px; background: color-mix(in oklab, var(--accent) 7%, var(--surface)); border: 1px solid color-mix(in oklab, var(--accent) 22%, var(--line)); margin-bottom: 14px; font-size: 13px; }
 .pz-notes ul { margin: 6px 0; padding-left: 18px; } .pz-notes li { margin: 3px 0; } .pz-notes small { color: var(--muted); }
+
+/* 5.11.2026 (3) yönetim paneli (yan menü): yapışkan başlıklar en üste (üst menü yok), sayfa yana taşmasın */
+@media (min-width: 1100px) {
+  html.adm-apple .shell.admin { --top-h: 12px; }
+  html.adm-apple { overflow-x: clip; }
+  html.adm-apple .shell.admin .main { width: auto !important; box-sizing: border-box; min-width: 0; }
+  html.adm-apple .shell.admin .send-bar { border-radius: 18px; }
+}

@@ -953,19 +953,26 @@ function useHideTop(on, upShow, tab, layer) {
   useEffect(() => {
     const r = document.documentElement; const ok = on && HIDE_TABS.has(tab) && !(tab === 'urun' && layer);
     if (!ok) { r.classList.remove('top-hide'); return; }
-    let last = scrollY, acc = 0, raf = 0;
+    // 5.11.2026 (3) headroom yöntemi: menü SADECE kullanıcının kaydırmasına tepki verir (tekerlek, parmak, klavye, kaydırma çubuğu).
+    // Sayfa geçişinde site kaldığın yere kendisi kaydırınca (geri dönüş) menü gizlenmez; her sayfa geçişinde menü görünür gelir.
+    r.classList.remove('top-hide');
+    let last = scrollY, acc = 0, raf = 0, userAt = 0; const born = Date.now();
+    const user = () => { userAt = Date.now(); };
     const busy = () => document.body.classList.contains('noscroll') || document.querySelector('.hsearch.mob-open, .hd-p, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
     const f = () => {
       raf = 0; const y = scrollY; const d = y - last; last = y;
       if (y < 70) { acc = 0; r.classList.remove('top-hide'); return; }
+      if (Date.now() - born < 450 || Date.now() - userAt > 700) { acc = 0; return; } // kodla yapılan kaydırma (sayfa geçişi, yer geri yükleme)
       if (busy()) { r.classList.remove('top-hide'); return; }
       acc = (d > 0) === (acc > 0) ? acc + d : d;
       if (acc > 24) r.classList.add('top-hide');
       else if (upShow && acc < -14) r.classList.remove('top-hide');
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
+    const EV = ['wheel', 'touchmove', 'keydown', 'pointerdown'];
+    EV.forEach((e) => addEventListener(e, user, { passive: true, capture: true }));
     addEventListener('scroll', q, { passive: true });
-    return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); r.classList.remove('top-hide'); };
+    return () => { EV.forEach((e) => removeEventListener(e, user, { capture: true })); removeEventListener('scroll', q); cancelAnimationFrame(raf); r.classList.remove('top-hide'); };
   }, [on, upShow, tab, layer]);
 }
 // 5.11.2026 'akan hap' (kullanıcı: bir şeye tıklayınca seçili hap eskisinden yenisine akıyormuş gibi gitsin): tek seçimli düğme
