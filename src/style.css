@@ -7539,10 +7539,13 @@ html.lg-on[data-theme="dark"] .hd-p { background: rgb(24 28 38 / .97) !important
 @media (hover: hover) { .topbar.hdr-g .topnav-b:not(.on):hover .ic { color: var(--accent); } }
 /* telefonda arama kutusu açılırken / sonuçlar belirirken animasyon */
 @media (max-width: 899px) {
-  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box { animation: hsOpen .34s cubic-bezier(.32, .72, 0, 1) both !important; transform-origin: 85% 50%; }
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box { animation: hsOpen .32s cubic-bezier(.32, .72, 0, 1) both !important; }
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box input { animation: hsCaret .4s step-end; }
   .hdr-gs .gs-srch .hsearch.mob-open .hsearch-res { animation: hsRes .28s .06s cubic-bezier(.32, .72, 0, 1) both; transform-origin: 50% 0; }
 }
-@keyframes hsOpen { from { opacity: 0; transform: scale(.82, .9); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+/* 5.11.2026: büyütme/bulanıklık yerine sağdan açılan maske — iPhone'da yazı imleci büyüyen kutuyu izlemiyor, kayıyordu; açılış bitene kadar imleç gizli */
+@keyframes hsOpen { from { opacity: 0; clip-path: inset(0 0 0 62% round 999px); } to { opacity: 1; clip-path: inset(0 0 0 0 round 999px); } }
+@keyframes hsCaret { from, to { caret-color: transparent; } }
 @keyframes hsRes { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
 /* sepete atınca: düğmeden sepete uçan nokta + sepet zıplar */
 .fly-dot { position: fixed; z-index: 200; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; pointer-events: none;
