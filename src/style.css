@@ -7538,3 +7538,5 @@ html.lg-on[data-theme="dark"] .hd-p { background: rgb(24 28 38 / .97) !important
 .topbar.hdr-g .topnav-b:not(.on):hover, .topbar.hdr-g .hd.open > .topnav-b:not(.on) { background: rgb(255 255 255 / .62) !important; color: var(--fg) !important; box-shadow: 0 1px 2px rgb(0 0 0 / .05), 0 4px 12px -8px rgb(15 23 42 / .18) !important; }
 .topbar.hdr-g .topnav-b:not(.on):hover .ic, .topbar.hdr-g .hd.open > .topnav-b:not(.on) .ic { color: var(--accent); }
 html[data-theme="dark"] .topbar.hdr-g .topnav-b:not(.on):hover, html[data-theme="dark"] .topbar.hdr-g .hd.open > .topnav-b:not(.on) { background: rgb(255 255 255 / .08) !important; color: #fff !important; box-shadow: none !important; }
+/* seçili hap rengi geçişsiz (üstüne gelme → seçili arası ara renk görünmesin) */
+.topbar.hdr-g .topnav-b { transition: color .15s ease, transform .2s ease !important; }
