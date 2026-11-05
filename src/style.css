@@ -7986,3 +7986,34 @@ html[data-theme="dark"] .p0-hub-big { background: radial-gradient(70% 140% at 90
 html.bgfx-glow.th-dash[data-theme="dark"] { background: var(--bg, #121110); }
 html.bgfx-glow.th-dash[data-theme="dark"] body::before { background: radial-gradient(42% 38% at 8% -4%, rgb(242 184 128 / .08), transparent 70%), radial-gradient(40% 36% at 98% 18%, rgb(110 140 255 / .06), transparent 70%), var(--bg, #121110); }
 @media (min-width: 900px) { .shell.public .acct2 .acct-body > :not(.mo-list), .shell.public .acct2 .acct-body > .set-card, .shell.public .acct2 .acct-body .addr-list, .shell.public .acct2 .acct-body .push-card { max-width: 980px; } }
+
+/* 6.11.2026 sipariş durumu: yarıda kalmış çizgi yerine 5 adım (Onay bekliyor → Onaylandı → Hazırlanıyor → Kargoda → Tamamlandı) */
+@media (min-width: 861px) {
+  .otable .ost { --stp: .2; }
+  .otable .ost-confirmed { --stp: .4; } .otable .ost-preparing { --stp: .6; } .otable .ost-shipped, .otable .ost-ready { --stp: .8; } .otable .ost-done, .otable .ost-cancelled { --stp: 1; }
+  .otable .ost::before, .otable .ost::after { left: 11px !important; right: 8px !important; width: auto !important; bottom: 5px; height: 4px; border-radius: 0;
+    -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 calc(20% - 3px), transparent calc(20% - 3px) 20%); mask-image: repeating-linear-gradient(90deg, #000 0 calc(20% - 3px), transparent calc(20% - 3px) 20%); }
+  .otable .ost::after { background: linear-gradient(90deg, var(--stc) calc(var(--stp) * 100%), transparent 0) !important; transition: none; }
+  .otable .ost-cancelled::after { opacity: .35; }
+}
+
+/* 6.11.2026 yönetim yan menüsü daraltılabilir (html.adm-mini, düğme menünün sağ kenarında; cihazda hatırlanır) */
+.adm-fold { display: none; }
+@media (min-width: 1100px) {
+  html.adm-apple .shell.admin .topbar { transition: width .32s cubic-bezier(.32, .72, 0, 1); }
+  html.adm-apple .shell.admin .main, html.adm-apple .shell.admin .demo-strip { transition: margin-left .32s cubic-bezier(.32, .72, 0, 1); }
+  html.adm-apple .shell.admin .adm-fold { display: grid; position: absolute; top: 26px; right: -13px; z-index: 2; width: 26px; height: 26px; place-items: center; padding: 0; border-radius: 50%; border: 1px solid var(--ad-line); background: var(--surface); color: var(--ad-dim); box-shadow: 0 4px 12px -6px rgb(0 0 0 / .35); cursor: pointer; }
+  html.adm-apple .shell.admin .adm-fold:hover { color: var(--ad-ink); }
+  html.adm-apple .shell.admin .adm-fold .ic { transition: transform .32s var(--ease); }
+  html.adm-mini.adm-apple .shell.admin .adm-fold .ic { transform: rotate(180deg); }
+  html.adm-mini.adm-apple .shell.admin .topbar { width: 72px; }
+  html.adm-mini.adm-apple .shell.admin .main { margin-left: 96px; }
+  html.adm-mini.adm-apple .shell.admin .demo-strip { margin-left: 96px; }
+  html.adm-mini.adm-apple .shell.admin .topbar-in { padding-left: 10px !important; padding-right: 10px !important; grid-template-columns: 1fr; justify-items: center; }
+  html.adm-mini.adm-apple .shell.admin :is(.brand-t, .admin-badge, .topnav-l, .topnav-chev, .me-t) { display: none !important; }
+  html.adm-mini.adm-apple .shell.admin .topnav-b { justify-content: center; padding: 0 !important; width: 48px; margin: 0 auto; }
+  html.adm-mini.adm-apple .shell.admin .topnav-b .badge { position: absolute !important; top: 2px; right: 0; margin: 0; transform: scale(.85); }
+  html.adm-mini.adm-apple .shell.admin .topbar-in > .me { justify-content: center; padding: 6px; background: none; }
+  html.adm-mini.adm-apple .shell.admin .topbar-in > :is(.brand, .brand-btn) { justify-self: center; }
+  html.adm-mini.adm-apple .shell.admin .topbar-in > :is(.nc, .icon-btn) { grid-row: auto; }
+}

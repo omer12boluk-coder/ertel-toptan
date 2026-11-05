@@ -339,7 +339,7 @@ function useTheme() {
     applyStyle(r, pub ? L.style : null);
     setSfxGlobal(L.sound !== false);
     // 5.11.2026 yönetim paneli teması (Ayarlar › Bayi ve panel renkleri › Yönetim paneli görünümü, look.admin: apple | classic)
-    r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic');
+    r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-mini', isAdm && ls.get('adm-mini', false) === true); /* 6.11.2026 daraltılmış yan menü (cihazda) */ r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic');
     // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
     r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
     applyLayout(r, pub ? L : {});
@@ -710,6 +710,7 @@ function ShellFull() {
       </header> : <header className={'topbar' + (pub && LK.header === 'glass' ? ' hdr-g' : '')}>
         <div className="topbar-in">
           <Brand small onClick={home} />
+          {admin && <button type="button" className="adm-fold" onClick={() => { const on = !document.documentElement.classList.contains('adm-mini'); document.documentElement.classList.toggle('adm-mini', on); ls.set('adm-mini', on); }} aria-label="Menüyü daralt / genişlet" title="Menüyü daralt / genişlet"><Icon n="back" s={14} /></button>}
           {admin && <span className="admin-badge" title="Yönetim paneli"><Icon n="shield" s={14} /><span className="badge-t">Yönetim paneli</span></span>}
           {pub && <span className="pub-id"><b className="pub-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b></span>}
           <nav className="topnav" aria-label="Ana menü">
