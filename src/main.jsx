@@ -587,7 +587,7 @@ function ShellFull() {
             })}
           </nav>
         </div>
-      </header> : <header className="topbar">
+      </header> : <header className={'topbar' + (pub && (S0.look?.header || 'glass') === 'glass' ? ' hdr-g' : '')}>
         <div className="topbar-in">
           <Brand small onClick={home} />
           {admin && <span className="admin-badge" title="Yönetim paneli"><Icon n="shield" s={14} /><span className="badge-t">Yönetim paneli</span></span>}

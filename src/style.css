@@ -6938,3 +6938,21 @@ html.top-hide .shell.public .topbar > :not(.topbar-in) { visibility: hidden; }
 @keyframes abR { from { transform: translateX(-110%); opacity: 0; } }
 @keyframes abFade { from { opacity: 0; transform: scale(.8); } }
 @media (prefers-reduced-motion: reduce) { .plist.pgrid.ab .qty-morph.grow > .stepper, .plist.pgrid.ab .qty-morph.grow > .stepper > *, .plist.pgrid.ab .prow-side .btn.add.back { animation: none; } }
+
+/* 5.11.2026 üst menü gizlenme / görünme daha yavaş ve yumuşak (kullanıcı: çok hızlıydı): .62s, iOS eğrisi + hafif solma */
+.shell.public .topbar { transition: transform .62s cubic-bezier(.22, .8, .24, 1), opacity .5s ease, box-shadow .3s; }
+html.top-hide .shell.public .topbar { opacity: 0; transition: transform .62s cubic-bezier(.4, 0, .2, 1), opacity .45s .12s ease, box-shadow .3s; }
+.shell.public :is(.toolbar, .set-head, .cat-side, .legal-nav) { transition: top .62s cubic-bezier(.22, .8, .24, 1); }
+
+/* 5.11.2026 üst menü 'Yüzen cam' (look.header 'glass'): kenarlardan ayrık, yuvarlak, buzlu cam (alttaki cam menüyle aynı dil);
+   içerik kayınca camın arkasından görünür. Seçili sekme nötr cam hap. */
+.topbar.hdr-g { background: transparent; border-bottom: 0; padding: 8px max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); }
+.topbar.hdr-g .topbar-in { height: calc(var(--top-h) - 8px); border-radius: 26px; padding-left: 12px; padding-right: 8px;
+  background: rgb(255 255 255 / .62); -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8);
+  border: 1px solid rgb(255 255 255 / .6); box-shadow: 0 10px 30px -16px rgb(10 20 40 / .35), 0 1px 0 rgb(255 255 255 / .7) inset; }
+.topbar.hdr-g .topnav-b.on { color: var(--accent); background: linear-gradient(180deg, rgb(255 255 255 / .7), rgb(255 255 255 / .3)), rgb(120 120 128 / .12); box-shadow: 0 0 0 .5px rgb(255 255 255 / .9) inset, 0 2px 8px -4px rgb(0 0 0 / .2); }
+.topbar.hdr-g .topnav { justify-content: center; }
+html[data-theme="dark"] .topbar.hdr-g .topbar-in { background: rgb(28 32 44 / .62); border-color: rgb(255 255 255 / .1); box-shadow: 0 10px 30px -16px rgb(0 0 0 / .7), 0 1px 0 rgb(255 255 255 / .08) inset; }
+html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { background: rgb(255 255 255 / .12); box-shadow: 0 0 0 .5px rgb(255 255 255 / .15) inset; }
+@media (prefers-color-scheme: dark) { html:not([data-theme]) .topbar.hdr-g .topbar-in { background: rgb(28 32 44 / .62); border-color: rgb(255 255 255 / .1); } }
+@media (max-width: 899px) { .topbar.hdr-g { padding-top: 6px; } .topbar.hdr-g .topbar-in { height: calc(var(--top-h) - 6px); border-radius: 22px; padding-left: 8px; padding-right: 6px; } }
