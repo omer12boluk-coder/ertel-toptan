@@ -256,6 +256,9 @@ export function P0Pick({ S, onProduct }) {
   );
 }
 
+const sbLight = (hex) => { const m = /^#?([\da-f]{6})$/i.exec(hex || ''); if (!m) return false; const n = parseInt(m[1], 16); return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 > 0.6; };
+export const SB_PATS = [['none', 'Düz'], ['dots', 'Noktalar'], ['grid', 'Izgara'], ['lines', 'Çizgiler'], ['circuit', 'Devre'], ['glow', 'Işık'], ['wave', 'Dalga']];
+export const SB_COLORS = ['#16181d', '#1b2a52', '#24324f', '#3f5a4b', '#4e2f1f', '#3a3a42', '#f3efe7', '#e9edf6'];
 // ---- 6 · Atölyeni kur: setler tek bantta (sets.ids seçilirse onlar, sırasıyla)
 export function P0Sets({ S }) {
   const C = p0of(S.shopHome).sets || {};
@@ -264,7 +267,7 @@ export function P0Sets({ S }) {
   const sets = (C.ids?.length ? C.ids.map((id) => live.find((x) => x.id === id)).filter(Boolean) : live).slice(0, Number(C.n) || 3);
   if (!sets.length) return null;
   return (
-    <section className="p0-sec p0-setband rv">
+    <section className={'p0-sec p0-setband rv sb-pat-' + (C.pat || 'dots') + (sbLight(C.bg) ? ' lt' : '')} style={C.bg ? { '--sb-bg': C.bg, ...(C.pc ? { '--sb-pc': C.pc } : null) } : C.pc ? { '--sb-pc': C.pc } : undefined}>
       <P0Head eye={C.eye ?? 'Atölyeni kur'} title={C.title || 'Birlikte al, daha az öde'} more={['Tüm setler', () => go('setlist')]} />
       <div className={'p0-sets n' + sets.length}>
         {sets.map((x) => { const v = setView(x, byId); return (
@@ -362,6 +365,10 @@ export function P0SetsPanel({ H, S: set, sets }) {
   return <>
     <div className="row2"><TF label="Üst yazı" v={C.eye ?? 'Atölyeni kur'} on={(v) => up({ eye: v })} /><TF label="Başlık" v={C.title} ph="Birlikte al, daha az öde" on={(v) => up({ title: v })} /></div>
     <Field label="En fazla"><select value={C.n || 3} onChange={(e) => up({ n: Number(e.target.value) })}>{[1, 2, 3, 4, 6].map((n) => <option key={n} value={n}>{n} set</option>)}</select></Field>
+    <Field label="Arka plan rengi"><span className="sxp-row p0-sw">{SB_COLORS.map((c) => <button key={c} type="button" className={(C.bg || '#16181d') === c ? 'on' : ''} style={{ background: c }} onClick={() => up({ bg: c })} aria-label={c} />)}
+      <span className="she-color"><input type="color" value={C.bg || '#16181d'} onChange={(e) => up({ bg: e.target.value })} /></span></span></Field>
+    <Field label="Desen"><span className="seg sw">{SB_PATS.map(([k, l]) => <button key={k} type="button" className={(C.pat || 'dots') === k ? 'on' : ''} onClick={() => up({ pat: k })}>{l}</button>)}</span></Field>
+    {(C.pat || 'dots') !== 'none' && <Field label="Desen rengi" hint="Boşsa zemine göre açık ya da koyu"><span className="sxp-row"><span className="she-color"><input type="color" value={C.pc || (sbLight(C.bg) ? '#16181d' : '#ffffff')} onChange={(e) => up({ pc: e.target.value })} /></span>{C.pc && <button type="button" className="btn sm ghost" onClick={() => up({ pc: '' })}>Otomatik</button>}</span></Field>}
     <p className="fine">Hiçbirini seçmezseniz açık setlerin ilkleri görünür. Seçtiğiniz sırayla gösterilir.</p>
     {(sets || []).map((x) => <Toggle key={x.id} id={'p0s' + x.id} label={x.name + (x.on ? '' : ' · kapalı')} checked={ids.includes(x.id)} onChange={(v) => up({ ids: v ? [...ids, x.id] : ids.filter((y) => y !== x.id) })} />)}
     {!sets?.length && <p className="fine">Henüz set yok (Yönetim › Ürünler › Setler).</p>}

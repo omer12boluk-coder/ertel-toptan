@@ -7941,3 +7941,24 @@ html[data-theme="dark"] .p0-hub-big { background: radial-gradient(70% 140% at 90
 .p0-hp-n span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .p0-hp-n .ic { opacity: .5; }
 .p0-hp-row .seg { flex-wrap: wrap; }
 .p0-pn-cat { padding: 8px 0; border-top: 1px solid var(--line); } .p0-pn-cat.off { opacity: .65; }
+
+/* 6.11.2026 (3) Atölyeni kur: arka plan rengi + desen (shopHome.p0.sets.bg / pat / pc) */
+.p0-setband { position: relative; isolation: isolate; overflow: hidden; background: var(--sb-bg, #16181d); --sb-pc: rgb(255 255 255 / .9); }
+.p0-setband.lt { --sb-pc: rgb(22 24 29 / .9); color: #16181d; }
+.p0-setband.lt .p0-head h2, .p0-setband.lt .p0-more { color: #16181d; }
+.p0-setband.lt .p0-eye { color: #b4612a; }
+.p0-setband.lt .p0-set { background: rgb(255 255 255 / .75); color: #16181d; }
+.p0-setband.lt .p0-set-p small { color: #1f7a45; }
+@media (hover: hover) { .p0-setband.lt .p0-set:hover { background: #fff; } }
+.p0-setband:not(.lt) .p0-set { background: color-mix(in oklab, var(--sb-bg, #16181d) 82%, #fff); }
+@media (hover: hover) { .p0-setband:not(.lt) .p0-set:hover { background: color-mix(in oklab, var(--sb-bg, #16181d) 74%, #fff); } }
+.p0-setband::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .1; }
+.p0-setband.sb-pat-dots::before { background-image: radial-gradient(var(--sb-pc) 1.2px, transparent 1.6px); background-size: 18px 18px; opacity: .16; -webkit-mask-image: linear-gradient(115deg, transparent 20%, #000 75%); mask-image: linear-gradient(115deg, transparent 20%, #000 75%); }
+.p0-setband.sb-pat-grid::before { background-image: linear-gradient(var(--sb-pc) 1px, transparent 1px), linear-gradient(90deg, var(--sb-pc) 1px, transparent 1px); background-size: 36px 36px; opacity: .08; -webkit-mask-image: radial-gradient(ellipse at 85% 0%, #000 10%, transparent 70%); mask-image: radial-gradient(ellipse at 85% 0%, #000 10%, transparent 70%); }
+.p0-setband.sb-pat-lines::before { background-image: repeating-linear-gradient(135deg, var(--sb-pc) 0 1px, transparent 1px 14px); opacity: .08; }
+.p0-setband.sb-pat-circuit::before { opacity: .12; background-image: linear-gradient(90deg, var(--sb-pc) 1px, transparent 1px), linear-gradient(var(--sb-pc) 1px, transparent 1px), radial-gradient(var(--sb-pc) 2.4px, transparent 3px);
+  background-size: 64px 64px, 64px 64px, 64px 64px; background-position: 0 32px, 32px 0, 0 0; -webkit-mask-image: linear-gradient(100deg, transparent 25%, #000 80%); mask-image: linear-gradient(100deg, transparent 25%, #000 80%); }
+.p0-setband.sb-pat-glow::before { opacity: 1; background: radial-gradient(60% 90% at 90% 0%, color-mix(in oklab, var(--sb-pc) 22%, transparent), transparent 60%), radial-gradient(50% 80% at 0% 100%, color-mix(in oklab, #f2a876 22%, transparent), transparent 60%); }
+.p0-setband.sb-pat-wave::before { opacity: .1; background-image: radial-gradient(circle at 50% 120%, transparent 38%, var(--sb-pc) 39%, var(--sb-pc) 40%, transparent 41%); background-size: 60px 30px; }
+.p0-sw button { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--line); cursor: pointer; }
+.p0-sw button.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--fg); }
