@@ -625,13 +625,21 @@ function ShellFull() {
   // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
   const lgOn = pub && LK.glass !== false;
   useEffect(() => { const c = document.documentElement.classList; c.toggle('hdr-gs-on', hs); c.toggle('hdr-c-on', hc); c.toggle('lg-on', lgOn); return () => c.remove('hdr-gs-on', 'hdr-c-on', 'lg-on'); }, [hs, hc, lgOn]);
+  // cam + arama üst menü: sol (logo) ve sağ (simgeler) sütunu eşit genişlikte tutulur → arama kutusu tam ortada kalır, dar ekranda kısalır
+  const gsRef = useRef(null);
+  useLayoutEffect(() => {
+    const h = gsRef.current; if (!h || !('ResizeObserver' in window)) return;
+    const r1 = h.querySelector('.gs-r1'), a = h.querySelector('.gs-brand'), b = h.querySelector('.gs-icons'); if (!r1 || !a || !b) return;
+    const f = () => r1.style.setProperty('--gs-side', Math.ceil(Math.max(a.scrollWidth, b.scrollWidth)) + 'px');
+    f(); const ro = new ResizeObserver(f); ro.observe(a); ro.observe(b); return () => ro.disconnect();
+  }, [hs]);
   const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && LK.hideTop !== false, LK.hideTop === 'up', tab, urunLayer);
   const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
-      {hs ? <header className="topbar hdr-g hdr-gs">
+      {hs ? <header className="topbar hdr-g hdr-gs" ref={gsRef}>
         <div className="topbar-in">
           <div className="gs-r1">
             <button className="gs-brand" onClick={home} aria-label="Ana sayfa" title="Ana sayfa"><img className="brand-logo" src={S0.brand.logo || LOGO_MARK} alt="" /><b style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b></button>

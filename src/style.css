@@ -7537,7 +7537,7 @@ html.lg-on[data-theme="dark"] .hd-p { background: rgb(24 28 38 / .97) !important
 
 /* 5.11.2026 (6): dar ekranda üst menüde sepet / simgeler arama kutusunun üstüne binmesin (sağ-sol sütun en az içeriği kadar) */
 @media (min-width: 900px) {
-  .hdr-gs .gs-r1 { grid-template-columns: minmax(max-content, 1fr) minmax(220px, 560px) minmax(max-content, 1fr) !important; column-gap: 14px; }
+  .hdr-gs .gs-r1 { grid-template-columns: minmax(var(--gs-side, 0px), 1fr) minmax(200px, 560px) minmax(var(--gs-side, 0px), 1fr) !important; column-gap: 14px; } /* iki yan sütun EŞİT (en genişi kadar) → arama hep tam ortada */
 }
 @media (min-width: 900px) and (max-width: 1280px) { .hdr-gs .gs-icons .me-t, .hdr-gs .gs-icons .hcart-t small { display: none; } }
 /* üst menü: üstüne gelince simge ve yazı seçili hâldeki renginde (hap rengi ve kayma animasyonu aynen) */
