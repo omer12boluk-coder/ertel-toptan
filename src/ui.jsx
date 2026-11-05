@@ -241,6 +241,9 @@ export function Sheet({ title, onClose, children, footer, wide, sub, sticky, cls
   );
 }
 
+// 5.11.2026: henüz inmemiş resim belirerek gelir (pat diye 'patlamaz'); önbellekteki resim ilk karede görünür (geri dönüşte flaş yok)
+const thumbRef = (el) => { if (el && el.complete && el.naturalWidth) el.classList.add('ld'); };
+const thumbLoaded = (e) => e.currentTarget.classList.add('ld');
 export function Thumb({ p, size = 'md' }) {
   const S = useStore((s) => s.settings);
   // resim adresi İLK ÇİZİMDE hesaplanır (önceden useEffect'teydi → kart önce renkli yer tutucuyla çizilip bir kare sonra
@@ -264,7 +267,7 @@ export function Thumb({ p, size = 'md' }) {
   const brand = (p?.n || '?').split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '').slice(0, 6);
   return (
     <div className={'thumb thumb-' + size} style={{ '--h': hue(brand) }}>
-      {src && !bad ? <img src={src} alt="" loading="lazy" onError={(e) => { if (!fbSkip(e)) setBad(true); }} /> : <span className="thumb-ph">{brand || '—'}</span>}
+      {src && !bad ? <img src={src} alt="" loading="lazy" ref={thumbRef} onLoad={thumbLoaded} onError={(e) => { if (!fbSkip(e)) setBad(true); }} /> : <span className="thumb-ph">{brand || '—'}</span>}
     </div>
   );
 }

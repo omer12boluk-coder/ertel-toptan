@@ -4,6 +4,8 @@ import { StoreDecor } from './decor.jsx';
 import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js';
 import { applyStyle } from './stylekit.js';
 import { applyLayout, lookFor } from './dzpresets.js';
+import { sfx, setSfxGlobal } from './sfx.js';
+import { SoundButton } from './soundui.jsx';
 import { RatePrompt } from './reviews.jsx';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -282,7 +284,23 @@ async function bootShop(A) {
 }
 
 // Tema: yöneticinin varsayılanı + her cihazın kendi seçimi (üst menüdeki güneş/ay düğmesi)
+// zayıf bilgisayar mı: dokunmatik olmayan cihazda ≤4 çekirdek / ≤4 GB bellek ya da açılışta kareler yavaşsa (telefona bakılmaz)
+const LOW_END = { v: false };
+const FINE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: fine)').matches;
+if (FINE && ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4)) LOW_END.v = true;
+function useLowEndProbe() {
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (!FINE || LOW_END.v) return;
+    let n = 0, slow = 0, prev = 0, raf = 0;
+    const tick = (ts) => { if (prev) { n++; if (ts - prev > 34) slow++; } prev = ts; if (n < 90) raf = requestAnimationFrame(tick); else if (slow > 30) { LOW_END.v = true; setT(1); } };
+    const st = setTimeout(() => { raf = requestAnimationFrame(tick); }, 2500); // açılış yüklemesi bittikten sonra ~1,5 sn ölçülür
+    return () => { clearTimeout(st); cancelAnimationFrame(raf); };
+  }, []);
+  return t;
+}
 function useTheme() {
+  const liteTick = useLowEndProbe();
   const S = useStore((s) => s.settings);
   const dev = useStore((s) => s.deviceTheme);
   const pub = useStore((s) => s.user?.role === 'public');
@@ -305,21 +323,25 @@ function useTheme() {
     if (pub && (L.logoTone === 'color' || L.logoTone === 'flat')) ensureLogoSvg(document, L.logoColor || lc.accent || S.brand.accent);
     if (lf) r.style.setProperty('--logo-f', lf); else r.style.removeProperty('--logo-f');
     applyStyle(r, pub ? L.style : null);
+    setSfxGlobal(L.sound !== false);
+    // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
+    r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
     applyLayout(r, pub ? L : {}); // 5.11.2026 sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (Tasarım › Sayfa)
     // 3.11.2026 telefon alt menüsü görünümü (Tasarım › Renkler ve sayfa › Telefon alt menüsü); sadece mağazada
     const bn = pub ? (['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass') : 'classic';
     ['glass', 'dark', 'bar'].forEach((k) => r.classList.toggle('bn-' + k, bn === k));
     // 5.11.2026 site teması 'dash' (CRM paneli gibi bakır gece): her zaman koyu → mağazada gece modu zorlanır
-    const dash = !!pub && L.site === 'dash';
+    const forced = !!pub && L.site === 'dash';
     // 5.11.2026 kullanıcı: mağaza varsayılan AYDINLIK açılsın (telefon gece modunda olsa da); gece modu sadece düğmeyle
-    const t = dash ? 'dark' : (dev || (pub && S.brand.theme === 'auto' ? 'light' : S.brand.theme));
-    r.classList.toggle('th-dash', dash);
+    const t = forced ? 'dark' : (dev || (pub && S.brand.theme === 'auto' ? 'light' : S.brand.theme));
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
-    // 5.11.2026 site teması (look.site): 'apple' = Apple açık gündüz görünümü (sadece mağaza, sadece gündüz; gece modunda eski koyu tema)
+    // 5.11.2026 site teması (look.site): 'apple' = gündüz Apple açık, GECE Bakır gece (aynı şekiller, koyu renkler); 'dash' = hep Bakır gece
     const effDark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    const dash = forced || (!!pub && (L.site || 'apple') === 'apple' && effDark);
+    r.classList.toggle('th-dash', dash); r.classList.toggle('th-dash-force', forced);
     r.classList.toggle('th-apple', !!pub && (L.site || 'apple') === 'apple' && !effDark); // varsayılan Apple açık (5.11.2026, kullanıcı onayı)
     document.title = seoTitle() || S.brand.appName;
-  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.width, L.edge, L.boxPat, L.bgFx, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.width, L.edge, L.boxPat, L.bgFx, L.sound, L.lite, liteTick, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {
@@ -336,15 +358,25 @@ function ThemeButton() {
   const pubT = useStore((s) => s.user?.role === 'public');
   const cur = dev || (pubT && S.brand.theme === 'auto' ? 'light' : S.brand.theme);
   const dark = cur === 'dark' || (cur === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  // 5.11.2026: gece/gündüz geçişi düğmenin olduğu yerden daire olarak yayılır (View Transitions; desteklemeyen tarayıcıda anında)
+  // 5.11.2026: gece/gündüz geçişi (Tasarım › Cam ve hareket › Gece/gündüz geçişi, look.darkFx): circle daireden yayılma (varsayılan) ·
+  // fade yumuşak solma · curtain perde (yukarıdan) · none anında. Akıcı olsun diye geçiş süresince bulanık camlar kapatılır (html.vt-lite):
+  // yeni sayfanın anlık görüntüsü ucuz çıkar, animasyon sadece ekran kartında oynar.
+  const fx = S.look?.darkFx || 'circle';
   const flip = (e) => {
     const n = dark ? 'light' : 'dark';
-    const apply = () => { ls.set('device-theme', n); document.documentElement.setAttribute('data-theme', n); flushSync(() => store.set({ deviceTheme: n })); };
-    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(); return; }
+    const R0 = document.documentElement;
+    const apply = () => { ls.set('device-theme', n); R0.setAttribute('data-theme', n); flushSync(() => store.set({ deviceTheme: n })); };
+    if (fx === 'none' || !document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(); return; }
     const r = e.currentTarget.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
     const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    R0.classList.add('vt-lite', 'vt-' + fx);
     const t = document.startViewTransition(apply);
-    t.ready.then(() => document.documentElement.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${R}px at ${x}px ${y}px)`] }, { duration: 680, easing: 'cubic-bezier(.4, 0, .2, 1)', pseudoElement: '::view-transition-new(root)' })).catch(() => {});
+    const kf = fx === 'fade' ? [{ opacity: 0 }, { opacity: 1 }]
+      : fx === 'curtain' ? [{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0 0)' }]
+      : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${R}px at ${x}px ${y}px)` }];
+    t.ready.then(() => R0.animate(kf, { duration: fx === 'fade' ? 420 : 560, easing: 'cubic-bezier(.33, 0, .2, 1)', pseudoElement: '::view-transition-new(root)' })).catch(() => {});
+    t.finished.finally(() => R0.classList.remove('vt-lite', 'vt-' + fx));
+    sfx('tap');
   };
   return <button className="icon-btn" data-theme-btn onClick={flip} aria-label={dark ? 'Açık temaya geç' : 'Koyu temaya geç'} title={dark ? 'Açık tema' : 'Koyu tema'}><Icon n={dark ? 'sun' : 'moon'} s={19} /></button>;
 }
@@ -602,6 +634,7 @@ function ShellFull() {
             <span className="gs-icons">
               <ShopBell />
               <HeaderCart on={tab === 'sepet'} />
+              <SoundButton />
               <ThemeButton />
               {member
                 ? <ProfileDrop><button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button></ProfileDrop>
@@ -626,6 +659,7 @@ function ShellFull() {
           </button>
           <span className="hc-r">
             <HeaderCart on={tab === 'sepet'} />
+            <SoundButton />
             <ThemeButton />
             {member
               ? <ProfileDrop><button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button></ProfileDrop>
@@ -934,13 +968,15 @@ function useHideTop(on, upShow, tab, layer) {
 // gruplarında (üst menü sekmeleri, seçim çubukları, alt sayfa çubukları, Siparişlerim sekmeleri, görünüm seçici) seçim değişince
 // eski seçilinin yerinden yenisine, yolun ortasında uzayarak kayan bir hap çizilir; yeni düğmenin kendi zemini o sırada gizlenir.
 // Hap grubun İÇİNE (yazıların altına) konur. Sadece transform/opacity değil ama tek küçük kutu → telefonda da hafif.
+// hap hareketi (look.pill / pillM telefonda): 'flow' akan (varsayılan) · 'mercury' cıva · 'none' yok
+const pillMode = () => { const L = store.s.settings?.look || {}; return lookFor(L, matchMedia('(max-width: 899px)').matches).pill || 'flow'; };
 function setupFlowPills() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
   const SEL = '.topnav .topnav-b, .seg > button, .mo-tabs > button, .view-sw > button, .of-seg > button';
   const groupOf = (b) => b.closest('.topnav') || b.parentElement;
   addEventListener('pointerdown', (e) => {
     const t = e.target instanceof Element ? e.target : null; const btn = t?.closest(SEL);
-    if (!btn || btn.classList.contains('on') || btn.disabled) return;
+    if (!btn || btn.classList.contains('on') || btn.disabled || pillMode() === 'none') return;
     const g = groupOf(btn); const old = [...g.querySelectorAll('.on')].find((x) => x.matches(SEL) && groupOf(x) === g);
     if (!old) return;
     const gr = g.getBoundingClientRect(); const a = old.getBoundingClientRect();
@@ -959,7 +995,14 @@ function setupFlowPills() {
       g.insertBefore(gh, g.firstChild); g.classList.add('flow-g'); btn.classList.add('flow-on');
       const dx = Math.abs(B.x - A.x); const mx = Math.min(A.x, B.x) + dx * 0.25; const mw = (A.w + B.w) / 2 + dx * 0.5;
       const f = (x, y, w, h) => ({ transform: `translate(${x}px, ${y}px)`, width: w + 'px', height: h + 'px' });
-      const an = gh.animate([f(A.x, A.y, A.w, A.h), { ...f(mx, (A.y + B.y) / 2 + 1, mw, (A.h + B.h) / 2 - 2), offset: 0.45 }, f(B.x, B.y, B.w, B.h)], { duration: 440, easing: 'cubic-bezier(.3, .7, .25, 1)' });
+      // 5.11.2026 'cıva' (look.pill 'mercury'): önce ön ucu yeni sekmeye uzanıp incelir, sonra arkası çekilip toparlanır (hafif taşar)
+      const an = pillMode() === 'mercury'
+        ? gh.animate([
+          { ...f(A.x, A.y, A.w, A.h), easing: 'cubic-bezier(.55, 0, .35, 1)' },
+          { ...f(Math.min(A.x, B.x), (A.y + B.y) / 2 + A.h * 0.13, Math.max(A.x + A.w, B.x + B.w) - Math.min(A.x, B.x), (A.h + B.h) / 2 * 0.74), offset: 0.48, easing: 'cubic-bezier(.3, 0, .2, 1)' },
+          { ...f(B.x + (B.x > A.x ? 3 : -3), B.y - 1, B.w * 1.04, B.h + 2), offset: 0.82, easing: 'ease-out' },
+          f(B.x, B.y, B.w, B.h)], { duration: 620 })
+        : gh.animate([f(A.x, A.y, A.w, A.h), { ...f(mx, (A.y + B.y) / 2 + 1, mw, (A.h + B.h) / 2 - 2), offset: 0.45 }, f(B.x, B.y, B.w, B.h)], { duration: 440, easing: 'cubic-bezier(.3, .7, .25, 1)' });
       const done = () => { gh.remove(); g.classList.remove('flow-g'); btn.classList.remove('flow-on'); };
       an.onfinish = done; an.oncancel = done;
     };
@@ -976,6 +1019,9 @@ function setupNavAnim() {
   const navIdx = () => { const bs = [...document.querySelectorAll('.botnav .botnav-b')]; return bs.findIndex((b) => b.classList.contains('on')); };
   let lastIdx = -1;
   const mob = () => matchMedia('(max-width: 899px)').matches;
+  // 5.11.2026 bilgisayarda da sayfa geçişi (look.motionD): 'soft' kısa kayma + solma (varsayılan) · 'fade' sadece solma · 'none' yok
+  const deskOn = () => (store.s.settings?.look?.motionD || 'soft') !== 'none';
+  const on = () => mob() || deskOn();
   addEventListener('popstate', () => mark('back'), true);
   addEventListener('pointerdown', (e) => {
     const t = e.target instanceof Element ? e.target : null; if (!t) return;
@@ -1002,9 +1048,12 @@ function setupNavAnim() {
     clear: { dx: () => Math.round(innerWidth * 0.24), ms: 1.15, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 },
     glass: { dx: 26, ms: 1.4, ease: 'cubic-bezier(.32,.72,0,1)', glass: true },
     slow: { dx: () => Math.round(innerWidth * 0.24), ms: 3, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 },
+    desk: { dx: 22, ms: 0.85, ease: 'cubic-bezier(.22,.8,.24,1)', cv: 0.7 }, // bilgisayar: kısa, sakin
+    dfade: { dx: 0, ms: 0.7, ease: EASE },
   };
   const play = (els, kind, ms0, dk = 1) => {
-    const as = []; const M = MOT[store.s.settings?.look?.motion] || MOT.clear; const ms = Math.round(ms0 * M.ms);
+    const as = []; const LK0 = store.s.settings?.look || {};
+    const M = mob() ? (MOT[LK0.motion] || MOT.clear) : LK0.motionD === 'fade' ? MOT.dfade : MOT.desk; const ms = Math.round(ms0 * M.ms);
     const dx = Math.round((typeof M.dx === 'function' ? M.dx() : M.dx) * dk);
     if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -dx : dx}px,0,0)` }, { transform: 'translate3d(0,0,0)' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: M.ease })); }
     const cv = getCover(); cv.classList.toggle('glass', !!M.glass);
@@ -1038,7 +1087,7 @@ function setupNavAnim() {
     const shell = document.querySelector('.shell');
     if (tries < 3 && shell && !shell.classList.contains('tab-' + store.s.tab)) { pend = requestAnimationFrame(() => runKey(tries + 1)); return; }
     const prev = last; last = k; click = null;
-    if (!mob() || !watched?.isConnected) return;
+    if (!on() || !watched?.isConnected) return;
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
     // 5.11.2026 alt menüyle sekme değişimi de yandan kayar: sağdaki sekmeye geçince sağdan, soldakine geçince soldan (iOS sekme hissi)
     const ti = navIdx();
@@ -1052,7 +1101,7 @@ function setupNavAnim() {
   // sayfa içi geçişler (adres değişmeden): MutationObserver, tıklanan düğme kaybolup yerine büyük bölüm gelince
   const onMut = (muts) => {
     if (pend || key(store.s) !== last) return;
-    const c = click; if (!c || Date.now() - c.at > 450 || c.el.isConnected || !mob()) return;
+    const c = click; if (!c || Date.now() - c.at > 450 || c.el.isConnected || !on()) return;
     if (Date.now() - hintAt < 600 && hint === 'back') c.back = true; // geri hareketiyle (popstate) gelen sayfa içi dönüş de soldan gelir
     const min = innerHeight * 0.45, added = [];
     for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1 && !n.closest('.sheet, .sheet-bg, .ctx-sheet-bg') && n.offsetHeight > min && !n.matches(FIX)) added.push(n);
@@ -1309,6 +1358,17 @@ function BotNav({ items, tab, badge }) {
     const a = prevPx.current; prevPx.current = px;
     if (a == null || px == null || Math.abs(a - px) < 2) return;
     const i = pill.current?.firstElementChild; if (!i?.animate || ref.current?.classList.contains('dragging') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const pm = pillMode();
+    if (pm === 'none') return;
+    if (pm === 'mercury') {
+      const o = pill.current; const w = o.offsetWidth || 64; const D = px - a; const sg = Math.sign(D);
+      const tx = (c) => `translateX(${c}px) translateX(-50%)`;
+      o.style.transition = 'none';
+      o.animate([{ transform: tx(a), easing: 'cubic-bezier(.55, 0, .35, 1)' }, { transform: tx((a + px) / 2), offset: 0.48, easing: 'cubic-bezier(.3, 0, .2, 1)' }, { transform: tx(px + sg * 3), offset: 0.82, easing: 'ease-out' }, { transform: tx(px) }], { duration: 620 })
+        .finished.finally(() => { o.style.transition = ''; });
+      i.animate([{ transform: 'scale(1, 1)', easing: 'cubic-bezier(.55, 0, .35, 1)' }, { transform: `scale(${((Math.abs(D) + w) / w).toFixed(3)}, .74)`, offset: 0.48, easing: 'cubic-bezier(.3, 0, .2, 1)' }, { transform: 'scale(1.05, 1.03)', offset: 0.82 }, { transform: 'scale(1, 1)' }], { duration: 620 });
+      return;
+    }
     const sx = 1 + Math.min(0.6, Math.abs(px - a) / 240);
     i.animate([{ transform: 'scale(1, 1)' }, { transform: `scale(${sx.toFixed(3)}, ${(1 - (sx - 1) * 0.22).toFixed(3)})`, offset: 0.4 }, { transform: 'scale(1, 1)' }], { duration: 460, easing: 'cubic-bezier(.3, .7, .3, 1)' });
   }, [px]);
@@ -1316,7 +1376,7 @@ function BotNav({ items, tab, badge }) {
     <nav ref={ref} className="botnav" aria-label="Alt menü">
       {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px}px) translateX(-50%)` }} aria-hidden="true"><i /></span>}
       {items.map(([k, l, i, sh], n) => (
-        <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => go(k)}>
+        <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => { if (tab !== k) sfx('tap'); go(k); }}>
           <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
           <span>{sh || l}</span>
         </button>

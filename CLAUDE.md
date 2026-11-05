@@ -172,6 +172,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **Bilgisayar/telefon ayrı (5.11.2026):** görünüm ayarı + 'M' = telefon değeri (`look.headerM`, `hideTopM`, `glassM`, `pillM`; kartta `productViewM`). `lookFor(L, phone)` (dzpresets.js) main.jsx Shell'de `usePhoneMQ` (≤899px) ile; tasarım çerçevesi de telefon değerleriyle çizer. Tasarım modu 'Renkler ve sayfa' paneli gruplu: Renk ve yazı · Sayfa · Menüler · Ürün kartları · Cam ve hareket (`DevPick`). Ayarlar'da mağaza görünümü satırları kaldırıldı → 'Tasarım modunu aç' kartı; 'gorunum' = Bayi ve panel renkleri.
 
+- **5.11.2026 hareket/ses/gece:** Apple açık + gece = `th-dash` (Bakır gece renkleri; `th-dash-force` sadece site 'dash'ta, ay düğmesini gizler). `look.darkFx` circle|fade|curtain|none (geçişte `html.vt-lite` camları kapatır). `look.motionD` soft|fade|none (bilgisayar sayfa geçişi, setupNavAnim `desk`/`dfade`). `look.pill`/`pillM` flow|mercury|none (`pillMode()`, setupFlowPills + BotNav). Ses `src/sfx.js` (Web Audio, `navigator.audioSession='ambient'`), `look.sound`, cihazda ls `sfx-off`; `soundui.jsx` SoundButton (bilgisayar üst menü) / SoundToggle (Hesabım). Hafif mod `look.lite` auto|on|off → html.lite (bulanıklık yok; auto: pointer fine + ≤4 çekirdek/GB ya da açılışta yavaş kare). Ana sayfa ilk 4 bölüm önce, gerisi boşta (`HOME_FULL`). `.thumb img` artık sadece ilk inişte belirir (`.ld`).
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.

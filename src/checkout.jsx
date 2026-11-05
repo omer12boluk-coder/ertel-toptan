@@ -23,6 +23,8 @@ import { LEGAL_V } from './legal.js';
 import { FirebaseBackend } from './backend-firebase.js';
 import { feat } from './extras.jsx';
 import { OrderRate, useRateable } from './reviews.jsx';
+import { sfx } from './sfx.js';
+import { SoundToggle } from './soundui.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -849,6 +851,7 @@ function AuthForm({ onDone, compact }) {
       {view === 'signup' && <p className="fine center auth-sw">Zaten hesabınız var mı? <button type="button" className="link" onClick={() => go2('login')}>Giriş yapın</button></p>}
       {view === 'bayi' && <p className="fine center auth-sw"><button type="button" className="link" onClick={() => go2('login')}>← Müşteri girişine dön</button></p>}
       {['login', 'signup'].includes(view) && (social.google || social.facebook) && <p className="fine center auth-legal">{[social.google && 'Google', social.facebook && 'Facebook'].filter(Boolean).join(' / ')} ile devam ederek <a className="link" href="/yasal/uyelik-sozlesmesi" target="_blank" rel="noopener">üyelik sözleşmesini</a> kabul etmiş olursunuz.</p>}
+      {view === 'login' && !compact && <SoundToggle />}
       {view === 'login' && !compact && <p className="auth-bayi"><button type="button" onClick={() => go2('bayi')}>Bayi girişi</button></p>}
       </div>
     </form>
@@ -1067,6 +1070,7 @@ function MemberHome() {
             </button>
           ))}
         </nav>
+        <SoundToggle />
         <button className="hub-out" onClick={() => A.memberLogout().then(() => { openAcct(null); toast('Çıkış yapıldı'); })}><Icon n="out" s={17} />Çıkış yap</button>
       </aside>
       <div className="acct-ph" ref={phRef} aria-hidden="true" />
@@ -1266,6 +1270,7 @@ function MyInfo({ part = 'all' }) {
 // ortada logo + etrafında dönen halka, alt satırda sırayla değişen adım yazısı; bitince halka ✓'ye döner.
 const WAIT_STEPS = ['Sepetiniz kontrol ediliyor', 'Fiyatlar doğrulanıyor', 'Siparişiniz oluşturuluyor', 'Neredeyse bitti'];
 function OrderWait({ done, logo }) {
+  useEffect(() => { if (done) sfx('done'); }, [done]);
   const [i, setI] = useState(0);
   useEffect(() => { const t = setInterval(() => setI((x) => Math.min(x + 1, WAIT_STEPS.length - 1)), 1300); return () => clearInterval(t); }, []);
   useEffect(() => { document.documentElement.classList.add('ow-lock'); return () => document.documentElement.classList.remove('ow-lock'); }, []);

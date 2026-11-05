@@ -1231,7 +1231,7 @@ a.btn { text-decoration: none; }
 .track li::before { transform-origin: left; transition: background .3s; }
 .track li.on .track-dot { animation: pop .5s var(--spring); }
 /* resim yüklenirken parıltı */
-.thumb img { animation: fade .3s ease backwards; }
+.thumb img { opacity: 0; transition: opacity .22s ease; } .thumb img.ld { opacity: 1; } /* 5.11.2026: her yeniden çizimde fade animasyonu yerine sadece ilk inişte belirme */
 .toast { animation: rise .25s var(--spring); }
 .sheet { animation: up .28s var(--spring); }
 @media (prefers-reduced-motion: reduce) {
@@ -7198,7 +7198,7 @@ html.th-dash { background: #121110; } html.th-dash body { background: transparen
 html.th-dash body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(70% 60% at 100% 100%, #6a3418 0%, rgb(42 26 18 / .85) 38%, rgb(18 17 16 / 0) 75%), radial-gradient(60% 50% at 0% 0%, rgb(58 35 22 / .55), rgb(18 17 16 / 0) 70%); }
 html.th-dash .shell.public { -webkit-font-smoothing: antialiased; letter-spacing: -.01em; }
-html.th-dash [data-theme-btn] { display: none; }
+html.th-dash-force [data-theme-btn] { display: none; }
 /* menüler: sıcak koyu cam */
 html.th-dash .topbar.hdr-g .topbar-in { background: rgb(30 26 23 / .62) !important; border-color: var(--dgb) !important; box-shadow: 0 14px 34px -16px rgb(0 0 0 / .7), var(--dgh) !important; }
 html.th-dash .topbar.hdr-g .topnav-b.on { background: rgb(255 255 255 / .14) !important; color: #fff !important; box-shadow: var(--dgh) !important; }
@@ -7335,8 +7335,8 @@ html.bgfx-glow { background: #f5f5f7; } html.bgfx-glow body { background: transp
 html.bgfx-glow body::before { content: ""; position: fixed; inset: 0; height: auto; z-index: -1; pointer-events: none;
   background: radial-gradient(42% 38% at 8% -4%, rgb(10 102 214 / .11), rgb(10 102 214 / 0) 70%), radial-gradient(38% 34% at 98% 14%, rgb(242 168 118 / .13), rgb(242 168 118 / 0) 70%),
     radial-gradient(48% 42% at 62% 106%, rgb(122 160 255 / .09), rgb(122 160 255 / 0) 70%), linear-gradient(#f7f7f9, #f2f2f5); }
-html.bgfx-glow[data-theme="dark"] { background: #121110; }
-html.bgfx-glow[data-theme="dark"] body::before { background: radial-gradient(42% 38% at 8% -4%, rgb(242 184 128 / .10), transparent 70%), radial-gradient(40% 36% at 98% 18%, rgb(110 140 255 / .08), transparent 70%), #121110; }
+html.bgfx-glow[data-theme="dark"]:not(.th-dash) { background: #121110; }
+html.bgfx-glow[data-theme="dark"]:not(.th-dash) body::before { background: radial-gradient(42% 38% at 8% -4%, rgb(242 184 128 / .10), transparent 70%), radial-gradient(40% 36% at 98% 18%, rgb(110 140 255 / .08), transparent 70%), #121110; }
 html.bgfx-plain body::before { display: none; }
 /* stil stüdyosu köşeleri Apple / Bakır temanın sabit köşelerini ezsin (sonradan yazıldığı için kazanır) */
 html.st-rbox .shell.public :is(.sh-box, .sh-brand, .sh-usp, .set-card) { border-radius: var(--st-rbox); }
@@ -7375,3 +7375,23 @@ html.st-rhero .shell.public :is(.sh-hero, .sh-hero .sh-slide, .sh-banner-in, .sh
 .dz-goto span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .dz-goto small { color: var(--muted); font-size: 13px; line-height: 1.4; }
 @media (max-width: 600px) { .dz-goto { flex-wrap: wrap; } .dz-goto .btn { width: 100%; } }
+
+/* gece/gündüz geçişi sırasında: bulanık camlar ve ağır gölgeler kapalı (anlık görüntü ucuz çıksın, animasyon akıcı) */
+html.vt-lite *, html.vt-lite *::before, html.vt-lite *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; transition: none !important; }
+html.vt-lite body::before { filter: none !important; }
+::view-transition-old(root), ::view-transition-new(root) { will-change: clip-path, opacity; }
+html.vt-fade::view-transition-old(root) { animation: none; }
+/* ses efektleri düğmesi / anahtarı */
+.sfx-btn { position: relative; }
+.sfx-x { position: absolute; left: 50%; top: 50%; width: 22px; height: 2px; border-radius: 2px; background: currentColor; transform: translate(-50%, -50%) rotate(-45deg); box-shadow: 0 0 0 1.5px var(--surface); }
+@media (max-width: 899px) { .shell.public .sfx-btn { display: none; } }
+.sfx-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; margin: 6px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--fg); text-align: left; cursor: pointer; }
+.sfx-row .hub-t { flex: 1; display: flex; flex-direction: column; gap: 2px; } .sfx-row small { color: var(--muted); font-size: 12.5px; }
+.sfx-sw { flex: none; width: 40px; height: 24px; border-radius: 12px; background: var(--line); position: relative; transition: background .2s; }
+.sfx-sw::after { content: ''; position: absolute; left: 2px; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .25); transition: transform .25s cubic-bezier(.3, 1.4, .5, 1); }
+.sfx-row.on .sfx-sw { background: #34c759; } .sfx-row.on .sfx-sw::after { transform: translateX(16px); }
+@media (min-width: 900px) { .auth-form .sfx-row, .auth .sfx-row { display: none; } }
+/* hafif mod: bulanık cam yok (eski bilgisayar) — saydam yerine neredeyse dolu zemin */
+html.lite *, html.lite *::before, html.lite *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.lite .topbar.hdr-g .topbar-in, html.lite .hd-p, html.lite .nc-panel { background: color-mix(in oklab, var(--surface) 97%, transparent) !important; }
+html.lite .shell.public .toolbar { background: var(--bg) !important; }

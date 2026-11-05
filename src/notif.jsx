@@ -13,6 +13,7 @@ import { PushHelp } from './pushhelp.jsx';
 import { issueNotifs } from './issue.jsx';
 import { seenWait } from './extras.jsx';
 import { finalItems } from './lcart.jsx';
+import { sfx } from './sfx.js';
 
 const DAY = 864e5;
 const msOf = (t) => (t?.toMillis ? t.toMillis() : typeof t === 'number' ? t : t?.seconds ? t.seconds * 1000 : 0);
@@ -64,7 +65,7 @@ export function NotifPop({ list, onPick, off }) {
     list.forEach((x) => known.current.add(x.id));
     if (!fresh.length || off) return;
     const x = fresh.sort((a, b) => b.at - a.at)[0];
-    setCur({ ...x, more: fresh.length - 1, k: Date.now() });
+    setCur({ ...x, more: fresh.length - 1, k: Date.now() }); sfx('ding');
     clearTimeout(tm.current); tm.current = setTimeout(() => setCur(null), 6500);
   }, [list]);
   useEffect(() => () => clearTimeout(tm.current), []);

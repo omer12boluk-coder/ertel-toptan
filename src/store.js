@@ -2,6 +2,7 @@ import { useRef, useSyncExternalStore } from 'react';
 import { withDefaults, ls, norm, now, cleanText } from './utils.js';
 import { lpath } from './route.js';
 import { prodPath, prodIdOf } from './seo.js';
+import { sfx } from './sfx.js';
 
 const subs = new Set();
 export const store = {
@@ -87,6 +88,7 @@ let toastT;
 export function toast(text, tone = 'ok') {
   clearTimeout(toastT);
   store.set({ toast: { text, tone, at: now() } });
+  if (tone === 'bad') sfx('error');
   toastT = setTimeout(() => store.set({ toast: null }), 3200);
 }
 
@@ -101,7 +103,9 @@ const cs = {
 export function loadCart() { if (guestCart()) ls.del(cartKey()); store.set({ cart: cs.get(cartKey()) }); }
 export function setQty(id, qty) {
   const cart = { ...store.s.cart };
+  const was = cart[id] || 0;
   if (qty > 0) cart[id] = Math.min(9999, Math.floor(qty)); else delete cart[id];
+  sfx(!(qty > 0) ? 'remove' : qty > was ? 'add' : 'tap'); // 5.11.2026 ses efektleri
   store.set({ cart }); cs.set(cartKey(), cart);
 }
 export function clearCart() { store.set({ cart: {} }); cs.set(cartKey(), {}); }

@@ -403,10 +403,21 @@ export function ShopHome({ S: Sover }) {
     if (!E && g.W >= 100) return node;
     return <WideBox W={g.W} pos={g.pos} selOnly className={'geo' + (g.W >= 100 ? ' full' : '')} up={E && !E.mobile ? (p) => E.set('shopHome.geo', { ...(H.geo || {}), [k]: p }) : null}>{node}</WideBox>;
   };
+  // 5.11.2026 hız: ilk açılışta sadece ekranın üst kısmındaki bölümler (ilk 4) çizilir; gerisi tarayıcı boşalınca ya da ilk kaydırmada
+  // (eski bilgisayarlarda açılış takılmasın). Bir kez açılınca hep açık kalır (geri dönüşte yeniden çizim yok).
+  const [allIn, setAllIn] = useState(() => !!E || HOME_FULL.v);
+  useEffect(() => {
+    if (allIn) return;
+    const go2 = () => { HOME_FULL.v = true; setAllIn(true); };
+    const ric = window.requestIdleCallback ? requestIdleCallback(go2, { timeout: 900 }) : setTimeout(go2, 350);
+    addEventListener('scroll', go2, { once: true, passive: true });
+    return () => { (window.cancelIdleCallback || clearTimeout)(ric); removeEventListener('scroll', go2); };
+  }, [allIn]);
+  let shown = 0;
   return (
     <div className={'sh' + (E ? ' dz' : '')} ref={ref} style={H.gap ? { gap: H.gap + 'px' } : undefined}>
       {L.map((k, i) => {
-        if (!E) return hidden.has(k) ? null : <Frag key={k}>{wrap(k)}</Frag>;
+        if (!E) { if (hidden.has(k)) return null; if (!allIn && ++shown > 4) return null; return <Frag key={k}>{wrap(k)}</Frag>; }
         return <E.Block key={k} k={k} i={i} L={L} hidden={hidden.has(k)}>{wrap(k)}</E.Block>;
       })}
       {product && <ProductSheet p={product} onClose={() => setProduct(null)} />}
@@ -414,6 +425,7 @@ export function ShopHome({ S: Sover }) {
   );
 }
 const Frag = ({ children }) => children || null;
+const HOME_FULL = { v: false };
 const stop = (e) => e.stopPropagation();
 const Empty = ({ label }) => <div className="dz-empty">{label}</div>;
 
