@@ -1103,6 +1103,7 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
     <Disclose label="Ürün kartları" value={<small>{C2.addPos === 'side' ? 'düğme yanda' : 'düğme altta'}</small>}>
       <Field label="Sepete ekle düğmesi"><span className="seg sw">{[['bottom', 'Fiyatın altında, tam genişlik'], ['side', 'Fiyatın yanında (eski)']].map(([x, l]) => <button key={x} type="button" className={(C2.addPos || 'bottom') === x ? 'on' : ''} onClick={() => setC('addPos', x)}>{l}</button>)}</span></Field>
       <Toggle id="dz-stk" label="Kartta “Stokta” yazısı" checked={C2.stockTag !== false} onChange={(v) => setC('stockTag', v)} />
+      <Toggle id="dz-fly" label="Sepete eklerken uçan nokta" hint="Ürün sepete ilk eklenince tıklanan yerden üstteki sepete küçük bir nokta uçar, sepet zıplar." checked={L.flyCart === true} onChange={(v) => set('look.flyCart', v)} />
       <Toggle id="dz-fab" label="Sağ alttaki yüzen sepet düğmesi" hint="Ürünler ve ana sayfada sepette ürün varken sağ altta duran yuvarlak sepet düğmesi. Kapalıyken sepet sadece üst menüde." checked={L.cartFab !== false} onChange={(v) => set('look.cartFab', v)} />
       <DevPick L={C2} set={set} base="cards" k="productView" kM="productViewM" def="sheet" label="Ürüne basınca" hint="Pencere: ürün listenin üstünde açılır. Sayfa: ürün kendi sayfasında açılır (paylaşılabilir adres)."
         opts={[['sheet', 'Pencerede'], ['page', 'Kendi sayfasında']]} />

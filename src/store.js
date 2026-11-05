@@ -107,7 +107,7 @@ export function setQty(id, qty) {
   const was = cart[id] || 0;
   if (qty > 0) cart[id] = Math.min(9999, Math.floor(qty)); else delete cart[id];
   sfx(!(qty > 0) ? 'remove' : qty > was ? 'add' : 'tap'); // 5.11.2026 ses efektleri
-  if (qty > 0 && was === 0) flyToCart(Math.floor(qty)); // sadece ilk eklemede (adet artırmada uçmaz)
+  if (qty > 0 && was === 0 && store.s.settings?.look?.flyCart === true) flyToCart(Math.floor(qty)); // sadece ilk eklemede (adet artırmada uçmaz)
   store.set({ cart }); cs.set(cartKey(), cart);
 }
 export function clearCart() { store.set({ cart: {} }); cs.set(cartKey(), {}); }
