@@ -849,6 +849,15 @@ function Hero({ slides, open, brands, heroH, pkHero, nv = {} }) {
   // görünür hâlde gelir → yarı yolda kaybolup yeniden belirmesin diye animasyon oynamaz.
   // target: kodla kaydırma sürerken ara scroll olayları etkin reklamı geri çevirmesin (1→0→1 gidip gelme, animasyon iki kez başlıyordu)
   const [play, setPlay] = useState(0);
+  // 5.11.2026 iPhone: uygulama arka plana atılıp dönünce reklam yazıları görünmüyordu (giriş animasyonu 'başlamadan' durumda donup
+  // kalıyordu). (1) yazı animasyonu bitince .done = animasyon yok, tam görünür; (2) sayfa yeniden görünür olunca animasyon baştan oynar.
+  const [done, setDone] = useState(-1); const lastPlay = useRef(0);
+  useEffect(() => { setDone(-1); const t = setTimeout(() => setDone(play), 1100); return () => clearTimeout(t); }, [play]);
+  useEffect(() => {
+    const re = () => { if (document.visibilityState !== 'visible') return; const k = playRef.current >= 0 ? playRef.current : (lastPlay.current || 0); lastPlay.current = k; setPlay(-1); requestAnimationFrame(() => requestAnimationFrame(() => setPlay(k))); };
+    document.addEventListener('visibilitychange', re); addEventListener('pageshow', re);
+    return () => { document.removeEventListener('visibilitychange', re); removeEventListener('pageshow', re); };
+  }, []);
   const target = useRef(null); const targetT = useRef(0);
   function goTo(k) {
     const el = track.current; if (!el) return;
@@ -878,7 +887,7 @@ function Hero({ slides, open, brands, heroH, pkHero, nv = {} }) {
   return (
     <section className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
-        {slides.map((s, k) => <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} open={open} logo={slideLogo(s, brands)} />)}
+        {slides.map((s, k) => <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>
@@ -917,7 +926,7 @@ const imVars = (im) => {
   return v;
 };
 const TOUCH_DEV = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
-function Slide({ s, on, play, open, logo, k, pkHero }) {
+function Slide({ s, on, play, done, open, logo, k, pkHero }) {
   const E = useContext(DesignCtx);
   const ly = SLIDE_LAYOUTS[s.layout] ? s.layout : 'split';
   const cover = COVER_LY.includes(ly) && s.img;
@@ -961,7 +970,7 @@ function Slide({ s, on, play, open, logo, k, pkHero }) {
   const mf = cover && ['whole', 'stack'].includes(s.mfit) ? ' m-' + s.mfit : '';
   const ink = bgp ? (bgp.ink === 'l' ? ' ink-dark' : ' ink-light') : '';
   return (
-    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (imDown ? ' dz-imdrag' : '') + (bgp ? ' has-bgp' : '') + ink + btn + (shrunk ? ' fill-' + fill : '') + mf + (cover && s.imgM ? ' has-mimg' : '') + (s.fxm && Object.values(s.fxm).some((v) => v?.ax != null) ? ' has-fxa' : '')} style={Object.keys(vars).length ? vars : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
+    <article className={'sh-slide th-' + (s.theme || 'night') + ' ly-' + ly + (cover ? ' cover fit-' + fit : '') + ' st-' + st + (on ? ' on' : '') + (play ? ' play' : '') + (done ? ' done' : '') + (imDown ? ' dz-imdrag' : '') + (bgp ? ' has-bgp' : '') + ink + btn + (shrunk ? ' fill-' + fill : '') + mf + (cover && s.imgM ? ' has-mimg' : '') + (s.fxm && Object.values(s.fxm).some((v) => v?.ax != null) ? ' has-fxa' : '')} style={Object.keys(vars).length ? vars : undefined} onClick={cover && s.link && !s.cta ? open(s.link) : undefined} onPointerDown={imDown} {...tilt}>
       {cover ? <>{((shrunk && fill === 'blur') || s.mfit === 'whole') && <ShopImg v={s.img} className={'sh-slide-bg sh-bg-blur' + (shrunk && fill === 'blur' ? '' : ' m-only')} />}<ShopImg v={s.img} className="sh-slide-bg sh-bg-main pc-img" />{s.imgM && <ShopImg v={s.imgM} className="sh-slide-bg sh-bg-main m-img" />}</> : bgp ? <span className="sh-bgp" aria-hidden="true" /> : ly !== 'plain' && <>
         <span className="sh-orb a" aria-hidden="true" /><span className="sh-orb b" aria-hidden="true" /><span className="sh-grid" aria-hidden="true" />
       </>}

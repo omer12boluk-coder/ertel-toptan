@@ -7259,3 +7259,5 @@ html:is(.th-apple, .th-dash) .shell.public .toolbar { background: color-mix(in o
   margin-inline: -16px; padding: 10px 16px; border-bottom: 1px solid color-mix(in oklab, var(--line) 70%, transparent); box-shadow: 0 10px 24px -20px rgb(15 23 42 / .35); }
 @media (min-width: 900px) { html:is(.th-apple, .th-dash) .shell.public .toolbar { margin-inline: 0; padding: 10px 12px; border: 1px solid color-mix(in oklab, var(--line) 70%, transparent); border-radius: 22px; } }
 html.th-dash .shell.public .toolbar { background: rgb(26 22 20 / .7); border-color: var(--dgb); }
+/* reklam yazısı animasyonu bitti: animasyon kaldırılır, yazılar kesin görünür (arka plandan dönüşte donmuş 'başlangıç' hâli kalmaz) */
+.sh-slide.done .sh-slide-t > *, .sh-slide.done .sh-slide-x > * { animation: none !important; opacity: 1 !important; }
