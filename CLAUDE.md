@@ -190,6 +190,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **6.11.2026 (2):** Paket 0 ayarları `shopHome.p0` {find, cats{hide,n}, pick{ids,auto}, sets{ids}, mq{color,speed,h,pause}, hub}; reklam yeri `slides[i].p0` big|top|bot|off (`p0Role`, panel `P0HeroPanel`). Tasarım › 'Ürünler açılış sayfası' (`sel.kind 'hub'`). Menüden Ürünler = `navGo` → `catalogGo {hub:true}`. `look.pillHov` (--pill-hov). Akan hap: hedef rengi geçiş kapatılıp okunur (yoksa siyah hap kaymıyordu). Stepper/sh-card renkleri `--add-*`.
 
+- **6.11.2026 (3):** Ders: `bgFx glow` + `th-dash` gecede zemini açık bırakıyordu (düzeldi) → zemin/arka plan değişikliğinden sonra GECE MODUNU da aç, bak. Hesabım: React className'i yazınca `side-fixed` siliniyordu → `useLayoutEffect([view])` ile `fitRef`; bilgisayarda Hesabım içi geçişte sadece `.acct-main` belirir (setupNavAnim). Seçili satır siyah.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.
