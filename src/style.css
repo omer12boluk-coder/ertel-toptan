@@ -8017,3 +8017,4 @@ html.bgfx-glow.th-dash[data-theme="dark"] body::before { background: radial-grad
   html.adm-mini.adm-apple .shell.admin .topbar-in > :is(.brand, .brand-btn) { justify-self: center; }
   html.adm-mini.adm-apple .shell.admin .topbar-in > :is(.nc, .icon-btn) { grid-row: auto; }
 }
+@media (min-width: 1100px) { html.adm-mini.adm-apple .shell.admin .topbar-in > .me .me-t { display: none !important; } html.adm-mini.adm-apple .shell.admin .topbar-in > .me { flex-direction: row; justify-content: center; } }
