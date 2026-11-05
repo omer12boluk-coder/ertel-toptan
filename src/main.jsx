@@ -307,7 +307,10 @@ function useTheme() {
     // 3.11.2026 telefon alt menüsü görünümü (Tasarım › Renkler ve sayfa › Telefon alt menüsü); sadece mağazada
     const bn = pub ? (['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass') : 'classic';
     ['glass', 'dark', 'bar'].forEach((k) => r.classList.toggle('bn-' + k, bn === k));
-    const t = dev || S.brand.theme;
+    // 5.11.2026 site teması 'dash' (CRM paneli gibi bakır gece): her zaman koyu → mağazada gece modu zorlanır
+    const dash = !!pub && L.site === 'dash';
+    const t = dash ? 'dark' : (dev || S.brand.theme);
+    r.classList.toggle('th-dash', dash);
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
     // 5.11.2026 site teması (look.site): 'apple' = Apple açık gündüz görünümü (sadece mağaza, sadece gündüz; gece modunda eski koyu tema)
     const effDark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
@@ -551,7 +554,7 @@ function ShellFull() {
       const go2 = () => { kept.current.add('katalog'); warm((x) => x + 1); };
       idle = window.requestIdleCallback ? requestIdleCallback(go2, { timeout: 2500 }) : setTimeout(go2, 50);
     };
-    t = setTimeout(tryWarm, 3500);
+    t = setTimeout(tryWarm, 1200); // 5.11.2026: 3,5 sn → 1,2 sn (ilk geçişler 'F5 gibi' takılıyordu)
     return () => { clearTimeout(t); window.cancelIdleCallback?.(idle); removeEventListener('scroll', onS); };
   }, [pub]);
   const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;

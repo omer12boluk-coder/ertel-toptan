@@ -7110,7 +7110,7 @@ html.th-apple {
   --ap-card-h: 0 2px 4px rgb(0 0 0 / .05), 0 22px 44px -24px rgb(0 0 0 / .3);
   --ap-btn: #1d1d1f; --ap-chip: #e8e8ed;
 }
-html.th-apple body { background: var(--bg); }
+html.th-apple { background: #f5f5f7; } html.th-apple body { background: transparent; }
 html.th-apple body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(120% 70% at 15% -10%, #ffffff 0%, rgb(255 255 255 / 0) 55%), radial-gradient(90% 60% at 100% 110%, #ebe7e1 0%, rgb(235 231 225 / 0) 60%); }
 html.th-apple .shell.public { -webkit-font-smoothing: antialiased; letter-spacing: -.01em; }
@@ -7169,3 +7169,87 @@ html.th-apple .shell.public .btn.outline { border-radius: 999px; }
 html.th-apple .sfoot { background: transparent; border-top: 1px solid var(--line); }
 html.th-apple .shell.public .ssum-pay { background: #f5f5f7; border: 0; border-radius: 18px; }
 html.th-apple .shell.public .ssum-pay :is(small, .ssum-pay-l) { color: var(--muted); }
+
+/* 5.11.2026 (7) marka + 'Stokta' ikisi de kapalıyken boş satır yer kaplamasın: ad ile fiyat yaklaşır (Az kaldı / Stok yok yine görünür) */
+.plist.pgrid.no-stk.no-brand .prow-meta { min-height: 0; margin: 0; gap: 0; }
+.plist.pgrid.no-stk.no-brand .prow-info { padding-bottom: 0; }
+/* Apple açık: sepete ekle siyah değil — açık, ana renkten hafif tonlu yuvarlak düğme (Apple 'Satın al' sadeliği) */
+html.th-apple .shell.public .plist .btn.add { background: color-mix(in oklab, var(--accent) 9%, #f2f2f5); color: var(--accent); }
+html.th-apple .shell.public .plist .btn.add:hover { background: color-mix(in oklab, var(--accent) 16%, #ececf1); color: var(--accent); }
+/* telefonda üst menü öğeleri biraz ferah */
+@media (max-width: 899px) {
+  .hdr-gs .gs-r1 { gap: 8px; padding: 0 8px 0 10px; } .hdr-gs .gs-icons { gap: 6px; }
+  .hdr-gs .gs-icons .icon-btn, .hdr-gs .gs-srch .hsearch-btn { width: 38px; height: 38px; }
+  .hdr-gs .gs-brand b { font-size: 15px; }
+}
+@media (max-width: 370px) { .hdr-gs .gs-brand b { display: none; } }
+
+/* ===== 5.11.2026 SİTE TEMASI 'Bakır gece (panel)' (look.site 'dash' → html.th-dash + data-theme dark; sadece mağaza) =====
+   Kullanıcının gönderdiği Sales CRM paneli dili: kömür zemin, sağ alttan bakır ışık, yarı saydam cam kartlar (ince açık kenar),
+   hap şeritler, yuvarlak simge düğmeler, iri sade rakamlar, tek vurgu rengi şeftali. Kartlarda bulanıklaştırma YOK (performans). */
+html.th-dash, html.th-dash[data-theme] {
+  --bg: #121110; --surface: #1b1816; --surface-2: #221e1b; --fg: #f3ece4; --muted: #a99d91; --line: #302a25; --line-2: #26211d;
+  --accent: #f2b880; --accent-ink: #1a1310; --accent-soft: rgb(242 184 128 / .14); --price: #f6c28e;
+  --f-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  --f-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  --dg: rgb(255 255 255 / .045); --dg2: rgb(255 255 255 / .08); --dgb: rgb(255 255 255 / .09); --dgh: 0 1px 0 rgb(255 255 255 / .06) inset;
+}
+html.th-dash { background: #121110; } html.th-dash body { background: transparent; }
+html.th-dash body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(70% 60% at 100% 100%, #6a3418 0%, rgb(42 26 18 / .85) 38%, rgb(18 17 16 / 0) 75%), radial-gradient(60% 50% at 0% 0%, rgb(58 35 22 / .55), rgb(18 17 16 / 0) 70%); }
+html.th-dash .shell.public { -webkit-font-smoothing: antialiased; letter-spacing: -.01em; }
+html.th-dash [data-theme-btn] { display: none; }
+/* menüler: sıcak koyu cam */
+html.th-dash .topbar.hdr-g .topbar-in { background: rgb(30 26 23 / .62) !important; border-color: var(--dgb) !important; box-shadow: 0 14px 34px -16px rgb(0 0 0 / .7), var(--dgh) !important; }
+html.th-dash .topbar.hdr-g .topnav-b.on { background: rgb(255 255 255 / .14) !important; color: #fff !important; box-shadow: var(--dgh) !important; }
+html.th-dash .topbar.hdr-g .topnav-b { color: #cbbfb3; }
+html.th-dash .topbar.hdr-g :is(.hcart, .hcart.full, .icon-btn, .me-login) { background: var(--dg2); border: 1px solid var(--dgb); color: var(--fg); }
+html.th-dash .topbar.hdr-gs .gs-srch .hsearch-box { background: var(--dg) !important; border: 1px solid var(--dgb) !important; color: var(--fg); }
+html.th-dash .topbar.hdr-gs .gs-nav { border-top-color: var(--dgb); }
+@media (max-width: 899px) {
+  html.th-dash .shell.public .botnav { background: rgb(30 26 23 / .62) !important; border-color: var(--dgb) !important; box-shadow: 0 14px 34px -16px rgb(0 0 0 / .7), var(--dgh) !important; }
+  html.th-dash .shell.public .botnav-pill i { background: rgb(255 255 255 / .14) !important; box-shadow: var(--dgh) !important; }
+  html.th-dash .shell.public .botnav-b { color: #b3a79b !important; } html.th-dash .shell.public .botnav-b.on { color: #fff !important; }
+  html.th-dash .shell.public .cart-bar { background: rgb(30 26 23 / .7) !important; border-color: var(--dgb) !important; }
+}
+html.th-dash .hd-p { background: rgb(30 26 23 / .86) !important; border-color: var(--dgb) !important; color: var(--fg); }
+/* cam kartlar */
+html.th-dash .shell.public :is(.plist.pgrid > li.prow, .sh-usp, .sh-brand, .sh-card, .cart-main, .cart-sum, .cart-subtot, .acct-side, .o-card, .mo-card, .co-sec, .addr-card, .kf-res, .set-hits) {
+  background: var(--dg) !important; border: 1px solid var(--dgb) !important; box-shadow: var(--dgh), 0 20px 40px -30px rgb(0 0 0 / .8) !important; }
+html.th-dash .shell.public .plist.pgrid > li.prow { border-radius: 24px; }
+html.th-dash .shell.public .plist.pgrid > li.prow:hover { background: rgb(255 255 255 / .065) !important; transform: translateY(-2px); }
+html.th-dash .shell.public .plist.pgrid .prow-main .thumb { background: #f4f1ec; border: 0; border-radius: 16px; }
+html.th-dash .shell.public .plist.pgrid .prow-main .cimg { padding: 10px 10px 0; }
+html.th-dash .shell.public .plist.pgrid .cimg-sw { border-bottom: 0; }
+html.th-dash .shell.public .prow-name { color: var(--fg); font-weight: 600; }
+html.th-dash .shell.public .price-mine { letter-spacing: -.02em; }
+html.th-dash .shell.public .sh-card-img { background: #f4f1ec; border-bottom: 0; margin: 10px 10px 0; border-radius: 16px; }
+html.th-dash .shell.public :is(.sh-usp, .sh-brand, .sh-card) { border-radius: 24px; }
+html.th-dash .shell.public .sh-head h2 { color: var(--fg); font-weight: 700; letter-spacing: -.025em; }
+html.th-dash .shell.public .sh-head h2::before { display: none; }
+html.th-dash .shell.public .sh-head p { margin-left: 0; color: var(--muted); }
+html.th-dash .shell.public .sh-hero { border-radius: 30px; box-shadow: 0 30px 60px -34px rgb(0 0 0 / .9); }
+html.th-dash .shell.public .sh-box { border-radius: 28px; }
+html.th-dash .shell.public :is(.marq, .sh-mq) { background: var(--dg) !important; border: 1px solid var(--dgb) !important; }
+/* düğmeler: cam hap */
+html.th-dash .shell.public .plist .btn.add { background: var(--dg2); color: var(--fg); border: 1px solid var(--dgb); border-radius: 999px !important; box-shadow: var(--dgh); }
+html.th-dash .shell.public .plist .btn.add:hover { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+html.th-dash .shell.public .stepper { background: var(--dg2); border: 1px solid var(--dgb); border-radius: 999px !important; }
+html.th-dash .shell.public .stepper > :is(button, input) { background: transparent; border: 0 !important; color: var(--fg); }
+html.th-dash .shell.public :is(.btn.primary, .cart-bar .btn.primary) { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); border-radius: 999px; }
+html.th-dash .shell.public :is(.back-btn, .btn.outline, .cart-clear) { background: var(--dg); border: 1px solid var(--dgb); color: var(--fg); border-radius: 999px; }
+/* şeritler ve çipler */
+html.th-dash .shell.public .chip { background: var(--dg); border: 1px solid var(--dgb); color: #d9cdc1; }
+html.th-dash .shell.public .chip.on { background: rgb(255 255 255 / .14); color: #fff; }
+html.th-dash .shell.public :is(.view-sw, .seg, .mo-tabs) { background: var(--dg); border: 1px solid var(--dgb); border-radius: 999px; padding: 3px; box-shadow: none; }
+html.th-dash .shell.public :is(.view-sw, .seg, .mo-tabs) > button { border-radius: 999px; color: #cbbfb3; }
+html.th-dash .shell.public :is(.view-sw, .seg, .mo-tabs) > button.on { background: rgb(255 255 255 / .14); color: #fff; box-shadow: var(--dgh); }
+html.th-dash .shell.public :is(.toolbar .search, .kf-search) { background: var(--dg); border: 1px solid var(--dgb); border-radius: 999px; color: var(--fg); }
+html.th-dash .shell.public .toolbar { background: transparent; }
+/* kategori paneli: CRM'deki sol çubuk gibi tek cam panel */
+@media (min-width: 900px) { html.th-dash .shell.public .cat-side { background: var(--dg); border: 1px solid var(--dgb); border-radius: 24px; padding: 14px 10px; box-shadow: var(--dgh); } }
+html.th-dash .shell.public .cat-link { border-radius: 12px; color: #d9cdc1; }
+html.th-dash .shell.public .cat-link.on { background: rgb(255 255 255 / .12); color: #fff; }
+/* sepet tutar kutusu */
+html.th-dash .shell.public .ssum-pay { background: linear-gradient(135deg, rgb(242 184 128 / .16), rgb(242 184 128 / .05)); border: 1px solid rgb(242 184 128 / .22); border-radius: 20px; }
+html.th-dash .sfoot { background: transparent; border-top: 1px solid var(--dgb); color: var(--muted); }

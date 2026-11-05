@@ -56,7 +56,7 @@ export function priceShow(S, role) {
 export const cardAdd = (S, role) => (role === 'public' || !role ? S.cards?.add : S.cards?.addB2b) || (role === 'public' || !role ? 'auto' : 'text');
 // 3.11.2026: mağaza kartında sepet düğmesinin yeri (Ayarlar > Ürün kartları): 'bottom' fiyatın altında tam genişlik (varsayılan; − 1 +
 // açılınca TL / KDV satırlarıyla çakışmaz) · 'side' fiyatın sağında (eski). Kart sınıfı: add-<tür> + ab (altta)
-export const cardCls = (S, role) => 'add-' + cardAdd(S, role) + ((role === 'public' || !role) && (S.cards?.addPos || 'bottom') === 'bottom' ? ' ab' : '') + (S.cards?.stockTag === false ? ' no-stk' : '');
+export const cardCls = (S, role) => 'add-' + cardAdd(S, role) + ((role === 'public' || !role) && (S.cards?.addPos || 'bottom') === 'bottom' ? ' ab' : '') + (S.cards?.stockTag === false ? ' no-stk' : '') + (S.catalog?.showBrand === false ? ' no-brand' : '');
 function PriceExtras({ v, cur, S: So, role: ro }) {
   const S0 = useStore((s) => s.settings);
   const r0 = useStore((s) => s.user?.role);
