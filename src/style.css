@@ -6879,3 +6879,11 @@ html.top-hide .shell.public .cat-side, html.top-hide .shell.public .legal-nav { 
 html.top-hide .shell.public .topbar > :not(.topbar-in) { visibility: hidden; }
 .seg.sw { display: flex; flex-wrap: wrap; }
 .seg.sw button { flex: 1 1 auto; padding: 8px 10px; white-space: nowrap; }
+/* demo: mağaza ⇄ yönetim düğmesi (sadece demo sayfası) */
+.demo-sw { position: fixed; z-index: 60; left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(var(--bot-h) + env(safe-area-inset-bottom, 0px) + 14px); display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 16px; border: 0; background: #0f172a; color: #fff; font: 600 12.5px/1 var(--f-body); box-shadow: 0 8px 20px -8px rgb(0 0 0 / .5); opacity: .92; cursor: pointer; }
+.demo-sw small { opacity: .6; font-weight: 500; }
+@media (min-width: 900px) { .demo-sw { bottom: 16px; } }
+/* 5.11.2026 yüzen alt menüde seçili sekme hapı menünün DIŞINA taşıyordu → menünün içinde, dikey ortalı */
+@media (max-width: 899px) {
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 5px !important; height: 52px; margin-top: 0; }
+}

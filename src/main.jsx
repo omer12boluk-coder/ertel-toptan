@@ -512,6 +512,13 @@ function PPLayer({ pid }) {
 // abonelikleriyle zaten güncellenirler. Ölçüm: Ürünler'e geçişte dokunuş işleyicisi ~45 ms → çok daha az.
 const HomeM = memo(ShopHome);
 const CatalogM = memo(Catalog);
+// 5.11.2026 sadece demo: mağaza ⇄ yönetim paneli geçişi (Claude'daki demo sayfasında adres çubuğundan /admin yazılamıyor)
+function DemoSwitch({ admin }) {
+  const sw = () => { try { location.hash = admin ? '' : 'admin'; } catch {} location.reload(); };
+  return <button type="button" className="demo-sw" onClick={sw} title={admin ? 'Mağazaya dön' : 'Yönetim paneli · giriş: admin / admin'}>
+    <Icon n={admin ? 'store' : 'shield'} s={15} /><span>{admin ? 'Mağazaya dön' : 'Yönetim paneli'}</span>{!admin && <small>admin / admin</small>}
+  </button>;
+}
 function ShellFull() {
   const { user, tab, cart, requests, api: A, vitrinCode, vitrinOpen, openOrder: openOrderId, settings: S0, pid, urunFrom, urunLayer, setId } = useStore();
   const admin = user.role === 'admin';
@@ -615,6 +622,7 @@ function ShellFull() {
           {!pub && <button className="icon-btn logout-btn" onClick={() => A.logout()} aria-label="Çıkış yap" title="Çıkış yap"><Icon n="out" s={18} /></button>}
         </div>
       </header>}
+      {A.mode === 'demo' && <DemoSwitch admin={admin} />}
       {A.mode === 'demo' && admin && demoNote && (
         <div className="demo-strip">
           <span><b>Demo modu.</b> Veriler sadece bu tarayıcıda. Bayi tarafını görmek için çıkış yapıp <code>ahmet / 1234</code> ile girin.</span>
@@ -729,6 +737,7 @@ function App() {
       {b === 'landing' && <Landing />}
       {b === 'error' && <div className="splash"><Brand /><p className="err">{bootError}</p><button className="btn outline" onClick={() => location.reload()}>Tekrar dene</button></div>}
       {b === 'login' && <Login />}
+      {b === 'login' && store.s.api?.mode === 'demo' && <DemoSwitch admin />}
       {b === 'ready' && <Shell />}
       {b === 'ready' && <StoreDecor />}
       {b === 'ready' && pub && <RatePrompt />}
