@@ -8011,3 +8011,34 @@ html.bgfx-glow.th-dash[data-theme="dark"] body::before { background: radial-grad
   html.adm-mini.adm-apple .shell.admin .topbar-in > :is(.nc, .icon-btn) { grid-row: auto; }
 }
 @media (min-width: 1100px) { html.adm-mini.adm-apple .shell.admin .topbar-in > .me .me-t { display: none !important; } html.adm-mini.adm-apple .shell.admin .topbar-in > .me { flex-direction: row; justify-content: center; } }
+
+/* ===== 6.11.2026 (4) mağazada her düğme TEMA RENGİNDE (kullanıcı: bir yer mavi bir yer siyah olmasın) =====
+   Apple açık temanın siyah düğmeleri (--ap-btn) artık ana renk: Kaydet, ödeme, seçili çip, seçili filtre etiketi, Hesabım seçili satırı */
+html.th-apple .shell.public, html.th-dash .shell.public { --ap-btn: var(--accent); --btn-ink: var(--accent-ink, #fff); --btn-hov: color-mix(in oklab, var(--accent) 86%, #000); }
+html.th-apple .shell.public .btn.primary:hover, html.th-apple .shell.public .af-chip:hover { background: var(--btn-hov) !important; }
+html.th-dash .shell.public .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--btn-ink); }
+html.th-dash .shell.public .chip.on, html.th-dash .shell.public .af-chip { background: var(--accent) !important; color: var(--btn-ink) !important; }
+@media (min-width: 900px) {
+  .shell.public .acct2 .acct-nav-i.on, html[data-theme="dark"] .shell.public .acct2 .acct-nav-i.on { background: var(--accent) !important; box-shadow: 0 6px 16px -10px color-mix(in oklab, var(--accent) 70%, transparent); }
+  .shell.public .acct2 .acct-nav-i.on :is(.hub-t b, .hub-t small, .hub-chev), html[data-theme="dark"] .shell.public .acct2 .acct-nav-i.on :is(.hub-t b, .hub-t small, .hub-chev) { color: var(--btn-ink, #fff) !important; }
+  .shell.public .acct2 .acct-nav-i.on .hub-ic, html[data-theme="dark"] .shell.public .acct2 .acct-nav-i.on .hub-ic { background: rgb(255 255 255 / .18) !important; color: var(--btn-ink, #fff) !important; }
+}
+/* Paket 0 düğmeleri de tema renginde */
+.shell.public :is(.p0-b-big .p0-add, .p0-hub-all, .p0-find-go) { background: var(--accent) !important; color: var(--btn-ink, #fff) !important; }
+.shell.public .p0-pr-ic { background: var(--accent) !important; color: var(--btn-ink, #fff) !important; }
+.shell.public .p0-cat.all { background: var(--accent) !important; color: var(--btn-ink, #fff) !important; } .shell.public .p0-cat.all small { color: color-mix(in oklab, var(--btn-ink, #fff) 70%, transparent) !important; }
+.shell.public .p0-hub-go { color: var(--accent); }
+@media (hover: hover) { .shell.public :is(.p0-b-big .p0-add, .p0-hub-all):hover { background: var(--btn-hov, var(--accent)) !important; } }
+
+/* gece modu (Bakır gece) düzeltmeleri: logolu çipler okunsun, beyaz resim kutuları göz almasın */
+html[data-theme="dark"] .p0-hot button:has(> .logo) { background: #f1f1f3; border-color: transparent; }
+html[data-theme="dark"] :is(.p0-cat-im, .p0-b-im, .p0-set .set-cov) { filter: brightness(.88); }
+html[data-theme="dark"] .p0-cat-im, html[data-theme="dark"] .p0-b-sm .p0-b-im, html[data-theme="dark"] .p0-b-big .p0-b-im { background: #e4e5ea; }
+html[data-theme="dark"] .p0-cat:not(.all), html[data-theme="dark"] .p0-b-sm { background: rgb(255 255 255 / .05); box-shadow: 0 0 0 1px rgb(255 255 255 / .06); }
+html[data-theme="dark"] .p0-find { background: rgb(255 255 255 / .05); box-shadow: 0 0 0 1px rgb(255 255 255 / .07); }
+html[data-theme="dark"] .p0-find-q { background: rgb(255 255 255 / .07); }
+html[data-theme="dark"] .p0-hub-brands button:not(.more) { background: #f1f1f3; }
+/* gece: marka bandındaki koyu logolar kaybolmasın → logolar açık renkli yuvarlak kutularda */
+html[data-theme="dark"] .p0-logo { height: calc(var(--mqh, 46px) + 20px); padding: 10px 22px; border-radius: 18px; background: #f1f1f3; }
+html[data-theme="dark"] .p0-brands.mc-color .p0-logo img, html[data-theme="dark"] .p0-logo img { filter: none !important; opacity: 1 !important; }
+html[data-theme="dark"] .p0-brands.mc-gray .p0-logo img { filter: grayscale(1) !important; opacity: .7 !important; }
