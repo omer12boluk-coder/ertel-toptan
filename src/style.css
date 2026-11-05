@@ -6887,3 +6887,14 @@ html.top-hide .shell.public .topbar > :not(.topbar-in) { visibility: hidden; }
 @media (max-width: 899px) {
   html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 5px !important; height: 52px; margin-top: 0; }
 }
+/* 5.11.2026 yüzen alt menü inceltildi (kullanıcı: simge ile yazı uzak, hap kaba / kalın): menü 56px, simge-yazı arası 1px,
+   hap tam yuvarlak ve ince gölgeli */
+@media (max-width: 899px) {
+  html.bn-glass, html.bn-dark { --bot-h: 66px; }
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav { border-radius: 30px; }
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b { height: 56px; gap: 1px; font-size: 11px; font-weight: 600; letter-spacing: .01em; }
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-i { height: 26px; }
+  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 4px !important; width: 64px; height: 46px; translate: none; }
+  html.bn-glass .shell:not(.admin) .botnav-pill i { border-radius: 23px; background: rgb(255 255 255 / .55); box-shadow: 0 1px 0 rgb(255 255 255 / .85) inset, 0 3px 10px -6px rgb(10 20 40 / .3); }
+  html.bn-dark .shell:not(.admin) .botnav-pill i { border-radius: 23px; }
+}

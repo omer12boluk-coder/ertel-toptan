@@ -1154,9 +1154,11 @@ function BotNav({ items, tab, badge }) {
     const bs = [...el.querySelectorAll('.botnav-b')];
     const ic = el.querySelector('.botnav-i');
     if (!bs.length || !ic) return;
-    setGeo({ cs: bs.map((b) => { const q = b.getBoundingClientRect(); return q.left - r.left + q.width / 2; }), top: ic.getBoundingClientRect().top - r.top });
+    const bl = el.clientLeft || 0; // yüzen menünün kenarlığı: hap kenarlığın içinden konumlanır
+    setGeo({ cs: bs.map((b) => { const q = b.getBoundingClientRect(); return q.left - r.left - bl + q.width / 2; }), top: ic.getBoundingClientRect().top - r.top });
   };
-  useLayoutEffect(() => { measure(); const f = () => measure(); addEventListener('resize', f); return () => removeEventListener('resize', f); }, [keys]);
+  // 5.11.2026: menünün boyu/genişliği değişince de (cam görünüm sonradan uygulanınca menü daralıyor) yeniden ölçülür — hap kaymasın
+  useLayoutEffect(() => { measure(); const f = () => measure(); addEventListener('resize', f); const ro = 'ResizeObserver' in window && ref.current ? new ResizeObserver(f) : null; ro?.observe(ref.current); return () => { removeEventListener('resize', f); ro?.disconnect(); }; }, [keys]);
   live.current = { geo, items };
   useEffect(() => {
     const el = ref.current; if (!el) return;
