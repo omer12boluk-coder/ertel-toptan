@@ -1117,6 +1117,15 @@ function BellBtn({ p, edit }) {
     <Icon key={pop} n="bell" s={17} className={pop ? 'fav-pop' : ''} />
   </button>;
 }
+// Tüm ürünler kartındaki 'Sepete ekle' ⇄ − 1 + geçişinin aynısı (Paket 0 'Tamircinin seçimi' kutuları da kullanır)
+export function CardAdd({ p }) {
+  const qty = useStore((s) => s.cart[p.id] || 0);
+  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
+  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
+  return <span className="abx" onClick={(e) => e.stopPropagation()}>{qty > 0
+    ? <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} /></span>
+    : <button type="button" className={'btn sm add' + (morph === 'back' ? ' back' : '')} onClick={() => setQty(p.id, 1)} aria-label="Sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-l">Sepete ekle</span></button>}</span>;
+}
 export function PCard({ p, i, isNew, onOpen }) {
   const S = useStore((s) => s.settings); const user = useStore((s) => s.user); const userPrices = useStore((s) => s.userPrices);
   const qty = useStore((s) => s.cart[p.id] || 0);
@@ -1134,13 +1143,14 @@ export function PCard({ p, i, isNew, onOpen }) {
       <div className="sh-card-b">
         {p.b && <span className="sh-card-brand">{p.b}</span>}
         <button className="sh-card-n" onClick={onOpen}>{p.n}</button>
-        <div className="sh-card-f">
+        <div className="sh-card-f abx">
           <b className="sh-card-p">{pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur)}</b>
+          {/* 6.11.2026: Tüm ürünler kartıyla aynı: fiyatın altında tam genişlik 'Sepete ekle', basınca aynı geçişle − 1 + */}
           {!qty && (pr.mine == null || outOfStock(p)) && (E || (user?.role || 'public') === 'public') && feat(S).notify
             ? <BellBtn p={p} edit={!!E} />
             : qty > 0
             ? <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} /></span>
-            : <button className={'sh-add' + (morph === 'back' ? ' back' : '')} onClick={() => { if (E) return; setQty(p.id, 1); toast('Sepete eklendi'); }} aria-label="Sepete ekle" title="Sepete ekle"><Icon n="cart" s={17} /><Icon n="plus" s={13} className="sh-add-plus" /></button>}
+            : <button className={'btn sm add' + (morph === 'back' ? ' back' : '')} onClick={() => { if (E) return; setQty(p.id, 1); }} aria-label="Sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-l">Sepete ekle</span></button>}
         </div>
       </div>
     </div>

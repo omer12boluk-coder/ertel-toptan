@@ -8046,3 +8046,33 @@ html[data-theme="dark"] .p0-brands.mc-gray .p0-logo img { filter: grayscale(1) !
 html[data-theme="dark"] .shell.public .plist.pgrid > li.prow .prow-side { background: transparent !important; }
 html.th-dash .shell.public .plist.pgrid .prow-main .thumb, html.th-dash .shell.public .plist.pgrid .prow-main .thumb img, html.th-dash .shell.public :is(.sh-card-img, .sh-card-img .thumb, .sh-card-img .thumb img) { background: #f4f1ec !important; }
 html.th-dash .shell.public .sh-card-img { border-radius: 16px; overflow: hidden; }
+
+/* 6.11.2026 ana sayfa raf kartları (sh-card) ve Tamircinin seçimi: Tüm ürünler kartındaki gibi fiyatın altında tam genişlik 'Sepete ekle',
+   basınca aynı geçişle − 1 + (ortadan açılır), silince düğme yaylanarak geri gelir (.plist.pgrid.ab kurallarının aynısı, .abx) */
+.sh-card-f.abx { flex-direction: column; align-items: stretch; justify-content: flex-end; gap: 8px; min-height: 0; }
+.abx .btn.add { width: 100% !important; height: 38px !important; padding: 0 12px !important; justify-content: center; border-radius: 11px; flex: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.abx .btn.add .add-plus, .abx .btn.add .add-l { display: inline-flex !important; }
+.shell .abx .qty-morph { display: block !important; width: 100% !important; margin: 0 !important; }
+.shell .abx .qty-morph > .stepper, .shell .sh-card-f.abx .qty-morph > .stepper { width: 100% !important; height: 38px !important; display: flex; border-radius: 11px; overflow: hidden; }
+.shell .abx .stepper > button, .shell .sh-card-f.abx .qty-morph > .stepper button { flex: 1 1 0; width: auto !important; height: 100% !important; }
+.shell .abx .stepper > input, .shell .sh-card-f.abx .qty-morph > .stepper input { flex: 1.2 1 0; width: auto !important; min-width: 0; height: 100% !important; font-size: 15px; }
+.abx .qty-morph.grow > .stepper { animation: abIn .3s cubic-bezier(.2, .8, .2, 1) backwards !important; transform-origin: center; }
+.abx .qty-morph.grow > .stepper > * { animation: none !important; }
+.abx .qty-morph.grow > .stepper > :first-child { animation: abL .36s cubic-bezier(.2, .8, .2, 1) backwards !important; }
+.abx .qty-morph.grow > .stepper > :last-child { animation: abR .36s cubic-bezier(.2, .8, .2, 1) backwards !important; }
+.abx .qty-morph.grow > .stepper > input { animation: abFade .3s .06s ease backwards !important; }
+.abx .btn.add.back { animation: abBack .42s cubic-bezier(.3, 1.35, .5, 1) backwards !important; }
+.abx .btn.add.back > * { animation: abIcon .42s .05s cubic-bezier(.3, 1.5, .5, 1) backwards; }
+@media (prefers-reduced-motion: reduce) { .abx .qty-morph.grow > .stepper, .abx .qty-morph.grow > .stepper > *, .abx .btn.add.back, .abx .btn.add.back > * { animation: none !important; } }
+html.th-apple .shell.public .abx .btn.add, html.th-apple .shell.public .abx .stepper { border-radius: 999px !important; }
+html:is(.addc-gray, .addc-dark, .addc-hex) .shell.public .abx .btn.add { background: var(--add-bg) !important; color: var(--add-fg) !important; border: 0 !important; }
+html:is(.addc-gray, .addc-dark, .addc-hex) .shell.public .abx .btn.add:hover { background: var(--add-bgh) !important; }
+html:not(.addc-gray):not(.addc-dark):not(.addc-hex) .shell.public .abx .btn.add { background: color-mix(in oklab, var(--accent) 9%, var(--surface)); color: var(--accent); border: 0; }
+.sh-card-f.abx .notify-btn, .sh-card-f.abx .bell-btn { width: 100%; height: 38px; border-radius: 11px; }
+/* Tamircinin seçimi kutularında düğme tam genişlik */
+.p0-b-p:has(> .p0-addw) { flex-direction: column; align-items: stretch; gap: 10px; }
+.p0-addw, .p0-addw > .abx { display: block; width: 100%; }
+.p0-b-f .p0-b-p:has(> .p0-addw) { min-width: 200px; align-items: stretch; }
+.p0-addw.big .btn.add, .p0-addw.big .stepper { height: 44px !important; }
+.p0-addw.big .btn.add { background: var(--accent) !important; color: var(--btn-ink, #fff) !important; }
+.sh-card-f.abx .sh-bell { width: 100%; height: 38px; border-radius: 999px; }
