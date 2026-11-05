@@ -7417,6 +7417,11 @@ html.adm-apple .shell.admin :is(.btn.primary) { border-radius: 999px; }
   html.adm-apple .shell.admin .botnav { left: 10px; right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); padding-bottom: 0; border-radius: 26px; background: var(--ad-side); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); border: 1px solid var(--ad-line); box-shadow: 0 14px 34px -18px rgb(0 0 0 / .4); }
   html.adm-apple .shell.admin .botnav-b { color: var(--ad-dim); } html.adm-apple .shell.admin .botnav-b.on { color: var(--ad-ink); }
   html.adm-apple .shell.admin .botnav-pill i { background: var(--ad-hov) !important; box-shadow: 0 0 0 .5px var(--ad-line) inset; border-radius: 18px; }
+  /* hap sekmeyi (simge + yazı) tam sarar, menünün ortasında */
+  html.adm-apple .shell.admin .botnav-pill { top: 4px !important; width: calc(var(--tw, 61px) - 2px); height: calc(100% - 8px); margin-top: 0; }
+  html.adm-apple .shell.admin .botnav-pill i { border-radius: 20px; }
+  html.adm-apple .shell.admin .botnav { padding-left: 4px; padding-right: 4px; }
+  html.adm-apple .shell.admin .botnav-b { font-size: 11px; letter-spacing: -.1px; white-space: nowrap; }
   html.adm-apple .shell.admin .main { padding-bottom: calc(var(--bot-h, 64px) + env(safe-area-inset-bottom, 0px) + 28px); }
 }
 /* bilgisayar: solda sabit cam menü */

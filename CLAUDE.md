@@ -192,6 +192,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **6.11.2026 (4):** Mağazada TÜM düğmeler tema renginde (`--ap-btn: var(--accent)`; kullanıcı: bir yer mavi bir yer siyah olmasın) — siyah hap ve gri Sepete ekle sadece kullanıcı seçerse. Yönetim yan menüsü daraltılır `html.adm-mini`. Gece: kart `.prow-side` saydam, resim kutusu `#f4f1ec`. Ayrıntı `docs/gunluk.md` '6.11.2026'.
 
+- **6.11.2026 (5):** Ana sayfa raf kartları + Paket 0 vitrinleri `CardAdd` (shophome.jsx, `.abx`) = Tüm ürünlerdeki tam genişlik Sepete ekle ve −1+ animasyonu. Yönetim telefon alt menüsünde hap sekmeyi (simge+yazı) tam sarar (`--tw`), yazı 11px.
+
 - **6.11.2026 (3):** Ders: `bgFx glow` + `th-dash` gecede zemini açık bırakıyordu (düzeldi) → zemin/arka plan değişikliğinden sonra GECE MODUNU da aç, bak. Hesabım: React className'i yazınca `side-fixed` siliniyordu → `useLayoutEffect([view])` ile `fitRef`; bilgisayarda Hesabım içi geçişte sadece `.acct-main` belirir (setupNavAnim). Seçili satır siyah.
 
 ## 9. Önemli kararlar (neden böyle)
