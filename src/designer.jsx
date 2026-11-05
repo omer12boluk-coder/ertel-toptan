@@ -699,6 +699,7 @@ function Inspector(P) {
       <Field label="Yazı" opt><input value={H.cta?.text || ''} onChange={(e) => S('cta', { ...(H.cta || {}), text: e.target.value })} /></Field>
       <More><GeoMore H={H} k={k} S={S} /></More>
     </>;
+    else if (k === 'p0:hero') body = <><p className="fine">Kutulara giren reklamlar: 1. reklam büyük kutuda (4. ve sonraki reklamlar da onunla sırayla döner), 2. ve 3. reklam yandaki küçük kutularda. Aşağıdan seçip yazısını, resmini, düğmesini ve zeminini düzenleyin; sırayı oklarla değiştirin.</p><HeroPanel {...P} /></>;
     else if (k === 'p0:cats') body = <><P0CatsPanel H={H} S={S} ImgPick={ImgPick} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
     else if (k.startsWith('p0:')) body = <><p className="fine">{P0_NOTES[k]}</p><p className="fine">Gizlemek için aşağıdaki düğme ya da Katmanlar’daki göz simgesi.</p><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
     else if (k === 'fav' || k === 'sets') body = <p className="fine">Bu raf otomatik dolar. Yerini Katmanlar'dan ya da sayfada sürükleyerek değiştirin, göz simgesiyle gizleyin.</p>;

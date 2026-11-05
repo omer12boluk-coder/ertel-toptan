@@ -22,7 +22,7 @@ const sellable = (p) => p && p.a !== 0 && !p.so;
 function Panel({ s, big, open, on = true }) {
   const bgp = BG_BY[s.bg];
   const lt = bgp ? bgp.ink === 'l' : LIGHT_TH.includes(s.theme);
-  const cover = s.img && !isProdImg(s.img) && ['cover', 'full', 'photo'].includes(s.layout);
+  const cover = s.img && !isProdImg(s.img) && ['cover', 'glass'].includes(s.layout);
   return (
     <article className={'p0-pan th-' + (s.theme || 'night') + (big ? ' big' : '') + (lt ? ' lt' : '') + (bgp ? ' bgp' : '') + (cover ? ' cover' : '') + (on ? ' on' : '')} style={bgp ? { '--bgp': bgp.bg } : undefined}
       // 6.11.2026: düğmesi olan büyük reklamda sadece düğme tıklanır (her yer tıklanınca düğme boşa çıkıyordu); düğmesiz küçük kutunun tamamı link
