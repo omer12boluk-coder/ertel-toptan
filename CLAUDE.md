@@ -201,7 +201,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 14. Siparişleri okuma yükü: tek 'özet belge' (son 7 gün) — kullanıcı kararı bekliyor.
 15. Yurtiçi Kargo entegrasyonu; sepet linkinden gelen siparişi normal siparişe çevirme + yasal onay + üye adres önerisi.
 16. Sıradaki tasarım adımı: **yönetim paneli Apple açık / yeni tasarım dili** (kullanıcının sırası: mağaza bitti → panel).
-17. Banner yazısının arka plandan dönünce görünmemesi düzeltmesi yayında, gerçek iPhone'da doğrulanmadı.
+17. (5.11 akşam düzeltmeleri yayında: arama/menü ortalı grid, bildirim paneli camı, tasarım önizlemesinde site teması + üst/alt menü `HeaderPreview`/`BotNavPreview`, reklam kutusu başlığı `useFitWords`, telefonda sayfa modunda açıklama kısa, yapışkan şerit transform ile kayar.) Banner yazısının arka plandan dönünce görünmemesi düzeltmesi yayında, gerçek iPhone'da doğrulanmadı.
 
 **Karar bekleyen:** ödeme özeti 2 üründe kayıyor (çözüm önerildi) · elde kalan mal için dürüst raf/rozet · ana sayfa 'imza' etkileşimi · SMS (Netgsm) · Ürünler ve Bayi siparişleri PageHead/SubNav'a alınsın mı · "Birlikte iyi gider" rafı açıklamanın altında kalıyor.
 **Tartışılacak:** Blaze sonrası açılış penceresi 14 → 30 → 62 gün; Workers Paid sonrası DHL sorgusu 30 → 5 dk.

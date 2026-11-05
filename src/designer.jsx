@@ -490,6 +490,40 @@ function useMobile() {
   return m;
 }
 
+// 5.11.2026: önizlemede mağazanın üst menüsü ve telefon alt menüsü (sadece görüntü; tıklanmaz) — tema/cam/menü ayarları görünsün
+function HeaderPreview({ S, kind }) {
+  const logo = <img className="brand-logo" src={S.brand?.logo || LOGO_MARK} alt="" />;
+  const name = <b style={S.brand?.nameColor ? { color: S.brand.nameColor } : undefined}>{S.brand?.appName}</b>;
+  const srch = <div className="hsearch"><button type="button" className="icon-btn hsearch-btn" tabIndex={-1}><Icon n="search" s={19} /></button><div className="hsearch-box"><Icon n="search" s={19} /><input type="search" placeholder="Ürün ara…" readOnly tabIndex={-1} /></div></div>;
+  const cart = <button className="hcart" tabIndex={-1}><span className="hcart-ic"><Icon n="cart" s={20} /></span><span className="hcart-t"><b>Sepet</b><small>Boş</small></span></button>;
+  const icons = <>{cart}<button className="icon-btn" tabIndex={-1}><Icon n="moon" s={19} /></button><button className="btn sm outline me-login" tabIndex={-1}><Icon n="user" s={16} /><span className="me-login-l">Giriş yap</span><span className="me-login-s">Giriş yap</span></button></>;
+  const links = [['home', 'Ana sayfa', true], ['grid', 'Ürünler'], ['chip', 'Kalıp bulucu'], ['tag', 'Markalar'], ['box', 'Setler']];
+  const nav = (ic) => links.map(([i, l, on]) => <button key={l} className={'topnav-b' + (on ? ' on' : '')} tabIndex={-1}>{ic && <Icon n={i} s={16} />}<span className="topnav-l">{l}</span></button>);
+  const st = { pointerEvents: 'none' };
+  if (kind === 'search') return (
+    <header className="topbar hdr-g hdr-gs dz-hprev" style={st}><div className="topbar-in">
+      <div className="gs-r1"><span className="gs-brand">{logo}{name}</span><span className="gs-srch">{srch}</span><span className="gs-icons">{icons}</span></div>
+      <nav className="topnav gs-nav">{nav(true)}</nav>
+    </div></header>
+  );
+  if (kind === 'center') return (
+    <header className="topbar hdr-c dz-hprev" style={st}><div className="topbar-in">
+      <span className="hc-l">{srch}</span><span className="hc-mid">{logo}<b className="hc-name">{S.brand?.appName}</b></span><span className="hc-r">{icons}</span>
+      <nav className="topnav hc-nav">{nav(false)}</nav>
+    </div></header>
+  );
+  return (
+    <header className={'topbar dz-hprev' + (kind === 'glass' ? ' hdr-g' : '')} style={st}><div className="topbar-in">
+      <span className="brand">{logo}</span><span className="pub-id"><b className="pub-name">{S.brand?.appName}</b></span>
+      <nav className="topnav">{nav(true)}</nav>{srch}{icons}
+    </div></header>
+  );
+}
+function BotNavPreview() {
+  const t = [['home', 'Ana sayfa', true], ['grid', 'Ürünler'], ['chip', 'Kalıp'], ['cart', 'Sepet'], ['user', 'Hesabım']];
+  return <nav className="botnav dz-bprev" style={{ pointerEvents: 'none' }}>{t.map(([i, l, on]) => <button key={l} className={'botnav-b' + (on ? ' on' : '')} tabIndex={-1}><span className="botnav-i"><Icon n={i} s={22} /></span><span>{l}</span></button>)}</nav>;
+}
+
 // ---- Orta alan: gerçek genişlikte önizleme çerçeveleri ---------------------------------------------------------------------
 const PHONES = [[430, 'iPhone 15/16 Pro Max · 430'], [393, 'iPhone 15/16 Pro · 393'], [390, 'iPhone 13/14 · 390'], [375, 'iPhone SE / mini · 375'], [412, 'Android · 412'], [360, 'Küçük Android · 360']];
 function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
@@ -497,18 +531,25 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   const L = view.look || {}; const pp = pack?.palette;
   const vars = {
     '--accent-user': lookColors(L, pack).accent || view.brand?.accent, '--price-user': lookColors(L, pack).price || view.brand?.priceAccent,
-    '--bg-user': lookColors(L, pack).bg || '', '--pcard-r': (Number(L.cardR) >= 0 && L.cardR !== '' && L.cardR != null ? Number(L.cardR) : 18) + 'px', '--top-h': '0px',
+    '--bg-user': lookColors(L, pack).bg || '', '--pcard-r': (Number(L.cardR) >= 0 && L.cardR !== '' && L.cardR != null ? Number(L.cardR) : 18) + 'px',
     '--pk-badge': pack?.badge?.text ? JSON.stringify(pack.badge.text) : '', '--pk-bbg': pack?.badge?.bg || '', '--pk-bfg': pack?.badge?.color || '',
     '--logo-f': logoFilter(L.logoTone, lookColors(L, pack).accent || view.brand?.accent) || '',
   };
   const so = styleOut(L.style); Object.assign(vars, so.vars);
-  const rootClass = { cls: so.cls, fonts: so.fonts };
+  // 5.11.2026: önizleme mağazadaki gibi: site teması (Apple açık / Bakır gece), Liquid glass, üst menü ve alt menü görünümü
+  const site = L.site || 'apple', dash = site === 'dash';
+  const th = dash ? 'dark' : (!view.brand?.theme || view.brand.theme === 'auto' ? 'light' : view.brand.theme);
+  const hdr = L.header || 'search';
+  const bn = ['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass';
+  const rootClass = { cls: [...(so.cls || []), site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', L.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts };
   const inner = (kind) => (
     <div className={'shell public tab-anasayfa dz-fshell' + (pack?.badge?.text ? ' pk-on' : '')}>
+      <HeaderPreview S={view} kind={hdr} />
       <main className={'main dz-canvas w-' + (kind === 'phone' ? 'phone' : 'full')}>
         <section className="kp"><DesignCtx.Provider value={E}><ShopHome S={view} /></DesignCtx.Provider></section>
       </main>
       <PackDecor pk={pack} />
+      {kind === 'phone' && <BotNavPreview />}
     </div>
   );
   const both = dev === 'both';
@@ -516,8 +557,8 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   const deskAvail = both ? w - pw - 100 : w - 48;
   return (
     <div className={'dz2-stage dev-' + dev} ref={ref}>
-      {w > 0 && dev !== 'phone' && <DeviceFrame key="desk" kind="desk" width={1280} availW={deskAvail} height={H0} rootVars={vars} rootClass={rootClass} theme={view.brand?.theme} onReady={onFrame('desk')} label={'Bilgisayar · 1280 px' + (deskAvail < 1280 ? ' · %' + Math.round((deskAvail / 1280) * 100) + ' küçültülmüş' : '')}>{inner('desk')}</DeviceFrame>}
-      {w > 0 && dev !== 'desk' && <div className="dz2-phone"><DeviceFrame key="phone" kind="phone" width={pw} height={Math.min(H0 - 76, Math.round(pw * 2.0))} rootVars={vars} rootClass={rootClass} theme={view.brand?.theme} onReady={onFrame('phone')} label={'Telefon · ' + pw + ' px'}>{inner('phone')}</DeviceFrame></div>}
+      {w > 0 && dev !== 'phone' && <DeviceFrame key="desk" kind="desk" width={1280} availW={deskAvail} height={H0} rootVars={vars} rootClass={rootClass} theme={th} onReady={onFrame('desk')} label={'Bilgisayar · 1280 px' + (deskAvail < 1280 ? ' · %' + Math.round((deskAvail / 1280) * 100) + ' küçültülmüş' : '')}>{inner('desk')}</DeviceFrame>}
+      {w > 0 && dev !== 'desk' && <div className="dz2-phone"><DeviceFrame key="phone" kind="phone" width={pw} height={Math.min(H0 - 76, Math.round(pw * 2.0))} rootVars={vars} rootClass={rootClass} theme={th} onReady={onFrame('phone')} label={'Telefon · ' + pw + ' px'}>{inner('phone')}</DeviceFrame></div>}
     </div>
   );
 }

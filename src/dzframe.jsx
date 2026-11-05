@@ -44,7 +44,9 @@ export function DeviceFrame({ width, availW, height, kind, rootVars, rootClass, 
     if (theme && theme !== 'auto') r.setAttribute('data-theme', theme); else r.removeAttribute('data-theme');
     // Stil Stüdyosu sınıfları (st-…) + yazı tipleri
     [...r.classList].filter((c) => c.startsWith('st-')).forEach((c) => r.classList.remove(c));
-    (rootClass?.cls || []).forEach((c) => r.classList.add(c));
+    (r.__dzc || []).forEach((c) => r.classList.remove(c)); // 5.11.2026: site teması / cam / menü sınıfları da (önceki seçimden kalmasın)
+    r.__dzc = (rootClass?.cls || []).filter(Boolean);
+    r.__dzc.forEach((c) => r.classList.add(c));
     if (rootClass?.fonts?.length) ensureFonts(d, rootClass.fonts);
   }, [body, JSON.stringify(rootVars), JSON.stringify(rootClass || null), theme]);
   return (

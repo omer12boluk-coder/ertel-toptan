@@ -7261,3 +7261,51 @@ html:is(.th-apple, .th-dash) .shell.public .toolbar { background: color-mix(in o
 html.th-dash .shell.public .toolbar { background: rgb(26 22 20 / .7); border-color: var(--dgb); }
 /* reklam yazısı animasyonu bitti: animasyon kaldırılır, yazılar kesin görünür (arka plandan dönüşte donmuş 'başlangıç' hâli kalmaz) */
 .sh-slide.done .sh-slide-t > *, .sh-slide.done .sh-slide-x > * { animation: none !important; opacity: 1 !important; }
+
+/* ===== 5.11.2026 düzeltmeler ===== */
+/* (1) Cam + arama: arama kutusu üst menünün tam ortasında → alttaki menü satırı da aynı merkezden iki yana eşit yayılır */
+@media (min-width: 900px) {
+  .hdr-gs .gs-r1 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px) minmax(0, 1fr); }
+  .hdr-gs .gs-brand { justify-self: start; }
+  .hdr-gs .gs-icons { justify-self: end; }
+  .hdr-gs .gs-srch .hsearch { max-width: none; }
+  .topbar.hdr-gs .gs-nav { justify-content: center; padding: 0 10px; margin: 0 !important; }
+  .hdr-gs .gs-r1 { padding: 0 10px !important; }
+}
+/* çerçeveler biraz daha belirgin, arama kutusu açık gri (cam üstünde kaybolmasın) */
+.topbar.hdr-g .topbar-in { border-color: rgb(15 23 42 / .12) !important; box-shadow: 0 10px 30px -18px rgb(15 23 42 / .3), 0 0 0 .5px rgb(15 23 42 / .05), 0 1px 0 rgb(255 255 255 / .9) inset; }
+.hdr-gs .gs-srch .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .1) !important; box-shadow: none !important; }
+.hdr-gs .gs-srch .hsearch-box:focus-within { background: #fff !important; border-color: color-mix(in oklab, var(--accent) 50%, transparent) !important; box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 14%, transparent) !important; }
+.topbar.hdr-gs .gs-nav { border-top-color: rgb(15 23 42 / .08); }
+html[data-theme="dark"] .topbar.hdr-g .topbar-in { border-color: rgb(255 255 255 / .13) !important; }
+html[data-theme="dark"] .hdr-gs .gs-srch .hsearch-box { background: rgb(255 255 255 / .09) !important; border-color: rgb(255 255 255 / .12) !important; }
+html[data-theme="dark"] .hdr-gs .gs-srch .hsearch-box:focus-within { background: rgb(255 255 255 / .14) !important; }
+
+/* (14) telefonda cam üst menü biraz daha dolgun, 'Giriş yap' kenara değmesin */
+@media (max-width: 899px) {
+  html.hdr-gs-on { --top-h: 64px; }
+  .hdr-gs .gs-r1 { padding: 0 12px 0 10px !important; }
+  .hdr-gs .btn.sm.me-login { padding: 0 4px; margin-left: 2px !important; }
+  .topbar.hdr-g .topbar-in { border-radius: 24px; }
+}
+
+/* (5) reklam kutusu başlığı: kelime ortadan bölünmez, sığmazsa yazı küçülür (useFitWords) */
+.sh-box-t b { display: block; overflow-wrap: normal; word-break: normal; hyphens: manual; }
+
+/* (10) bildirim paneli de cam (Liquid glass açıkken) */
+html.lg-on .nc-panel { background: rgb(252 252 253 / .84); -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); border-color: rgb(15 23 42 / .1); box-shadow: 0 24px 60px -22px rgb(15 23 42 / .38), 0 1px 0 rgb(255 255 255 / .95) inset; }
+html.lg-on .nc-panel .nc-day { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html.lg-on .nc-panel .nc-h, html.lg-on .nc-panel .nc-tabs { background: transparent; }
+html.lg-on .nc-panel .nc-i:hover { background: rgb(118 118 128 / .1); }
+html.lg-on .nc-panel .nc-i.fresh { background: color-mix(in oklab, var(--accent) 9%, transparent); }
+html.lg-on[data-theme="dark"] .nc-panel { background: rgb(24 28 38 / .82); border-color: rgb(255 255 255 / .1); box-shadow: 0 24px 60px -22px rgb(0 0 0 / .7); }
+html.th-dash .nc-panel { background: rgb(30 26 23 / .86) !important; border-color: var(--dgb) !important; }
+html.lg-on .nc-panel .nc-tabs .chip { border-radius: 999px; }
+
+/* (13) Ürünler yapışkan arama/filtre şeridi: üst menü gizlenip açılırken 'top' yerine transform kayar (ekran kartında, akıcı);
+   telefonda bulanıklık yok (her kaydırmada yeniden boyanıp takılıyordu) */
+.shell.public .toolbar { transition: transform .5s cubic-bezier(.22, .8, .24, 1) !important; will-change: transform; }
+html.top-hide .shell.public .toolbar { top: calc(env(safe-area-inset-top, 0px) + var(--top-h)) !important; transform: translate3d(0, calc(-1 * var(--top-h)), 0); }
+@media (max-width: 899px) {
+  html:is(.th-apple, .th-dash) .shell.public .toolbar { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: color-mix(in oklab, var(--bg) 96%, transparent) !important; }
+}

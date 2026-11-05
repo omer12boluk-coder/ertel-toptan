@@ -1378,7 +1378,8 @@ export function Lightbox({ urls, thumbs, start = 0, title, onClose }) {
 
 function Description({ id }) {
   const S = useStore((s) => s.settings);
-  const short = !!S.cards?.descShort; // Ayarlar > Ürün kartları > "Ürün açıklamasını kısa göster"
+  // Ayarlar > Ürün kartları > "Ürün açıklamasını kısa göster"; 5.11.2026: telefonda ürün SAYFA olarak açılıyorsa da kısa (Devamını göster)
+  const short = !!S.cards?.descShort || (isPhoneUI() && productViewFor(S) === 'page');
   const [html, setHtml] = useState(null);
   const [more, setMore] = useState(false);
   const [long, setLong] = useState(false); // kısa gösterimde açıklama gerçekten uzun mu (değilse düğme yok)

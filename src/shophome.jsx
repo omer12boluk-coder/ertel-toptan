@@ -166,6 +166,31 @@ function useReveal() {
   });
   return ref;
 }
+// 5.11.2026: reklam kutusu başlığında uzun kelime ortadan bölünmesin ('Program-layıcılar') → en uzun kelime sığana kadar yazı küçülür
+function fitOne(el) {
+  el.style.fontSize = '';
+  const W = el.ownerDocument.defaultView || window;
+  let fs = parseFloat(W.getComputedStyle(el).fontSize) || 20, n = 0;
+  while (el.scrollWidth > el.clientWidth + 1 && n++ < 12 && fs > 11) { fs *= 0.93; el.style.fontSize = fs.toFixed(1) + 'px'; }
+}
+function useFitWords(ref) {
+  const rq = useRef(0);
+  useEffect(() => {
+    const root = ref.current; if (!root) return;
+    const W = root.ownerDocument.defaultView || window;
+    const run = () => { rq.current = 0; root.querySelectorAll('.sh-box-t b').forEach(fitOne); };
+    if (!rq.current) rq.current = W.requestAnimationFrame(run);
+  });
+  useEffect(() => {
+    const root = ref.current; if (!root) return;
+    const W = root.ownerDocument.defaultView || window;
+    if (!('ResizeObserver' in W)) return;
+    let last = 0;
+    const ro = new W.ResizeObserver(() => { const w = root.clientWidth; if (w === last) return; last = w; if (!rq.current) rq.current = W.requestAnimationFrame(() => { rq.current = 0; root.querySelectorAll('.sh-box-t b').forEach(fitOne); }); });
+    ro.observe(root);
+    return () => ro.disconnect();
+  }, []);
+}
 const isLight = (hex) => { const m = /^#?([\da-f]{6})$/i.exec(hex || ''); if (!m) return false; const n = parseInt(m[1], 16); const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255]; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.62; };
 // imleci takip eden ışık (kutuların üstünde)
 const spot = (e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`); };
@@ -267,6 +292,7 @@ export function ShopHome({ S: Sover }) {
   const [product, setProduct] = useState(null);
   const open = useOpenLink();
   const ref = useReveal();
+  useFitWords(ref);
   const link = (l) => () => (E ? null : open(l, setProduct));
   const counts = useMemo(() => { const m = new Map(); for (const p of catalog) if (p.b && p.a !== 0) m.set(norm(p.b), (m.get(norm(p.b)) || 0) + 1); return m; }, [catalog]);
   // logo, renk ve logo boyutu: kutuda ayrıca verilmediyse Ayarlar > Markalar'dan
