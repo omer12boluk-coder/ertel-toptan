@@ -170,6 +170,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **Tasarım paketleri (5.11.2026, `src/dzpresets.js`):** `settings.dzPresets` [{id,name,data}] (public'e gitmez) + yerleşik `APPLE` (Paket 1). `snapshot(d)` görünüm anahtarlarını alır (look tamamı − myPacks, brand renk/tema, cards görünüm, shopHome görünüm, slide/promo renk anahtarları), `applyPreset` pakette olmayanı siler → geri dönüş birebir. İlk açılışta mevcut hâl 'Eski düzenim' (Paket 2) kaydedilir. Yeni look alanları: `width` narrow|mid|''|full, `edge` px, `boxPat` ''|glow|grid|wave|none (kutu başına `pat`), `bgFx` ''|glow|plain → `layoutOut/applyLayout` html sınıfları `pw-*`, `pg-edge`, `bp-*`, `bgfx-*`. Yeni yazı tipleri (Inter Tight, Manrope, Jakarta, Geist…), banner arka planı grubu 'Sakin (Apple)' `p-*`, stil 'apple'.
 
+- **Bilgisayar/telefon ayrı (5.11.2026):** görünüm ayarı + 'M' = telefon değeri (`look.headerM`, `hideTopM`, `glassM`, `pillM`; kartta `productViewM`). `lookFor(L, phone)` (dzpresets.js) main.jsx Shell'de `usePhoneMQ` (≤899px) ile; tasarım çerçevesi de telefon değerleriyle çizer. Tasarım modu 'Renkler ve sayfa' paneli gruplu: Renk ve yazı · Sayfa · Menüler · Ürün kartları · Cam ve hareket (`DevPick`). Ayarlar'da mağaza görünümü satırları kaldırıldı → 'Tasarım modunu aç' kartı; 'gorunum' = Bayi ve panel renkleri.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.

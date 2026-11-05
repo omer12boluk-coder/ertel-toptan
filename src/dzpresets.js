@@ -102,3 +102,12 @@ export function applyLayout(r, L) {
   LAYOUT_CLS.forEach((c) => r.classList.toggle(c, cls.includes(c)));
   Object.entries(vars).forEach(([k, v]) => (v ? r.style.setProperty(k, v) : r.style.removeProperty(k)));
 }
+
+// telefonda farklı seçilen görünüm ayarları (anahtar + 'M'): telefonda onlar geçerli
+export const DEV_KEYS = ['header', 'hideTop', 'glass', 'pill'];
+export function lookFor(L = {}, phone) {
+  if (!phone || !L) return L || {};
+  const o = { ...L };
+  DEV_KEYS.forEach((k) => { if (L[k + 'M'] !== undefined && L[k + 'M'] !== null) o[k] = L[k + 'M']; });
+  return o;
+}

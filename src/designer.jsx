@@ -16,7 +16,7 @@ import {
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
 import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter, ensureLogoSvg } from './presets.js';
 import { STYLE_PRESETS, PRESET_BY, SHADOWS, BORDERS, HOVERS, TITLES, styleOut } from './stylekit.js';
-import { snapshot, applyPreset, sameAs, APPLE, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut } from './dzpresets.js';
+import { snapshot, applyPreset, sameAs, APPLE, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
 
@@ -432,7 +432,10 @@ export function ShopDesigner() {
     const out = new Set();
     for (const k of new Set([...Object.keys(d.shopHome || {}), ...Object.keys(baseObj.shopHome || {})])) if (JSON.stringify(d.shopHome?.[k]) !== JSON.stringify(baseObj.shopHome?.[k])) out.add(PATH_NAMES[k] || 'Tasarım');
     if (JSON.stringify(d.look?.pack) !== JSON.stringify(baseObj.look?.pack) || JSON.stringify(d.look?.myPacks) !== JSON.stringify(baseObj.look?.myPacks)) out.add('Tema Stüdyosu');
-    if (['shopAccent', 'shopPrice', 'bg', 'cardR', 'decor', 'site', 'glass', 'header', 'botnav', 'motion', 'width', 'edge', 'boxPat', 'bgFx', 'style'].some((k) => JSON.stringify(d.look?.[k]) !== JSON.stringify(baseObj.look?.[k]))) out.add('Sayfa renkleri');
+    const lk = (o) => JSON.stringify(Object.fromEntries(Object.entries(o || {}).filter(([k]) => k !== 'pack' && k !== 'myPacks')));
+    if (lk(d.look) !== lk(baseObj.look)) out.add('Sayfa görünümü');
+    if (JSON.stringify(d.cards) !== JSON.stringify(baseObj.cards)) out.add('Ürün kartları');
+    if (JSON.stringify(d.brand) !== JSON.stringify(baseObj.brand)) out.add('Renkler');
     if (JSON.stringify(d.brandLogos) !== JSON.stringify(baseObj.brandLogos)) out.add('Marka logoları');
     return [...out];
   }, [d, baseObj, dirty]);
@@ -547,13 +550,15 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   // 5.11.2026: önizleme mağazadaki gibi: site teması (Apple açık / Bakır gece), Liquid glass, üst menü ve alt menü görünümü
   const site = L.site || 'apple', dash = site === 'dash';
   const th = dash ? 'dark' : (!view.brand?.theme || view.brand.theme === 'auto' ? 'light' : view.brand.theme);
-  const hdr = L.header || 'search';
   const bn = ['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass';
   const lo = layoutOut(L); Object.assign(vars, lo.vars);
-  const rootClass = { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', L.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts };
+  // telefon çerçevesi 'Telefonda farklı' değerleriyle çizilir
+  const LX = (kind) => lookFor(L, kind === 'phone');
+  const hdrOf = (kind) => LX(kind).header || 'search';
+  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts }; };
   const inner = (kind) => (
     <div className={'shell public tab-anasayfa dz-fshell' + (pack?.badge?.text ? ' pk-on' : '')}>
-      <HeaderPreview S={view} kind={hdr} />
+      <HeaderPreview S={view} kind={hdrOf(kind)} />
       <main className={'main dz-canvas w-' + (kind === 'phone' ? 'phone' : 'full')}>
         <section className="kp"><DesignCtx.Provider value={E}><ShopHome S={view} /></DesignCtx.Provider></section>
       </main>
@@ -566,8 +571,8 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   const deskAvail = both ? w - pw - 100 : w - 48;
   return (
     <div className={'dz2-stage dev-' + dev} ref={ref}>
-      {w > 0 && dev !== 'phone' && <DeviceFrame key="desk" kind="desk" width={1280} availW={deskAvail} height={H0} rootVars={vars} rootClass={rootClass} theme={th} onReady={onFrame('desk')} label={'Bilgisayar · 1280 px' + (deskAvail < 1280 ? ' · %' + Math.round((deskAvail / 1280) * 100) + ' küçültülmüş' : '')}>{inner('desk')}</DeviceFrame>}
-      {w > 0 && dev !== 'desk' && <div className="dz2-phone"><DeviceFrame key="phone" kind="phone" width={pw} height={Math.min(H0 - 76, Math.round(pw * 2.0))} rootVars={vars} rootClass={rootClass} theme={th} onReady={onFrame('phone')} label={'Telefon · ' + pw + ' px'}>{inner('phone')}</DeviceFrame></div>}
+      {w > 0 && dev !== 'phone' && <DeviceFrame key="desk" kind="desk" width={1280} availW={deskAvail} height={H0} rootVars={vars} rootClass={rootClass('desk')} theme={th} onReady={onFrame('desk')} label={'Bilgisayar · 1280 px' + (deskAvail < 1280 ? ' · %' + Math.round((deskAvail / 1280) * 100) + ' küçültülmüş' : '')}>{inner('desk')}</DeviceFrame>}
+      {w > 0 && dev !== 'desk' && <div className="dz2-phone"><DeviceFrame key="phone" kind="phone" width={pw} height={Math.min(H0 - 76, Math.round(pw * 2.0))} rootVars={vars} rootClass={rootClass('phone')} theme={th} onReady={onFrame('phone')} label={'Telefon · ' + pw + ' px'}>{inner('phone')}</DeviceFrame></div>}
     </div>
   );
 }
@@ -1043,7 +1048,17 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <button type="button" className={'lc-lock' + (keep[kk] && L[k] ? ' on' : '')} disabled={!L[k]} onClick={() => set('look.keep', { ...keep, [kk]: !keep[kk] })} title="Tema açıkken de bu rengi kullan"><Icon n={keep[kk] && L[k] ? 'check' : 'plus'} s={13} />Temada da</button>
     </div>;
   };
+  const C2 = d.cards || {};
+  const setC = (k, v) => set('cards.' + k, v);
   return <>
+    <div className="dz2-tiles">
+      <button className="dz2-tile" onClick={() => setSel({ kind: 'presets' })}><Icon n="box" s={20} /><span><b>Tasarım paketleri</b><small>Bütün görünüm tek tıkla · Apple sade, Eski düzenim</small></span></button>
+      <button className="dz2-tile" onClick={() => setSel({ kind: 'style' })}><Icon n="brush" s={20} /><span><b>Stil Stüdyosu</b><small>{L.style?.preset ? 'Açık: ' + (PRESET_BY[L.style.preset]?.n || 'özel') : 'Hazır stiller · yazı tipi · köşe · gölge'}</small></span></button>
+      <button className="dz2-tile" onClick={() => setSel({ kind: 'studio' })}><Icon n="sparkle" s={20} /><span><b>Tema Stüdyosu</b><small>{pack ? 'Açık: ' + pack.n : PACKS.length + ' tema · desen, süs, efekt'}</small></span></button>
+      <button className="dz2-tile" onClick={openVers}><Icon n="clock" s={20} /><span><b>Sürüm geçmişi</b><small>Önceki yayınlara dön</small></span></button>
+    </div>
+    <p className="fine dz2-devnote"><Icon n="mobile" s={14} /> Ayarların çoğu bilgisayar ve telefon için ortak. <b>Telefonda farklı</b> seçince telefona ayrı değer verirsiniz; önizlemede “Yan yana” ile ikisini birlikte görün.</p>
+    <Disclose label="Renk ve yazı" defOpen>
     {pack?.palette && <div className="dz2-warn info"><Icon n="sparkle" s={16} /><span>Tema açık (<b>{pack.n}</b>). Renkler temadan gelir; aşağıda değiştirdiğiniz renk <b>temanın üstüne yazılır</b> (“Temada da” işaretli).</span><button className="btn sm" onClick={() => setSel({ kind: 'studio' })}>Tema</button></div>}
     <div className="lc-box">
       <span className="field-l">Renklerim</span>
@@ -1051,7 +1066,6 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       {C('shopPrice', 'price', 'Fiyat rengi', '#2f55b0')}
       {C('bg', 'bg', 'Sayfa zemini', '#f3f5f9')}
     </div>
-    <LayoutFields L={L} set={set} />
     <Disclose label="Hazır renk paletleri" value={cur ? cur.n : null}>
       <p className="fine">Ana renk, fiyat rengi ve sayfa zemini birlikte değişir. Üzerine gelince sayfada denenir.</p>
       <span className="dz2-pals">{PALETTES.map((p) => (
@@ -1059,11 +1073,6 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
           <i style={{ background: p.bg || '#f3f5f9' }}><b style={{ background: p.accent }} /><b style={{ background: p.price }} /></i><span>{p.n}</span>
         </button>
       ))}</span>
-    </Disclose>
-    <Disclose label="Ölçüler">
-      <Field label="Ürün kartı köşeleri"><span className="she-scale"><input type="range" min="0" max="28" step="1" value={Number(L.cardR ?? 18)} onChange={(e) => set('look.cardR', Number(e.target.value))} /><code>{Number(L.cardR ?? 18)} px</code></span></Field>
-      <Field label="Bölümler arası boşluk"><span className="she-scale"><input type="range" min="0" max="80" step="2" value={Number(H.gap) || 0} onChange={(e) => set('shopHome.gap', Number(e.target.value))} /><code>{Number(H.gap) ? H.gap + ' px' : 'varsayılan'}</code></span></Field>
-      <Toggle id="dz-home-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => set('shopHome.enabled', v)} />
     </Disclose>
     <Disclose label="Logo ve logo rengi" value={<small>{({ tint: 'temaya uyar', gray: 'siyah-beyaz', white: 'beyaz', color: 'seçilen renk', flat: 'düz renk' })[L.logoTone] || 'orijinal'}</small>}>
       <LogoFile d={d} set={set} />
@@ -1077,37 +1086,67 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       {(L.logoTone === 'color' || L.logoTone === 'flat') && <Field label="Logo rengi"><span className="she-color"><input type="color" value={/^#[0-9a-f]{6}$/i.test(L.logoColor || '') ? L.logoColor : (lc.accent || '#1f6feb')} onChange={(e) => set('look.logoColor', e.target.value)} aria-label="Logo rengi" /><code>{L.logoColor || 'ana renk'}</code>{L.logoColor && <button type="button" className="linkish" onClick={() => set('look.logoColor', '')}>ana renk</button>}</span></Field>}
     </Disclose>
     <Field label="Site teması" hint="Apple açık: gündüz modunda açık gri zemin, beyaz kartlar, sade yazı (Apple Store gibi). Bakır gece (panel): CRM paneli gibi koyu, cam kartlı. Klasik = eski görünüm."><span className="seg sw">{[['classic', 'Klasik'], ['apple', 'Apple açık'], ['dash', 'Bakır gece (panel)']].map(([x, l]) => <button key={x} type="button" className={(L.site || 'apple') === x ? 'on' : ''} onClick={() => set('look.site', x)}>{l}</button>)}</span></Field>
-    <Toggle id="dz-lg" label="Liquid glass teması" hint="Sepet düğmeleri, filtre çipleri, kategoriler, Hesabım menüsü ve açılır menüler cam görünümünde. Kapalı = eski düz görünüm." checked={L.glass !== false} onChange={(v) => set('look.glass', v)} />
-    <BotNavPick v={L.botnav} set={(v) => set('look.botnav', v)} />
-    <Disclose label="Sayfa geçişleri (telefon)" value={<small>{({ soft: 'hafif', glass: 'cam', slow: 'yavaş (deneme)' })[L.motion] || 'yandan kayma'}</small>}>
-      <Field label="Telefonda sayfadan sayfaya geçerken" hint="Yandan kayma: yeni sayfa iPhone'daki gibi yandan kayarak gelir, geri dönüşte ters yönden. Cam: yeni sayfa buzlu camın arkasından netleşerek gelir (Apple'ın cam görünümüne yakın). Yavaş: geçişi rahatça izlemek için 3 kat yavaş — denedikten sonra geri alın."><span className="seg sw">{[['soft', 'Hafif (eski)'], ['clear', 'Yandan kayma'], ['glass', 'Cam'], ['slow', 'Yavaş · deneme']].map(([x, l]) => <button key={x} type="button" className={(L.motion || 'clear') === x ? 'on' : ''} onClick={() => set('look.motion', x)}>{l}</button>)}</span></Field>
+      <p className="fine">Yazı tipleri, gölge ve tek tek köşeler: <button type="button" className="linkish" onClick={() => setSel({ kind: 'style' })}>Stil Stüdyosu</button></p>
     </Disclose>
-    <Disclose label="Üst menü" value={<small>{({ center: 'logo ortada', classic: 'klasik', glass: 'yüzen cam' })[L.header] || 'cam + arama'}{L.hideTop === false ? '' : ' · kayınca gizlenir'}</small>}>
-      <Field label="Düzen" hint="Ortada logo: logo ve ad ortada, solda arama + zil, sağda sepet ve hesap; bilgisayarda menü altta ortalı, sade büyük harfli."><span className="seg sw">{[['classic', 'Klasik'], ['glass', 'Yüzen cam'], ['search', 'Cam + arama'], ['center', 'Ortada logo']].map(([x, l]) => <button key={x} type="button" className={(L.header || 'search') === x ? 'on' : ''} onClick={() => set('look.header', x)}>{l}</button>)}</span></Field>
-      <Field label="Aşağı kaydırınca" hint="Gizlenince sayfa daha geniş görünür. Sepet, ödeme ve Hesabım sayfalarında menü hep görünür."><span className="seg sw">{[['top', 'Gizlen · en üstte gelsin'], ['up', 'Gizlen · yukarı kayınca gelsin'], ['off', 'Hep görünsün']].map(([x, l]) => <button key={x} type="button" className={((L.hideTop === false ? 'off' : L.hideTop) || 'top') === x ? 'on' : ''} onClick={() => set('look.hideTop', x === 'off' ? false : x)}>{l}</button>)}</span></Field>
-      <p className="fine">Üst menü tasarım çerçevesinde çizilmez; değişikliği Yayınla'dan sonra mağazada görürsünüz.</p>
+    <LayoutFields L={L} set={set}>
+      <Field label="Ürün kartı köşeleri"><span className="she-scale"><input type="range" min="0" max="28" step="1" value={Number(L.cardR ?? 18)} onChange={(e) => set('look.cardR', Number(e.target.value))} /><code>{Number(L.cardR ?? 18)} px</code></span></Field>
+      <Field label="Bölümler arası boşluk"><span className="she-scale"><input type="range" min="0" max="80" step="2" value={Number(H.gap) || 0} onChange={(e) => set('shopHome.gap', Number(e.target.value))} /><code>{Number(H.gap) ? H.gap + ' px' : 'varsayılan'}</code></span></Field>
+      <Toggle id="dz-home-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => set('shopHome.enabled', v)} />
+    </LayoutFields>
+    <Disclose label="Menüler" value={<small>{({ center: 'logo ortada', classic: 'klasik', glass: 'yüzen cam' })[L.header] || 'cam + arama'}</small>}>
+      <DevPick L={L} set={set} k="header" def="search" label="Üst menü düzeni" hint="Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Ortada logo: logo ortada, menü altta."
+        opts={[['search', 'Cam + arama'], ['glass', 'Yüzen cam'], ['center', 'Ortada logo'], ['classic', 'Klasik']]} />
+      <DevPick L={L} set={set} k="hideTop" def="top" label="Aşağı kaydırınca üst menü" hint="Sepet, ödeme ve Hesabım sayfalarında menü hep görünür."
+        opts={[['top', 'Gizlen · en üstte gelsin'], ['up', 'Gizlen · yukarı kayınca gelsin'], [false, 'Hep görünsün']]} />
+      <BotNavPick v={L.botnav} set={(v) => set('look.botnav', v)} />
     </Disclose>
-    <div className="dz2-tiles">
-      <button className="dz2-tile" onClick={() => setSel({ kind: 'style' })}><Icon n="brush" s={20} /><span><b>Stil Stüdyosu</b><small>{L.style?.preset ? 'Açık: ' + (PRESET_BY[L.style.preset]?.n || 'özel') : 'Hazır stiller · yazı tipi · köşe · gölge'}</small></span></button>
-      <button className="dz2-tile" onClick={() => setSel({ kind: 'studio' })}><Icon n="sparkle" s={20} /><span><b>Tema Stüdyosu</b><small>{pack ? 'Açık: ' + pack.n : PACKS.length + ' tema · desen, süs, efekt'}</small></span></button>
-      <button className="dz2-tile" onClick={openVers}><Icon n="clock" s={20} /><span><b>Sürüm geçmişi</b><small>Önceki yayınlara dön</small></span></button>
-    </div>
+    <Disclose label="Ürün kartları" value={<small>{C2.addPos === 'side' ? 'düğme yanda' : 'düğme altta'}</small>}>
+      <Field label="Sepete ekle düğmesi"><span className="seg sw">{[['bottom', 'Fiyatın altında, tam genişlik'], ['side', 'Fiyatın yanında (eski)']].map(([x, l]) => <button key={x} type="button" className={(C2.addPos || 'bottom') === x ? 'on' : ''} onClick={() => setC('addPos', x)}>{l}</button>)}</span></Field>
+      <Toggle id="dz-stk" label="Kartta “Stokta” yazısı" checked={C2.stockTag !== false} onChange={(v) => setC('stockTag', v)} />
+      <DevPick L={C2} set={set} base="cards" k="productView" kM="productViewM" def="sheet" label="Ürüne basınca" hint="Pencere: ürün listenin üstünde açılır. Sayfa: ürün kendi sayfasında açılır (paylaşılabilir adres)."
+        opts={[['sheet', 'Pencerede'], ['page', 'Kendi sayfasında']]} />
+      <Toggle id="dz-dsh" label="Uzun açıklamayı kısa göster (Devamını göster)" hint="Telefonda ürün sayfa olarak açılıyorsa hep kısa." checked={!!C2.descShort} onChange={(v) => setC('descShort', v)} />
+      <p className="fine">Fiyat gösterimi (TL, KDV dahil) ve bayi kartı: Ayarlar › Ürün kartları.</p>
+    </Disclose>
+    <Disclose label="Cam ve hareket" value={<small>{L.glass === false ? 'cam kapalı' : 'cam açık'}</small>}>
+      <DevPick L={L} set={set} k="glass" def={true} label="Liquid glass teması" hint="Filtre çipleri, kategoriler, Hesabım menüsü, seçim çubukları ve açılır menüler cam görünümünde. Kapalı = eski düz görünüm."
+        opts={[[true, 'Açık'], [false, 'Kapalı']]} />
+      <Field label="Sayfa geçişi · telefon" hint="Yandan kayma: yeni sayfa yandan kayarak gelir, alt menüde sağdaki sekmeye geçince sağdan. Cam: buzlu camın arkasından netleşir."><span className="seg sw">{[['clear', 'Yandan kayma'], ['soft', 'Hafif'], ['glass', 'Cam'], ['slow', 'Yavaş · deneme']].map(([x, l]) => <button key={x} type="button" className={(L.motion || 'clear') === x ? 'on' : ''} onClick={() => set('look.motion', x)}>{l}</button>)}</span></Field>
+    </Disclose>
     <p className="fine">Sayfada bir şeye tıklayınca bu panel tam o şeyin ayarlarını açar: banner'daki açıklamaya tıklarsanız açıklamanın rengi, butona tıklarsanız buton.</p>
   </>;
 }
 
 // ---- 5.11.2026 Sayfa düzeni: genişlik, kenar boşluğu, köşeler, kutu deseni, zemin ışığı -----------------------------------
-function LayoutFields({ L, set }) {
+function LayoutFields({ L, set, children }) {
   const st = L.style || {};
   const corner = CORNERS.find(([, , v]) => Object.entries(v).every(([k, x]) => st[k] === x));
   const seg = (opts, cur, on) => <span className="seg sw sm">{opts.map(([k, l]) => <button key={k || 'd'} type="button" className={(cur || '') === k ? 'on' : ''} onClick={() => on(k)}>{l}</button>)}</span>;
-  return <Disclose label="Sayfa düzeni" value={<small>{WIDTHS.find((w) => w[0] === (L.width || ''))?.[1]} · {corner ? corner[1] : 'özel köşe'}</small>} defOpen>
+  return <Disclose label="Sayfa" value={<small>{WIDTHS.find((w) => w[0] === (L.width || ''))?.[1]} · {corner ? corner[1] : 'özel köşe'}</small>} defOpen>
     <Field label="Sayfa genişliği (bilgisayar)" hint="Sayfanın enine ne kadar yayılacağı. Telefonda hep tam ekran.">{seg(WIDTHS, L.width, (k) => set('look.width', k))}</Field>
     <Field label="Kenar boşluğu (bilgisayar)"><span className="she-scale"><input type="range" min="0" max="80" step="2" value={L.edge ?? 16} onChange={(e) => set('look.edge', Number(e.target.value))} /><code>{L.edge == null ? 'varsayılan' : L.edge + ' px'}</code>{L.edge != null && <button type="button" className="linkish" onClick={() => set('look.edge', undefined)}>sıfırla</button>}</span></Field>
     <Field label="Köşeler" hint="Kartlar, kutular, büyük reklam ve düğmeler birlikte. Tek tek ayar: Stil Stüdyosu.">{seg(CORNERS.map(([k, l]) => [k, l]), corner?.[0] || '-', (k) => set('look.style', { ...st, ...CORNERS.find((c) => c[0] === k)[2] }))}</Field>
     <Field label="Reklam kutularının deseni" hint="Bütün kutular. Bir kutuya ayrı desen: kutuya tıklayın.">{seg(BOX_PATS, L.boxPat, (k) => set('look.boxPat', k))}</Field>
     <Field label="Sayfa zemini ışığı">{seg(BG_FX, L.bgFx, (k) => set('look.bgFx', k))}</Field>
+    {children}
   </Disclose>;
+}
+
+// bilgisayar / telefon ayrı ayarlanabilen seçim: 'İkisinde aynı' | 'Telefonda farklı' (telefon değeri k + 'M')
+function DevPick({ L, set, base = 'look', k, kM = k + 'M', def, label, hint, opts }) {
+  const v = L[k] === undefined || L[k] === null || L[k] === '' ? def : L[k];
+  const m = L[kM]; const split = m !== undefined && m !== null;
+  const seg = (cur, on) => <span className="seg sw">{opts.map(([x, l]) => <button key={String(x)} type="button" className={cur === x ? 'on' : ''} onClick={() => on(x)}>{l}</button>)}</span>;
+  return <div className="field dev-f">
+    <span className="dev-h"><span className="field-l">{label}</span>
+      <span className="dev-sw" role="group" aria-label="Cihaz"><button type="button" className={!split ? 'on' : ''} onClick={() => set(base + '.' + kM, undefined)}>İkisinde aynı</button><button type="button" className={split ? 'on' : ''} onClick={() => !split && set(base + '.' + kM, v)}><Icon n="mobile" s={13} />Telefonda farklı</button></span>
+    </span>
+    {split ? <>
+      <span className="dev-l"><Icon n="monitor" s={13} />Bilgisayar</span>{seg(v, (x) => set(base + '.' + k, x))}
+      <span className="dev-l"><Icon n="mobile" s={13} />Telefon</span>{seg(m, (x) => set(base + '.' + kM, x))}
+    </> : seg(v, (x) => set(base + '.' + k, x))}
+    {hint && <span className="field-h">{hint}</span>}
+  </div>;
 }
 
 // ---- 5.11.2026 Tasarım paketleri ---------------------------------------------------------------------------------------------

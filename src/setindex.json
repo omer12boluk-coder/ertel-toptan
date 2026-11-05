@@ -44,15 +44,6 @@
 "Ürün resimleri"
 ],
 "gorunum": [
-"Site teması",
-"Liquid glass teması",
-"Telefon alt menüsü",
-"Telefonda sayfa geçişi",
-"Üst menü düzeni",
-"Aşağı kaydırınca üst menü",
-"Mağaza ana rengi",
-"Mağaza fiyat rengi",
-"Sayfa arka planı",
 "Ana renk",
 "Toptan fiyat rengi",
 "Mağaza adı rengi",
@@ -60,9 +51,9 @@
 "Tema",
 "Online mağaza",
 "Bayi uygulaması",
-"Mağaza menüleri ve geçişler",
 "Bayi uygulaması ve yönetim",
-"Ortak"
+"Ortak",
+"Mağazanın görünümü Tasarım modunda"
 ],
 "tema": [
 "Üstte süs şeridi",

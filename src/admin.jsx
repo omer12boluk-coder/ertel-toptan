@@ -578,10 +578,10 @@ const GROUPS = [
 ];
 // [anahtar, ad, açıklama, simge, grup]
 const SECTIONS = [
-  ['magazaana', 'Mağaza ana sayfası', 'Tasarım modunda düzenlenir: reklamlar, kutular, raflar, renkler', 'monitor', 'vitrin'],
+  ['magazaana', 'Mağaza görünümü', 'Tasarım modunda: paketler, renkler, menüler, kartlar, cam, geçişler, reklamlar', 'monitor', 'vitrin'],
   ['markalar', 'Markalar', 'Marka logoları, renkleri ve logo boyutları', 'star', 'vitrin'],
-  ['gorunum', 'Renkler ve görünüm', 'Renkler, alt menü, üst menü, sayfa geçişleri · önizlemeli', 'palette', 'vitrin'],
-  ['kart', 'Ürün kartları', 'Fiyat gösterimi, sepete ekle düğmesi, resimler, ürün açılışı · önizlemeli', 'grid', 'vitrin'],
+  ['gorunum', 'Bayi ve panel renkleri', 'Bayi uygulaması ve yönetim paneli renkleri, gece / gündüz', 'palette', 'vitrin'],
+  ['kart', 'Fiyat gösterimi ve bayi kartı', 'TL / KDV dahil fiyat, bayi kartının düğmesi · mağaza kartının görünümü Tasarım modunda', 'grid', 'vitrin'],
   ['tema', 'Süsleme teması (eski)', 'Yenisi: Tasarım modu › Tema Stüdyosu', 'sparkle', 'vitrin'],
   ['altbilgi', 'Alt bilgi ve sayfalar', 'İletişim, sosyal medya, Kargo / İade sayfaları, KVKK ve sözleşmeler', 'list', 'vitrin'],
   ['fiyat', 'Fiyat, KDV ve kur', 'Toptan indirimi, yuvarlama, KDV oranı, elle kur', 'tag', 'satis'],
@@ -1435,18 +1435,7 @@ function LookSettings({ d, set }) {
       <ThemePreview S={S} role="public" title="Online mağaza" accent={L.shopAccent || S.brand.accent} price={L.shopPrice || S.brand.priceAccent} bg={L.bg} />
       <ThemePreview S={S} role="customer" title="Bayi uygulaması" accent={S.brand.accent} price={S.brand.priceAccent} />
     </div>
-    <h3>Mağaza menüleri ve geçişler</h3>
-    <p className="fine">Aynı ayarlar Tasarım modu › Renkler ve sayfa'da da var.</p>
-    <Field label="Site teması" hint="Apple açık: gündüz modunda açık gri zemin, beyaz kartlar, sade yazı tipi, yuvarlak düğmeler (Apple Store gibi). Gece modunda koyu tema aynen kalır. Bakır gece (panel): CRM paneli gibi her zaman koyu, bakır ışıklı, cam kartlı. Klasik = eski görünüm."><span className="seg seg-wrap">{[['classic', 'Klasik'], ['apple', 'Apple açık'], ['dash', 'Bakır gece (panel)']].map(([x, l]) => <button key={x} type="button" className={(L.site || 'apple') === x ? 'on' : ''} onClick={() => set('look.site', x)}>{l}</button>)}</span></Field>
-    <Toggle id="s-lg" label="Liquid glass teması" hint="Kartlardaki sepet düğmeleri, filtre çipleri, kategori listesi, Hesabım menüsü, seçim çubukları ve açılır menüler cam görünümünde. Kapalı = eski düz görünüm." checked={L.glass !== false} onChange={(v) => set('look.glass', v)} />
-    <Field label="Telefon alt menüsü"><span className="seg seg-wrap">{[['glass', 'Yüzen cam'], ['dark', 'Koyu cam'], ['bar', 'Şerit cam'], ['classic', 'Klasik (eski)']].map(([x, l]) => <button key={x} type="button" className={(L.botnav || 'glass') === x ? 'on' : ''} onClick={() => set('look.botnav', x)}>{l}</button>)}</span></Field>
-    <Field label="Telefonda sayfa geçişi" hint="Yandan kayma: yeni sayfa yandan kayarak gelir, alt menüde sağdaki sekmeye geçince sağdan. Yavaş: denemek için 3 kat yavaş."><span className="seg seg-wrap">{[['clear', 'Yandan kayma'], ['glass', 'Cam'], ['soft', 'Hafif (eski)'], ['slow', 'Yavaş · deneme']].map(([x, l]) => <button key={x} type="button" className={(L.motion || 'clear') === x ? 'on' : ''} onClick={() => set('look.motion', x)}>{l}</button>)}</span></Field>
-    <Field label="Üst menü düzeni"><span className="seg seg-wrap">{[['classic', 'Klasik'], ['glass', 'Yüzen cam'], ['search', 'Cam + arama'], ['center', 'Ortada logo']].map(([x, l]) => <button key={x} type="button" className={(L.header || 'search') === x ? 'on' : ''} onClick={() => set('look.header', x)}>{l}</button>)}</span></Field>
-    <Field label="Aşağı kaydırınca üst menü"><span className="seg seg-wrap">{[['top', 'Gizlen · en üstte gelsin'], ['up', 'Gizlen · yukarı kayınca gelsin'], ['off', 'Hep görünsün']].map(([x, l]) => <button key={x} type="button" className={((L.hideTop === false ? 'off' : L.hideTop) || 'top') === x ? 'on' : ''} onClick={() => set('look.hideTop', x === 'off' ? false : x)}>{l}</button>)}</span></Field>
-    <h3>Online mağaza</h3>
-    <ColorRow label="Mağaza ana rengi" hint="Düğmeler, seçili sekme, bağlantılar" v={L.shopAccent} def={S.brand.accent} allowEmpty emptyLabel="Ana renk ile aynı" onChange={(v) => set('look.shopAccent', v)} />
-    <ColorRow label="Mağaza fiyat rengi" v={L.shopPrice} def="#c2410c" onChange={(v) => set('look.shopPrice', v)} />
-    <Field label="Sayfa arka planı" hint="Açık temada"><span className="seg seg-wrap">{BGS.map(([c, l]) => <button key={l} type="button" className={(L.bg || '') === c ? 'on' : ''} onClick={() => set('look.bg', c)}><i className="bg-dot" style={{ background: c || '#f1f4f9' }} />{l}</button>)}</span></Field>
+    <div className="dz-goto"><Icon n="brush" s={22} /><span><b>Mağazanın görünümü Tasarım modunda</b><small>Paketler, renkler, site teması, üst ve alt menü, Liquid glass, sayfa geçişleri, kartlar — hepsi tek yerde, bilgisayar ve telefon ayrı ayarlanabilir.</small></span><button type="button" className="btn primary sm" onClick={() => go('tasarim')}>Tasarım modunu aç</button></div>
     <h3>Bayi uygulaması ve yönetim</h3>
     <ColorRow label="Ana renk" v={S.brand.accent} def="#2f55b0" onChange={(v) => set('brand.accent', v)} />
     <ColorRow label="Toptan fiyat rengi" v={S.brand.priceAccent} def="#c2410c" onChange={(v) => set('brand.priceAccent', v)} />

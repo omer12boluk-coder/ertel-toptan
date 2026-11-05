@@ -3,7 +3,7 @@ import { SaveDock } from './savedock.jsx';
 import { StoreDecor } from './decor.jsx';
 import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js';
 import { applyStyle } from './stylekit.js';
-import { applyLayout } from './dzpresets.js';
+import { applyLayout, lookFor } from './dzpresets.js';
 import { RatePrompt } from './reviews.jsx';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -580,13 +580,16 @@ function ShellFull() {
   const lcNew = useStore((st) => (admin ? (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length : 0));
   const badge = (k) => (k === 'sepet' ? cartN : k === 'talepler' ? unread : k === 'musteriler' ? pendingN : k === 'katalog' ? priceN : k === 'siparisler' ? newOrders + lcNew : 0);
   // 3.11.2026 mağaza üst menüsü: 'classic' (eski) · 'center' (logo ortada, menü altında — Tasarım › Renkler ve sayfa › Üst menü)
-  const hc = pub && S0.look?.header === 'center';
-  const hs = pub && (S0.look?.header || 'search') === 'search';
+  // 5.11.2026: her görünüm ayarı telefonda ayrı olabilir (look.headerM, hideTopM, glassM — Tasarım › 'Telefonda farklı')
+  const phoneUI = usePhoneMQ();
+  const LK = lookFor(S0.look, phoneUI);
+  const hc = pub && LK.header === 'center';
+  const hs = pub && (LK.header || 'search') === 'search';
   // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
-  const lgOn = pub && S0.look?.glass !== false;
+  const lgOn = pub && LK.glass !== false;
   useEffect(() => { const c = document.documentElement.classList; c.toggle('hdr-gs-on', hs); c.toggle('hdr-c-on', hc); c.toggle('lg-on', lgOn); return () => c.remove('hdr-gs-on', 'hdr-c-on', 'lg-on'); }, [hs, hc, lgOn]);
   const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
-  useHideTop(pub && S0.look?.hideTop !== false, S0.look?.hideTop === 'up', tab, urunLayer);
+  useHideTop(pub && LK.hideTop !== false, LK.hideTop === 'up', tab, urunLayer);
   const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
@@ -635,7 +638,7 @@ function ShellFull() {
             })}
           </nav>
         </div>
-      </header> : <header className={'topbar' + (pub && S0.look?.header === 'glass' ? ' hdr-g' : '')}>
+      </header> : <header className={'topbar' + (pub && LK.header === 'glass' ? ' hdr-g' : '')}>
         <div className="topbar-in">
           <Brand small onClick={home} />
           {admin && <span className="admin-badge" title="Yönetim paneli"><Icon n="shield" s={14} /><span className="badge-t">Yönetim paneli</span></span>}
@@ -901,6 +904,13 @@ function setupCrispBack() {
 // dönünce (ya da 'up' seçiliyse yukarı kaydırmaya başlayınca) geri gelir. Pencere / arama / menü açıkken, sabit yan kutulu sayfalarda
 // (sepet, ödeme, hesap, ürün katmanı) hiç gizlenmez → oralardaki sabit konumlar bozulmaz.
 const HIDE_TABS = new Set(['anasayfa', 'katalog', 'kalip', 'set', 'urun', 'yasal', 'liste']);
+// telefon ekranı mı (≤899px) — değişince yeniden çizilir
+const PHONE_MQ = '(max-width: 899px)';
+function usePhoneMQ() {
+  const [v, setV] = useState(() => matchMedia(PHONE_MQ).matches);
+  useEffect(() => { const m = matchMedia(PHONE_MQ); const f = () => setV(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f); }, []);
+  return v;
+}
 function useHideTop(on, upShow, tab, layer) {
   useEffect(() => {
     const r = document.documentElement; const ok = on && HIDE_TABS.has(tab) && !(tab === 'urun' && layer);

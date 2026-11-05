@@ -7361,3 +7361,17 @@ html.st-rhero .shell.public :is(.sh-hero, .sh-hero .sh-slide, .sh-banner-in, .sh
 .pbx-sw { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .pbx-c { width: 28px; height: 28px; border-radius: 9px; border: 0; box-shadow: 0 0 0 1px rgb(0 0 0 / .1) inset; cursor: pointer; }
 .pbx-c.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+/* tasarım modu: bilgisayar / telefon ayrı ayar */
+.dev-f { display: flex; flex-direction: column; gap: 6px; }
+.dev-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.dev-sw { display: inline-flex; padding: 2px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.dev-sw button { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; border: 0; border-radius: 999px; background: none; color: var(--muted); font: 600 11.5px/1 var(--f-body); cursor: pointer; }
+.dev-sw button.on { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
+.dev-l { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+.dz2-devnote { display: flex; gap: 6px; align-items: flex-start; }
+.dz2-devnote .ic { flex: none; margin-top: 2px; }
+.dz-goto { display: flex; align-items: center; gap: 14px; padding: 16px 18px; margin: 10px 0 18px; border-radius: 16px; background: color-mix(in oklab, var(--accent) 7%, var(--surface)); border: 1px solid color-mix(in oklab, var(--accent) 25%, var(--line)); }
+.dz-goto > .ic { flex: none; color: var(--accent); }
+.dz-goto span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dz-goto small { color: var(--muted); font-size: 13px; line-height: 1.4; }
+@media (max-width: 600px) { .dz-goto { flex-wrap: wrap; } .dz-goto .btn { width: 100%; } }
