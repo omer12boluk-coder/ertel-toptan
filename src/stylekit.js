@@ -7,6 +7,9 @@ const fam = (id) => (FONT_BY[id]?.fam ? `'${FONT_BY[id].fam}', system-ui, sans-s
 
 // hazır stiller: tek tıkla birçok ayar (pal = isteğe bağlı renkler: ana renk, fiyat, sayfa zemini)
 export const STYLE_PRESETS = [
+  { id: 'apple', n: 'Apple sade', d: 'Inter Tight başlık, Inter metin, ölçülü yumuşak köşeler, hap düğmeler, hafif gölge (5.11.2026)', pv: ['#f5f5f7', '#0a66d6', '#ffffff'],
+    s: { head: 'intert', body: 'inter', price: 'intert', hw: 700, hls: -0.02, rCard: 18, rBox: 24, rHero: 30, rBtn: 999, shadow: 'soft', border: 'none', imgFit: 'contain', imgBg: '#ffffff', imgPad: 12, hover: 'lift', title: 'plain', gap: 44 },
+    pal: { accent: '#0a66d6', price: '#1d1d1f', bg: '#f5f5f7' } },
   { id: 'lux', n: 'Lüks sade', d: 'Beymen tarzı: köşesiz, gölgesiz, bol boşluk, büyük harf ince başlıklar, kare ürün resimleri', pv: ['#ffffff', '#111111', '#f4f4f4'],
     s: { head: 'montserrat', body: 'inter', price: 'inter', hw: 500, hup: true, hls: 0.14, rCard: 0, rBox: 0, rHero: 0, rBtn: 0, shadow: 'none', border: 'none', imgFit: 'contain', imgBg: '#f4f4f4', imgPad: 0, hover: 'zoom', title: 'center', gap: 56, pw: 500 },
     pal: { accent: '#111111', price: '#111111', bg: '#ffffff' } },

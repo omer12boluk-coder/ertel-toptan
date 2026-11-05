@@ -13,6 +13,7 @@ import { feat, useStats, toggleNotify, outOfStock } from './extras.jsx';
 import { useWin, winOf, onDrag } from './dzframe.jsx';
 import { BG_BY, activePack, BTN_BY, ARROW_BY } from './presets.js';
 import { SlideEls, useSlideFonts, FONT_BY, FONTS, ensureFonts } from './slidex.jsx';
+import { BOX_COLORS, BOX_PATS } from './dzpresets.js';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
 
@@ -325,7 +326,7 @@ export function ShopHome({ S: Sover }) {
         {title && <SecHead title={title} onTitle={onTitle} />}
         <PromoTrack on={sl} cls={sl ? 'sh-bento sh-pslide ' + (lo.lay === 'slideM' ? 'm-only' : 'all') + ' ar-' + (lo.ar || 'tall') + ' pw-' + (lo.w || 'md') : 'sh-bento'} bar={lo.bar !== false}>
           {list.map((x, i) => { const im = boxImgMode(x); return (
-            <button key={x.idx} data-dz={g} data-i={x.idx} data-fk={(x.title || '') + (x.img || '')} data-dz-name={x.title || 'Kutu'} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? ' im-' + im + (im === 'card' ? ' prod' : im === 'float' ? ' prod float' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (x.ta ? ' ta-' + x.ta : '') + (sel?.kind === 'promo' && sel.i === x.idx && (sel.b || null) === bid ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i, ...(x.ibg ? { '--ibg': x.ibg } : null), ...(x.iz && x.iz !== 1 ? { '--iz': x.iz } : null), ...(x.ix != null ? { '--ix': x.ix + '%' } : null), ...(x.iy != null ? { '--iy': x.iy + '%' } : null), ...(x.tc ? { '--btc': x.tc } : null), ...(x.f ? { '--bf': `'${FONT_BY[x.f]?.fam || x.f}', var(--f-display)` } : null) }}
+            <button key={x.idx} data-dz={g} data-i={x.idx} data-fk={(x.title || '') + (x.img || '')} data-dz-name={x.title || 'Kutu'} className={'sh-box sz-' + (x.size || 'sq') + (x.img ? ' im-' + im + (im === 'card' ? ' prod' : im === 'float' ? ' prod float' : ' has-img') : '') + (!x.title && !x.text && !x.tag ? ' notext' : '') + (x.ta ? ' ta-' + x.ta : '') + (x.pat ? ' pat-' + x.pat : '') + (isLight(x.color) ? ' lt' : '') + (sel?.kind === 'promo' && sel.i === x.idx && (sel.b || null) === bid ? ' dz-sel' : '')} style={{ '--c': x.color || '#0f172a', '--i': i, ...(x.ibg ? { '--ibg': x.ibg } : null), ...(x.iz && x.iz !== 1 ? { '--iz': x.iz } : null), ...(x.ix != null ? { '--ix': x.ix + '%' } : null), ...(x.iy != null ? { '--iy': x.iy + '%' } : null), ...(x.tc ? { '--btc': x.tc } : null), ...(x.f ? { '--bf': `'${FONT_BY[x.f]?.fam || x.f}', var(--f-display)` } : null) }}
               onClick={E ? (E.mobile ? (e) => { stop(e); E.select('promo', x.idx, bid); } : stop) : link(x.link)} onMouseMove={spot}
               onPointerDown={E && !E.mobile ? (e) => dragSort(e, g, x.idx, (f, t) => E.set(path, moveItem(cur(), f, t)), () => E.select('promo', x.idx, bid)) : undefined}>
               {x.img && (im === 'card' || im === 'float' ? <span className="sh-box-prod"><ShopImg v={x.img} /></span> : <ShopImg v={x.img} className="sh-box-img" />)}
@@ -1367,6 +1368,10 @@ export function PromoFields({ x, up }) {
       <Field label="Boyut"><select value={x.size || 'sq'} onChange={(e) => up({ size: e.target.value })}>{Object.entries(SIZES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       <Field label="Zemin rengi"><span className="she-color"><input type="color" value={x.color || '#0f172a'} onChange={(e) => up({ color: e.target.value })} /><code>{x.color}</code></span></Field>
       <Field label="Küçük etiket" opt><input value={x.tag || ''} onChange={(e) => up({ tag: e.target.value })} placeholder="ör. %20 indirim" /></Field>
+    </div>
+    <div className="field"><span className="field-l">Uyumlu renkler ve desen</span>
+      <span className="pbx-sw">{BOX_COLORS.map(([c, n]) => <button key={c} type="button" title={n} className={'pbx-c' + ((x.color || '').toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => up({ color: c })} />)}</span>
+      <span className="seg sw sm">{[['', 'Sayfanınki'], ...BOX_PATS.map(([k, l]) => [k || 'ring', l])].map(([k, l]) => <button key={k} type="button" className={(x.pat || '') === k ? 'on' : ''} onClick={() => up({ pat: k || undefined })}>{l}</button>)}</span>
     </div>
     <div className="row2">
       <Field label="Başlık" hint="Boş bırakırsanız kutuda yazı olmaz (yazısı resmin içinde olan hazır banner için)"><input value={x.title || ''} onChange={(e) => up({ title: e.target.value })} /></Field>

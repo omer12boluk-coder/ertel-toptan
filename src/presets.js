@@ -4,8 +4,17 @@
 // ---- Banner arka planları (slides[i].bg = id). ink: 'l' açık zeminde koyu yazı, yoksa beyaz yazı
 const grid = (c, s = 28) => `linear-gradient(${c} 1px, transparent 1px) 0 0/${s}px ${s}px, linear-gradient(90deg, ${c} 1px, transparent 1px) 0 0/${s}px ${s}px`;
 const dots = (c, s = 14, r = 1.4) => `radial-gradient(circle, ${c} ${r}px, transparent ${r + 0.4}px) 0 0/${s}px ${s}px`;
-export const BG_CATS = { grad: 'Renk geçişi', aura: 'Işık ve aura', tex: 'Desen ve doku', tech: 'Teknik / atölye', light: 'Açık zemin', glass: 'Parlak ve cam' };
+export const BG_CATS = { calm: 'Sakin (Apple)', grad: 'Renk geçişi', aura: 'Işık ve aura', tex: 'Desen ve doku', tech: 'Teknik / atölye', light: 'Açık zemin', glass: 'Parlak ve cam' };
 export const BG_PRESETS = [
+  // 5.11.2026 Apple sade paketi: derin, sakin tonlar (beyaz yazı her birinde okunur) + iki açık ton
+  { id: 'p-midnight', cat: 'calm', n: 'Gece yarısı', bg: 'radial-gradient(120% 90% at 85% 10%, #31477a 0%, #16213b 52%, #0c1324 100%)' },
+  { id: 'p-graphite', cat: 'calm', n: 'Grafit', bg: 'radial-gradient(120% 90% at 85% 10%, #55555f 0%, #26262c 55%, #141417 100%)' },
+  { id: 'p-sage', cat: 'calm', n: 'Adaçayı', bg: 'radial-gradient(120% 90% at 85% 10%, #5f7f6c 0%, #2b3d33 55%, #17221c 100%)' },
+  { id: 'p-copper', cat: 'calm', n: 'Bakır', bg: 'radial-gradient(120% 90% at 85% 10%, #a2694a 0%, #4e2f1f 55%, #23150e 100%)' },
+  { id: 'p-ink', cat: 'calm', n: 'Mürekkep', bg: 'radial-gradient(120% 90% at 80% 15%, #3b4f8f 0%, #1c2547 55%, #0d1226 100%)' },
+  { id: 'p-plum', cat: 'calm', n: 'Erik', bg: 'radial-gradient(120% 90% at 85% 10%, #76607f 0%, #3a2d42 55%, #1b1520 100%)' },
+  { id: 'p-mist', cat: 'calm', n: 'Sis', ink: 'l', bg: 'radial-gradient(120% 90% at 85% 10%, #ffffff 0%, #eef2f8 50%, #dde4ef 100%)' },
+  { id: 'p-sand', cat: 'calm', n: 'Kum', ink: 'l', bg: 'radial-gradient(120% 90% at 85% 10%, #ffffff 0%, #f5f0e8 50%, #e8dfd1 100%)' },
   // renk geçişi
   { id: 'g-night', cat: 'grad', n: 'Gece mavisi', bg: 'linear-gradient(120deg, #0d1b33, #1d5fd8 70%, #38bdf8)' },
   { id: 'g-ember', cat: 'grad', n: 'Kor', bg: 'linear-gradient(125deg, #1a0702, #9a2d07 55%, #ff8a3d)' },

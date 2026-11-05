@@ -168,6 +168,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 - Tema Stüdyosu `look.pack`, Stil Stüdyosu `look.style`, logo `look.logoTone`/`logoColor`, reklam kutuları `promosLay`/`blocks[id].lay`, banner gezinme `shopHome.heroNav`.
 - Ödeme: `pricing.storeVatInc` (KDV dahil mağaza), `orders.storeCard`, `orders.inst` taksit; kart ödemesi şu an DEMO (gerçek POS yok). Sepet linkinde kart "Yakında" (`orders.cardSoon`).
 
+- **Tasarım paketleri (5.11.2026, `src/dzpresets.js`):** `settings.dzPresets` [{id,name,data}] (public'e gitmez) + yerleşik `APPLE` (Paket 1). `snapshot(d)` görünüm anahtarlarını alır (look tamamı − myPacks, brand renk/tema, cards görünüm, shopHome görünüm, slide/promo renk anahtarları), `applyPreset` pakette olmayanı siler → geri dönüş birebir. İlk açılışta mevcut hâl 'Eski düzenim' (Paket 2) kaydedilir. Yeni look alanları: `width` narrow|mid|''|full, `edge` px, `boxPat` ''|glow|grid|wave|none (kutu başına `pat`), `bgFx` ''|glow|plain → `layoutOut/applyLayout` html sınıfları `pw-*`, `pg-edge`, `bp-*`, `bgfx-*`. Yeni yazı tipleri (Inter Tight, Manrope, Jakarta, Geist…), banner arka planı grubu 'Sakin (Apple)' `p-*`, stil 'apple'.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.

@@ -7309,3 +7309,55 @@ html.top-hide .shell.public .toolbar { top: calc(env(safe-area-inset-top, 0px) +
 @media (max-width: 899px) {
   html:is(.th-apple, .th-dash) .shell.public .toolbar { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: color-mix(in oklab, var(--bg) 96%, transparent) !important; }
 }
+
+/* ===== 5.11.2026 Tasarım paketleri: sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (dzpresets.js layoutOut) ===== */
+html:is(.pw-narrow, .pw-mid, .pw-full) .shell.public :is(.main, .topbar-in), html:is(.pw-narrow, .pw-mid, .pw-full) :is(.sfoot-in, .sfoot-mini) { max-width: var(--pw-max) !important; }
+@media (min-width: 900px) {
+  html.pg-edge .shell.public .main { padding-left: max(var(--pg-edge), env(safe-area-inset-left, 0px)); padding-right: max(var(--pg-edge), env(safe-area-inset-right, 0px)); }
+  html.pg-edge .shell.public .topbar.hdr-g { padding-left: max(calc(var(--pg-edge) - 6px), 10px); padding-right: max(calc(var(--pg-edge) - 6px), 10px); }
+}
+/* reklam kutusu desenleri (bütün kutular: html.bp-*, tek kutu: .pat-*) */
+html.bp-glow .sh-box::before, html .sh-box.pat-glow::before { border: 0; right: -28%; top: -34%; width: 95%; background: radial-gradient(closest-side, rgb(255 255 255 / .24), rgb(255 255 255 / 0)); }
+html.bp-grid .sh-box::before, html .sh-box.pat-grid::before { inset: 0; width: auto; aspect-ratio: auto; border: 0; border-radius: 0;
+  background-image: linear-gradient(rgb(255 255 255 / .08) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .08) 1px, transparent 1px); background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(140deg, transparent 25%, #000 85%); mask-image: linear-gradient(140deg, transparent 25%, #000 85%); }
+html.bp-wave .sh-box::before, html .sh-box.pat-wave::before { inset: auto -20% -38% -20%; top: auto; right: -20%; width: auto; height: 72%; aspect-ratio: auto; border: 0; border-radius: 50% 50% 0 0 / 60% 60% 0 0;
+  background: rgb(255 255 255 / .07); box-shadow: 0 -26px 0 rgb(255 255 255 / .045); }
+html.bp-none .sh-box::before, html .sh-box.pat-none::before { display: none; }
+html .sh-box.pat-ring::before { display: block; inset: auto; right: -18%; top: -18%; width: 70%; height: auto; aspect-ratio: 1; border-radius: 50%; border: 26px solid rgb(255 255 255 / .07); background: none; box-shadow: none; -webkit-mask-image: none; mask-image: none; }
+/* açık renkli kutuda yazı koyu */
+.sh-box.lt { color: #1d1d1f; }
+.sh-box.lt::before { border-color: rgb(0 0 0 / .05) !important; }
+html.bp-glow .sh-box.lt::before, .sh-box.lt.pat-glow::before { background: radial-gradient(closest-side, rgb(255 255 255 / .9), rgb(255 255 255 / 0)); }
+.sh-box.lt .sh-box-go { background: rgb(0 0 0 / .08); color: #1d1d1f; }
+/* sayfa zemini ışığı */
+html.bgfx-glow { background: #f5f5f7; } html.bgfx-glow body { background: transparent; }
+html.bgfx-glow body::before { content: ""; position: fixed; inset: 0; height: auto; z-index: -1; pointer-events: none;
+  background: radial-gradient(42% 38% at 8% -4%, rgb(10 102 214 / .11), rgb(10 102 214 / 0) 70%), radial-gradient(38% 34% at 98% 14%, rgb(242 168 118 / .13), rgb(242 168 118 / 0) 70%),
+    radial-gradient(48% 42% at 62% 106%, rgb(122 160 255 / .09), rgb(122 160 255 / 0) 70%), linear-gradient(#f7f7f9, #f2f2f5); }
+html.bgfx-glow[data-theme="dark"] { background: #121110; }
+html.bgfx-glow[data-theme="dark"] body::before { background: radial-gradient(42% 38% at 8% -4%, rgb(242 184 128 / .10), transparent 70%), radial-gradient(40% 36% at 98% 18%, rgb(110 140 255 / .08), transparent 70%), #121110; }
+html.bgfx-plain body::before { display: none; }
+/* stil stüdyosu köşeleri Apple / Bakır temanın sabit köşelerini ezsin (sonradan yazıldığı için kazanır) */
+html.st-rbox .shell.public :is(.sh-box, .sh-brand, .sh-usp, .set-card) { border-radius: var(--st-rbox); }
+html.st-rhero .shell.public :is(.sh-hero, .sh-hero .sh-slide, .sh-banner-in, .sh-banner-img, .sh-video-box) { border-radius: var(--st-rhero); }
+
+/* tasarım paketleri paneli */
+.pz-list { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 16px; }
+.pz-card { position: relative; display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); transition: border-color .15s, box-shadow .15s; }
+.pz-card:hover { border-color: color-mix(in oklab, var(--accent) 40%, var(--line)); }
+.pz-card.on { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent); }
+.pz-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px; border: 0; background: none; text-align: left; color: inherit; cursor: pointer; }
+.pz-sw { flex: none; display: grid; grid-template-columns: 1fr 1fr; width: 46px; height: 46px; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px rgb(0 0 0 / .08) inset; }
+.pz-sw b { display: block; }
+.pz-t { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pz-t small { font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+.pz-card.on .pz-t small { color: var(--accent); }
+.pz-t b { font-size: 15px; } .pz-t em { font-style: normal; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.pz-t input { font: 600 15px/1.2 var(--f-body); padding: 4px 8px; border-radius: 8px; }
+.pz-acts { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px; border-left: 1px solid var(--line-2); }
+.pz-new { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 14px; background: var(--surface-2); }
+.pz-row { display: flex; gap: 8px; } .pz-row input { flex: 1; min-width: 0; }
+.pbx-sw { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pbx-c { width: 28px; height: 28px; border-radius: 9px; border: 0; box-shadow: 0 0 0 1px rgb(0 0 0 / .1) inset; cursor: pointer; }
+.pbx-c.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }

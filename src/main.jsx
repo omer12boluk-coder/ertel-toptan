@@ -3,6 +3,7 @@ import { SaveDock } from './savedock.jsx';
 import { StoreDecor } from './decor.jsx';
 import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js';
 import { applyStyle } from './stylekit.js';
+import { applyLayout } from './dzpresets.js';
 import { RatePrompt } from './reviews.jsx';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -304,6 +305,7 @@ function useTheme() {
     if (pub && (L.logoTone === 'color' || L.logoTone === 'flat')) ensureLogoSvg(document, L.logoColor || lc.accent || S.brand.accent);
     if (lf) r.style.setProperty('--logo-f', lf); else r.style.removeProperty('--logo-f');
     applyStyle(r, pub ? L.style : null);
+    applyLayout(r, pub ? L : {}); // 5.11.2026 sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (Tasarım › Sayfa)
     // 3.11.2026 telefon alt menüsü görünümü (Tasarım › Renkler ve sayfa › Telefon alt menüsü); sadece mağazada
     const bn = pub ? (['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass') : 'classic';
     ['glass', 'dark', 'bar'].forEach((k) => r.classList.toggle('bn-' + k, bn === k));
@@ -317,7 +319,7 @@ function useTheme() {
     const effDark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
     r.classList.toggle('th-apple', !!pub && (L.site || 'apple') === 'apple' && !effDark); // varsayılan Apple açık (5.11.2026, kullanıcı onayı)
     document.title = seoTitle() || S.brand.appName;
-  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.width, L.edge, L.boxPat, L.bgFx, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {

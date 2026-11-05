@@ -12,6 +12,15 @@ import { ColorPick } from './shophome.jsx';
 export const FONTS = [
   { id: '', n: 'Sayfanın yazısı', g: 'Sade', fam: null },
   { id: 'inter', n: 'Inter', g: 'Sade', fam: 'Inter', w: [400, 700, 900] },
+  // 5.11.2026 Apple hissine yakın yeni yazı tipleri (hepsi Türkçe harfleri destekler)
+  { id: 'intert', n: 'Inter Tight', g: 'Apple gibi', fam: 'Inter Tight', w: [400, 600, 700, 800] },
+  { id: 'manrope', n: 'Manrope', g: 'Apple gibi', fam: 'Manrope', w: [400, 600, 700, 800] },
+  { id: 'jakarta', n: 'Plus Jakarta Sans', g: 'Apple gibi', fam: 'Plus Jakarta Sans', w: [400, 600, 700, 800] },
+  { id: 'geist', n: 'Geist', g: 'Apple gibi', fam: 'Geist', w: [400, 600, 700, 800] },
+  { id: 'dmsans', n: 'DM Sans', g: 'Apple gibi', fam: 'DM Sans', w: [400, 600, 700] },
+  { id: 'figtree', n: 'Figtree', g: 'Apple gibi', fam: 'Figtree', w: [400, 600, 700, 800] },
+  { id: 'outfit', n: 'Outfit', g: 'Apple gibi', fam: 'Outfit', w: [400, 600, 700] },
+  { id: 'sora', n: 'Sora', g: 'Apple gibi', fam: 'Sora', w: [400, 600, 700] },
   { id: 'montserrat', n: 'Montserrat', g: 'Sade', fam: 'Montserrat', w: [400, 700, 900] },
   { id: 'poppins', n: 'Poppins', g: 'Sade', fam: 'Poppins', w: [400, 700, 900] },
   { id: 'rubik', n: 'Rubik', g: 'Sade', fam: 'Rubik', w: [400, 700, 900] },

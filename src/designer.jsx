@@ -16,6 +16,7 @@ import {
 import { DeviceFrame, useSize, onDrag, winOf } from './dzframe.jsx';
 import { BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY, PALETTES, PACKS, PACK_BY, PACK_PARTS, FX_KINDS, activePack, contrast, bgTone, lookColors, PATTERNS, ORNS, patBg, ornBg, logoFilter, ensureLogoSvg } from './presets.js';
 import { STYLE_PRESETS, PRESET_BY, SHADOWS, BORDERS, HOVERS, TITLES, styleOut } from './stylekit.js';
+import { snapshot, applyPreset, sameAs, APPLE, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut } from './dzpresets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
 
@@ -146,6 +147,11 @@ export function ShopDesigner() {
   }
   const discard = () => setConfirm({ title: 'Değişiklikleri at', text: 'Yayınlanmamış tasarım değişiklikleri silinecek, mağazanın şu anki hâline dönülecek.', okLabel: 'At', tone: 'danger', onOk: () => { store.set({ designDraft: null }); hist.current = { list: [], redo: [], t: 0 }; setSel(null); } });
 
+  // 5.11.2026: paketler gelmeden önceki görünüm bir kez 'Paket 2 · Eski düzenim' olarak saklanır (tek tıkla geri dönülsün)
+  useEffect(() => {
+    if (Array.isArray(store.s.settings.dzPresets)) return;
+    savePresets([{ id: 'p' + Date.now().toString(36), name: 'Eski düzenim', note: 'Paketlerden önceki hâlin (5.11.2026): renkler, tema, stil, menüler aynen', at: Date.now(), data: snapshot(prepare(store.s.settings)) }], A);
+  }, []);
   const L = H.layout;
   const setL = (n) => set('shopHome.layout', n);
   const select = (kind, i, b) => {
@@ -419,19 +425,21 @@ export function ShopDesigner() {
   // tema stüdyosu tasarımda tarihten bağımsız önizlenir
   const pack = useMemo(() => { const lk = (peek?.path === 'look.pack' ? { ...d.look, pack: peek.v } : d.look) || {}; return lk.pack?.id ? activePack({ ...lk, pack: { ...lk.pack, from: '', to: '' } }) : null; }, [d.look, peek]);
   const E = { H, L, get, fxDrag, fxResize, imDrag, xDrag, xScale, penDown, tool: pen.on ? 'pen' : null, mobile, sel: mobile ? pick : sel, tapBlock, setSel, select, set, setL, toggleHide, removeBlock, addBlock, heroI, heroGo: heroGo.current, guide, pack, blockMenu: mobile ? null : blockMenu, Block: DzBlock, HeroTools: DzHeroTools };
-  const view = useMemo(() => withDefaults(peek ? setPath(d, peek.path, peek.v) : d), [d, peek]);
+  const view = useMemo(() => withDefaults(peek ? (peek.whole || setPath(d, peek.path, peek.v)) : d), [d, peek]);
   // değişen bölümler (Yayınla düğmesinin yanında)
   const changes = useMemo(() => {
     if (!dirty) return [];
     const out = new Set();
     for (const k of new Set([...Object.keys(d.shopHome || {}), ...Object.keys(baseObj.shopHome || {})])) if (JSON.stringify(d.shopHome?.[k]) !== JSON.stringify(baseObj.shopHome?.[k])) out.add(PATH_NAMES[k] || 'Tasarım');
     if (JSON.stringify(d.look?.pack) !== JSON.stringify(baseObj.look?.pack) || JSON.stringify(d.look?.myPacks) !== JSON.stringify(baseObj.look?.myPacks)) out.add('Tema Stüdyosu');
-    if (['shopAccent', 'shopPrice', 'bg', 'cardR', 'decor'].some((k) => JSON.stringify(d.look?.[k]) !== JSON.stringify(baseObj.look?.[k]))) out.add('Sayfa renkleri');
+    if (['shopAccent', 'shopPrice', 'bg', 'cardR', 'decor', 'site', 'glass', 'header', 'botnav', 'motion', 'width', 'edge', 'boxPat', 'bgFx', 'style'].some((k) => JSON.stringify(d.look?.[k]) !== JSON.stringify(baseObj.look?.[k]))) out.add('Sayfa renkleri');
     if (JSON.stringify(d.brandLogos) !== JSON.stringify(baseObj.brandLogos)) out.add('Marka logoları');
     return [...out];
   }, [d, baseObj, dirty]);
 
-  const P = { select, measure, get, sel, d, H, set, setSel, heroI, goSlide, removeBlock, dupBlock, setPeek, L, setL, toggleHide, reveal, pack, openVers: () => setVers(true), pen, setPen, addEl, updEl, removeEl, dupEl, orderEl };
+  // 5.11.2026 tasarım paketleri: bütün görünümü tek adımda değiştir (geri alınabilir)
+  const setAll = (next, n) => { const cur = store.s.designDraft || prepare(store.s.settings); hist.current.list.push({ d: cur, n }); if (hist.current.list.length > 80) hist.current.list.shift(); hist.current.redo = []; hist.current.t = 0; setPeek(null); store.set({ designDraft: next }); };
+  const P = { setAll, select, measure, get, sel, d, H, set, setSel, heroI, goSlide, removeBlock, dupBlock, setPeek, L, setL, toggleHide, reveal, pack, openVers: () => setVers(true), pen, setPen, addEl, updEl, removeEl, dupEl, orderEl };
 
   if (mobile) return (
     <div className={'page dz-page dz-mobile' + (sel ? ' has-panel' : '') + (pick ? ' has-pick' : '')}>
@@ -541,7 +549,8 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   const th = dash ? 'dark' : (!view.brand?.theme || view.brand.theme === 'auto' ? 'light' : view.brand.theme);
   const hdr = L.header || 'search';
   const bn = ['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass';
-  const rootClass = { cls: [...(so.cls || []), site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', L.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts };
+  const lo = layoutOut(L); Object.assign(vars, lo.vars);
+  const rootClass = { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', L.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on'], fonts: so.fonts };
   const inner = (kind) => (
     <div className={'shell public tab-anasayfa dz-fshell' + (pack?.badge?.text ? ' pk-on' : '')}>
       <HeaderPreview S={view} kind={hdr} />
@@ -573,6 +582,7 @@ function Layers({ get, H, L, setL, sel, setSel, toggleHide, reveal, addBlock, bl
   return (
     <aside className="dz2-layers" aria-label="Katmanlar">
       <div className="dz2-lh">Sayfa</div>
+      <button className={'dz2-ly page' + (sel?.kind === 'presets' ? ' on' : '')} onClick={() => setSel({ kind: 'presets' })}><Icon n="box" s={16} /><span className="dz2-lyn">Tasarım paketleri</span></button>
       <button className={'dz2-ly page' + (!sel ? ' on' : '')} onClick={() => setSel(null)}><Icon n="palette" s={16} /><span className="dz2-lyn">Renkler ve sayfa</span></button>
       <button className={'dz2-ly page' + (sel?.kind === 'style' ? ' on' : '')} onClick={() => setSel({ kind: 'style' })}><Icon n="brush" s={16} /><span className="dz2-lyn">Stil Stüdyosu</span></button>
       <button className={'dz2-ly page' + (sel?.kind === 'studio' ? ' on' : '')} onClick={() => setSel({ kind: 'studio' })}><Icon n="sparkle" s={16} /><span className="dz2-lyn">Tema Stüdyosu</span></button>
@@ -607,6 +617,7 @@ function Inspector(P) {
   const S = (k, v) => set('shopHome.' + k, v);
   let title = '', sub = '', body = null, back = null;
   if (!sel) { title = 'Renkler ve sayfa'; sub = 'Hiçbir şey seçili değilken burası açık'; body = <PagePanel {...P} />; }
+  else if (sel.kind === 'presets') { title = 'Tasarım paketleri'; sub = 'Bütün görünüm tek tıkla'; body = <PresetPanel {...P} />; }
   else if (sel.kind === 'studio') { title = 'Tema Stüdyosu'; sub = 'Kampanya ve sezon görünümü'; body = <StudioPanel {...P} />; }
   else if (sel.kind === 'style') { title = 'Stil Stüdyosu'; sub = 'Yazı tipleri, köşeler, hazır stiller'; body = <StylePanel {...P} />; }
   else if (sel.kind === 'brand') {
@@ -1040,6 +1051,7 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       {C('shopPrice', 'price', 'Fiyat rengi', '#2f55b0')}
       {C('bg', 'bg', 'Sayfa zemini', '#f3f5f9')}
     </div>
+    <LayoutFields L={L} set={set} />
     <Disclose label="Hazır renk paletleri" value={cur ? cur.n : null}>
       <p className="fine">Ana renk, fiyat rengi ve sayfa zemini birlikte değişir. Üzerine gelince sayfada denenir.</p>
       <span className="dz2-pals">{PALETTES.map((p) => (
@@ -1081,6 +1093,61 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <button className="dz2-tile" onClick={openVers}><Icon n="clock" s={20} /><span><b>Sürüm geçmişi</b><small>Önceki yayınlara dön</small></span></button>
     </div>
     <p className="fine">Sayfada bir şeye tıklayınca bu panel tam o şeyin ayarlarını açar: banner'daki açıklamaya tıklarsanız açıklamanın rengi, butona tıklarsanız buton.</p>
+  </>;
+}
+
+// ---- 5.11.2026 Sayfa düzeni: genişlik, kenar boşluğu, köşeler, kutu deseni, zemin ışığı -----------------------------------
+function LayoutFields({ L, set }) {
+  const st = L.style || {};
+  const corner = CORNERS.find(([, , v]) => Object.entries(v).every(([k, x]) => st[k] === x));
+  const seg = (opts, cur, on) => <span className="seg sw sm">{opts.map(([k, l]) => <button key={k || 'd'} type="button" className={(cur || '') === k ? 'on' : ''} onClick={() => on(k)}>{l}</button>)}</span>;
+  return <Disclose label="Sayfa düzeni" value={<small>{WIDTHS.find((w) => w[0] === (L.width || ''))?.[1]} · {corner ? corner[1] : 'özel köşe'}</small>} defOpen>
+    <Field label="Sayfa genişliği (bilgisayar)" hint="Sayfanın enine ne kadar yayılacağı. Telefonda hep tam ekran.">{seg(WIDTHS, L.width, (k) => set('look.width', k))}</Field>
+    <Field label="Kenar boşluğu (bilgisayar)"><span className="she-scale"><input type="range" min="0" max="80" step="2" value={L.edge ?? 16} onChange={(e) => set('look.edge', Number(e.target.value))} /><code>{L.edge == null ? 'varsayılan' : L.edge + ' px'}</code>{L.edge != null && <button type="button" className="linkish" onClick={() => set('look.edge', undefined)}>sıfırla</button>}</span></Field>
+    <Field label="Köşeler" hint="Kartlar, kutular, büyük reklam ve düğmeler birlikte. Tek tek ayar: Stil Stüdyosu.">{seg(CORNERS.map(([k, l]) => [k, l]), corner?.[0] || '-', (k) => set('look.style', { ...st, ...CORNERS.find((c) => c[0] === k)[2] }))}</Field>
+    <Field label="Reklam kutularının deseni" hint="Bütün kutular. Bir kutuya ayrı desen: kutuya tıklayın.">{seg(BOX_PATS, L.boxPat, (k) => set('look.boxPat', k))}</Field>
+    <Field label="Sayfa zemini ışığı">{seg(BG_FX, L.bgFx, (k) => set('look.bgFx', k))}</Field>
+  </Disclose>;
+}
+
+// ---- 5.11.2026 Tasarım paketleri ---------------------------------------------------------------------------------------------
+function swOf(data) { const L = data.look || {}; return [L.bg || '#f3f5f9', L.shopAccent || data.brand?.accent || '#2f55b0', data.promos?.[0]?.color || '#0f172a', data.promos?.[1]?.color || L.shopPrice || '#c2410c']; }
+function savePresets(list, A) {
+  const s0 = store.s.settings; const dd = store.s.designDraft;
+  store.set({ settings: { ...s0, dzPresets: list }, ...(dd ? { designDraft: { ...dd, dzPresets: list } } : {}) });
+  queueSave('settings', () => A.saveSettings(store.s.settings));
+}
+function PresetPanel({ d, setAll, setPeek }) {
+  const A = useStore((s) => s.api); const saved = useStore((s) => s.settings.dzPresets) || [];
+  const [name, setName] = useState('');
+  const [edit, setEdit] = useState(null); const [confirm, setConfirm] = useState(null);
+  const all = [APPLE, ...saved];
+  const use = (p) => { setAll(applyPreset(d, p.data), 'Paket: ' + p.name); toast(p.name + ' yüklendi. Beğenirseniz Yayınla; vazgeçmek için Geri al (Ctrl Z).'); };
+  const add = () => { const n = name.trim() || 'Paketim ' + (saved.length + 1); savePresets([...saved, { id: 'p' + Date.now().toString(36), name: n, at: Date.now(), data: snapshot(d) }], A); setName(''); toast('“' + n + '” paketi kaydedildi'); };
+  const upd = (id, f) => savePresets(saved.map((p) => (p.id === id ? { ...p, ...f } : p)), A);
+  return <>
+    <p className="fine">Paket = sayfanın bütün görünümü: renkler, tema, stil, yazı tipleri, köşeler, genişlik, üst ve alt menü, cam, geçişler, kart ve reklam renkleri. Ürünler, reklam yazıları ve resimler değişmez. Pakete basınca taslağa yüklenir; mağazada görünmesi için <b>Yayınla</b>.</p>
+    <div className="pz-list">{all.map((p, i) => {
+      const on = sameAs(d, p.data);
+      return <div key={p.id} className={'pz-card' + (on ? ' on' : '')}>
+        <button type="button" className="pz-main" onClick={() => use(p)} onMouseEnter={() => setPeek({ whole: applyPreset(d, p.data) })} onMouseLeave={() => setPeek(null)}>
+          <i className="pz-sw">{(p.sw || swOf(p.data)).map((c, j) => <b key={j} style={{ background: c }} />)}</i>
+          <span className="pz-t"><small>Paket {i + 1}{p.builtin ? ' · öneri' : ''}{on ? ' · şu an bu' : ''}</small>
+            {edit === p.id ? <input autoFocus defaultValue={p.name} onClick={(e) => e.stopPropagation()} onBlur={(e) => { upd(p.id, { name: e.target.value.trim() || p.name }); setEdit(null); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} /> : <b>{p.name}</b>}
+            {p.note && <em>{p.note}</em>}</span>
+        </button>
+        {!p.builtin && <span className="pz-acts">
+          <button type="button" className="icon-btn sm" title="Adını değiştir" onClick={() => setEdit(p.id)}><Icon n="edit" s={15} /></button>
+          <button type="button" className="icon-btn sm" title="Şu anki görünümü bu pakete kaydet" onClick={() => setConfirm({ title: 'Paketi güncelle', text: '“' + p.name + '” paketi şu anki görünümle değiştirilecek.', okLabel: 'Güncelle', onOk: () => { upd(p.id, { data: snapshot(d), at: Date.now() }); toast('Paket güncellendi'); } })}><Icon n="check" s={15} /></button>
+          <button type="button" className="icon-btn sm" title="Sil" onClick={() => setConfirm({ title: 'Paketi sil', text: '“' + p.name + '” silinecek. Mağazanın şu anki görünümü değişmez.', okLabel: 'Sil', tone: 'danger', onOk: () => savePresets(saved.filter((x) => x.id !== p.id), A) })}><Icon n="trash" s={15} /></button>
+        </span>}
+      </div>;
+    })}</div>
+    <div className="pz-new">
+      <span className="field-l">Şu anki görünümü paket olarak kaydet</span>
+      <span className="pz-row"><input value={name} onChange={(e) => setName(e.target.value)} placeholder={'Paketim ' + (saved.length + 1)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} /><button type="button" className="btn sm" onClick={add}><Icon n="plus" s={15} />Kaydet</button></span>
+    </div>
+    {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
   </>;
 }
 
