@@ -311,7 +311,7 @@ function useTheme() {
     if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t);
     // 5.11.2026 site teması (look.site): 'apple' = Apple açık gündüz görünümü (sadece mağaza, sadece gündüz; gece modunda eski koyu tema)
     const effDark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-    r.classList.toggle('th-apple', !!pub && L.site === 'apple' && !effDark);
+    r.classList.toggle('th-apple', !!pub && (L.site || 'apple') === 'apple' && !effDark); // varsayılan Apple açık (5.11.2026, kullanıcı onayı)
     document.title = seoTitle() || S.brand.appName;
   }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
