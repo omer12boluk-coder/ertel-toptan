@@ -186,6 +186,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - **6.11.2026:** `look.addColor` gray (varsayılan) | dark | accent (eski) | #hex → html `addc-*`, `--add-bg/fg/tx` (kart + ürün sayfası Sepete ekle + ürün adı vurgusu). `look.pillTone` 'dark' → `pill-dark` (siyah hap). Buzlu cam (frost) KALDIRILDI. Logo ortalı menü: bilgisayarda solda ses+gece, sağda arama (logoya doğru uzar)+bildirim, Markalar/Setler, keskin açılır menü. Telefon arama margin animasyonuyla simgeden uzar/kapanır (cam şerit `!important` left kullanıyor). Sesler baştan (yumuşak sinüs + alçak geçiren), `setupSfxTaps` mağazada dokunma sesleri. Hesabım: ses anahtarı bilgisayarda yok, side-tight titremesi düzeldi.
 
+- **6.11.2026 Paket 0 (dal `paket0`, önizleme https://erteltoptan--paket0-svdbr75h.web.app, henüz main'de DEĞİL):** `src/p0home.jsx` + `p0keys.js` bölümler `p0:hero|find|cats|pick|sets|brands|trust` (layoutOf bunları kendiliğinden EKLEMEZ), `dzpresets.js` `P0` (`layoutFn 'p0'` → `p0Layout`: eski bölümler gizlenir), `look.porc` (html `porc`), `look.prodHub` (Ürünler açılışı `ProdHub`, catalog.jsx `hubOff`). Paket listesi artık 0'dan numaralı.
+
 ## 9. Önemli kararlar (neden böyle)
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.
