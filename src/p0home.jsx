@@ -9,7 +9,8 @@ import { BG_BY } from './presets.js';
 import { feat } from './extras.jsx';
 import { liveSets, setView, openSet, SetCover } from './sets.jsx';
 import { useBrandList, openBrand } from './brandsets.jsx';
-import { ShopImg, CtaButton, isProdImg } from './shophome.jsx';
+import { ShopImg, CtaButton, isProdImg, PCard } from './shophome.jsx';
+import { loadPhones, mergePhones, searchPhones, short, useStencils, matchStencils } from './kalipfind.jsx';
 import { useTree, useVisibleProducts } from './catalog.jsx';
 
 export { P0_KEYS } from './p0keys.js';
@@ -55,24 +56,76 @@ export function P0Hero({ slides, open }) {
   );
 }
 
-// ---- 2 · Hızlı bulucu: arama + telefon modeli (kalıp bulucu) + sık arananlar
-const HOT = ['JCID', 'Face ID', 'Havya', 'Mikroskop', 'Programlayıcı', 'Ekran ayırıcı', 'Batarya'];
-export function P0Finder({ S }) {
-  const [q, setQ] = useState('');
-  const catalog = useStore((s) => s.catalog);
-  const chips = useMemo(() => {
-    const own = (S.shopHome?.p0hot || []).filter(Boolean);
-    if (own.length) return own;
-    return HOT.filter((t) => { const n = norm(t); return catalog.some((p) => p._s?.includes(n)); }).slice(0, 5);
-  }, [catalog, S.shopHome?.p0hot]);
-  const find = (t) => { const v = (t ?? q).trim(); if (!v) return; store.set({ catalogGo: { q: v } }); go('katalog'); };
+// ---- 2 · Hızlı bulucu (6.11.2026 (2)): telefon modelini yaz → o modele uyan kalıplar ve parçalar hemen burada çıkar;
+// altında en çok ürünü olan kategori ve markalara hızlı geçiş. Ürün araması üst menüde (burada ikinci arama kutusu yok).
+function useNameHits(sel) {
+  const vis = useVisibleProducts(false);
+  return useMemo(() => {
+    if (!sel?.n) return [];
+    const w = norm(sel.n).split(/\s+/).filter(Boolean); const tail = w.slice(1).join(' '); // "apple iphone 15 pro" → "iphone 15 pro"
+    const keys = [w.join(' '), tail].filter((x) => x.length >= 5);
+    // ad tam tutmalı (iphone 15 ≠ iphone 15 pro): ardından harf/rakam gelmesin
+    const rx = keys.map((k) => new RegExp('(^|[^a-z0-9])' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![a-z0-9])'));
+    return vis.filter((p) => sellable(p) && rx.some((r) => r.test(norm(p.n)))).sort((a, b) => (b.s > 0) - (a.s > 0)).slice(0, 12);
+  }, [sel, vis]);
+}
+function PhoneResults({ sel, onProduct, onClear }) {
+  const stencils = useStencils();
+  const st = useMemo(() => matchStencils(stencils, sel), [stencils, sel]);
+  const parts = useNameHits(sel);
+  const kal = [...st.single, ...st.sets].map((x) => x.p);
+  const ids = new Set(kal.map((p) => p.id));
+  const list = [...kal, ...parts.filter((p) => !ids.has(p.id))].slice(0, 12);
+  const toKalip = () => { try { history.replaceState(history.state, '', '/magaza/kalip?m=' + encodeURIComponent(sel.n)); } catch {} go('kalip'); };
   return (
-    <section className="p0-find rv" aria-label="Ürün bul">
-      <form className="p0-find-row" onSubmit={(e) => { e.preventDefault(); find(); }}>
-        <label className="p0-find-q"><Icon n="search" s={20} /><input value={q} onChange={(e) => setQ(e.target.value)} type="search" enterKeyHint="search" placeholder="Ürün, marka ya da stok kodu…" aria-label="Ürün ara" />{q && <button type="submit" className="p0-find-go" aria-label="Ara"><Icon n="back" s={16} className="flip" /></button>}</label>
-        {S.kalip?.on !== false && <button type="button" className="p0-find-k" onClick={() => go('kalip')}><Icon n="grid" s={18} /><span><b>Telefon modeline göre bul</b><small>Kalıp bulucu</small></span><Icon n="back" s={15} className="flip" /></button>}
-      </form>
-      {chips.length > 0 && <div className="p0-hot"><small>Sık arananlar</small>{chips.map((t) => <button key={t} type="button" onClick={() => find(t)}>{t}</button>)}</div>}
+    <div className="p0-pr" key={sel.n}>
+      <div className="p0-pr-h">
+        <span className="p0-pr-ic"><Icon n="mobile" s={20} /></span>
+        <span className="p0-pr-t"><b>{sel.n}</b><small>{short(sel.c) || sel.c}{kal.length ? ' · ' + kal.length + ' uygun kalıp' : ''}{parts.length ? ' · ' + parts.length + ' parça' : ''}</small></span>
+        <button type="button" className="p0-more" onClick={toKalip}>Kalıp bulucuda aç<Icon n="back" s={14} className="flip" /></button>
+        <button type="button" className="icon-btn sm" onClick={onClear} aria-label="Kapat"><Icon n="x" s={16} /></button>
+      </div>
+      {list.length ? <div className="p0-pr-rail">{list.map((p, i) => <PCard key={p.id} p={p} i={i} isNew={p.nw} onOpen={() => onProduct(p)} />)}</div>
+        : <p className="p0-pr-none">Bu modele özel ürün şu an katalogda yok. {store.s.settings.shop?.whatsapp ? 'WhatsApp’tan sorun, hemen bakalım.' : ''}</p>}
+    </div>
+  );
+}
+export function P0Finder({ S, onProduct }) {
+  const [base, setBase] = useState(null);
+  const phones = useMemo(() => base && mergePhones(base, S.kalip?.phones), [base, S.kalip?.phones]);
+  const [q, setQ] = useState(''); const [open, setOpen] = useState(false); const [hi, setHi] = useState(0); const [sel, setSel] = useState(null);
+  const inp = useRef(null);
+  const load = () => { if (!base) loadPhones().then(setBase).catch(() => {}); };
+  const sugg = useMemo(() => (phones && open && q.trim().length >= 2 ? searchPhones(phones, q, 7) : []), [phones, q, open]);
+  const pick = (ph) => { setSel(ph); setQ(ph.n); setOpen(false); inp.current?.blur(); };
+  const key = (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, sugg.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (sugg[hi]) pick(sugg[hi]); }
+    else if (e.key === 'Escape') setOpen(false);
+  };
+  const tiles = useCatTiles(); const brands = useBrandList();
+  const quick = [...tiles.slice(0, 4).map((c) => ({ k: 'c' + c.id, t: c.name, go: () => openCat(c.id) })), ...brands.slice(0, 4).map((b) => ({ k: 'b' + b.n, t: b.n, logo: b.logo, go: () => openBrand(b.n) }))];
+  const ex = ['iPhone 13', 'Galaxy A52', 'Redmi Note 10 Pro'];
+  return (
+    <section className={'p0-find rv' + (sel ? ' has-sel' : '')} aria-label="Telefon modeline göre bul">
+      <div className="p0-find-top">
+        <div className="p0-find-l"><span className="p0-eye">Hızlı bulucu</span><b>Telefon modelini yaz, uyan kalıp ve parçaları gösterelim</b></div>
+        <div className={'p0-find-q' + (sugg.length ? ' open' : '')}>
+          <Icon n="mobile" s={20} />
+          <input ref={inp} value={q} type="search" enterKeyHint="search" autoComplete="off" placeholder="Örn. iPhone 15 Pro, Galaxy A52…" aria-label="Telefon modeli"
+            onFocus={() => { load(); setOpen(true); }} onChange={(e) => { load(); setQ(e.target.value); setOpen(true); setHi(0); if (sel) setSel(null); }} onBlur={() => setTimeout(() => setOpen(false), 160)} onKeyDown={key} />
+          {q && <button type="button" className="p0-find-x" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(''); setSel(null); inp.current?.focus(); }} aria-label="Temizle"><Icon n="x" s={14} /></button>}
+          {sugg.length > 0 && <div className="p0-sugg" role="listbox">{sugg.map((p, i) => (
+            <button type="button" key={p.n} role="option" aria-selected={i === hi} className={i === hi ? 'on' : ''} onMouseEnter={() => setHi(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(p)}>
+              <Icon n="mobile" s={16} /><span><b>{p.n}</b><small>{short(p.c) || p.c}</small></span></button>))}</div>}
+        </div>
+      </div>
+      {!sel && <div className="p0-hot">
+        {!q && <><small>Örnek</small>{ex.map((x) => <button key={x} type="button" className="ex" onMouseDown={(e) => e.preventDefault()} onClick={() => { load(); setQ(x); setOpen(true); setHi(0); inp.current?.focus(); }}>{x}</button>)}<i className="p0-hot-sep" aria-hidden="true" /></>}
+        <small>Hızlı geçiş</small>{quick.map((x) => <button key={x.k} type="button" onClick={x.go}>{x.logo ? <ShopImg v={x.logo} className="logo" alt={x.t} /> : x.t}</button>)}
+      </div>}
+      {sel && <PhoneResults sel={sel} onProduct={onProduct} onClear={() => { setSel(null); setQ(''); }} />}
     </section>
   );
 }

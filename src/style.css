@@ -7825,3 +7825,40 @@ html.porc:not([data-theme="dark"]) body { background: radial-gradient(90% 60% at
   .p0-pan-art.prod, .p0-pan:not(.big) .p0-pan-art.prod { max-height: 36%; border-radius: 20px; }
   .p0-pan.big p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
+/* ---- Hızlı bulucu (6.11.2026 (2)): telefon modeli → sonuçlar burada ---- */
+.p0-find { position: relative; z-index: 3; gap: 16px; padding: 22px 22px 18px; }
+.p0-find-top { display: flex; align-items: center; gap: 24px; }
+.p0-find-l { flex: 0 1 340px; display: flex; flex-direction: column; gap: 6px; padding-left: 6px; }
+.p0-find-l b { font: 750 20px/1.2 var(--f-display); letter-spacing: -.02em; color: var(--fg); }
+.p0-find-q { position: relative; flex: 1; }
+.p0-find-q input { font-size: 17px; }
+.p0-find-x { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: color-mix(in oklab, var(--fg) 8%, transparent); color: var(--fg); cursor: pointer; margin-right: 6px; }
+.p0-sugg { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 20; padding: 6px; border-radius: 22px; background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 24px 50px -20px rgb(16 24 40 / .35); animation: hdInC .14s ease-out both; }
+.p0-sugg button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 0; border-radius: 16px; background: none; color: var(--fg); text-align: left; cursor: pointer; }
+.p0-sugg button.on { background: color-mix(in oklab, var(--fg) 6%, transparent); }
+.p0-sugg span { display: flex; flex-direction: column; gap: 2px; min-width: 0; } .p0-sugg b { font: 600 15px/1.2 var(--f-body); } .p0-sugg small { font-size: 12.5px; color: var(--muted); }
+.p0-sugg .ic { color: var(--muted); flex: none; }
+.p0-hot button.ex { border-style: dashed; }
+.p0-hot button .logo { height: 18px; width: auto; max-width: 80px; object-fit: contain; display: block; filter: grayscale(1); opacity: .75; }
+.p0-hot-sep { width: 1px; height: 20px; background: var(--line); margin: 0 6px; flex: none; }
+.p0-pr { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; animation: p0In .35s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes p0In { from { opacity: 0; transform: translateY(8px); } }
+.p0-pr-h { display: flex; align-items: center; gap: 14px; padding: 0 4px; }
+.p0-pr-ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 14px; background: #16181d; color: #fff; }
+html[data-theme="dark"] .p0-pr-ic { background: #f5f5f7; color: #111; }
+.p0-pr-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .p0-pr-t b { font: 750 19px/1.15 var(--f-display); letter-spacing: -.015em; } .p0-pr-t small { font-size: 13px; color: var(--muted); }
+.p0-pr-rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); gap: 12px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 6px; scroll-snap-type: x mandatory; }
+.p0-pr-rail::-webkit-scrollbar { display: none; }
+.p0-pr-rail > .sh-card { scroll-snap-align: start; max-width: 260px; }
+.p0-pr-none { margin: 0; padding: 18px; border-radius: 18px; background: color-mix(in oklab, var(--fg) 4%, transparent); color: var(--muted); font-size: 14px; }
+@media (max-width: 899px) {
+  .p0-find { padding: 16px 14px 14px; }
+  .p0-find-top { flex-direction: column; align-items: stretch; gap: 12px; }
+  .p0-find-l { flex: none; padding: 0 4px; } .p0-find-l b { font-size: 17px; }
+  .p0-pr-h .p0-more { display: none; }
+  .p0-pr-rail { grid-auto-columns: 46%; margin: 0 -14px; padding: 2px 14px 6px; }
+  .p0-hot-sep { display: none; }
+}
+.p0-find { grid-template-columns: minmax(0, 1fr); }
+.p0-pr, .p0-pr-rail { min-width: 0; }
+.p0-find-q input, .p0-find-q input:focus, .p0-find-q input:focus-visible { outline: 0 !important; box-shadow: none !important; border: 0 !important; background: none !important; padding: 0 !important; }
