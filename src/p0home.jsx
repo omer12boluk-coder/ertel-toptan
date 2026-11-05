@@ -25,7 +25,8 @@ function Panel({ s, big, open, on = true }) {
   const cover = s.img && !isProdImg(s.img) && ['cover', 'full', 'photo'].includes(s.layout);
   return (
     <article className={'p0-pan th-' + (s.theme || 'night') + (big ? ' big' : '') + (lt ? ' lt' : '') + (bgp ? ' bgp' : '') + (cover ? ' cover' : '') + (on ? ' on' : '')} style={bgp ? { '--bgp': bgp.bg } : undefined}
-      onClick={s.link ? open(s.link) : undefined} role={s.link ? 'link' : undefined}>
+      // 6.11.2026: düğmesi olan büyük reklamda sadece düğme tıklanır (her yer tıklanınca düğme boşa çıkıyordu); düğmesiz küçük kutunun tamamı link
+      onClick={s.link && !(big && s.cta) ? open(s.link) : undefined} role={s.link && !(big && s.cta) ? 'link' : undefined}>
       {cover && <ShopImg v={s.img} className="p0-pan-bg" />}
       <div className="p0-pan-t">
         {s.tag && <span className="p0-eye">{s.tag}</span>}

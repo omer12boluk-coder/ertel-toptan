@@ -7869,3 +7869,4 @@ html[data-theme="dark"] .p0-pr-ic { background: #f5f5f7; color: #111; }
 .pv-badge small { opacity: .6; }
 .pv-badge button { height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: #fff; color: #111; font: 600 12px/1 var(--f-body); cursor: pointer; }
 @media (min-width: 900px) { .pv-badge { bottom: 16px; } }
+.p0-pan.big:has(.p0-pan-cta) { cursor: default; }
