@@ -3,6 +3,8 @@ name: Banner resimleri (geçici)
 on:
   push:
     branches: [banner-resim]
+permissions:
+  contents: write
 jobs:
   get:
     runs-on: ubuntu-latest
@@ -17,7 +19,9 @@ jobs:
             curl -sfL --max-time 40 -o "out/$n.$ext" "$u" || echo "::notice::yok $n $u"
           done < tools/banner-list.txt
           ls -la out | head -100
-      - uses: actions/upload-artifact@v4
-        with:
-          name: resimler
-          path: out
+      - name: ayri dala koy
+        run: |
+          cd out && git init -q && git checkout -q -b banner-resim-out
+          git config user.name bot && git config user.email bot@users.noreply.github.com
+          git add -A && git commit -qm resimler
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" banner-resim-out
