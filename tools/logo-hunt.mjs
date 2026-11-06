@@ -25,6 +25,25 @@ for (const [b, keys] of Object.entries(BR)) {
   if (hit.length) note('Koleksiyon ' + b, hit.slice(0, 4).map((c) => c.title + ' → ' + c.image.src).join(' | '));
   for (const c of hit.slice(0, 3)) await save(b, c.image.src.startsWith('//') ? 'https:' + c.image.src : c.image.src, 'dfx');
 }
+// 1b) lcd-phone.com (PrestaShop) marka listesi: /en/brands → /img/m/<id>.jpg
+for (const host of ['https://prod.lcd-phone.com', 'https://www.lcd-phone.com']) {
+  try {
+    const r = await get(host + '/en/brands'); const h = await r.text();
+    const brands = new Map();
+    for (const m of h.matchAll(/href="([^"]*\/brand\/(\d+)-([a-z0-9-]+))"/gi)) brands.set(m[2], m[3]);
+    const imgs = [...h.matchAll(/<img[^>]+src="([^"]*\/img\/m\/[^"]+)"/gi)].map((m) => m[1]);
+    note('lcd-phone ' + host, `${r.status} marka ${brands.size} · resim ${imgs.length} · örnek ${imgs.slice(0, 3).join(' | ')}`);
+    for (const [b, keys] of Object.entries(BR)) {
+      for (const [id, sl] of brands) { const t = sl.replace(/-/g, ' '); if (!keys.some((k) => t === k || t.replace(/ /g, '') === k.replace(/[ -]/g, ''))) continue;
+        const own = imgs.filter((u) => new RegExp('/img/m/' + id + '[-./]').test(u));
+        note('lcd ' + b, id + ' ' + sl + ' ' + own.join(' | '));
+        for (const u of own.length ? own : [host + '/img/m/' + id + '.jpg']) await save(b, new URL(u, host).href, 'lcd');
+        await save(b, host + '/img/m/' + id + '.jpg', 'lcdo');
+      }
+    }
+    if (brands.size) break;
+  } catch (e) { note('lcd-phone', 'hata ' + e.message); }
+}
 // 2) resmi siteler: logo içeren img/svg
 for (const [b, u] of Object.entries(SITES)) {
   try {
