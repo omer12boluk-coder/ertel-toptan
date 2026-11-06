@@ -9000,9 +9000,14 @@ html[data-theme="dark"] .cd-sec .cd-tile .cd-tile-im .thumb img { background: tr
 .cd-big-im .thumb img, .cd-si .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .cd-big-im .thumb .thumb-ph, .cd-si .thumb .thumb-ph { position: absolute; inset: 0; display: grid; place-items: center; }
 @media (min-width: 900px) { .cd-big-im { place-items: center; } }
+/* 7.11.2026 (4) telefonda 'Haftanın ürünü' resmi görünmüyordu (kutu 0×0: flex:1 + min-height 0 + ortalı sütun) */
+@media (max-width: 899px) {
+  .cd-big-im { flex: none; width: 100%; min-height: 0; place-items: center; }
+  .cd-big-im .thumb { width: min(300px, 80%) !important; height: auto !important; aspect-ratio: 1; max-height: none; }
+}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '93656d4ebe';</script>
+<script>window.__BUILD = 'd82f36257e';</script>
 </head>
 <body>
 <div id="root"></div>
