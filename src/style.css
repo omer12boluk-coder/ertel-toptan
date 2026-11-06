@@ -8223,3 +8223,16 @@ html:not(.addc-gray):not(.addc-dark):not(.addc-hex) .shell.public .abx .btn.add 
 .pl-v-st.ok { color: #1f6b47; } .pl-v-st.bad { color: #b3261e; }
 .pl-v-f { display: flex; align-items: center; gap: 6px; margin: 14px 0 0; font-size: 12px; color: var(--muted); }
 html[data-theme="dark"] .pl-vcard { box-shadow: none; }
+/* ödeme linki demo kart (?demo=1) */
+.pl-demo { width: min(100%, 500px); }
+.pl-demo-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: color-mix(in oklab, #c97a3a 14%, transparent); color: #9a5a22; font-size: 12px; font-weight: 650; margin-bottom: 6px; }
+html[data-theme="dark"] .pl-demo-tag { color: #e6a466; }
+.pl-v-ic.ok { background: color-mix(in oklab, #1f6b47 14%, transparent); color: #1f6b47; }
+.pl-cardw { width: 100%; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.pl-cardw .cardf-demo { display: none; }
+.pl-3d { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface-2, var(--bg)); }
+.pl-3d-h { width: 100%; display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.pl-3d-h b { font-size: 16px; } .pl-3d-h span { font-size: 12px; font-weight: 700; color: #1f6b47; letter-spacing: .04em; }
+.pl-3d p { margin: 0; } .pl-3d small { color: var(--muted); }
+.pl-3d-in { width: 180px; height: 52px; text-align: center; font-size: 24px; letter-spacing: .4em; font-variant-numeric: tabular-nums; border-radius: 14px; }
+.pl-3d-n { margin: 10px 0 0; }
