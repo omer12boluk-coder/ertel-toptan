@@ -73,6 +73,23 @@ function PriceExtras({ v, cur, S: So, role: ro }) {
     {inc != null && <span className="vat-inc num">KDV dahil {fmt(inc, cur)}{tl(inc) && cur !== 'TRY' ? ' · ' + tl(inc) : ''}</span>}
   </>;
 }
+// 6.11.2026 ürün sayfası 'Toplam': adet değişince rakam yumuşakça sayarak gider (birden sıçramıyordu), altında fiyattaki gibi
+// TL karşılığı ve soluk KDV dahil satırı (PriceExtras — aynı ayarlar, aynı yazı boyu/silikliği)
+function useCountUp(target, ms = 420) {
+  const [v, setV] = useState(target); const cur = useRef(target); const raf = useRef(0);
+  useEffect(() => {
+    const from = cur.current, to = target; if (from === to) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { cur.current = to; setV(to); return; }
+    const t0 = performance.now(); cancelAnimationFrame(raf.current);
+    const step = (t) => { const k = Math.min(1, (t - t0) / ms); const e = 1 - Math.pow(1 - k, 3); const x = from + (to - from) * e; cur.current = x; setV(x); if (k < 1) raf.current = requestAnimationFrame(step); else { cur.current = to; setV(to); } };
+    raf.current = requestAnimationFrame(step); return () => cancelAnimationFrame(raf.current);
+  }, [target, ms]);
+  return v;
+}
+function BuyTotal({ v, cur }) {
+  const x0 = useCountUp(v); const x = Number.isInteger(v) ? Math.round(x0) : Math.round(x0 * 100) / 100; // tam sayı fiyatta ara kareler kuruşsuz
+  return <span className="pbuy-tot"><small>Toplam</small><b className="num">{fmt(x, cur)}</b><PriceExtras v={x} cur={cur} /></span>;
+}
 function PlusVat({ S: So, role: ro }) { const S0 = useStore((s) => s.settings); const r0 = useStore((s) => s.user?.role); const S = So || S0; return priceShow(S, ro || r0).plus && Number(S.pricing.vatPct) > 0 ? <em className="plusvat">+KDV</em> : null; }
 
 // S / role verilirse (Ayarlar önizlemesi) o ayarlar ve o müşteri tipiyle çizilir
@@ -892,7 +909,7 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
           <div className="qty-line">
             <span>Adet</span>
             <Stepper value={qty} min={1} onChange={setQ} onRemove={cart[p.id] ? () => { setQty(p.id, 0); toast('Sepetten çıkarıldı'); } : undefined} />
-            {pr.mine != null && <span className="pbuy-tot"><small>Toplam</small><b className="num">{fmt(pr.mine * qty, p.cur)}</b></span>}
+            {pr.mine != null && <BuyTotal v={pr.mine * qty} cur={p.cur} />}
           </div>
           <div className="pbuy-btns">
             {cart[p.id] && cart[p.id] === qty
