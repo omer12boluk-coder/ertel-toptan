@@ -1104,9 +1104,12 @@ function setupResumeFix() {
     const upd = () => {
       q = 0; const nav = document.querySelector('.botnav'); if (!nav || isField(document.activeElement)) { if (cur) { cur = 0; r.style.removeProperty('--vvd'); } return; }
       const cs = getComputedStyle(nav); if (cs.position !== 'fixed' || cs.display === 'none') return;
-      const want = vv.height + vv.offsetTop - (parseFloat(cs.bottom) || 0); // menünün altı burada olmalı
+      // sayfanın başında / sonunda esneme (lastik) sırasında ölçülmez: menüyü sayfanın altına itiyordu (6.11.2026)
+      const maxY = (document.scrollingElement || r).scrollHeight - innerHeight;
+      if (scrollY < 0 || scrollY > maxY + 1) return;
+      const want = vv.height - (parseFloat(cs.bottom) || 0); // menünün altı burada olmalı
       const rb = nav.getBoundingClientRect().bottom - cur; // itme olmadan menünün altı
-      let d = Math.round(want - rb); if (Math.abs(d) < 2) d = 0;
+      let d = Math.round(want - rb); if (Math.abs(d) < 24) d = 0; // küçük farklar (esneme, adres çubuğu) yok sayılır
       if (d !== cur) { cur = d; d ? r.style.setProperty('--vvd', d + 'px') : r.style.removeProperty('--vvd'); }
       if (d && Date.now() - lastFix > 1500) { lastFix = Date.now(); fix(); }
     };
