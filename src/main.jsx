@@ -1,4 +1,5 @@
 import { LinkCartPage, LinkCartsPage } from './lcart.jsx';
+import { PayLinkPage, PayLinkView } from './paylink.jsx';
 import { SaveDock } from './savedock.jsx';
 import { StoreDecor } from './decor.jsx';
 import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js';
@@ -263,7 +264,8 @@ async function bootShop(A) {
   // Sipariş takip linki (/magaza/s/<no>) katalog beklemeden açılır
   if (ROUTE.orderId) { loadCart(); store.set({ boot: 'ready' }); openOrder(ROUTE.orderId); }
   if (ROUTE.authAction) { loadCart(); store.set({ boot: 'ready', tab: 'islem' }); }
-  if (ROUTE.lcartId) { loadCart(); store.set({ boot: 'ready', tab: 'lsepet' }); } // sepet linki katalog beklemeden açılır
+  if (ROUTE.lcartId) { loadCart(); store.set({ boot: 'ready', tab: 'lsepet' }); }
+  if (ROUTE.payId) { loadCart(); store.set({ boot: 'ready', tab: 'odeme' }); } // ödeme linki // sepet linki katalog beklemeden açılır
   // Liste linki (WhatsApp'tan gelen) katalog yüklenmesini beklemeden hemen açılır
   if (ROUTE.reqId && !ROUTE.orderId) { loadCart(); store.set({ boot: 'ready', tab: 'talepler', openReq: ROUTE.reqId }); }
   const cached = A.cachedCatalog ? await A.cachedCatalog(true) : null;
@@ -279,7 +281,7 @@ async function bootShop(A) {
   if (firstTab === 'set') store.set({ setId: setIdFromPath() });
   if (ROUTE.listCode) { loadCart(); store.set({ boot: 'ready', tab: 'liste', openReq: null }); } // linkli liste katalogu beklemeden açılır (yüklenene kadar kendi bekleme ekranı var)
   if (cached) setCatalog(cached.items);
-  const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId || ROUTE.authAction || ROUTE.lcartId;
+  const direct = ROUTE.reqId || ROUTE.listCode || ROUTE.orderId || ROUTE.authAction || ROUTE.lcartId || ROUTE.payId;
   if (cached && !direct) { loadCart(); store.set({ boot: 'ready', tab: firstTab, openReq: null }); }
   try {
     setCatalog(await A.loadPublicCatalog());
@@ -655,7 +657,7 @@ function ShellFull() {
   }, [hs]);
   const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && LK.hideTop !== false, LK.hideTop === 'up', tab, urunLayer);
-  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
+  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' || tab === 'odemelink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
@@ -758,8 +760,10 @@ function ShellFull() {
         {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><HomeM /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'lsepet' && pub && <LinkCartPage id={ROUTE.lcartId} />}
+        {tab === 'odeme' && pub && <PayLinkView id={ROUTE.payId} />}
         {tab === 'sepetlink' && admin && <OrderForm linkMode />}
         {tab === 'sepetler' && admin && <LinkCartsPage />}
+        {tab === 'odemelink' && admin && <PayLinkPage />}
         {(tab === 'katalog' || ((pub || admin) && kept.current.has('katalog'))) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><CatalogM admin={admin} /></section>}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
@@ -785,7 +789,7 @@ function ShellFull() {
         {tab === 'tasarim' && admin && <ShopDesigner />}
       </main>
       {pub && !['katalog', 'sepet', 'hesap', 'kalip'].includes(tab) && <ShopFooter compact={tab !== 'anasayfa'} />}
-      {!admin && tab !== 'lsepet' && <CartBar />}
+      {!admin && tab !== 'lsepet' && tab !== 'odeme' && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
       <BotNav items={nav.filter(([k]) => k !== 'tasarim' && !(admin && k === 'siparis'))} tab={navTab} badge={badge} />

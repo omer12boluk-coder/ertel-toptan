@@ -164,6 +164,7 @@ export function OrderForm({ linkMode = false }) {
       <SubNav label="Form oluştur" items={[
         { k: 'form', icon: 'tag', label: 'Form oluştur', on: !linkMode, onClick: () => go('siparis') },
         { k: 'link', icon: 'cart', label: 'Sepet linki', badge: lcNew, on: linkMode, onClick: () => go('sepetlink') },
+        { k: 'pay', icon: 'card', label: 'Ödeme linki', onClick: () => go('odemelink') },
       ]} />
 
       <div className="oform-grid">

@@ -121,6 +121,11 @@ service cloud.firestore {
         && lcSub(request.resource.data.sub, resource.data)
         && request.resource.data.subAt == request.time);
     }
+    // ödeme linki (6.11.2026): linki bilen okur (kimlik tahmin edilemez), sadece yönetici yazar / listeler
+    match /paylinks/{id} {
+      allow get: if true;
+      allow list, create, update, delete: if isAdmin();
+    }
     match /stats/{d} { allow read: if true; allow write: if isAdmin(); }
     match /revsum/{d} { allow read: if true; allow write: if isAdmin(); }
     // Gelince haber ver: ürün başına bekleyen üyeler (eşitleme okur, bildirim gönderip siler). Üye sadece KENDİ kimliğini ekler / çıkarır.

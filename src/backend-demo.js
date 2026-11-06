@@ -285,6 +285,13 @@ export class DemoBackend {
   async submitLcart(id, sub) { const x = this.lc_()[id]; if (!x || x.status !== 'open' || (x.exp && now() >= x.exp)) throw new Error('permission: Bu sepet artık açık değil'); Object.assign(x, { status: 'sent', sub, subAt: now() }); this.persist(); }
   async updateLcart(id, patch) { Object.assign(this.lc_()[id], patch); this.persist(); }
   async deleteLcart(id) { delete this.lc_()[id]; this.persist(); }
+  pl_() { return (this.db.paylinks = this.db.paylinks || {}); }
+  newPaylinkId() { return 'p' + rid() + rid() + rid(); }
+  async createPaylink(id, data) { this.pl_()[id] = data; this.persist(); }
+  watchPaylinks(cb) { return this.sub(() => cb(Object.entries(this.pl_()).map(([id, x]) => ({ id, ...JSON.parse(JSON.stringify(x)) })).sort((a, b) => b.at - a.at))); }
+  async getPaylink(id) { const x = this.pl_()[id]; return x ? { id, ...JSON.parse(JSON.stringify(x)) } : null; }
+  async updatePaylink(id, patch) { Object.assign(this.pl_()[id], patch); this.persist(); }
+  async deletePaylink(id) { delete this.pl_()[id]; this.persist(); }
   async deleteLcarts(ids) { for (const id of ids) delete this.lc_()[id]; this.persist(); }
   async syncRevSum() {}
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }

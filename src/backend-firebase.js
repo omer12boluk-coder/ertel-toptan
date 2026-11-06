@@ -483,6 +483,13 @@ export class FirebaseBackend {
   async submitLcart(id, sub) { await timeout(this.F.updateDoc(this.d('lcarts', id), { status: 'sent', sub, subAt: this.F.serverTimestamp() })); }
   async updateLcart(id, patch) { await timeout(this.F.updateDoc(this.d('lcarts', id), patch)); }
   async deleteLcart(id) { await timeout(this.F.deleteDoc(this.d('lcarts', id))); }
+  // Ödeme linki (paylinks/{id}, paylink.jsx): yönetici oluşturur, müşteri linkten sadece okur
+  newPaylinkId() { return this.F.doc(this.c('paylinks')).id; }
+  async createPaylink(id, data) { await timeout(this.F.setDoc(this.d('paylinks', id), data)); }
+  watchPaylinks(cb) { return this.F.onSnapshot(this.F.query(this.c('paylinks'), this.F.orderBy('at', 'desc'), this.F.limit(60)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => { console.warn(e); cb([]); }); }
+  async getPaylink(id) { const s = await timeout(this.getSafe('paylinks', id)); return s.exists() ? { id, ...s.data() } : null; }
+  async updatePaylink(id, patch) { await timeout(this.F.updateDoc(this.d('paylinks', id), patch)); }
+  async deletePaylink(id) { await timeout(this.F.deleteDoc(this.d('paylinks', id))); }
   async deleteLcarts(ids) { const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('lcarts', id))); await timeout(b.commit()); }
   async syncRevSum(pid) {
     const l = await this.reviewsOf(pid); const n = l.length; const avg = n ? Math.round((l.reduce((a, r) => a + (r.stars || 0), 0) / n) * 10) / 10 : 0;

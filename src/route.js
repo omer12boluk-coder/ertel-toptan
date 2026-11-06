@@ -31,7 +31,7 @@ try {
 } catch {}
 // Büyük harfle / Türkçe İ ile yazılan adres (/ADMİN, /Urunler, /marka/JBC) küçük harfe çevrilir (31.10.2026).
 // Kimlik taşıyan parçalar (sipariş /s/<id>, sepet /k/<id>, liste /l/<kod>, talep /t/<id>, /u/, /i/, /set/<id>) büyük-küçük harfe duyarlı → dokunulmaz.
-const ID_AFTER = new Set(['s', 'k', 'l', 't', 'u', 'i', 'set']);
+const ID_AFTER = new Set(['s', 'k', 'o', 'l', 't', 'u', 'i', 'set']);
 const trLow = (x) => x.replace(/[İIı]/g, 'i').toLowerCase().replace(/i\u0307/g, 'i');
 try {
   let raw = location.pathname; try { raw = decodeURIComponent(raw); } catch {}
@@ -57,12 +57,13 @@ export const ROUTE = {
   issueId: (path.match(/^\/admin\/i\/([\w-]+)$/) || [])[1] || null, // sorun bildirimi (Telegram / bildirim linki)
   orderId: (path.match(/\/s\/([\w-]+)$/) || [])[1] || null,
   lcartId: (path.match(/^\/magaza\/k\/([\w-]+)$/) || [])[1] || null, // sepet linki (yönetici hazırlar, müşteri onaylar; lcart.jsx) // mağaza siparişi: /magaza/s/<no>, /admin/s/<no>
+  payId: (path.match(/^\/magaza\/o\/([\w-]+)$/) || [])[1] || null, // ödeme linki (paylink.jsx)
   authAction: /\/magaza\/islem\/?$/.test(path), // e-postadaki şifre yenileme / doğrulama bağlantısı
 };
 ROUTE.landing = false;
 // Mağazada tanınmayan adres (/xyz, /urunlerr…): ana sayfa açılır, adres düzeltilir, "sayfa bulunamadı" denir ve
 // Google'a bu adres "dizine ekleme" (noindex) olarak bildirilir (yoksa her yanlış adres ana sayfanın kopyası sayılır).
-const SHOP_SEGS = new Set(['', 'urunler', 'sepet', 'hesap', 'urun', 'kalip', 'talep', 'yasal', 'sorun', 'set', 'marka', 'markalar', 'setler', 'kategori', 's', 'l', 'k', 't', 'islem']);
+const SHOP_SEGS = new Set(['', 'urunler', 'sepet', 'hesap', 'urun', 'kalip', 'talep', 'yasal', 'sorun', 'set', 'marka', 'markalar', 'setler', 'kategori', 's', 'l', 'k', 'o', 't', 'islem']);
 ROUTE.notFound = ROUTE.shop && !hash && !SHOP_SEGS.has(path.split('/')[2] || ''); // giriş sayfası kalktı (31.10.2026): kök adres = mağaza
 
 export const links = {

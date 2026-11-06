@@ -129,6 +129,7 @@ export function AdminDrop({ k, children }) {
   if (k === 'siparis') return <HoverDrop panel={(c) => (<>
     <Item close={c} icon="tag" label="Form oluştur" sub="Liste resmi + fiyatlı link" onClick={() => go('siparis')} />
     <Item close={c} icon="cart" label="Sepet linki" sub="Müşteri tek tıkla onaylar" onClick={() => go('sepetlink')} />
+    <Item close={c} icon="card" label="Ödeme linki" sub="Tutar + KDV + komisyon → link" onClick={() => go('odemelink')} />
   </>)}>{children}</HoverDrop>;
   if (k === 'katalog') return <HoverDrop panel={(c) => (<>
     <Item close={c} icon="grid" label="Ürünler" sub="Katalog, fiyat, stok" onClick={() => go('katalog')} />
