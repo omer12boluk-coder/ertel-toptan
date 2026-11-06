@@ -84,13 +84,18 @@ async function makeDraft(env, b) {
   const search = !!b.search;
   // ÜCRETSİZ kaynaklar önce: marka mağazası (addaki marka biliniyorsa) + yöneticinin yapıştırdığı ürün linki
   const up = name.toUpperCase();
-  const shopKey = Object.keys(shops).find((k) => up.includes(k));
-  const model0 = up.replace(shopKey || '', '').trim();
+  const link = /^https?:\/\//.test(b.link || '') ? String(b.link).trim() : '';
+  // Verilen link tek ürün sayfası değilse (ör. sadece "2uul.com" ya da bir kategori sayfası) o siteyi MAĞAZA say:
+  // sitenin kendi aramasında ürünü bul (Shopify); sayfanın her yerinden resim TOPLAMA (saçma resimler geliyordu).
+  const linkShop = link && !isProductUrl(link) ? host(link) : '';
+  const shopKey = Object.keys(shops).find((k) => up.includes(k) || (linkShop && shops[k] === linkShop));
+  const shopDom = linkShop || (shopKey && shops[shopKey]) || '';
+  const model0 = (shopKey ? up.replace(shopKey, '') : up).trim();
   const [shop, linked] = await Promise.all([
-    shopKey ? shopifyProduct(shops[shopKey], model0 || name).catch(() => null) : null,
-    /^https?:\/\//.test(b.link || '') ? pageInfo(String(b.link)).catch(() => null) : null,
+    shopDom ? shopifyProduct(shopDom, model0 || name, name).catch(() => null) : null,
+    link && !linkShop ? pageInfo(link).catch(() => null) : null,
   ]);
-  const ctx = [shop && `Markanın resmi sitesindeki ürün (${shops[shopKey]}): ${shop.title}\n${shop.text}`, linked && `Yöneticinin verdiği ürün sayfası (${host(b.link)}): ${linked.title}\n${linked.text}`].filter(Boolean).join('\n\n');
+  const ctx = [shop && `Markanın resmi sitesindeki ürün (${shopDom}): ${shop.title}\n${shop.text}`, linked && `Yöneticinin verdiği ürün sayfası (${host(b.link)}): ${linked.title}\n${linked.text}`].filter(Boolean).join('\n\n');
   const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''), vocab, ctx, search);
   let out, sources = [], engine, cost = 0;
   if (env.ANTHROPIC_KEY) { engine = b.hq ? 'claude-hq' : 'claude'; ({ out, sources, cost } = await askClaude(env, prompt, search, !!b.hq)); }
@@ -103,8 +108,8 @@ async function makeDraft(env, b) {
   const pages = [...new Set([...(d.pages || []), ...sources.map((s) => s.url)].filter((u) => /^https?:\/\//.test(u)))].slice(0, 8);
   const imgs = [];
   const add = (arr, from) => arr.forEach((u) => { if (!imgs.some((x) => x.u === u) && imgs.length < 14) imgs.push({ u, from }); });
-  if (shop) add(shop.imgs, shops[shopKey]);
-  if (linked) add(linked.imgs, host(b.link));
+  if (shop) add(shop.imgs, shopDom);
+  if (linked) add(linked.imgs, host(link));
   const dom = shops[brand.toUpperCase()];
   if (dom && !shop) add(await shopifyImages(dom, d.model || name).catch(() => []), dom);
   // aramada bulunan sayfalar: sadece ürün galerisi (AliExpress listesi, Shopify, JSON-LD Product) — og:image / sayfadaki
@@ -211,10 +216,19 @@ const big = (u) => (/(\.(jpe?g|png|webp))_[^/]+$/i.test(u) ? u.replace(/(\.(jpe?
 const okImg = (u) => u && /^https?:/.test(u) && !/(logo|icon|sprite|favicon|avatar|placeholder|badge|flag|payment|\.svg|\.gif)/i.test(u);
 
 const strip = (h) => String(h || '').replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>|<\/(p|li|tr|h\d|div)>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
-async function shopifyProduct(dom, q) {
-  const s = await (await get(`https://${dom}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=3`)).json();
-  const prods = s?.resources?.results?.products || [];
-  if (!prods.length) return null;
+// Tek ürün sayfası mı? (Shopify /products/, AliExpress /item/, genel /product/ /urun/ ...)
+function isProductUrl(u) { try { const p = new URL(u).pathname.toLowerCase(); return /\/(products?|item|items|urun|p)\/[^/]+|[-_/]p-?\d{3,}|\.html?$/.test(p) && p.length > 3; } catch { return false; } }
+// Model kodu eşleşiyor mu: "da07" ↔ "DA-07", "DA07 Pro" ...; addaki rakamlı kelimelerin hepsi başlıkta geçmeli
+const flat = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+function sameModel(title, q) {
+  const codes = String(q || '').toLowerCase().split(/[\s,/]+/).map(flat).filter((w) => /\d/.test(w) && w.length >= 2);
+  if (!codes.length) return true;
+  const t = flat(title); return codes.every((c) => t.includes(c));
+}
+async function shopifyProduct(dom, q, full) {
+  const s = await (await get(`https://${dom}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=6`)).json();
+  const prods = (s?.resources?.results?.products || []).filter((p) => sameModel(p.title, q) || sameModel(p.title, full));
+  if (!prods.length) return null; // aramada bu model yok → yanlış ürünün resimlerini alma
   const h = prods[0].handle || (prods[0].url || '').split('/products/')[1]?.split('?')[0];
   const p = await (await get(`https://${dom}/products/${h}.js`)).json();
   return { title: p.title || '', text: strip(p.description).slice(0, 4000), descImgs: imgsIn(p.description, `https://${dom}/`), imgs: (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0])) };
@@ -227,7 +241,7 @@ function imgsIn(html, base) {
 }
 // yapıştırılan ürün sayfası: başlık + sade metin (yapay zekâya kaynak) + galeri resimleri + açıklama resimleri
 async function pageInfo(u) {
-  const imgs = await pageImages(u).catch(() => []);
+  const imgs = await pageImages(u, !isProductUrl(u)).catch(() => []);
   let title = '', text = '', descImgs = [];
   try {
     const html = (await (await get(u)).text()).slice(0, 2e6);
@@ -250,7 +264,7 @@ async function shopifyImages(dom, q) {
   return (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0]));
 }
 
-export { pageInfo };
+export { pageInfo, shopifyProduct, isProductUrl };
 export async function pageImages(u, strict = false) {
   if (!/^https?:\/\//.test(u)) return [];
   const url = new URL(u);
