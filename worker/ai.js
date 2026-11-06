@@ -73,12 +73,16 @@ async function makeDraft(env, b) {
   if (dom && !shop) add(await shopifyImages(dom, d.model || name).catch(() => []), dom);
   const got = await Promise.all(pages.map((p) => pageImages(p).then((l) => [p, l]).catch(() => [p, []])));
   for (const [p, l] of got) add(l.slice(0, 8), host(p));
+  // açıklamanın altına markanın / sayfanın uzun tanıtım görselleri (yöneticinin elle yaptığı gibi), sırasıyla
+  const descImgs = [...new Set([...(shop?.descImgs || []), ...(linked?.descImgs || [])])].slice(0, 20);
+  let desc = cleanDesc(String(d.desc || ''));
+  if (descImgs.length) desc += '\n<p>&nbsp;</p>\n' + descImgs.map((u) => `<img loading="lazy" src="${u}" />`).join('\n');
   return {
-    q: name, engine: engine + (search ? '+ara' : ''),
+    q: name, engine: engine + (search ? '+ara' : ''), descImgs: descImgs.length,
     n: String(d.name || name).trim(), b: brand, model: d.model || '',
     c: Number.isFinite(+d.cat) ? +d.cat : null, c2: Number.isFinite(+d.cat2) && d.cat2 !== null && d.cat2 !== '' ? +d.cat2 : null,
     t: (Array.isArray(d.tags) ? d.tags : String(d.tags || '').split(',')).map((x) => String(x).trim()).filter(Boolean).slice(0, 90).join(','),
-    desc: cleanDesc(String(d.desc || '')), note: String(d.note || '').slice(0, 400),
+    desc, note: String(d.note || '').slice(0, 400),
     imgs, src: [...new Map([...pages.map((u) => [u, { url: u, title: host(u) }]), ...sources.map((s) => [s.url, s])]).values()].slice(0, 10),
   };
 }
@@ -100,7 +104,7 @@ Görevin:
    · İngilizcenin kulaktan yazımı (Flux→Flaks, Solder→Soldır, Screen→Sikrin, Booster→Buster), birleşik/ayrık yazım,
    · model kodunun hatalı yazımları (DA88 → Da 88, Da-88, D88, Da8, Daa88).
    Aşağıdaki "mevcut etiket sözlüğü"nde mağazanın zaten kullandığı yanlış yazım ve argo kalıpları varsa bunları da kullan.
-6) Açıklama (desc): örneklerdeki HTML yapısıyla, Türkçe, satış dili sade ve teknisyene hitap eden: 2 kısa paragraf (<p dir="ltr">), <p dir="ltr"><strong>Özellikler</strong></p> + <ul dir="ltr"><li>…</li></ul>, <p dir="ltr"><strong>Teknik Özellikler</strong></p> + <table><thead><tr><th scope="col">Özellik</th><th scope="col">Değer</th></tr></thead><tbody>…</tbody></table>, biliniyorsa <p dir="ltr"><strong>Kutu İçeriği</strong></p> + liste. Resim, video, link, iframe KOYMA.
+6) Açıklama (desc): örneklerdeki HTML yapısıyla, Türkçe, satış dili sade ve teknisyene hitap eden: 2 kısa paragraf (<p dir="ltr">), <p dir="ltr"><strong>Özellikler</strong></p> + <ul dir="ltr"><li>…</li></ul>, <p dir="ltr"><strong>Teknik Özellikler</strong></p> + <table><thead><tr><th scope="col">Özellik</th><th scope="col">Değer</th></tr></thead><tbody>…</tbody></table>, biliniyorsa <p dir="ltr"><strong>Kutu İçeriği</strong></p> + liste. Resim, video, link, iframe KOYMA (tanıtım resimlerini sistem kendisi açıklamanın altına ekler).
 7) pages: ${search ? 'ürünün resimlerinin bulunduğu EN İYİ 1-4 tek ürün sayfası adresi (arama/kategori sayfası değil).' : 'boş liste [] bırak.'}
 
 Kategori listesi (numara: yol):
@@ -173,19 +177,29 @@ async function shopifyProduct(dom, q) {
   if (!prods.length) return null;
   const h = prods[0].handle || (prods[0].url || '').split('/products/')[1]?.split('?')[0];
   const p = await (await get(`https://${dom}/products/${h}.js`)).json();
-  return { title: p.title || '', text: strip(p.description).slice(0, 4000), imgs: (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0])) };
+  return { title: p.title || '', text: strip(p.description).slice(0, 4000), descImgs: imgsIn(p.description, `https://${dom}/`), imgs: (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0])) };
 }
-// yapıştırılan ürün sayfası: başlık + sade metin (yapay zekâya kaynak) + resimler
+// HTML parçasındaki resimler (sırasıyla) — açıklamanın altındaki uzun tanıtım görselleri için
+function imgsIn(html, base) {
+  const out = [];
+  for (const m of String(html || '').matchAll(/<img[^>]+?(?:data-src|src)=["']([^"']+)["']/gi)) { const a = abs(m[1], base); if (a && okImg(a)) { const b2 = big(a.split('?')[0]); if (!out.includes(b2)) out.push(b2); } }
+  return out.slice(0, 20);
+}
+// yapıştırılan ürün sayfası: başlık + sade metin (yapay zekâya kaynak) + galeri resimleri + açıklama resimleri
 async function pageInfo(u) {
   const imgs = await pageImages(u).catch(() => []);
-  let title = '', text = '';
+  let title = '', text = '', descImgs = [];
   try {
     const html = (await (await get(u)).text()).slice(0, 2e6);
     title = strip((/<title[^>]*>([\s\S]*?)<\/title>/i.exec(html) || [])[1] || '').slice(0, 200);
     const main = /<(main|article)[\s\S]*?<\/\1>/i.exec(html)?.[0] || html.replace(/<(header|footer|nav)[\s\S]*?<\/\1>/gi, ' ');
     text = strip(main).slice(0, 5000);
+    // AliExpress: açıklama ayrı bir adreste (descriptionUrl) — tanıtım görselleri orada
+    const du = /"(?:descriptionUrl|descUrl)"\s*:\s*"([^"]+)"/.exec(html)?.[1]?.replace(/\\u002F/g, '/').replace(/\\\//g, '/');
+    if (du) { const dh = await (await get(abs(du, u))).text(); descImgs = imgsIn(dh, u); if (!text || text.length < 300) text = strip(dh).slice(0, 5000); }
+    else { const i = html.search(/(id|class)=["'][^"']*(description|product-desc|tab-desc|rte)/i); if (i > 0) descImgs = imgsIn(html.slice(i, i + 3e5), u).filter((x) => !imgs.includes(x)); }
   } catch {}
-  return { title, text, imgs };
+  return { title, text, imgs, descImgs };
 }
 async function shopifyImages(dom, q) {
   const s = await (await get(`https://${dom}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=3`)).json();
@@ -196,6 +210,7 @@ async function shopifyImages(dom, q) {
   return (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0]));
 }
 
+export { pageInfo };
 export async function pageImages(u) {
   if (!/^https?:\/\//.test(u)) return [];
   const url = new URL(u);

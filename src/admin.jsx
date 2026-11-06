@@ -149,6 +149,24 @@ export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
   const mediaOpen = useRef(null);
   // taslaktaki dış adresli resimler (marka sitesi, AliExpress…) onayda kendi depomuza (R2) alınır → site kapansa da resim kalır
   const [pull, setPull] = useState('');
+  // tek resmi indir → R2 → 'r2:…'. long = açıklamadaki uzun tanıtım resmi (boyu kısaltılmaz, en fazla 4000px)
+  async function pullOne(x, long) {
+    const blob = /^data:/.test(x) ? await (await fetch(x)).blob() : await api().aiPicBlob(x);
+    const h = await fileHash(blob);
+    return (await api().findUpload(h)) || await (async () => { const [big, th] = await Promise.all([long && blob.size < 3e6 && /jpe?g|webp|png/.test(blob.type) ? blob : imageBlob(blob, long ? 4000 : 1600, 0.85), imageBlob(blob, 420, 0.8)]); return api().uploadImage(big, th, h); })();
+  }
+  // açıklamadaki dış resimler (marka/AliExpress tanıtım görselleri) → resim.ertelmarket.com
+  async function pullDescImgs(html) {
+    const srcs = [...new Set([...html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map((m) => m[1].replace(/&amp;/g, '&')).filter((u) => (/^https?:\/\//.test(u) && !/(ertelmarket\.com|platincdn\.com|r2\.dev)/.test(u)) || (draft && /^data:image\//.test(u))))];
+    if (!srcs.length) return html;
+    let i = 0, bad = 0, out = html;
+    for (const u of srcs) {
+      setPull(`Açıklama resimleri depoya alınıyor ${++i}/${srcs.length}…`);
+      try { const ref = await pullOne(u, true); const full = picUrl(ref, null, true); out = out.split(u).join(full).split(u.replace(/&/g, '&amp;')).join(full); } catch { bad++; }
+    }
+    setPull(''); if (bad) toast(`Açıklamadaki ${bad} resim depoya alınamadı, eski adresiyle kaldı`, 'bad');
+    return out;
+  }
   async function pullExternal(arr) {
     const ext = (x) => /^https?:\/\//.test(x) && !/(ertelmarket\.com|platincdn\.com|r2\.dev)/.test(x);
     const todo = arr.filter((x) => !isVid(x) && (ext(x) || (draft && /^data:image\//.test(x)))); if (!todo.length) return arr;
@@ -156,12 +174,7 @@ export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
     for (const x of arr) {
       if (!todo.includes(x)) { out.push(x); continue; }
       setPull(`Resimler depoya alınıyor ${++i}/${todo.length}…`);
-      try {
-        const blob = /^data:/.test(x) ? await (await fetch(x)).blob() : await api().aiPicBlob(x);
-        const h = await fileHash(blob);
-        const ref = (await api().findUpload(h)) || await (async () => { const [big, th] = await Promise.all([imageBlob(blob, 1600, 0.85), imageBlob(blob, 420, 0.8)]); return api().uploadImage(big, th, h); })();
-        out.push(ref);
-      } catch { bad++; if (!draft) out.push(x); }
+      try { out.push(await pullOne(x)); } catch { bad++; if (!draft) out.push(x); }
     }
     setPull(''); if (bad) toast(draft ? `${bad} resim alınamadı, listeden çıkarıldı` : `${bad} resim depoya alınamadı, eski adresiyle kaldı`, 'bad');
     return out;
@@ -199,9 +212,10 @@ export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
       if (rec.c2 === '' || rec.c2 === rec.c) delete rec.c2; else if (rec.c2 != null) rec.c2 = Number(rec.c2);
       const list = isNew ? [rec, ...catalog] : catalog.map((x) => (x.id === rec.id ? rec : x));
       // hemen kapanır; kayıt arka plan kuyruğunda (saveq.js), durum sağ altta / hata olursa tekrar dener
+      const descH = desc != null && desc !== desc0 ? await pullDescImgs(desc) : null; // pencere kapanmadan
       setCatalog(list); toast(draft ? 'Ürün eklendi' : 'Ürün kaydedildi'); onSaved?.(rec); onClose();
       saveCatalogLater();
-      if (desc != null && desc !== desc0) { const id = rec.id, h = desc; queueSave('desc:' + id, () => api().setDesc(id, h)); }
+      if (descH != null) { const id = rec.id, h = descH; queueSave('desc:' + id, () => api().setDesc(id, h)); }
     } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
     setBusy(false);
   }

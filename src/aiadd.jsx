@@ -25,9 +25,11 @@ async function examples(q, catalog) {
   const score = (p) => { const n = norm(p.n + ' ' + (p.b || '')); return words.reduce((a, w) => a + (n.includes(w) ? (w === norm(p.b || '') ? 3 : 1) : 0), 0) + (p.id > 3000 ? 0.5 : 0); };
   const pool = catalog.filter((p) => p.t && p.t.split(',').length > 20);
   const ranked = pool.map((p) => [score(p), p]).sort((a, b) => b[0] - a[0] || b[1].id - a[1].id).map((x) => x[1]);
-  const pick = ranked.slice(0, 2);
+  // 2 en benzer + en son eklenen (güncel tarz) ürün
+  const newest = pool.reduce((a, p) => (!a || p.id > a.id ? p : a), null);
+  const pick = [...ranked.slice(0, 2), ...(newest && !ranked.slice(0, 2).includes(newest) ? [newest] : [])];
   examples.vocab = ranked.slice(2, 8).map((p) => p.t); // sadece etiketler: tarz + yanlış yazım kalıpları (ucuz)
-  return Promise.all(pick.map(async (p) => ({ n: p.n, t: p.t, d: String((await api().getDesc(p.id).catch(() => '')) || '').replace(/<(iframe|script)[\s\S]*?<\/\1>/gi, '').replace(/<img[^>]*>/gi, '').replace(/<div[^>]*>\s*<\/div>/gi, '').slice(0, 2500) })));
+  return Promise.all(pick.map(async (p) => ({ n: p.n, t: p.t, d: String((await api().getDesc(p.id).catch(() => '')) || '').replace(/<(iframe|script)[\s\S]*?<\/\1>/gi, '').replace(/<img[^>]*>/gi, '').replace(/<a [^>]*report\.aliexpress[\s\S]*?<\/a>/gi, '').replace(/\s(data-[\w-]+|ae_[\w-]+|st_page_id|clk_trigger|slate-data-type)="[^"]*"/gi, '').replace(/<div[^>]*>\s*<\/div>/gi, '').replace(/(<p>&nbsp;<\/p>\s*)+/g, '').slice(0, 1800) })));
 }
 
 // sıra modül düzeyinde: sayfadan çıkılsa da hazırlama sürer (yarıda kalıp boşuna yeniden ödenmesin)
