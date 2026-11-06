@@ -43,26 +43,38 @@ async function makeDraft(env, b) {
   const cats = (Array.isArray(b.cats) ? b.cats : []).slice(0, 400);
   const brands = (Array.isArray(b.brands) ? b.brands : []).slice(0, 400);
   const ex = (Array.isArray(b.ex) ? b.ex : []).slice(0, 3);
-  const vocab = (Array.isArray(b.vocab) ? b.vocab : []).slice(0, 6).map((x) => String(x).slice(0, 1500));
-  const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''), vocab);
+  const vocab = (Array.isArray(b.vocab) ? b.vocab : []).slice(0, 4).map((x) => String(x).slice(0, 1000));
+  const shops = { ...SHOPS, ...(b.shops || {}) };
+  const search = !!b.search;
+  // ÜCRETSİZ kaynaklar önce: marka mağazası (addaki marka biliniyorsa) + yöneticinin yapıştırdığı ürün linki
+  const up = name.toUpperCase();
+  const shopKey = Object.keys(shops).find((k) => up.includes(k));
+  const model0 = up.replace(shopKey || '', '').trim();
+  const [shop, linked] = await Promise.all([
+    shopKey ? shopifyProduct(shops[shopKey], model0 || name).catch(() => null) : null,
+    /^https?:\/\//.test(b.link || '') ? pageInfo(String(b.link)).catch(() => null) : null,
+  ]);
+  const ctx = [shop && `Markanın resmi sitesindeki ürün (${shops[shopKey]}): ${shop.title}\n${shop.text}`, linked && `Yöneticinin verdiği ürün sayfası (${host(b.link)}): ${linked.title}\n${linked.text}`].filter(Boolean).join('\n\n');
+  const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''), vocab, ctx, search);
   let out, sources = [], engine;
-  if (env.ANTHROPIC_KEY) { engine = 'claude'; ({ out, sources } = await askClaude(env, prompt)); }
+  if (env.ANTHROPIC_KEY) { engine = 'claude'; ({ out, sources } = await askClaude(env, prompt, search)); }
   else if (env.AI) { engine = 'cf'; out = await askCf(env, prompt); }
   else throw new Error('Yapay zekâ bağlı değil: GitHub › Settings › Secrets’a ANTHROPIC_KEY ekleyip “Bekçiyi yayınla”yı çalıştırın.');
   const d = parseJson(out);
   if (!d) throw new Error('Yapay zekâ cevabı okunamadı, tekrar deneyin');
   const brand = String(d.brand || '').trim();
   // resimler: 1) marka mağazası 2) yapay zekânın bulduğu ürün sayfaları 3) aramada çıkan sayfalar
-  const shops = { ...SHOPS, ...(b.shops || {}) };
   const pages = [...new Set([...(d.pages || []), ...sources.map((s) => s.url)].filter((u) => /^https?:\/\//.test(u)))].slice(0, 8);
   const imgs = [];
   const add = (arr, from) => arr.forEach((u) => { if (!imgs.some((x) => x.u === u) && imgs.length < 16) imgs.push({ u, from }); });
+  if (shop) add(shop.imgs, shops[shopKey]);
+  if (linked) add(linked.imgs, host(b.link));
   const dom = shops[brand.toUpperCase()];
-  if (dom) add(await shopifyImages(dom, d.model || d.name || name).catch(() => []), dom);
+  if (dom && !shop) add(await shopifyImages(dom, d.model || name).catch(() => []), dom);
   const got = await Promise.all(pages.map((p) => pageImages(p).then((l) => [p, l]).catch(() => [p, []])));
   for (const [p, l] of got) add(l.slice(0, 8), host(p));
   return {
-    q: name, engine,
+    q: name, engine: engine + (search ? '+ara' : ''),
     n: String(d.name || name).trim(), b: brand, model: d.model || '',
     c: Number.isFinite(+d.cat) ? +d.cat : null, c2: Number.isFinite(+d.cat2) && d.cat2 !== null && d.cat2 !== '' ? +d.cat2 : null,
     t: (Array.isArray(d.tags) ? d.tags : String(d.tags || '').split(',')).map((x) => String(x).trim()).filter(Boolean).slice(0, 90).join(','),
@@ -71,13 +83,13 @@ async function makeDraft(env, b) {
   };
 }
 
-function buildPrompt(name, cats, brands, ex, hint, vocab = []) {
-  const exTxt = ex.map((e, i) => `ÖRNEK ${i + 1}\nAd: ${e.n}\nEtiketler: ${e.t}\nAçıklama HTML:\n${String(e.d || '').slice(0, 2500)}`).join('\n\n');
+function buildPrompt(name, cats, brands, ex, hint, vocab = [], ctx = '', search = false) {
+  const exTxt = ex.map((e, i) => `ÖRNEK ${i + 1}\nAd: ${e.n}\nEtiketler: ${e.t}\nAçıklama HTML:\n${String(e.d || '').slice(0, 1800)}`).join('\n\n');
   return `Sen ERTEL GSM'in (İstanbul Tahtakale, cep telefonu tamir ekipmanı ve yedek parça toptancısı) ürün giriş asistanısın.
 Yönetici şu ürünü eklemek istiyor: "${name}"${hint ? `\nEk bilgi: ${hint}` : ''}
 
 Görevin:
-1) Ürünü web'de araştır (önce markanın resmi sitesi, sonra AliExpress, Alibaba, martview, mobilesentrix, ifixit vb.). Doğru modeli bul; emin olmadığın teknik değeri UYDURMA, yazma.
+1) ${search ? "Ürünü web'de araştır (önce markanın resmi sitesi, sonra AliExpress, Alibaba, martview, mobilesentrix vb.); en fazla 2 arama yap." : 'Web araması YOK: aşağıdaki kaynak metinlere ve kendi bilgine dayan.'} Doğru modeli bul; emin olmadığın teknik değeri UYDURMA, yazma (not alanında belirt).${ctx ? `\n\nKAYNAK METİNLER (otomatik bulundu; yazılan ürünle AYNI model değilse dikkate alma):\n${ctx}\n` : ''}
 2) Mağazanın ad yazım tarzıyla Türkçe ürün adı yaz (Marka büyük harf + Model + Türkçe ne olduğu; gerekirse parantez içinde uyumlu model / paket bilgisi). Örneklerdeki gibi.
 3) Marka: listede varsa AYNI yazımla seç, yoksa resmi yazımı büyük harfle.
 4) Kategori: aşağıdaki listeden en uygun kategori numarasını (cat) ve varsa ikinci kategoriyi (cat2, yoksa null) seç.
@@ -89,7 +101,7 @@ Görevin:
    · model kodunun hatalı yazımları (DA88 → Da 88, Da-88, D88, Da8, Daa88).
    Aşağıdaki "mevcut etiket sözlüğü"nde mağazanın zaten kullandığı yanlış yazım ve argo kalıpları varsa bunları da kullan.
 6) Açıklama (desc): örneklerdeki HTML yapısıyla, Türkçe, satış dili sade ve teknisyene hitap eden: 2 kısa paragraf (<p dir="ltr">), <p dir="ltr"><strong>Özellikler</strong></p> + <ul dir="ltr"><li>…</li></ul>, <p dir="ltr"><strong>Teknik Özellikler</strong></p> + <table><thead><tr><th scope="col">Özellik</th><th scope="col">Değer</th></tr></thead><tbody>…</tbody></table>, biliniyorsa <p dir="ltr"><strong>Kutu İçeriği</strong></p> + liste. Resim, video, link, iframe KOYMA.
-7) pages: ürünün resimlerinin bulunduğu EN İYİ 1-5 ürün sayfası adresi (resmi site ürün sayfası, AliExpress ürün sayfası…). Arama sonucu / kategori sayfası değil, tek ürün sayfası.
+7) pages: ${search ? 'ürünün resimlerinin bulunduğu EN İYİ 1-4 tek ürün sayfası adresi (arama/kategori sayfası değil).' : 'boş liste [] bırak.'}
 
 Kategori listesi (numara: yol):
 ${cats.map(([id, p]) => `${id}: ${p}`).join('\n')}
@@ -103,16 +115,17 @@ Cevabın SADECE şu JSON olsun, <json> ve </json> arasında:
 <json>{"name":"…","brand":"…","model":"…","cat":0,"cat2":null,"tags":["…"],"desc":"<p dir=\\"ltr\\">…</p>","pages":["https://…"],"note":"emin olmadığın şeyler / yöneticiye kısa not"}</json>`;
 }
 
-async function askClaude(env, prompt) {
-  const model = env.AI_MODEL || 'claude-sonnet-5-5';
-  const tools = [{ type: env.AI_SEARCH_TOOL || 'web_search_20250305', name: 'web_search', max_uses: 4 }];
+// Ucuz mod (varsayılan): Haiku, web araması yok. 'İnternette araştır' seçilirse en çok 2 arama.
+async function askClaude(env, prompt, search) {
+  const model = env.AI_MODEL || 'claude-haiku-5-5';
+  const tools = search ? [{ type: env.AI_SEARCH_TOOL || 'web_search_20250305', name: 'web_search', max_uses: 2 }] : undefined;
   let messages = [{ role: 'user', content: prompt }];
   const sources = []; let text = '';
   for (let turn = 0; turn < 4; turn++) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model, max_tokens: 8000, tools, messages }),
+      body: JSON.stringify({ model, max_tokens: 6000, ...(tools ? { tools } : {}), messages }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error('Claude: ' + (j.error?.message || r.status));
@@ -153,6 +166,27 @@ const abs = (u, base) => { try { const x = new URL(u.replace(/&amp;/g, '&'), bas
 const big = (u) => (/(\.(jpe?g|png|webp))_[^/]+$/i.test(u) ? u.replace(/(\.(jpe?g|png|webp))_[^/]+$/i, '$1') : u.replace(/_(\d+x\d*|\d*x\d+|small|medium|thumb|compact)(?=\.(jpe?g|png|webp))/i, ''));
 const okImg = (u) => u && /^https?:/.test(u) && !/(logo|icon|sprite|favicon|avatar|placeholder|badge|flag|payment|\.svg|\.gif)/i.test(u);
 
+const strip = (h) => String(h || '').replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>|<\/(p|li|tr|h\d|div)>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
+async function shopifyProduct(dom, q) {
+  const s = await (await get(`https://${dom}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=3`)).json();
+  const prods = s?.resources?.results?.products || [];
+  if (!prods.length) return null;
+  const h = prods[0].handle || (prods[0].url || '').split('/products/')[1]?.split('?')[0];
+  const p = await (await get(`https://${dom}/products/${h}.js`)).json();
+  return { title: p.title || '', text: strip(p.description).slice(0, 4000), imgs: (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0])) };
+}
+// yapıştırılan ürün sayfası: başlık + sade metin (yapay zekâya kaynak) + resimler
+async function pageInfo(u) {
+  const imgs = await pageImages(u).catch(() => []);
+  let title = '', text = '';
+  try {
+    const html = (await (await get(u)).text()).slice(0, 2e6);
+    title = strip((/<title[^>]*>([\s\S]*?)<\/title>/i.exec(html) || [])[1] || '').slice(0, 200);
+    const main = /<(main|article)[\s\S]*?<\/\1>/i.exec(html)?.[0] || html.replace(/<(header|footer|nav)[\s\S]*?<\/\1>/gi, ' ');
+    text = strip(main).slice(0, 5000);
+  } catch {}
+  return { title, text, imgs };
+}
 async function shopifyImages(dom, q) {
   const s = await (await get(`https://${dom}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=3`)).json();
   const prods = s?.resources?.results?.products || [];

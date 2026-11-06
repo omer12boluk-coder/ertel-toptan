@@ -43,7 +43,7 @@ function pump() {
     try {
       const { catalog, settings: S } = store.s;
       const brands = [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
-      const r = await api().aiDraft({ name: next.q, hint: next.hint || '', cats: catPaths(catalog, S), brands, ex: await examples(next.q, catalog), vocab: examples.vocab || [] });
+      const r = await api().aiDraft({ name: next.q, hint: next.hint || '', link: next.link || '', search: !!next.search, cats: catPaths(catalog, S), brands, ex: await examples(next.q, catalog), vocab: examples.vocab || [] });
       running = false; updQ(next.id, { st: 'ok', d: r.draft, err: '' });
     } catch (e) { running = false; updQ(next.id, { st: 'err', err: e.message }); }
   })();
@@ -53,17 +53,20 @@ export function AiAdd() {
   const S = useStore((s) => s.settings);
   const [q, setQ0] = useState('');
   const [hint, setHint] = useState('');
+  const [link, setLink] = useState('');
+  const [search, setSearch] = useState(() => ls.get('ai-search', false));
   const [list, setList0] = useState(getQ);
   useEffect(() => { subs.add(setList0); pump(); return () => subs.delete(setList0); }, []);
   const [edit, setEdit] = useState(null);
   const [del, setDel] = useState(false);
   const setList = setQ; const upd = updQ;
   const addNames = () => {
-    const names = q.split('\n').map((x) => x.trim()).filter(Boolean);
-    if (!names.length) return toast('Ürün adı yazın', 'bad');
-    const now = Date.now();
-    setList((l) => [...names.map((n, i) => ({ id: now + '-' + i, q: n, hint: hint.trim(), st: 'wait' })), ...l]);
-    setQ0(''); setHint('');
+    // satırda link varsa o ürünün kaynağı olur: "2uul da 88 https://…"
+    const rows = q.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const u = (/https?:\/\/\S+/.exec(x) || [''])[0]; return { n: x.replace(u, '').trim(), u }; }).filter((x) => x.n);
+    if (!rows.length) return toast('Ürün adı yazın', 'bad');
+    const now = Date.now(); const l0 = link.trim();
+    setList((l) => [...rows.map((r, i) => ({ id: now + '-' + i, q: r.n, link: r.u || (rows.length === 1 ? l0 : ''), hint: hint.trim(), search, st: 'wait' })), ...l]);
+    setQ0(''); setHint(''); setLink('');
   };
   const waiting = list.filter((x) => x.st === 'wait' || x.st === 'run').length;
   const ready = list.filter((x) => x.st === 'ok').length;
@@ -77,16 +80,18 @@ export function AiAdd() {
         <label className="ai-l" htmlFor="ai-q">Ürün adını yazın <small>— her satıra bir ürün</small></label>
         <textarea id="ai-q" rows={3} placeholder={'2uul da 88\njcid v1se face id flex 15 pro'} value={q} onChange={(e) => setQ0(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNames(); }} />
+        <input id="ai-link" className="ai-link" placeholder="Ürün linki (isteğe bağlı, önerilir): AliExpress / marka sitesi sayfası — yazıları ve resimleri buradan alır" value={link} onChange={(e) => setLink(e.target.value)} />
         <div className="ai-row">
           <input id="ai-hint" placeholder="Ek bilgi (isteğe bağlı): ör. 5'li paket, iPhone 16 uyumlu" value={hint} onChange={(e) => setHint(e.target.value)} />
           <button type="button" className="btn primary" onClick={addNames}><Icon n="sparkle" s={16} />Hazırla</button>
         </div>
-        <p className="fine">Yapay zekâ ürünü web'de araştırır; adını sizin yazım tarzınızla, markasını, kategorisini, gizli etiketlerini ve açıklamasını hazırlar, marka sitesinde / AliExpress'te resim arar. Hiçbir şey kendiliğinden kaydedilmez: siz kontrol edip fiyat ve stok girip onaylarsınız.</p>
+        <label className="ai-chk"><input type="checkbox" checked={search} onChange={(e) => { setSearch(e.target.checked); ls.set('ai-search', e.target.checked); }} /> İnternette de araştırsın <small>— link vermediğiniz ve tanınmayan ürünler için; ürün başına biraz daha pahalı</small></label>
+        <p className="fine">Yapay zekâ ürünü tanır (link verirseniz o sayfayı, 2UUL gibi markalarda markanın sitesini okur); adını sizin yazım tarzınızla, markasını, kategorisini, gizli etiketlerini ve açıklamasını hazırlar, marka sitesinde / AliExpress'te resim arar. Hiçbir şey kendiliğinden kaydedilmez: siz kontrol edip fiyat ve stok girip onaylarsınız.</p>
       </div>
 
       {list.length > 0 && <div className="ai-list-h"><b>Taslaklar</b>{waiting > 0 && <span className="muted"> · {waiting} hazırlanıyor</span>}
         <button type="button" className="link" onClick={() => setDel(true)}>Hepsini temizle</button></div>}
-      {!list.length ? <Empty icon="sparkle" title="Henüz taslak yok"><p>Yukarıya ürün adını yazıp Hazırla'ya basın. Bir ürün yaklaşık 30–90 saniyede hazırlanır.</p></Empty> : (
+      {!list.length ? <Empty icon="sparkle" title="Henüz taslak yok"><p>Yukarıya ürün adını yazıp Hazırla'ya basın. Bir ürün yaklaşık 10–60 saniyede hazırlanır.</p></Empty> : (
         <div className="ai-list">
           {list.map((x) => {
             const d = x.d; const cover = d?.imgs?.[0]?.u;
@@ -106,7 +111,7 @@ export function AiAdd() {
                     <small className="muted">Yazdığınız: “{x.q}”{d.note ? ' · ' + d.note : ''}</small>
                   </> : <>
                     <b>{x.q}</b>
-                    <small className={x.st === 'err' ? 'ai-err' : 'muted'}>{x.st === 'run' ? 'Araştırılıyor… (30–90 sn)' : x.st === 'wait' ? 'Sırada' : 'Hazırlanamadı: ' + x.err}</small>
+                    <small className={x.st === 'err' ? 'ai-err' : 'muted'}>{x.st === 'run' ? 'Hazırlanıyor…' : x.st === 'wait' ? 'Sırada' : 'Hazırlanamadı: ' + x.err}</small>
                   </>}
                 </div>
                 {x.st === 'ok' && <button type="button" className="btn sm primary" onClick={(e) => { e.stopPropagation(); setEdit(x); }}>İncele ve onayla</button>}

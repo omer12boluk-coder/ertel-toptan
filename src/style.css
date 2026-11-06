@@ -8082,3 +8082,6 @@ html.th-dash .shell.public .sh-card-img { border-radius: 16px; overflow: hidden;
   .ai-row-c > .btn { grid-column: 2 / 4; justify-self: start; }
   .ai-more { flex-direction: column; }
 }
+.ai-add .ai-link { width: 100%; font-size: 16px; }
+.ai-add .ai-chk { display: flex; align-items: center; gap: 8px; font-size: 14px; flex-wrap: wrap; }
+.ai-add .ai-chk small { color: var(--muted); }

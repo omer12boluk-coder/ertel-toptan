@@ -151,7 +151,7 @@ export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
   const [pull, setPull] = useState('');
   async function pullExternal(arr) {
     const ext = (x) => /^https?:\/\//.test(x) && !/(ertelmarket\.com|platincdn\.com|r2\.dev)/.test(x);
-    const todo = arr.filter((x) => !isVid(x) && (ext(x) || /^data:image\//.test(x))); if (!todo.length) return arr;
+    const todo = arr.filter((x) => !isVid(x) && (ext(x) || (draft && /^data:image\//.test(x)))); if (!todo.length) return arr;
     let i = 0, bad = 0; const out = [];
     for (const x of arr) {
       if (!todo.includes(x)) { out.push(x); continue; }
@@ -161,9 +161,9 @@ export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
         const h = await fileHash(blob);
         const ref = (await api().findUpload(h)) || await (async () => { const [big, th] = await Promise.all([imageBlob(blob, 1600, 0.85), imageBlob(blob, 420, 0.8)]); return api().uploadImage(big, th, h); })();
         out.push(ref);
-      } catch { bad++; }
+      } catch { bad++; if (!draft) out.push(x); }
     }
-    setPull(''); if (bad) toast(`${bad} resim alınamadı, listeden çıkarıldı`, 'bad');
+    setPull(''); if (bad) toast(draft ? `${bad} resim alınamadı, listeden çıkarıldı` : `${bad} resim depoya alınamadı, eski adresiyle kaldı`, 'bad');
     return out;
   }
   const [more, setMore] = useState('');
@@ -182,7 +182,8 @@ export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
     if (f.k && catalog.some((x) => x.id !== f.id && String(x.k || '').toLowerCase() === String(f.k).trim().toLowerCase())) return toast('Bu stok kodu başka üründe var: ' + f.k, 'bad');
     setBusy(true);
     try {
-      let ff = f; if (draft) { const m = await pullExternal(mediaOf(f)); ff = { ...f, pi: m[0] || '', im: m.slice(1), ie: 1 }; }
+      // dışarıdan adresle eklenen resimler (taslak ya da elle yapıştırılan) kaydederken resim.ertelmarket.com'a alınır
+      let ff = f; { const m0 = mediaOf(f), m = await pullExternal(m0); if (m.join('|') !== m0.join('|')) ff = { ...f, pi: m[0] || '', im: m.slice(1), ie: 1 }; }
       const rec = { ...ff, n: f.n.trim(), r: num(f.r) || 0, w: num(f.w), s: Number(f.s) || 0, c: Number(f.c) || 0, ut: Date.now(), ur: 'edit' };
       if (imgUrl.trim() && rec.img !== 'fs') rec.img = imgUrl.trim();
       if (!imgUrl.trim() && rec.img && rec.img !== 'fs') delete rec.img;
