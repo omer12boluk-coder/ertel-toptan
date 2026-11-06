@@ -1092,7 +1092,7 @@ function setupResumeFix() {
   addEventListener('pageshow', (e) => { if (e.persisted) fix(); });
   // 6.11.2026 (2): aynı bozulma klavye kapanınca da oluyordu (sepette yazı alanından çıkınca alt menü ortada, sayfa boş) →
   // yazı alanından çıkınca ve klavye kapanınca (görünür alan birden uzayınca) ekran yeniden ölçülür
-  const isField = (el) => el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+  const isField = (el) => !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable || (el.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|reset|range|color|file|image)$/i.test(el.type))); // sadece klavye açan alanlar (onay kutusu / anahtar odakta kalınca düzeltme duruyordu)
   document.addEventListener('focusout', (e) => { if (!isField(e.target)) return; setTimeout(() => { if (!isField(document.activeElement)) fix(); }, 120); });
   const vv = window.visualViewport;
   if (vv) { let h0 = vv.height; vv.addEventListener('resize', () => { const h = vv.height; if (h - h0 > 120 && !isField(document.activeElement)) setTimeout(fix, 60); h0 = h; }); }
@@ -1101,13 +1101,31 @@ function setupResumeFix() {
   // değilse aradaki fark kadar itilir (--vvd) ve ekran yeniden ölçtürülür. Yazı alanı açıkken (klavye) dokunulmaz.
   if (vv && matchMedia('(pointer: coarse)').matches) {
     const r = document.documentElement; let cur = 0, q = 0, lastFix = 0;
+    // 6.11.2026 (4): ana ekran uygulamasında dönünce iPhone görünen alanı (visualViewport) da bir süre KISA bildirebiliyor →
+    // eski hesap menüyü bu kısa yüksekliğe göre YUKARI itiyordu (Hesabım'da menü ekranın ortasında). Artık:
+    // (a) görünen alanın kaydırma payı (offsetTop) da hesaba katılır, (b) ana ekran uygulamasında (tarayıcı çubuğu yok)
+    // bu genişlikte daha önce görülen sağlıklı tam yükseklik hatırlanır; klavye yokken menü hep ekranın en altına oturur.
+    const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+    const goodH = {}; try { Object.assign(goodH, JSON.parse(localStorage.getItem('vv-good') || '{}')); } catch {}
+    const visBottom = () => {
+      const top = Math.max(0, vv.offsetTop || 0); let h = vv.height;
+      if (standalone && !isField(document.activeElement)) {
+        const k = String(Math.round(innerWidth)), cap = Math.max(screen.width, screen.height) + 1;
+        // sağlıklı an: sayfa alanı ile görünen alan aynı boyda (klavye / bozulma yok) → kaydet
+        if (Math.abs(vv.height - innerHeight) < 2 && Math.abs(vv.width - innerWidth) < 2 && vv.height <= cap && vv.height > (goodH[k] || 0) + 1) {
+          goodH[k] = Math.round(vv.height); try { localStorage.setItem('vv-good', JSON.stringify(goodH)); } catch {}
+        }
+        if (goodH[k] && goodH[k] <= cap) h = Math.max(h, goodH[k]);
+      }
+      return top + h;
+    };
     const upd = () => {
       q = 0; const nav = document.querySelector('.botnav'); if (!nav || isField(document.activeElement)) { if (cur) { cur = 0; r.style.removeProperty('--vvd'); } return; }
       const cs = getComputedStyle(nav); if (cs.position !== 'fixed' || cs.display === 'none') return;
       // sayfanın başında / sonunda esneme (lastik) sırasında ölçülmez: menüyü sayfanın altına itiyordu (6.11.2026)
       const maxY = (document.scrollingElement || r).scrollHeight - innerHeight;
       if (scrollY < 0 || scrollY > maxY + 1) return;
-      const want = vv.height - (parseFloat(cs.bottom) || 0); // menünün altı burada olmalı
+      const want = visBottom() - (parseFloat(cs.bottom) || 0); // menünün altı burada olmalı
       const rb = nav.getBoundingClientRect().bottom - cur; // itme olmadan menünün altı
       let d = Math.round(want - rb); if (Math.abs(d) < 24) d = 0; // küçük farklar (esneme, adres çubuğu) yok sayılır
       if (d !== cur) { cur = d; d ? r.style.setProperty('--vvd', d + 'px') : r.style.removeProperty('--vvd'); }
