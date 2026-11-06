@@ -18,7 +18,7 @@ const newNo = () => Array.from({ length: 4 }, () => CODE[Math.floor(Math.random(
 const KEY = 'order-draft';
 const TTL = 12 * 3600e3; // açık form 12 saat sonra kendiliğinden temizlenir
 // imza: formun kaydedilmiş/açılmış hâliyle karşılaştırmak için (değişiklik yoksa Kaydet düğmesi görünmez)
-const sig = (x) => JSON.stringify([(x.name || '').trim(), (x.items || []).map((it) => [it.id, Number(it.qty) || 0, it.price == null || it.price === '' ? null : Number(it.price)])]);
+const sig = (x) => JSON.stringify([!!x.noVat, (x.name || '').trim(), (x.items || []).map((it) => [it.id, Number(it.qty) || 0, it.price == null || it.price === '' ? null : Number(it.price)])]);
 const blank = () => { const b = { no: newNo(), name: '', items: [] }; b.base = sig(b); return b; };
 const loadDraft = (key = KEY) => { const x = ls.get(key, null); if (!(x && x.items && x.at && Date.now() - x.at < TTL)) return blank(); if (x.base == null) x.base = x.sid ? sig(x) : sig({}); return x; };
 // arama sıralaması için kullanım: bu cihazda forma ekleme sayısı + siparişlerde geçme sayısı
@@ -81,8 +81,9 @@ export function OrderForm({ linkMode = false }) {
   });
   const tot = totals(items, 'offer');
   const tTL = rate ? toTL(tot, rate) : null;
-  const rec = useMemo(() => ({ no: d.no, gname: d.name.trim(), items, status: 'offered', createdAt: Date.now(), updatedAt: Date.now(), tl: true }), [JSON.stringify(items), d.no, d.name]);
-  const link = listLink(encodeList({ no: d.no, at: Date.now(), priced: true, rate: rate?.usd, items }));
+  const noVat = !linkMode && !!d.noVat; // 6.11.2026: 'KDV'yi gösterme' → formda, liste resminde ve linkte KDV satırı çizilmez
+  const rec = useMemo(() => ({ no: d.no, gname: d.name.trim(), items, noVat, status: 'offered', createdAt: Date.now(), updatedAt: Date.now(), tl: true }), [JSON.stringify(items), d.no, d.name, noVat]);
+  const link = listLink(encodeList({ no: d.no, at: Date.now(), priced: true, noVat, rate: rate?.usd, items }));
 
   const set = (patch) => setD((x) => ({ ...x, ...patch }));
   const upd = (id, patch) => setD((x) => ({ ...x, items: x.items.map((it) => (it.id === id ? { ...it, ...patch } : it)) }));
@@ -105,11 +106,11 @@ export function OrderForm({ linkMode = false }) {
   const saveForm = async (then) => {
     if (!d.items.length) return toast('Form boş', 'warn');
     const A = api(); const id = d.sid || A.newFormId();
-    const data = { no: d.no, name: d.name.trim(), items: d.items.map(({ id: pid, qty, price }) => ({ id: pid, qty, price: price == null ? null : Number(price) })), at: Date.now(), total: tot };
+    const data = { no: d.no, name: d.name.trim(), noVat: !!d.noVat || undefined, items: d.items.map(({ id: pid, qty, price }) => ({ id: pid, qty, price: price == null ? null : Number(price) })), at: Date.now(), total: tot };
     const base = sig(d);
     try { await A.saveForm(id, data); setD((x) => ({ ...x, sid: id, base })); toast(d.sid ? 'Değişiklikler kaydedildi' : 'Form kaydedildi'); then?.(); } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
   };
-  const load = (f) => { const x = { no: f.no || newNo(), name: f.name || '', items: (f.items || []).filter((it) => byId.get(it.id)), sid: f.id }; x.base = sig(x); setD(x); setImgs(null); setQ(''); window.scrollTo({ top: 0, behavior: 'smooth' }); toast('Form açıldı'); };
+  const load = (f) => { const x = { no: f.no || newNo(), name: f.name || '', noVat: !!f.noVat, items: (f.items || []).filter((it) => byId.get(it.id)), sid: f.id }; x.base = sig(x); setD(x); setImgs(null); setQ(''); window.scrollTo({ top: 0, behavior: 'smooth' }); toast('Form açıldı'); };
   const openForm = (f) => { if (d.sid === f.id && !dirty) return; if (dirty && d.items.length) setAsk(f); else load(f); };
 
   // Liste değişince resimleri yeniden hazırla
@@ -169,7 +170,7 @@ export function OrderForm({ linkMode = false }) {
 
       <div className="oform-grid">
         <section className="oform-pick">
-          <div className="search"><Icon n="search" s={18} /><input id="of-search" type="search" placeholder="Ürün adı veya stok kodu ile ara…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus={!matchMedia('(hover: none) and (pointer: coarse)').matches} /></div>
+          <div className="search"><Icon n="search" s={18} /><input id="of-search" type="search" autoComplete="off" placeholder="Ürün adı veya stok kodu ile ara…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus={!matchMedia('(hover: none) and (pointer: coarse)').matches} /></div>
           {q && results.length === 0 && <p className="fine">Eşleşen ürün yok.</p>}
           {!q && <p className="fine oform-hint">Ürün adı ya da stok kodu yazın; sonuçlar burada, kendi kutusunda listelenir.</p>}
           {q && results.length > 0 && <span className="oform-count">{results.length} sonuç</span>}
@@ -216,8 +217,9 @@ export function OrderForm({ linkMode = false }) {
                   ))}
                 </tbody>
               </table>
-              <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b>{tTL != null && <span className="muted num">≈ {fmtTL(tTL)}</span>}</div>
-              <VatLines by={tot} rate={rate} className="right" />
+              <div className="vle-tot of-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b>{tTL != null && <span className="muted num">≈ {fmtTL(tTL)}</span>}</div>
+              {!noVat && <VatLines by={tot} rate={rate} className="right" />}
+              {!linkMode && <label className="mini-check of-novat"><input type="checkbox" checked={!!d.noVat} onChange={(e) => set({ noVat: e.target.checked })} />KDV’yi gösterme <small className="muted">— liste resminde ve linkte de KDV satırı çıkmaz</small></label>}
             </>
           )}
         </section>

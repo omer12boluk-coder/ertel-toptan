@@ -100,6 +100,51 @@ export function PageHead({ title, extra, newLabel, onNew, children, cls = '' }) 
     </div>
   );
 }
+// 6.11.2026 (6) Çip biçimli seçim: fareli bilgisayarda tarayıcının çirkin açılır listesi yerine sitenin kendi menüsü
+// (kart gölgesi, yuvarlak köşe, seçili satırda tik, tema rengi). Dokunmatikte telefonun kendi seçicisi (iOS çarkı) kalır.
+// options: [[değer, yazı], ...]; label: kapalıyken gösterilecek yazı (yoksa seçili seçeneğin yazısı)
+const FINE = typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+export function ChipSelect({ id, value, onChange, options, icon, className = '', on, ariaLabel }) {
+  const [open, setOpen] = useState(false); const [pos, setPos] = useState(null);
+  const btn = useRef(null); const pop = useRef(null);
+  const cur = options.find(([v]) => String(v) === String(value)) || options[0];
+  const isOn = on ?? !!value;
+  useEffect(() => {
+    if (!open) return;
+    const r = btn.current.getBoundingClientRect();
+    setPos({ top: r.bottom + 6, left: Math.max(8, Math.min(r.left, innerWidth - 248)), minW: Math.max(r.width, 190) });
+    const out = (e) => { if (!btn.current?.contains(e.target) && !pop.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') { setOpen(false); btn.current?.focus(); } };
+    const shut = (e) => { if (!pop.current?.contains(e.target)) setOpen(false); };
+    addEventListener('pointerdown', out, true); addEventListener('keydown', esc); addEventListener('scroll', shut, true); addEventListener('resize', shut);
+    return () => { removeEventListener('pointerdown', out, true); removeEventListener('keydown', esc); removeEventListener('scroll', shut, true); removeEventListener('resize', shut); };
+  }, [open]);
+  useEffect(() => { if (open && pos) pop.current?.querySelector('.csel-o.sel, .csel-o')?.focus({ preventScroll: true }); }, [open, pos]);
+  if (!FINE) return (
+    <label className={'chip select' + (isOn ? ' on' : '') + (className ? ' ' + className : '')}>
+      {icon && <Icon n={icon} s={14} />}
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel}>{options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+    </label>
+  );
+  const pick = (v) => { setOpen(false); if (String(v) !== String(value)) onChange(v); btn.current?.focus({ preventScroll: true }); };
+  const move = (e) => { if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return; e.preventDefault(); const xs = [...pop.current.querySelectorAll('.csel-o')]; const i = xs.indexOf(document.activeElement); xs[(i + (e.key === 'ArrowDown' ? 1 : -1) + xs.length) % xs.length]?.focus(); };
+  return (
+    <>
+      <button ref={btn} id={id} type="button" className={'chip select csel' + (isOn ? ' on' : '') + (open ? ' open' : '') + (className ? ' ' + className : '')} aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} onClick={() => setOpen((x) => !x)}>
+        {icon && <Icon n={icon} s={14} />}<span className="csel-t">{cur?.[1]}</span><Icon n="down" s={14} className="csel-ch" />
+      </button>
+      {open && pos && createPortal(
+        <div ref={pop} className="csel-pop" role="listbox" aria-label={ariaLabel} style={{ top: pos.top, left: pos.left, minWidth: pos.minW }} onKeyDown={move}>
+          {options.map(([v, l]) => { const sel = String(v) === String(value); return (
+            <button key={v} type="button" role="option" aria-selected={sel} className={'csel-o' + (sel ? ' sel' : '')} onClick={() => pick(v)}>
+              <span>{l}</span>{sel && <Icon n="check" s={15} />}
+            </button>
+          ); })}
+        </div>, document.body)}
+    </>
+  );
+}
+
 // Sepete ekle ⇄ − 1 + geçişi (6.11.2026): sınıf çizimle aynı anda hesaplanır. Eskiden useEffect + setState ile bir kare
 // SONRA geliyordu → yeni öğe bir kare son hâlinde görünüp sonra animasyonun başına sıçrıyordu (flaş).
 export function useMorph(qty) {

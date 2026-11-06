@@ -99,7 +99,7 @@ export function ListPaper({ r, items: itemsIn, rate: rateIn, label, who = true, 
             {tTL != null && <span className="paper-tl num">≈ {fmtTL(tTL)} <small>({rateLabel(rate)})</small></span>}
           </div>
         </div>
-        {b2b ? <B2bGain items={items} /> : <VatLines by={tot} rate={rate} />}
+        {b2b ? <B2bGain items={items} /> : !r.noVat && <VatLines by={tot} rate={rate} />}
         </>}
       </footer>
       {zoom && <Lightbox urls={zoom.urls} title={zoom.title} onClose={() => setZoom(null)} />}
@@ -182,7 +182,7 @@ export async function renderListImages(r, { items: itemsIn, rate, tl: tlIn } = {
   const per = Math.ceil(rows.length / nPages) || 1;
   const pages = Array.from({ length: nPages }, (_, i) => rows.slice(i * per, (i + 1) * per));
   const vat0 = vatOf(totals(items, 'offer'), S.pricing.vatPct ?? 20);
-  const vat = S.pricing.showVat === false ? { pct: 0 } : vat0;
+  const vat = S.pricing.showVat === false || r.noVat ? { pct: 0 } : vat0; // r.noVat: Form oluştur 'KDV'yi gösterme'
   const tot = totals(items, 'offer');
   const tTL = tl ? toTL(tot, rate) : null;
   const who = r.gname || r.userName;
@@ -507,7 +507,7 @@ export function VitrinListEditor({ code, onClose }) {
   const step = Number(S.pricing.adjustStep) || 1;
   if (!L0) return <Sheet title="Vitrin listesi" onClose={onClose}><p className="err">Bu link okunamadı. Linkin tamamını yapıştırdığınızdan emin olun.</p></Sheet>;
   const upd = (i, patch) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x)));
-  const L = { no: L0.no, at: Date.now(), priced: true, rate: live?.usd || L0.rate, items };
+  const L = { no: L0.no, at: Date.now(), priced: true, noVat: L0.noVat, rate: live?.usd || L0.rate, items };
   const newLink = listLink(encodeList(L));
   const rate = live || (L0.rate ? { usd: L0.rate, src: 'harem' } : null);
   return (
@@ -535,7 +535,7 @@ export function VitrinListEditor({ code, onClose }) {
           </tbody>
         </table>
         <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(totals(items, 'offer'))}</b>{rate && toTL(totals(items, 'offer'), rate) != null && <span className="muted num">≈ {fmtTL(toTL(totals(items, 'offer'), rate))}</span>}</div>
-        <VatLines by={totals(items, 'offer')} rate={rate} className="right" />
+        {!L0.noVat && <VatLines by={totals(items, 'offer')} rate={rate} className="right" />}
         <div className="export-bar">
           <a className="btn wa" href={waLink('', 'Fiyatlı listeniz:\n' + newLink)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp’ta müşteriye gönder</a>
           <button className="btn outline" onClick={() => copyText(newLink, 'Fiyatlı liste linki kopyalandı')}><Icon n="copy" s={16} />Linki kopyala</button>

@@ -9,7 +9,12 @@ export function setSfxGlobal(on) { globalOn = on !== false; }
 // 6.11.2026 (5): ses düzeyi (look.soundVol, Tasarım › Cam ve hareket; 0.3–3, varsayılan 1.8 — eskisi 1 çok kısık bulundu)
 export const SFX_VOL_DEF = 1.8;
 let vol = SFX_VOL_DEF, volNode = null;
-export function setSfxVol(v) { const n = Number(v); vol = n > 0 ? Math.min(3, Math.max(0.3, n)) : SFX_VOL_DEF; if (volNode) volNode.gain.value = vol; }
+// cihaz düzeyi (6.11.2026 (6)): ses düğmesinin üstüne gelince açılan kaydırıcı; bu tarayıcıya özel çarpan (ls 'sfx-dv', 0–1.5)
+let dv = (() => { try { const x = Number(localStorage.getItem('sfx-dv')); return x >= 0 && x <= 1.5 && localStorage.getItem('sfx-dv') !== null ? x : 1; } catch { return 1; } })();
+const applyVol = () => { if (volNode) volNode.gain.value = vol * dv; };
+export function setSfxVol(v) { const n = Number(v); vol = n > 0 ? Math.min(3, Math.max(0.3, n)) : SFX_VOL_DEF; applyVol(); }
+export const sfxDevVol = () => dv;
+export function setSfxDevVol(x) { dv = Math.min(1.5, Math.max(0, Number(x) || 0)); try { localStorage.setItem('sfx-dv', String(dv)); } catch {} applyVol(); }
 export const sfxEnabled = () => globalOn && !devOff();
 export const sfxAvailable = () => globalOn;
 export function setSfxDevice(on) { try { if (on) localStorage.removeItem(LS); else localStorage.setItem(LS, '1'); } catch {} subs.forEach((f) => f()); }
@@ -38,7 +43,7 @@ function out(c) {
   if (bus && bus.context === c) return bus;
   const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600; lp.Q.value = 0.4;
   const cp = c.createDynamicsCompressor(); cp.threshold.value = -24; cp.ratio.value = 4;
-  volNode = c.createGain(); volNode.gain.value = vol; lp.connect(cp).connect(volNode).connect(c.destination); bus = lp; return lp;
+  volNode = c.createGain(); volNode.gain.value = vol * dv; lp.connect(cp).connect(volNode).connect(c.destination); bus = lp; return lp;
 }
 function tone(c, { f, f2, t0 = 0, d = 0.12, g = 0.05, a = 0.006, h = 0 }) {
   const t = c.currentTime + t0; const o = out(c);
@@ -67,10 +72,10 @@ export function sfx(name) {
 }
 
 // 6.11.2026 mağazada dokunma sesleri (kullanıcı: çoğu şeyde ses yok): sekmeler, çipler, seçim çubukları, anahtarlar, favori, geri, arama
-const TAP = '.topnav-b, .botnav-b, .seg > button, .chip, .mo-tabs > button, .view-sw > button, .of-seg > button, .back-btn, .hsearch-btn, .cat-link, .hd-i, .hd-ct, .hd-cs, .bp-tile, .icon-btn, .sh-dot, .qty button, .iq-b';
+const TAP = '.subnav > button, .ph-new, .ph-sec, .orow, .tnav-sub button, .topnav-b, .botnav-b, .seg > button, .chip, .mo-tabs > button, .view-sw > button, .of-seg > button, .back-btn, .hsearch-btn, .cat-link, .hd-i, .hd-ct, .hd-cs, .bp-tile, .icon-btn, .sh-dot, .qty button, .iq-b';
 export function setupSfxTaps() {
   addEventListener('click', (e) => {
-    const t = e.target instanceof Element ? e.target : null; if (!t || !t.closest('.shell.public, .hd-p')) return;
+    const t = e.target instanceof Element ? e.target : null; if (!t || !t.closest('.shell, .hd-p')) return; // 6.11.2026 (6): yönetim + bayi panelinde de
     if (t.closest('.fav-btn')) { if (!t.closest('.fav-btn').classList.contains('on')) sfx('like'); return; }
     if (t.closest('.toggle, [role=switch]')) { sfx('toggle'); return; }
     if (t.closest('.btn.add, .iq-p, .iq-m, .pbuy-btns')) return; // sepet sesleri setQty'den gelir

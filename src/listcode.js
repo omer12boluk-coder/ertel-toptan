@@ -16,6 +16,7 @@ export function encodeList(list) {
   const day = Math.floor((at - new Date(at).getTimezoneOffset() * 6e4) / 864e5 - D0); // yerel gün
   let head = `${list.no}_${n36(day)}`;
   if (list.priced) head += '_p' + (list.rate ? n36(list.rate * 100) : '0'); // fiyatlı liste işareti (+ kur)
+  if (list.noVat) head += '_n'; // 6.11.2026: KDV gösterilmesin (Form oluştur 'KDV'yi gösterme')
   const rows = list.items.map((it) => {
     let t = n36(it.id);
     if (list.priced) t += '_' + n36(it.qty || 1) + '_' + (it.offer == null || it.offer === '' ? 'x' : n36(Number(it.offer) * 100));
@@ -28,14 +29,14 @@ export function decodeList(code) {
   try {
     if (/^ey/.test(code)) return decodeOld(code); // eski uzun linkler
     const parts = code.split('-');
-    const [no, day, pr] = parts[0].split('_');
+    const hs = parts[0].split('_'); const [no, day] = hs; const pr = hs.slice(2).find((x) => x[0] === 'p'); const noVat = hs.slice(2).includes('n');
     const priced = !!pr && pr[0] === 'p';
     const rows = parts.slice(1).map((t) => {
       const [id, q, price] = t.split('_');
       return { id: parseInt(id, 36), qty: Math.max(1, parseInt(q || '1', 36) || 1), price: priced ? (price && price !== 'x' ? parseInt(price, 36) / 100 : null) : null };
     }).filter((r) => r.id > 0);
     if (!rows.length) return null;
-    return { no, name: '', at: (parseInt(day, 36) + D0) * 864e5 + 12 * 36e5, priced, rate: priced ? parseInt(pr.slice(1), 36) / 100 || null : null, rows };
+    return { no, name: '', noVat, at: (parseInt(day, 36) + D0) * 864e5 + 12 * 36e5, priced, rate: priced ? parseInt(pr.slice(1), 36) / 100 || null : null, rows };
   } catch { return null; }
 }
 function decodeOld(code) {
@@ -57,7 +58,7 @@ export function listItems(L, byId = store.s.byId) {
 }
 // ListPaper / resim çizimi için liste "kaydı"
 export function listRecord(L, items) {
-  return { id: 'l', no: L.no, gname: L.name, items, status: L.priced ? 'offered' : 'new', createdAt: L.at, updatedAt: L.at, tl: true, rate: L.priced && L.rate ? { usd: L.rate, src: 'harem', at: L.at } : undefined };
+  return { id: 'l', no: L.no, gname: L.name, noVat: !!L.noVat, items, status: L.priced ? 'offered' : 'new', createdAt: L.at, updatedAt: L.at, tl: true, rate: L.priced && L.rate ? { usd: L.rate, src: 'harem', at: L.at } : undefined };
 }
 
 export const listLink = (code, admin) => `${location.origin}/${admin ? 'admin' : 'magaza'}/l/${code}`;

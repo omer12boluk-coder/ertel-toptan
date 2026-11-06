@@ -87,7 +87,12 @@ export function NotifBell() {
   const [kind, setKind] = useState('all');
   const box = useRef(null);
   const unread = list.filter((x) => x.at > seen).length;
-  const close = () => { setOpen(false); const t = Date.now(); ls.set('notif-seen', t); setSeen(t); };
+  // 6.11.2026 (6): kapanırken kısa animasyon (panel zile doğru küçülüp söner), sonra kaldırılır
+  const close = () => {
+    const done = () => { setOpen(false); const t = Date.now(); ls.set('notif-seen', t); setSeen(t); };
+    const p = box.current?.querySelector('.nc-panel'); if (!p || p.classList.contains('out') || matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
+    p.classList.add('out'); box.current.querySelector('.nc-scrim')?.classList.add('out'); setTimeout(done, 150);
+  };
   useEffect(() => {
     if (!open) return;
     const out = (e) => { if (box.current && !box.current.contains(e.target) && !e.target.closest?.('.sheet-bg, .ctx-catch, .confirm-bg')) close(); }; // üstünde açılan pencereye (Nasıl açılır?) dokunmak paneli kapatmasın
@@ -249,7 +254,12 @@ export function ShopBell() {
   const [seen, setSeen] = useState(cSeenAt);
   const box = useRef(null);
   const unread = list.filter((x) => x.at > seen).length;
-  const close = () => { setOpen(false); const t = Date.now(); ls.set('cnotif-seen', t); setSeen(t); };
+  // 6.11.2026 (6): kapanırken kısa animasyon (panel zile doğru küçülüp söner), sonra kaldırılır
+  const close = () => {
+    const done = () => { setOpen(false); const t = Date.now(); ls.set('cnotif-seen', t); setSeen(t); };
+    const p = box.current?.querySelector('.nc-panel'); if (!p || p.classList.contains('out') || matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
+    p.classList.add('out'); box.current.querySelector('.nc-scrim')?.classList.add('out'); setTimeout(done, 150);
+  };
   useEffect(() => {
     if (!open) return;
     const out = (e) => { if (box.current && !box.current.contains(e.target) && !e.target.closest?.('.sheet-bg, .ctx-catch, .confirm-bg')) close(); }; // üstünde açılan pencereye (Nasıl açılır?) dokunmak paneli kapatmasın

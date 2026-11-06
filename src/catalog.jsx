@@ -3,7 +3,7 @@ import { ProdHub } from './p0home.jsx';
 import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
-import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead, useMorph } from './ui.jsx';
+import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead, useMorph, ChipSelect } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid, fbSkip } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
@@ -593,47 +593,10 @@ export function Catalog({ admin }) {
               {!admin && user?.role === 'public' && <button className={'chip' + (showOos ? ' on' : '')} onClick={() => setShowOos(!showOos)} title="Stokta olmayan ürünleri de listele"><Icon n={showOos ? 'eye' : 'eyeoff'} s={14} />Stokta olmayanlar</button>}
               {!admin && user?.role !== 'public' && <button className={'chip' + (stockOnly ? ' on' : '')} onClick={() => setStockOnly(!stockOnly)}>Stoktakiler</button>}
               {!admin && <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>}
-              <label className={'chip select' + (price ? ' on' : '')}>
-                <Icon n="tag" s={14} />
-                <select id="cat-price" value={price} onChange={(e) => setPrice(e.target.value)} aria-label="Fiyat aralığı">
-                  <option value="">Tüm fiyatlar</option><option value="u10">$10 altı</option><option value="10-50">$10 – $50</option><option value="50-200">$50 – $200</option><option value="200+">$200 üstü</option>
-                </select>
-              </label>
-              {brands.length > 1 && (
-                <label className={'chip select' + (brand ? ' on' : '')}>
-                  <select id="cat-brand" value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="Marka">
-                    <option value="">Tüm markalar</option>
-                    {brands.map(([b, n]) => <option key={b} value={b}>{b} ({n})</option>)}
-                  </select>
-                </label>
-              )}
-              <label className="chip select">
-                <Icon n="sort" s={15} />
-                <select id="cat-sort" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sıralama">
-                  <option value="default">Yeni eklenen</option>
-                  <option value="asc">Fiyat artan</option>
-                  <option value="desc">Fiyat azalan</option>
-                  <option value="name">İsim A–Z</option>
-                  <option value="stock">Stoktakiler önce</option>
-                </select>
-              </label>
-              {admin && (
-                <label className="chip select">
-                  <select id="adm-filter" value={adminFilter} onChange={(e) => setAdminFilter(e.target.value)} aria-label="Filtre">
-                    <option value="all">Tüm ürünler</option>
-                    <option value="active">Aktif olanlar</option>
-                    <option value="inactive">Pasif olanlar</option>
-                    <option value="instock">Stoktakiler</option>
-                    <option value="nostock">Stoğu bitenler</option>
-                    <option value="nowholesale">Toptan fiyatı girilmemiş</option>
-                    <option value="noimg">Resmi olmayanlar</option>
-                    <option value="notags">Etiketi olmayanlar</option>
-                    <option value="pricechanged">Toptanı kontrol edilecekler</option>
-                    <option value="new">Siteden yeni gelenler</option>
-                    <option value="siteoff">Sitede satışta olmayanlar</option>
-                  </select>
-                </label>
-              )}
+              <ChipSelect id="cat-price" icon="tag" value={price} onChange={setPrice} ariaLabel="Fiyat aralığı" options={[['', 'Tüm fiyatlar'], ['u10', '$10 altı'], ['10-50', '$10 – $50'], ['50-200', '$50 – $200'], ['200+', '$200 üstü']]} />
+              {brands.length > 1 && <ChipSelect id="cat-brand" value={brand} onChange={setBrand} ariaLabel="Marka" options={[['', 'Tüm markalar'], ...brands.map(([b2, n]) => [b2, `${b2} (${n})`])]} />}
+              <ChipSelect id="cat-sort" icon="sort" value={sort} onChange={setSort} on={false} ariaLabel="Sıralama" options={[['default', 'Yeni eklenen'], ['asc', 'Fiyat artan'], ['desc', 'Fiyat azalan'], ['name', 'İsim A–Z'], ['stock', 'Stoktakiler önce']]} />
+              {admin && <ChipSelect id="adm-filter" value={adminFilter} onChange={setAdminFilter} on={adminFilter !== 'all'} ariaLabel="Filtre" options={[['all', 'Tüm ürünler'], ['active', 'Aktif olanlar'], ['inactive', 'Pasif olanlar'], ['instock', 'Stoktakiler'], ['nostock', 'Stoğu bitenler'], ['nowholesale', 'Toptan fiyatı girilmemiş'], ['noimg', 'Resmi olmayanlar'], ['notags', 'Etiketi olmayanlar'], ['pricechanged', 'Toptanı kontrol edilecekler'], ['new', 'Siteden yeni gelenler'], ['siteoff', 'Sitede satışta olmayanlar']]} />}
 
             </div>
           </div>

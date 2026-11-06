@@ -1844,7 +1844,10 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .oform-right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .oform-res { max-height: min(520px, 58vh); border: 1px solid var(--line-2); border-radius: 12px; padding: 0 8px; }
 .oform-res:empty { display: none; }
-@media (min-width: 1000px) { .oform-pick { max-height: none; } }
+/* 6.11.2026 (6): Form oluştur + Sepet linki — bilgisayarda ürün arama paneli sayfayla kaymaz (yapışkan, ekrana sığar),
+   sadece sonuç listesi kendi içinde kayar; liste sonuna gelince sayfa kaymaya devam etmez (overscroll contain) */
+@media (min-width: 1000px) { .oform-pick { max-height: calc(100vh - var(--top-h) - 32px); max-height: calc(100dvh - var(--top-h) - 32px); }
+  .oform-res { flex: 1 1 auto; min-height: 0; max-height: none; overscroll-behavior: contain; } }
 .oform-count { font-size: 12.5px; color: var(--muted); font-weight: 600; margin-bottom: -6px; }
 .oform-hint { margin: 0; }
 .oform-out { scroll-margin-top: calc(var(--top-h) + 16px); border-color: color-mix(in oklab, #25d366 35%, var(--line)); }
@@ -8350,6 +8353,62 @@ html.nav-anim :is(.main > *, .main > .kp > *, .plist > li, .olist > li, .co-sec,
 .lc-tot .tl-hint, .lc-tot .vat-inc { font-size: 12.5px; text-align: right; }
 /* 6.11.2026 gece: sepet sayacı (üst menü + yüzen sepet) --price ile boyanıyordu → grafitte beyaz zemin üstüne beyaz '1' görünmüyordu;
    bakırda da şeftali üstüne beyaz soluktu. Gecede iOS kırmızısı rozet (alt menüdeki sepet rozetiyle aynı). WhatsApp düğmesi yazısı daha parlak. */
+/* 6.11.2026 (6): kullanıcı: gündüz sepet sayısı TEMA RENGİNDE; gece kırmızı kalsın */
+html :is(.hcart-ic b, .cart-fab-ic b) { background: var(--accent); color: var(--accent-ink, #fff); }
 html.th-dash :is(.hcart-ic b, .cart-fab-ic b) { background: #ff3b30; color: #fff; }
 html.th-dash .shell.public .btn.wa-soft { color: #30d158; border-color: rgb(48 209 88 / .35); background: rgb(48 209 88 / .08); }
 html.th-dash.nt-gr .sh-new { background: #0a84ff; box-shadow: 0 6px 14px -6px rgb(10 132 255 / .7); } /* fiyat rengi grafitte beyaz → 'YENİ' rozeti beyaz üstüne beyazdı */
+
+/* 6.11.2026 (6) ses düğmesi: üstüne gelince düzey kaydırıcısı (sadece fareli bilgisayarda) */
+.sfx-wrap { position: relative; display: inline-flex; }
+.sfx-pop { position: absolute; top: calc(100% + 8px); left: 50%; z-index: 60; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 14px 34px -14px rgb(0 0 0 / .35); white-space: nowrap;
+  opacity: 0; visibility: hidden; transform: translate(-50%, -4px) scale(.97); transform-origin: 50% 0; transition: opacity .16s ease, transform .2s cubic-bezier(.2, .9, .25, 1), visibility 0s .2s; }
+.sfx-pop::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; } /* düğmeden kaydırıcıya geçerken kapanmasın */
+@media (hover: hover) and (pointer: fine) { .sfx-wrap:hover .sfx-pop, .sfx-wrap:focus-within .sfx-pop { opacity: 1; visibility: visible; transform: translate(-50%, 0) scale(1); transition-delay: 0s; } }
+.sfx-pop input[type=range] { width: 120px; height: 4px !important; min-height: 0 !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; appearance: none; -webkit-appearance: none; border-radius: 4px; background: linear-gradient(90deg, var(--accent) var(--p, 66%), var(--line) var(--p, 66%)); cursor: pointer; }
+.sfx-pop input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 .5px rgb(0 0 0 / .15), 0 2px 6px rgb(0 0 0 / .25); }
+.sfx-pop input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgb(0 0 0 / .25); }
+.sfx-pop b { font: 600 12px/1 var(--f-body); color: var(--muted); min-width: 34px; text-align: right; }
+@media (max-width: 899px) { .shell.public .sfx-wrap { display: none; } }
+/* 6.11.2026 (6) Form oluştur / Sepet linki tablosu: sağ sütun dar kalınca (yan menülü panelde ~600px) sabit sütunlar ürün adını
+   kelime kelime alt alta itiyordu → kutu darsa (container < 860px, sadece bilgisayar/tablet) her satır iki sıralı kart:
+   üstte numara + resim + tam ad + sil, altta adet · liste · fiyat · tutar */
+.oform-cart { container: ofc / inline-size; }
+@media (min-width: 761px) { @container ofc (max-width: 860px) {
+  .oform-t, .oform-t tbody { display: block; width: 100%; } .oform-t thead { display: none; }
+  .oform-t tr { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; grid-template-areas: "n n n n d" "q l . o s"; align-items: center; gap: 10px 14px; padding: 12px 4px; border-bottom: 1px solid var(--line-2); }
+  .oform-t td { display: block; width: auto !important; padding: 0 !important; border: 0 !important; }
+  .oform-t .it-name { grid-area: n; } .oform-t .it-del { grid-area: d; } .oform-t .it-qty { grid-area: q; } .oform-t .it-list { grid-area: l; white-space: nowrap; }
+  .oform-t .it-list::before { content: "Liste "; } .oform-t .it-offer { grid-area: o; } .oform-t .it-sum { grid-area: s; min-width: 72px; text-align: right; }
+  .oform-t td .stepper, .oform-t td .adj { margin: 0; }
+} }
+
+/* 6.11.2026 (6) Form oluştur: toplam tema renginde (yönetimde fiyat rengi turuncuydu), 'KDV'yi gösterme' sağa yaslı */
+.oform-cart .vle-tot b { color: var(--accent); }
+.of-novat { align-self: flex-end; font-size: 13px; }
+
+/* 6.11.2026 (6) yönetim: seçili menü satırı siyah/beyaz yerine TEMA RENGİ (kullanıcı: renk tutarsızlığı olmasın) */
+html.adm-apple, html.adm-apple[data-theme="dark"] { --ad-on: var(--accent); --ad-on-ink: var(--accent-ink, #fff); }
+/* 6.11.2026 (6) bildirim paneli: zilden açılır (küçükten büyüyüp belirir), kapanırken zile doğru söner — mağaza + yönetim */
+.nc-panel { animation: ncIn .28s cubic-bezier(.2, .9, .25, 1) both; transform-origin: calc(100% - 28px) 0; }
+.nc-panel.out { animation: ncOut .15s ease-in forwards; pointer-events: none; }
+.nc-scrim { animation: ncFade .2s ease both; } .nc-scrim.out { animation: ncFade .15s ease reverse forwards; }
+@keyframes ncIn { from { opacity: 0; transform: translateY(-6px) scale(.94); } }
+@keyframes ncOut { to { opacity: 0; transform: translateY(-4px) scale(.96); } }
+@keyframes ncFade { from { opacity: 0; } }
+@media (min-width: 1100px) { html.adm-apple .shell.admin .nc-panel { transform-origin: 0 100%; } }
+@media (max-width: 700px) { .nc-panel { transform-origin: 50% 0; } }
+@media (prefers-reduced-motion: reduce) { .nc-panel, .nc-panel.out, .nc-scrim { animation: none; } }
+
+/* 6.11.2026 (6) ChipSelect: sitenin kendi açılır menüsü (fareli bilgisayar) */
+.chip.csel { gap: 6px; cursor: pointer; } .chip.csel .csel-ch { opacity: .6; transition: transform .2s ease; } .chip.csel.open .csel-ch { transform: rotate(180deg); }
+.chip.csel.open { border-color: color-mix(in oklab, var(--accent) 45%, var(--line)); }
+.csel-pop { position: fixed; z-index: 120; max-height: min(360px, 60vh); overflow-y: auto; overscroll-behavior: contain; padding: 6px; border-radius: 14px;
+  background: var(--surface); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 22px 48px -18px rgb(10 20 50 / .4), 0 2px 6px -2px rgb(0 0 0 / .08);
+  animation: cselIn .18s cubic-bezier(.2, .9, .25, 1) both; transform-origin: 20px 0; }
+@keyframes cselIn { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+.csel-o { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; padding: 9px 12px; border-radius: 9px; font: 500 14px/1.2 var(--f-body); color: inherit; text-align: left; white-space: nowrap; }
+.csel-o:hover, .csel-o:focus-visible { background: var(--surface-2); outline: none; }
+.csel-o.sel { color: var(--accent); font-weight: 650; } .csel-o.sel svg { flex: none; }
+html.th-dash .csel-pop { background: var(--surface); border-color: var(--line); }

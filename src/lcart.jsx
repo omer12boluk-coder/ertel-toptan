@@ -153,9 +153,11 @@ export function lcSummary(c, S) {
 export function LinkCartsPage() { return <LinkCarts page />; }
 
 export function LinkCarts({ page = false }) {
-  const list = useStore((s) => s.lcarts ?? null); // datawin: son N gün + bekleyenler (Ayarlar > Veri ve kota)
+  const list0 = useStore((s) => s.lcarts ?? null); // datawin: son N gün + bekleyenler (Ayarlar > Veri ve kota)
+  // 6.11.2026 (6): süresi dolup onaylanmamış linkler listede hiç görünmez (bekçi 10 dakikada bir siler; o arada da gizli)
+  const list = useMemo(() => list0 && list0.filter((c) => !(c.status === 'open' && lcExpired(c))), [list0]);
   const live = useRate();
-  const [f, setF] = useState('sent');
+  const [f, setF] = useState(page ? 'sent' : 'open'); // Sepet linki sayfasında önce açıkta bekleyen linkler
   const [q, setQ] = useState('');
   const open = useStore((st) => st.lcOpen || null); // mağaza siparişi gibi store'da (geri = sayfa geçişi animasyonu)
   const [confirm, setConfirm] = useState(null);

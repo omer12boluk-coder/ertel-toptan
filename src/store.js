@@ -106,7 +106,7 @@ export function setQty(id, qty) {
   const cart = { ...store.s.cart };
   const was = cart[id] || 0;
   if (qty > 0) cart[id] = Math.min(9999, Math.floor(qty)); else delete cart[id];
-  sfx(!(qty > 0) ? 'remove' : qty > was ? 'add' : 'tap'); // 5.11.2026 ses efektleri
+  sfx('tap'); // 6.11.2026 (6): sepete ekle / +1 / −1 / kaldır = menüdeki tık sesiyle aynı (kullanıcı isteği)
   if (qty > 0 && was === 0 && store.s.settings?.look?.flyCart === true) flyToCart(Math.floor(qty)); // sadece ilk eklemede (adet artırmada uçmaz)
   store.set({ cart }); cs.set(cartKey(), cart);
 }

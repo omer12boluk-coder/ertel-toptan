@@ -894,6 +894,17 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   setupCrispBack();
   setupResumeFix();
 }
+// 6.11.2026 (6): arama kutularında tarayıcının eski aramalar listesi (siyah öneri kutusu) çıkmasın — odaklanınca autocomplete=off
+document.addEventListener('focusin', (e) => {
+  const t = e.target; if (!(t instanceof HTMLInputElement) || t.hasAttribute('autocomplete')) return;
+  if (t.type === 'search' || /\bara\b|ara…|ara\.\.\.|^Ara/i.test(t.placeholder || '') || t.closest('[class*="search"], [class*="srch"]')) t.setAttribute('autocomplete', 'off');
+}, true);
+// 6.11.2026 (6): arama kutularında tarayıcının 'eski aramalar' siyah öneri listesi çıkmasın (ad/telefon/adres alanlarının
+// otomatik doldurması korunur: sadece type=search ya da 'ara' yazan / arama kutusu içindeki alanlar)
+addEventListener('focusin', (e) => {
+  const t = e.target; if (!(t instanceof HTMLInputElement) || t.hasAttribute('autocomplete')) return;
+  if (t.type === 'search' || /\bara\b|ara…|ara\.\.\.|Ara…/i.test(t.placeholder || '') || t.closest('.search, .hsearch, .hsearch-box, [class*="srch"]')) t.setAttribute('autocomplete', 'off');
+}, true);
 setupNavAnim(); // 6.11.2026: bilgisayarda da (eskiden sadece telefonda çağrılıyordu → bilgisayarda sadece CSS 'alttan yükselme' vardı, look.motionD hiç çalışmıyordu)
 setupFlowPills(); // akan hap: bilgisayarda da
 setupSfxTaps(); // 6.11.2026 mağazada dokunma sesleri
@@ -1239,6 +1250,12 @@ function setupNavAnim() {
     const pa = prev.split('|'), ka = k.split('|');
     if (!mob() && pa[0] === 'hesap' && ka[0] === 'hesap' && pa[1] !== ka[1] && pa.slice(2).join() === ka.slice(2).join()) {
       const m = watched.querySelector('.acct-main'); if (m) m.animate([{ opacity: 0, transform: `translate3d(${h === 'back' ? -14 : 14}px,0,0)` }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.2,.7,.2,1)' });
+      return;
+    }
+    // 6.11.2026 (6): bilgisayarda yönetim panelinde iç sekmeler (alt başlıklar, sayfa içi geçişler) yandan kaymasın — yorucu
+    // bulundu; kısa, sakin bir belirme. Ana menü (yan menü) geçişi ve geri dönüş eskisi gibi kayar.
+    if (!mob() && h !== 'back' && document.documentElement.classList.contains('adm-on')) {
+      for (const el of pageTargets(watched)) el.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 170, easing: 'ease-out', id: 'nav' });
       return;
     }
     play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
