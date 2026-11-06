@@ -100,6 +100,13 @@ export function PageHead({ title, extra, newLabel, onNew, children, cls = '' }) 
     </div>
   );
 }
+// Sepete ekle ⇄ − 1 + geçişi (6.11.2026): sınıf çizimle aynı anda hesaplanır. Eskiden useEffect + setState ile bir kare
+// SONRA geliyordu → yeni öğe bir kare son hâlinde görünüp sonra animasyonun başına sıçrıyordu (flaş).
+export function useMorph(qty) {
+  const r = useRef({ q: qty, m: '' });
+  if (r.current.q !== qty) { const was = r.current.q; if (!was && qty) r.current.m = 'grow'; else if (was && !qty) r.current.m = 'back'; r.current.q = qty; }
+  return r.current.m;
+}
 // Alt sayfa çubuğu: sadece yana kayar (aşağı-yukarı oynamaz), seçili düğme görünür yere kayar
 export function SubNav({ items, label = 'Sayfa' }) {
   const ref = useRef(null);

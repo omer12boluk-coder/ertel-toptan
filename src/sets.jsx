@@ -4,7 +4,7 @@
 // Siparişte ürünler tek tek yazılır, her kalemde set: { id, n, k } (bekçi fiyatı setin tanımından doğrular).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, go, setQty, toast, api, openProduct } from './store.js';
-import { PageHead, SubNav, Icon, Thumb, Stepper, Sheet, Empty, Toggle, Confirm, openMenu } from './ui.jsx';
+import { PageHead, SubNav, Icon, Thumb, Stepper, Sheet, Empty, Toggle, Confirm, openMenu, useMorph } from './ui.jsx';
 import { fmt, norm, now } from './utils.js';
 import { queueSave } from './saveq.js';
 import { ShareBtn } from './extras.jsx';
@@ -128,8 +128,7 @@ export function SetCard({ set, asLi = true }) {
   const k = setKey(set.id);
   const qty = useStore((s) => s.cart[k] || 0);
   const v = useMemo(() => setView(set, byId), [set, byId]);
-  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
-  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
+  const morph = useMorph(qty); // 6.11.2026: çizimle AYNI anda (eskiden bir kare sonra → flaş)
   const ordersOn = S.orders?.enabled !== false;
   const pseudo = useMemo(() => ({ id: 's-' + set.id, n: set.name, r: v.price, cur: v.cur, s: v.ok ? 1 : 0, a: 1 }), [set, v]);
   const lk = setLookOf(S, set);
@@ -171,8 +170,7 @@ function SetRailCard({ set, i }) {
   const k = setKey(set.id);
   const qty = useStore((s) => s.cart[k] || 0);
   const v = useMemo(() => setView(set, byId), [set, byId]);
-  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
-  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
+  const morph = useMorph(qty); // 6.11.2026: çizimle AYNI anda (eskiden bir kare sonra → flaş)
   const open = () => openSet(set.id);
   return (
     <div className="sh-card set-shcard" style={{ '--i': i }} onClick={(e) => { if (!e.target.closest('button, input, .stepper')) open(); }}>

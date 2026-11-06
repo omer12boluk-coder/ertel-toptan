@@ -21,6 +21,12 @@ function ac() {
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   return ctx;
 }
+// 6.11.2026 (4): ilk sepete ekle/kaldırda takılma: ses motoru ilk seste kuruluyordu (o karede ~onlarca ms) → kullanıcının
+// İLK dokunuşunda/kaydırmasında önceden kurulur (sessiz); sepete eklerken hazırdır.
+if (typeof window !== 'undefined') {
+  const warm = () => { if (!sfxEnabled()) return; const c = ac(); if (!c) return; try { out(c); } catch {} if (c.state === 'running') ['pointerdown', 'touchend', 'keydown'].forEach((e) => removeEventListener(e, warm, true)); };
+  ['pointerdown', 'touchend', 'keydown'].forEach((e) => addEventListener(e, warm, { capture: true, passive: true }));
+}
 // 6.11.2026: sesler baştan — tiz/cızırtılı bulundu. Hepsi yumuşak sinüs, ana çıkışta alçak geçiren süzgeç (tizleri keser) + sıkıştırıcı;
 // perdeler düşük-orta (marimba / ahşap tık gibi), saldırı 4–8 ms (tık sesi çıkmaz), kısık.
 let bus = null;

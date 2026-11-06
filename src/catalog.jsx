@@ -3,7 +3,7 @@ import { ProdHub } from './p0home.jsx';
 import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
-import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead } from './ui.jsx';
+import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead, useMorph } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid, fbSkip } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
@@ -708,8 +708,7 @@ function ProductRow({ p, admin, onOpen, pinned }) {
   const S = useStore((st) => st.settings); const user = useStore((st) => st.user);
   const qty = useStore((st) => st.cart[p.id] || 0);
   // sepete ekle ⇄ adet seçici geçişi yaylanarak (sadece bu kartta değişince; sayfa açılışında oynamaz)
-  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
-  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
+  const morph = useMorph(qty); // 6.11.2026: çizimle AYNI anda (eskiden bir kare sonra → flaş)
   const [hov, setHov] = useState(false); // bilgisayar: üstüne gelince (birden çok resim varsa) yazılar aşağı kayar, küçük resimler çıkar
   const [ix, setIx] = useState(0);
   const multi = FINE && S.cards?.hoverImgs !== false && imgFiles(p).length > 1;

@@ -7076,7 +7076,7 @@ html.lg-on[data-theme="dark"] .shell.public :is(.view-sw, .seg, .mo-tabs, .back-
 
 /* kart sepet düğmesi: yazılı 'Sepete ekle' (tam genişlik, ortalı); − 1 + ortadan açılır, silince düğme ortadan yaylanarak geri gelir */
 .plist.pgrid.ab .prow-side .btn.add { justify-content: center; }
-.plist.pgrid.ab .prow-side .btn.add.back { animation: abBack .42s cubic-bezier(.3, 1.35, .5, 1) backwards; }
+.plist.pgrid.ab .prow-side .btn.add.back { animation: abBack .42s cubic-bezier(.2, .9, .25, 1) backwards; } /* 6.11.2026: taşma (1'in üstüne esneme) kart kenarında kırpılıp flaş gibi görünüyordu */
 .plist.pgrid.ab .prow-side .btn.add.back > * { animation: abIcon .42s .05s cubic-bezier(.3, 1.5, .5, 1) backwards; }
 @keyframes abBack { from { opacity: 0; transform: scaleX(.55) scaleY(.85); } 60% { opacity: 1; } }
 @keyframes abIcon { from { transform: scale(.4) rotate(-18deg); opacity: 0; } }
@@ -8126,7 +8126,7 @@ html.th-dash .shell.public .sh-card-img { border-radius: 16px; overflow: hidden;
 .abx .qty-morph.grow > .stepper > :first-child { animation: abL .36s cubic-bezier(.2, .8, .2, 1) backwards !important; }
 .abx .qty-morph.grow > .stepper > :last-child { animation: abR .36s cubic-bezier(.2, .8, .2, 1) backwards !important; }
 .abx .qty-morph.grow > .stepper > input { animation: abFade .3s .06s ease backwards !important; }
-.abx .btn.add.back { animation: abBack .42s cubic-bezier(.3, 1.35, .5, 1) backwards !important; }
+.abx .btn.add.back { animation: abBack .42s cubic-bezier(.2, .9, .25, 1) backwards !important; } /* 6.11.2026: taşma (1'in üstüne esneme) kart kenarında kırpılıp flaş gibi görünüyordu */
 .abx .btn.add.back > * { animation: abIcon .42s .05s cubic-bezier(.3, 1.5, .5, 1) backwards; }
 @media (prefers-reduced-motion: reduce) { .abx .qty-morph.grow > .stepper, .abx .qty-morph.grow > .stepper > *, .abx .btn.add.back, .abx .btn.add.back > * { animation: none !important; } }
 html.th-apple .shell.public .abx .btn.add, html.th-apple .shell.public .abx .stepper { border-radius: 999px !important; }

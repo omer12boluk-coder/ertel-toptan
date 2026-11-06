@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { SetRail, searchSets, setView, openSet, setLookOf, setsOf, liveSets } from './sets.jsx';
 import { flushSync } from 'react-dom';
 import { useStore, store, setQty, go, api, toast } from './store.js';
-import { Icon, Thumb, Stepper, Field, Toggle, Fold } from './ui.jsx';
+import { Icon, Thumb, Stepper, Field, Toggle, Fold, useMorph } from './ui.jsx';
 import { fmt, norm, priceFor, resizeForWeb, picUrl, isAbsImg, fbSkip, fileHash, imageBlob } from './utils.js';
 import { waLink } from './route.js';
 import { ProductSheet, useTree, PlayVideo, mediaUrl } from './catalog.jsx';
@@ -1120,8 +1120,7 @@ function BellBtn({ p, edit }) {
 // Tüm ürünler kartındaki 'Sepete ekle' ⇄ − 1 + geçişinin aynısı (Paket 0 'Tamircinin seçimi' kutuları da kullanır)
 export function CardAdd({ p }) {
   const qty = useStore((s) => s.cart[p.id] || 0);
-  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
-  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
+  const morph = useMorph(qty); // 6.11.2026: çizimle AYNI anda (eskiden bir kare sonra → flaş)
   return <span className="abx" onClick={(e) => e.stopPropagation()}>{qty > 0
     ? <span className={'qty-morph' + (morph === 'grow' ? ' grow' : '')}><Stepper small value={qty} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} /></span>
     : <button type="button" className={'btn sm add' + (morph === 'back' ? ' back' : '')} onClick={() => setQty(p.id, 1)} aria-label="Sepete ekle"><Icon n="plus" s={15} className="add-plus" /><span className="add-l">Sepete ekle</span></button>}</span>;
@@ -1131,8 +1130,7 @@ export function PCard({ p, i, isNew, onOpen }) {
   const qty = useStore((s) => s.cart[p.id] || 0);
   const E = useContext(DesignCtx);
   // sepete ekle ⇄ adet seçici: Tüm ürünler kartlarındaki geçişin aynısı (sadece bu kartta değişince)
-  const prevQ = useRef(qty); const [morph, setMorph] = useState('');
-  useEffect(() => { const was = prevQ.current; prevQ.current = qty; if (!was && qty) setMorph('grow'); else if (was && !qty) setMorph('back'); }, [qty]);
+  const morph = useMorph(qty); // 6.11.2026: çizimle AYNI anda (eskiden bir kare sonra → flaş)
   const pr = E ? priceFor(p, S, { role: 'public' }, null) : priceFor(p, S, user, userPrices); // tasarımda müşterinin gördüğü fiyat
   return (
     <div className="sh-card" style={{ '--i': i }} onMouseMove={spot} onClick={(e) => { if (!E && !e.target.closest('button, input, .stepper')) onOpen?.(); }}>
