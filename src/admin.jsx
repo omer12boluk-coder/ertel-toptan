@@ -669,6 +669,18 @@ const SECTIONS = [
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'shield', 'sistem'],
 ];
 const SEC_BY = Object.fromEntries(SECTIONS.map((x) => [x[0], x]));
+// 7.11.2026 sade Ayarlar ana ekranı (Apple Ayarlar gibi gruplu listeler). Eski ekran: cihazda ls 'set-v' = 'old'.
+// [başlık, [bölüm anahtarları]] · '@tasarim' = Tasarım moduna git. Listede olmayan bölümler 'Diğer ayarlar'da.
+const SADE = [
+  ['Sık kullanılanlar', ['dukkan', 'fiyat', 'siparis', 'teslimat', 'odeme', 'bildirim']],
+  ['Mağaza', ['@tasarim', 'markalar', 'altbilgi', 'ozellik']],
+  ['Ürünler', ['katalog', 'kategori', 'setler', 'kalip']],
+  ['Bayiler', ['anasayfa', 'kademe', 'talep', 'bayiuye']],
+];
+const SADE_SHORT = { dukkan: 'Ad, adres, telefon, WhatsApp, saatler', fiyat: 'Toptan indirimi, KDV, kur', siparis: 'Mağaza açık/kapalı, üyelik, giriş', teslimat: 'Kargo, dükkandan teslim, firmalar', odeme: 'Havale, kart, dükkanda ödeme', bildirim: 'Telegram, e-posta, müşteri bildirimleri',
+  markalar: 'Logolar ve renkler', altbilgi: 'İletişim, sosyal medya, yasal sayfalar', ozellik: 'Paylaş, haber ver, yorumlar…', katalog: 'Stok gösterimi, sayfa başına ürün', kategori: 'Adlar, sıra, gizleme', setler: 'Set fiyatı, yayına al', kalip: 'Telefon modelleri, kalıplar',
+  anasayfa: 'Duyurular, bannerlar', kademe: 'İndirim kademeleri', talep: 'Fiyat sor, hazır cevaplar', bayiuye: 'Bayi kendi üye olsun, profil' };
+const SADE_C = ['#2f62d6', '#0b7a52', '#c2410c', '#0e7490', '#b4232a', '#3a3a42', '#a16207', '#1d4ed8'];
 const ALIAS = { magaza: 'siparis' }; // eski bölüm adı → yeni yeri (eski kısayollar / kayıtlı geçmiş)
 const secKey = (k) => (k && (SEC_BY[k] ? k : ALIAS[k])) || null;
 const groupOf = (k) => SEC_BY[k]?.[4] || null;
@@ -691,6 +703,31 @@ const atPath = (o, p) => p.split('.').reduce((x, k) => (x == null ? x : x[k]), o
 // "Son açtıklarınız" (cihazda, en çok 3)
 const recentSecs = () => { try { return (ls.get('set-recent', []) || []).filter((k) => SEC_BY[k]).slice(0, 3); } catch { return []; } };
 const pushRecent = (k) => { try { ls.set('set-recent', [k, ...recentSecs().filter((x) => x !== k)].slice(0, 3)); } catch {} };
+
+function SadeHome({ openSec, dirty, q, setQ, results, toks, jump, toOld }) {
+  const used = new Set(SADE.flatMap(([, ks]) => ks));
+  const rest = SECTIONS.filter(([k]) => !used.has(k));
+  const [more, setMore] = useState(false);
+  let ci = 0;
+  const row = (k) => {
+    const c = SADE_C[ci++ % SADE_C.length];
+    if (k === '@tasarim') return <button key={k} type="button" className="sd-row" onClick={() => go('tasarim')}><span className="sd-ic" style={{ background: c }}><Icon n="brush" s={17} /></span><span className="sd-t"><b>Tasarım</b><small>Ana sayfa, bannerlar, renkler</small></span><Icon n="back" s={16} className="sd-go flip" /></button>;
+    const S0 = SEC_BY[k]; if (!S0) return null;
+    return <button key={k} type="button" className="sd-row" onClick={() => openSec(k)}><span className="sd-ic" style={{ background: c }}><Icon n={S0[3]} s={17} /></span><span className="sd-t"><b>{S0[1]}</b><small>{SADE_SHORT[k] || S0[2]}</small></span>{dirty(k) && <i className="dirty-dot" aria-label="kaydedilmedi" />}<Icon n="back" s={16} className="sd-go flip" /></button>;
+  };
+  return <div className="sd">
+    <h1 className="sd-h">Ayarlar</h1>
+    <div className="sd-find"><Icon n="search" s={17} /><input type="search" placeholder="Ayar ara (kargo, kdv, logo, banner…)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) jump(results[0].k, results[0].x); }} />{q && <button type="button" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={15} /></button>}</div>
+    {toks.length > 0 ? <div className="sd-card">{results.length ? results.slice(0, 30).map((r, i) => <button key={i} type="button" className="sd-row" onClick={() => jump(r.k, r.x)}><span className="sd-ic g"><Icon n={SEC_BY[r.k][3]} s={16} /></span><span className="sd-t"><b><Hl t={r.x || r.l} toks={toks} /></b><small>{r.l}{!r.x ? ' · bölüm' : ''}</small></span><Icon n="back" s={16} className="sd-go flip" /></button>)
+      : <p className="sd-none">“{q}” ile eşleşen ayar yok. Daha kısa bir kelime deneyin.</p>}</div>
+    : <>
+      {SADE.map(([t, ks]) => <section key={t} className="sd-grp"><span className="sd-cap">{t}</span><div className="sd-card">{ks.map(row)}</div></section>)}
+      <section className="sd-grp"><button type="button" className="sd-cap sd-more" onClick={() => setMore((x) => !x)}>Diğer ayarlar ({rest.length})<Icon n="back" s={13} className={"flip" + (more ? " sd-rot" : "")} /></button>
+        {more && <div className="sd-card">{rest.map(([k]) => row(k))}</div>}</section>
+      <p className="sd-foot"><button type="button" className="linkish" onClick={toOld}>Eski Ayarlar görünümü</button></p>
+    </>}
+  </div>;
+}
 
 export function Settings() {
   const { settings, api: A, catalog, user } = useStore();
@@ -1073,11 +1110,12 @@ export function Settings() {
   const G = grp && GROUPS.find((x) => x[0] === grp);
   const S0 = sec && SEC_BY[sec];
   const recent = !grp && !sec ? recentSecs() : [];
+  const [sade, setSadeS] = useState(() => ls.get('set-v', 'sade') !== 'old');
 
   return (
     <div className={'page settings set-v-' + (sec ? 'sec' : grp ? 'grp' : 'home')}>
       {/* üst: ana ekranda başlık + ayar arama; grup ve bölüm sayfasında geri + başlık */}
-      {!sec && !grp ? (
+      {!sec && !grp && sade ? null : !sec && !grp ? (
         <div className="page-h">
           <h1 className="page-t">Ayarlar</h1>
           <button className={'set-find-btn' + (search ? ' on' : '')} onClick={() => { setSearch(!search); setQ(''); }} aria-label="Ayar ara" title="Ayar ara"><Icon n={search ? 'x' : 'search'} s={16} /><span>{search ? 'Aramayı kapat' : 'Ayar ara'}</span></button>
@@ -1085,14 +1123,14 @@ export function Settings() {
         </div>
       ) : (
         <div className="set-top">
-          <button type="button" className="back-btn" onClick={back}><Icon n="back" s={16} />{sec ? GROUPS.find((x) => x[0] === groupOf(sec))[1] : 'Ayarlar'}</button>
+          <button type="button" className="back-btn" onClick={back}><Icon n="back" s={16} />{sec && !sade ? GROUPS.find((x) => x[0] === groupOf(sec))[1] : 'Ayarlar'}</button>
           <div className="set-top-t">
             <span className="set-top-ic"><Icon n={sec ? S0[3] : G[3]} s={20} /></span>
             <span><h1 className="page-t">{sec ? S0[1] : G[1]}</h1><small className="muted">{sec ? S0[2] : G[2]}</small></span>
           </div>
         </div>
       )}
-      {search && !sec && !grp && (
+      {search && !sec && !grp && !sade && (
         <div className="set-find">
           <div className="search"><Icon n="search" s={18} /><input id="set-q" type="search" autoFocus placeholder="Ayar ara… (ör. kargo, kdv, logo, banner, set fiyatı)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) jump(results[0].k, results[0].x); if (e.key === 'Escape') { setSearch(false); setQ(''); } }} /></div>
           {toks.length > 0 && (results.length
@@ -1101,7 +1139,8 @@ export function Settings() {
         </div>
       )}
 
-      {!sec && !grp && <>
+      {!sec && !grp && sade && <SadeHome openSec={(k) => nav(null, k, true)} dirty={secDirty} q={q} setQ={setQ} results={results} toks={toks} jump={jump} toOld={() => { ls.set('set-v', 'old'); setSadeS(false); }} />}
+      {!sec && !grp && !sade && <>
         {recent.length > 0 && (
           <div className="set-recent">
             <span className="set-lbl">Son açtıklarınız</span>
@@ -1118,7 +1157,7 @@ export function Settings() {
             </button>
           ))}
         </div>
-        <p className="fine set-intro">Mağazanın görünüşünü sürükle-bırak ile düzenlemek için <button type="button" className="linkish" onClick={() => go('tasarim')}>Tasarım modu</button>.</p>
+        <p className="fine set-intro">Mağazanın görünüşünü sürükle-bırak ile düzenlemek için <button type="button" className="linkish" onClick={() => go('tasarim')}>Tasarım modu</button>. · <button type="button" className="linkish" onClick={() => { ls.set('set-v', 'sade'); setSadeS(true); }}>Sade görünüm</button></p>
       </>}
 
       {grp && !sec && (

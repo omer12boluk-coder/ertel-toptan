@@ -79,3 +79,17 @@ telefonda ~0.75:1. Bu yüzden banner sabit resim DEĞİL; `PhotoBanner` kutuyu �
 - Düğmeler: `İncele` ürün penceresini açıyor mu, `Sepete ekle` sepete atıyor mu (`__store.s.cart`).
 - Ürün düğmeye/yazıya biniyor mu; açık zeminde noktalar ve oklar görünüyor mu; gece modunda gölge.
 - Sayfa hatası (`pageerror`) yok.
+
+## 6. Kart hizası (kullanıcı kuralı, 7.11.2026)
+
+"Hizasızlık istemiyorum": yan yana kartlarda **logo, resim, ad, açıklama, fiyat ve Sepete ekle hep aynı çizgide** olmalı.
+- Logo kutusu sabit yükseklik (16 px), resim alanı sabit yükseklik (150 / telefonda 104 px).
+- Ad en çok 2 satır, **en az 2 satırlık yer** (`min-height: 2.4em`); açıklama en çok 2 satır, en az 2 satırlık yer.
+- Fiyat + Sepete ekle kartın dibine yapışık (`margin-top: auto`); ızgara satırındaki kartlar eşit boy (grid stretch).
+- Örnek: `src/cdhome.jsx` `.cd-tile` (Bu hafta masamızdan küçükleri + ürün rafları). Yeni kart yazarken bunu kopyala.
+
+## 7. Claude düzeni bölümleri (cdhome.jsx)
+
+`cd:hero` (banner: `heroList`, genişlik `heroW`, yükseklik `heroFill`), `cd:pick`, `cd:sets`, `cd:brands`, `cd:mq`, ürün rafları `CdRail`
+(`look.cd` açıkken bütün raflar). Ayarlar `shopHome.cd.{pick,sets,brands,mq}`. Kısa ad `shortOf(p, names)` (elle ad `cd.pick.names`).
+Banner satırı `{ pb: '<şablon id>', title?, tag?, sub?, eye?, c1?, c2?, off? }` (`pbOf` çözer).

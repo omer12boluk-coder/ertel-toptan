@@ -8854,3 +8854,32 @@ html[data-theme="dark"] .v3 { background: var(--bg); }
 .v3-m:not(.sheet-up) .v3-m-sheet { transform: translateY(calc(100% - 44px)); }
 .v3-m-hnd { display: block; width: 100%; height: 30px; border: 0; background: none; cursor: pointer; }
 .v3-m-hnd i { display: block; width: 40px; height: 5px; margin: 0 auto; border-radius: 3px; background: color-mix(in oklab, var(--fg) 20%, transparent); }
+
+/* ===== 7.11.2026 Sade Ayarlar ana ekranı (admin.jsx SadeHome): Apple Ayarlar gibi gruplu listeler ===== */
+.sd { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; }
+.sd-h { margin: 4px 0 10px; font: 600 34px/1.1 'Inter Tight', Inter, var(--f-display); letter-spacing: -.03em; }
+.sd-find { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
+.sd-find > svg { position: absolute; left: 14px; color: var(--muted); pointer-events: none; }
+.sd-find input { width: 100%; height: 46px; padding: 0 44px 0 42px; border: 0; border-radius: 14px; background: color-mix(in oklab, var(--fg) 7%, var(--surface)); color: var(--fg); font: 400 16px/1 Inter, var(--f-body); }
+.sd-find input:focus { outline: 2px solid color-mix(in oklab, var(--accent) 40%, transparent); }
+.sd-find > button { position: absolute; right: 8px; width: 30px; height: 30px; border: 0; border-radius: 50%; display: grid; place-items: center; background: none; color: var(--muted); cursor: pointer; }
+.sd-grp { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.sd-cap { display: flex; align-items: center; gap: 6px; padding: 0 16px; font: 600 12.5px/1.2 Inter; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); border: 0; background: none; text-align: left; }
+.sd-more { cursor: pointer; padding-top: 4px; padding-bottom: 4px; }
+.sd-more svg { transition: transform .2s; } .sd-more .sd-rot { transform: rotate(90deg); }
+.sd-card { background: var(--surface); border-radius: 18px; overflow: hidden; box-shadow: 0 1px 2px rgb(16 24 40 / .05); }
+.sd-row { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; padding: 11px 14px 11px 14px; border: 0; background: none; text-align: left; color: var(--fg); cursor: pointer; }
+.sd-row + .sd-row::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; border-top: 1px solid var(--line); }
+@media (hover: hover) { .sd-row:hover { background: color-mix(in oklab, var(--fg) 4%, var(--surface)); } }
+.sd-ic { flex: none; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #fff; }
+.sd-ic.g { background: color-mix(in oklab, var(--fg) 12%, var(--surface)); color: var(--fg); }
+.sd-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sd-t b { font: 500 15.5px/1.25 Inter, var(--f-body); }
+.sd-t small { color: var(--muted); font-size: 13px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sd-go { flex: none; color: color-mix(in oklab, var(--muted) 70%, transparent); }
+.sd-row .dirty-dot { position: static; }
+.sd-none { padding: 16px; margin: 0; color: var(--muted); font-size: 14px; }
+.sd-foot { text-align: center; margin: 22px 0 8px; font-size: 13px; }
+@media (max-width: 700px) { .sd-h { font-size: 30px; } .sd-row { padding: 10px 12px; } .sd-t small { white-space: normal; } }
+.settings .sd { width: min(760px, 100%); align-self: center; justify-self: center; }
+.sd-more .flip { transform: scaleX(-1); } .sd-more .flip.sd-rot { transform: rotate(-90deg); }
