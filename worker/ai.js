@@ -59,7 +59,7 @@ export async function aiRoute(req, env, url, adminOf, json, notify = async () =>
     if (mon >= MONTH_LIMIT) return json({ ok: false, error: `Bu ayın sınırı doldu (${MONTH_LIMIT} ürün).` });
     await env.KV.put(ck, String(used + 1), { expirationTtl: 172800 });
     await env.KV.put(mk, String(mon + 1), { expirationTtl: 40 * 86400 });
-    try { const draft = await makeDraft(env, b); if (draft._cost) { await spend(env, draft._cost, notify); delete draft._cost; } return json({ ok: true, draft, left: Math.min(DAY_LIMIT - used, MONTH_LIMIT - mon) - 1 }); }
+    try { const draft = await makeDraft(env, b); if (draft._cost) { await spend(env, draft._cost, notify); draft.cost = +draft._cost.toFixed(4); delete draft._cost; } return json({ ok: true, draft, left: Math.min(DAY_LIMIT - used, MONTH_LIMIT - mon) - 1 }); }
     catch (e) {
       if (e.cost) await spend(env, e.cost, notify).catch(() => {});
       const m = String(e.message || e);

@@ -8130,3 +8130,4 @@ html:not(.addc-gray):not(.addc-dark):not(.addc-hex) .shell.public .abx .btn.add 
 .p0-addw.big .btn.add, .shell .p0-addw.big .abx .qty-morph > .stepper { height: 44px !important; }
 .p0-addw.big .btn.add { background: var(--accent) !important; color: var(--btn-ink, #fff) !important; }
 .sh-card-f.abx .sh-bell { width: 100%; height: 38px; border-radius: 999px; }
+.ai-add .ai-warn { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; background: color-mix(in srgb, #e0a100 12%, var(--surface)); border: 1px solid color-mix(in srgb, #e0a100 45%, var(--line)); }

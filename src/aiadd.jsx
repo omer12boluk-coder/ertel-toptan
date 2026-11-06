@@ -162,6 +162,7 @@ export function AiAdd() {
         </div>
         <label className="ai-chk"><input type="checkbox" checked={search} onChange={(e) => { setSearch(e.target.checked); ls.set('ai-search', e.target.checked); }} /> İnternette de araştırsın <small>— link vermediğiniz ve tanınmayan ürünler için; ürün başına ~1 TL</small></label>
         <label className="ai-chk"><input type="checkbox" checked={hq} onChange={(e) => { setHq(e.target.checked); ls.set('ai-hq', e.target.checked); }} /> Kaliteli mod <small>— daha güçlü yapay zekâ, açıklama daha özenli; ürün başına ~2 TL (normal ~0,1 TL)</small></label>
+        {search && hq && <p className="ai-warn">İkisi birlikte pahalı: internette bulunan sayfaların tamamını güçlü yapay zekâ okuyor, ürün başına ~6–8 TL. Mümkünse ürün linkini yapıştırıp ikisini kapalı bırakın.</p>}
         <p className="fine">Yapay zekâ ürünü tanır (link verirseniz o sayfayı, 2UUL gibi markalarda markanın sitesini okur); adını sizin yazım tarzınızla, markasını, kategorisini, gizli etiketlerini ve açıklamasını hazırlar, marka sitesinde / AliExpress'te resim arar. Hiçbir şey kendiliğinden kaydedilmez: siz kontrol edip fiyat ve stok girip onaylarsınız.</p>
       </div>
 
@@ -185,7 +186,7 @@ export function AiAdd() {
                   {x.st === 'ok' ? <>
                     <b>{d.n}</b>
                     <small>{[d.b || 'marka yok', d.c != null ? catName(S, d.c) : 'kategori yok', `${(d.imgs || []).length} resim`, `${d.t ? d.t.split(',').length : 0} etiket`].join(' · ')}</small>
-                    <small className="muted">{x.hq ? 'Kaliteli mod · ' : ''}Yazdığınız: “{x.q}”{d.note ? ' · ' + d.note : ''}</small>
+                    <small className="muted">{x.hq ? 'Kaliteli mod · ' : ''}{x.search ? 'İnternette arandı · ' : ''}{d.cost != null ? `maliyet ~${d.cost < 0.01 ? '<0,01' : d.cost.toFixed(2).replace('.', ',')} $ · ` : ''}Yazdığınız: “{x.q}”{d.note ? ' · ' + d.note : ''}</small>
                   </> : <>
                     <b>{x.q}</b>
                     <small className={x.st === 'err' ? 'ai-err' : 'muted'}>{x.st === 'run' ? x.sub || 'Hazırlanıyor…' : x.st === 'wait' ? 'Sırada' : 'Hazırlanamadı: ' + x.err}</small>
