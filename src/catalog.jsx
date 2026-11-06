@@ -385,7 +385,7 @@ export function Catalog({ admin }) {
   const [stockOnly, setStockOnly] = useState(false);
   const [showOos, setShowOos] = useState(false); // mağaza: stokta olmayanlar varsayılan gizli (31.10.2026)
   const chipRow = useFitRow();
-  const [limit, setLimit] = useState(S.catalog.pageSize);
+  const [limit, setLimit] = useState(() => (matchMedia('(max-width: 899px)').matches && Number(S.catalog.pageSizeM)) || S.catalog.pageSize);
   const [open, setOpen] = useState(null);
   const [edit, setEdit] = useState(null);
   const [catSheet, setCatSheet] = useState(false);
@@ -514,8 +514,10 @@ export function Catalog({ admin }) {
     setsOnly && ['Setler', () => setSetsOnly(false)],
   ].filter(Boolean);
 
-  useLayoutEffect(() => setLimit(S.catalog.pageSize), [q, qk, cat, sort, stockOnly, showOos, adminFilter, brand, price, newOnly, imgOnly, favOnly]);
-  const more = useCallback(() => setLimit((l) => l + S.catalog.pageSize), [S.catalog.pageSize]);
+  // 6.11.2026: telefonda ayrı sayfa boyu (catalog.pageSizeM; boşsa pageSize) — ilk çizim hafif, Ana sayfa ⇄ Ürünler geçişi akıcı
+  const PS = (matchMedia('(max-width: 899px)').matches && Number(S.catalog.pageSizeM)) || Number(S.catalog.pageSize) || 60;
+  useLayoutEffect(() => setLimit(PS), [q, qk, cat, sort, stockOnly, showOos, adminFilter, brand, price, newOnly, imgOnly, favOnly, PS]);
+  const more = useCallback(() => setLimit((l) => l + PS), [PS]);
   const sentinel = useInfinite(more);
   const shown = list.slice(0, limit);
   const cartCount = Object.keys(cart).length;

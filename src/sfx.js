@@ -6,6 +6,10 @@ let globalOn = true;
 const LS = 'sfx-off';
 const devOff = () => { try { return localStorage.getItem(LS) === '1'; } catch { return false; } };
 export function setSfxGlobal(on) { globalOn = on !== false; }
+// 6.11.2026 (5): ses düzeyi (look.soundVol, Tasarım › Cam ve hareket; 0.3–3, varsayılan 1.8 — eskisi 1 çok kısık bulundu)
+export const SFX_VOL_DEF = 1.8;
+let vol = SFX_VOL_DEF, volNode = null;
+export function setSfxVol(v) { const n = Number(v); vol = n > 0 ? Math.min(3, Math.max(0.3, n)) : SFX_VOL_DEF; if (volNode) volNode.gain.value = vol; }
 export const sfxEnabled = () => globalOn && !devOff();
 export const sfxAvailable = () => globalOn;
 export function setSfxDevice(on) { try { if (on) localStorage.removeItem(LS); else localStorage.setItem(LS, '1'); } catch {} subs.forEach((f) => f()); }
@@ -34,7 +38,7 @@ function out(c) {
   if (bus && bus.context === c) return bus;
   const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600; lp.Q.value = 0.4;
   const cp = c.createDynamicsCompressor(); cp.threshold.value = -24; cp.ratio.value = 4;
-  lp.connect(cp).connect(c.destination); bus = lp; return lp;
+  volNode = c.createGain(); volNode.gain.value = vol; lp.connect(cp).connect(volNode).connect(c.destination); bus = lp; return lp;
 }
 function tone(c, { f, f2, t0 = 0, d = 0.12, g = 0.05, a = 0.006, h = 0 }) {
   const t = c.currentTime + t0; const o = out(c);
@@ -47,7 +51,7 @@ const SOUNDS = {
   tap: (c) => tone(c, { f: 420, f2: 300, d: 0.05, g: 0.035, a: 0.003 }), // ahşap tık: sekme, çip, düğme
   toggle: (c) => tone(c, { f: 560, f2: 470, d: 0.06, g: 0.03, a: 0.003 }),
   add: (c) => { tone(c, { f: 210, f2: 140, d: 0.13, g: 0.08, a: 0.004, h: 0.12 }); tone(c, { f: 620, f2: 480, d: 0.035, g: 0.016, a: 0.002 }); }, // 6.11.2026 (3): tok, alçak 'tak' (telefon hoparlöründe de duyulsun diye hafif üst ses)
-  remove: (c) => tone(c, { f: 440, f2: 300, d: 0.1, g: 0.032, a: 0.005 }),
+  remove: (c) => tone(c, { f: 170, f2: 115, d: 0.12, g: 0.075, a: 0.004, h: 0.06 }), // 6.11.2026 (5): 'ekle' gibi tok, biraz daha pes ve kısa (tiz 'tıng' kötü bulundu)
   like: (c) => tone(c, { f: 698, f2: 784, d: 0.14, g: 0.04, h: 0.1 }),
   open: (c) => tone(c, { f: 330, f2: 392, d: 0.09, g: 0.025 }),
   done: (c) => { tone(c, { f: 523, d: 0.3, g: 0.045, h: 0.1 }); tone(c, { f: 659, t0: 0.1, d: 0.32, g: 0.042, h: 0.1 }); tone(c, { f: 784, t0: 0.2, d: 0.5, g: 0.04, h: 0.08 }); },

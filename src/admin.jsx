@@ -676,7 +676,7 @@ const groupOf = (k) => SEC_BY[k]?.[4] || null;
 const SEC_KEYS = {
   tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
   anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], talep: ['requests'],
-  katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
+  katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.pageSizeM', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
   resim: ['catalog.imageThumb', 'catalog.imageLarge'],
   dukkan: ['shop.name', 'shop.hours', 'shop.address', 'shop.phone', 'shop.whatsapp', 'shop.pickupNote'],
   siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook'],
@@ -884,7 +884,8 @@ export function Settings() {
           <div className="row3">
             <Field label="Stok gösterimi"><select id="s-stock" value={d.catalog.stockMode} onChange={(e) => set('catalog.stockMode', e.target.value)}><option value="badge">Stokta / Az kaldı / Yok</option><option value="number">Adet olarak</option><option value="hidden">Gizle</option></select></Field>
             <Field label="“Az kaldı” sınırı"><input id="s-low" inputMode="numeric" value={d.catalog.lowStock} onChange={(e) => set('catalog.lowStock', Number(e.target.value) || 0)} /></Field>
-            <Field label="Sayfa başına ürün"><select id="s-page" value={d.catalog.pageSize} onChange={(e) => set('catalog.pageSize', Number(e.target.value))}><option>30</option><option>60</option><option>120</option></select></Field>
+            <Field label="Sayfa başına ürün" hint="Ürünler açılınca ilk çizilen kart sayısı; aşağı kaydırdıkça bu kadar daha gelir. Az = daha hızlı açılış."><select id="s-page" value={d.catalog.pageSize} onChange={(e) => set('catalog.pageSize', Number(e.target.value))}>{[12, 16, 20, 24, 30, 40, 60, 120].map((n) => <option key={n} value={n}>{n}</option>)}</select></Field>
+            <Field label="Telefonda sayfa başına" hint="Boş: bilgisayardakiyle aynı. Telefonda Ana sayfa ⇄ Ürünler geçişi takılıyorsa 12–20 deneyin."><select id="s-pagem" value={d.catalog.pageSizeM || ''} onChange={(e) => set('catalog.pageSizeM', Number(e.target.value) || 0)}><option value="">Aynı</option>{[8, 12, 16, 20, 24, 30, 40, 60].map((n) => <option key={n} value={n}>{n}</option>)}</select></Field>
           </div>
           <Toggle id="s-inactive" label="Pasif ürünleri de göster" checked={d.catalog.showInactive} onChange={(v) => set('catalog.showInactive', v)} />
           <Toggle id="s-oos" label="Stokta olmayanları gizle" checked={d.catalog.hideOutOfStock} onChange={(v) => set('catalog.hideOutOfStock', v)} />

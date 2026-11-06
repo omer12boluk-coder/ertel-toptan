@@ -398,6 +398,7 @@ export const SPLASH_STYLES = {
   light: { n: 'Açık desenli', top: '#eef2fb' },
   white: { n: 'Düz beyaz', top: '#ffffff' },
   grad: { n: 'Renk geçişli', top: '#2453db' },
+  apple: { n: 'Apple sade', top: '#f5f5f7' },
 };
 // seçili firma kapatılmışsa varsayılana düşer
 export const pickCar = (S, k) => (carrierPublic(S).some((x) => x.k === k) ? k : carrierDef(S));

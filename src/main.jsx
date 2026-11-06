@@ -6,7 +6,7 @@ import { StoreDecor } from './decor.jsx';
 import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js';
 import { applyStyle } from './stylekit.js';
 import { applyLayout, lookFor } from './dzpresets.js';
-import { sfx, setSfxGlobal, setupSfxTaps } from './sfx.js';
+import { sfx, setSfxGlobal, setSfxVol, setupSfxTaps } from './sfx.js';
 import { SoundButton } from './soundui.jsx';
 import { RatePrompt } from './reviews.jsx';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -341,7 +341,7 @@ function useTheme() {
     if (pub && (L.logoTone === 'color' || L.logoTone === 'flat')) ensureLogoSvg(document, L.logoColor || lc.accent || S.brand.accent);
     if (lf) r.style.setProperty('--logo-f', lf); else r.style.removeProperty('--logo-f');
     applyStyle(r, pub ? L.style : null);
-    setSfxGlobal(L.sound !== false);
+    setSfxGlobal(L.sound !== false); setSfxVol(L.soundVol);
     // 5.11.2026 yönetim paneli teması (Ayarlar › Bayi ve panel renkleri › Yönetim paneli görünümü, look.admin: apple | classic)
     r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-mini', isAdm && ls.get('adm-mini', false) === true); /* 6.11.2026 daraltılmış yan menü (cihazda) */ r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic'); r.classList.toggle('adm-mark', isAdm && L.adminMark !== false); /* 6.11.2026 telefonda panel belirgin: koyu alt menü + Yönetim rozeti (kapatılabilir) */
     // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
@@ -367,9 +367,11 @@ function useTheme() {
     const effDark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
     const dash = forced || (!!pub && (L.site || 'apple') === 'apple' && effDark);
     r.classList.toggle('th-dash', dash); r.classList.toggle('th-dash-force', forced);
+    // 6.11.2026 gece renkleri (look.night): 'graphite' (VARSAYILAN, yönetim panelinin koyu grafit renkleri) | 'copper' (eski Bakır gece)
+    r.classList.toggle('nt-gr', dash && L.night !== 'copper');
     r.classList.toggle('th-apple', !!pub && (L.site || 'apple') === 'apple' && !effDark); // varsayılan Apple açık (5.11.2026, kullanıcı onayı)
     document.title = seoTitle() || S.brand.appName;
-  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.width, L.edge, L.boxPat, L.bgFx, L.sound, L.lite, liteTick, isAdm, L.admin, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.night, L.width, L.edge, L.boxPat, L.bgFx, L.sound, L.lite, liteTick, isAdm, L.admin, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {
@@ -889,10 +891,10 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   touchHoverToActive();
   setupTapHover(); // 30.10.2026: SADECE öne çıkan ürün kutularında eğik resmin düzelmesi (kaydırırken çıkmaz)
   setupPull();
-  setupNavAnim();
   setupCrispBack();
   setupResumeFix();
 }
+setupNavAnim(); // 6.11.2026: bilgisayarda da (eskiden sadece telefonda çağrılıyordu → bilgisayarda sadece CSS 'alttan yükselme' vardı, look.motionD hiç çalışmıyordu)
 setupFlowPills(); // akan hap: bilgisayarda da
 setupSfxTaps(); // 6.11.2026 mağazada dokunma sesleri
 
@@ -1145,6 +1147,10 @@ function setupResumeFix() {
 
 function setupNavAnim() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
+  // 6.11.2026: sayfa geçişini SADECE bu yapar → eski CSS 'rise' (aşağıdan yükselme, satır satır gecikmeli) her yerde kapalı
+  // (html.nav-anim). Önceden telefonda mağazada kapalıydı ama bilgisayarda ve yönetimde ikisi birden oynuyordu: yandan kayma +
+  // alttan yükselme → 'anlaşılmayan / alttan çıkan' geçiş.
+  document.documentElement.classList.add('nav-anim');
   const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar';
   const EASE = 'cubic-bezier(.2,.7,.2,1)';
   const key = (s) => [s.tab, s.acct || '', s.pid || '', s.openOrder || '', s.openReq || '', s.lcOpen || ''].join('|');
@@ -1182,7 +1188,8 @@ function setupNavAnim() {
     clear: { dx: () => Math.round(innerWidth * 0.24), ms: 1.15, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 },
     glass: { dx: 26, ms: 1.4, ease: 'cubic-bezier(.32,.72,0,1)', glass: true },
     slow: { dx: () => Math.round(innerWidth * 0.24), ms: 3, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 },
-    desk: { dx: () => Math.round(Math.min(200, innerWidth * 0.13)), ms: 1.15, ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 }, // bilgisayar: telefondaki gibi yönlü yandan kayma (ekranın ~%13'ü)
+    desk: { dx: () => Math.round(Math.min(120, innerWidth * 0.08)), ms: 1, // 6.11.2026: bilgisayarda daha kısa kayma (geniş ekranda 200px fazla savruluyordu)
+      ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 }, // bilgisayar: telefondaki gibi yönlü yandan kayma (ekranın ~%13'ü)
     dfade: { dx: 0, ms: 0.7, ease: EASE },
   };
   const play = (els, kind, ms0, dk = 1) => {

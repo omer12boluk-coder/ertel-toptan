@@ -4763,6 +4763,10 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .ptr7 .ptr-t:empty { display: none; }
 /* Kalıp bulucu örnekleri telefonda TEK SATIR: sığmayan örnek alta geçmez, gizli kalır (ekran genişliğine göre 2-4 örnek) */
 @media (max-width: 700px) { .kf-ex { flex-wrap: wrap; height: 30px; overflow: hidden; row-gap: 20px; align-content: flex-start; } .kf-ex button { padding: 5px 10px; } }
+/* 6.11.2026: telefonda 5 örnek arama kutusunun altında TEK SIRA, kutu genişliğine yayılır; 'Örnek:' yazısı telefonda yok
+   (kutuda zaten 'Örn.' var). Çok dar ekranda sığmayan çip alt satıra geçmez, gizlenir. */
+@media (max-width: 700px) { .kf-ex { flex-wrap: wrap; height: 30px; overflow: hidden; row-gap: 30px; gap: 30px 4px; justify-content: space-between; align-content: flex-start; }
+  .kf-ex > span { display: none; } .kf-ex button { flex: none; padding: 5px 6px; font-size: 12px; white-space: nowrap; } }
 /* (7b) bitince ok yerine ✓ (yeşil) kısa süre görünür */
 .ptr7-c { position: relative; }
 .ptr7-c > svg { position: absolute; }
@@ -5050,6 +5054,23 @@ html.pre-light body::before { background-color: #f3f6fc; background-image: radia
 html.pre-white body::before { background: #fff; }
 html.pre-grad body::before { background-color: #1e48c8; background-image: linear-gradient(150deg, #1e48c8 0%, #2f6bff 45%, #10b3e0 100%); }
 .intro.intro2 { animation: none; }
+/* 6.11.2026 'Apple sade' açılış ekranı (sp-apple): açık gri (#f5f5f7) zemin, desen/tarama yok; logo beyaz yuvarlak kare
+   kart içinde yumuşak gölgeyle; ad koyu (#1d1d1f), alt yazı gri; ince gri çizgi */
+.intro2.sp-apple { background: #f5f5f7; background-image: radial-gradient(90% 70% at 50% 42%, #ffffff 0%, #f5f5f7 62%, #ececf0 100%); }
+.intro2.sp-apple .i2-grid, .intro2.sp-apple .i2-scan, .intro2.sp-apple .i2-glow.a, .intro2.sp-apple .i2-glow.b { display: none; }
+.intro2.sp-apple .i2-glow.c { display: none; } /* renkli ışık denendi: mor gibi duruyordu (MOR YOK) → sade */
+.intro2.sp-apple .i2-mark { width: 124px; height: 124px; margin-bottom: 26px; border-radius: 30px; background: #fff;
+  box-shadow: 0 1px 0 rgb(255 255 255) inset, 0 0 0 .5px rgb(0 0 0 / .06), 0 22px 50px -18px rgb(0 0 0 / .28), 0 4px 12px -4px rgb(0 0 0 / .08); animation: i2-applePop .8s cubic-bezier(.2, .9, .25, 1) both; }
+.intro2.sp-apple .intro-logo { width: 84px; height: 84px; padding: 0; box-shadow: none; border-radius: 22px; }
+.intro2.sp-apple .i2-ring { display: none; }
+.intro2.sp-apple .i2-name { color: #1d1d1f; letter-spacing: -.01em; font-weight: 700; }
+.intro2.sp-apple .i2-sub { color: #6e6e73; letter-spacing: .02em; text-transform: none; font-weight: 500; }
+.intro2.sp-apple .intro-bar { width: 96px; height: 3px; background: rgb(0 0 0 / .08); border-radius: 3px; }
+.intro2.sp-apple .intro-bar i { background: #1d1d1f; opacity: .55; border-radius: 3px; }
+@keyframes i2-applePop { from { transform: scale(.86); opacity: 0; filter: blur(6px); } }
+.spl-sw.sp-apple { background: radial-gradient(90% 70% at 50% 42%, #fff, #ececf0); border: 1px solid var(--line); } .spl-sw.sp-apple::before { display: none; }
+.spl-sw.sp-apple i { width: 30px; height: 30px; border-radius: 9px; background: #fff; box-shadow: 0 0 0 .5px rgb(0 0 0 / .08), 0 8px 18px -8px rgb(0 0 0 / .35); }
+html.pre-apple body::before { background: #f5f5f7; background-image: radial-gradient(90% 70% at 50% 42%, #ffffff 0%, #f5f5f7 62%, #ececf0 100%); }
 
 /* ---- Üst menü açılır menüleri (31.10.2026, sadece bilgisayar; navdrop.jsx) ---- */
 .topnav-chev { display: none; margin-left: -2px; opacity: .6; transition: transform .2s ease; }
@@ -8291,3 +8312,33 @@ html[data-theme="dark"] .pl-demo-tag { color: #e6a466; }
 /* iPhone sayfa alanını kısa sanınca alttaki sabit öğeler görünen ekranın altına itilir (main.jsx setupResumeFix --vvd) */
 .botnav { translate: 0 var(--vvd, 0px); }
 
+
+/* ===== 6.11.2026 Gece renkleri 'Grafit (panel)' (html.th-dash.nt-gr, look.night varsayılan): mağaza gecesi yönetim panelinin
+   koyu temasıyla aynı renkler — kömür gri zemin, nötr cam menüler, Apple koyu mavi vurgu. Şekiller Bakır gecenin aynısı;
+   sadece sıcak (kahve/şeftali) renkler nötre çevrilir. Eski hâl: look.night 'copper'. */
+html.th-dash.nt-gr, html.th-dash.nt-gr[data-theme] {
+  --bg: #0f1012; --surface: #1a1b1e; --surface-2: #222327; --fg: #f2f2f4; --muted: #a1a1a8; --line: #2c2d32; --line-2: #25262a;
+  --accent: #0a84ff; --accent-ink: #fff; --accent-soft: rgb(10 132 255 / .16); --price: #f2f2f4;
+  --dg: rgb(255 255 255 / .045); --dg2: rgb(255 255 255 / .08); --dgb: rgb(255 255 255 / .09);
+}
+html.th-dash.nt-gr { background: #0f1012; }
+html.th-dash.nt-gr body::before { background: radial-gradient(60% 50% at 100% 0%, rgb(10 132 255 / .09), rgb(15 16 18 / 0) 70%), radial-gradient(50% 40% at 0% 100%, rgb(120 130 150 / .06), rgb(15 16 18 / 0) 70%); }
+html.th-dash.nt-gr .topbar.hdr-g .topbar-in { background: rgb(30 31 35 / .74) !important; }
+html.th-dash.nt-gr .topbar.hdr-g .topnav-b, html.th-dash.nt-gr .shell.public :is(.view-sw, .seg, .mo-tabs) > button { color: #c7c7cc; }
+html.th-dash.nt-gr .topbar.hdr-g .topnav-b.on .ic { color: var(--accent); }
+@media (max-width: 899px) {
+  html.th-dash.nt-gr .shell.public .botnav { background: rgb(30 31 35 / .74) !important; }
+  html.th-dash.nt-gr .shell.public .botnav-b { color: #a1a1a8 !important; } html.th-dash.nt-gr .shell.public .botnav-b.on { color: #fff !important; }
+  html.th-dash.nt-gr .shell.public .cart-bar { background: rgb(30 31 35 / .8) !important; }
+}
+html.th-dash.nt-gr .hd-p { background: rgb(30 31 35 / .92) !important; }
+html.th-dash.nt-gr .shell.public :is(.chip, .cat-link) { color: #d1d1d6; }
+html.th-dash.nt-gr .shell.public .ssum-pay { background: linear-gradient(135deg, rgb(10 132 255 / .16), rgb(10 132 255 / .05)); border-color: rgb(10 132 255 / .24); }
+html.th-dash.nt-gr .shell.public .toolbar { background: rgb(24 25 28 / .72); }
+html.th-dash.nt-gr .nc-panel { background: #1a1b1e !important; }
+html.th-dash.nt-gr .shell.public .plist.pgrid .prow-main .thumb, html.th-dash.nt-gr .shell.public .plist.pgrid .prow-main .thumb img, html.th-dash.nt-gr .shell.public :is(.sh-card-img, .sh-card-img .thumb, .sh-card-img .thumb img) { background: #ececef !important; }
+
+/* 6.11.2026 sayfa geçişini setupNavAnim (yandan kayma + örtü) tek başına yapar → eski 'rise' (alttan yükselme) giriş animasyonları
+   bilgisayarda ve yönetim panelinde de kapalı (telefonda mağazada zaten kapalıydı). Hareket azaltılmışsa sınıf eklenmez. */
+html.nav-anim :is(.main > *, .main > .kp > *, .plist > li, .olist > li, .co-sec, .o-card, .set-card, .done-card, .cart-sum, .gline,
+  .page.adm-sub > :not(.page-h):not(.subnav), .ulist > li, .orows > li, .co-grid > :not(.co-side), .cart-page > :not(.cart-grid), .cart-grid > .clist, .cart-grid > .cart-main, .req-page:not(.has-detail) .req-list, .mo-list) { animation: none; }
