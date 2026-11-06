@@ -8085,3 +8085,8 @@ html.th-dash .shell.public .sh-card-img { border-radius: 16px; overflow: hidden;
 .ai-add .ai-link { width: 100%; font-size: 16px; }
 .ai-add .ai-chk { display: flex; align-items: center; gap: 8px; font-size: 14px; flex-wrap: wrap; }
 .ai-add .ai-chk small { color: var(--muted); }
+.ai-bal { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0 0; padding: 10px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; }
+.ai-bal small { color: var(--muted); }
+.ai-bal .link { margin-left: auto; }
+.ai-bal input { width: 90px; font-size: 16px; }
+.ai-bal.low { border-color: color-mix(in srgb, #e0a100 55%, var(--line)); background: color-mix(in srgb, #e0a100 10%, var(--surface)); }

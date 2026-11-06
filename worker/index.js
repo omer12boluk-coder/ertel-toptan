@@ -45,7 +45,7 @@ export default {
         return r ? json(r, 200, { 'Cache-Control': 'public, max-age=30' }) : json({ error: 'kur alınamadı' }, 502);
       }
       // Yönetici resim yükleme (Ürünü düzenle > +) ve yüklenen / kopyalanan resimleri gösterme (Cloudflare R2 deposu)
-      if (url.pathname.startsWith('/ai/')) return await aiRoute(req, env, url, adminOf, json);
+      if (url.pathname.startsWith('/ai/')) return await aiRoute(req, env, url, adminOf, json, async (subject, text) => { await notifySend(env, { subject, text, link: 'https://ertelmarket.com/admin/urun-ekle', noEmail: true }).catch(() => {}); await adminPush(env, { title: subject, body: text.slice(0, 160), url: '/admin/urun-ekle', tag: 'ai-bal' }).catch(() => {}); });
       if (url.pathname === '/up' && req.method === 'POST') return json(await upImage(req, env));
       if (url.pathname === '/upv' && req.method === 'POST') return json(await upVideo(req, env));
       if (url.pathname === '/up/has' && req.method === 'GET') return json(await upHas(env, url));

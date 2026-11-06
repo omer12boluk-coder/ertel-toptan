@@ -46,9 +46,34 @@ function pump() {
       const { catalog, settings: S } = store.s;
       const brands = [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
       const r = await api().aiDraft({ name: next.q, hint: next.hint || '', link: next.link || '', search: !!next.search, hq: !!next.hq, cats: catPaths(catalog, S), brands, ex: await examples(next.q, catalog), vocab: examples.vocab || [] });
-      running = false; updQ(next.id, { st: 'ok', d: r.draft, err: '' });
+      running = false; updQ(next.id, { st: 'ok', d: r.draft, err: '' }); balTick();
     } catch (e) { running = false; updQ(next.id, { st: 'err', err: e.message }); }
   })();
+}
+
+// Bakiye kartı: yüklenen tutar + harcanan (bekçi kendi sayar; Anthropic bakiyeyi dışarı vermiyor). Azalınca / bitince Telegram + panel bildirimi.
+const balSubs = new Set(); const balTick = () => balSubs.forEach((f) => f());
+function BalCard() {
+  const [b, setB] = useState(null); const [ed, setEd] = useState(false); const [v, setV] = useState('');
+  const load = () => api().aiBal().then(setB).catch(() => setB({ err: 1 }));
+  useEffect(() => { load(); balSubs.add(load); return () => balSubs.delete(load); }, []);
+  if (!b || b.err) return null;
+  const left = b.budget > 0 ? Math.max(0, b.budget - (b.spent || 0)) : null;
+  const low = left != null && left <= b.budget * 0.2;
+  const save = async () => { const n = Number(String(v).replace(',', '.')); if (!(n > 0)) return toast('Tutarı $ olarak yazın, ör. 5', 'bad'); setB(await api().aiBal(n)); setEd(false); setV(''); toast('Bakiye kaydedildi'); };
+  return (
+    <div className={'ai-bal' + (low ? ' low' : '')}>
+      {ed ? <>
+        <span>Yüklediğiniz tutar ($):</span>
+        <input inputMode="decimal" autoFocus value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()} placeholder="5" />
+        <button type="button" className="btn sm primary" onClick={save}>Kaydet</button>
+        <button type="button" className="btn sm ghost" onClick={() => setEd(false)}>Vazgeç</button>
+      </> : <>
+        <span>{b.budget > 0 ? <>Yapay zekâ bakiyesi: <b>~{left.toFixed(2)} $</b> kaldı <small>({(b.spent || 0).toFixed(2)} $ / {b.budget} $ · {b.n || 0} ürün)</small></> : <>Bakiye takibi kapalı — yüklediğiniz tutarı yazın, azalınca haber verelim</>}</span>
+        <button type="button" className="link" onClick={() => setEd(true)}>{b.budget > 0 ? 'Yeni yükleme yaptım' : 'Tutarı yaz'}</button>
+      </>}
+    </div>
+  );
 }
 
 export function AiAdd() {
@@ -79,6 +104,7 @@ export function AiAdd() {
     <div className="page ai-add adm-sub">
       <PageHead title="Akıllı ürün ekle" extra={ready ? <span className="muted"> · {ready} hazır</span> : null} />
       <ProductsSwitch on="ai" />
+      <BalCard />
       <div className="ai-box">
         <label className="ai-l" htmlFor="ai-q">Ürün adını yazın <small>— her satıra bir ürün</small></label>
         <textarea id="ai-q" rows={3} placeholder={'2uul da 88\njcid v1se face id flex 15 pro'} value={q} onChange={(e) => setQ0(e.target.value)}

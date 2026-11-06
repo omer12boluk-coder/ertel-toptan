@@ -16,10 +16,34 @@ const DAY_LIMIT = 20, MONTH_LIMIT = 60;
 // (diğerleri panelden: Ayarlar › Akıllı ürün ekle › Marka siteleri)
 const SHOPS = { '2UUL': '2uul.com' };
 
-export async function aiRoute(req, env, url, adminOf, json) {
+// Bakiye takibi: Anthropic bakiyeyi dışarı vermiyor → harcamayı kendimiz sayarız (cevaptaki token + arama sayısı × fiyat).
+// Yönetici yüklediği tutarı sayfaya yazar (/ai/bal); %80'i harcanınca ve bakiye bitti hatası gelince Telegram + panel bildirimi.
+// KV 'aibal' = {budget, spent, w80, w100} — sadece taslak hazırlanınca yazılır (ayda birkaç kez).
+const PRICE = { haiku: [0.1, 0.5], sonnet: [2, 10], opus: [4, 20] }; // $ / milyon token (Kasım 2026)
+const costOf = (model, u = {}) => { const p = PRICE[Object.keys(PRICE).find((k) => model.includes(k)) || 'sonnet']; return ((u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) * 0.1) * p[0] / 1e6 + (u.output_tokens || 0) * p[1] / 1e6 + (u.server_tool_use?.web_search_requests || 0) * 0.01; };
+const getBal = async (env) => JSON.parse((await env.KV.get('aibal')) || '{}');
+async function spend(env, usd, notify) {
+  const b = await getBal(env); b.spent = +((b.spent || 0) + usd).toFixed(4); b.n = (b.n || 0) + 1;
+  let msg = null;
+  if (b.budget > 0 && !b.w80 && b.spent >= b.budget * 0.8) { b.w80 = 1; msg = `Yapay zekâ bakiyesi azaldı: yüklenen ${b.budget} $'ın yaklaşık ${b.spent.toFixed(2)} $'ı harcandı. console.anthropic.com › Billing'den yükleyebilirsiniz.`; }
+  await env.KV.put('aibal', JSON.stringify(b));
+  if (msg) await notify('⚠️ Yapay zekâ bakiyesi azaldı', msg);
+}
+async function outOfCredit(env, notify) {
+  const b = await getBal(env); if (b.w100 && Date.now() - b.w100 < 86400000) return; // günde en çok 1 kez
+  b.w100 = Date.now(); await env.KV.put('aibal', JSON.stringify(b));
+  await notify('⛔ Yapay zekâ bakiyesi bitti', 'Akıllı ürün ekle çalışmıyor: Anthropic bakiyesi bitti. console.anthropic.com › Billing › Buy credits ile yükleyin, sonra panelde Akıllı ekle › Bakiye’ye yüklediğiniz tutarı yazın.');
+}
+
+export async function aiRoute(req, env, url, adminOf, json, notify = async () => {}) {
   const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403);
   if (url.pathname === '/ai/pic' && req.method === 'GET') return picProxy(url.searchParams.get('u') || '');
   const b = await req.json().catch(() => ({}));
+  if (url.pathname === '/ai/bal') {
+    const cur = await getBal(env);
+    if (b.budget != null) { const v = Math.max(0, Number(b.budget) || 0); const nb = { budget: v, spent: 0, n: 0, at: Date.now() }; await env.KV.put('aibal', JSON.stringify(nb)); return json({ ok: true, bal: nb }); }
+    return json({ ok: true, bal: cur });
+  }
   if (url.pathname === '/ai/pics') return json({ ok: true, imgs: await pageImages(String(b.url || '')) });
   if (url.pathname === '/ai/draft') {
     const day = new Date().toISOString().slice(0, 10); const ck = 'aiday:' + day, mk = 'aimon:' + day.slice(0, 7);
@@ -28,8 +52,13 @@ export async function aiRoute(req, env, url, adminOf, json) {
     if (mon >= MONTH_LIMIT) return json({ ok: false, error: `Bu ayın sınırı doldu (${MONTH_LIMIT} ürün).` });
     await env.KV.put(ck, String(used + 1), { expirationTtl: 172800 });
     await env.KV.put(mk, String(mon + 1), { expirationTtl: 40 * 86400 });
-    try { return json({ ok: true, draft: await makeDraft(env, b), left: Math.min(DAY_LIMIT - used, MONTH_LIMIT - mon) - 1 }); }
-    catch (e) { return json({ ok: false, error: String(e.message || e).slice(0, 300) }); }
+    try { const draft = await makeDraft(env, b); if (draft._cost) { await spend(env, draft._cost, notify); delete draft._cost; } return json({ ok: true, draft, left: Math.min(DAY_LIMIT - used, MONTH_LIMIT - mon) - 1 }); }
+    catch (e) {
+      if (e.cost) await spend(env, e.cost, notify).catch(() => {});
+      const m = String(e.message || e);
+      if (/credit balance|billing|insufficient/i.test(m)) { await outOfCredit(env, notify); return json({ ok: false, error: 'Yapay zekâ bakiyesi bitti. console.anthropic.com › Billing’den yükleyin.' }); }
+      return json({ ok: false, error: m.slice(0, 300) });
+    }
   }
   return json({ ok: false, error: 'bulunamadı' }, 404);
 }
@@ -56,12 +85,12 @@ async function makeDraft(env, b) {
   ]);
   const ctx = [shop && `Markanın resmi sitesindeki ürün (${shops[shopKey]}): ${shop.title}\n${shop.text}`, linked && `Yöneticinin verdiği ürün sayfası (${host(b.link)}): ${linked.title}\n${linked.text}`].filter(Boolean).join('\n\n');
   const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''), vocab, ctx, search);
-  let out, sources = [], engine;
-  if (env.ANTHROPIC_KEY) { engine = b.hq ? 'claude-hq' : 'claude'; ({ out, sources } = await askClaude(env, prompt, search, !!b.hq)); }
+  let out, sources = [], engine, cost = 0;
+  if (env.ANTHROPIC_KEY) { engine = b.hq ? 'claude-hq' : 'claude'; ({ out, sources, cost } = await askClaude(env, prompt, search, !!b.hq)); }
   else if (env.AI) { engine = 'cf'; out = await askCf(env, prompt); }
   else throw new Error('Yapay zekâ bağlı değil: GitHub › Settings › Secrets’a ANTHROPIC_KEY ekleyip “Bekçiyi yayınla”yı çalıştırın.');
   const d = parseJson(out);
-  if (!d) throw new Error('Yapay zekâ cevabı okunamadı, tekrar deneyin');
+  if (!d) { const e = new Error('Yapay zekâ cevabı okunamadı, tekrar deneyin'); e.cost = cost; throw e; }
   const brand = String(d.brand || '').trim();
   // resimler: 1) marka mağazası 2) yapay zekânın bulduğu ürün sayfaları 3) aramada çıkan sayfalar
   const pages = [...new Set([...(d.pages || []), ...sources.map((s) => s.url)].filter((u) => /^https?:\/\//.test(u)))].slice(0, 8);
@@ -78,7 +107,7 @@ async function makeDraft(env, b) {
   let desc = cleanDesc(String(d.desc || ''));
   if (descImgs.length) desc += '\n<p>&nbsp;</p>\n' + descImgs.map((u) => `<img loading="lazy" src="${u}" />`).join('\n');
   return {
-    q: name, engine: engine + (search ? '+ara' : ''), descImgs: descImgs.length,
+    q: name, engine: engine + (search ? '+ara' : ''), descImgs: descImgs.length, _cost: cost,
     n: String(d.name || name).trim(), b: brand, model: d.model || '',
     c: Number.isFinite(+d.cat) ? +d.cat : null, c2: Number.isFinite(+d.cat2) && d.cat2 !== null && d.cat2 !== '' ? +d.cat2 : null,
     t: (Array.isArray(d.tags) ? d.tags : String(d.tags || '').split(',')).map((x) => String(x).trim()).filter(Boolean).slice(0, 90).join(','),
@@ -125,7 +154,7 @@ async function askClaude(env, prompt, search, hq) {
   const model = hq ? env.AI_MODEL_HQ || 'claude-sonnet-5-5' : env.AI_MODEL || 'claude-haiku-5-5';
   const tools = search ? [{ type: env.AI_SEARCH_TOOL || 'web_search_20250305', name: 'web_search', max_uses: 2 }] : undefined;
   let messages = [{ role: 'user', content: prompt }];
-  const sources = []; let text = '';
+  const sources = []; let text = '', cost = 0;
   for (let turn = 0; turn < 4; turn++) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -134,6 +163,7 @@ async function askClaude(env, prompt, search, hq) {
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error('Claude: ' + (j.error?.message || r.status));
+    cost += costOf(model, j.usage);
     for (const c of j.content || []) {
       if (c.type === 'text') text += c.text;
       if (c.type === 'web_search_tool_result' && Array.isArray(c.content)) c.content.forEach((x) => x.url && sources.push({ url: x.url, title: x.title || host(x.url) }));
@@ -141,7 +171,7 @@ async function askClaude(env, prompt, search, hq) {
     if (j.stop_reason !== 'pause_turn') break;
     messages = [...messages, { role: 'assistant', content: j.content }];
   }
-  return { out: text, sources: sources.slice(0, 20) };
+  return { out: text, sources: sources.slice(0, 20), cost };
 }
 
 async function askCf(env, prompt) {

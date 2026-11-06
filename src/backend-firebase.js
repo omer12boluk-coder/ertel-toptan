@@ -385,6 +385,7 @@ export class FirebaseBackend {
     const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/ai/draft', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), 240000);
     const j = await r.json().catch(() => ({})); if (!j.ok) throw new Error(j.error || 'Hazırlanamadı (' + r.status + ')'); return j;
   }
+  async aiBal(budget) { return (await this._watchPost('/ai/bal', budget == null ? {} : { budget })).bal || {}; }
   async aiPics(url) { return (await this._watchPost('/ai/pics', { url })).imgs || []; }
   async aiPicBlob(u) {
     const tok = await this.idToken(); if (!tok) throw new Error('Oturum bulunamadı');

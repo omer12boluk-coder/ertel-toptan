@@ -115,6 +115,7 @@ export class DemoBackend {
     } };
   }
   async aiPics() { return []; }
+  async aiBal(budget) { if (budget != null) ls.set('demo-aibal', { budget: +budget, spent: 0, n: 0 }); return ls.get('demo-aibal', { budget: 5, spent: 0.31, n: 12 }); }
   async aiPicBlob(u) { return (await fetch(u)).blob(); }
   async saveCatalog(items) { this.db.catalog = items.map((p) => { const o = {}; for (const k in p) if (!k.startsWith('_')) o[k] = p[k]; return o; }); this.db.catalogVersion = now(); if (!ls.set(KEY, this.db)) console.warn('localStorage dolu'); this.emit(); }
   async getDesc(id) {
