@@ -10,9 +10,9 @@ jobs:
       - name: Dene
         run: |
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
-          for u in "https://www.2uul.com/" "https://2uul.com/search/suggest.json?q=DA07&resources[type]=product&resources[limit]=6" "https://www.2uul.com/search/suggest.json?q=DA07&resources[type]=product&resources[limit]=6" "https://www.2uul.com/search?q=DA07" "https://www.2uul.com/products.json?limit=3"; do
-            code=$(curl -sS -L -A "$UA" -o /tmp/b -w '%{http_code} %{content_type} %{url_effective}' "$u" || echo hata)
+          for u in "https://2uul.com/search/suggest.json?q=DA07&resources[type]=product&resources[limit]=6" "https://www.2uul.com/search/suggest.json?q=DA07&resources[type]=product&resources[limit]=6" "https://www.2uul.com/search?q=DA07" "https://www.2uul.com/search?q=DA07&type=product&options[prefix]=last"; do
+            code=$(curl -g -sS -L -A "$UA" -o /tmp/b -w '%{http_code} %{content_type} %{url_effective}' "$u" || echo hata)
             body=$(head -c 600 /tmp/b | tr '\n\r' '  ' | sed 's/::/: :/g')
-            shop=$(grep -o -m3 'cdn.shopify.com\|Shopify.shop\|wp-content\|woocommerce\|/products/[a-z0-9-]*\|/product/[a-z0-9-]*\|cf-challenge\|Just a moment' /tmp/b | sort | uniq -c | tr '\n' ' ')
+            shop=$(grep -o 'cdn.shopify.com\|Shopify.shop\|wp-content\|woocommerce\|/products/[a-z0-9-]*da[-]*0*7[a-z0-9-]*\|/product/[a-z0-9-]*\|cf-challenge\|Just a moment' /tmp/b | sort | uniq -c | tr '\n' ' ')
             echo "::notice title=$u::$code | işaretler: $shop | $body"
           done
