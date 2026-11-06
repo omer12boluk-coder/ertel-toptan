@@ -1,6 +1,6 @@
 // Online mağaza ana sayfası (/magaza → Ana sayfa): büyük reklam alanı, avantajlar, marka kutuları,
 // kare reklam kutuları (bento), ürün rafları ve alt WhatsApp bandı. İçerik: Ayarlar > Mağaza ana sayfası (settings.shopHome).
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { SetRail, searchSets, setView, openSet, setLookOf, setsOf, liveSets } from './sets.jsx';
 import { flushSync } from 'react-dom';
 import { useStore, store, setQty, go, api, toast } from './store.js';
@@ -380,7 +380,7 @@ export function ShopHome({ S: Sover }) {
     );
     if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)), H.promosLay);
     if (k === 'sets') return <SetRail edit={!!E} />;
-    if (k === 'p0:hero') return (H.slides || []).length || photoBnOn(H) ? <P0Hero slides={H.slides} pre={photoBnOn(H) ? PHOTO_BANNERS : []} onProduct={setProduct} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'p0:hero') return (H.slides || []).length || photoBnOn(H) ? <P0Hero slides={H.slides} nv={H.heroNav || {}} pre={photoBnOn(H) ? PHOTO_BANNERS : []} onProduct={setProduct} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
     if (k === 'p0:find') return <P0Finder S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'p0:cats') return <P0Cats H={H} />;
     if (k === 'p0:pick') return <P0Pick S={S} onProduct={E ? () => E.select(k) : setProduct} />;
@@ -873,7 +873,7 @@ const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
 function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }) {
   // boydan boya banner: sayfa kırpması html sınıfıyla (eskiden :has() seçiciydi — her DOM değişikliğinde bütün sayfanın stilini yeniden hesaplatıyordu)
-  useEffect(() => { const c = document.documentElement.classList; c.toggle('hf-on', !!nv.full); c.toggle('hf-wide', nv.full === 'pc' || nv.full === 'all'); return () => c.remove('hf-on', 'hf-wide'); }, [nv.full]);
+  const fsRef = useHeroFull(nv);
   useSlideFonts(slides);
   const E = useContext(DesignCtx);
   const [i, setI] = useState(0);
@@ -943,7 +943,7 @@ function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }) {
   const grab = () => { target.current = null; clearTimeout(targetT.current); touching.current = true; clearTimeout(settleT.current); };
   const release = () => { touching.current = false; settle(); };
   return (
-    <section className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
+    <section ref={fsRef} className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '') + (slides[i]?.pb && !slides[i].pb.dark ? ' pb-lt' : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
         {slides.map((s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />)}
       </div>
@@ -956,6 +956,20 @@ function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }) {
       </>}
     </section>
   );
+}
+// 7.11.2026 boydan boya (nv.full) + TAM EKRAN (nv.fs: pc|m|all): sayfa genişliği ayarından bağımsız kenardan kenara;
+// tam ekranda yükseklik = ekranın bannerın başladığı yerden altına kadarı (--fs-top ölçülür). Eski Hero ve Paket 0 vitrini ortak.
+export function useHeroFull(nv = {}) {
+  const ref = useRef(null);
+  const wide = nv.full === 'pc' || nv.full === 'all' || nv.fs === 'pc' || nv.fs === 'all';
+  useEffect(() => { const c = document.documentElement.classList; c.toggle('hf-on', !!(nv.full || nv.fs)); c.toggle('hf-wide', wide); return () => c.remove('hf-on', 'hf-wide'); }, [nv.full, nv.fs, wide]);
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el || !nv.fs) return;
+    const W = el.ownerDocument.defaultView || window;
+    const m = () => { const t = el.getBoundingClientRect().top + W.scrollY; el.style.setProperty('--fs-top', Math.max(0, Math.min(260, Math.round(t))) + 'px'); };
+    m(); const t = setTimeout(m, 400); W.addEventListener('resize', m); return () => { clearTimeout(t); W.removeEventListener('resize', m); };
+  }, [nv.fs]);
+  return ref;
 }
 // reklam bir markaya gidiyorsa (ya da etiketinde marka adı varsa) o markanın logosu reklamda görünür
 function slideLogo(s, brands) {

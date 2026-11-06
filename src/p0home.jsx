@@ -9,7 +9,7 @@ import { BG_BY } from './presets.js';
 import { feat } from './extras.jsx';
 import { liveSets, setView, openSet, SetCover } from './sets.jsx';
 import { useBrandList, openBrand } from './brandsets.jsx';
-import { ShopImg, CtaButton, isProdImg, PCard, DesignCtx, CardAdd } from './shophome.jsx';
+import { ShopImg, CtaButton, isProdImg, PCard, DesignCtx, CardAdd, useHeroFull } from './shophome.jsx';
 import { loadPhones, mergePhones, searchPhones, short, useStencils, matchStencils } from './kalipfind.jsx';
 import { useTree, useVisibleProducts } from './catalog.jsx';
 import { PhotoBanner } from './photobn.jsx';
@@ -46,7 +46,8 @@ function Panel({ s, big, open, on = true, onProduct, edit }) {
 // 'top' sağ üst, 'bot' sağ alt, 'off' gösterme. Seçilmemişse: 1. reklam büyük, 2. sağ üst, 3. sağ alt, 4. ve sonrası büyük.
 export const P0_ROLES = [['big', 'Büyük kutu'], ['top', 'Sağ üst'], ['bot', 'Sağ alt'], ['off', 'Gösterme']];
 export const p0Role = (s, i) => (s && ['big', 'top', 'bot', 'off'].includes(s.p0) ? s.p0 : i === 1 ? 'top' : i === 2 ? 'bot' : 'big');
-export function P0Hero({ slides: all, open, edit, pre = [], onProduct }) {
+export function P0Hero({ slides: all, open, edit, pre = [], onProduct, nv = {} }) {
+  const fsRef = useHeroFull(nv);
   // pre = fotoğraflı bannerlar: büyük kutuda kullanıcının reklamlarından önce döner (i < 0 → tasarım modundaki reklam sırası değişmez)
   const items = [...pre.map((b, j) => ({ s: { pb: b }, i: -1 - j, r: 'big' })), ...(all || []).map((s, i) => ({ s, i, r: p0Role(s, i) })).filter((x) => edit || x.s.title || x.s.img)];
   const rotI = items.filter((x) => x.r === 'big'); const rot = rotI.map((x) => x.s);
@@ -59,7 +60,7 @@ export function P0Hero({ slides: all, open, edit, pre = [], onProduct }) {
   if (!rot.length && !side.length) return null;
   const big = rot.length ? rot : [side.shift()];
   return (
-    <section className={'p0-hero n' + (side.length + 1)} aria-label="Kampanyalar">
+    <section ref={fsRef} className={'p0-hero n' + (side.length + 1) + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '')} aria-label="Kampanyalar">
       <div className="p0-big">
         {big.map((s, i) => <Panel key={s.pb ? s.pb.id : i} s={s} big open={open} on={i === (k % big.length)} onProduct={onProduct} edit={edit} />)}
         {big.length > 1 && <span className={'p0-dots' + (big[k % big.length]?.pb && !big[k % big.length].pb.dark ? ' dk' : '')}>{big.map((_, i) => <button key={i} type="button" className={i === k ? 'on' : ''} onClick={() => setK(i)} aria-label={'Reklam ' + (i + 1)} />)}</span>}

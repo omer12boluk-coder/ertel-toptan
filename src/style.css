@@ -8554,3 +8554,32 @@ html[data-theme="dark"] .hd-p.hd-wide-p { background: #1e1f23 !important; }
 .p0-dots.dk button { background: rgb(0 0 0 / .16); }
 .p0-dots.dk button.on { background: #1d1d1f; }
 .dz2-pb { margin: 0 0 12px; padding: 4px 12px; border-radius: 14px; background: color-mix(in oklab, var(--fg) 4%, var(--surface)); }
+/* açık renkli fotoğraflı bannerda (pb-lt) koyu gölge bandı belli oluyordu → yumuşak gölge; nokta ve oklar koyu */
+.sh-hero { transition: box-shadow .5s ease; }
+.sh-hero.pb-lt { box-shadow: 0 1px 2px rgb(16 24 40 / .04), 0 16px 34px -28px rgb(16 24 40 / .18); }
+.sh-hero.pb-lt .sh-dot i { background: rgb(0 0 0 / .12); }
+.sh-hero.pb-lt .sh-dot.on i::after, .sh-hero.pb-lt.nd-dots .sh-dot.on i { background: #1d1d1f; }
+.sh-hero.pb-lt .sh-num { color: #1d1d1f; }
+.sh-hero.pb-lt .sh-hero-nav { color: #1d1d1f; background: rgb(255 255 255 / .7); border-color: rgb(0 0 0 / .08); }
+html[data-theme=dark] .sh-hero.pb-lt { box-shadow: none; }
+
+/* 7.11.2026 TAM EKRAN (heroNav.fs): kenardan kenara + ekranın altına kadar (--fs-top = bannerın sayfadaki başlangıcı, JS ölçer) */
+@media (min-width: 701px) {
+  :is(.sh-hero, .p0-hero):is(.fs-pc, .fs-all) { margin-inline: calc(50% - 50vw); border-radius: 0; box-shadow: none; }
+  .sh-hero:is(.fs-pc, .fs-all) .sh-slide { min-height: max(420px, calc(100svh - var(--fs-top, 120px))); border-radius: 0; }
+  .p0-hero:is(.fs-pc, .fs-all) { height: max(460px, calc(100svh - var(--fs-top, 120px))); gap: 0; }
+  .p0-hero:is(.fs-pc, .fs-all) :is(.p0-big, .p0-pan) { border-radius: 0; }
+  .p0-hero:is(.hf-pc, .hf-all) { margin-inline: calc(50% - 50vw); }
+  .p0-hero:is(.hf-pc, .hf-all) :is(.p0-big, .p0-pan) { border-radius: 0; }
+}
+@media (max-width: 700px) {
+  .sh-hero:is(.fs-m, .fs-all) { margin-inline: -16px; border-radius: 0; box-shadow: none; }
+  .sh-hero:is(.fs-m, .fs-all) .sh-hero-track { gap: 0; }
+  .sh-hero:is(.fs-m, .fs-all) .sh-slide { min-height: max(420px, calc(100svh - var(--fs-top, 90px) - 96px)); border-radius: 0; }
+}
+@media (max-width: 899px) {
+  .p0-hero:is(.fs-m, .fs-all) { gap: 0; padding: 0; scroll-padding: 0; }
+  .p0-hero:is(.fs-m, .fs-all) > :is(.p0-big, .p0-pan) { flex-basis: 100%; height: max(420px, calc(100svh - var(--fs-top, 90px) - 96px)); border-radius: 0; }
+}
+/* sivri köşe seçilince (Stil Stüdyosu › büyük reklam köşesi) Paket 0 vitrinindeki ürün kartı da aynı köşede */
+html.st-rhero .p0-pan-art.prod { border-radius: calc(var(--st-rhero) * .75); }

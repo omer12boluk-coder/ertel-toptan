@@ -5,7 +5,7 @@
 // Kutu boyu her yerde farklı (P0 büyük kutu ~1.45:1, eski banner ~2.6:1, telefon ~0.75:1) → banner bir "tuval"e çizilir:
 // geniş kutuda yükseklik 560 birim (en az 1000 birim genişlik), telefonda genişlik 358 birim; yerleşim tuval boyuna göre hesaplanır.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { store, setQty, toast } from './store.js';
+import { store, setQty, toast, useStore } from './store.js';
 import { ensureFonts } from './slidex.jsx';
 import { useWin } from './dzframe.jsx';
 
@@ -35,7 +35,7 @@ export const PHOTO_BANNERS = [
 const Chev = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>;
 
 // yazı bloğu (logo · başlık · slogan · açıklama · düğmeler)
-function Txt({ b, m, hs = 64, act, center, w }) {
+function Txt({ b, m, hs = 64, act, center, w, br = 999 }) {
   const ink = b.dark ? '#f5f5f7' : '#1d1d1f';
   const sub = b.dark ? '#a1a1a6' : b.subC || '#6e6e73';
   const eye = m ? b.eyeM || b.eye : b.eye;
@@ -52,7 +52,7 @@ function Txt({ b, m, hs = 64, act, center, w }) {
       {b.tag && <p style={{ margin: 0, font: `500 ${m ? 19 : b.center ? 26 : 28}px/1.2 Inter, sans-serif`, letterSpacing: '-.015em', color: ink }}>{b.tag}</p>}
       {s && <p style={{ margin: 0, font: `400 ${m ? 15 : 20}px/1.4 Inter, sans-serif`, color: sub, maxWidth: m ? '100%' : 440 }}>{s}</p>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 8 }}>
-        <button type="button" className="pb-b1" onClick={act(b.a1[1])} style={{ height: m ? 42 : 48, padding: '0 24px', borderRadius: 999, background: b.btn, color: '#fff', font: `500 ${fs}px/1 Inter, sans-serif`, border: 0, cursor: 'pointer' }}>{b.a1[0]}</button>
+        <button type="button" className="pb-b1" onClick={act(b.a1[1])} style={{ height: m ? 42 : 48, padding: '0 24px', borderRadius: br, background: b.btn, color: '#fff', font: `500 ${fs}px/1 Inter, sans-serif`, border: 0, cursor: 'pointer' }}>{b.a1[0]}</button>
         <button type="button" className="pb-b2" onClick={act(b.a2[1])} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 0, padding: 0, color: b.lnk, font: `500 ${fs}px/1 Inter, sans-serif`, cursor: 'pointer' }}>{(m && b.a2M) || b.a2[0]} <Chev /></button>
       </div>
     </div>
@@ -63,8 +63,8 @@ const abs = (o) => ({ position: 'absolute', ...o });
 const vmid = { top: 0, bottom: 0, display: 'flex', alignItems: 'center' };
 
 // geniş kutu yerleşimi (W ≥ 1000, H ≥ 560 tuval birimi)
-function Wide({ b, W, H, act }) {
-  const T = (p) => <Txt b={b} act={act} {...p} />;
+function Wide({ b, W, H, act, br }) {
+  const T = (p) => <Txt b={b} act={act} br={br} {...p} />;
   if (b.id === 'quick861') {
     const iw = Math.min((H + 80) * 1.4, W - 380), ih = iw / 1.4;
     return <>
@@ -113,8 +113,8 @@ function Wide({ b, W, H, act }) {
 }
 
 // telefon yerleşimi (W = 358 tuval birimi; H kutuya göre ~450–600)
-function Phone({ b, H, act }) {
-  const top = <div style={abs({ left: 0, right: 0, top: 30, padding: '0 24px', display: 'flex', justifyContent: 'center' })}><Txt b={b} m center act={act} w="100%" /></div>;
+function Phone({ b, H, act, br }) {
+  const top = <div style={abs({ left: 0, right: 0, top: 30, padding: '0 24px', display: 'flex', justifyContent: 'center' })}><Txt b={b} m center act={act} br={br} w="100%" /></div>;
   const free = H - 225; // yazı bloğunun altında kalan yükseklik
   if (b.id === 'quick861') { const s = Math.min(358, free + 64); return <><img src={IMG('q861-m.webp')} alt="Quick 861 Pro Max" style={abs({ left: (358 - s) / 2, bottom: -64 * (s / 358), width: s, height: s })} />{top}</>; }
   if (b.id === 'zm6745') { const h = Math.min(340, free + 70); return <>{top}<img src={IMG('zm-front.webp')} alt="AmScope ZM6745T" style={abs({ left: '50%', bottom: -70 * (h / 340), height: h, width: 'auto', transform: 'translateX(-50%)' })} /></>; }
@@ -128,6 +128,9 @@ function Phone({ b, H, act }) {
 export function PhotoBanner({ b, open, onProduct, edit }) {
   const ref = useRef(null); const [sz, setSz] = useState(null);
   const win = useWin();
+  // köşeler: Stil Stüdyosu'nda büyük reklam köşesi (look.style.rHero) küçültülünce düğmeler de aynı oranda sivrileşir (Apple yuvarlağı = hap)
+  const rh = useStore((s) => s.settings?.look?.style?.rHero);
+  const br = rh == null || rh === '' || Number(rh) >= 16 ? 999 : Math.round(Number(rh) * 0.5);
   useEffect(() => { ensureFonts(win.document, ['inter', 'intert']); }, [win]);
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
@@ -149,9 +152,10 @@ export function PhotoBanner({ b, open, onProduct, edit }) {
     const phone = sz.w / sz.h < 1.05;
     let s, W, H;
     if (phone) { s = sz.w / 358; W = 358; H = sz.h / s; }
-    else { s = sz.h / 560; W = sz.w / s; H = 560; if (W < 1000) { s = sz.w / 1000; W = 1000; H = sz.h / s; } }
+    // tam ekran gibi çok yüksek kutuda yazılar devleşmesin: büyütme en çok 1.3 (tuval o kadar uzar)
+    else { s = Math.min(sz.h / 560, 1.3); W = sz.w / s; H = sz.h / s; if (W < 1000) { s = sz.w / 1000; W = 1000; H = sz.h / s; } }
     cv = <div className="pb-cv" style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `scale(${s})`, transformOrigin: '0 0', fontFamily: 'Inter, sans-serif' }}>
-      {phone ? <Phone b={b} H={H} act={act} /> : <Wide b={b} W={W} H={H} act={act} />}
+      {phone ? <Phone b={b} H={H} act={act} br={br} /> : <Wide b={b} W={W} H={H} act={act} br={br} />}
     </div>;
     if (phone && b.bgM) bg = b.bgM;
   }

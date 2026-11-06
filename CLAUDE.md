@@ -246,9 +246,9 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 18. Paket 0 yayında (kullanıcı deniyor); Ürünler açılış sayfası askıda (ayardan kapalı tutulabilir); gerçek iPhone'da sesler / arama animasyonu / gece modu doğrulanmadı.
 
-- **7.11.2026 Fotoğraflı bannerlar** (dal `banner-foto`, önizlemede; yayında DEĞİL): `src/photobn.jsx` `PHOTO_BANNERS` (5 banner, logolu, resimler `hosting/public/bn/`), P0Hero `pre` + eski Hero'nun başına eklenir (kullanıcı reklamlarına dokunmaz). Kapatma `shopHome.photoBn === false` (Tasarım › büyük reklam alanı). Tuval: geniş kutuda 560 birim yükseklik (en az 1000 genişlik), telefonda 358 genişlik. Eski Hero'da tasarım modunda gösterilmez.
+- **7.11.2026 Fotoğraflı bannerlar** (dal `banner-foto`, önizlemede; yayında DEĞİL): `src/photobn.jsx` `PHOTO_BANNERS` (5 banner, logolu, resimler `hosting/public/bn/`), P0Hero `pre` + eski Hero'nun başına eklenir (kullanıcı reklamlarına dokunmaz). Kapatma `shopHome.photoBn === false` (Tasarım › büyük reklam alanı). Tuval: geniş kutuda 560 birim yükseklik (en az 1000 genişlik), telefonda 358 genişlik. Eski Hero'da tasarım modunda gösterilmez. **Yeni banner istenirse önce `docs/banner-kurallari.md`.** Tam ekran `heroNav.fs` pc|m|all (`useHeroFull`, eski Hero + Paket 0; boydan boya `full` artık Paket 0'da da). Açık bannerda hafif gölge `.pb-lt`. Banner düğme köşesi `look.style.rHero`'ya uyar.
 
-**SIRADAKİ İŞ (7.11.2026):** Ana sayfa büyük reklam alanı için 5 fotoğraflı banner önerisi → `docs/banner-oneri/OKU.md` (kullanıcı hangilerini seçtiğini söyleyecek, sonra siteye kurulacak). Geçici dallar `banner-resim`, `banner-resim-out` silinebilir.
+**SIRADAKİ İŞ (7.11.2026):** Fotoğraflı bannerlar `banner-foto` dalında önizlemede, kullanıcının 'yayınla' demesi bekleniyor (sonra `main`'e birleştir). Geçici dallar `banner-resim`, `banner-resim-out` silinebilir.
 **Karar bekleyen:** ödeme özeti 2 üründe kayıyor (çözüm önerildi) · elde kalan mal için dürüst raf/rozet · ana sayfa 'imza' etkileşimi · SMS (Netgsm) · Ürünler ve Bayi siparişleri PageHead/SubNav'a alınsın mı · "Birlikte iyi gider" rafı açıklamanın altında kalıyor.
 **Tartışılacak:** Blaze sonrası açılış penceresi 14 → 30 → 62 gün; Workers Paid sonrası DHL sorgusu 30 → 5 dk.
 **Küçük işler / bakım:** banner videosu (Santral Center dosyası), logosu olmayan markalar, Qianli gece rengi, sipariş formu uzun ad, Platin'e kalan bağlar (`u`, 'Sitede aç', XML eşitleme), eski GitHub dallarını sil (cf-site, eposta, resim-adresi, platin-kopma, sunucu-siparis, peek-out, mng-probe, tr-data, kalip-data, kalip-bulucu, linkli-siparis, blaze-hazirlik, tasarim-*), Actions Node 20 → 24.
@@ -275,6 +275,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 | Kapasite ve yasal eksik listesi, eski yol haritası | `docs/gunluk.md` | `KAPASİTE`, `YOL HARİTASI` |
 | Fiyat kuralları, fiyat gösterimi, kur | `docs/ozellik-temel.md` | `### Fiyat`, `pricing.steps`, `priceShow` |
 | Bayi tarafı, bayi siparişi | `docs/ozellik-temel.md` | `### Bayi`, `BayiSend`, `B2B_PAY` |
+| Yeni banner hazırlama kuralları (fotoğraf, logo, tuval, kesim, deneme) | `docs/banner-kurallari.md` | `PHOTO_BANNERS`, `defringe`, `tuval` |
 | Mağaza ana sayfası, banner, şerit, arama, alt bilgi, video bölümü | `docs/ozellik-temel.md` | `### Online mağaza`, `marquee`, `HeaderSearch`, `VideoBlock` |
 | Yönetim paneli, Ayarlar düzeni, tasarım modu (eski) | `docs/ozellik-temel.md` | `### Yönetim paneli`, `GROUPS`, `SECTIONS` |
 | Sipariş listesi/detayı, durumlar, kargo kartı, DHL, adres alanları, barkod yazdırma | `docs/ozellik-temel.md` | `27.10.2026 düzenlemeleri`, `CargoCard`, `AddressFields`, `labelpdf` |

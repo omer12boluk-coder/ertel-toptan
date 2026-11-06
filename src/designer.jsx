@@ -778,6 +778,7 @@ function HeroNavFields({ nv, up }) {
   const seg = (k, opts, def) => <span className="seg sw">{opts.map(([x, l]) => <button key={x} type="button" className={(nv[k] || def) === x ? 'on' : ''} onClick={() => up({ [k]: x })}>{l}</button>)}</span>;
   return <div data-f="heroNav" className="dz2-frame-box"><h4><Icon n="grid" s={15} />Banner genişliği ve geçişler <small>(tüm reklamlar)</small></h4>
     <Field label="Boydan boya" hint="Banner sayfanın sağ ve sol kenarına kadar uzar, köşeler düz olur">{seg('full', [['', 'Kapalı'], ['pc', 'Bilgisayarda'], ['m', 'Telefonda'], ['all', 'İkisinde']], '')}</Field>
+    <Field label="Tam ekran" hint="Banner ekranı kaplar: sağdan sola kenardan kenara, başladığı yerden ekranın altına kadar. Sayfa genişliği ve diğer bölümler nasıl ayarlı olursa olsun.">{seg('fs', [['', 'Kapalı'], ['pc', 'Bilgisayarda'], ['m', 'Telefonda'], ['all', 'İkisinde']], '')}</Field>
     <Field label="Reklam göstergesi" hint="Alttaki hangi reklamda olduğunu gösteren işaret">{seg('dots', [['bars', 'Çizgiler'], ['dots', 'Noktalar'], ['pill', 'Hap'], ['num', '1 / 5'], ['none', 'Yok']], 'bars')}</Field>
     {nv.dots !== 'none' && <Field label="Göstergenin yeri">{seg('dpos', [['left', 'Solda'], ['center', 'Ortada'], ['right', 'Sağda']], 'left')}</Field>}
     <Field label="Oklar · bilgisayar" hint="Telefonda ok yok, parmakla kaydırılır">{seg('arr', [['glass', 'Cam (eski)'], ['solid', 'Beyaz yuvarlak'], ['min', 'Sade ok'], ['side', 'Kenar çubuğu'], ['none', 'Yok']], 'glass')}</Field>
