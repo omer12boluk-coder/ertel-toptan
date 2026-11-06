@@ -40,8 +40,9 @@ export function LinkMake({ no, name, items, total, rate, onDone }) {
   const [made, setMade] = useState(null); // { id, link, sig, exp }
   const [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState(false); // müşteri adetleri değiştirebilsin mi (her yeni linkte KAPALI başlar)
+  const [plusVat, setPlusVat] = useState(false); // 6.11.2026: '+KDV ekle' — açıksa müşteri KDV dahil tutarı da görür (her yeni linkte KAPALI)
   const canEdit = items.length <= LC_MAX_EDIT;
-  const sig = JSON.stringify([edit && canEdit, items.map((it) => [it.id, it.qty, it.offer])]);
+  const sig = JSON.stringify([edit && canEdit, plusVat, items.map((it) => [it.id, it.qty, it.offer])]);
   const missing = items.filter((it) => it.offer == null || it.offer === '' || !(Number(it.offer) > 0)).length;
   async function make() {
     if (missing) return toast(`${missing} ürünün fiyatı boş`, 'warn');
@@ -53,7 +54,7 @@ export function LinkMake({ no, name, items, total, rate, onDone }) {
       const data = strip({
         no, name: (name || '').trim(), status: 'open', at, exp: at + hours * 3600e3, hours, rate: rate?.usd || null, total,
         edit: !!(edit && canEdit), ids: items.map((it) => String(it.id)),
-        vat: P.showVat === false ? 0 : Number(P.vatPct ?? 20), // müşterinin gördüğü KDV oranı (özet bununla yazılır)
+        vat: plusVat ? Number(P.vatPct ?? 20) || 20 : 0, // 6.11.2026: müşterinin gördüğü KDV oranı = '+KDV ekle' anahtarı (0 = KDV gösterilmez; özet de bununla yazılır)
         items: items.map((it) => ({ id: it.id, k: it.k || '', n: it.n, cur: it.cur || 'USD', qty: Math.max(1, Math.round(Number(it.qty) || 1)), price: Number(it.offer), list: it.list ?? null, pi: it.pi, img: it.img && it.img !== 'fs' ? it.img : undefined })),
       });
       await A.createLcart(id, data);
@@ -75,6 +76,9 @@ export function LinkMake({ no, name, items, total, rate, onDone }) {
           <div className="lc-edit-t">
             <Toggle id="lc-edit" label="Müşteri adetleri değiştirebilsin" hint={canEdit ? (edit ? 'Müşteri sadece − / + ile adet değiştirip ürün çıkarabilir. Ürün ekleyemez, fiyat değişmez.' : 'Kapalı: müşteri hiçbir şeyi değiştiremez, sadece kontrol edip onaylar.') : `${LC_MAX_EDIT} üründen fazla sepette açılamaz.`} checked={edit && canEdit} onChange={(v) => setEdit(v && canEdit)} />
           </div>
+          <div className="lc-edit-t">
+            <Toggle id="lc-vat" label="+KDV ekle" hint={plusVat ? `Müşteri toplamın altında KDV %${Number((S.pricing || {}).vatPct ?? 20) || 20} dahil tutarı da (USD ve TL) görür; WhatsApp özetine de yazılır.` : 'Kapalı: müşteri sadece fiyatı ve TL karşılığını görür.'} checked={plusVat} onChange={setPlusVat} />
+          </div>
           <p className="fine lc-dur"><Icon n="clock" s={14} /> Link {lcHours(S)} saat açık kalır; müşteri onaylamazsa kendiliğinden silinir (Ayarlar › Sepet linki).</p>
           <button className="btn primary lc-make-btn" disabled={busy || !items.length} onClick={make}><Icon n="send" s={16} />{busy ? 'Hazırlanıyor…' : 'Sepet linki oluştur'}</button>
           {missing > 0 && <p className="fine lc-warn">{missing} ürünün fiyatı boş; önce fiyat yazın.</p>}
@@ -82,7 +86,7 @@ export function LinkMake({ no, name, items, total, rate, onDone }) {
       ) : (
         <div className="lc-made">
           <div className="lc-url"><code>{made.link}</code></div>
-          <p className="fine lc-dur"><Icon n="clock" s={14} /> {hm(made.exp)}’e kadar açık{edit && canEdit ? ' · müşteri adetleri değiştirebilir' : ' · müşteri hiçbir şeyi değiştiremez'}</p>
+          <p className="fine lc-dur"><Icon n="clock" s={14} /> {hm(made.exp)}’e kadar açık{edit && canEdit ? ' · müşteri adetleri değiştirebilir' : ' · müşteri hiçbir şeyi değiştiremez'}{plusVat ? ' · +KDV' : ''}</p>
           <div className="row-btns">
             <a className="btn sm wa" href={waLink('', `Sepetiniz hazır, buradan kontrol edip onaylayabilirsiniz:\n${made.link}`)} target="_blank" rel="noopener"><Icon n="wa" s={15} />WhatsApp’ta gönder</a>
             <button className="btn sm outline" onClick={() => copyText(made.link, 'Link kopyalandı')}><Icon n="copy" s={15} />Linki kopyala</button>
@@ -94,6 +98,20 @@ export function LinkMake({ no, name, items, total, rate, onDone }) {
     </section>
   );
 }
+
+// 6.11.2026 müşteri sayfalarında toplam: altında her zaman TL karşılığı (linkin kuru), '+KDV ekle' açıksa KDV dahil satırı —
+// ürün sayfasındaki fiyatın altıyla aynı yazı boyu / silikliği (tl-hint, vat-inc)
+function LcTotal({ tot, rate, pct }) {
+  const tTL = rate ? toTL(tot, rate) : null;
+  const v = vatOf(tot, pct); const incTL = v.pct && rate ? toTL(v.inc, rate) : null;
+  return <div className="lc-tot">
+    <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
+    {tTL != null && <span className="tl-hint num">≈ {fmtTL(tTL)}</span>}
+    {v.pct > 0 && Object.keys(tot).length > 0 && <span className="vat-inc num">+KDV %{v.pct.toLocaleString('tr-TR')} · KDV dahil {fmtTotals(v.inc)}{incTL != null && !('TRY' in tot && Object.keys(tot).length === 1) ? ' · ' + fmtTL(incTL) : ''}</span>}
+  </div>;
+}
+// eski linkler: vat alanı yoksa ayarlardaki gösterim
+const lcVat = (c, S) => c?.vat ?? (S?.pricing?.showVat === false ? 0 : Number(S?.pricing?.vatPct ?? 20));
 
 // ============================================================================================
 // Yönetim: linkle gelen sepetler
@@ -429,8 +447,7 @@ export function LinkCartPage({ id }) {
               ))}
             </ul>
           )}
-          <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b>{tTL != null && <span className="muted num">≈ {fmtTL(tTL)}</span>}</div>
-          <VatLines by={tot} rate={rate} className="right" />
+          <LcTotal tot={tot} rate={rate} pct={lcVat(c, S)} />
         </section>
 
         <div className="lc-form">
@@ -474,6 +491,7 @@ export function LinkCartPage({ id }) {
 
 // Müşteri: onaylanmış sepet linki = sipariş takip sayfası (durum, onaylanan ürünler, teslimat, kargo takibi)
 function LinkCartStatus({ c, justDone, S, byId }) {
+  const liveRate = useRate(); const rate = c?.rate ? { usd: c.rate } : liveRate;
   const its = finalItems(c);
   const tot = totals(its, 'offer');
   const sub = c.sub || {};
@@ -515,7 +533,7 @@ function LinkCartStatus({ c, justDone, S, byId }) {
             </li>
           ))}
         </ul>
-        <div className="vle-tot"><span>Toplam</span><b className="num">{fmtTotals(tot)}</b></div>
+        <LcTotal tot={tot} rate={rate} pct={lcVat(c, S)} />
       </div>
       {c.sub && <div className="lc-st-box">
         <h3>Teslimat</h3>

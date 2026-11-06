@@ -8343,3 +8343,13 @@ html.th-dash.nt-gr .shell.public .plist.pgrid .prow-main .thumb, html.th-dash.nt
    bilgisayarda ve yönetim panelinde de kapalı (telefonda mağazada zaten kapalıydı). Hareket azaltılmışsa sınıf eklenmez. */
 html.nav-anim :is(.main > *, .main > .kp > *, .plist > li, .olist > li, .co-sec, .o-card, .set-card, .done-card, .cart-sum, .gline,
   .page.adm-sub > :not(.page-h):not(.subnav), .ulist > li, .orows > li, .co-grid > :not(.co-side), .cart-page > :not(.cart-grid), .cart-grid > .clist, .cart-grid > .cart-main, .req-page:not(.has-detail) .req-list, .mo-list) { animation: none; }
+
+/* 6.11.2026 sepet linki müşteri toplamı: TL + (isteğe bağlı) KDV dahil, sağa yaslı, ürün sayfasındaki fiyat altıyla aynı */
+.lc-tot { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.lc-tot .vle-tot { align-self: stretch; }
+.lc-tot .tl-hint, .lc-tot .vat-inc { font-size: 12.5px; text-align: right; }
+/* 6.11.2026 gece: sepet sayacı (üst menü + yüzen sepet) --price ile boyanıyordu → grafitte beyaz zemin üstüne beyaz '1' görünmüyordu;
+   bakırda da şeftali üstüne beyaz soluktu. Gecede iOS kırmızısı rozet (alt menüdeki sepet rozetiyle aynı). WhatsApp düğmesi yazısı daha parlak. */
+html.th-dash :is(.hcart-ic b, .cart-fab-ic b) { background: #ff3b30; color: #fff; }
+html.th-dash .shell.public .btn.wa-soft { color: #30d158; border-color: rgb(48 209 88 / .35); background: rgb(48 209 88 / .08); }
+html.th-dash.nt-gr .sh-new { background: #0a84ff; box-shadow: 0 6px 14px -6px rgb(10 132 255 / .7); } /* fiyat rengi grafitte beyaz → 'YENİ' rozeti beyaz üstüne beyazdı */
