@@ -9053,3 +9053,9 @@ img[src*="/brands/tbk."] { --lk: 2.062; --lc: 0.248; --ll: -0.007; }
 img[src*="/brands/sugon."] { --lk: 1.037; --lc: -0.008; --ll: -0.032; }
 img[src*="/brands/fluke."] { --lk: 1.530; --lc: 0.000; --ll: -0.036; }
 img[src*="/brands/ersa."] { --lk: 1.080; --lc: -0.040; --ll: -0.011; }
+/* 7.11.2026 (5) Haftanın ürünü: Sepete ekle (44) ⇄ − 1 + (38) boy farkı kartı ve altındaki kutuları oynatıyordu → ikisi de 44 */
+.cd-big-add .abx { height: 44px; }
+.cd-big-add .abx > *, .cd-big-add .abx .stepper, .cd-big-add .abx .qty { height: 44px !important; min-height: 44px; }
+/* 7.11.2026 (5) iPhone'da banner yukarı-aşağı titriyordu: yatay kayan şerit (overflow-x: auto) dikeyde de 'auto' sayılır →
+   içerik bir an taşınca parmakla dikey kaydırırken şerit kendi içinde birkaç px yukarı-aşağı oynuyordu. Dikey kaydırma tamamen kapalı. */
+.sh-hero-track { overflow-y: hidden !important; overscroll-behavior-y: auto; }
