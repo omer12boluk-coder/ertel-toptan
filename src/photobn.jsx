@@ -30,6 +30,12 @@ export const PHOTO_BANNERS = [
   { id: 'da07', name: '2UUL DA07', bg: 'linear-gradient(120deg, #f2fbf7 0%, #d3efe2 100%)', bgM: 'linear-gradient(170deg, #f2fbf7 0%, #d3efe2 100%)', logo: '/brands/2uul.png', lh: 40, eye: 'DA07 · iPhone 17 serisine uygun', eyeM: 'DA07', eyeC: '#0b7a52',
     title: 'Arka kapak,\ntek presle.', titleC: '#0f241b', subC: '#4a5f55', sub: 'Mini ısıtmalı pres istasyonu. Kasa ve arka kapak yapıştırmada eşit baskı, eşit ısı.', subM: 'iPhone 17 serisine uygun mini ısıtmalı pres.',
     a1: ['İncele', 'p:2756'], a2: ['2UUL ürünleri', 'brand:2UUL'], btn: '#0b7a52', lnk: '#0b7a52' },
+  { id: 'mech-pp2', name: 'Mechanic Power Pro Max 2.0', bg: '#fff', bgW: 'radial-gradient(70% 90% at 72% 60%, #ffffff 0%, #f1f1f4 80%)', logo: '/brands/mechanic-dark.png', lh: 26, eye: 'Power Pro Max 2.0', eyeC: '#1d1d1f',
+    title: 'Tek tuş.\nTam güç.', sub: 'iPhone X’ten 17 Pro Max’e kadar tek tuşla açma. Gerilimi ışıkla gösterir.', subM: 'iPhone X – 17 Pro Max, tek tuşla açma.',
+    a1: ['İncele', 'p:3062'], a2: ['Sepete ekle', 'cart:3062'], btn: ACC, lnk: ACC },
+  { id: 'sm4ntp', name: 'AmScope SM-4NTP', bg: 'linear-gradient(180deg, #fbfbfd 0%, #eeeef2 100%)', logo: '/brands/amscope.png', lh: 30, eye: 'SM-4NTP', eyeC: '#bf4800',
+    title: 'Uzun kol.\nGeniş masa.', sub: 'Çift kollu stand ve trinoküler kafa. Masanın her köşesine uzanır.', subM: 'Çift kollu stand, trinoküler kafa.',
+    a1: ['İncele', 'p:30'], a2: ['Mikroskoplar', 'cat:14'], btn: ACC, lnk: ACC },
 ];
 
 const Chev = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>;
@@ -103,6 +109,23 @@ function Wide({ b, W, H, act, br }) {
       <div style={abs({ left: tl, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
     </>;
   }
+  if (b.id === 'mech-pp2') {
+    // bilgisayarda kablolu ürün kesimi (elli fotoğrafta kol havada bitiyordu); telefonda elli fotoğraf kenardan girer
+    const ih = Math.min(500, H * 0.86), iw = ih * 0.761; const ir = Math.max(60, W * 0.14 - 20); const tw = W - iw - ir - 88 - 40;
+    return <>
+      <div style={abs({ right: ir - 20, bottom: 30, width: iw + 40, height: 40, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.16), rgba(0,0,0,0))' })} />
+      <img src={IMG('mech-prod.webp')} alt="Mechanic Power Pro Max 2.0" style={abs({ right: ir, bottom: 44, width: iw, height: ih })} />
+      <div style={abs({ left: 88, ...vmid })}>{T({ w: Math.min(520, tw), hs: tw < 420 ? 56 : 64 })}</div>
+    </>;
+  }
+  if (b.id === 'sm4ntp') {
+    const iw = Math.min(720, W * 0.5), ih = iw * 0.765; const ir = Math.min(90, W * 0.05); const tw = Math.min(520, W - ir - iw - 88 - 20);
+    return <>
+      <div style={abs({ right: ir + iw * 0.06, bottom: 40, width: iw * 0.84, height: 44, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.2), rgba(0,0,0,0))' })} />
+      <img src={IMG('sm4.webp')} alt="AmScope SM-4NTP" style={abs({ right: ir, bottom: 56, width: iw, height: ih })} />
+      <div style={abs({ left: 88, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
+    </>;
+  }
   // da07
   const ih = Math.min(460, H * 0.82), iw = ih * 0.885; const ir = Math.min(170, W * 0.1); const tw = Math.min(520, W - ir - iw - 88 - 30);
   return <>
@@ -120,6 +143,8 @@ function Phone({ b, H, act, br }) {
   if (b.id === 'zm6745') { const h = Math.min(340, free + 70); return <>{top}<img src={IMG('zm-front.webp')} alt="AmScope ZM6745T" style={abs({ left: '50%', bottom: -70 * (h / 340), height: h, width: 'auto', transform: 'translateX(-50%)' })} /></>; }
   if (b.id === 'hands') { const h = Math.min(300, free - 10); return <><img src={IMG('hands.webp')} alt="Mikroskop kafasını ayarlayan eller" style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: '50% 35%' })} />{top}</>; }
   if (b.id === 'ht316') { const w = Math.min(330, (free - 34) * 1.425); return <>{top}<img src={IMG('ht316.webp')} alt="Aixun HT316" style={abs({ left: (358 - w) / 2, bottom: 34, width: w, height: 'auto' })} /></>; }
+  if (b.id === 'mech-pp2') { const h = Math.min(300, free - 10); return <><img src={IMG('mech-hand.webp')} alt="Mechanic Power Pro Max 2.0" style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: '62% 26%' })} />{top}</>; }
+  if (b.id === 'sm4ntp') { const w = Math.min(330, (free - 30) / 0.765); return <>{top}<img src={IMG('sm4.webp')} alt="AmScope SM-4NTP" style={abs({ left: (358 - w) / 2, bottom: 30, width: w, height: w * 0.765 })} /></>; }
   const h = Math.min(260, free - 22);
   return <>{top}<img src={IMG('da07.webp')} alt="2UUL DA07" style={abs({ left: '50%', bottom: 22, height: h, width: 'auto', transform: 'translateX(-50%)' })} /></>;
 }
@@ -157,7 +182,7 @@ export function PhotoBanner({ b, open, onProduct, edit }) {
     cv = <div className="pb-cv" style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `scale(${s})`, transformOrigin: '0 0', fontFamily: 'Inter, sans-serif' }}>
       {phone ? <Phone b={b} H={H} act={act} br={br} /> : <Wide b={b} W={W} H={H} act={act} br={br} />}
     </div>;
-    if (phone && b.bgM) bg = b.bgM;
+    if (phone && b.bgM) bg = b.bgM; else if (!phone && b.bgW) bg = b.bgW;
   }
   return <div ref={ref} className={'pb-box' + (b.dark ? ' pb-dark' : ' pb-light')} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: bg }}>{cv}</div>;
 }

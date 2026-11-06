@@ -8547,7 +8547,9 @@ html[data-theme="dark"] .hd-p.hd-wide-p { background: #1e1f23 !important; }
 
 /* ---- Fotoğraflı bannerlar (7.11.2026, src/photobn.jsx): tuval kutuyu doldurur, yazı/resim tuval içinde ---- */
 .p0-pan.pb-pan { padding: 0; cursor: default; background: transparent; }
-.sh-slide.pb-slide { display: block; padding: 0; background: #000; }
+.sh-slide.pb-slide { display: block; padding: 0; background: transparent; }
+/* köşe: banner zemini kutunun köşesiyle birlikte kırpılır (alttaki zemin köşede sızıp koyu çizgi yapıyordu) */
+.pb-box { border-radius: inherit; }
 .pb-box .pb-cv img { user-select: none; -webkit-user-drag: none; pointer-events: none; }
 .pb-box button { -webkit-tap-highlight-color: transparent; transition: filter .2s, opacity .2s; }
 @media (hover: hover) { .pb-box .pb-b1:hover { filter: brightness(1.1); } .pb-box .pb-b2:hover { opacity: .75; } }
