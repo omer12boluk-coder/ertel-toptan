@@ -1090,6 +1090,12 @@ function setupResumeFix() {
     else fix();
   });
   addEventListener('pageshow', (e) => { if (e.persisted) fix(); });
+  // 6.11.2026 (2): aynı bozulma klavye kapanınca da oluyordu (sepette yazı alanından çıkınca alt menü ortada, sayfa boş) →
+  // yazı alanından çıkınca ve klavye kapanınca (görünür alan birden uzayınca) ekran yeniden ölçülür
+  const isField = (el) => el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+  document.addEventListener('focusout', (e) => { if (!isField(e.target)) return; setTimeout(() => { if (!isField(document.activeElement)) fix(); }, 120); });
+  const vv = window.visualViewport;
+  if (vv) { let h0 = vv.height; vv.addEventListener('resize', () => { const h = vv.height; if (h - h0 > 120 && !isField(document.activeElement)) setTimeout(fix, 60); h0 = h; }); }
 }
 
 function setupNavAnim() {
