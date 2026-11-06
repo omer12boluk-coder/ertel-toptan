@@ -225,7 +225,7 @@ const cleanDesc = (h) => h.replace(/<(script|iframe|style)[\s\S]*?<\/\1>/gi, '')
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
 // ---------------------------------------------------------------- resim bulma
-async function get(u, ms = 12000) {
+async function get(u, ms = 25000) {
   const r = await fetch(u, { headers: { 'User-Agent': UA, Accept: 'text/html,application/json;q=0.9,*/*;q=0.8', 'Accept-Language': 'en-US,en;q=0.9,tr;q=0.8' }, redirect: 'follow', signal: AbortSignal.timeout(ms) });
   if (!r.ok) throw new Error(String(r.status));
   return r;
@@ -256,10 +256,11 @@ async function siteSearch(site, q, full) {
   for (const t of tries.slice(0, 3)) {
     let html; try { html = (await (await get(t)).text()).slice(0, 1.5e6); } catch { continue; }
     // sonuç sayfasındaki aynı siteye ait bağlantılardan, model kodu geçen ilk ürün sayfası
-    for (const m of html.matchAll(/<a[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]{0,400}?)<\/a>/gi)) {
-      const u = abs(m[1], t); if (!u || new URL(u).hostname.replace(/^www\./, '') !== h) continue;
-      if (u.includes('search') || !isProductUrl(u)) continue;
-      const label = strip(m[2]) + ' ' + /title=["']([^"']+)/i.exec(m[0])?.[1] + ' ' + u;
+    for (const m of html.matchAll(/<a\b[^>]*?href=["']([^"'#]+)["'][^>]*>/gi)) {
+      const u = abs(m[1].replace(/&amp;/g, '&'), t); if (!u || new URL(u).hostname.replace(/^www\./, '') !== h) continue;
+      if (/search|[?&](pg|page)=/.test(u) || !isProductUrl(u)) continue;
+      const after = html.slice(m.index + m[0].length, m.index + m[0].length + 800);
+      const label = strip(after.split(/<\/a>/i)[0]) + ' ' + (/title=["']([^"']+)/i.exec(m[0])?.[1] || '') + ' ' + u;
       if (strongMatch(label, q) || strongMatch(label, full)) return u.split('#')[0];
     }
   }
@@ -288,7 +289,12 @@ async function shopifyProduct(dom0, q, full) {
     try { s = await (await get(`https://${d}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=6`)).json(); dom = d; break; } catch {}
   }
   if (!s) return null;
-  const prods = (s?.resources?.results?.products || []).filter((p) => sameModel(p.title, q) || sameModel(p.title, full));
+  let prods = (s?.resources?.results?.products || []).filter((p) => sameModel(p.title, q) || sameModel(p.title, full));
+  // "jcid v1se" gibi aramada sitenin kendi marka yazımı farklıysa (JC V1SE): sadece model koduyla bir daha ara
+  const codes = String(full || q).split(/[\s,/]+/).filter((w) => /\d/.test(w)).join(' ');
+  if (!prods.length && codes && codes.toLowerCase() !== String(q).toLowerCase()) {
+    try { const s2 = await (await get(`https://${dom}/search/suggest.json?q=${encodeURIComponent(codes)}&resources[type]=product&resources[limit]=6`)).json(); prods = (s2?.resources?.results?.products || []).filter((p) => sameModel(p.title, codes)); } catch {}
+  }
   if (!prods.length) return null; // aramada bu model yok → yanlış ürünün resimlerini alma
   const h = prods[0].handle || (prods[0].url || '').split('/products/')[1]?.split('?')[0];
   const p = await (await get(`https://${dom}/products/${h}.js`)).json();
@@ -326,6 +332,30 @@ async function shopifyImages(dom, q) {
 }
 
 export { pageInfo, shopifyProduct, isProductUrl, siteSearch, parseJson };
+// Ürün adresinin son parçası (slug) resim dosya adlarında geçiyorsa o resimler bu ürünün galerisidir (martview vb.).
+// Boyut ekleri (-small, -medium, -medium-large, -thumb) en büyüğe (-large) çevrilir, aynı numara bir kez alınır.
+const sizeless = (x) => x.replace(/-(small|medium-large|medium|large|thumb|tiny|mini)(?=\.(jpe?g|png|webp)$)/i, '').replace(/\.(jpe?g|png|webp)$/i, '');
+function slugImages(html, pageUrl) {
+  let slug = ''; try { slug = new URL(pageUrl).pathname.split('/').filter(Boolean).pop().replace(/\.html?$/i, '').toLowerCase(); } catch {}
+  if (slug.length < 12) return [];
+  const key = slug.slice(0, 40), best = new Map();
+  // sayfada görülen en büyük boyutu seç (var olmayan adresi uydurma): large > medium-large > medium > (eksiz) > small
+  const rank = (x) => (/-large\./i.test(x) && !/-medium-large\./i.test(x) ? 5 : /-medium-large\./i.test(x) ? 4 : /-medium\./i.test(x) ? 3 : /-(small|thumb|tiny|mini)\./i.test(x) ? 1 : 2) + (/\.jpe?g$/i.test(x) ? 0.5 : 0);
+  for (const m of html.matchAll(/https?:\/\/[^"'\s()<>\\]+?\.(?:jpe?g|png|webp)/gi)) {
+    const x = m[0]; if (!x.toLowerCase().includes(key)) continue;
+    const id = sizeless(x); const cur = best.get(id);
+    if (!cur || rank(x) > rank(cur)) best.set(id, x);
+  }
+  // sitede '-large' kalıbı varsa diğer resimlerin de büyüğünü dene (yoksa tarayıcıdaki ayıklama açılamayanı atar,
+  // aynı resmin küçüğü yedek olarak kalır; kopyayı görsel parmak izi eler)
+  const hasLarge = [...best.values()].some((x) => /-large\./i.test(x) && !/-medium-large\./i.test(x));
+  const res = [];
+  for (const x of best.values()) {
+    if (hasLarge && !(/-large\./i.test(x) && !/-medium-large\./i.test(x))) { const L = x.replace(/-(small|medium-large|medium|thumb|tiny|mini)(\.(?:jpe?g|png|webp))$/i, '-large$2'); if (L !== x) res.push(L); }
+    res.push(x);
+  }
+  return res.slice(0, 16);
+}
 export async function pageImages(u, strict = false) {
   if (!/^https?:\/\//.test(u)) return [];
   const url = new URL(u);
@@ -338,7 +368,8 @@ export async function pageImages(u, strict = false) {
   }
   const html = (await (await get(u)).text()).slice(0, 3e6);
   const out = [];
-  const push = (x) => { const a = abs(x, u); if (a && okImg(a)) { const b2 = big(a); if (!out.includes(b2)) out.push(b2); } };
+  const ids = new Set();
+  const push = (x) => { const a = abs(x, u); if (a && okImg(a)) { const b2 = big(a); const id = sizeless(b2); if (!out.includes(b2) && !ids.has(id)) { out.push(b2); ids.add(id); } } };
   // AliExpress
   const ae = /"imagePathList"\s*:\s*\[([^\]]+)\]/.exec(html);
   if (ae) ae[1].match(/"([^"]+)"/g)?.forEach((x) => push(x.slice(1, -1)));
@@ -349,6 +380,7 @@ export async function pageImages(u, strict = false) {
       walk(JSON.parse(m[1]));
     } catch {}
   }
+  for (const x of slugImages(html, u)) if (!out.includes(x)) { out.push(x); ids.add(sizeless(x)); }
   if (strict) return out.slice(0, 8);
   // og:image
   for (const m of html.matchAll(/<meta[^>]+(?:property|name)=["'](?:og:image|og:image:secure_url|twitter:image)["'][^>]*>/gi)) { const c = /content=["']([^"']+)/i.exec(m[0]); if (c) push(c[1]); }
