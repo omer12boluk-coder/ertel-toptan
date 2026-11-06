@@ -1,0 +1,216 @@
+// 'Claude düzeni' (7.11.2026): fotoğraflı bannerların diliyle sıfırdan ana sayfa bölümleri (cd:*). Kurallar: docs/banner-kurallari.md
+// Sade zemin, marka logosu, kısa model adı, bir satır açıklama, fiyat, tek düğme. Mor yok; düğmeler tema renginde.
+// Bölümler sadece kayıtlı sırada (shopHome.layout) varsa çizilir — eski paketler (Paket 0, 1, Eski düzenim) birebir aynı kalır.
+// Ayarlar: shopHome.cd = { pick: {ids, auto, names{id: kısa ad}, eye, title, badge}, sets: {ids, n, eye, title}, brands: {n, eye, title},
+//   mq: {speed, eye}, rails: {} }; banner genişliği shopHome.heroW (''|narrow|mid|wide|full), yüksekliği shopHome.heroFill (''|screen).
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useStore, go } from './store.js';
+import { Icon, Thumb } from './ui.jsx';
+import { fmt, norm, priceFor } from './utils.js';
+import { feat } from './extras.jsx';
+import { liveSets, setView, openSet } from './sets.jsx';
+import { useBrandList, openBrand } from './brandsets.jsx';
+import { useVisibleProducts, useTree } from './catalog.jsx';
+import { CardAdd, ShopImg, Hero } from './shophome.jsx';
+import { heroList } from './photobn.jsx';
+
+export const cdOf = (H) => H?.cd || {};
+const sellable = (p) => p && p.a !== 0 && !p.so;
+const hasImg = (p) => !!(p && (p.pi || p.im || p.img));
+
+// kısa model adı: marka atılır; baştaki model parçaları (rakamlı/BÜYÜK harfli/Pro·Max·Mini…) alınır.
+// İlk kelime sıradan bir kelimeyse (Power, Mini…) parantez/virgüle kadar en çok 4 kelime. Elle ad (cd.pick.names) her zaman önce.
+const MODEL_W = new Set(['pro', 'max', 'mini', 'plus', 'ultra', 'se', 'lite', 'air', 'set', 'kit', 'ii', 'iii', 'iv', 'v2', 'v3', 'x']);
+export function shortOf(p, names) {
+  const own = names?.[p.id]; if (own) return { n: own, sub: '' };
+  let n = String(p.n || '').trim();
+  if (p.b && norm(n).startsWith(norm(p.b))) n = n.slice(p.b.length).trim();
+  const cut = n.split(/[(,]/)[0].trim(); const w = cut.split(/\s+/).filter(Boolean);
+  const isModel = (t) => /\d/.test(t) || (/^[A-ZÇĞİÖŞÜ0-9-]{2,}$/.test(t) && t.length <= 8) || MODEL_W.has(t.toLocaleLowerCase('tr'));
+  let k = 0; while (k < w.length && k < 5 && isModel(w[k])) k++;
+  if (!k) k = Math.min(4, w.length);
+  const name = w.slice(0, k).join(' ');
+  let sub = w.slice(k).join(' ').replace(/^[^\p{L}\p{N}]+/u, '');
+  const par = /\(([^)]{2,40})\)/.exec(n); if (par && sub.length < 40 && /\d/.test(par[1])) sub = (sub ? sub + ' · ' : '') + par[1];
+  return { n: name || p.n, sub: sub.length > 46 ? sub.slice(0, 44).replace(/\s+\S*$/, '') + '…' : sub };
+}
+function usePrice() {
+  const S = useStore((s) => s.settings); const user = useStore((s) => s.user); const up = useStore((s) => s.userPrices);
+  return (p) => { const pr = priceFor(p, S, user, up); return pr.mine == null ? null : fmt(pr.mine, p.cur); };
+}
+function useLogos() {
+  const list = useBrandList();
+  return useMemo(() => { const m = new Map(); for (const b of list) if (b.logo) m.set(norm(b.n), b.logo); return m; }, [list]);
+}
+const Logo = ({ p, logos, cls = 'cd-lg' }) => { const l = p?.b && logos.get(norm(p.b)); return l ? <ShopImg v={l} className={cls} alt={p.b} /> : p?.b ? <b className={cls + ' tx'}>{p.b}</b> : null; };
+function Head({ eye, title, more }) {
+  return <header className="cd-head"><div>{eye && <span className="cd-eye">{eye}</span>}<h2>{title}</h2></div>
+    {more && <button type="button" className="cd-more" onClick={more[1]}>{more[0]}<Icon n="back" s={14} className="flip" /></button>}</header>;
+}
+
+// ---- Banner alanı: kullanıcının reklam listesi (fotoğraflı bannerlar dahil), genişlik ve yükseklik sayfadan ayrı ----
+export const HERO_W = [['', 'Sayfayla aynı'], ['narrow', 'Dar'], ['mid', 'Orta'], ['wide', 'Geniş'], ['full', 'Kenardan kenara']];
+export const HERO_FILL = [['', 'Normal'], ['screen', 'Ekranı doldur']];
+export function CdHero({ H, open, onProduct, brands, pkHero }) {
+  const ref = useRef(null);
+  const w = H.heroW || ''; const fill = H.heroFill === 'screen';
+  const slides = useMemo(() => heroList(H), [H.slides, H.photoBn]); // eslint-disable-line react-hooks/exhaustive-deps
+  const out = !!w; // sayfanın kenarından taşabilir → sayfa kırpması açılır
+  useEffect(() => { if (!out) return; const c = document.documentElement.classList; c.add('hf-on', 'hf-wide'); return () => c.remove('hf-on', 'hf-wide'); }, [out]);
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el || !fill) return;
+    const W = el.ownerDocument.defaultView || window;
+    const m = () => { const t = el.getBoundingClientRect().top + W.scrollY; el.style.setProperty('--fs-top', Math.max(0, Math.min(260, Math.round(t))) + 'px'); };
+    m(); const t = setTimeout(m, 400); W.addEventListener('resize', m); return () => { clearTimeout(t); W.removeEventListener('resize', m); };
+  }, [fill]);
+  if (!slides.length) return null;
+  return <div ref={ref} className={'cd-hero' + (w ? ' hw-' + w : '') + (fill ? ' hh-screen' : '')}>
+    <Hero slides={slides} open={open} onProduct={onProduct} brands={brands} pkHero={pkHero} nv={{ ...(H.heroNav || {}), full: w === 'full' ? 'all' : '', fs: '' }} heroH={fill ? undefined : H.heroH} />
+  </div>;
+}
+
+// ---- Bu hafta masamızdan: bir büyük (haftanın ürünü) + dört küçük ----
+export function CdPick({ H, S, onProduct }) {
+  const C = cdOf(H).pick || {};
+  const byId = useStore((s) => s.byId); const vis = useVisibleProducts(false);
+  const price = usePrice(); const logos = useLogos();
+  const ik = (C.ids || []).join(',');
+  const list = useMemo(() => {
+    const out = []; const seen = new Set(); const add = (p) => { if (p && sellable(p) && !seen.has(p.id) && out.length < 5) { seen.add(p.id); out.push(p); } };
+    (C.ids || []).forEach((id) => add(byId.get(Number(id))));
+    if (C.auto !== false) {
+      feat(S).pins.forEach((id) => add(byId.get(Number(id))));
+      vis.filter((p) => p.nw && p.s > 0 && hasImg(p)).forEach(add);
+      vis.filter((p) => p.s > 0 && hasImg(p)).forEach(add);
+    }
+    return out;
+  }, [S, byId, vis, ik, C.auto]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (list.length < 3) return null;
+  const [a, ...rest] = list; const A = shortOf(a, C.names);
+  return (
+    <section className="cd-sec rv">
+      <Head eye={C.eye ?? 'Tamircinin seçimi'} title={C.title || 'Bu hafta masamızdan.'} />
+      <div className="cd-bento">
+        <div className="cd-big" role="button" tabIndex={0} onClick={() => onProduct(a)}>
+          <div className="cd-big-t">
+            <Logo p={a} logos={logos} />
+            {(C.badge ?? 'Haftanın ürünü') && <span className="cd-eye g">{C.badge ?? 'Haftanın ürünü'}</span>}
+            <h3>{A.n}</h3>{A.sub && <p>{A.sub}</p>}
+            {price(a) && <b className="cd-pr num">{price(a)}</b>}
+            <span className="cd-big-add"><CardAdd p={a} /><span className="cd-lnk">İncele<Icon n="back" s={13} className="flip" /></span></span>
+          </div>
+          <span className="cd-big-im"><Thumb p={a} size="lg" /></span>
+        </div>
+        <div className="cd-grid">{rest.map((p) => { const X = shortOf(p, C.names); return (
+          <div key={p.id} className="cd-tile" role="button" tabIndex={0} onClick={() => onProduct(p)}>
+            <Logo p={p} logos={logos} />
+            <span className="cd-tile-im"><Thumb p={p} size="md" /></span>
+            <b className="cd-nm">{X.n}</b>{X.sub && <small className="cd-sb">{X.sub}</small>}
+            {price(p) && <b className="cd-pr sm num">{price(p)}</b>}
+            <CardAdd p={p} />
+          </div>); })}</div>
+      </div>
+    </section>
+  );
+}
+
+// ---- Atölyeni kur: her set kendi açık renkli kartında, ürün fotoğrafları üst üste ----
+const SET_BG = ['var(--surface)', 'var(--cd-t1)', 'var(--cd-t2)', 'var(--cd-t3)'];
+export function CdSets({ H, S }) {
+  const C = cdOf(H).sets || {};
+  const byId = useStore((s) => s.byId); const logos = useLogos();
+  const live = liveSets(S);
+  const sets = (C.ids?.length ? C.ids.map((id) => live.find((x) => x.id === id)).filter(Boolean) : live).slice(0, Number(C.n) || 3);
+  if (!sets.length) return null;
+  return (
+    <section className="cd-sec rv">
+      <Head eye={C.eye ?? 'Atölyeni kur'} title={C.title || 'Birlikte al, daha az öde.'} more={['Tüm setler', () => go('setlist')]} />
+      <div className={'cd-sets n' + sets.length}>
+        {sets.map((x, i) => { const v = setView(x, byId); const ps = v.active.map((l) => l.p).filter(Boolean); const brands = [...new Set(ps.map((p) => p.b).filter(Boolean))];
+          return (
+            <button key={x.id} type="button" className="cd-set" style={{ '--sbg': SET_BG[i % SET_BG.length] }} onClick={() => openSet(x.id)}>
+              <span className={'cd-set-art k' + Math.min(3, ps.length)}>{ps.slice(0, 3).map((p, j) => <span key={p.id} className={'cd-si s' + j}><Thumb p={p} size="md" /></span>)}</span>
+              <span className="cd-set-t">
+                <span className="cd-eye">Set · {v.active.length} ürün</span>
+                <b className="cd-set-n">{x.name}</b>
+                {brands.length > 0 && <span className="cd-set-lg">{brands.slice(0, 4).map((b) => (logos.get(norm(b)) ? <ShopImg key={b} v={logos.get(norm(b))} alt={b} /> : <small key={b}>{b}</small>))}</span>}
+                <span className="cd-set-p"><b className="num">{fmt(v.price, v.cur)}</b>{v.save > 0 && <s className="num">{fmt(v.list, v.cur)}</s>}{v.save > 0 && <small>ayrı ayrı</small>}</span>
+                <span className="cd-set-go"><span className="cd-pill">Seti incele</span></span>
+              </span>
+            </button>); })}
+      </div>
+    </section>
+  );
+}
+
+// ---- Markalar: büyük marka kartları (logo · ürün sayısı · markanın bir ürünü), yana kayar ----
+export function CdBrands({ H }) {
+  const C = cdOf(H).brands || {};
+  const list = useBrandList().filter((b) => b.logo).slice(0, Number(C.n) || 10);
+  const vis = useVisibleProducts(false);
+  const top = useMemo(() => { const m = new Map(); for (const p of vis) if (p.b && !m.has(p.b) && p.s > 0 && hasImg(p)) m.set(p.b, p); return m; }, [vis]);
+  const rail = useRef(null);
+  if (list.length < 3) return null;
+  return (
+    <section className="cd-sec rv">
+      <Head eye={C.eye ?? 'Markalar'} title={C.title || 'Ustaların güvendiği markalar.'} more={['Tüm markalar', () => go('markalar')]} />
+      <div className="cd-brands" ref={rail}>{list.map((b) => (
+        <button key={b.n} type="button" className="cd-brand" onClick={() => openBrand(b.n)}>
+          <ShopImg v={b.logo} className="cd-brand-lg" alt={b.n} />
+          <small>{b.c} ürün</small>
+          <span className="cd-brand-im">{top.get(b.n) && <Thumb p={top.get(b.n)} size="md" />}</span>
+          <span className="cd-lnk">Ürünleri gör<Icon n="back" s={13} className="flip" /></span>
+        </button>))}</div>
+    </section>
+  );
+}
+
+// ---- Akan şerit: logolar kendi renginde, kenarlarda yumuşak geçiş, üstüne gelince durur ----
+export function CdMarquee({ H }) {
+  const C = cdOf(H).mq || {};
+  const list = useBrandList().filter((b) => b.logo).slice(0, 18);
+  if (list.length < 4) return null;
+  const row = (dup) => list.map((b) => <button key={(dup ? 'd' : '') + b.n} type="button" className="cd-mq-i" onClick={() => openBrand(b.n)} tabIndex={dup ? -1 : 0} aria-hidden={dup || undefined} title={b.n}><ShopImg v={b.logo} alt={b.n} /></button>);
+  const sp = Number(C.speed) || 40;
+  return (
+    <section className="cd-mq rv" aria-label="Markalar">
+      {C.eye !== '' && <span className="cd-eye">{C.eye ?? 'Orijinal ürün, distribütör güvencesi'}</span>}
+      <div className="cd-mq-in"><div className="cd-mq-tr" style={{ '--mq-t': Math.max(14, Math.round(list.length * (80 / sp) * 2.2)) + 's' }}>{row(false)}{row(true)}</div></div>
+    </section>
+  );
+}
+
+// ---- Ürün rafı: kayıtlı raf ayarları (mod/marka/kategori/elle seçim) + yeni kart dili ----
+export function CdRail({ sec, open, onProduct, edit }) {
+  const catalog = useStore((s) => s.catalog); const byId = useStore((s) => s.byId);
+  const tree = useTree(); const price = usePrice(); const logos = useLogos();
+  const railRef = useRef(null);
+  const limit = Number(sec.limit) || 10;
+  const list = useMemo(() => {
+    if (sec.mode === 'manual') return (sec.ids || []).map((id) => byId.get(id)).filter(sellable);
+    let r = catalog.filter(sellable);
+    if (sec.mode === 'brand') r = r.filter((p) => p.b && norm(p.b) === norm(sec.brand || ''));
+    if (sec.mode === 'cat') { const c = Number(sec.cat); r = r.filter((p) => tree.ancestors(p.c).includes(c) || (p.c2 != null && tree.ancestors(p.c2).includes(c))); }
+    if (sec.mode === 'new') { const flagged = r.filter((p) => p.nw); r = (flagged.length >= limit ? flagged : r); }
+    return [...r].sort((a, b) => b.id - a.id).slice(0, limit);
+  }, [catalog, byId, sec, tree, limit]);
+  if (!list.length) return edit ? <div className="dz-empty">{'Ürün rafı “' + (sec.title || '') + '”: ürün bulunamadı'}</div> : null;
+  const more = sec.mode === 'brand' ? () => open('brand:' + sec.brand)() : sec.mode === 'cat' ? () => open('cat:' + sec.cat)() : () => go('katalog');
+  const by = (d) => { const el = railRef.current; if (el) el.scrollBy({ left: d * el.clientWidth * 0.8, behavior: 'smooth' }); };
+  return (
+    <section className="cd-sec rv">
+      <header className="cd-head"><div>{sec.sub && <span className="cd-eye">{sec.sub}</span>}<h2>{sec.title || 'Ürünler'}</h2></div>
+        <span className="cd-head-r">{!edit && <button type="button" className="cd-more" onClick={more}>Tümü<Icon n="back" s={14} className="flip" /></button>}
+          <button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span></header>
+      <div className="cd-rail" ref={railRef}>{list.map((p) => { const X = shortOf(p); return (
+        <div key={p.id} className="cd-tile" role="button" tabIndex={0} onClick={() => onProduct(p)}>
+          <Logo p={p} logos={logos} />
+          {(sec.mode === 'new' || p.nw) && <span className="cd-new">Yeni</span>}
+          <span className="cd-tile-im"><Thumb p={p} size="md" /></span>
+          <b className="cd-nm">{X.n}</b>{X.sub && <small className="cd-sb">{X.sub}</small>}
+          {price(p) ? <b className="cd-pr sm num">{price(p)}</b> : <small className="cd-sb">Fiyat sorun</small>}
+          <CardAdd p={p} />
+        </div>); })}</div>
+    </section>
+  );
+}

@@ -352,6 +352,7 @@ function useTheme() {
     r.classList.remove('fr-1', 'fr-2');
     r.classList.toggle('pill-dark', !!pub && L.pillTone === 'dark');
     { const ph = pub ? L.pillHov : ''; if (ph === 'ink') r.style.setProperty('--pill-hov', 'var(--fg)'); else if (ph === 'none') r.style.setProperty('--pill-hov', 'currentColor'); else if (/^#/.test(ph || '')) r.style.setProperty('--pill-hov', ph); else r.style.removeProperty('--pill-hov'); } // üstüne gelince simge rengi
+    r.classList.toggle('cd-on', !!pub && L.cd === true); // 7.11.2026 Claude düzeni (cdhome.jsx)
     r.classList.toggle('porc', !!pub && L.porc === true); // 6.11.2026 Paket 0 porselen kutular (bulanıklıksız parlak beyaz) // 6.11.2026 siyah hap (Tasarım › Cam ve hareket) // 6.11.2026 buzlu cam kaldırıldı (kullanıcının kastettiği bu değildi)
     // 6.11.2026 'Sepete ekle' rengi temadan bağımsız (Tasarım › Ürün kartları › Sepete ekle rengi): gray (varsayılan) | accent (eski) | dark | #hex
     const ac = pub ? (L.addColor || 'gray') : 'accent';

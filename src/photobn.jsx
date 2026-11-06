@@ -186,3 +186,35 @@ export function PhotoBanner({ b, open, onProduct, edit }) {
   }
   return <div ref={ref} className={'pb-box' + (b.dark ? ' pb-dark' : ' pb-light')} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: bg }}>{cv}</div>;
 }
+
+// ---- 7.11.2026 (2): fotoğraflı bannerlar artık kullanıcının reklam listesinde (shopHome.slides) normal satır: { pb: '<şablon id>', … }
+// Şablonun fotoğrafı/yerleşimi koddan gelir; yazıları satırdan değiştirilebilir (title · tag = slogan · sub · eye · c1/c2 = düğme yazıları).
+// s.off = reklam gizli (silinmez). Listede hiç pb satırı yoksa eski davranış: photoBn açıksa 5+2 banner baştan eklenir.
+export const PB_BY = Object.fromEntries(PHOTO_BANNERS.map((b) => [b.id, b]));
+export const PB_TEXT = [['eye', 'Üst yazı (logonun yanı)'], ['title', 'Başlık'], ['tag', 'Slogan'], ['sub', 'Açıklama'], ['c1', 'Düğme'], ['c2', 'İkinci bağlantı']];
+export function pbOf(s) {
+  const T = typeof s?.pb === 'string' ? PB_BY[s.pb] : s?.pb; if (!T) return null;
+  const o = { ...T };
+  const has = (k) => s[k] != null && s[k] !== '';
+  if (has('title')) { o.title = s.title; o.titleM = s.title.replace(/\n/g, ' '); }
+  if (has('tag')) o.tag = s.tag;
+  if (has('sub')) { o.sub = s.sub; o.subM = s.sub; }
+  if (has('eye')) { o.eye = s.eye; o.eyeM = s.eye; }
+  if (has('c1')) o.a1 = [s.c1, T.a1[1]];
+  if (has('c2')) { o.a2 = [s.c2, T.a2[1]]; o.a2M = null; }
+  return o;
+}
+// mağazada gösterilecek reklamlar (pb satırları çözülmüş, gizliler çıkarılmış)
+export function heroList(H, edit) {
+  const sl = H?.slides || [];
+  const has = sl.some((s) => s?.pb);
+  const pre = !has && photoBnOn(H) && !edit ? PHOTO_BANNERS.map((b) => ({ pb: b })) : [];
+  const own = sl.filter((s) => s && (edit || !s.off)).map((s) => (s.pb ? (pbOf(s) ? { ...s, pb: pbOf(s) } : null) : s)).filter(Boolean);
+  return [...pre, ...own];
+}
+// 'Claude düzeni' paketine geçerken: bannerlar listenin başına, kullanıcının eski reklamları gizli (silinmez)
+export function withPbSlides(slides) {
+  const sl = slides || [];
+  if (sl.some((s) => s?.pb)) return sl;
+  return [...PHOTO_BANNERS.map((b) => ({ pb: b.id })), ...sl.map((s) => (s.off ? s : { ...s, off: true, offBy: 'cd' }))];
+}

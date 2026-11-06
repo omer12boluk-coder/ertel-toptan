@@ -20,7 +20,7 @@ import { FROSTS, BTN_STYLES, ARROWS, SLIDE_TEMPLATES, BG_PRESETS, BG_CATS, BG_BY
 import { STYLE_PRESETS, PRESET_BY, SHADOWS, BORDERS, HOVERS, TITLES, styleOut } from './stylekit.js';
 import { P0HeroPanel, P0CatsPanel, P0PickPanel, P0SetsPanel, P0FindPanel, P0BrandsPanel, P0HubPanel, P0_NOTES } from './p0home.jsx';
 import { ProductSearch } from './shophome.jsx';
-import { snapshot, applyPreset, sameAs, APPLE, CLAUDE_CHANGES, P0, P0_CHANGES, upgradePresets, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
+import { snapshot, applyPreset, sameAs, APPLE, CLAUDE_CHANGES, P0, P0_CHANGES, CD, CD_CHANGES, upgradePresets, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
 
@@ -563,7 +563,7 @@ function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   // telefon çerçevesi 'Telefonda farklı' değerleriyle çizilir
   const LX = (kind) => lookFor(L, kind === 'phone');
   const hdrOf = (kind) => LX(kind).header || 'search';
-  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on', X.porc === true && 'porc', X.pillTone === 'dark' && 'pill-dark', 'addc-' + (/^#/.test(X.addColor || '') ? 'hex' : (X.addColor || 'gray'))], fonts: so.fonts }; };
+  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on', X.porc === true && 'porc', X.cd === true && 'cd-on', X.pillTone === 'dark' && 'pill-dark', 'addc-' + (/^#/.test(X.addColor || '') ? 'hex' : (X.addColor || 'gray'))], fonts: so.fonts }; };
   const inner = (kind) => (
     <div className={'shell public tab-anasayfa dz-fshell' + (pack?.badge?.text ? ' pk-on' : '')}>
       <HeaderPreview S={view} kind={hdrOf(kind)} />
@@ -1202,9 +1202,9 @@ function PresetPanel({ d, setAll, setPeek }) {
   const A = useStore((s) => s.api); const saved = useStore((s) => s.settings.dzPresets) || [];
   const [name, setName] = useState('');
   const [edit, setEdit] = useState(null); const [confirm, setConfirm] = useState(null);
-  const all = [P0, APPLE, ...saved];
+  const all = [CD, P0, APPLE, ...saved];
   const use = (p) => { setAll(applyPreset(d, p.data), 'Paket: ' + p.name); toast(p.name + ' yüklendi. Beğenirseniz Yayınla; vazgeçmek için Geri al (Ctrl Z).'); };
-  const onApple = sameAs(d, APPLE.data); const onP0 = sameAs(d, P0.data);
+  const onApple = sameAs(d, APPLE.data); const onP0 = sameAs(d, P0.data); const onCd = sameAs(d, CD.data);
   const add = () => { const n = name.trim() || 'Paketim ' + (saved.length + 1); savePresets([...saved, { id: 'p' + Date.now().toString(36), name: n, at: Date.now(), data: snapshot(d) }], A); setName(''); toast('“' + n + '” paketi kaydedildi'); };
   const upd = (id, f) => savePresets(saved.map((p) => (p.id === id ? { ...p, ...f } : p)), A);
   return <>
@@ -1214,7 +1214,7 @@ function PresetPanel({ d, setAll, setPeek }) {
       return <div key={p.id} className={'pz-card' + (on ? ' on' : '')}>
         <button type="button" className="pz-main" onClick={() => use(p)} onMouseEnter={() => setPeek({ whole: applyPreset(d, p.data) })} onMouseLeave={() => setPeek(null)}>
           <i className="pz-sw">{(p.sw || swOf(p.data)).map((c, j) => <b key={j} style={{ background: c }} />)}</i>
-          <span className="pz-t"><small>Paket {i}{p.builtin ? ' · öneri' : ''}{on ? ' · şu an bu' : ''}</small>
+          <span className="pz-t"><small>{p.id === 'cd' ? 'Yeni' : 'Paket ' + (i - 1)}{p.builtin ? ' · öneri' : ''}{on ? ' · şu an bu' : ''}</small>
             {edit === p.id ? <input autoFocus defaultValue={p.name} onClick={(e) => e.stopPropagation()} onBlur={(e) => { upd(p.id, { name: e.target.value.trim() || p.name }); setEdit(null); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} /> : <b>{p.name}</b>}
             {p.note && <em>{p.note}</em>}</span>
         </button>
@@ -1225,6 +1225,7 @@ function PresetPanel({ d, setAll, setPeek }) {
         </span>}
       </div>;
     })}</div>
+    {onCd && <div className="pz-notes"><b>Claude düzeninde yeni olanlar</b><ul>{CD_CHANGES.map((t) => <li key={t}>{t}</li>)}</ul><small>Hiçbir şey silinmedi; başka pakete basınca eski reklamlarınız geri açılır.</small></div>}
     {onP0 && <div className="pz-notes"><b>Paket 0’da yeni olanlar</b><ul>{P0_CHANGES.map((t) => <li key={t}>{t}</li>)}</ul><small>Hiçbir bölüm silinmedi; eskiye dönmek için Paket 2 ya da Geri al.</small></div>}
     {onApple && <div className="pz-notes"><b>Claude’un tasarımında sayfada yaptıklarım</b><ul>{CLAUDE_CHANGES.map((t) => <li key={t}>{t}</li>)}</ul><small>Hiçbir bölüm silinmedi; gizlenen bölümü Katmanlar’dan göz simgesiyle geri açabilirsiniz.</small></div>}
     <div className="pz-new">

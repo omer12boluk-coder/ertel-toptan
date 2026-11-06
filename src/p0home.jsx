@@ -49,7 +49,7 @@ export const p0Role = (s, i) => (s && ['big', 'top', 'bot', 'off'].includes(s.p0
 export function P0Hero({ slides: all, open, edit, pre = [], onProduct, nv = {} }) {
   const fsRef = useHeroFull(nv);
   // pre = fotoğraflı bannerlar: büyük kutuda kullanıcının reklamlarından önce döner (i < 0 → tasarım modundaki reklam sırası değişmez)
-  const items = [...pre.map((b, j) => ({ s: { pb: b }, i: -1 - j, r: 'big' })), ...(all || []).map((s, i) => ({ s, i, r: p0Role(s, i) })).filter((x) => edit || x.s.title || x.s.img)];
+  const items = [...pre.map((b, j) => ({ s: { pb: b }, i: -1 - j, r: 'big' })), ...(all || []).map((s, i) => ({ s, i, r: p0Role(s, i) })).filter((x) => edit || x.s.pb || x.s.title || x.s.img).filter((x) => x.r !== 'off' || edit)];
   const rotI = items.filter((x) => x.r === 'big'); const rot = rotI.map((x) => x.s);
   const side = ['top', 'bot'].map((r) => items.find((x) => x.r === r)?.s).filter(Boolean);
   const [k, setK] = useState(0);

@@ -15,7 +15,8 @@ import { BG_BY, activePack, BTN_BY, ARROW_BY } from './presets.js';
 import { SlideEls, useSlideFonts, FONT_BY, FONTS, ensureFonts } from './slidex.jsx';
 import { BOX_COLORS, BOX_PATS } from './dzpresets.js';
 import { P0_KEYS } from './p0keys.js';
-import { PHOTO_BANNERS, PhotoBanner, photoBnOn } from './photobn.jsx';
+import { PHOTO_BANNERS, PhotoBanner, photoBnOn, pbOf, heroList } from './photobn.jsx';
+import { CdHero, CdPick, CdSets, CdBrands, CdMarquee, CdRail } from './cdhome.jsx';
 import { P0Hero, P0Finder, P0Cats, P0Pick, P0Sets, P0Brands, P0Trust } from './p0home.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
@@ -310,7 +311,9 @@ export function ShopHome({ S: Sover }) {
   const fkey = [...(H.promos || []).map((x) => x.f), ...Object.values(H.blocks || {}).flatMap((b) => [b.tf, ...(b.items || []).map((x) => x.f)])].filter(Boolean).sort().join(',');
   useEffect(() => { if (fkey) ensureFonts(W0.document, fkey.split(',')); }, [fkey, W0]);
   const promos = (H.promos || []).map((x, idx) => ({ ...x, idx })).filter((x) => x.title || x.img || E);
-  const slides = (H.slides || []).filter((x) => x.title || x.img || E);
+  // pb (fotoğraflı banner) satırları çözülür; gizli (off) reklamlar mağazada görünmez
+  const slides = (H.slides || []).filter((x) => x && (x.pb ? pbOf(x) && (E || !x.off) : (x.title || x.img || E) && (E || !x.off))).map((x) => (x.pb ? { ...x, pb: pbOf(x) } : x));
+  const pbHas = (H.slides || []).some((x) => x?.pb);
   const hidden = new Set(H.hidden || []);
   const L = layoutOf(H);
   const sel = E?.sel;
@@ -349,7 +352,7 @@ export function ShopHome({ S: Sover }) {
     );
   };
   const render = (k) => {
-    if (k === 'hero') return slides.length > 0 || (!E && photoBnOn(H)) ? <Hero slides={!E && photoBnOn(H) ? [...PHOTO_BANNERS.map((pb) => ({ pb })), ...slides] : slides} onProduct={setProduct} pkHero={pk?.hero} nv={H.heroNav || {}} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'hero') return slides.length > 0 || (!E && photoBnOn(H)) ? <Hero slides={!E && photoBnOn(H) && !pbHas ? [...PHOTO_BANNERS.map((pb) => ({ pb })), ...slides] : slides} onProduct={setProduct} pkHero={pk?.hero} nv={H.heroNav || {}} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
     if (k === 'usps') return (H.usps || []).some((u) => u.title) ? (
       <section className="sh-usps rv" aria-label="Avantajlar">
         {(H.usps || []).filter((u) => u.title).map((u, i) => (
@@ -380,7 +383,13 @@ export function ShopHome({ S: Sover }) {
     );
     if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)), H.promosLay);
     if (k === 'sets') return <SetRail edit={!!E} />;
-    if (k === 'p0:hero') return (H.slides || []).length || photoBnOn(H) ? <P0Hero slides={H.slides} nv={H.heroNav || {}} pre={photoBnOn(H) ? PHOTO_BANNERS : []} onProduct={setProduct} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
+    // 7.11.2026 Claude düzeni bölümleri (cdhome.jsx)
+    if (k === 'cd:hero') return heroList(H, !!E).length ? <CdHero H={H} open={link} onProduct={setProduct} pkHero={pk?.hero} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Banner yok" />;
+    if (k === 'cd:pick') return <CdPick H={H} S={S} onProduct={E ? () => E.select(k) : setProduct} />;
+    if (k === 'cd:sets') return <CdSets H={H} S={S} />;
+    if (k === 'cd:brands') return <CdBrands H={H} />;
+    if (k === 'cd:mq') return <CdMarquee H={H} />;
+    if (k === 'p0:hero') return (H.slides || []).length || photoBnOn(H) ? <P0Hero slides={(H.slides || []).map((x) => (x?.pb ? (pbOf(x) ? { ...x, pb: pbOf(x) } : { ...x, off: true }) : x)).map((x) => (x.off && !E ? { ...x, p0: 'off' } : x))} nv={H.heroNav || {}} pre={photoBnOn(H) && !pbHas ? PHOTO_BANNERS : []} onProduct={setProduct} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
     if (k === 'p0:find') return <P0Finder S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'p0:cats') return <P0Cats H={H} />;
     if (k === 'p0:pick') return <P0Pick S={S} onProduct={E ? () => E.select(k) : setProduct} />;
@@ -388,7 +397,7 @@ export function ShopHome({ S: Sover }) {
     if (k === 'p0:brands') return <P0Brands H={H} />;
     if (k === 'p0:trust') return <P0Trust H={H} />;
     if (k === 'fav') return <FavRail onProduct={E ? () => E.select(k) : setProduct} edit={!!E} S={S} />;
-    if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
+    if (k.startsWith('rail:')) { const i = (H.sections || []).findIndex((r, j) => railKey(r, j) === k); const sec = H.sections[i]; if (S.look?.cd) return <CdRail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} edit={!!E} />; return <Rail sec={sec} open={link} onProduct={E ? () => E.select(k) : setProduct} onTitle={E && !E.mobile && ((t) => E.set('shopHome.sections', H.sections.map((r, j) => (j === i ? { ...r, title: t } : r))))} edit={!!E} />; }
     if (k.startsWith('b:')) { const b = H.blocks[k.slice(2)]; const up = E && !E.mobile ? (p) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, ...p } }) : null;
       if (b.t === 'rate') return <RateBlock b={b} up={up} />;
       if (b.t === 'promos') return promoGrid((b.items || []).map((x, idx) => ({ ...x, idx })).filter((x) => x.title || x.img || E), b.title, k.slice(2), E && !E.mobile && ((t) => E.set('shopHome.blocks', { ...H.blocks, [k.slice(2)]: { ...b, title: t } })), b.lay);
@@ -871,7 +880,7 @@ function Marquee({ items, style, speed, speedM, ls = 1, z, zm }) { // speed: mas
 const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
-function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }) {
+export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }) {
   // boydan boya banner: sayfa kırpması html sınıfıyla (eskiden :has() seçiciydi — her DOM değişikliğinde bütün sayfanın stilini yeniden hesaplatıyordu)
   const fsRef = useHeroFull(nv);
   useSlideFonts(slides);
