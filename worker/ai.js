@@ -106,7 +106,12 @@ async function makeDraft(env, b) {
   if (env.ANTHROPIC_KEY) { engine = b.hq ? 'claude-hq' : 'claude'; ({ out, sources, cost } = await askClaude(env, prompt, search, !!b.hq)); }
   else if (env.AI) { engine = 'cf'; out = await askCf(env, prompt); }
   else throw new Error('Yapay zekâ bağlı değil: GitHub › Settings › Secrets’a ANTHROPIC_KEY ekleyip “Bekçiyi yayınla”yı çalıştırın.');
-  const d = parseJson(out);
+  let d = parseJson(out);
+  if (!d && env.ANTHROPIC_KEY && out) {
+    // cevap bozuksa: aramasız, ucuz modelle sadece biçimi düzelttir (ürün başına ~0,01 TL)
+    const fix = await askClaude(env, 'Aşağıdaki metni, içindeki bilgileri DEĞİŞTİRMEDEN istenen biçime çevir. Sadece şu iki parçayı yaz:\n<json>{"name":"","brand":"","model":"","cat":0,"cat2":null,"tags":[],"pages":[],"note":""}</json>\n<desc>HTML</desc>\n\nMETİN:\n' + out.slice(-20000), false, false).catch(() => null);
+    if (fix) { cost += fix.cost || 0; d = parseJson(fix.out); }
+  }
   if (!d) { const e = new Error('Yapay zekâ cevabı okunamadı, tekrar deneyin'); e.cost = cost; throw e; }
   const brand = String(d.brand || '').trim();
   // resimler: 1) marka mağazası 2) yapay zekânın bulduğu ürün sayfaları 3) aramada çıkan sayfalar
@@ -164,8 +169,9 @@ ${vocab.length ? `\nMevcut etiket sözlüğü (benzer ürünlerden; tarz ve yanl
 
 ${exTxt}
 
-Cevabın SADECE şu JSON olsun, <json> ve </json> arasında:
-<json>{"name":"…","brand":"…","model":"…","cat":0,"cat2":null,"tags":["…"],"desc":"<p dir=\\"ltr\\">…</p>","pages":["https://…"],"note":"emin olmadığın şeyler / yöneticiye kısa not"}</json>`;
+Cevabını TAM OLARAK şu iki parça hâlinde ver, başka açıklama yazma:
+<json>{"name":"…","brand":"…","model":"…","cat":0,"cat2":null,"tags":["…"],"pages":["https://…"],"note":"emin olmadığın şeyler / yöneticiye kısa not"}</json>
+<desc>açıklamanın HTML'i buraya (JSON'un içine KOYMA)</desc>`;
 }
 
 // Ucuz mod (varsayılan): Haiku, web araması yok. 'İnternette araştır' seçilirse en çok 2 arama.
@@ -179,7 +185,7 @@ async function askClaude(env, prompt, search, hq) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model, max_tokens: 6000, ...(tools ? { tools } : {}), messages }),
+      body: JSON.stringify({ model, max_tokens: 10000, ...(tools ? { tools } : {}), messages }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error('Claude: ' + (j.error?.message || r.status));
@@ -204,8 +210,16 @@ async function askCf(env, prompt) {
 
 function parseJson(s) {
   const m = /<json>([\s\S]*?)<\/json>/.exec(s) || /```(?:json)?\s*([\s\S]*?)```/.exec(s);
-  const raw = m ? m[1] : s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1);
-  try { return JSON.parse(raw); } catch { return null; }
+  let raw = (m ? m[1] : s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)).trim();
+  let d = null;
+  try { d = JSON.parse(raw); } catch {
+    // sık bozulmalar: sondaki virgül, akıllı tırnak, kod bloğu işaretleri
+    try { d = JSON.parse(raw.replace(/,\s*([}\]])/g, '$1').replace(/[“”]/g, '"').replace(/^```\w*|```$/g, '')); } catch {}
+  }
+  if (!d) return null;
+  const dm = /<desc>([\s\S]*?)(<\/desc>|$)/.exec(s);
+  if (dm && dm[1].trim()) d.desc = dm[1].trim();
+  return d;
 }
 const cleanDesc = (h) => h.replace(/<(script|iframe|style)[\s\S]*?<\/\1>/gi, '').replace(/<img[^>]*>/gi, '').replace(/\son\w+="[^"]*"/gi, '').trim();
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
@@ -311,7 +325,7 @@ async function shopifyImages(dom, q) {
   return (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0]));
 }
 
-export { pageInfo, shopifyProduct, isProductUrl, siteSearch };
+export { pageInfo, shopifyProduct, isProductUrl, siteSearch, parseJson };
 export async function pageImages(u, strict = false) {
   if (!/^https?:\/\//.test(u)) return [];
   const url = new URL(u);
