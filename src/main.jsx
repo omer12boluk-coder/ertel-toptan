@@ -342,7 +342,7 @@ function useTheme() {
     applyStyle(r, pub ? L.style : null);
     setSfxGlobal(L.sound !== false);
     // 5.11.2026 yönetim paneli teması (Ayarlar › Bayi ve panel renkleri › Yönetim paneli görünümü, look.admin: apple | classic)
-    r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-mini', isAdm && ls.get('adm-mini', false) === true); /* 6.11.2026 daraltılmış yan menü (cihazda) */ r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic');
+    r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-mini', isAdm && ls.get('adm-mini', false) === true); /* 6.11.2026 daraltılmış yan menü (cihazda) */ r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic'); r.classList.toggle('adm-mark', isAdm && L.adminMark !== false); /* 6.11.2026 telefonda panel belirgin: koyu alt menü + Yönetim rozeti (kapatılabilir) */
     // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
     r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
     applyLayout(r, pub ? L : {});
