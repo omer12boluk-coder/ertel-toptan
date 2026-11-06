@@ -132,16 +132,18 @@ function EditCell({ value, show, onSave, kind = 'num', label, className = '' }) 
 }
 // Sütun genişlikleri sürüklenerek değişir (Excel gibi), cihazda hatırlanır; ürün sütunu kalan yeri alır
 const COLS = [['code', 'STOK KODU', 106], ['name', 'ÜRÜN', 0], ['s', 'STOK', 70, 'r'], ['r', 'SATIŞ', 116, 'r'], ['w', 'TOPTAN', 100, 'r'], ['a', 'DURUM', 112, 'c'], ['ut', 'SON İŞLEM', 112]];
+const COL_FLOOR = { code: 92, s: 66, r: 86, w: 78, a: 104, ut: 88 }; // daralırken içerik kesilmesin
 const COLW_MIN = 56, COLW_MAX = 420, NAME_MIN = 200, NAME_MAX = 900;
 // Excel gibi: her sütun sabit genişlikte; bir sütunu genişletince sağındakiler kayar, artan yer en sondaki ⋮ sütununa kalır
 // (sığmazsa tablo yana kayar). Ürün sütununun varsayılanı kalan genişlik.
-const cwOf = (w, k, d, nameW) => k === 'name' ? Math.max(NAME_MIN, Math.min(NAME_MAX, w.name || nameW || 360)) : Math.max(COLW_MIN, Math.min(COLW_MAX, w[k] || d));
-function colTpl(w, nameW, hide = []) { return COLS.filter(([k]) => !hide.includes(k)).map(([k, , d]) => cwOf(w, k, d, nameW) + 'px').join(' ') + ' minmax(44px, 1fr)'; }
-const colSum = (w, nameW, hide = []) => COLS.filter(([k]) => !hide.includes(k)).reduce((t, [k, , d]) => t + cwOf(w, k, d, nameW), 0) + 44;
+// 6.11.2026: dar ekranda (yan menülü dizüstü) sütunlar kesilmesin → elle ayarlanmamış sütunlar sc oranında daralır (en az %70)
+const cwOf = (w, k, d, nameW, sc = 1) => k === 'name' ? Math.max(NAME_MIN, Math.min(NAME_MAX, w.name || nameW || 360)) : Math.max(COLW_MIN, Math.min(COLW_MAX, w[k] || Math.max(COL_FLOOR[k] || 0, Math.round(d * sc))));
+function colTpl(w, nameW, hide = [], sc = 1) { return COLS.filter(([k]) => !hide.includes(k)).map(([k, , d]) => cwOf(w, k, d, nameW, sc) + 'px').join(' ') + ' minmax(44px, 1fr)'; }
+const colSum = (w, nameW, hide = [], sc = 1) => COLS.filter(([k]) => !hide.includes(k)).reduce((t, [k, , d]) => t + cwOf(w, k, d, nameW, sc), 0) + 44;
 const COL_NAMES = { code: 'Stok kodu', s: 'Stok', r: 'Satış', w: 'Toptan', a: 'Durum', ut: 'Son işlem' };
 function AdminTable({ list, asort, sortBy, onEdit, onCopy }) {
   const [cw, setCw0] = useState(() => ls.get('atw', {}));
-  const [nameW, setNameW] = useState(0); // ürün sütununun varsayılanı: tablonun kalan genişliği
+  const [nameW, setNameW] = useState(0); const [sc, setSc] = useState(1); // ürün sütununun varsayılanı: tablonun kalan genişliği
   const [del, setDel] = useState(null);
   const [hide, setHide0] = useState(() => ls.get('atc-hide', [])); // gizlenen sütunlar (ürün sütunu gizlenemez)
   const setHide = (h) => { setHide0(h); ls.set('atc-hide', h); };
@@ -162,15 +164,15 @@ function AdminTable({ list, asort, sortBy, onEdit, onCopy }) {
   useLayoutEffect(() => {
     const ul = headRef.current?.parentElement; if (!ul) return;
     // varsayılan sütun genişliklerine göre (sürüklenen genişlikler ürün sütununu daraltmasın: kenar imleçle gitsin)
-    const fit = () => { const others = COLS.reduce((t, [k, , d]) => t + (k === 'name' || hide.includes(k) ? 0 : d), 0) + 44; setNameW(Math.max(NAME_MIN, ul.clientWidth - others - 2)); };
+    const fit = () => { const others = COLS.reduce((t, [k, , d]) => t + (k === 'name' || hide.includes(k) ? 0 : d), 0) + 44; const av = ul.clientWidth - 2; const f = av - others >= 260 ? 1 : Math.max(0.7, (av - 260 - 44) / (others - 44)); setSc(f); const used = COLS.reduce((t, [k, , d]) => t + (k === 'name' || hide.includes(k) ? 0 : Math.max(COL_FLOOR[k] || 0, Math.round(d * f))), 0); setNameW(Math.max(NAME_MIN, av - used - 44)); };
     fit(); const ro = new ResizeObserver(fit); ro.observe(ul); return () => ro.disconnect();
   }, [hide.join()]);
-  useLayoutEffect(() => { const ul = headRef.current?.parentElement; if (!ul) return; ul.classList.add('at-ul'); for (const k of Object.keys(COL_NAMES)) ul.classList.toggle('hide-' + k, hide.includes(k)); ul.style.setProperty('--atc', colTpl(cw, nameW, hide)); ul.style.setProperty('--atw', colSum(cw, nameW, hide) + 'px'); }, [cw, nameW, hide.join()]);
+  useLayoutEffect(() => { const ul = headRef.current?.parentElement; if (!ul) return; ul.classList.add('at-ul'); for (const k of Object.keys(COL_NAMES)) ul.classList.toggle('hide-' + k, hide.includes(k)); ul.style.setProperty('--atc', colTpl(cw, nameW, hide, sc)); ul.style.setProperty('--atw', colSum(cw, nameW, hide, sc) + 'px'); }, [cw, nameW, sc, hide.join()]);
   useEffect(() => () => { const ul = headRef.current?.parentElement; if (ul) { ul.classList.remove('at-ul'); ul.style.removeProperty('--atc'); ul.style.removeProperty('--atw'); } }, []);
   // sütunun SAĞ kenarı tutulur: kenar imleçle birlikte gider, soldaki sütunlar yerinden oynamaz
   const grip = (k, d) => (e) => {
     e.preventDefault(); e.stopPropagation();
-    const x0 = e.clientX, w0 = cwOf(cw, k, d, nameW), el = e.currentTarget; el.setPointerCapture?.(e.pointerId); el.classList.add('on');
+    const x0 = e.clientX, w0 = cwOf(cw, k, d, nameW, sc), el = e.currentTarget; el.setPointerCapture?.(e.pointerId); el.classList.add('on');
     document.documentElement.classList.add('col-resizing');
     let last = cw;
     const mv = (ev) => { const v = Math.round(w0 + ev.clientX - x0); last = { ...cw, [k]: k === 'name' ? Math.max(NAME_MIN, Math.min(NAME_MAX, v)) : Math.max(COLW_MIN, Math.min(COLW_MAX, v)) }; setCw0(last); };
@@ -404,7 +406,7 @@ export function Catalog({ admin }) {
   const setView = (v) => { setView0(v); if (!admin) ls.set('cat-view', v); };
   const tree = useTree();
   // yönetici: kategori paneli sürükleyerek daraltılır / genişletilir (tabloya yer), cihazda hatırlanır; çift tık = varsayılan
-  const [catW, setCatW0] = useState(() => ls.get('cat-w', 240));
+  const [catW, setCatW0] = useState(() => ls.get('cat-w', innerWidth <= 1440 ? 196 : 240));
   const setCatW = (w) => { setCatW0(w); ls.set('cat-w', w); };
   const gripDown = (e) => {
     e.preventDefault(); const x0 = e.clientX, w0 = catW; const el = e.currentTarget; el.setPointerCapture?.(e.pointerId); el.classList.add('on');

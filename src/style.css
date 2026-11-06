@@ -3607,7 +3607,7 @@ html.dark .fav-btn, :root[data-theme="dark"] .fav-btn { background: rgba(30, 34,
 /* başlık */
 .ath-row { background: var(--surface-2) !important; border-bottom: 1px solid var(--line) !important; }
 .ath-row > .tc { padding-top: 9px; padding-bottom: 9px; }
-.ath { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; padding: 0; margin: 0; cursor: pointer; font: 700 11px/1 var(--f-body); letter-spacing: .06em; color: var(--muted); white-space: nowrap; min-width: 0; -webkit-tap-highlight-color: transparent; }
+.ath { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; padding: 0; margin: 0; cursor: pointer; font: 700 11px/1 var(--f-body); letter-spacing: .06em; color: var(--muted); white-space: nowrap; min-width: 0; letter-spacing: .03em; -webkit-tap-highlight-color: transparent; }
 .ath > span { overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
 .ath.on { color: var(--accent); }
 .ath-ar { flex: none; width: 9px; height: 9px; fill: currentColor; opacity: 0; transition: opacity .12s, transform .2s var(--ease); }
@@ -8238,3 +8238,26 @@ html[data-theme="dark"] .pl-demo-tag { color: #e6a466; }
 .pl-3d-n { margin: 10px 0 0; }
 .pl-3d-bad { display: flex; align-items: center; gap: 6px; margin: 0; color: #b3261e; font-weight: 600; font-size: 14px; }
 .pl-demo-n { font-size: 12px; opacity: .85; }
+/* 6.11.2026: yönetim sipariş tablosu yan menülü dizüstünde (dar içerik alanı) sağdan kesiliyordu → tablo kendi genişliğine göre daralır */
+@media (min-width: 961px) {
+  .otable { container: otbl / inline-size; }
+  @container otbl (max-width: 1080px) {
+    .otable-h, .orow, .otable:not(.selecting) .otable-h, .otable:not(.selecting) .orow {
+      grid-template-columns: 78px minmax(110px, 1.2fr) 92px minmax(118px, 1fr) 104px 112px 142px 30px; column-gap: 10px; }
+    .otable.selecting .otable-h, .otable.selecting .orow {
+      grid-template-columns: 28px 78px minmax(110px, 1.2fr) 92px minmax(118px, 1fr) 104px 112px 132px 30px; column-gap: 10px; }
+    .orow { padding-left: 12px; padding-right: 12px; } .otable-h { padding-left: 12px; padding-right: 12px; }
+    .or-sum { padding-right: 10px; } .otable-h .oh-sum { padding-right: 10px; }
+    .or-sum b { font-size: 15px; } .or-date { font-size: 12.5px; white-space: normal; }
+    .or-thd .or-th-i, .or-thd .or-th-i.more { width: 30px; height: 30px; }
+  }
+  @container otbl (max-width: 860px) {
+    .otable-h .oh-th, .or-thd { display: none; }
+    .otable-h, .orow, .otable:not(.selecting) .otable-h, .otable:not(.selecting) .orow {
+      grid-template-columns: 74px minmax(100px, 1.2fr) minmax(104px, 1fr) 100px 100px 132px 28px; }
+    .otable.selecting .otable-h, .otable.selecting .orow {
+      grid-template-columns: 28px 74px minmax(100px, 1.2fr) minmax(104px, 1fr) 100px 100px 124px 28px; }
+  }
+}
+/* ürün tablosu başlıkları daralınca kesilmesin: iki satıra iner */
+@media (min-width: 701px) { .plist.at-ul > .ath-row > .tc { padding-left: 7px; padding-right: 7px; } .plist.at-ul .ath { white-space: normal; line-height: 1.2; text-align: left; } .plist.at-ul .ath > span { overflow: visible !important; text-overflow: clip !important; white-space: normal !important; } }
