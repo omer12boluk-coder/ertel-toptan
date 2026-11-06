@@ -1212,6 +1212,9 @@ function setupNavAnim() {
     const k0 = kind === 'tab' ? 0.65 : 1;
     as.push(cv.animate(M.glass ? [{ opacity: kind === 'tab' ? 0.8 : 1 }, { opacity: 0.6, offset: 0.35 }, { opacity: 0 }]
       : M.cv && kind !== 'tab' ? [{ opacity: k0 }, { opacity: 0, offset: M.cv }, { opacity: 0 }] : [{ opacity: k0 }, { opacity: 0 }], { duration: kind === 'tab' ? Math.min(ms, 220) : ms, easing: M.glass ? 'ease-out' : kind === 'tab' ? EASE : 'cubic-bezier(.2,.6,.3,1)' }));
+    // 6.11.2026 (7): iPhone'da kayan sayfanın üstündeki cam menü, altındaki ürün resmini bulanık değil 'büyütülmüş' gösteriyordu
+    // (WebKit: hareket eden katman üstünde backdrop-filter). Geçiş süresince menüler neredeyse opak (html.nav-mv), bitince eski cam.
+    const R = document.documentElement; R.classList.add('nav-mv'); clearTimeout(R.__nmv); R.__nmv = setTimeout(() => R.classList.remove('nav-mv'), (kind === 'tab' ? Math.min(ms, 220) : ms) + 80);
     as.forEach((a) => a.pause());
     requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
   };
