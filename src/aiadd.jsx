@@ -45,7 +45,7 @@ function pump() {
     try {
       const { catalog, settings: S } = store.s;
       const brands = [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
-      const r = await api().aiDraft({ name: next.q, hint: next.hint || '', link: next.link || '', search: !!next.search, cats: catPaths(catalog, S), brands, ex: await examples(next.q, catalog), vocab: examples.vocab || [] });
+      const r = await api().aiDraft({ name: next.q, hint: next.hint || '', link: next.link || '', search: !!next.search, hq: !!next.hq, cats: catPaths(catalog, S), brands, ex: await examples(next.q, catalog), vocab: examples.vocab || [] });
       running = false; updQ(next.id, { st: 'ok', d: r.draft, err: '' });
     } catch (e) { running = false; updQ(next.id, { st: 'err', err: e.message }); }
   })();
@@ -57,6 +57,7 @@ export function AiAdd() {
   const [hint, setHint] = useState('');
   const [link, setLink] = useState('');
   const [search, setSearch] = useState(() => ls.get('ai-search', false));
+  const [hq, setHq] = useState(() => ls.get('ai-hq', false));
   const [list, setList0] = useState(getQ);
   useEffect(() => { subs.add(setList0); pump(); return () => subs.delete(setList0); }, []);
   const [edit, setEdit] = useState(null);
@@ -67,7 +68,7 @@ export function AiAdd() {
     const rows = q.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const u = (/https?:\/\/\S+/.exec(x) || [''])[0]; return { n: x.replace(u, '').trim(), u }; }).filter((x) => x.n);
     if (!rows.length) return toast('Ürün adı yazın', 'bad');
     const now = Date.now(); const l0 = link.trim();
-    setList((l) => [...rows.map((r, i) => ({ id: now + '-' + i, q: r.n, link: r.u || (rows.length === 1 ? l0 : ''), hint: hint.trim(), search, st: 'wait' })), ...l]);
+    setList((l) => [...rows.map((r, i) => ({ id: now + '-' + i, q: r.n, link: r.u || (rows.length === 1 ? l0 : ''), hint: hint.trim(), search, hq, st: 'wait' })), ...l]);
     setQ0(''); setHint(''); setLink('');
   };
   const waiting = list.filter((x) => x.st === 'wait' || x.st === 'run').length;
@@ -87,7 +88,8 @@ export function AiAdd() {
           <input id="ai-hint" placeholder="Ek bilgi (isteğe bağlı): ör. 5'li paket, iPhone 16 uyumlu" value={hint} onChange={(e) => setHint(e.target.value)} />
           <button type="button" className="btn primary" onClick={addNames}><Icon n="sparkle" s={16} />Hazırla</button>
         </div>
-        <label className="ai-chk"><input type="checkbox" checked={search} onChange={(e) => { setSearch(e.target.checked); ls.set('ai-search', e.target.checked); }} /> İnternette de araştırsın <small>— link vermediğiniz ve tanınmayan ürünler için; ürün başına biraz daha pahalı</small></label>
+        <label className="ai-chk"><input type="checkbox" checked={search} onChange={(e) => { setSearch(e.target.checked); ls.set('ai-search', e.target.checked); }} /> İnternette de araştırsın <small>— link vermediğiniz ve tanınmayan ürünler için; ürün başına ~1 TL</small></label>
+        <label className="ai-chk"><input type="checkbox" checked={hq} onChange={(e) => { setHq(e.target.checked); ls.set('ai-hq', e.target.checked); }} /> Kaliteli mod <small>— daha güçlü yapay zekâ, açıklama daha özenli; ürün başına ~2 TL (normal ~0,1 TL)</small></label>
         <p className="fine">Yapay zekâ ürünü tanır (link verirseniz o sayfayı, 2UUL gibi markalarda markanın sitesini okur); adını sizin yazım tarzınızla, markasını, kategorisini, gizli etiketlerini ve açıklamasını hazırlar, marka sitesinde / AliExpress'te resim arar. Hiçbir şey kendiliğinden kaydedilmez: siz kontrol edip fiyat ve stok girip onaylarsınız.</p>
       </div>
 
@@ -99,7 +101,8 @@ export function AiAdd() {
             const d = x.d; const cover = d?.imgs?.[0]?.u;
             const menu = (e) => openMenu(e, [
               x.st === 'ok' && { label: 'İncele ve onayla', icon: 'check', onClick: () => setEdit(x) },
-              { label: 'Yeniden hazırla', icon: 'sparkle', onClick: () => upd(x.id, { st: 'wait', err: '', d: null }) },
+              { label: 'Yeniden hazırla', icon: 'sparkle', onClick: () => upd(x.id, { st: 'wait', err: '', d: null, hq: false }) },
+              { label: 'Kaliteli modla yeniden hazırla', icon: 'sparkle', hint: '~2 TL', onClick: () => upd(x.id, { st: 'wait', err: '', d: null, hq: true }) },
               '-',
               { label: 'Taslağı sil', icon: 'trash', danger: true, onClick: () => setList((l) => l.filter((y) => y.id !== x.id)) },
             ], x.q);
@@ -110,7 +113,7 @@ export function AiAdd() {
                   {x.st === 'ok' ? <>
                     <b>{d.n}</b>
                     <small>{[d.b || 'marka yok', d.c != null ? catName(S, d.c) : 'kategori yok', `${(d.imgs || []).length} resim`, `${d.t ? d.t.split(',').length : 0} etiket`].join(' · ')}</small>
-                    <small className="muted">Yazdığınız: “{x.q}”{d.note ? ' · ' + d.note : ''}</small>
+                    <small className="muted">{x.hq ? 'Kaliteli mod · ' : ''}Yazdığınız: “{x.q}”{d.note ? ' · ' + d.note : ''}</small>
                   </> : <>
                     <b>{x.q}</b>
                     <small className={x.st === 'err' ? 'ai-err' : 'muted'}>{x.st === 'run' ? 'Hazırlanıyor…' : x.st === 'wait' ? 'Sırada' : 'Hazırlanamadı: ' + x.err}</small>

@@ -57,7 +57,7 @@ async function makeDraft(env, b) {
   const ctx = [shop && `Markanın resmi sitesindeki ürün (${shops[shopKey]}): ${shop.title}\n${shop.text}`, linked && `Yöneticinin verdiği ürün sayfası (${host(b.link)}): ${linked.title}\n${linked.text}`].filter(Boolean).join('\n\n');
   const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''), vocab, ctx, search);
   let out, sources = [], engine;
-  if (env.ANTHROPIC_KEY) { engine = 'claude'; ({ out, sources } = await askClaude(env, prompt, search)); }
+  if (env.ANTHROPIC_KEY) { engine = b.hq ? 'claude-hq' : 'claude'; ({ out, sources } = await askClaude(env, prompt, search, !!b.hq)); }
   else if (env.AI) { engine = 'cf'; out = await askCf(env, prompt); }
   else throw new Error('Yapay zekâ bağlı değil: GitHub › Settings › Secrets’a ANTHROPIC_KEY ekleyip “Bekçiyi yayınla”yı çalıştırın.');
   const d = parseJson(out);
@@ -120,8 +120,9 @@ Cevabın SADECE şu JSON olsun, <json> ve </json> arasında:
 }
 
 // Ucuz mod (varsayılan): Haiku, web araması yok. 'İnternette araştır' seçilirse en çok 2 arama.
-async function askClaude(env, prompt, search) {
-  const model = env.AI_MODEL || 'claude-haiku-5-5';
+// Kaliteli mod (hq): Sonnet — ürün başına ~20 kat pahalı, sadece seçilince
+async function askClaude(env, prompt, search, hq) {
+  const model = hq ? env.AI_MODEL_HQ || 'claude-sonnet-5-5' : env.AI_MODEL || 'claude-haiku-5-5';
   const tools = search ? [{ type: env.AI_SEARCH_TOOL || 'web_search_20250305', name: 'web_search', max_uses: 2 }] : undefined;
   let messages = [{ role: 'user', content: prompt }];
   const sources = []; let text = '';
