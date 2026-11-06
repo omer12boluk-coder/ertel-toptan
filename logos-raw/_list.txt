@@ -1,0 +1,16 @@
+logos-raw/sugon__site__0.png	https://www.sugoncn.com/cn/uploadfiles/Top002990_logo.png
+logos-raw/sugon__site__1.png	https://www.sugoncn.com/cn/uploadfiles/Top002990_logo2.png
+logos-raw/luowei__site__2.png	https://static-assets.strikinglycdn.com/images/ecommerce/ecommerce-footer-logo.png
+logos-raw/tbk__site__3.png	https://5271403.s21i.co99.net/4/ABUIABAEGAAgosPfgwYoj6P2nwYwoAY4oAY.png?v=1763432515
+logos-raw/fluke__site__4.gif	https://www.fluke.com/modules/custom/igcommerce_brand_chooser/dist/images/Fluke_logo.gif
+logos-raw/fluke__site__5.gif	https://www.fluke.com/modules/custom/igcommerce_brand_chooser/dist/images/Fluke-brand-choser-fluke-cal-logo-160x65.gif
+logos-raw/fluke__site__6.gif	https://www.fluke.com/modules/custom/igcommerce_brand_chooser/dist/images/Fluke-brand-choser-fluke-bio-logo-160x65.gif
+logos-raw/fluke__site__7.gif	https://www.fluke.com/modules/custom/igcommerce_brand_chooser/dist/images/Fluke-brand-choser-fluke-pi-logo-146x69.gif
+logos-raw/ersa__site__8.svg	https://kurtzersa.com/fileadmin/user_upload/logo/logo-kurtzersa.svg
+logos-raw/ersa__site__9.svg	https://kurtzersa.com/fileadmin/user_upload/logo/logo-sign-white.svg
+logos-raw/mega-idea__site__10.png	https://www.qianli.cn/en/static/upload/image/20210513/1620891672252417.png
+logos-raw/mega-idea__site__11.png	https://www.qianli.cn/en/static/upload/image/20220620/1655709223795146.png
+logos-raw/mega-idea__site__12.png	https://www.qianli.cn/en/static/upload/image/20210520/1621504085730882.png
+ifixes__shot__0.png	https://backend.appmiaoda.com/projects/supabase245084004091473920/storage/v1/object/public/app-7fshtpomqha9_logos/logo-1762779263669.png
+ersa__shot__0.png	https://kurtzersa.com/fileadmin/user_upload/logo/logo-kurtzersa.svg
+kaisi__shot__0.png	https://www.kaisitool.com/english/images/logo.png
