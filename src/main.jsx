@@ -886,6 +886,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   setupPull();
   setupNavAnim();
   setupCrispBack();
+  setupResumeFix();
 }
 setupFlowPills(); // akan hap: bilgisayarda da
 setupSfxTaps(); // 6.11.2026 mağazada dokunma sesleri
@@ -1068,6 +1069,25 @@ function setupFlowPills() {
     requestAnimationFrame(wait);
   }, { capture: true, passive: true });
 }
+// 6.11.2026 iPhone: uygulamadan çıkıp dönünce (özellikle klavye açıkken çıkıldıysa) ekran yüksekliği kısa kalıyordu →
+// alt menü ve ürün katmanı (fixed, bottom:0) ekranın ortasında, altında arkadaki sayfa görünüyordu. Çıkarken açık yazı alanı
+// kapatılır; dönünce takılı kalmış sayfa geçişi animasyonları bitirilir ve tarayıcı ekranı yeniden ölçmeye zorlanır.
+function setupResumeFix() {
+  const fix = () => {
+    try { document.getAnimations?.().forEach((a) => { if (a.playState === 'paused' || a.playState === 'running') { const t = a.effect?.target; if (t?.classList?.contains('nav-cover') || a.id === 'nav') a.finish(); } }); } catch {}
+    const y = scrollY;
+    requestAnimationFrame(() => {
+      const h = document.documentElement; h.style.minHeight = '100.1%';
+      requestAnimationFrame(() => { h.style.minHeight = ''; scrollTo(scrollX, y + 1); scrollTo(scrollX, y); });
+    });
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { const a = document.activeElement; if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) a.blur(); }
+    else fix();
+  });
+  addEventListener('pageshow', (e) => { if (e.persisted) fix(); });
+}
+
 function setupNavAnim() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
   const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar';
@@ -1114,7 +1134,7 @@ function setupNavAnim() {
     const as = []; const LK0 = store.s.settings?.look || {};
     const M = mob() ? (MOT[LK0.motion] || MOT.clear) : LK0.motionD === 'fade' ? MOT.dfade : MOT.desk; const ms = Math.round(ms0 * M.ms);
     const dx = Math.round((typeof M.dx === 'function' ? M.dx() : M.dx) * dk);
-    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -dx : dx}px,0,0)` }, { transform: 'translate3d(0,0,0)' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: M.ease })); }
+    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -dx : dx}px,0,0)` }, { transform: 'translate3d(0,0,0)' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: M.ease, id: 'nav' })); }
     const cv = getCover(); cv.classList.toggle('glass', !!M.glass);
     const k0 = kind === 'tab' ? 0.65 : 1;
     as.push(cv.animate(M.glass ? [{ opacity: kind === 'tab' ? 0.8 : 1 }, { opacity: 0.6, offset: 0.35 }, { opacity: 0 }]
