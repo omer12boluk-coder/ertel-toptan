@@ -93,3 +93,11 @@ telefonda ~0.75:1. Bu yüzden banner sabit resim DEĞİL; `PhotoBanner` kutuyu �
 `cd:hero` (banner: `heroList`, genişlik `heroW`, yükseklik `heroFill`), `cd:pick`, `cd:sets`, `cd:brands`, `cd:mq`, ürün rafları `CdRail`
 (`look.cd` açıkken bütün raflar). Ayarlar `shopHome.cd.{pick,sets,brands,mq}`. Kısa ad `shortOf(p, names)` (elle ad `cd.pick.names`).
 Banner satırı `{ pb: '<şablon id>', title?, tag?, sub?, eye?, c1?, c2?, off? }` (`pbOf` çözer).
+
+## 8. Kategori kapakları ve reklam kutuları (7.11.2026)
+
+- Kapak 800×600, reklam 800×1000 (üst %40 yazı için boş). Zemin: iki açık tonlu dikey degrade + sağ üstte hafif ışık;
+  ürün kesimi alta oturur, altında yumuşak elips gölge. Yazı resme GÖMÜLMEZ (sayfada HTML).
+- Tonlar (mor yok): nane `#f2fbf7→#d8efe4`, buz mavisi `#f1f6fd→#dde7f7`, gri `#f6f6f8→#e3e4ea`, kum `#faf5ee→#eee2d2`, gül `#fcf2f0→#f2dcd7`.
+- Filigranlı (başka mağaza adı), üstünde yazı olan ya da 500 px'ten küçük fotoğraf KULLANILMAZ.
+- Kullanıcı: renkli zeminde beyaz zeminli ürün resmi "kutu gibi" duruyor → ürün resmi renkli karta koyulacaksa ya kesim yap ya da kartı beyaz yap.

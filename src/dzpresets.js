@@ -144,7 +144,7 @@ export const P0 = {
 
 // ---- Claude düzeni (7.11.2026): fotoğraflı bannerların diliyle ana sayfa (cdhome.jsx, docs/banner-kurallari.md) ----------------------
 // Bannerlar kullanıcının reklam listesine taşınır (pb satırları), eski reklamlar GİZLENİR (off, silinmez). Eski bölümler gizlenir, rafların ilk ikisi yeni kartlarla.
-const CD_ORDER = ['cd:hero', 'p0:find', 'cd:pick', '@rail0', 'cd:sets', 'cd:brands', '@rail1', 'cd:mq', 'p0:trust'];
+const CD_ORDER = ['cd:hero', 'p0:find', 'cd:pick', 'cd:ads', '@rail0', 'cd:sets', '@rail1', 'cd:brands', 'cd:mq', 'p0:trust'];
 export function cdLayout(H) {
   const L0 = (Array.isArray(H.layout) ? H.layout : []).filter((k) => !k.startsWith('p0:') && !k.startsWith('cd:'));
   const rails = (H.sections || []).map((r, i) => 'rail:' + (r.id || i)).filter((k) => !L0.length || L0.includes(k));
@@ -154,7 +154,7 @@ export function cdLayout(H) {
   const hidden = [...new Set([...(H.hidden || []).filter((k) => !want.includes(k)), ...OLD_FIXED, 'p0:hero', 'p0:cats', 'p0:pick', 'p0:sets', 'p0:brands', ...rest.filter((k) => k.startsWith('rail:') || k.startsWith('b:'))])];
   return { layout, hidden, slides: withPbSlides(H.slides) };
 }
-export const CD_CHANGES = ['Banner: 7 fotoğraflı banner sizin reklam listenizde (yazı, sıra, aç/kapa); eski reklamlarınız gizlendi, silinmedi', 'Bu hafta masamızdan: haftanın ürünü + dört ürün, logolu, kısa adlı', 'Atölyeni kur: her set kendi kartında', 'Markalar: büyük marka kartları', 'Akan şerit: renkli logolar', 'Ürün rafları: yeni kart dili (fiyat ve Sepete ekle hep aynı hizada)', 'Hızlı bulucu ve güven şeridi Paket 0’dan', 'Eski bölümler gizlendi, silinmedi'];
+export const CD_CHANGES = ['Banner: 7 fotoğraflı banner sizin reklam listenizde (yazı, sıra, aç/kapa); eski reklamlarınız gizlendi, silinmedi', 'Bu hafta masamızdan: haftanın ürünü + dört ürün, logolu, kısa adlı', 'Atölyeni kur: her set kendi kartında', 'Markalar: bütün markalar logo duvarında', 'Reklam kutuları: fotoğraflı küçük reklamlar, elle kaydırılır', 'Akan şerit: renkli logolar', 'Ürün rafları: yeni kart dili (fiyat ve Sepete ekle hep aynı hizada)', 'Hızlı bulucu ve güven şeridi Paket 0’dan', 'Eski bölümler gizlendi, silinmedi'];
 export const CD = {
   id: 'cd', builtin: true, merge: true, layoutFn: 'cd', name: 'Claude düzeni', note: 'Fotoğraflı bannerların diliyle: sade zemin, marka logoları, kısa adlar, tek düğme · tasarım modu v3',
   sw: ['#f5f5f7', '#1d1d1f', '#2f62d6', '#ffffff'],
@@ -163,7 +163,8 @@ export const CD = {
     look: {
       site: 'apple', cd: true, glass: true, header: 'search', hideTop: 'top', botnav: 'glass', motion: 'clear', motionD: 'soft', pill: 'flow', porc: false, prodHub: true,
       width: '', edge: 28, boxPat: 'none', bgFx: 'plain', logoTone: '', decor: { id: '', amt: 'md', front: true }, pack: {}, keep: {}, shopAccent: '#2f62d6', bg: '#f5f5f7',
-      style: { head: 'intert', body: 'inter', price: 'intert', hw: 600, hls: -0.03, rCard: 24, rBox: 28, rHero: 30, rBtn: 999, shadow: 'none', border: 'none', imgFit: 'contain', imgBg: '#ffffff', imgPad: 12, hover: 'none', title: 'plain', gap: 64 },
+      // 7.11.2026 (3): yazı tipi pakete girmez (kullanıcı Inter Tight'ı sıkışık buldu) — sitenin seçili yazı tipi kalır
+      style: { rCard: 24, rBox: 28, rHero: 30, rBtn: 999, shadow: 'none', border: 'none', imgFit: 'contain', imgBg: '#ffffff', imgPad: 12, hover: 'none', title: 'plain', gap: 64 },
     },
     brand: { theme: 'light' },
     home: { gap: 64 },

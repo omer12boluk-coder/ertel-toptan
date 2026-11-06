@@ -4,7 +4,7 @@
 // Ayarlar: shopHome.cd = { pick: {ids, auto, names{id: kısa ad}, eye, title, badge}, sets: {ids, n, eye, title}, brands: {n, eye, title},
 //   mq: {speed, eye}, rails: {} }; banner genişliği shopHome.heroW (''|narrow|mid|wide|full), yüksekliği shopHome.heroFill (''|screen).
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { useStore, go } from './store.js';
+import { useStore, store, go } from './store.js';
 import { Icon, Thumb } from './ui.jsx';
 import { fmt, norm, priceFor } from './utils.js';
 import { feat } from './extras.jsx';
@@ -13,6 +13,7 @@ import { useBrandList, openBrand } from './brandsets.jsx';
 import { useVisibleProducts, useTree } from './catalog.jsx';
 import { CardAdd, ShopImg, Hero } from './shophome.jsx';
 import { heroList } from './photobn.jsx';
+import { useCatTiles } from './p0home.jsx';
 
 export const cdOf = (H) => H?.cd || {};
 const sellable = (p) => p && p.a !== 0 && !p.so;
@@ -115,7 +116,7 @@ export function CdPick({ H, S, onProduct }) {
 }
 
 // ---- Atölyeni kur: her set kendi açık renkli kartında, ürün fotoğrafları üst üste ----
-const SET_BG = ['var(--surface)', 'var(--cd-t1)', 'var(--cd-t2)', 'var(--cd-t3)'];
+const SET_BG = ['var(--surface)']; // 7.11.2026 (3): renkli zeminde beyaz zeminli ürün resimleri kutu gibi duruyordu → hepsi beyaz
 export function CdSets({ H, S }) {
   const C = cdOf(H).sets || {};
   const byId = useStore((s) => s.byId); const logos = useLogos();
@@ -129,7 +130,7 @@ export function CdSets({ H, S }) {
         {sets.map((x, i) => { const v = setView(x, byId); const ps = v.active.map((l) => l.p).filter(Boolean); const brands = [...new Set(ps.map((p) => p.b).filter(Boolean))];
           return (
             <button key={x.id} type="button" className="cd-set" style={{ '--sbg': SET_BG[i % SET_BG.length] }} onClick={() => openSet(x.id)}>
-              <span className={'cd-set-art k' + Math.min(3, ps.length)}>{ps.slice(0, 3).map((p, j) => <span key={p.id} className={'cd-si s' + j}><Thumb p={p} size="md" /></span>)}</span>
+              <span className={'cd-set-art k' + Math.min(3, ps.length)}>{ps.slice(0, 3).map((p) => <span key={p.id} className="cd-si"><Thumb p={p} size="md" /></span>)}</span>
               <span className="cd-set-t">
                 <span className="cd-eye">Set · {v.active.length} ürün</span>
                 <b className="cd-set-n">{x.name}</b>
@@ -143,24 +144,24 @@ export function CdSets({ H, S }) {
   );
 }
 
-// ---- Markalar: büyük marka kartları (logo · ürün sayısı · markanın bir ürünü), yana kayar ----
+// ---- Markalar: TÜM markalar logo duvarı (beyaz kutular, logo ortada, ürün sayısı altında) — 7.11.2026 (3) ----
+export function BrandWall({ max, logosOnly }) {
+  const all = useBrandList();
+  const list = (logosOnly ? all.filter((b) => b.logo) : all).slice(0, max || 999);
+  return <div className="cd-bwall">{list.map((b) => (
+    <button key={b.n} type="button" className="cd-bw" onClick={() => openBrand(b.n)} title={b.n}>
+      <span className="cd-bw-lg">{b.logo ? <ShopImg v={b.logo} alt={b.n} /> : <b>{b.n}</b>}</span>
+      <small>{b.c} ürün</small>
+    </button>))}</div>;
+}
 export function CdBrands({ H }) {
   const C = cdOf(H).brands || {};
-  const list = useBrandList().filter((b) => b.logo).slice(0, Number(C.n) || 10);
-  const vis = useVisibleProducts(false);
-  const top = useMemo(() => { const m = new Map(); for (const p of vis) if (p.b && !m.has(p.b) && p.s > 0 && hasImg(p)) m.set(p.b, p); return m; }, [vis]);
-  const rail = useRef(null);
-  if (list.length < 3) return null;
+  const n = useBrandList().length;
+  if (n < 3) return null;
   return (
     <section className="cd-sec rv">
-      <Head eye={C.eye ?? 'Markalar'} title={C.title || 'Ustaların güvendiği markalar.'} more={['Tüm markalar', () => go('markalar')]} />
-      <div className="cd-brands" ref={rail}>{list.map((b) => (
-        <button key={b.n} type="button" className="cd-brand" onClick={() => openBrand(b.n)}>
-          <ShopImg v={b.logo} className="cd-brand-lg" alt={b.n} />
-          <small>{b.c} ürün</small>
-          <span className="cd-brand-im">{top.get(b.n) && <Thumb p={top.get(b.n)} size="md" />}</span>
-          <span className="cd-lnk">Ürünleri gör<Icon n="back" s={13} className="flip" /></span>
-        </button>))}</div>
+      <Head eye={C.eye ?? 'Markalar'} title={C.title || 'Tüm markalar.'} more={['Markalar sayfası', () => go('markalar')]} />
+      <BrandWall max={Number(C.n) || 0} />
     </section>
   );
 }
@@ -211,6 +212,65 @@ export function CdRail({ sec, open, onProduct, edit }) {
           {price(p) ? <b className="cd-pr sm num">{price(p)}</b> : <small className="cd-sb">Fiyat sorun</small>}
           <CardAdd p={p} />
         </div>); })}</div>
+    </section>
+  );
+}
+
+// ---- Ürünler açılış sayfası (look.cd + look.prodHub): kapaklı kategori kartları + Tüm ürünler + marka duvarı (7.11.2026 (3)) ----
+// Kapaklar: Claude'un hazırladığı fotoğraflar hosting/public/bn/cat-<id>.webp; kullanıcının seçtiği kapak (shopHome.p0catImg) her zaman önce.
+export const CAT_COVERS = { 42: '/bn/cat-42.webp', 31: '/bn/cat-31.webp', 6: '/bn/cat-6.webp', 14: '/bn/cat-14.webp', 3: '/bn/cat-3.webp', 5: '/bn/cat-5.webp', 24: '/bn/cat-24.webp' };
+export function CdHub({ onAll, total }) {
+  const H = useStore((s) => s.settings.shopHome) || {}; const C = H.p0?.hub || {};
+  const tiles = useCatTiles(H.p0catImg, H.p0?.cats?.hide).filter((c) => !c.off);
+  const open = (id) => { store.set({ catalogGo: { cat: id } }); go('katalog'); };
+  return (
+    <div className="cd-hub">
+      <header className="cd-head"><div><span className="cd-eye">{C.eye ?? 'Ürünler'}</span><h2 className="cd-hub-t">{C.title || 'Ne arıyorsun?'}</h2></div></header>
+      <button type="button" className="cd-hub-all" onClick={onAll}>
+        <span className="cd-hub-all-t"><b>Tüm ürünler</b><small>{total} ürün · ara, süz, sırala</small></span>
+        <span className="cd-pill">Tüm ürünleri gör</span>
+      </button>
+      <div className="cd-cats">{tiles.map((c) => { const cov = c.img || CAT_COVERS[c.id]; return (
+        <button key={c.id} type="button" className="cd-cat" onClick={() => open(c.id)}>
+          <span className={'cd-cat-im' + (cov ? ' cov' : '')}>{cov ? <ShopImg v={cov} alt={c.name} /> : c.p && <Thumb p={c.p} size="md" />}</span>
+          <span className="cd-cat-t"><b>{c.name}</b><small>{c.n} ürün</small></span>
+        </button>); })}</div>
+      {C.brands !== false && <section className="cd-sec"><Head eye="Markalar" title="Tüm markalar." more={['Markalar sayfası', () => go('markalar')]} /><BrandWall /></section>}
+    </div>
+  );
+}
+
+// ---- Reklam kutuları (cd:ads, 7.11.2026 (3)): banner kurallarıyla küçük reklamlar, yan yana; KENDİLİĞİNDEN KAYMAZ (parmak / oklar) ----
+// Fotoğraflar hosting/public/bn/ad-<id>.webp (üst kısım yazı için boş). Ayar: shopHome.cd.ads { off: [id], eye, title }.
+export const CD_ADS = [
+  { id: 'jbc', logo: '/brands/jbc.png', title: 'Ustanın havyası.', sub: 'JBC istasyonlar ve uçlar', link: 'brand:JBC', cta: 'JBC ürünleri' },
+  { id: 't420', logo: '/brands/aixun-dark.png', title: 'İki el tutamağı,\ntek gövde.', sub: 'Aixun T420D istasyonlu havya', link: 'p:2745', cta: 'İncele' },
+  { id: 'u70', logo: '/brands/jcid.png', title: 'UFS ve eMMC.\nOku, yaz.', sub: 'JCID U70 ISP modülü', link: 'p:3110', cta: 'İncele' },
+  { id: 'sf850', logo: '/brands/amscope.png', title: 'Yakından bak.', sub: 'Stereo mikroskoplar, başlıklar, lensler', link: 'cat:14', cta: 'Mikroskoplar' },
+  { id: 'chip', eye: 'Entegre', title: 'Doğru entegre,\nilk seferde.', sub: 'Şarj, güç ve ses entegreleri', link: 'cat:6', cta: 'Entegreler' },
+  { id: 'ersa', eye: 'Ersa ve Alpha', title: 'İnce iş,\nince uç.', sub: 'Havya uçları, lehim ve flux', link: 'cat:24', cta: 'Ürünleri gör' },
+  { id: 'masa', logo: '/brands/2uul.png', eye: 'Tamir ekipmanları', title: 'Masanın eksiği\nburada.', sub: 'Presler, açma kabloları, aparatlar', link: 'cat:42', cta: 'Tamir ekipmanları' },
+];
+export function CdAds({ H, open }) {
+  const C = cdOf(H).ads || {};
+  const off = new Set(C.off || []);
+  const list = CD_ADS.filter((a) => !off.has(a.id));
+  const rail = useRef(null);
+  if (!list.length) return null;
+  const by = (d) => { const el = rail.current; if (el) el.scrollBy({ left: d * el.clientWidth * 0.8, behavior: 'smooth' }); };
+  return (
+    <section className="cd-sec rv">
+      <header className="cd-head"><div>{(C.eye ?? 'Keşfet') && <span className="cd-eye">{C.eye ?? 'Keşfet'}</span>}<h2>{C.title || 'Atölyen için.'}</h2></div>
+        <span className="cd-head-r"><button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span></header>
+      <div className="cd-ads" ref={rail}>{list.map((a) => (
+        <button key={a.id} type="button" className="cd-ad" onClick={open(a.link)} style={{ backgroundImage: `url(/bn/ad-${a.id}.webp)` }}>
+          <span className="cd-ad-t">
+            <span className="cd-ad-eye">{a.logo && <img src={a.logo} alt="" />}{a.eye && <span>{a.eye}</span>}</span>
+            <b>{a.title}</b>
+            <small>{a.sub}</small>
+            <span className="cd-lnk">{a.cta}<Icon n="back" s={13} className="flip" /></span>
+          </span>
+        </button>))}</div>
     </section>
   );
 }

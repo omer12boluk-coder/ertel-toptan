@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ProdHub } from './p0home.jsx';
+import { CdHub } from './cdhome.jsx';
 import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
@@ -551,7 +552,7 @@ export function Catalog({ admin }) {
   ), [list, limit, view, admin, addCls, asort, pinKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!admin && user?.role === 'public' && S.look?.prodHub && !hubOff && actives.length === 0) return <div className="catalog"><ProdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} /></div>;
+  if (!admin && user?.role === 'public' && S.look?.prodHub && !hubOff && actives.length === 0) return <div className="catalog">{S.look?.cd ? <CdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} /> : <ProdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} />}</div>;
   const hubBack = !admin && user?.role === 'public' && S.look?.prodHub && hubOff;
   return (
     <div className="catalog">

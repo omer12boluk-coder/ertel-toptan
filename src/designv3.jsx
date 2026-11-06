@@ -11,7 +11,8 @@ import { prepare, Stage, ShopDesigner } from './designer.jsx';
 import { queueSave } from './saveq.js';
 import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
 import { PB_BY, PB_TEXT, PHOTO_BANNERS } from './photobn.jsx';
-import { HERO_W, HERO_FILL, cdOf, shortOf } from './cdhome.jsx';
+import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS } from './cdhome.jsx';
+import { CD_KEYS } from './p0keys.js';
 import { liveSets } from './sets.jsx';
 
 const PREVIEW = typeof location !== 'undefined' && /--/.test(location.hostname);
@@ -95,7 +96,7 @@ export function DesignV3() {
   const ctx = { sel, select, H };
   const view = useMemo(() => withDefaults(d), [d]);
 
-  const pagePanel = <PagePanel L={L} H={H} hidden={hidden} sel={sel} select={select} move={move} toggleHide={toggleHide} cdOn={cdOn} toCd={() => { setAll(applyPreset(d, CD.data)); toast('Claude düzeni yüklendi. Beğenirseniz Yayınla, vazgeçmek için Geri al.'); }} />;
+  const pagePanel = <PagePanel L={L} H={H} hidden={hidden} sel={sel} select={select} move={move} toggleHide={toggleHide} cdOn={cdOn} add={(k) => { const i = L.indexOf('cta'); S('layout', i >= 0 ? [...L.slice(0, i), k, ...L.slice(i)] : [...L, k]); select(k); }} toCd={() => { setAll(applyPreset(d, CD.data)); toast('Claude düzeni yüklendi. Beğenirseniz Yayınla, vazgeçmek için Geri al.'); }} />;
   const lookPanel = <LookPanel d={d} set={set} setAll={setAll} A={A} />;
   const insp = sel ? <Inspector k={sel} d={d} H={H} S={S} close={() => setSel(null)} hidden={hidden.has(sel)} toggleHide={() => toggleHide(sel)} /> : null;
 
@@ -141,7 +142,7 @@ export function DesignV3() {
 }
 
 // ---- Sol: Sayfa — bölümler (açık olanlar üstte sırayla, gizliler altta) ----
-function PagePanel({ L, H, hidden, sel, select, move, toggleHide, cdOn, toCd }) {
+function PagePanel({ L, H, hidden, sel, select, move, toggleHide, cdOn, toCd, add }) {
   const [showOff, setShowOff] = useState(false);
   const on = L.filter((k) => !hidden.has(k)); const off = L.filter((k) => hidden.has(k));
   const row = (k, i, list) => (
@@ -157,6 +158,8 @@ function PagePanel({ L, H, hidden, sel, select, move, toggleHide, cdOn, toCd }) 
     {on.map((k, i) => row(k, i, on))}
     {off.length > 0 && <button type="button" className="v3-more" onClick={() => setShowOff((x) => !x)}><Icon n={showOff ? 'down' : 'back'} s={13} className={showOff ? '' : 'flip'} />Gizli bölümler ({off.length})</button>}
     {showOff && off.map((k, i) => row(k, i, off))}
+    {cdOn && Object.keys(CD_KEYS).some((k) => !L.includes(k)) && <><span className="v3-cap">Eklenebilecek bölümler</span>
+      {Object.entries(CD_KEYS).filter(([k]) => !L.includes(k)).map(([k, l]) => <button key={k} type="button" className="v3-more" onClick={() => add(k)}><Icon n="plus" s={13} />{l}</button>)}</>}
   </div>;
 }
 
@@ -186,8 +189,9 @@ function Inspector({ k, d, H, S, close, hidden, toggleHide }) {
   const body = k === 'cd:hero' || k === 'hero' || k === 'p0:hero' ? <HeroPanel H={H} S={S} k={k} />
     : k === 'cd:pick' ? <PickPanel H={H} S={S} />
     : k === 'cd:sets' ? <SetsPanel H={H} S={S} d={d} />
-    : k === 'cd:brands' ? <TextPanel H={H} S={S} part="brands" eye="Markalar" title="Ustaların güvendiği markalar." n={[[6, '6'], [10, '10'], [14, '14']]} />
+    : k === 'cd:brands' ? <TextPanel H={H} S={S} part="brands" eye="Markalar" title="Tüm markalar." n={[[0, 'Hepsi'], [12, '12'], [18, '18']]} />
     : k === 'cd:mq' ? <MqPanel H={H} S={S} />
+    : k === 'cd:ads' ? <AdsPanel H={H} S={S} />
     : k.startsWith('rail:') ? <RailPanel H={H} S={S} k={k} />
     : <p className="fine">{NOTE[k] || 'Bu eski bir bölüm; ayrıntılı ayarları Gelişmiş tasarım modunda.'}</p>;
   return <div className="v3-insp">
@@ -285,8 +289,20 @@ function TextPanel({ H, S, part, eye, title, n }) {
   return <>
     <Row label="Üst yazı"><TF v={C.eye} ph={eye} on={(v) => up({ eye: v })} /></Row>
     <Row label="Başlık"><TF v={C.title} ph={title} on={(v) => up({ title: v })} /></Row>
-    {n && <Row label="Kaç tane"><Seg v={String(Number(C.n) || n[1][0])} opts={n.map(([a, b]) => [String(a), b])} on={(v) => up({ n: Number(v) })} /></Row>}
+    {n && <Row label="Kaç marka"><Seg v={String(Number(C.n) || n[0][0])} opts={n.map(([a, b]) => [String(a), b])} on={(v) => up({ n: Number(v) })} /></Row>}
     <p className="fine">Marka logoları Yönetim › Ayarlar › Markalar’dan gelir; en çok ürünü olan marka önde.</p>
+  </>;
+}
+function AdsPanel({ H, S }) {
+  const C = cdOf(H).ads || {}; const off = new Set(C.off || []);
+  const up = (p) => S('cd', { ...cdOf(H), ads: { ...C, ...p } });
+  return <>
+    <Row label="Üst yazı"><TF v={C.eye} ph="Keşfet" on={(v) => up({ eye: v })} /></Row>
+    <Row label="Başlık"><TF v={C.title} ph="Atölyen için." on={(v) => up({ title: v })} /></Row>
+    <span className="v3-cap">Reklamlar · kendiliğinden kaymaz, elle kaydırılır</span>
+    {CD_ADS.map((a) => <div key={a.id} className={'v3-row' + (off.has(a.id) ? ' off' : '')}><span className="v3-row-n"><span>{a.title.replace(/\n/g, ' ')}</span></span>
+      <button type="button" className={'v3-tg' + (off.has(a.id) ? '' : ' on')} onClick={() => up({ off: off.has(a.id) ? [...off].filter((x) => x !== a.id) : [...off, a.id] })} aria-label="Aç / kapat" /></div>)}
+    <p className="v3-tip">Yeni reklam kutusu mu istiyorsunuz? Sohbette Claude’a ürünü söyleyin, fotoğraflı hazırlasın.</p>
   </>;
 }
 function MqPanel({ H, S }) {

@@ -16,7 +16,7 @@ import { SlideEls, useSlideFonts, FONT_BY, FONTS, ensureFonts } from './slidex.j
 import { BOX_COLORS, BOX_PATS } from './dzpresets.js';
 import { P0_KEYS } from './p0keys.js';
 import { PHOTO_BANNERS, PhotoBanner, photoBnOn, pbOf, heroList } from './photobn.jsx';
-import { CdHero, CdPick, CdSets, CdBrands, CdMarquee, CdRail } from './cdhome.jsx';
+import { CdHero, CdPick, CdSets, CdBrands, CdMarquee, CdRail, CdAds } from './cdhome.jsx';
 import { P0Hero, P0Finder, P0Cats, P0Pick, P0Sets, P0Brands, P0Trust } from './p0home.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
@@ -389,6 +389,7 @@ export function ShopHome({ S: Sover }) {
     if (k === 'cd:sets') return <CdSets H={H} S={S} />;
     if (k === 'cd:brands') return <CdBrands H={H} />;
     if (k === 'cd:mq') return <CdMarquee H={H} />;
+    if (k === 'cd:ads') return <CdAds H={H} open={link} />;
     if (k === 'p0:hero') return (H.slides || []).length || photoBnOn(H) ? <P0Hero slides={(H.slides || []).map((x) => (x?.pb ? (pbOf(x) ? { ...x, pb: pbOf(x) } : { ...x, off: true }) : x)).map((x) => (x.off && !E ? { ...x, p0: 'off' } : x))} nv={H.heroNav || {}} pre={photoBnOn(H) && !pbHas ? PHOTO_BANNERS : []} onProduct={setProduct} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
     if (k === 'p0:find') return <P0Finder S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'p0:cats') return <P0Cats H={H} />;
