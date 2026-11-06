@@ -3,6 +3,7 @@ name: Resim teşhisi
 on:
   push:
     branches: [img-probe]
+    paths: [tools/img-probe.mjs]
   workflow_dispatch:
 jobs:
   probe:

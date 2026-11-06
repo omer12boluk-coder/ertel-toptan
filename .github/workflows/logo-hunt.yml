@@ -1,0 +1,19 @@
+name: Logo avı (teşhis)
+on:
+  push:
+    branches: [img-probe]
+    paths: [tools/logo-hunt.mjs, .github/workflows/logo-hunt.yml]
+permissions:
+  contents: write
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/logo-hunt.mjs
+      - run: |
+          git config user.name "logo-bot"; git config user.email "bot@users.noreply.github.com"
+          git checkout -b logo-raw; git add logos-raw; git commit -qm "logo adayları" || true; git push -f origin logo-raw
