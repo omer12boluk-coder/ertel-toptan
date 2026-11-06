@@ -243,7 +243,7 @@ export function Orders() {
                         <button type="button" className={'ost ost-' + o.status} onClick={(e) => { e.stopPropagation(); quick(e, o); }} title="Durumu değiştir"><span>{ADMIN_ST[o.status] || o.status}</span><Icon n="chev" s={14} /></button>
                         {noCode && <small className="warn-t">Takip no yok</small>}
                       </span>
-                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{o.contact?.name}{!o.member && <small> · misafir</small>}</b><span className="num or-mob-s">{o.sum ? tl2(o.sum.pay) : orderTL(o, live) != null ? fmtTL(orderTL(o, live)) : orderTotal(o)} <small>· {ago2(o.createdAt)}</small></span></span></span>
+                      <span className="or-mob"><OrderThumbs o={o} /><span className="or-mob-t"><b className="or-mob-n">{o.contact?.name}{!o.member && <small> · misafir</small>}</b><span className="num or-mob-s">{o.sum ? tl2(o.sum.pay) : orderTL(o, live) != null ? fmtTL(orderTL(o, live)) : orderTotal(o)} <small>· {ago2(o.createdAt)}</small></span><span className="or-mob-p">{o.sum && o.pay === 'card' ? (o.sum.inst?.n > 1 ? 'Kredi kartı · ' + o.sum.inst.n + ' taksit' : 'Kredi kartı · tek çekim') : PAY_SHORT[o.pay] || PAY[o.pay] || '—'}{o.delivery?.method === 'pickup' ? ' · Dükkândan' : car ? ' · ' + car.short : ''}</span></span></span>
                       <span className="or-act"><button type="button" className="or-dots" aria-label="İşlemler" onClick={(e) => { e.stopPropagation(); menu(e, o); }}><Icon n="more" s={18} /></button></span>
                     </div>
                   </li>

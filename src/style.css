@@ -7546,14 +7546,18 @@ html.lg-on[data-theme="dark"] .hd-p { background: rgb(24 28 38 / .97) !important
 /* telefonda arama kutusu açılırken / sonuçlar belirirken animasyon */
 @media (max-width: 899px) {
   /* 6.11.2026: kutu arama simgesinin olduğu yerden sola doğru UZAR (kenar boşluğu küçülür, büyütme yok → imleç kaymaz, mavi çerçeve kesilmez); kapanırken simgeye geri döner */
-  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box { animation: hsGrow .3s cubic-bezier(.32, .72, 0, 1) both !important; }
-  .hdr-gs .gs-srch .hsearch.mob-open.closing .hsearch-box { animation: hsShrink .22s cubic-bezier(.4, 0, .6, 1) both !important; }
+  /* 6.11.2026: kenar boşluğu (margin) animasyonu her karede sayfayı yeniden dizdiği için telefonda ~30 fps'ti → kutu yerinde durur,
+     sadece görünen kısmı (clip-path, köşeleri yuvarlak) simgeden sola doğru açılır; bitince kırpma kalkar (çerçeve/gölge tam) */
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box { animation: hsGrowC .3s cubic-bezier(.32, .72, 0, 1) backwards !important; will-change: clip-path; }
+  .hdr-gs .gs-srch .hsearch.mob-open.closing .hsearch-box { animation: hsShrinkC .22s cubic-bezier(.4, 0, .6, 1) both !important; }
   .hdr-gs .gs-srch .hsearch.mob-open .hsearch-box input { animation: hs-fade .2s .08s ease both !important; }
   .hdr-gs .gs-srch .hsearch.mob-open.closing .hsearch-box input, .hdr-gs .gs-srch .hsearch.mob-open.closing .hsearch-res { opacity: 0; transition: opacity .08s; }
   .hdr-gs .gs-srch .hsearch.mob-open .hsearch-res { animation: hsRes .26s .1s cubic-bezier(.32, .72, 0, 1) both; transform-origin: 50% 0; }
 }
 @keyframes hsGrow { from { margin-left: var(--hsx, 70%); margin-right: var(--hsr, 0px); opacity: .6; } to { margin-left: 0; margin-right: 0; opacity: 1; } }
 @keyframes hsShrink { from { margin-left: 0; margin-right: 0; opacity: 1; } 70% { opacity: 1; } to { margin-left: var(--hsx, 70%); margin-right: var(--hsr, 0px); opacity: 0; } }
+@keyframes hsGrowC { from { clip-path: inset(0 var(--hsr, 0px) 0 var(--hsx, 70%) round 22px); opacity: .7; } to { clip-path: inset(0 0 0 0 round 22px); opacity: 1; } }
+@keyframes hsShrinkC { from { clip-path: inset(0 0 0 0 round 22px); opacity: 1; } 70% { opacity: 1; } to { clip-path: inset(0 var(--hsr, 0px) 0 var(--hsx, 70%) round 22px); opacity: 0; } }
 @keyframes hsRes { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
 /* sepete atınca: düğmeden sepete uçan nokta + sepet zıplar */
 .fly-dot { position: fixed; z-index: 200; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; pointer-events: none;
@@ -8261,3 +8265,7 @@ html[data-theme="dark"] .pl-demo-tag { color: #e6a466; }
 }
 /* ürün tablosu başlıkları daralınca kesilmesin: iki satıra iner */
 @media (min-width: 701px) { .plist.at-ul > .ath-row > .tc { padding-left: 7px; padding-right: 7px; } .plist.at-ul .ath { white-space: normal; line-height: 1.2; text-align: left; } .plist.at-ul .ath > span { overflow: visible !important; text-overflow: clip !important; white-space: normal !important; } }
+/* telefonda sipariş kartı: Ö/Ü noktaları kesilmesin (b kuralı satır yüksekliğini 1.1'e indiriyordu) + ödeme şekli görünür */
+.or-mob-t b.or-mob-n { line-height: 1.32; padding-top: 1px; }
+.or-mob-s { line-height: 1.3; }
+.or-mob-p { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
