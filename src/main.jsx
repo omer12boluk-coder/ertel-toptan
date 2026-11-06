@@ -6,6 +6,7 @@ import { StoreDecor } from './decor.jsx';
 import { activePack, lookColors, logoFilter, ensureLogoSvg } from './presets.js';
 import { applyStyle } from './stylekit.js';
 import { applyLayout, lookFor } from './dzpresets.js';
+import { setupScrollbar } from './scrollbar.js';
 import { sfx, setSfxGlobal, setSfxVol, setupSfxTaps } from './sfx.js';
 import { SoundButton } from './soundui.jsx';
 import { RatePrompt } from './reviews.jsx';
@@ -346,6 +347,7 @@ function useTheme() {
     r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-mini', isAdm && ls.get('adm-mini', false) === true); /* 6.11.2026 daraltılmış yan menü (cihazda) */ r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic'); r.classList.toggle('adm-mark', isAdm && L.adminNav === 'old' && L.adminMark !== false); /* 6.11.2026 telefonda panel belirgin: koyu alt menü + Yönetim rozeti (kapatılabilir) */
     // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
     r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
+    r.classList.toggle('sb-thin', L.scrollbar !== 'native'); // 7.11.2026 ince süzülen kaydırma çubuğu (bilgisayar); 'native' = tarayıcının çubuğu
     applyLayout(r, pub ? L : {});
     r.classList.remove('fr-1', 'fr-2');
     r.classList.toggle('pill-dark', !!pub && L.pillTone === 'dark');
@@ -909,6 +911,7 @@ addEventListener('focusin', (e) => {
 setupNavAnim(); // 6.11.2026: bilgisayarda da (eskiden sadece telefonda çağrılıyordu → bilgisayarda sadece CSS 'alttan yükselme' vardı, look.motionD hiç çalışmıyordu)
 setupFlowPills(); // akan hap: bilgisayarda da
 setupSfxTaps(); // 6.11.2026 mağazada dokunma sesleri
+setupScrollbar(); // 7.11.2026 ince kaydırma çubuğu (scrollbar.js)
 
 // Telefonda dokunma hissi: kart/düğmeye basınca yumuşakça içe göçer, çok kısa dokunuşta bile en az ~120 ms basılı görünür,
 // bırakınca hafif yaylanarak geri gelir (CSS :active iPhone'da bir an yanıp sönüyordu, "çiğ" duruyordu).

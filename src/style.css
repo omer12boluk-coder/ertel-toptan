@@ -8455,3 +8455,16 @@ html .shell.public .p0-b-big .p0-addw.big .abx .stepper { background: color-mix(
 html .shell.public .p0-b-big .p0-addw.big .abx .stepper :is(button, input) { color: var(--accent) !important; }
 html[data-theme="dark"] .shell.public .p0-b-big .p0-addw.big .abx .stepper { background: color-mix(in oklab, var(--accent) 22%, transparent) !important; }
 html[data-theme="dark"] .shell.public .p0-b-big .p0-addw.big .abx .stepper :is(button, input) { color: #fff !important; }
+
+/* ===== İnce süzülen sayfa kaydırma çubuğu (7.11.2026, scrollbar.js; look.scrollbar 'native' = eski) ===== */
+@media (hover: hover) and (pointer: fine) { html.sb-thin { scrollbar-width: none; } html.sb-thin::-webkit-scrollbar { display: none; } }
+.sbx { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  html.sb-thin .sbx { display: block; position: fixed; top: 0; right: 0; bottom: 0; width: 16px; z-index: 2147483000; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
+  html.sb-thin .sbx.on { opacity: 1; transition-duration: .12s; }
+  .sbx i { position: absolute; top: 0; right: 3px; width: 6px; border-radius: 6px; background: rgb(20 22 28 / .36); pointer-events: auto; cursor: default; transition: width .15s, background .15s; }
+  .sbx.on i:hover, .sbx.drag i { width: 9px; background: rgb(20 22 28 / .55); }
+  html[data-theme="dark"] .sbx i { background: rgb(255 255 255 / .34); }
+  html[data-theme="dark"] .sbx.on i:hover, html[data-theme="dark"] .sbx.drag i { background: rgb(255 255 255 / .55); }
+  html.sb-drag, html.sb-drag * { user-select: none !important; }
+}
