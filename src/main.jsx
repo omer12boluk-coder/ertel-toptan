@@ -1168,7 +1168,8 @@ function setupNavAnim() {
   // (html.nav-anim). Önceden telefonda mağazada kapalıydı ama bilgisayarda ve yönetimde ikisi birden oynuyordu: yandan kayma +
   // alttan yükselme → 'anlaşılmayan / alttan çıkan' geçiş.
   document.documentElement.classList.add('nav-anim');
-  const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar';
+  const FIX = '.cart-bar, .cs-fixed, .co-fixed, .gbar, .cart-fab, .save-bar, .dz-mbar, .acct-ph';
+  const SELF = '.acct-side'; // kendisi kayar, üst kutusu kaymaz (pageTargets); yer tutucusu .acct-ph hiç kaymaz (FIX) — menünün yeri ondan ölçülür
   const EASE = 'cubic-bezier(.2,.7,.2,1)';
   const key = (s) => [s.tab, s.acct || '', s.pid || '', s.openOrder || '', s.openReq || '', s.lcOpen || ''].join('|');
   let last = key(store.s), hint = '', hintAt = 0, click = null, mo = null, watched = null;
@@ -1232,8 +1233,11 @@ function setupNavAnim() {
         if (c.classList.contains('kp-off')) continue;
         // sayfa kabuğuna (.page) ve sabit öğe taşıyabilen kutulara transform VERİLMEZ (sepet çubuğu vb. sonradan gelse bile yerinde kalsın) → çocuklarına inilir
         if (c.matches(FIX)) continue;
+        // 7.11.2026 kendi başına sabit (fixed) olan ama sayfayla kayması gereken öğe (Hesabım sol menüsü): üst kutusuna transform
+        // verilirse sabit menü o kutuya göre konumlanıp kayma bitince yerine SIÇRIYORDU → transform menünün kendisine verilir
+        if (c.matches(SELF)) { out.push(c); continue; }
         // (getComputedStyle KULLANILMAZ: ağır sayfa açılırken stil hesabını erkenden zorlayıp iki kez yaptırıyordu)
-        if (d < 6 && (c.classList.contains('page') || c.querySelector(FIX))) walk(c, d + 1); else out.push(c);
+        if (d < 6 && (c.classList.contains('page') || c.querySelector(FIX) || c.querySelector(SELF))) walk(c, d + 1); else out.push(c);
       }
     };
     walk(main, 0); return out;
@@ -1283,7 +1287,7 @@ function setupNavAnim() {
     const top = added.filter((n) => !added.some((o) => o !== n && o.contains(n)));
     if (!top.length || top.some((n) => n.classList.contains('no-anim') || n.querySelector('.no-anim'))) return; // animasyonsuz dönüş isteyen sayfa
     click = null;
-    const els = []; for (const n of top) { if (n.classList.contains('page') || n.querySelector(FIX)) els.push(...pageTargets({ children: [n] })); else els.push(n); }
+    const els = []; for (const n of top) { if (n.classList.contains('page') || n.querySelector(FIX) || n.querySelector(SELF)) els.push(...pageTargets({ children: [n] })); else els.push(n); }
     play(els, c.back ? 'back' : 'fwd', 300);
   };
   const attach = () => {
