@@ -89,7 +89,7 @@ function pump() {
     try {
       const { catalog, settings: S } = store.s;
       const brands = [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
-      const r = await api().aiDraft({ name: next.q, hint: next.hint || '', link: next.link || '', search: !!next.search, hq: !!next.hq, cats: catPaths(catalog, S), brands, ex: await examples(next.q, catalog), vocab: examples.vocab || [] });
+      const r = await api().aiDraft({ name: next.q, hint: next.hint || '', link: next.link || '', links: next.links || (next.link ? [next.link] : []), search: !!next.search, hq: !!next.hq, cats: catPaths(catalog, S), brands, ex: await examples(next.q, catalog), vocab: examples.vocab || [] });
       updQ(next.id, { st: 'run', sub: 'Resimler ayıklanıyor…' });
       const d = await tidyDraft(r.draft);
       running = false; updQ(next.id, { st: 'ok', d, err: '', sub: '' }); balTick();
@@ -135,11 +135,15 @@ export function AiAdd() {
   const [del, setDel] = useState(false);
   const setList = setQ; const upd = updQ;
   const addNames = () => {
-    // satırda link varsa o ürünün kaynağı olur: "2uul da 88 https://…"
-    const rows = q.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const u = (/https?:\/\/\S+/.exec(x) || [''])[0]; return { n: x.replace(u, '').trim(), u }; }).filter((x) => x.n);
+    // satırdaki linkler o ürünün kaynağıdır: "2uul da 88 https://… https://…" (en çok 3)
+    const urls = (t) => t.match(/https?:\/\/[^\s,]+/g) || [];
+    const rows = q.split('\n').map((x) => x.trim()).filter(Boolean).map((x) => { const u = urls(x); return { n: u.reduce((a, y) => a.replace(y, ''), x).trim(), u }; }).filter((x) => x.n);
     if (!rows.length) return toast('Ürün adı yazın', 'bad');
-    const now = Date.now(); const l0 = link.trim();
-    setList((l) => [...rows.map((r, i) => ({ id: now + '-' + i, q: r.n, link: r.u || (rows.length === 1 ? l0 : ''), hint: hint.trim(), search, hq, st: 'wait' })), ...l]);
+    // link kutusu: tek ürün yazıldıysa hepsi o ürüne; birden çok ürün varsa sadece site ana sayfaları (martview.com gibi) hepsine
+    const field = urls(link);
+    const isRoot = (u) => { try { return new URL(u).pathname.replace(/\/+$/, '') === ''; } catch { return false; } };
+    const now = Date.now();
+    setList((l) => [...rows.map((r, i) => { const ls = [...new Set([...r.u, ...(rows.length === 1 ? field : field.filter(isRoot))])].slice(0, 3); return { id: now + '-' + i, q: r.n, links: ls, link: ls[0] || '', hint: hint.trim(), search, hq, st: 'wait' }; }), ...l]);
     setQ0(''); setHint(''); setLink('');
   };
   const waiting = list.filter((x) => x.st === 'wait' || x.st === 'run').length;
@@ -155,7 +159,7 @@ export function AiAdd() {
         <label className="ai-l" htmlFor="ai-q">Ürün adını yazın <small>— her satıra bir ürün</small></label>
         <textarea id="ai-q" rows={3} placeholder={'2uul da 88\njcid v1se face id flex 15 pro'} value={q} onChange={(e) => setQ0(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNames(); }} />
-        <input id="ai-link" className="ai-link" placeholder="Ürün linki (isteğe bağlı, önerilir): AliExpress / marka sitesi sayfası — yazıları ve resimleri buradan alır" value={link} onChange={(e) => setLink(e.target.value)} />
+        <textarea id="ai-link" className="ai-link" rows={1} placeholder="Linkler (isteğe bağlı, en çok 3, aralarına boşluk ya da alt satır): ürün sayfası ya da site (martview.com, diyfixtool.com…) — ürünü o sitelerde arar, yazı ve resimleri oradan alır" value={link} onChange={(e) => setLink(e.target.value)} />
         <div className="ai-row">
           <input id="ai-hint" placeholder="Ek bilgi (isteğe bağlı): ör. 5'li paket, iPhone 16 uyumlu" value={hint} onChange={(e) => setHint(e.target.value)} />
           <button type="button" className="btn primary" onClick={addNames}><Icon n="sparkle" s={16} />Hazırla</button>

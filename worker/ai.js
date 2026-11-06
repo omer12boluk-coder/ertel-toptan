@@ -82,25 +82,34 @@ async function makeDraft(env, b) {
   const vocab = (Array.isArray(b.vocab) ? b.vocab : []).slice(0, 4).map((x) => String(x).slice(0, 1000));
   const shops = { ...SHOPS, ...(b.shops || {}) };
   const search = !!b.search;
-  // ÜCRETSİZ kaynaklar önce: marka mağazası (addaki marka biliniyorsa) + yöneticinin yapıştırdığı ürün linki
+  // ÜCRETSİZ kaynaklar önce: marka mağazası (addaki marka biliniyorsa) + yöneticinin verdiği 1-3 link (aynı anda okunur)
   const up = name.toUpperCase();
-  const link = /^https?:\/\//.test(b.link || '') ? String(b.link).trim() : '';
-  // Verilen link tek ürün sayfası değilse (ör. sadece "2uul.com" ya da bir kategori sayfası) o siteyi MAĞAZA say:
-  // sitenin kendi aramasında ürünü bul (Shopify); sayfanın her yerinden resim TOPLAMA (saçma resimler geliyordu).
-  // DİKKAT: site adresi olduğu gibi (www dahil) kullanılır — bazı siteler www'suz adrese cevap vermiyor (2uul.com)
-  const linkShop = link && !isProductUrl(link) ? new URL(link).hostname : '';
-  const shopKey = Object.keys(shops).find((k) => up.includes(k) || (linkShop && host('https://' + shops[k]) === host(link)));
-  const shopDom = linkShop || (shopKey && shops[shopKey]) || '';
+  const links = [...new Set([...(Array.isArray(b.links) ? b.links : []), b.link].map((x) => String(x || '').trim()).filter((x) => /^https?:\/\//.test(x)))].slice(0, 3);
+  const shopKey = Object.keys(shops).find((k) => up.includes(k));
   const model0 = (shopKey ? up.replace(shopKey, '') : up).trim();
-  let [shop, linked] = await Promise.all([
-    shopDom ? shopifyProduct(shopDom, model0 || name, name).catch(() => null) : null,
-    link && !linkShop ? pageInfo(link).catch(() => null) : null,
+  const q = model0 || name;
+  // Bir link: tek ürün sayfasıysa doğrudan okunur; site / kategori sayfasıysa o sitenin aramasında ürün bulunur
+  // (önce Shopify, olmazsa sitenin kendi arama sayfası). Sayfanın her yerinden resim TOPLANMAZ.
+  // DİKKAT: site adresi olduğu gibi (www dahil) kullanılır — bazı siteler www'suz adrese cevap vermiyor (2uul.com)
+  async function fromLink(link) {
+    if (isProductUrl(link)) { const pi = await pageInfo(link).catch(() => null); return pi && { ...pi, src: link }; }
+    const dom = new URL(link).hostname;
+    const sp = await shopifyProduct(dom, q, name).catch(() => null);
+    if (sp) return { ...sp, src: `https://${dom}/` };
+    const found = await siteSearch(link, q, name).catch(() => '');
+    if (!found) return null;
+    const pi = await pageInfo(found).catch(() => null); return pi && { ...pi, src: found };
+  }
+  const brandDom = shopKey && !links.some((l) => host(l) === host('https://' + shops[shopKey])) ? shops[shopKey] : '';
+  const fetched = await Promise.all([
+    brandDom ? shopifyProduct(brandDom, q, name).then((r) => r && { ...r, src: `https://${brandDom}/`, brand: 1 }).catch(() => null) : null,
+    ...links.map((l) => fromLink(l).catch(() => null)),
   ]);
-  // Shopify olmayan site (martview vb.): sitenin kendi arama sayfasında ürünü bul → o ürün sayfasını oku (ücretsiz, yapay zekâ yok)
-  let found = '';
-  if (linkShop && !shop) { found = await siteSearch(link, model0 || name, name).catch(() => ''); if (found) linked = await pageInfo(found).catch(() => null); }
-  const linkSrc = found || link;
-  const ctx = [shop && `Markanın resmi sitesindeki ürün (${shopDom}): ${shop.title}\n${shop.text}`, linked && `Ürün sayfası (${host(linkSrc)}): ${linked.title}\n${linked.text}`].filter(Boolean).join('\n\n');
+  const srcs = fetched.filter(Boolean);
+  const shop = srcs.find((x) => x.brand) || null;
+  // her kaynağın yazısı kısaltılarak yapay zekâya gider (3 link → biraz daha uzun istem, ürün başına kuruşlar)
+  const per = srcs.length > 1 ? 2500 : 5000;
+  const ctx = srcs.map((x) => `${x.brand ? 'Markanın resmi sitesindeki ürün' : 'Ürün sayfası'} (${host(x.src)}): ${x.title}\n${String(x.text || '').slice(0, per)}`).join('\n\n');
   const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''), vocab, ctx, search);
   let out, sources = [], engine, cost = 0;
   if (env.ANTHROPIC_KEY) { engine = b.hq ? 'claude-hq' : 'claude'; ({ out, sources, cost } = await askClaude(env, prompt, search, !!b.hq)); }
@@ -115,12 +124,12 @@ async function makeDraft(env, b) {
   if (!d) { const e = new Error('Yapay zekâ cevabı okunamadı, tekrar deneyin'); e.cost = cost; throw e; }
   const brand = String(d.brand || '').trim();
   // resimler: 1) marka mağazası 2) yapay zekânın bulduğu ürün sayfaları 3) aramada çıkan sayfalar
-  if (found) sources.unshift({ url: found, title: host(found) });
-  const pages = [...new Set([...(d.pages || []), ...sources.map((s) => s.url)].filter((u) => /^https?:\/\//.test(u)))].slice(0, 8);
+  srcs.forEach((x) => sources.unshift({ url: x.src, title: host(x.src) }));
+  const done = new Set(srcs.map((x) => x.src));
+  const pages = [...new Set([...(d.pages || []), ...sources.map((s) => s.url)].filter((u) => /^https?:\/\//.test(u) && !done.has(u)))].slice(0, 8);
   const imgs = [];
   const add = (arr, from) => arr.forEach((u) => { if (!imgs.some((x) => x.u === u) && imgs.length < 14) imgs.push({ u, from }); });
-  if (shop) add(shop.imgs, shopDom);
-  if (linked) add(linked.imgs, host(linkSrc));
+  for (const x of srcs) add((x.imgs || []).slice(0, 10), host(x.src));
   const dom = shops[brand.toUpperCase()];
   if (dom && !shop) { const sp = await shopifyProduct(dom, d.model || name, name).catch(() => null); if (sp) add(sp.imgs, dom); }
   // aramada bulunan sayfalar: sadece ürün galerisi (AliExpress listesi, Shopify, JSON-LD Product) — og:image / sayfadaki
@@ -128,7 +137,8 @@ async function makeDraft(env, b) {
   const got = await Promise.all(pages.map((p) => pageImages(p, true).then((l) => [p, l]).catch(() => [p, []])));
   for (const [p, l] of got) add(l.slice(0, 6), host(p));
   // açıklamanın altına markanın / sayfanın uzun tanıtım görselleri (yöneticinin elle yaptığı gibi), sırasıyla
-  const descImgs = [...new Set([...(shop?.descImgs || []), ...(linked?.descImgs || [])])].slice(0, 20);
+  // açıklama altı tanıtım resimleri tek kaynaktan (farklı sitelerinkini karıştırma): önce marka sitesi, sonra link sırası
+  const descImgs = (srcs.find((x) => x.descImgs?.length)?.descImgs || []).slice(0, 20);
   let desc = cleanDesc(String(d.desc || ''));
   if (descImgs.length) desc += '\n<p>&nbsp;</p>\n' + descImgs.map((u) => `<img loading="lazy" src="${u}" />`).join('\n');
   return {
@@ -331,7 +341,7 @@ async function shopifyImages(dom, q) {
   return (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0]));
 }
 
-export { pageInfo, shopifyProduct, isProductUrl, siteSearch, parseJson };
+export { pageInfo, shopifyProduct, isProductUrl, siteSearch, parseJson, makeDraft };
 // Ürün adresinin son parçası (slug) resim dosya adlarında geçiyorsa o resimler bu ürünün galerisidir (martview vb.).
 // Boyut ekleri (-small, -medium, -medium-large, -thumb) en büyüğe (-large) çevrilir, aynı numara bir kez alınır.
 const sizeless = (x) => x.replace(/-(small|medium-large|medium|large|thumb|tiny|mini)(?=\.(jpe?g|png|webp)$)/i, '').replace(/\.(jpe?g|png|webp)$/i, '');
