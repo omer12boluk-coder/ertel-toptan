@@ -8426,6 +8426,15 @@ html.nav-anim { overflow-x: clip; }
 
 /* 6.11.2026 yönetim telefon alt menüsü = mağazadaki cam alt menünün birebir aynısı (look.adminNav 'shop', varsayılan; 'old' = eski).
    Seçili sekme koyu gri (look.adminNavTone 'ink', varsayılan) | 'accent' = mağazayla birebir tema renginde */
-.shell.adm-bn.bn-ink .botnav { --lg-pill: linear-gradient(180deg, rgb(255 255 255 / .75), rgb(255 255 255 / .3)), rgb(15 23 42 / .06); }
+.shell.adm-bn.bn-ink .botnav { --lg-pill: linear-gradient(180deg, rgb(255 255 255 / .45), rgb(255 255 255 / .05)), rgb(15 23 42 / .12); }
+html:not([data-theme="dark"]) .shell.adm-bn.bn-ink .botnav .botnav-pill i { box-shadow: 0 0 0 .5px rgb(15 23 42 / .1) inset, 0 3px 10px -5px rgb(15 23 42 / .3) !important; }
 html .shell.adm-bn.bn-ink .botnav .botnav-b.on, html .shell.adm-bn.bn-ink .botnav .botnav-b.hov { color: #2a2d33 !important; }
 html[data-theme="dark"] .shell.adm-bn.bn-ink .botnav .botnav-b.on, html[data-theme="dark"] .shell.adm-bn.bn-ink .botnav .botnav-b.hov { color: #fff !important; }
+
+/* 6.11.2026 telefonda kalıp örnekleri: 'Örnek:' + 5 örnek TEK satırda, sığmazsa yazı küçülür */
+@media (max-width: 700px) {
+  .kf-ex.kf-ex { flex-wrap: nowrap; height: auto; overflow: visible; gap: 4px; justify-content: space-between; font-size: min(12px, 2.8vw); }
+  .kf-ex.kf-ex > span { display: inline; flex: none; font-size: inherit; }
+  .kf-ex.kf-ex button { flex: none; padding: 4px min(6px, 1.4vw); font-size: inherit; white-space: nowrap; }
+}
+@media (min-width: 701px) { .kf-hero:not(.pq-hero) .kf-ex { flex-wrap: nowrap; gap: 5px; } .kf-hero:not(.pq-hero) .kf-ex button { white-space: nowrap; flex: none; padding: 5px 10px; font-size: 12.5px; } }
