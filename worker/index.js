@@ -430,8 +430,20 @@ async function pushOne(env, sub, data) {
   return r.status;
 }
 const PUSH_TEXTS = { confirmed: 'Siparişiniz onaylandı.', preparing: 'Siparişiniz hazırlanıyor.', shipped: 'Siparişiniz kargoya verildi.', ready: 'Siparişiniz hazır, dükkândan teslim alabilirsiniz.', done: 'Siparişiniz teslim edildi. Teşekkür ederiz!', cancelled: 'Siparişiniz iptal edildi.' };
+// Firestore okuma: geçici hata (429 / 5xx / ağ) olursa kısa aralıkla 2 kez daha dener; son durum kodu fsLast'ta kalır
+// (sipariş hatasında müşteriye/Telegram'a kodla gösterilir → 6.11.2026 gece 'Katalog okunamadı' sebebi görünmüyordu).
+let fsLast = 0;
+async function fsGet(url, init) {
+  let r = null;
+  for (let i = 0; i < 3; i++) {
+    try { r = await fetch(url, init); fsLast = r.status; } catch (e) { r = null; fsLast = 'ağ'; }
+    if (r && (r.ok || (r.status !== 429 && r.status < 500))) return r;
+    await new Promise((ok) => setTimeout(ok, 250 * (i + 1)));
+  }
+  return r || { ok: false, status: fsLast };
+}
 async function fsDoc(path) {
-  const r = await fetch(FS + path); if (!r.ok) return null;
+  const r = await fsGet(FS + path); if (!r.ok) return null;
   const doc = await r.json(); return Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
 }
 // Aboneliği listeye ekle — SADECE değiştiyse yaz (ücretsiz KV günde 1.000 yazma; her sayfa açılışında her sipariş için
@@ -493,7 +505,7 @@ async function pushStatus(env, id, test) {
 // Abonelik: yönetici panelden açar; kimliği Firebase oturum anahtarıyla (ID token) Firestore'dan users/{uid}.role okunarak doğrulanır.
 const tokUid = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).user_id || ''; } catch { return ''; } };
 async function fsAuth(path, tok) {
-  const r = await fetch(FS + path, { headers: { Authorization: 'Bearer ' + tok } }); if (!r.ok) return null; // Firestore anahtarı kendisi doğrular
+  const r = await fsGet(FS + path, { headers: { Authorization: 'Bearer ' + tok } }); if (!r.ok) return null; // Firestore anahtarı kendisi doğrular
   const doc = await r.json(); return Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
 }
 async function adminSub(env, b) {
@@ -1224,7 +1236,7 @@ const ORD_FIELDS = ['contact', 'delivery', 'invoice', 'pay', 'note', 'legal'];
 const ORD_PAYS = ['havale', 'card', 'shop'];
 let pubCache = null; // { v, map: Map(id → ürün) } — aynı Worker örneğinde katalog sürümü değişmedikçe tekrar okunmaz
 async function pubPrices() {
-  const meta = await fsDoc('pubcatalog/_meta'); if (!meta) throw new Error('Katalog okunamadı');
+  const meta = await fsDoc('pubcatalog/_meta'); if (!meta) throw new Error('Katalog okunamadı (' + fsLast + ')');
   if (pubCache && pubCache.v === meta.version) return pubCache.map;
   const parts = await Promise.all(Array.from({ length: Number(meta.chunks) || 1 }, (_, i) => fsDoc('pubcatalog/c' + i)));
   const map = new Map();
@@ -1259,7 +1271,7 @@ async function placeOrder(req, env, b, ctx) {
   let uid = null;
   if (o.uid && !b.check) {
     const tok = bearer(req); uid = tokUid(tok);
-    if (!uid || uid !== o.uid || !(await fsAuth('members/' + uid, tok))) return { ok: false, code: 'auth', error: 'Oturum doğrulanamadı, yeniden giriş yapın' };
+    if (!uid || uid !== o.uid || !(await fsAuth('members/' + uid, tok))) return { ok: false, code: 'auth', error: 'Oturum doğrulanamadı, yeniden giriş yapın (' + fsLast + ')' };
   }
   const list = Array.isArray(o.items) ? o.items : [];
   if (!list.length || list.length > 300) return { ok: false, error: 'Sepet boş ya da çok büyük' };

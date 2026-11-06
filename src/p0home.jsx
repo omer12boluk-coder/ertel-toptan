@@ -9,7 +9,7 @@ import { BG_BY } from './presets.js';
 import { feat } from './extras.jsx';
 import { liveSets, setView, openSet, SetCover } from './sets.jsx';
 import { useBrandList, openBrand } from './brandsets.jsx';
-import { ShopImg, CtaButton, isProdImg, PCard, DesignCtx } from './shophome.jsx';
+import { ShopImg, CtaButton, isProdImg, PCard, DesignCtx, CardAdd } from './shophome.jsx';
 import { loadPhones, mergePhones, searchPhones, short, useStencils, matchStencils } from './kalipfind.jsx';
 import { useTree, useVisibleProducts } from './catalog.jsx';
 
@@ -212,12 +212,7 @@ function P0Head({ eye, title, more }) {
 // ---- 5 · Tamircinin seçimi: bir büyük + dört küçük. Ürünleri yönetici seçer (pick.ids); boşsa öne çıkanlar → yeni gelenler
 function usePrice() { const S = useStore((s) => s.settings); const user = useStore((s) => s.user); const up = useStore((s) => s.userPrices); return (p) => { const pr = priceFor(p, S, user, up); return pr.mine == null ? 'Fiyat sorun' : fmt(pr.mine, p.cur); }; }
 // sepete ekleyince − 1 + adet seçici (kartlardaki gibi)
-function Add({ p, big }) {
-  const q = useStore((s) => s.cart[p.id] || 0);
-  const stop = (e) => e.stopPropagation();
-  if (q > 0) return <span className={'p0-qty' + (big ? ' big' : '')} onClick={stop}><Stepper value={q} onChange={(v) => setQty(p.id, v)} onRemove={() => setQty(p.id, 0)} /></span>;
-  return <button type="button" className="p0-add" onClick={(e) => { stop(e); setQty(p.id, 1); toast('Sepete eklendi'); }}><Icon n="plus" s={15} />Sepete ekle</button>;
-}
+const Add = ({ p, big }) => <span className={'p0-addw' + (big ? ' big' : '')}><CardAdd p={p} /></span>;
 export function P0Pick({ S, onProduct }) {
   const C = p0of(S.shopHome).pick || {};
   const byId = useStore((s) => s.byId); const vis = useVisibleProducts(false);

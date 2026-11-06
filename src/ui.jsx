@@ -285,19 +285,28 @@ export function Avatar({ u, size = 40 }) {
 // çöp ⇄ − geçişi ve sayının artıp azalması hafif animasyonlu
 // lock: sadece − / + düğmeleri (sayı elle yazılamaz); max: üst sınır
 export function Stepper({ value, onChange, min = 0, max = Infinity, small, onRemove, lock }) {
-  const [txt, setTxt] = useState(String(value));
+  // Yazı alanı her değişimde yeniden oluşturulmaz (eskiden key={value}: iPhone yeni alanı geç çiziyordu, sayı altta ~1 sn donup
+  // yerine oturuyordu). Aynı alan Web Animations ile kısa kayar; düzenlerken (odaktayken) yazılan metin gösterilir.
+  const [txt, setTxt] = useState(String(value)); const [edit, setEdit] = useState(false);
   useEffect(() => setTxt(String(value)), [value]);
-  const prev = useRef(value); const [dir, setDir] = useState('');
-  useEffect(() => { if (value !== prev.current) setDir(value > prev.current ? 'up' : 'down'); prev.current = value; }, [value]);
+  const prev = useRef(value); const inp = useRef(null);
+  useLayoutEffect(() => {
+    const was = prev.current; prev.current = value; const el = inp.current;
+    if (was === value || !el?.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const y = value > was ? 5 : -5;
+    el.getAnimations?.().forEach((a) => a.id === 'st' && a.cancel());
+    const a = el.animate([{ transform: `translate3d(0,${y}px,0)`, opacity: 0.3 }, { transform: 'translate3d(0,0,0)', opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.22,1,.36,1)' }); a.id = 'st';
+  }, [value]);
   const del = !!onRemove && value <= Math.max(min, 1);
   return (
     <div className={'stepper' + (small ? ' sm' : '')}>
       <button type="button" className={'st-minus' + (del ? ' is-del' : '')} onClick={() => (del ? onRemove() : onChange(Math.max(min, value - 1)))} aria-label={del ? 'Sepetten çıkar' : 'Azalt'} title={del ? 'Sepetten çıkar' : undefined}>
         {onRemove ? <span className="st-ic" aria-hidden="true"><Icon n="minus" s={16} className="st-i-m" /><Icon n="trash" s={15} className="st-i-t" /></span> : <Icon n="minus" s={16} />}
       </button>
-      <input key={value} className={dir ? 'st-' + dir : undefined} inputMode="numeric" value={txt} aria-label="Adet" readOnly={lock} tabIndex={lock ? -1 : undefined}
+      <input ref={inp} inputMode="numeric" value={edit ? txt : String(value)} aria-label="Adet" readOnly={lock} tabIndex={lock ? -1 : undefined}
+        onFocus={() => { setTxt(String(value)); setEdit(true); }}
         onChange={(e) => setTxt(e.target.value.replace(/\D/g, ''))}
-        onBlur={() => onChange(Math.min(max, Math.max(min, Number(txt) || 0)))}
+        onBlur={() => { setEdit(false); const v = Math.min(max, Math.max(min, Number(txt) || 0)); if (v !== value) onChange(v); }}
         onKeyDown={(e) => e.key === 'Enter' && e.target.blur()} />
       <button type="button" disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))} aria-label="Arttır"><Icon n="plus" s={16} /></button>
     </div>
