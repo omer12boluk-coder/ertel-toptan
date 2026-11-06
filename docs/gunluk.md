@@ -123,3 +123,4 @@ Kullanıcı: "ürün adını yazayım (ör. 2uul da 88), etiketleri benim tarzı
 - Onay: `ProductEdit` taslak modu (banner + kaynaklar + 'Başka sayfadan resim al'), dış adresli resimler `/ai/pic` üzerinden indirilip `uploadImage` ile R2'ye.
 - Kurulum: GitHub Secrets'a `ANTHROPIC_KEY` (console.anthropic.com) → main'e birleşince `worker.yml` gizli ayarı yükler. Anahtar yoksa ücretsiz Workers AI (web araması yok, sonuç zayıf).
 - Not: ücretsiz Workers planında 10 ms CPU sınırı büyük sayfa ayrıştırmada aşılabilir → Workers Paid önerilir.
+- 6.11 (2): kullanıcı: 'durduk yere sorgu yapmasın', 'çamur lehim gibi yanlış yazanları da yakalasın', ayda en çok 30-35 ürün ekliyor. → sınır 20/gün 60/ay, max_uses 4, yarıda kalan iş 'err', istemde argo/yanlış yazım bölümü + vocab. Tahmini maliyet ürün başına ~0,10–0,30 $ (Sonnet 3$/15$ + arama 0,01 $), ayda ~5–10 $.

@@ -9,7 +9,8 @@
 //  GET  /ai/pic?u=<resim adresi> → resmin kendisi (tarayıcı CORS'a takılmadan R2'ye yüklemek için)
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
-const DAY_LIMIT = 80; // günde en çok taslak (yanlışlıkla döngüye girip para yakmasın)
+// Sadece yönetici 'Hazırla'ya basınca çalışır (zamanlanmış/otomatik sorgu YOK). Para yakmasın diye sınır:
+const DAY_LIMIT = 20, MONTH_LIMIT = 60;
 
 // Bilinen marka mağazaları (çoğu Shopify: /search/suggest.json + /products/<ad>.js ile resimler temiz gelir)
 // (diğerleri panelden: Ayarlar › Akıllı ürün ekle › Marka siteleri)
@@ -21,11 +22,13 @@ export async function aiRoute(req, env, url, adminOf, json) {
   const b = await req.json().catch(() => ({}));
   if (url.pathname === '/ai/pics') return json({ ok: true, imgs: await pageImages(String(b.url || '')) });
   if (url.pathname === '/ai/draft') {
-    const day = new Date().toISOString().slice(0, 10); const ck = 'aiday:' + day;
-    const used = Number((await env.KV.get(ck)) || 0);
+    const day = new Date().toISOString().slice(0, 10); const ck = 'aiday:' + day, mk = 'aimon:' + day.slice(0, 7);
+    const used = Number((await env.KV.get(ck)) || 0), mon = Number((await env.KV.get(mk)) || 0);
     if (used >= DAY_LIMIT) return json({ ok: false, error: `Bugünkü sınır doldu (${DAY_LIMIT} ürün). Yarın tekrar deneyin.` });
+    if (mon >= MONTH_LIMIT) return json({ ok: false, error: `Bu ayın sınırı doldu (${MONTH_LIMIT} ürün).` });
     await env.KV.put(ck, String(used + 1), { expirationTtl: 172800 });
-    try { return json({ ok: true, draft: await makeDraft(env, b), left: DAY_LIMIT - used - 1 }); }
+    await env.KV.put(mk, String(mon + 1), { expirationTtl: 40 * 86400 });
+    try { return json({ ok: true, draft: await makeDraft(env, b), left: Math.min(DAY_LIMIT - used, MONTH_LIMIT - mon) - 1 }); }
     catch (e) { return json({ ok: false, error: String(e.message || e).slice(0, 300) }); }
   }
   return json({ ok: false, error: 'bulunamadı' }, 404);
@@ -40,7 +43,8 @@ async function makeDraft(env, b) {
   const cats = (Array.isArray(b.cats) ? b.cats : []).slice(0, 400);
   const brands = (Array.isArray(b.brands) ? b.brands : []).slice(0, 400);
   const ex = (Array.isArray(b.ex) ? b.ex : []).slice(0, 3);
-  const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''));
+  const vocab = (Array.isArray(b.vocab) ? b.vocab : []).slice(0, 6).map((x) => String(x).slice(0, 1500));
+  const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''), vocab);
   let out, sources = [], engine;
   if (env.ANTHROPIC_KEY) { engine = 'claude'; ({ out, sources } = await askClaude(env, prompt)); }
   else if (env.AI) { engine = 'cf'; out = await askCf(env, prompt); }
@@ -67,7 +71,7 @@ async function makeDraft(env, b) {
   };
 }
 
-function buildPrompt(name, cats, brands, ex, hint) {
+function buildPrompt(name, cats, brands, ex, hint, vocab = []) {
   const exTxt = ex.map((e, i) => `ÖRNEK ${i + 1}\nAd: ${e.n}\nEtiketler: ${e.t}\nAçıklama HTML:\n${String(e.d || '').slice(0, 2500)}`).join('\n\n');
   return `Sen ERTEL GSM'in (İstanbul Tahtakale, cep telefonu tamir ekipmanı ve yedek parça toptancısı) ürün giriş asistanısın.
 Yönetici şu ürünü eklemek istiyor: "${name}"${hint ? `\nEk bilgi: ${hint}` : ''}
@@ -78,6 +82,12 @@ Görevin:
 3) Marka: listede varsa AYNI yazımla seç, yoksa resmi yazımı büyük harfle.
 4) Kategori: aşağıdaki listeden en uygun kategori numarasını (cat) ve varsa ikinci kategoriyi (cat2, yoksa null) seç.
 5) Gizli arama etiketleri (tags): örneklerdeki tarzda 35-60 etiket. Her kelimenin ilk harfi büyük. Sırayla: marka ve model yazım çeşitleri (birleşik, boşluklu, tireli: Pw35, Pw 35, Pw-35), Türkçe ürün adları ve eş anlamlıları, Türkçe karaktersiz yazımları (Hoparlör/Hoparlor), İngilizce adları, uyumlu cihaz modelleri, ölçüler, "… Fiyat", sonra 4-6 adet soru şeklinde uzun arama cümlesi (… Nasıl …, … Ne İşe Yarar), en sonda "<Marka> <Model> Türkiye Satıcısı". Etiketlerde virgül olmasın.
+   ÇOK ÖNEMLİ — müşteriler aramada ürünü yanlış / halk ağzıyla / argo adıyla yazıyor. Etiketlerin en az üçte biri bunlara ayrılsın:
+   · tamirci argosu ve halk ağzı adlar (ör. sıvı lehim → Çamur Lehim, Krem Lehim, Macun Lehim, Lehim Pastası; flux → Flaks, Fluks, Lehim Yağı; lehim teli → Tel Lehim; ısı tabancası → Sıcak Hava, Hava Tabancası, Fön),
+   · Türkçe karaktersiz ve yanlış harfli yazımlar (ş→s, ı→i, ö→o, ü→u, ğ→g, ç→c; harf atlama/çiftleme/yer değiştirme: Lehm, Leihm, Mikroskop→Mikroskob/Mikroskp),
+   · İngilizcenin kulaktan yazımı (Flux→Flaks, Solder→Soldır, Screen→Sikrin, Booster→Buster), birleşik/ayrık yazım,
+   · model kodunun hatalı yazımları (DA88 → Da 88, Da-88, D88, Da8, Daa88).
+   Aşağıdaki "mevcut etiket sözlüğü"nde mağazanın zaten kullandığı yanlış yazım ve argo kalıpları varsa bunları da kullan.
 6) Açıklama (desc): örneklerdeki HTML yapısıyla, Türkçe, satış dili sade ve teknisyene hitap eden: 2 kısa paragraf (<p dir="ltr">), <p dir="ltr"><strong>Özellikler</strong></p> + <ul dir="ltr"><li>…</li></ul>, <p dir="ltr"><strong>Teknik Özellikler</strong></p> + <table><thead><tr><th scope="col">Özellik</th><th scope="col">Değer</th></tr></thead><tbody>…</tbody></table>, biliniyorsa <p dir="ltr"><strong>Kutu İçeriği</strong></p> + liste. Resim, video, link, iframe KOYMA.
 7) pages: ürünün resimlerinin bulunduğu EN İYİ 1-5 ürün sayfası adresi (resmi site ürün sayfası, AliExpress ürün sayfası…). Arama sonucu / kategori sayfası değil, tek ürün sayfası.
 
@@ -85,6 +95,7 @@ Kategori listesi (numara: yol):
 ${cats.map(([id, p]) => `${id}: ${p}`).join('\n')}
 
 Mevcut markalar: ${brands.join(', ')}
+${vocab.length ? `\nMevcut etiket sözlüğü (benzer ürünlerden; tarz ve yanlış yazım kalıpları için):\n${vocab.map((v, i) => `${i + 1}) ${v}`).join('\n')}\n` : ''}
 
 ${exTxt}
 
@@ -94,7 +105,7 @@ Cevabın SADECE şu JSON olsun, <json> ve </json> arasında:
 
 async function askClaude(env, prompt) {
   const model = env.AI_MODEL || 'claude-sonnet-5-5';
-  const tools = [{ type: env.AI_SEARCH_TOOL || 'web_search_20250305', name: 'web_search', max_uses: 6 }];
+  const tools = [{ type: env.AI_SEARCH_TOOL || 'web_search_20250305', name: 'web_search', max_uses: 4 }];
   let messages = [{ role: 'user', content: prompt }];
   const sources = []; let text = '';
   for (let turn = 0; turn < 4; turn++) {
