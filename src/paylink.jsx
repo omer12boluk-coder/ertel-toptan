@@ -142,7 +142,6 @@ export function PayLinkPage() {
                 <a className="btn sm wa" href={waLink('', waText(made.link, made.total, f.title.trim()))} target="_blank" rel="noopener"><Icon n="wa" s={15} />WhatsApp’ta gönder</a>
                 <button className="btn sm outline" onClick={() => copyText(made.link, 'Link kopyalandı')}><Icon n="copy" s={15} />Linki kopyala</button>
                 <a className="btn sm ghost" href={made.link} target="_blank" rel="noopener"><Icon n="eye" s={15} />Müşteri gibi aç</a>
-                <a className="btn sm ghost" href={made.link + '?demo=1'} target="_blank" rel="noopener"><Icon n="card" s={15} />Demo kartla dene</a>
               </div>
             </div>
           )}
@@ -230,7 +229,7 @@ export function PayLinkView({ id }) {
   if (p === undefined) return <div className="page pl-view"><div className="pl-vcard pl-load"><span className="spin" /><p className="fine">Ödeme bilgisi yükleniyor…</p></div></div>;
   if (!p) return <div className="page pl-view"><div className="pl-vcard"><Empty icon="card" title="Ödeme linki bulunamadı">Link hatalı ya da silinmiş olabilir. {wa ? 'Bize WhatsApp’tan yazabilirsiniz.' : ''}</Empty>{wa && <a className="btn wa" href={waLink(wa, 'Merhaba, ödeme linkim açılmıyor.')} target="_blank" rel="noopener"><Icon n="wa" s={17} />WhatsApp’tan yazın</a>}</div></div>;
   const paid = p.status === 'paid', cancel = p.status === 'cancel';
-  if (DEMO_PAY && !paid && !cancel) return <div className="page pl-view"><DemoPay p={p} shop={shop} /></div>;
+  if (DEMO_PAY && !paid && !cancel) return <div className="page pl-view"><DemoPay p={p} shop={shop} wa={wa} /></div>;
   return (
     <div className="page pl-view">
       <div className={'pl-vcard' + (paid ? ' paid' : cancel ? ' cancel' : '')}>
@@ -259,8 +258,9 @@ export function PayLinkView({ id }) {
 // ============================================================================================
 // Demo kartla ödeme (sadece ?demo=1 ile açılan linkte; müşteriye giden linkte YOK): kart formu → 3D doğrulama → sonuç.
 // Hiçbir şey kaydedilmez, kart bilgisi hiçbir yere gönderilmez. Sanal POS bağlanınca aynı akış bekçi + banka sayfasıyla çalışacak.
-const DEMO_PAY = (() => { try { return new URLSearchParams(location.search).has('demo'); } catch { return false; } })();
-function DemoPay({ p, shop }) {
+// 6.11.2026 kullanıcı: müşteriye giden linkte de olsun → herkese açık; sonuç ekranı 'ödeme ALINMADI' der (müşteri ödedim sanmasın).
+const DEMO_PAY = true;
+function DemoPay({ p, shop, wa }) {
   const [step, setStep] = useState('sum'); // sum → card → 3d → done
   const [card, setCard] = useState({ num: '', name: '', exp: '', cvv: '', n: 1 });
   const [err, setErr] = useState({});
@@ -275,13 +275,15 @@ function DemoPay({ p, shop }) {
   const confirm3d = () => { if (code.length < 6) return; setBusy(true); setTimeout(() => { setBusy(false); setStep('done'); }, 900); };
   return (
     <div className="pl-vcard pl-demo">
-      <span className="pl-demo-tag"><Icon n="shield" s={13} />Demo · gerçek çekim yapılmaz, hiçbir şey kaydedilmez</span>
+      <span className="pl-demo-tag"><Icon n="shield" s={13} />Deneme sürümü · gerçek ödeme alınmaz, kart bilgisi hiçbir yere gönderilmez</span>
       {step === 'done' ? <>
         <span className="pl-v-ic ok"><Icon n="check" s={24} /></span>
-        <p className="pl-v-k">{shop} · Ödeme</p>
-        <h1 className="pl-v-t">Ödemeniz alındı</h1>
-        <div className="pl-v-amt"><span>Çekilen tutar</span><b className="num">{tl2(p.total)}</b><small>{BRAND[out.brand] || 'Kart'} •••• {out.last4} · Tek çekim</small></div>
-        <p className="fine">Gerçekte bu adımda bankadan onay gelir, link "Ödendi" olur ve size Telegram + panel bildirimi düşer. Demoda bunların hiçbiri yapılmadı.</p>
+        <p className="pl-v-k">{shop} · Demo ödeme</p>
+        <h1 className="pl-v-t">Demo tamamlandı</h1>
+        <div className="pl-v-amt"><span>Deneme tutarı</span><b className="num">{tl2(p.total)}</b><small>{BRAND[out.brand] || 'Kart'} •••• {out.last4} · Tek çekim</small></div>
+        <p className="pl-v-st bad"><Icon n="x" s={16} />Gerçek ödeme ALINMADI, kartınızdan para çekilmedi.</p>
+        <p className="fine">Kartla ödeme çok yakında açılacak. Şimdilik ödeme için bize ulaşabilirsiniz.</p>
+        {wa && <a className="btn wa pl-v-wa" href={waLink(wa, `Merhaba, ${tl2(p.total)} tutarındaki ödeme linkim${p.title ? ' (' + p.title + ')' : ''} için yazıyorum.`)} target="_blank" rel="noopener"><Icon n="wa" s={17} />WhatsApp’tan yazın</a>}
         <button className="btn outline pl-v-wa" onClick={() => { setStep('sum'); setCode(''); }}><Icon n="undo" s={16} />Baştan dene</button>
       </> : step === '3d' ? <>
         <div className="pl-3d">
