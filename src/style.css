@@ -8236,3 +8236,5 @@ html[data-theme="dark"] .pl-demo-tag { color: #e6a466; }
 .pl-3d p { margin: 0; } .pl-3d small { color: var(--muted); }
 .pl-3d-in { width: 180px; height: 52px; text-align: center; font-size: 24px; letter-spacing: .4em; font-variant-numeric: tabular-nums; border-radius: 14px; }
 .pl-3d-n { margin: 10px 0 0; }
+.pl-3d-bad { display: flex; align-items: center; gap: 6px; margin: 0; color: #b3261e; font-weight: 600; font-size: 14px; }
+.pl-demo-n { font-size: 12px; opacity: .85; }

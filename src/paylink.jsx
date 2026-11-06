@@ -260,37 +260,43 @@ export function PayLinkView({ id }) {
 // Hiçbir şey kaydedilmez, kart bilgisi hiçbir yere gönderilmez. Sanal POS bağlanınca aynı akış bekçi + banka sayfasıyla çalışacak.
 // 6.11.2026 kullanıcı: müşteriye giden linkte de olsun → herkese açık; sonuç ekranı 'ödeme ALINMADI' der (müşteri ödedim sanmasın).
 const DEMO_PAY = true;
+// !!! GEÇİCİ DEMO KODU — SANAL POS BAĞLANINCA KALDIR !!! (CLAUDE.md §10 'Claude'un yapacakları' maddesinde yazılı)
+// 3D doğrulama ekranında sadece bu kod "ödeme başarılı" der; başka kod "Kod hatalı". Kaldırmak için: DEMO_PAY = false yap,
+// DemoPay bileşenini ve DEMO_OTP'yi sil (gerçek akışta SMS ekranı bankanındır, bizde kod kontrolü OLMAZ).
+const DEMO_OTP = '111111';
 function DemoPay({ p, shop, wa }) {
   const [step, setStep] = useState('sum'); // sum → card → 3d → done
   const [card, setCard] = useState({ num: '', name: '', exp: '', cvv: '', n: 1 });
   const [err, setErr] = useState({});
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [bad, setBad] = useState('');
   const out = cardOut(card);
   const go3d = () => {
     const e = cardErrors(card); setErr(e);
     if (Object.keys(e).length) { document.getElementById(Object.keys(e)[0].replace(/^c/, 'co-c'))?.focus(); return; }
     setBusy(true); setTimeout(() => { setBusy(false); setStep('3d'); }, 700);
   };
-  const confirm3d = () => { if (code.length < 6) return; setBusy(true); setTimeout(() => { setBusy(false); setStep('done'); }, 900); };
+  const confirm3d = () => { if (code.length < 6) return; setBad(''); setBusy(true); setTimeout(() => { setBusy(false); if (code === DEMO_OTP) setStep('done'); else { setBad('Doğrulama kodu hatalı, tekrar deneyin.'); setCode(''); } }, 900); };
   return (
     <div className="pl-vcard pl-demo">
       <span className="pl-demo-tag"><Icon n="shield" s={13} />Deneme sürümü · gerçek ödeme alınmaz, kart bilgisi hiçbir yere gönderilmez</span>
       {step === 'done' ? <>
         <span className="pl-v-ic ok"><Icon n="check" s={24} /></span>
-        <p className="pl-v-k">{shop} · Demo ödeme</p>
-        <h1 className="pl-v-t">Demo tamamlandı</h1>
-        <div className="pl-v-amt"><span>Deneme tutarı</span><b className="num">{tl2(p.total)}</b><small>{BRAND[out.brand] || 'Kart'} •••• {out.last4} · Tek çekim</small></div>
-        <p className="pl-v-st bad"><Icon n="x" s={16} />Gerçek ödeme ALINMADI, kartınızdan para çekilmedi.</p>
-        <p className="fine">Kartla ödeme çok yakında açılacak. Şimdilik ödeme için bize ulaşabilirsiniz.</p>
+        <p className="pl-v-k">{shop} · Ödeme</p>
+        <h1 className="pl-v-t">Ödeme başarılı</h1>
+        <div className="pl-v-amt"><span>Çekilen tutar</span><b className="num">{tl2(p.total)}</b><small>{BRAND[out.brand] || 'Kart'} •••• {out.last4} · Tek çekim</small></div>
+        <p className="pl-v-st ok"><Icon n="check" s={16} />Teşekkür ederiz, ödemeniz onaylandı.</p>
+        <p className="fine pl-demo-n">Bu bir deneme ödemesidir: kartınızdan para çekilmedi. Gerçek ödeme için bize ulaşabilirsiniz.</p>
         {wa && <a className="btn wa pl-v-wa" href={waLink(wa, `Merhaba, ${tl2(p.total)} tutarındaki ödeme linkim${p.title ? ' (' + p.title + ')' : ''} için yazıyorum.`)} target="_blank" rel="noopener"><Icon n="wa" s={17} />WhatsApp’tan yazın</a>}
-        <button className="btn outline pl-v-wa" onClick={() => { setStep('sum'); setCode(''); }}><Icon n="undo" s={16} />Baştan dene</button>
+        <button className="btn outline pl-v-wa" onClick={() => { setStep('sum'); setCode(''); setBad(''); }}><Icon n="undo" s={16} />Baştan dene</button>
       </> : step === '3d' ? <>
         <div className="pl-3d">
           <div className="pl-3d-h"><b>Demo Bank</b><span>3D Secure</span></div>
           <p>Ödeme tutarı <b className="num">{tl2(p.total)}</b><br /><small>{shop} · {BRAND[out.brand] || 'Kart'} •••• {out.last4}</small></p>
-          <p className="fine">Telefonunuza gelen 6 haneli doğrulama kodunu girin. <b>Demo:</b> herhangi 6 rakam yazın.</p>
-          <input className="pl-3d-in" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} autoFocus />
+          <p className="fine">Telefonunuza gelen 6 haneli doğrulama kodunu girin. <b>Deneme kodu:</b> 111111</p>
+          {bad && <p className="pl-3d-bad"><Icon n="x" s={14} />{bad}</p>}
+          <input className="pl-3d-in" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="••••••" value={code} onChange={(e) => { setBad(''); setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); }} autoFocus />
           <button className="btn primary pl-v-pay" disabled={busy || code.length < 6} onClick={confirm3d}>{busy ? 'Doğrulanıyor…' : 'Onayla'}</button>
           <button className="btn ghost sm" onClick={() => setStep('card')}>Vazgeç</button>
         </div>

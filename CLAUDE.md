@@ -227,6 +227,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 **Claude'un yapacakları:**
 10. Blaze günü: sahte harcama denemesi düğmesi, Firebase App Check, hızlı kota bekçisi (Monitoring okuma sayısı), gerekirse Cloudflare hız sınırı.
+10b. **Sanal POS bağlanınca demo kartı KALDIR:** `src/paylink.jsx` `DEMO_PAY = false` + `DemoPay` bileşeni ve `DEMO_OTP = '111111'` (3D ekranında 'başarılı' deneme kodu) silinir; müşteri linkine gerçek ödeme bağlanır.
 11. Sipariş e-postasını Resend'den Cloudflare Email Service'e taşı ('en son döneriz').
 12. Resend 'verified' kontrolü.
 13. WhatsApp bilgilendirme (Meta Cloud API, kargoya verildi / teslim edildi) — önce Meta işletme doğrulaması.
