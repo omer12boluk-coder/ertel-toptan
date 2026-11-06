@@ -158,7 +158,7 @@ export function BrandWall({ max, logosOnly }) {
   const all = useBrandList();
   const list = (logosOnly ? all.filter((b) => b.logo) : all).slice(0, max || 999);
   return <div className="cd-bwall">{list.map((b) => (
-    <button key={b.n} type="button" className="cd-bw" onClick={() => openBrand(b.n)} title={b.n}>
+    <button key={b.n} type="button" className="cd-bw" style={b.color ? { '--bc': b.color } : undefined} onClick={() => openBrand(b.n)} title={b.n}>
       <span className="cd-bw-lg">{b.logo ? <ShopImg v={b.logo} alt={b.n} /> : <b>{b.n}</b>}</span>
       <small>{b.c} ürün</small>
     </button>))}</div>;
@@ -218,7 +218,8 @@ export function CdRail({ sec, open, onProduct, edit }) {
 }
 
 // ---- Ürünler açılış sayfası (look.cd + look.prodHub): kapaklı kategori kartları + Tüm ürünler + marka duvarı (7.11.2026 (3)) ----
-// Kapaklar: Claude'un hazırladığı fotoğraflar hosting/public/bn/cat-<id>.webp; kullanıcının seçtiği kapak (shopHome.p0catImg) her zaman önce.
+// Kapaklar: Claude'un hazırladığı fotoğraflar hosting/public/bn/cat-<id>.webp ÖNCE (7.11.2026 (4) kullanıcı: kendi resimlerim çirkin); kapağı olmayan kategoride kullanıcının seçtiği (shopHome.p0catImg).
+// 'Tüm ürünler' artık ayrı büyük kart değil, ızgaranın ilk kartı (ilk 4 kapaktan kolaj) → 7 kategori + 1 = boşluksuz 4'lü/2'li ızgara.
 export const CAT_COVERS = { 42: '/bn/cat-42.webp', 31: '/bn/cat-31.webp', 6: '/bn/cat-6.webp', 14: '/bn/cat-14.webp', 3: '/bn/cat-3.webp', 5: '/bn/cat-5.webp', 24: '/bn/cat-24.webp' };
 export function CdHub({ onAll, total }) {
   const H = useStore((s) => s.settings.shopHome) || {}; const C = H.p0?.hub || {};
@@ -227,11 +228,12 @@ export function CdHub({ onAll, total }) {
   return (
     <div className="cd-hub">
       <header className="cd-head"><div><span className="cd-eye">{C.eye ?? 'Ürünler'}</span><h2 className="cd-hub-t">{C.title || 'Ne arıyorsun?'}</h2></div></header>
-      <button type="button" className="cd-hub-all" onClick={onAll}>
-        <span className="cd-hub-all-t"><b>Tüm ürünler</b><small>{total} ürün · ara, süz, sırala</small></span>
-        <span className="cd-pill">Tüm ürünleri gör</span>
-      </button>
-      <div className="cd-cats">{tiles.map((c) => { const cov = c.img || CAT_COVERS[c.id]; return (
+      <div className="cd-cats">
+        <button type="button" className="cd-cat all" onClick={onAll}>
+          <span className="cd-cat-im all">{tiles.slice(0, 4).map((c) => { const cov = CAT_COVERS[c.id] || c.img; return <span key={c.id}>{cov ? <ShopImg v={cov} alt="" /> : c.p && <Thumb p={c.p} size="md" />}</span>; })}</span>
+          <span className="cd-cat-t"><b>Tüm ürünler</b><small>{total} ürün</small></span>
+        </button>
+        {tiles.map((c) => { const cov = CAT_COVERS[c.id] || c.img; return (
         <button key={c.id} type="button" className="cd-cat" onClick={() => open(c.id)}>
           <span className={'cd-cat-im' + (cov ? ' cov' : '')}>{cov ? <ShopImg v={cov} alt={c.name} /> : c.p && <Thumb p={c.p} size="md" />}</span>
           <span className="cd-cat-t"><b>{c.name}</b><small>{c.n} ürün</small></span>

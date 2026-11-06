@@ -139,8 +139,10 @@ function Wide({ b, W, H, act, br }) {
 function Phone({ b, H, act, br }) {
   const top = <div style={abs({ left: 0, right: 0, top: 30, padding: '0 24px', display: 'flex', justifyContent: 'center' })}><Txt b={b} m center act={act} br={br} w="100%" /></div>;
   const free = H - 225; // yazı bloğunun altında kalan yükseklik
-  if (b.id === 'quick861') { const s = Math.min(358, free + 64); return <><img src={IMG('q861-m.webp')} alt="Quick 861 Pro Max" style={abs({ left: (358 - s) / 2, bottom: -64 * (s / 358), width: s, height: s })} />{top}</>; }
-  if (b.id === 'zm6745') { const h = Math.min(340, free + 70); return <>{top}<img src={IMG('zm-front.webp')} alt="AmScope ZM6745T" style={abs({ left: '50%', bottom: -70 * (h / 340), height: h, width: 'auto', transform: 'translateX(-50%)' })} /></>; }
+  // 7.11.2026 (4): resim kutunun altından TAŞMAZ (eskiden eksi 'bottom' ile taşıyordu → iPhone'da yuvarlak köşeli kırpma kayarken titriyordu);
+  // alttaki parça object-fit ile resmin kendisinden kırpılır, görünüm aynı.
+  if (b.id === 'quick861') { const s = Math.min(358, free + 64); const v = s * (1 - 64 / 358); return <><img src={IMG('q861-m.webp')} alt="Quick 861 Pro Max" style={abs({ left: (358 - s) / 2, bottom: 0, width: s, height: v, objectFit: 'cover', objectPosition: '50% 0' })} />{top}</>; }
+  if (b.id === 'zm6745') { const h = Math.min(340, free + 70); const w = h * 760 / 1300; const v = h * (1 - 70 / 340); return <>{top}<img src={IMG('zm-front.webp')} alt="AmScope ZM6745T" style={abs({ left: (358 - w) / 2, bottom: 0, height: v, width: w, objectFit: 'cover', objectPosition: '50% 0' })} /></>; }
   if (b.id === 'hands') { const h = Math.min(300, free - 10); return <><img src={IMG('hands.webp')} alt="Mikroskop kafasını ayarlayan eller" style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: '50% 35%' })} />{top}</>; }
   if (b.id === 'ht316') { const w = Math.min(330, (free - 34) * 1.425); return <>{top}<img src={IMG('ht316.webp')} alt="Aixun HT316" style={abs({ left: (358 - w) / 2, bottom: 34, width: w, height: 'auto' })} /></>; }
   if (b.id === 'mech-pp2') { const h = Math.min(300, free - 10); return <><img src={IMG('mech-hand.webp')} alt="Mechanic Power Pro Max 2.0" style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: '62% 26%' })} />{top}</>; }

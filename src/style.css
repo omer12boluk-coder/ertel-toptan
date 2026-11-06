@@ -8549,7 +8549,7 @@ html[data-theme="dark"] .hd-p.hd-wide-p { background: #1e1f23 !important; }
 .p0-pan.pb-pan { padding: 0; cursor: default; background: transparent; }
 .sh-slide.pb-slide { display: block; padding: 0; background: transparent; }
 /* köşe: banner zemini kutunun köşesiyle birlikte kırpılır (alttaki zemin köşede sızıp koyu çizgi yapıyordu) */
-.pb-box { border-radius: inherit; }
+.pb-box { border-radius: inherit; isolation: isolate; -webkit-mask-image: -webkit-radial-gradient(white, black); }
 .pb-box .pb-cv img { user-select: none; -webkit-user-drag: none; pointer-events: none; }
 .pb-box button { -webkit-tap-highlight-color: transparent; transition: filter .2s, opacity .2s; }
 @media (hover: hover) { .pb-box .pb-b1:hover { filter: brightness(1.1); } .pb-box .pb-b2:hover { opacity: .75; } }
@@ -8979,8 +8979,77 @@ html[data-theme="dark"] .cd-sec .cd-tile .cd-tile-im .thumb img { background: tr
 .cd-big-im .thumb img, .cd-si .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .cd-big-im .thumb .thumb-ph, .cd-si .thumb .thumb-ph { position: absolute; inset: 0; display: grid; place-items: center; }
 @media (min-width: 900px) { .cd-big-im { place-items: center; } }
+
+/* 7.11.2026 (4) LOGO HİZASI: her logo dosyasının ASIL yazı bandı ölçüldü (tools: Claude, logoband) → yazı bantları aynı boyda ve
+   satırın ortasında; büyük simge / ® / alt yazı banttan taşar ama hizayı bozmaz. Çok geniş logolar biraz küçülür (görsel ağırlık).
+   --lk = görünen yükseklik / taban, --lc = dikey kaydırma, --ll = soldaki boşluğun atılması (taban birimiyle). Yeni logo eklenirse buraya satır. */
+img[src*="/brands/2uul."] { --lk: 1.645; --lc: -0.035; --ll: -0.047; }
+img[src*="/brands/aixun-dark."] { --lk: 1.055; --lc: -0.041; --ll: 0.000; }
+img[src*="/brands/aixun."] { --lk: 1.055; --lc: -0.041; --ll: 0.000; }
+img[src*="/brands/amaoe."] { --lk: 1.683; --lc: 0.006; --ll: 0.000; }
+img[src*="/brands/amscope."] { --lk: 1.333; --lc: -0.034; --ll: 0.000; }
+img[src*="/brands/jbc."] { --lk: 0.780; --lc: 0.000; --ll: 0.000; }
+img[src*="/brands/jcid."] { --lk: 1.627; --lc: 0.013; --ll: 0.000; }
+img[src*="/brands/luban."] { --lk: 2.347; --lc: 0.000; --ll: 0.000; }
+img[src*="/brands/mechanic-dark."] { --lk: 0.816; --lc: -0.004; --ll: 0.000; }
+img[src*="/brands/mechanic."] { --lk: 0.816; --lc: -0.004; --ll: 0.000; }
+img[src*="/brands/qianli."] { --lk: 1.149; --lc: -0.060; --ll: 0.000; }
+img[src*="/brands/quick."] { --lk: 1.373; --lc: -0.226; --ll: 0.000; }
+img[src*="/brands/relife."] { --lk: 0.923; --lc: 0.005; --ll: 0.000; }
+img[src*="/brands/rf4."] { --lk: 1.708; --lc: 0.139; --ll: 0.000; }
+img[src*="/brands/sunshine."] { --lk: 1.813; --lc: -0.026; --ll: 0.000; }
+img[src*="/brands/unit."] { --lk: 0.951; --lc: 0.000; --ll: 0.000; }
+img[src*="/brands/yihua."] { --lk: 1.091; --lc: 0.000; --ll: -0.078; }
+:is(.cd-t-lg .cd-lg, .cd-big .cd-lg, .cd-set-lg img, .cd-mq-i img, .cd-bw-lg img):not(.tx) { height: calc(var(--lh) * var(--lk, 1.25)) !important; width: auto; max-width: none !important; max-height: none !important; object-fit: contain; transform: translateY(calc(var(--lh) * var(--lc, 0))); }
+:is(.cd-t-lg .cd-lg, .cd-big .cd-lg, .cd-set-lg img):not(.tx) { margin-left: calc(var(--lh) * var(--ll, 0)); }
+.cd-t-lg .cd-lg { --lh: 12px; } .cd-big .cd-lg { --lh: 20px; } .cd-set-lg img { --lh: 12px; } .cd-mq-i img { --lh: 20px; } .cd-bw-lg img { --lh: 21px; }
+.cd-t-lg { overflow: visible; } .cd-set-lg { min-height: 20px; gap: 14px; }
+@media (max-width: 899px) { .cd-t-lg .cd-lg { --lh: 10.5px; } .cd-big .cd-lg { --lh: 18px; } .cd-mq-i img { --lh: 15px; } .cd-bw-lg img { --lh: 16px; } }
+/* 7.11.2026 (4) Ürünler açılışı: 'Tüm ürünler' ızgaranın ilk kartı, resim yerinde 4 kapaktan kolaj */
+.cd-cat-im.all { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px; background: transparent; }
+.cd-cat-im.all > span { display: block; overflow: hidden; border-radius: calc(var(--st-rcard, 24px) * .35); background: #f3f3f6; }
+.cd-cat-im.all > span img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cd-cat.all .cd-cat-t b { color: var(--accent); }
+.cd-cat-t b { min-height: 0 !important; }
+.cd-hub { gap: 18px; }
 /* 7.11.2026 (4) telefonda 'Haftanın ürünü' resmi görünmüyordu (kutu 0×0: flex:1 + min-height 0 + ortalı sütun) */
 @media (max-width: 899px) {
   .cd-big-im { flex: none; width: 100%; min-height: 0; place-items: center; }
   .cd-big-im .thumb { width: min(300px, 80%) !important; height: auto !important; aspect-ratio: 1; max-height: none; }
 }
+
+/* ===== 7.11.2026 (4) YENİ ÜSTÜNE GELME (html.hv-cd, look.hoverFx; 'old' = eski) — banner dili: kart YERİNDE durur (zıplamaz),
+   gölgesi yumuşakça açılır, resim kendi kutusunda yavaşça büyür; marka kutusu kendi rengine boyanır, logo büyür;
+   kategori/reklam kapağı büyür, yazı tema renginde. Sadece fareli bilgisayarda. ===== */
+@media (hover: hover) and (pointer: fine) {
+  html.hv-cd :is(.cd-tile, .cd-big, .cd-set, .cd-cat, .cd-bw, .cd-hub-all, .cd-brand, .sh-card, .sh-box, .sh-brand, .set-card, .plist.pgrid > li.prow, .bp-tile, .cd-ad) {
+    transition: box-shadow .45s cubic-bezier(.2, .7, .2, 1), background-color .45s ease, transform .45s cubic-bezier(.2, .7, .2, 1) !important; }
+  html.hv-cd :is(.cd-tile, .cd-big, .cd-set, .cd-cat, .cd-bw, .cd-hub-all, .cd-brand, .sh-card, .sh-box, .sh-brand, .set-card, .plist.pgrid > li.prow, .bp-tile, .cd-ad):hover {
+    transform: none !important; box-shadow: 0 1px 2px rgb(16 24 40 / .04), 0 26px 50px -30px rgb(16 24 40 / .30) !important; }
+  html.hv-cd :is(.cd-tile-im, .cd-big-im, .cd-si, .cd-cat-im, .sh-card-img, .plist.pgrid .prow-main .cimg) img { transition: transform .7s cubic-bezier(.2, .7, .2, 1) !important; }
+  html.hv-cd :is(.cd-tile, .sh-card, .plist.pgrid > li.prow):hover :is(.cd-tile-im, .sh-card-img, .prow-main) .thumb img { transform: scale(1.06) !important; }
+  html.hv-cd .cd-big:hover .cd-big-im img { transform: scale(1.04) !important; }
+  html.hv-cd .cd-set:hover .cd-si img { transform: scale(1.06) !important; }
+  html.hv-cd .cd-cat:hover .cd-cat-im img { transform: scale(1.05) !important; }
+  html.hv-cd .cd-cat:hover .cd-cat-t b { color: var(--accent); }
+  html.hv-cd .cd-tile:hover .cd-nm { color: var(--accent); transition: color .3s; }
+  html.hv-cd .cd-set:hover .cd-pill { filter: brightness(1.08); }
+  /* markalar: kutu kendi marka rengine (çok hafif) boyanır, logo büyür */
+  html.hv-cd :is(.cd-bw, .bp-tile, .sh-brand) img { transition: transform .5s cubic-bezier(.2, .7, .2, 1) !important; }
+  html.hv-cd :is(.cd-bw, .bp-tile, .sh-brand):hover { background-color: color-mix(in oklab, var(--bc, var(--accent)) 7%, var(--surface)) !important; }
+  html.hv-cd :is(.cd-bw, .bp-tile, .sh-brand):hover img { transform: scale(1.08) !important; }
+  html.hv-cd .cd-bw:hover small { color: var(--bc, var(--accent)); }
+  html.hv-cd .cd-mq-i:hover img { transform: scale(1.08); transition: transform .4s; }
+  /* eski 'küçük resimler çıkar' kayması yeni efektle karışmasın: yazılar yerinde kalır */
+  html.hv-cd .plist.pgrid > li.prow.hov .prow-body { transform: none !important; }
+}
+.cd-bw-lg img { --lh: 17px !important; max-width: 84% !important; }
+@media (max-width: 899px) { .cd-bw-lg img { --lh: 13px !important; } }
+
+/* 7.11.2026 (4) internetten bulunan yeni logolar */
+img[src*="/brands/kaisi."] { --lk: 1.097; --lc: 0.005; --ll: -0.020; }
+img[src*="/brands/ifixes."] { --lk: 1.267; --lc: -0.033; --ll: -0.100; }
+img[src*="/brands/tbk."] { --lk: 2.062; --lc: 0.248; --ll: -0.007; }
+img[src*="/brands/sugon."] { --lk: 1.037; --lc: -0.008; --ll: -0.032; }
+img[src*="/brands/fluke."] { --lk: 1.530; --lc: 0.000; --ll: -0.036; }
+img[src*="/brands/ersa."] { --lk: 1.080; --lc: -0.040; --ll: -0.011; }
