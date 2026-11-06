@@ -10,16 +10,18 @@ jobs:
         run: |
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
           probe() {
-            code=$(curl -g -sS -L --max-time 25 -A "$UA" -H 'Accept: text/html,*/*' -o /tmp/b -w '%{http_code} %{size_download}B %{url_effective}' "$1" || echo hata)
-            forms=$(grep -o -i '<form[^>]*>' /tmp/b | head -4 | tr '\n' ' ' | cut -c1-400)
-            inputs=$(grep -o -i '<input[^>]*name="[^"]*"[^>]*>' /tmp/b | grep -i -o 'name="[^"]*"' | sort -u | head -12 | tr '\n' ' ')
-            links=$(grep -o -i 'href="[^"]*"' /tmp/b | grep -i "$2" | sort -u | head -8 | tr '\n' ' ' | cut -c1-900)
-            js=$(grep -o -i 'search[A-Za-z_]*\(Url\|url\|URL\|api\)[^,;]\{0,120\}' /tmp/b | head -3 | tr '\n' ' ' | cut -c1-300)
-            echo "::notice title=$1::$code | FORM: $forms | INPUT: $inputs | LINK($2): $links | JS: $js"
+            rm -f /tmp/b
+            code=$(curl -g -sS -L --max-time 40 -A "$UA" -H 'Accept: text/html,*/*' -H 'Accept-Language: en-US,en;q=0.9' -o /tmp/b -w '%{http_code} %{size_download}B %{url_effective}' "$1" 2>&1 | tr '\n' ' ')
+            [ -f /tmp/b ] || touch /tmp/b
+            shop=$(grep -o -m1 'cdn.shopify.com' /tmp/b | head -1)
+            ld=$(grep -c 'application/ld+json' /tmp/b)
+            og=$(grep -o -i '<meta[^>]*og:image[^>]*>' /tmp/b | head -2 | tr '\n' ' ' | cut -c1-300)
+            imgs=$(grep -o -i "$2" /tmp/b | sort -u | head -10 | tr '\n' ' ' | cut -c1-1200)
+            echo "::notice title=$1::$code | shopify:$shop | ld+json:$ld | OG: $og | ESLESEN: $imgs"
           }
-          probe "https://www.martview.com/" "products\|search"
-          probe "https://www.martview.com/products?search=DA07" "da07\|da-07"
-          probe "https://www.martview.com/products?search=V1SE" "v1se"
-          probe "https://www.jcprogrammer.com/" "search\|keyword"
-          probe "https://www.jcprogrammer.com/search?keyword=V1SE" "v1se"
-          probe "https://www.jcprogrammer.com/search/?q=V1SE" "v1se"
+          probe "https://www.martview.com/2uul-da07-mini-heating-press-station-compatible-with-iphone-17-series.html" 'https://static.martview.com/[^"'"'"' )]*'
+          probe "https://www.diyfixtool.com/" 'href="[^"]*\(products\|search\)[^"]*"'
+          probe "https://www.diyfixtool.com/search/suggest.json?q=V1SE&resources[type]=product&resources[limit]=3" '"title":"[^"]*"'
+          probe "https://www.diyfixtool.com/search?q=V1SE" 'href="[^"]*v1se[^"]*"'
+          probe "https://jcprogrammer.com/" 'href="[^"]*\(search\|keyword\|product\)[^"]*"'
+          probe "https://www.jcprogrammer.com/" '<form[^>]*>'
