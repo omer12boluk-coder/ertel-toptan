@@ -14,7 +14,7 @@ const DAY_LIMIT = 20, MONTH_LIMIT = 60;
 
 // Bilinen marka mağazaları (çoğu Shopify: /search/suggest.json + /products/<ad>.js ile resimler temiz gelir)
 // (diğerleri panelden: Ayarlar › Akıllı ürün ekle › Marka siteleri)
-const SHOPS = { '2UUL': '2uul.com' };
+const SHOPS = { '2UUL': 'www.2uul.com' }; // 6.11.2026: 2uul.com (www'suz) HİÇ cevap vermiyor, www şart
 
 // Bakiye takibi: Anthropic bakiyeyi dışarı vermiyor → harcamayı kendimiz sayarız (cevaptaki token + arama sayısı × fiyat).
 // Yönetici yüklediği tutarı sayfaya yazar (/ai/bal); %80'i harcanınca ve bakiye bitti hatası gelince Telegram + panel bildirimi.
@@ -87,8 +87,9 @@ async function makeDraft(env, b) {
   const link = /^https?:\/\//.test(b.link || '') ? String(b.link).trim() : '';
   // Verilen link tek ürün sayfası değilse (ör. sadece "2uul.com" ya da bir kategori sayfası) o siteyi MAĞAZA say:
   // sitenin kendi aramasında ürünü bul (Shopify); sayfanın her yerinden resim TOPLAMA (saçma resimler geliyordu).
-  const linkShop = link && !isProductUrl(link) ? host(link) : '';
-  const shopKey = Object.keys(shops).find((k) => up.includes(k) || (linkShop && shops[k] === linkShop));
+  // DİKKAT: site adresi olduğu gibi (www dahil) kullanılır — bazı siteler www'suz adrese cevap vermiyor (2uul.com)
+  const linkShop = link && !isProductUrl(link) ? new URL(link).hostname : '';
+  const shopKey = Object.keys(shops).find((k) => up.includes(k) || (linkShop && host('https://' + shops[k]) === host(link)));
   const shopDom = linkShop || (shopKey && shops[shopKey]) || '';
   const model0 = (shopKey ? up.replace(shopKey, '') : up).trim();
   let [shop, linked] = await Promise.all([
@@ -116,7 +117,7 @@ async function makeDraft(env, b) {
   if (shop) add(shop.imgs, shopDom);
   if (linked) add(linked.imgs, host(linkSrc));
   const dom = shops[brand.toUpperCase()];
-  if (dom && !shop) add(await shopifyImages(dom, d.model || name).catch(() => []), dom);
+  if (dom && !shop) { const sp = await shopifyProduct(dom, d.model || name, name).catch(() => null); if (sp) add(sp.imgs, dom); }
   // aramada bulunan sayfalar: sadece ürün galerisi (AliExpress listesi, Shopify, JSON-LD Product) — og:image / sayfadaki
   // rastgele resimler ALINMAZ (reklam, rozet, site logosu geliyordu). Yöneticinin linki ve marka sitesi bunun dışında.
   const got = await Promise.all(pages.map((p) => pageImages(p, true).then((l) => [p, l]).catch(() => [p, []])));
@@ -266,8 +267,13 @@ function strongMatch(label, q) {
   if (!words.length) return false;
   const t = flat(label); return words.filter((w) => t.includes(w)).length / words.length >= 0.7;
 }
-async function shopifyProduct(dom, q, full) {
-  const s = await (await get(`https://${dom}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=6`)).json();
+async function shopifyProduct(dom0, q, full) {
+  // www'lu / www'suz: hangisi cevap verirse
+  let dom = dom0, s;
+  for (const d of [dom0, dom0.startsWith('www.') ? dom0.slice(4) : 'www.' + dom0]) {
+    try { s = await (await get(`https://${d}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=6`)).json(); dom = d; break; } catch {}
+  }
+  if (!s) return null;
   const prods = (s?.resources?.results?.products || []).filter((p) => sameModel(p.title, q) || sameModel(p.title, full));
   if (!prods.length) return null; // aramada bu model yok → yanlış ürünün resimlerini alma
   const h = prods[0].handle || (prods[0].url || '').split('/products/')[1]?.split('?')[0];
