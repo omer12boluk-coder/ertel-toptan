@@ -15,6 +15,7 @@ import { BG_BY, activePack, BTN_BY, ARROW_BY } from './presets.js';
 import { SlideEls, useSlideFonts, FONT_BY, FONTS, ensureFonts } from './slidex.jsx';
 import { BOX_COLORS, BOX_PATS } from './dzpresets.js';
 import { P0_KEYS } from './p0keys.js';
+import { PHOTO_BANNERS, PhotoBanner, photoBnOn } from './photobn.jsx';
 import { P0Hero, P0Finder, P0Cats, P0Pick, P0Sets, P0Brands, P0Trust } from './p0home.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
@@ -348,7 +349,7 @@ export function ShopHome({ S: Sover }) {
     );
   };
   const render = (k) => {
-    if (k === 'hero') return slides.length > 0 ? <Hero slides={slides} pkHero={pk?.hero} nv={H.heroNav || {}} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'hero') return slides.length > 0 || (!E && photoBnOn(H)) ? <Hero slides={!E && photoBnOn(H) ? [...PHOTO_BANNERS.map((pb) => ({ pb })), ...slides] : slides} onProduct={setProduct} pkHero={pk?.hero} nv={H.heroNav || {}} open={link} heroH={H.heroH} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Reklam yok" />;
     if (k === 'usps') return (H.usps || []).some((u) => u.title) ? (
       <section className="sh-usps rv" aria-label="Avantajlar">
         {(H.usps || []).filter((u) => u.title).map((u, i) => (
@@ -379,7 +380,7 @@ export function ShopHome({ S: Sover }) {
     );
     if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)), H.promosLay);
     if (k === 'sets') return <SetRail edit={!!E} />;
-    if (k === 'p0:hero') return (H.slides || []).length ? <P0Hero slides={H.slides} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
+    if (k === 'p0:hero') return (H.slides || []).length || photoBnOn(H) ? <P0Hero slides={H.slides} pre={photoBnOn(H) ? PHOTO_BANNERS : []} onProduct={setProduct} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
     if (k === 'p0:find') return <P0Finder S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'p0:cats') return <P0Cats H={H} />;
     if (k === 'p0:pick') return <P0Pick S={S} onProduct={E ? () => E.select(k) : setProduct} />;
@@ -870,7 +871,7 @@ function Marquee({ items, style, speed, speedM, ls = 1, z, zm }) { // speed: mas
 const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
-function Hero({ slides, open, brands, heroH, pkHero, nv = {} }) {
+function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }) {
   // boydan boya banner: sayfa kırpması html sınıfıyla (eskiden :has() seçiciydi — her DOM değişikliğinde bütün sayfanın stilini yeniden hesaplatıyordu)
   useEffect(() => { const c = document.documentElement.classList; c.toggle('hf-on', !!nv.full); c.toggle('hf-wide', nv.full === 'pc' || nv.full === 'all'); return () => c.remove('hf-on', 'hf-wide'); }, [nv.full]);
   useSlideFonts(slides);
@@ -944,7 +945,7 @@ function Hero({ slides, open, brands, heroH, pkHero, nv = {} }) {
   return (
     <section className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
-        {slides.map((s, k) => <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />)}
+        {slides.map((s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>

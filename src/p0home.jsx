@@ -12,6 +12,7 @@ import { useBrandList, openBrand } from './brandsets.jsx';
 import { ShopImg, CtaButton, isProdImg, PCard, DesignCtx, CardAdd } from './shophome.jsx';
 import { loadPhones, mergePhones, searchPhones, short, useStencils, matchStencils } from './kalipfind.jsx';
 import { useTree, useVisibleProducts } from './catalog.jsx';
+import { PhotoBanner } from './photobn.jsx';
 
 export { P0_KEYS } from './p0keys.js';
 const LIGHT_TH = ['ice', 'sand', 'mint'];
@@ -19,7 +20,9 @@ const hasImg = (p) => !!(p && (p.pi || p.im || (Array.isArray(p.im) && p.im.leng
 const sellable = (p) => p && p.a !== 0 && !p.so;
 
 // ---- 1 · Üçlü vitrin: büyük kutu (sırayla dönen reklamlar) + yanda iki küçük kampanya
-function Panel({ s, big, open, on = true }) {
+function Panel({ s, big, open, on = true, onProduct, edit }) {
+  // 7.11.2026: Claude'un fotoğraflı bannerı (photobn.jsx) — kendi tuvalini çizer
+  if (s.pb) return <article className={'p0-pan big pb-pan' + (on ? ' on' : '')}><PhotoBanner b={s.pb} open={open} onProduct={onProduct} edit={edit} /></article>;
   const bgp = BG_BY[s.bg];
   const lt = bgp ? bgp.ink === 'l' : LIGHT_TH.includes(s.theme);
   const cover = s.img && !isProdImg(s.img) && ['cover', 'glass'].includes(s.layout);
@@ -43,8 +46,9 @@ function Panel({ s, big, open, on = true }) {
 // 'top' sağ üst, 'bot' sağ alt, 'off' gösterme. Seçilmemişse: 1. reklam büyük, 2. sağ üst, 3. sağ alt, 4. ve sonrası büyük.
 export const P0_ROLES = [['big', 'Büyük kutu'], ['top', 'Sağ üst'], ['bot', 'Sağ alt'], ['off', 'Gösterme']];
 export const p0Role = (s, i) => (s && ['big', 'top', 'bot', 'off'].includes(s.p0) ? s.p0 : i === 1 ? 'top' : i === 2 ? 'bot' : 'big');
-export function P0Hero({ slides: all, open, edit }) {
-  const items = (all || []).map((s, i) => ({ s, i, r: p0Role(s, i) })).filter((x) => edit || x.s.title || x.s.img);
+export function P0Hero({ slides: all, open, edit, pre = [], onProduct }) {
+  // pre = fotoğraflı bannerlar: büyük kutuda kullanıcının reklamlarından önce döner (i < 0 → tasarım modundaki reklam sırası değişmez)
+  const items = [...pre.map((b, j) => ({ s: { pb: b }, i: -1 - j, r: 'big' })), ...(all || []).map((s, i) => ({ s, i, r: p0Role(s, i) })).filter((x) => edit || x.s.title || x.s.img)];
   const rotI = items.filter((x) => x.r === 'big'); const rot = rotI.map((x) => x.s);
   const side = ['top', 'bot'].map((r) => items.find((x) => x.r === r)?.s).filter(Boolean);
   const [k, setK] = useState(0);
@@ -57,8 +61,8 @@ export function P0Hero({ slides: all, open, edit }) {
   return (
     <section className={'p0-hero n' + (side.length + 1)} aria-label="Kampanyalar">
       <div className="p0-big">
-        {big.map((s, i) => <Panel key={i} s={s} big open={open} on={i === (k % big.length)} />)}
-        {big.length > 1 && <span className="p0-dots">{big.map((_, i) => <button key={i} type="button" className={i === k ? 'on' : ''} onClick={() => setK(i)} aria-label={'Reklam ' + (i + 1)} />)}</span>}
+        {big.map((s, i) => <Panel key={s.pb ? s.pb.id : i} s={s} big open={open} on={i === (k % big.length)} onProduct={onProduct} edit={edit} />)}
+        {big.length > 1 && <span className={'p0-dots' + (big[k % big.length]?.pb && !big[k % big.length].pb.dark ? ' dk' : '')}>{big.map((_, i) => <button key={i} type="button" className={i === k ? 'on' : ''} onClick={() => setK(i)} aria-label={'Reklam ' + (i + 1)} />)}</span>}
       </div>
       {side.map((s, i) => <Panel key={i} s={s} open={open} />)}
     </section>

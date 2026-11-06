@@ -9,6 +9,7 @@ import { LOGO_MARK } from './config.js';
 import { useContext, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { useStore, store, toast, go } from './store.js';
 import { Icon, Field, Toggle, Confirm, openMenu } from './ui.jsx';
+import { PHOTO_BANNERS } from './photobn.jsx';
 import { withDefaults, norm, ls } from './utils.js';
 import {
   ShopHome, DesignCtx, FxFields, FX_NAMES, layoutOf, blockLabel, dragSort, moveItem, rid, NEW, UspFields, PromoFields, PromoSizeGuide, FontSelect, RailFields, BrandFields, BlockFields,
@@ -666,7 +667,9 @@ function Inspector(P) {
     </>;
   } else {
     const k = sel.k; const lab = blockLabel(k, H).split(' · '); title = lab[0]; sub = lab[1] || '';
-    if (k === 'hero') body = <HeroPanel {...P} />;
+    // 7.11.2026: Claude'un fotoğraflı bannerları (photobn.jsx) — kullanıcının reklamlarından önce; kapatınca eski hâl birebir
+    const PB = <div className="dz2-pb"><Toggle checked={H.photoBn !== false} onChange={(v) => S('photoBn', v)} label="Claude’un fotoğraflı bannerları" hint={PHOTO_BANNERS.length + ' hazır banner (Quick, AmScope, Aixun, 2UUL) sizin reklamlarınızdan önce gösterilir' + (k === 'hero' ? '. Tasarım modunda görünmez, sitede görünür.' : '.')} /></div>;
+    if (k === 'hero') body = <>{PB}<HeroPanel {...P} /></>;
     else if (k === 'usps') body = <Rows list={H.usps || []} set={(v) => S('usps', v)} max={4} sub="Avantaj ekle" openIdx={0} title={(u, i) => u.title || `${i + 1}. avantaj`} add={() => S('usps', [...(H.usps || []), NEW.usp()])} render={(u, up) => <UspFields u={u} up={up} />} />;
     else if (k === 'marquee') body = <>
       <Field label="Görünüm"><span className="dz2-mqs">{Object.entries(MQ_STYLES).map(([x, l]) => <button key={x} type="button" className={'dz2-mq mq-' + x + ((H.marquee || 'color') === x ? ' on' : '')} onClick={() => S('marquee', x)}><i aria-hidden="true"><b /><b /><b /></i><span>{l}</span></button>)}</span></Field>
@@ -703,7 +706,7 @@ function Inspector(P) {
       <Field label="Yazı" opt><input value={H.cta?.text || ''} onChange={(e) => S('cta', { ...(H.cta || {}), text: e.target.value })} /></Field>
       <More><GeoMore H={H} k={k} S={S} /></More>
     </>;
-    else if (k === 'p0:hero') body = <><h4 className="dz2-sub">Vitrin yerleşimi</h4><P0HeroPanel H={H} S={S} onPick={(i) => { P.goSlide?.(i); P.heroI.current = i; }} /><h4 className="dz2-sub">Reklamı düzenle</h4><HeroPanel {...P} /></>;
+    else if (k === 'p0:hero') body = <>{PB}<h4 className="dz2-sub">Vitrin yerleşimi</h4><P0HeroPanel H={H} S={S} onPick={(i) => { P.goSlide?.(i); P.heroI.current = i; }} /><h4 className="dz2-sub">Reklamı düzenle</h4><HeroPanel {...P} /></>;
     else if (k === 'p0:cats') body = <><P0CatsPanel H={H} S={S} ImgPick={ImgPick} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
     else if (k === 'p0:pick') body = <><P0PickPanel H={H} S={S} ProductSearch={ProductSearch} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;
     else if (k === 'p0:sets') body = <><P0SetsPanel H={H} S={S} sets={d.sets || []} /><div className="dz2-acts"><button className="btn sm ghost" onClick={() => P.toggleHide(k)}><Icon n={(H.hidden || []).includes(k) ? 'eye' : 'eyeoff'} s={15} />{(H.hidden || []).includes(k) ? 'Bölümü göster' : 'Bölümü gizle'}</button></div></>;

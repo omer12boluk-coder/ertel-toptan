@@ -246,6 +246,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 18. Paket 0 yayında (kullanıcı deniyor); Ürünler açılış sayfası askıda (ayardan kapalı tutulabilir); gerçek iPhone'da sesler / arama animasyonu / gece modu doğrulanmadı.
 
+- **7.11.2026 Fotoğraflı bannerlar** (dal `banner-foto`, önizlemede; yayında DEĞİL): `src/photobn.jsx` `PHOTO_BANNERS` (5 banner, logolu, resimler `hosting/public/bn/`), P0Hero `pre` + eski Hero'nun başına eklenir (kullanıcı reklamlarına dokunmaz). Kapatma `shopHome.photoBn === false` (Tasarım › büyük reklam alanı). Tuval: geniş kutuda 560 birim yükseklik (en az 1000 genişlik), telefonda 358 genişlik. Eski Hero'da tasarım modunda gösterilmez.
+
 **SIRADAKİ İŞ (7.11.2026):** Ana sayfa büyük reklam alanı için 5 fotoğraflı banner önerisi → `docs/banner-oneri/OKU.md` (kullanıcı hangilerini seçtiğini söyleyecek, sonra siteye kurulacak). Geçici dallar `banner-resim`, `banner-resim-out` silinebilir.
 **Karar bekleyen:** ödeme özeti 2 üründe kayıyor (çözüm önerildi) · elde kalan mal için dürüst raf/rozet · ana sayfa 'imza' etkileşimi · SMS (Netgsm) · Ürünler ve Bayi siparişleri PageHead/SubNav'a alınsın mı · "Birlikte iyi gider" rafı açıklamanın altında kalıyor.
 **Tartışılacak:** Blaze sonrası açılış penceresi 14 → 30 → 62 gün; Workers Paid sonrası DHL sorgusu 30 → 5 dk.
