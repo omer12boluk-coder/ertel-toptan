@@ -8269,11 +8269,17 @@ html[data-theme="dark"] .pl-demo-tag { color: #e6a466; }
 .or-mob-t b.or-mob-n { line-height: 1.32; padding-top: 1px; }
 .or-mob-s { line-height: 1.3; }
 .or-mob-p { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
-/* 6.11.2026 telefonda yönetim paneli belirgin (look.adminMark, varsayılan açık): koyu grafit alt menü (rozet denendi, telefonda logo yazısının üstüne biniyordu) */
+/* 6.11.2026 telefonda yönetim paneli belirgin (look.adminMark, varsayılan açık): alt menü tema renginde tonlu (koyu grafit denendi, kullanıcı beğenmedi) */
 @media (max-width: 1099px) {
-  html.adm-apple.adm-mark .shell.admin .botnav { background: #1c1f26 !important; border-color: rgb(255 255 255 / .08) !important; box-shadow: 0 14px 34px -14px rgb(0 0 0 / .55) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-  html.adm-apple.adm-mark .shell.admin .botnav-b { color: rgb(255 255 255 / .62) !important; }
-  html.adm-apple.adm-mark .shell.admin .botnav-b.on, html.adm-apple.adm-mark .shell.admin .botnav-b.hov { color: #fff !important; }
-  html.adm-apple.adm-mark .shell.admin .botnav-pill i { background: rgb(255 255 255 / .14) !important; box-shadow: 0 0 0 .5px rgb(255 255 255 / .12) inset !important; }
-  html.adm-apple.adm-mark .shell.admin .botnav .badge { box-shadow: 0 0 0 2px #1c1f26; }
+  html.adm-apple.adm-mark .shell.admin .botnav { background: color-mix(in oklab, var(--accent) 13%, #fff) !important; border-color: color-mix(in oklab, var(--accent) 26%, transparent) !important; box-shadow: 0 12px 30px -14px color-mix(in oklab, var(--accent) 55%, transparent) !important; }
+  html.adm-apple.adm-mark .shell.admin .botnav-b { color: color-mix(in oklab, var(--accent) 55%, #3b3f47) !important; }
+  html.adm-apple.adm-mark .shell.admin .botnav-b.on, html.adm-apple.adm-mark .shell.admin .botnav-b.hov { color: var(--accent) !important; }
+  html.adm-apple.adm-mark .shell.admin .botnav-pill i { background: #fff !important; box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 4px 12px -6px color-mix(in oklab, var(--accent) 50%, transparent) !important; }
+  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav { background: color-mix(in oklab, var(--accent) 22%, #171a21) !important; }
+  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav-b { color: rgb(255 255 255 / .62) !important; }
+  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav-b.on, html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav-b.hov { color: #fff !important; }
+  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav-pill i { background: rgb(255 255 255 / .14) !important; box-shadow: none !important; }
 }
+/* iPhone sayfa alanını kısa sanınca alttaki sabit öğeler görünen ekranın altına itilir (main.jsx setupResumeFix --vvd) */
+.botnav { translate: 0 var(--vvd, 0px); }
+

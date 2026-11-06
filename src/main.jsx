@@ -1096,6 +1096,25 @@ function setupResumeFix() {
   document.addEventListener('focusout', (e) => { if (!isField(e.target)) return; setTimeout(() => { if (!isField(document.activeElement)) fix(); }, 120); });
   const vv = window.visualViewport;
   if (vv) { let h0 = vv.height; vv.addEventListener('resize', () => { const h = vv.height; if (h - h0 > 120 && !isField(document.activeElement)) setTimeout(fix, 60); h0 = h; }); }
+  // 6.11.2026 (3): iPhone bazen (birkaç sayfa geçişi / uygulamadan çıkıp dönme sonrası) alt menüyü ekrana sabit tutmayı bırakıyor:
+  // menü sayfayla birlikte kayıyor ya da ortada kalıyor. Kaydırırken menünün gerçek yeri ölçülür; görünen ekranın altında
+  // değilse aradaki fark kadar itilir (--vvd) ve ekran yeniden ölçtürülür. Yazı alanı açıkken (klavye) dokunulmaz.
+  if (vv && matchMedia('(pointer: coarse)').matches) {
+    const r = document.documentElement; let cur = 0, q = 0, lastFix = 0;
+    const upd = () => {
+      q = 0; const nav = document.querySelector('.botnav'); if (!nav || isField(document.activeElement)) { if (cur) { cur = 0; r.style.removeProperty('--vvd'); } return; }
+      const cs = getComputedStyle(nav); if (cs.position !== 'fixed' || cs.display === 'none') return;
+      const want = vv.height + vv.offsetTop - (parseFloat(cs.bottom) || 0); // menünün altı burada olmalı
+      const rb = nav.getBoundingClientRect().bottom - cur; // itme olmadan menünün altı
+      let d = Math.round(want - rb); if (Math.abs(d) < 2) d = 0;
+      if (d !== cur) { cur = d; d ? r.style.setProperty('--vvd', d + 'px') : r.style.removeProperty('--vvd'); }
+      if (d && Date.now() - lastFix > 1500) { lastFix = Date.now(); fix(); }
+    };
+    const req = () => { if (!q) q = requestAnimationFrame(upd); };
+    vv.addEventListener('resize', req); vv.addEventListener('scroll', req); addEventListener('resize', req); addEventListener('scroll', req, { passive: true }); addEventListener('pageshow', req);
+    document.addEventListener('focusout', () => setTimeout(req, 150)); document.addEventListener('visibilitychange', () => setTimeout(req, 300));
+    setInterval(() => { if (document.visibilityState === 'visible') req(); }, 600); addEventListener('touchstart', req, { passive: true });
+  }
 }
 
 function setupNavAnim() {
