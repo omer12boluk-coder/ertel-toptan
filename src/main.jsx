@@ -1418,6 +1418,7 @@ function BotNav({ items, tab, badge }) {
   const [geo, setGeo] = useState(null); // { cs: [sekme ortaları], top }
   const st = useRef(null);
   const live = useRef({});
+  const dragX = useRef(null); // sürükleyip bırakınca hapın parmaktaki yeri: geçiş oradan başlar (dokunuşta null → eski sekmeden başlar)
   const keys = items.map((x) => x[0]).join(',');
   const measure = () => {
     const el = ref.current; if (!el) return;
@@ -1435,30 +1436,33 @@ function BotNav({ items, tab, badge }) {
   useEffect(() => {
     const el = ref.current; if (!el) return;
     const place = (x) => { if (pill.current) pill.current.style.transform = `translateX(${x}px) translateX(-50%)`; };
-    const track = (cx) => {
+    // 6.11.2026: basit dokunuşta hap parmağa kaymaz (önce parmağa, sonra eski sekmeye, sonra yeni sekmeye gidiyordu → titreme); sadece sürüklerken parmağı izler
+    const track = (cx, noPlace) => {
       const { geo: g } = live.current; if (!g) return;
       const r = el.getBoundingClientRect(); const lx = cx - r.left;
       const x = Math.min(g.cs[g.cs.length - 1], Math.max(g.cs[0], lx));
       let i = 0, best = 1e9; g.cs.forEach((c, n) => { const d = Math.abs(c - lx); if (d < best) { best = d; i = n; } });
       const s = st.current; if (!s) return;
       if (s.i !== i) { if (s.i != null) { s.moved = true; try { navigator.vibrate?.(6); } catch {} } s.i = i; setHov(i); }
-      place(x);
+      if (!noPlace) { s.dragged = true; s.x = x; place(x); }
     };
     const finish = (go_) => {
       const s = st.current; st.current = null;
       el.classList.remove('dragging', 'pressing'); setHov(-1);
-      if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x}px) translateX(-50%)`; // aktif sekmeye yumuşakça döner
-      if (s && s.i != null && go_) go(live.current.items[s.i][0]);
+      const to = s && s.i != null && go_ ? live.current.items[s.i][0] : null;
+      if (to && to !== store.s.tab) { dragX.current = s.dragged ? s.x : null; go(to); return; } // hap bulunduğu yerden yeni sekmeye kayar
+      dragX.current = null;
+      if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x}px) translateX(-50%)`; // aynı sekme / vazgeçti: yerine döner
     };
     // iPhone'da ekranın altındaki çizgiden yukarı kaydırma (uygulamadan çıkma / uygulama değiştirici) menünün alt boşluğundan başlar:
     // oradan başlayan dokunuş sekme değiştirmez (31.10.2026: uygulama arka plana giderken Kalıp/Sepet sekmesine geçiyordu)
-    const start = (e) => { const t = e.touches[0]; if (!t || e.touches.length > 1) return; const b = el.querySelector('.botnav-b')?.getBoundingClientRect(); if (b && t.clientY > b.bottom - 2) return; st.current = { i: null }; el.classList.add('pressing'); track(t.clientX); };
+    const start = (e) => { const t = e.touches[0]; if (!t || e.touches.length > 1) return; const b = el.querySelector('.botnav-b')?.getBoundingClientRect(); if (b && t.clientY > b.bottom - 2) return; st.current = { i: null }; el.classList.add('pressing'); track(t.clientX, true); };
     const move = (e) => { if (!st.current) return; e.preventDefault(); el.classList.add('dragging'); const t = e.touches[0]; if (t) track(t.clientX); };
     const end = (e) => {
       if (!st.current) return;
       const t = e.changedTouches?.[0];
       // 6.11.2026 kullanıcı: parmak menünün üstüne (sayfaya) çıkmış olsa da bırakılan yerdeki sekmeye geçsin (eskiden 40 px yukarıda vazgeçiyordu)
-      if (t) track(t.clientX);
+      if (t) track(t.clientX, !st.current?.dragged);
       e.preventDefault(); // tıklama tekrar tetiklenmesin
       finish(true);
     };
@@ -1489,8 +1493,9 @@ function BotNav({ items, tab, badge }) {
   // 5.11.2026 sıvı geçiş: hap yeni sekmeye kayarken yolun ortasında uzayıp hafif basıklaşır, varınca toplanır (iOS cam sekme çubuğu hissi)
   const prevPx = useRef(px);
   useEffect(() => {
-    const a = prevPx.current; prevPx.current = px;
-    if (a == null || px == null || Math.abs(a - px) < 2) return;
+    const a0 = prevPx.current; prevPx.current = px;
+    const a = dragX.current != null ? dragX.current : a0; dragX.current = null;
+    if (a0 == null || px == null || Math.abs(a - px) < 2) return;
     const i = pill.current?.firstElementChild; if (!i?.animate || ref.current?.classList.contains('dragging') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const pm = pillMode();
     if (pm === 'none') return;
