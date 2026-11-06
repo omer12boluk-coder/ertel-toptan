@@ -5119,6 +5119,9 @@ html.pre-grad body::before { background-color: #1e48c8; background-image: linear
 .set-cov-i { position: relative; display: grid; border-radius: 9px; overflow: hidden; background: #fff; min-width: 0; min-height: 0; }
 .set-cov-i .thumb, .set-cov-i img { width: 100%; height: 100%; object-fit: contain; }
 .set-cov-more { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(16 32 74 / .55); color: #fff; font: 800 22px/1 var(--f-display); }
+/* 6.11.2026: '+6' kutunun boyuna göre küçülür (küçük kapaklarda taşıp kesiliyordu: yönetim Setler listesi, arama vb.) */
+.set-cov.n4 .set-cov-i:nth-child(4) { container-type: size; }
+.set-cov.n4 .set-cov-more { font-size: clamp(9px, 42cqmin, 22px); letter-spacing: -.02em; background: rgb(16 32 74 / .72); }
 .set-tag { position: absolute; left: 10px; top: 10px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; background: #10204a; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 .set-card { display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: var(--pcard-r, 16px); background: var(--surface); border: 1px solid var(--line); text-align: left; color: var(--fg); transition: box-shadow .2s, transform .2s; min-width: 0; }
 .set-card:hover { box-shadow: 0 14px 34px -18px rgb(16 32 74 / .4); transform: translateY(-2px); }
