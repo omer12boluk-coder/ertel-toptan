@@ -35,8 +35,15 @@ async function outOfCredit(env, notify) {
   await notify('⛔ Yapay zekâ bakiyesi bitti', 'Akıllı ürün ekle çalışmıyor: Anthropic bakiyesi bitti. console.anthropic.com › Billing › Buy credits ile yükleyin, sonra panelde Akıllı ekle › Bakiye’ye yüklediğiniz tutarı yazın.');
 }
 
+// Yönetici kontrolü Firestore'dan 1 okuma (users/<uid>). Onayda her resim için /ai/pic çağrılır → aynı oturum anahtarını
+// bellekte 30 dk hatırla, Firebase okuma kotası (Spark 50 bin/gün) boşuna yenmesin.
+const okTok = new Map();
 export async function aiRoute(req, env, url, adminOf, json, notify = async () => {}) {
-  const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403);
+  const tok = (req.headers.get('Authorization') || '').slice(-64);
+  if (!(okTok.get(tok) > Date.now())) {
+    const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403);
+    if (okTok.size > 50) okTok.clear(); okTok.set(tok, Date.now() + 30 * 60000);
+  }
   if (url.pathname === '/ai/pic' && req.method === 'GET') return picProxy(url.searchParams.get('u') || '');
   const b = await req.json().catch(() => ({}));
   if (url.pathname === '/ai/bal') {
