@@ -91,11 +91,15 @@ async function makeDraft(env, b) {
   const shopKey = Object.keys(shops).find((k) => up.includes(k) || (linkShop && shops[k] === linkShop));
   const shopDom = linkShop || (shopKey && shops[shopKey]) || '';
   const model0 = (shopKey ? up.replace(shopKey, '') : up).trim();
-  const [shop, linked] = await Promise.all([
+  let [shop, linked] = await Promise.all([
     shopDom ? shopifyProduct(shopDom, model0 || name, name).catch(() => null) : null,
     link && !linkShop ? pageInfo(link).catch(() => null) : null,
   ]);
-  const ctx = [shop && `Markanın resmi sitesindeki ürün (${shopDom}): ${shop.title}\n${shop.text}`, linked && `Yöneticinin verdiği ürün sayfası (${host(b.link)}): ${linked.title}\n${linked.text}`].filter(Boolean).join('\n\n');
+  // Shopify olmayan site (martview vb.): sitenin kendi arama sayfasında ürünü bul → o ürün sayfasını oku (ücretsiz, yapay zekâ yok)
+  let found = '';
+  if (linkShop && !shop) { found = await siteSearch(link, model0 || name, name).catch(() => ''); if (found) linked = await pageInfo(found).catch(() => null); }
+  const linkSrc = found || link;
+  const ctx = [shop && `Markanın resmi sitesindeki ürün (${shopDom}): ${shop.title}\n${shop.text}`, linked && `Ürün sayfası (${host(linkSrc)}): ${linked.title}\n${linked.text}`].filter(Boolean).join('\n\n');
   const prompt = buildPrompt(name, cats, brands, ex, String(b.hint || ''), vocab, ctx, search);
   let out, sources = [], engine, cost = 0;
   if (env.ANTHROPIC_KEY) { engine = b.hq ? 'claude-hq' : 'claude'; ({ out, sources, cost } = await askClaude(env, prompt, search, !!b.hq)); }
@@ -105,11 +109,12 @@ async function makeDraft(env, b) {
   if (!d) { const e = new Error('Yapay zekâ cevabı okunamadı, tekrar deneyin'); e.cost = cost; throw e; }
   const brand = String(d.brand || '').trim();
   // resimler: 1) marka mağazası 2) yapay zekânın bulduğu ürün sayfaları 3) aramada çıkan sayfalar
+  if (found) sources.unshift({ url: found, title: host(found) });
   const pages = [...new Set([...(d.pages || []), ...sources.map((s) => s.url)].filter((u) => /^https?:\/\//.test(u)))].slice(0, 8);
   const imgs = [];
   const add = (arr, from) => arr.forEach((u) => { if (!imgs.some((x) => x.u === u) && imgs.length < 14) imgs.push({ u, from }); });
   if (shop) add(shop.imgs, shopDom);
-  if (linked) add(linked.imgs, host(link));
+  if (linked) add(linked.imgs, host(linkSrc));
   const dom = shops[brand.toUpperCase()];
   if (dom && !shop) add(await shopifyImages(dom, d.model || name).catch(() => []), dom);
   // aramada bulunan sayfalar: sadece ürün galerisi (AliExpress listesi, Shopify, JSON-LD Product) — og:image / sayfadaki
@@ -216,14 +221,50 @@ const big = (u) => (/(\.(jpe?g|png|webp))_[^/]+$/i.test(u) ? u.replace(/(\.(jpe?
 const okImg = (u) => u && /^https?:/.test(u) && !/(logo|icon|sprite|favicon|avatar|placeholder|badge|flag|payment|\.svg|\.gif)/i.test(u);
 
 const strip = (h) => String(h || '').replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>|<\/(p|li|tr|h\d|div)>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
+// Bilinen arama adresleri; bilinmeyen sitede ana sayfadaki arama formundan bulunur, olmazsa yaygın kalıplar denenir
+const SEARCH_URL = { 'martview.com': (q) => `https://www.martview.com/products?search=${encodeURIComponent(q)}` };
+async function siteSearch(site, q, full) {
+  const o = new URL(site); const h = o.hostname.replace(/^www\./, '');
+  const tries = [];
+  if (SEARCH_URL[h]) tries.push(SEARCH_URL[h](q));
+  else {
+    try {
+      const home = (await (await get(o.origin + '/')).text()).slice(0, 1e6);
+      for (const f of home.matchAll(/<form[^>]*>([\s\S]*?)<\/form>/gi)) {
+        const inp = /<input[^>]+name=["'](q|s|search|keyword|keywords|query|k|searchword|search_query|filter_name)["']/i.exec(f[1]); if (!inp) continue;
+        const act = /action=["']([^"']*)["']/i.exec(f[0])?.[1] || '/';
+        const u = new URL(act.replace(/&amp;/g, '&'), o.origin); u.searchParams.set(inp[1], q); tries.push(u.href); break;
+      }
+    } catch {}
+    tries.push(`${o.origin}/search?q=${encodeURIComponent(q)}`, `${o.origin}/?s=${encodeURIComponent(q)}&post_type=product`, `${o.origin}/products?search=${encodeURIComponent(q)}`, `${o.origin}/catalogsearch/result/?q=${encodeURIComponent(q)}`);
+  }
+  for (const t of tries.slice(0, 3)) {
+    let html; try { html = (await (await get(t)).text()).slice(0, 1.5e6); } catch { continue; }
+    // sonuç sayfasındaki aynı siteye ait bağlantılardan, model kodu geçen ilk ürün sayfası
+    for (const m of html.matchAll(/<a[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]{0,400}?)<\/a>/gi)) {
+      const u = abs(m[1], t); if (!u || new URL(u).hostname.replace(/^www\./, '') !== h) continue;
+      if (u.includes('search') || !isProductUrl(u)) continue;
+      const label = strip(m[2]) + ' ' + /title=["']([^"']+)/i.exec(m[0])?.[1] + ' ' + u;
+      if (strongMatch(label, q) || strongMatch(label, full)) return u.split('#')[0];
+    }
+  }
+  return '';
+}
 // Tek ürün sayfası mı? (Shopify /products/, AliExpress /item/, genel /product/ /urun/ ...)
-function isProductUrl(u) { try { const p = new URL(u).pathname.toLowerCase(); return /\/(products?|item|items|urun|p)\/[^/]+|[-_/]p-?\d{3,}|\.html?$/.test(p) && p.length > 3; } catch { return false; } }
+function isProductUrl(u) { try { const p = new URL(u).pathname.toLowerCase(); if (/wholesale|search|arama|categor|kategori|collections?\/?$|\/c\/|\/w\//.test(p)) return false; return /\/(products?|item|items|urun|p)\/[^/]+|[-_/]p-?\d{3,}|\.html?$/.test(p) && p.length > 3; } catch { return false; } }
 // Model kodu eşleşiyor mu: "da07" ↔ "DA-07", "DA07 Pro" ...; addaki rakamlı kelimelerin hepsi başlıkta geçmeli
 const flat = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 function sameModel(title, q) {
   const codes = String(q || '').toLowerCase().split(/[\s,/]+/).map(flat).filter((w) => /\d/.test(w) && w.length >= 2);
   if (!codes.length) return true;
   const t = flat(title); return codes.every((c) => t.includes(c));
+}
+// Site aramasında: model kodu varsa o eşleşmeli; kod yoksa addaki kelimelerin çoğu (≥%70) bağlantı yazısında geçmeli
+function strongMatch(label, q) {
+  const words = String(q || '').toLowerCase().split(/[\s,/]+/).map(flat).filter((w) => w.length >= 3);
+  if (words.some((w) => /\d/.test(w))) return sameModel(label, q);
+  if (!words.length) return false;
+  const t = flat(label); return words.filter((w) => t.includes(w)).length / words.length >= 0.7;
 }
 async function shopifyProduct(dom, q, full) {
   const s = await (await get(`https://${dom}/search/suggest.json?q=${encodeURIComponent(q)}&resources[type]=product&resources[limit]=6`)).json();
@@ -264,7 +305,7 @@ async function shopifyImages(dom, q) {
   return (p.images || []).map((u) => abs(u, `https://${dom}/`)).filter(Boolean).map((u) => big(u.split('?')[0]));
 }
 
-export { pageInfo, shopifyProduct, isProductUrl };
+export { pageInfo, shopifyProduct, isProductUrl, siteSearch };
 export async function pageImages(u, strict = false) {
   if (!/^https?:\/\//.test(u)) return [];
   const url = new URL(u);
