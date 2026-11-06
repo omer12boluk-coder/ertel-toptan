@@ -1429,19 +1429,35 @@ function BotNav({ items, tab, badge }) {
     const end = (e) => {
       if (!st.current) return;
       const t = e.changedTouches?.[0];
-      const away = t && t.clientY < el.getBoundingClientRect().top - 40; // menüden yukarı çekip bıraktıysa vazgeç
+      // 6.11.2026 kullanıcı: parmak menünün üstüne (sayfaya) çıkmış olsa da bırakılan yerdeki sekmeye geçsin (eskiden 40 px yukarıda vazgeçiyordu)
+      if (t) track(t.clientX);
       e.preventDefault(); // tıklama tekrar tetiklenmesin
-      finish(!away);
+      finish(true);
     };
     const cancel = () => finish(!!st.current?.moved); // sistem dokunuşu aldı: sadece parmakla sekmeler üstünde gezinmişse geç, yoksa hiçbir şey yapma
-    el.addEventListener('touchstart', start, { passive: true });
-    el.addEventListener('touchmove', move, { passive: false });
+    // 6.11.2026: bırakınca sekmeye geçmeyip hap ortada takılı kalıyordu (parmak kalkışı menüye ulaşmadı) → bırakma pencere
+    // seviyesinde de yakalanır; menü dışında yeni dokunuş, sayfadan çıkma ya da 4 sn sessizlik takılı hâli temizler
+    const winEnd = (e) => { if (st.current && !el.contains(e.target)) end(e); };
+    const winStart = (e) => { if (st.current && !el.contains(e.target)) finish(false); };
+    const hide = () => { if (document.visibilityState === 'hidden' && st.current) finish(false); };
+    let dog = 0; const kick = () => { clearTimeout(dog); dog = setTimeout(() => { if (st.current) finish(!!st.current.moved); }, 4000); };
+    const start2 = (e) => { if (st.current) finish(false); start(e); if (st.current) kick(); };
+    const move2 = (e) => { move(e); if (st.current) kick(); };
+    el.addEventListener('touchstart', start2, { passive: true });
+    el.addEventListener('touchmove', move2, { passive: false });
     el.addEventListener('touchend', end, { passive: false });
     el.addEventListener('touchcancel', cancel);
-    return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', cancel); };
+    addEventListener('touchend', winEnd, { capture: true, passive: false });
+    addEventListener('touchcancel', winEnd, { capture: true });
+    addEventListener('touchstart', winStart, { capture: true, passive: true });
+    document.addEventListener('visibilitychange', hide);
+    return () => { clearTimeout(dog); el.removeEventListener('touchstart', start2); el.removeEventListener('touchmove', move2); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', cancel);
+      removeEventListener('touchend', winEnd, { capture: true }); removeEventListener('touchcancel', winEnd, { capture: true }); removeEventListener('touchstart', winStart, { capture: true }); document.removeEventListener('visibilitychange', hide); };
   }, []);
   const ai = items.findIndex((x) => x[0] === tab);
   const px = geo && ai >= 0 ? geo.cs[ai] : null;
+  // sekme değişince takılı kalmış sürükleme izi temizlenir, hap yeni sekmeye oturur
+  useLayoutEffect(() => { const el = ref.current; if (!el || st.current) return; el.classList.remove('dragging', 'pressing'); setHov(-1); if (pill.current && px != null) pill.current.style.transform = `translateX(${px}px) translateX(-50%)`; }, [tab, px]);
   // 5.11.2026 sıvı geçiş: hap yeni sekmeye kayarken yolun ortasında uzayıp hafif basıklaşır, varınca toplanır (iOS cam sekme çubuğu hissi)
   const prevPx = useRef(px);
   useEffect(() => {
