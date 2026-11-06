@@ -1119,24 +1119,11 @@ function setupResumeFix() {
   // değilse aradaki fark kadar itilir (--vvd) ve ekran yeniden ölçtürülür. Yazı alanı açıkken (klavye) dokunulmaz.
   if (vv && matchMedia('(pointer: coarse)').matches) {
     const r = document.documentElement; let cur = 0, q = 0, lastFix = 0;
-    // 6.11.2026 (4): ana ekran uygulamasında dönünce iPhone görünen alanı (visualViewport) da bir süre KISA bildirebiliyor →
-    // eski hesap menüyü bu kısa yüksekliğe göre YUKARI itiyordu (Hesabım'da menü ekranın ortasında). Artık:
-    // (a) görünen alanın kaydırma payı (offsetTop) da hesaba katılır, (b) ana ekran uygulamasında (tarayıcı çubuğu yok)
-    // bu genişlikte daha önce görülen sağlıklı tam yükseklik hatırlanır; klavye yokken menü hep ekranın en altına oturur.
-    const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-    const goodH = {}; try { Object.assign(goodH, JSON.parse(localStorage.getItem('vv-good') || '{}')); } catch {}
-    const visBottom = () => {
-      const top = Math.max(0, vv.offsetTop || 0); let h = vv.height;
-      if (standalone && !isField(document.activeElement)) {
-        const k = String(Math.round(innerWidth)), cap = Math.max(screen.width, screen.height) + 1;
-        // sağlıklı an: sayfa alanı ile görünen alan aynı boyda (klavye / bozulma yok) → kaydet
-        if (Math.abs(vv.height - innerHeight) < 2 && Math.abs(vv.width - innerWidth) < 2 && vv.height <= cap && vv.height > (goodH[k] || 0) + 1) {
-          goodH[k] = Math.round(vv.height); try { localStorage.setItem('vv-good', JSON.stringify(goodH)); } catch {}
-        }
-        if (goodH[k] && goodH[k] <= cap) h = Math.max(h, goodH[k]);
-      }
-      return top + h;
-    };
+    // 6.11.2026 (7): 'en büyük sağlıklı yükseklik' hatırlama yöntemi KALDIRILDI — iPhone bir an durum çubuğu dahil uzun ölçü
+    // bildirince o değer kalıcı kaydoluyor, menü ekranın altından taşıyordu. Artık: menü sadece AŞAĞI itilir (görünen alan kısa
+    // bildirildiğinde yukarı, ekranın ortasına itilmez); uzun aradan dönüşte sayfa zaten yenilenir (yukarıda).
+    try { localStorage.removeItem('vv-good'); } catch {}
+    const visBottom = () => vv.height;
     const upd = () => {
       q = 0; const nav = document.querySelector('.botnav'); if (!nav || isField(document.activeElement)) { if (cur) { cur = 0; r.style.removeProperty('--vvd'); } return; }
       const cs = getComputedStyle(nav); if (cs.position !== 'fixed' || cs.display === 'none') return;
@@ -1145,7 +1132,7 @@ function setupResumeFix() {
       if (scrollY < 0 || scrollY > maxY + 1) return;
       const want = visBottom() - (parseFloat(cs.bottom) || 0); // menünün altı burada olmalı
       const rb = nav.getBoundingClientRect().bottom - cur; // itme olmadan menünün altı
-      let d = Math.round(want - rb); if (Math.abs(d) < 24) d = 0; // küçük farklar (esneme, adres çubuğu) yok sayılır
+      let d = Math.round(want - rb); if (d < 24) d = 0; // sadece aşağı (yukarı itmek menüyü ortaya taşıyordu) // küçük farklar (esneme, adres çubuğu) yok sayılır
       if (d !== cur) { cur = d; d ? r.style.setProperty('--vvd', d + 'px') : r.style.removeProperty('--vvd'); }
       if (d && Date.now() - lastFix > 1500) { lastFix = Date.now(); fix(); }
     };
