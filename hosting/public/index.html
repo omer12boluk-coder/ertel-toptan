@@ -8192,7 +8192,7 @@ html:not(.addc-gray):not(.addc-dark):not(.addc-hex) .shell.public .abx .btn.add 
 .ai-add textarea.ai-link { min-height: 48px; resize: vertical; }
 
 /* ===== Ödeme linki (6.11.2026, paylink.jsx) ===== */
-.pl-page { max-width: 1120px; }
+.pl-page > :not(.page-h, .subnav) { max-width: 1120px; width: 100%; } /* sayfa Form oluştur ile aynı genişlikte: başlık + sekmeler sekme değişince kaymaz */
 .pl-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .9fr); gap: 16px; align-items: start; }
 .pl-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
 .pl-form { display: flex; flex-direction: column; gap: 18px; }
@@ -8441,9 +8441,12 @@ html.th-dash .csel-pop { background: var(--surface); border-color: var(--line); 
 /* 6.11.2026 (7) yönetim yan menüsündeki ses düğmesi: kaydırıcı düğmenin ÜSTÜNDE açılır (alt köşede ekran dışına taşmasın) */
 .shell.admin .sfx-pop { top: auto; bottom: calc(100% + 8px); transform-origin: 50% 100%; }
 .shell.admin .sfx-pop::before { top: auto; bottom: -10px; }
+
+/* Sayfa geçişinde yana kayan sayfa, bilgisayarda bir an yatay kaydırma çubuğu açtırıyordu (altta çizgi) → sayfa hiç yana taşmaz */
+html.nav-anim { overflow-x: clip; }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '63bd277773';</script>
+<script>window.__BUILD = 'c516e58b4e';</script>
 </head>
 <body>
 <div id="root"></div>
