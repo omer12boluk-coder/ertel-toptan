@@ -670,10 +670,10 @@ input[type="tel"] { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .shell.admin .me-t small { color: var(--admin-dim); }
 .shell.admin .topbar .icon-btn { color: var(--admin-dim); }
 .shell.admin .topbar .icon-btn:hover { color: #fff; background: rgb(255 255 255 / .08); }
-.shell.admin .botnav { background: var(--admin-bar); border-top-color: #0d1530; }
-.shell.admin .botnav-b { color: var(--admin-dim); }
-.shell.admin .botnav-b.on { color: #fff; }
-.shell.admin .botnav-b.on .botnav-i { background: rgb(255 255 255 / .14); }
+.shell.admin:not(.adm-bn) .botnav { background: var(--admin-bar); border-top-color: #0d1530; }
+.shell.admin:not(.adm-bn) .botnav-b { color: var(--admin-dim); }
+.shell.admin:not(.adm-bn) .botnav-b.on { color: #fff; }
+.shell.admin:not(.adm-bn) .botnav-b.on .botnav-i { background: rgb(255 255 255 / .14); }
 @media (max-width: 560px) { .admin-badge { padding: 0 8px; font-size: 10.5px; } .shell.admin .brand-t { display: none; } }
 body:has(.shell.admin)::before { background: #16213f; }
 .login-card.admin { border-top: 4px solid #f5b20b; }
@@ -2119,10 +2119,10 @@ button.dash-kpi { cursor: pointer; } button.dash-kpi:hover { transform: translat
 .botnav.pressing .botnav-b:not(.hov) { color: var(--muted); }
 .botnav-b.hov { color: var(--accent); }
 .botnav-b.hov .ic { transform: translateY(-1px) scale(1.1); }
-.shell.admin .botnav-pill i { background: rgb(255 255 255 / .14); }
-.shell.admin .botnav.pressing .botnav-pill i { box-shadow: 0 0 14px rgb(160 190 255 / .35); }
-.shell.admin .botnav.pressing .botnav-b:not(.hov) { color: var(--admin-dim); }
-.shell.admin .botnav-b.hov { color: #fff; }
+.shell.admin:not(.adm-bn) .botnav-pill i { background: rgb(255 255 255 / .14); }
+.shell.admin:not(.adm-bn) .botnav.pressing .botnav-pill i { box-shadow: 0 0 14px rgb(160 190 255 / .35); }
+.shell.admin:not(.adm-bn) .botnav.pressing .botnav-b:not(.hov) { color: var(--admin-dim); }
+.shell.admin:not(.adm-bn) .botnav-b.hov { color: #fff; }
 
 /* Telefonda yazı seçme / basılı tutma (Ayarlar > Online mağaza > Mobil dokunma seçenekleri) */
 @media (hover: none) and (pointer: coarse) {
@@ -6826,28 +6826,28 @@ html.hf-on body { overflow-x: clip; }
    Yüzen hâlde menü kenarlardan 12px ayrık, alttan güvenli alanın biraz üstünde; altına kalan içerik buzlu camdan görünür. */
 @media (max-width: 899px) {
   html.bn-glass, html.bn-dark { --bot-h: 74px; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav {
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav {
     left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px));
     padding: 0 4px; border-radius: 32px; border: 1px solid rgb(255 255 255 / .55);
     background: rgb(255 255 255 / .58); -webkit-backdrop-filter: blur(22px) saturate(1.9); backdrop-filter: blur(22px) saturate(1.9);
     box-shadow: 0 12px 34px -14px rgb(10 20 40 / .38), 0 1px 0 rgb(255 255 255 / .7) inset, 0 -1px 0 rgb(0 0 0 / .04) inset; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b { height: 62px; }
-  html.bn-glass .shell:not(.admin) .botnav-pill i { background: rgb(255 255 255 / .62); border-radius: 18px; box-shadow: 0 1px 0 rgb(255 255 255 / .9) inset, 0 6px 16px -8px rgb(10 20 40 / .28), 0 0 0 1px rgb(10 20 40 / .05); }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { width: 70px; height: 52px; margin-top: -12px; translate: -3px 0; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-b { height: 62px; }
+  html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i { background: rgb(255 255 255 / .62); border-radius: 18px; box-shadow: 0 1px 0 rgb(255 255 255 / .9) inset, 0 6px 16px -8px rgb(10 20 40 / .28), 0 0 0 1px rgb(10 20 40 / .05); }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-pill { width: 70px; height: 52px; margin-top: -12px; translate: -3px 0; }
   /* koyu cam */
-  html.bn-dark .shell:not(.admin) .botnav { background: rgb(18 22 32 / .62); border-color: rgb(255 255 255 / .12); box-shadow: 0 14px 34px -14px rgb(0 0 0 / .6), 0 1px 0 rgb(255 255 255 / .1) inset; }
-  html.bn-dark .shell:not(.admin) .botnav-b { color: rgb(255 255 255 / .62); }
-  html.bn-dark .shell:not(.admin) .botnav-b.on, html.bn-dark .shell:not(.admin) .botnav-b.hov { color: #fff; }
-  html.bn-dark .shell:not(.admin) .botnav-pill i { background: rgb(255 255 255 / .14); border-radius: 18px; box-shadow: 0 1px 0 rgb(255 255 255 / .16) inset; }
+  html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav { background: rgb(18 22 32 / .62); border-color: rgb(255 255 255 / .12); box-shadow: 0 14px 34px -14px rgb(0 0 0 / .6), 0 1px 0 rgb(255 255 255 / .1) inset; }
+  html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-b { color: rgb(255 255 255 / .62); }
+  html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-b.on, html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-b.hov { color: #fff; }
+  html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-pill i { background: rgb(255 255 255 / .14); border-radius: 18px; box-shadow: 0 1px 0 rgb(255 255 255 / .16) inset; }
   /* şerit cam: alta yapışık, yarı saydam */
-  html.bn-bar .shell:not(.admin) .botnav { background: color-mix(in srgb, var(--surface) 66%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); border-top-color: color-mix(in srgb, var(--line) 60%, transparent); }
+  html.bn-bar .shell:is(:not(.admin), .adm-bn) .botnav { background: color-mix(in srgb, var(--surface) 66%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); border-top-color: color-mix(in srgb, var(--line) 60%, transparent); }
   /* gece modu: açık cam koyulaşır */
-  html[data-theme="dark"].bn-glass .shell:not(.admin) .botnav { background: rgb(28 32 44 / .6); border-color: rgb(255 255 255 / .1); box-shadow: 0 12px 34px -14px rgb(0 0 0 / .7), 0 1px 0 rgb(255 255 255 / .08) inset; }
-  html[data-theme="dark"].bn-glass .shell:not(.admin) .botnav-pill i { background: rgb(255 255 255 / .12); box-shadow: 0 1px 0 rgb(255 255 255 / .12) inset; }
+  html[data-theme="dark"].bn-glass .shell:is(:not(.admin), .adm-bn) .botnav { background: rgb(28 32 44 / .6); border-color: rgb(255 255 255 / .1); box-shadow: 0 12px 34px -14px rgb(0 0 0 / .7), 0 1px 0 rgb(255 255 255 / .08) inset; }
+  html[data-theme="dark"].bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i { background: rgb(255 255 255 / .12); box-shadow: 0 1px 0 rgb(255 255 255 / .12) inset; }
 }
 @media (max-width: 899px) and (prefers-color-scheme: dark) {
-  html:not([data-theme]).bn-glass .shell:not(.admin) .botnav { background: rgb(28 32 44 / .6); border-color: rgb(255 255 255 / .1); }
-  html:not([data-theme]).bn-glass .shell:not(.admin) .botnav-pill i { background: rgb(255 255 255 / .12); }
+  html:not([data-theme]).bn-glass .shell:is(:not(.admin), .adm-bn) .botnav { background: rgb(28 32 44 / .6); border-color: rgb(255 255 255 / .1); }
+  html:not([data-theme]).bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i { background: rgb(255 255 255 / .12); }
 }
 /* Tasarım panelindeki seçici kartları */
 .dz2-bns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -6916,44 +6916,44 @@ html.top-hide .shell.public .topbar > :not(.topbar-in) { visibility: hidden; }
 @media (min-width: 900px) { .demo-sw { bottom: 16px; } }
 /* 5.11.2026 yüzen alt menüde seçili sekme hapı menünün DIŞINA taşıyordu → menünün içinde, dikey ortalı */
 @media (max-width: 899px) {
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 5px !important; height: 52px; margin-top: 0; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-pill { top: 5px !important; height: 52px; margin-top: 0; }
 }
 /* 5.11.2026 yüzen alt menü inceltildi (kullanıcı: simge ile yazı uzak, hap kaba / kalın): menü 56px, simge-yazı arası 1px,
    hap tam yuvarlak ve ince gölgeli */
 @media (max-width: 899px) {
   html.bn-glass, html.bn-dark { --bot-h: 66px; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav { border-radius: 30px; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b { height: 56px; gap: 1px; font-size: 11px; font-weight: 600; letter-spacing: .01em; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-i { height: 26px; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 4px !important; width: 64px; height: 46px; translate: none; }
-  html.bn-glass .shell:not(.admin) .botnav-pill i { border-radius: 23px; background: rgb(255 255 255 / .55); box-shadow: 0 1px 0 rgb(255 255 255 / .85) inset, 0 3px 10px -6px rgb(10 20 40 / .3); }
-  html.bn-dark .shell:not(.admin) .botnav-pill i { border-radius: 23px; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav { border-radius: 30px; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-b { height: 56px; gap: 1px; font-size: 11px; font-weight: 600; letter-spacing: .01em; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-i { height: 26px; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-pill { top: 4px !important; width: 64px; height: 46px; translate: none; }
+  html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i { border-radius: 23px; background: rgb(255 255 255 / .55); box-shadow: 0 1px 0 rgb(255 255 255 / .85) inset, 0 3px 10px -6px rgb(10 20 40 / .3); }
+  html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-pill i { border-radius: 23px; }
 }
 
 /* 5.11.2026 (2) kart: telefon ve bilgisayarda 'Sepete ekle' yazılı, tam genişlik, − 1 + ile AYNI boy (38px) → ekleyince kart boyu değişmez */
 .plist.pgrid.ab .prow-side { justify-content: flex-start !important; }
 /* yüzen alt menü: seçili hap daha küçük ve menünün içinde tam ortalı, gölgesiz (kullanıcı: oturmamış duruyordu) */
 @media (max-width: 899px) {
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav { padding: 0 6px; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 7px !important; width: 60px; height: 42px; }
-  html.bn-glass .shell:not(.admin) .botnav-pill i { border-radius: 21px; background: color-mix(in oklab, var(--accent) 11%, rgb(255 255 255 / .35)); box-shadow: 0 0 0 1px rgb(255 255 255 / .55) inset; }
-  html.bn-glass .shell:not(.admin) .botnav.pressing .botnav-pill i { box-shadow: 0 0 0 1px rgb(255 255 255 / .55) inset, 0 4px 14px -6px color-mix(in oklab, var(--accent) 45%, transparent); }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b .ic { transform: none; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav { padding: 0 6px; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-pill { top: 7px !important; width: 60px; height: 42px; }
+  html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i { border-radius: 21px; background: color-mix(in oklab, var(--accent) 11%, rgb(255 255 255 / .35)); box-shadow: 0 0 0 1px rgb(255 255 255 / .55) inset; }
+  html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav.pressing .botnav-pill i { box-shadow: 0 0 0 1px rgb(255 255 255 / .55) inset, 0 4px 14px -6px color-mix(in oklab, var(--accent) 45%, transparent); }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-b .ic { transform: none; }
 }
 /* 5.11.2026 (2) hap sekmenin tamamını sarar (yazı dahil): genişlik = sekme − 6px, boy 48 */
 @media (max-width: 899px) {
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 4px !important; width: calc(var(--tw, 72px) - 6px); height: 48px; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill i { border-radius: 24px; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-pill { top: 4px !important; width: calc(var(--tw, 72px) - 6px); height: 48px; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-pill i { border-radius: 24px; }
 }
 /* 5.11.2026 (3) hap: temadan bağımsız iPhone cam rengi (nötr gri cam + üst parlama), sekmeden biraz geniş */
 @media (max-width: 899px) {
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav { padding: 0 5px; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill { top: 3px !important; width: calc(var(--tw, 72px) - 1px); height: 50px; }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-pill i { border-radius: 25px; }
-  html.bn-glass .shell:not(.admin) .botnav-pill i, html.bn-glass .shell:not(.admin) .botnav.pressing .botnav-pill i {
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav { padding: 0 5px; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-pill { top: 3px !important; width: calc(var(--tw, 72px) - 1px); height: 50px; }
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-pill i { border-radius: 25px; }
+  html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i, html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav.pressing .botnav-pill i {
     background: linear-gradient(180deg, rgb(255 255 255 / .55), rgb(255 255 255 / .2)), rgb(120 120 128 / .14);
     box-shadow: 0 0 0 .5px rgb(255 255 255 / .8) inset, 0 1px 1px rgb(255 255 255 / .9) inset, 0 2px 8px -4px rgb(0 0 0 / .18); }
-  html[data-theme="dark"].bn-glass .shell:not(.admin) .botnav-pill i, html.bn-dark .shell:not(.admin) .botnav-pill i {
+  html[data-theme="dark"].bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i, html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-pill i {
     background: linear-gradient(180deg, rgb(255 255 255 / .16), rgb(255 255 255 / .06)), rgb(120 120 128 / .24); box-shadow: 0 0 0 .5px rgb(255 255 255 / .18) inset, 0 1px 1px rgb(255 255 255 / .2) inset; }
 }
 /* 5.11.2026 kart sepete ekle ⇄ − 1 + geçişi (kullanıcı: telefonda pürüzlü): kırpma (clip-path) animasyonu yerine sadece transform + opacity
@@ -6992,12 +6992,12 @@ html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { background: rgb(255 255 255
    görünüyordu). Hap: mavi-mor buzlu cam, simge/yazı iOS mavisi. */
 :root { --lg-blue: #0a6cff; --lg-pill: linear-gradient(180deg, rgb(255 255 255 / .55), rgb(255 255 255 / .12)), linear-gradient(120deg, rgb(64 132 255 / .22), rgb(134 98 255 / .2)); }
 @media (max-width: 899px) {
-  html.bn-glass .shell:not(.admin) .botnav-pill i, html.bn-glass .shell:not(.admin) .botnav.pressing .botnav-pill i {
+  html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i, html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav.pressing .botnav-pill i {
     background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .85) inset, 0 1px 1px rgb(255 255 255 / .9) inset, 0 3px 10px -5px rgb(70 90 220 / .35); }
-  html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b.on, html:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b.hov { color: var(--lg-blue); }
-  html[data-theme="dark"].bn-glass .shell:not(.admin) .botnav-pill i, html.bn-dark .shell:not(.admin) .botnav-pill i {
+  html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-b.on, html:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-b.hov { color: var(--lg-blue); }
+  html[data-theme="dark"].bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i, html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-pill i {
     background: linear-gradient(180deg, rgb(255 255 255 / .14), rgb(255 255 255 / .04)), linear-gradient(120deg, rgb(64 132 255 / .32), rgb(134 98 255 / .28)); box-shadow: 0 0 0 .5px rgb(160 180 255 / .3) inset, 0 1px 1px rgb(255 255 255 / .15) inset; }
-  html[data-theme="dark"]:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b.on, html.bn-dark .shell:not(.admin) .botnav-b.on { color: #6ea8ff; }
+  html[data-theme="dark"]:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-b.on, html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-b.on { color: #6ea8ff; }
 }
 .topbar.hdr-g .topnav-b.on { color: var(--lg-blue); background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .85) inset, 0 2px 8px -4px rgb(70 90 220 / .3); }
 html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { color: #6ea8ff; background: linear-gradient(120deg, rgb(64 132 255 / .3), rgb(134 98 255 / .26)); }
@@ -7076,11 +7076,11 @@ html[data-theme="dark"] .hdr-gs .gs-srch :is(.hsearch-box, .hsearch-btn) { backg
   box-shadow: 0 10px 30px -14px rgb(15 23 42 / .28), 0 1px 0 rgb(255 255 255 / .95) inset, 0 -1px 0 rgb(15 23 42 / .04) inset !important;
   -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5); }
 @media (max-width: 899px) {
-  html:is(.bn-glass) .shell:not(.admin) .botnav { background: rgb(252 252 253 / .7); border-color: rgb(15 23 42 / .08); box-shadow: 0 10px 30px -14px rgb(15 23 42 / .3), 0 1px 0 rgb(255 255 255 / .95) inset;
+  html:is(.bn-glass) .shell:is(:not(.admin), .adm-bn) .botnav { background: rgb(252 252 253 / .7); border-color: rgb(15 23 42 / .08); box-shadow: 0 10px 30px -14px rgb(15 23 42 / .3), 0 1px 0 rgb(255 255 255 / .95) inset;
     -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5); }
-  html.bn-glass .shell:not(.admin) .botnav-pill i, html.bn-glass .shell:not(.admin) .botnav.pressing .botnav-pill i { background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .9) inset, 0 1px 1px rgb(255 255 255 / .9) inset, 0 3px 10px -6px rgb(15 23 42 / .25); }
-  html[data-theme="dark"].bn-glass .shell:not(.admin) .botnav-pill i, html.bn-dark .shell:not(.admin) .botnav-pill i { background: linear-gradient(180deg, rgb(255 255 255 / .14), rgb(255 255 255 / .04)), color-mix(in oklab, var(--accent) 26%, transparent); box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset; }
-  html[data-theme="dark"]:is(.bn-glass, .bn-dark) .shell:not(.admin) .botnav-b.on, html.bn-dark .shell:not(.admin) .botnav-b.on { color: color-mix(in oklab, var(--accent) 70%, #fff); }
+  html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i, html.bn-glass .shell:is(:not(.admin), .adm-bn) .botnav.pressing .botnav-pill i { background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .9) inset, 0 1px 1px rgb(255 255 255 / .9) inset, 0 3px 10px -6px rgb(15 23 42 / .25); }
+  html[data-theme="dark"].bn-glass .shell:is(:not(.admin), .adm-bn) .botnav-pill i, html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-pill i { background: linear-gradient(180deg, rgb(255 255 255 / .14), rgb(255 255 255 / .04)), color-mix(in oklab, var(--accent) 26%, transparent); box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset; }
+  html[data-theme="dark"]:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav-b.on, html.bn-dark .shell:is(:not(.admin), .adm-bn) .botnav-b.on { color: color-mix(in oklab, var(--accent) 70%, #fff); }
 }
 html[data-theme="dark"] .topbar.hdr-g .topbar-in { background: rgb(26 30 40 / .7); border-color: rgb(255 255 255 / .09) !important; }
 html[data-theme="dark"] .topbar.hdr-g .topnav-b.on { color: color-mix(in oklab, var(--accent) 70%, #fff); background: color-mix(in oklab, var(--accent) 24%, transparent); }
@@ -7238,9 +7238,9 @@ html.th-dash .topbar.hdr-g :is(.hcart, .hcart.full, .icon-btn, .me-login) { back
 html.th-dash .topbar.hdr-gs .gs-srch .hsearch-box { background: var(--dg) !important; border: 1px solid var(--dgb) !important; color: var(--fg); }
 html.th-dash .topbar.hdr-gs .gs-nav { border-top-color: var(--dgb); }
 @media (max-width: 899px) {
-  html.th-dash .shell.public .botnav { background: rgb(30 26 23 / .62) !important; border-color: var(--dgb) !important; box-shadow: 0 14px 34px -16px rgb(0 0 0 / .7), var(--dgh) !important; }
-  html.th-dash .shell.public .botnav-pill i { background: rgb(255 255 255 / .14) !important; box-shadow: var(--dgh) !important; }
-  html.th-dash .shell.public .botnav-b { color: #b3a79b !important; } html.th-dash .shell.public .botnav-b.on { color: #fff !important; }
+  html.th-dash .shell:is(.public, .adm-bn) .botnav { background: rgb(30 26 23 / .62) !important; border-color: var(--dgb) !important; box-shadow: 0 14px 34px -16px rgb(0 0 0 / .7), var(--dgh) !important; }
+  html.th-dash .shell:is(.public, .adm-bn) .botnav-pill i { background: rgb(255 255 255 / .14) !important; box-shadow: var(--dgh) !important; }
+  html.th-dash .shell:is(.public, .adm-bn) .botnav-b { color: #b3a79b !important; } html.th-dash .shell:is(.public, .adm-bn) .botnav-b.on { color: #fff !important; }
   html.th-dash .shell.public .cart-bar { background: rgb(30 26 23 / .7) !important; border-color: var(--dgb) !important; }
 }
 html.th-dash .hd-p { background: rgb(30 26 23 / .86) !important; border-color: var(--dgb) !important; color: var(--fg); }
@@ -7445,14 +7445,14 @@ html.adm-apple .shell.admin :is(.card, .o-card, .dash-card, .set-card, .set-sec,
 html.adm-apple .shell.admin :is(.btn.primary) { border-radius: 999px; }
 /* telefon alt menüsü: yüzen cam */
 @media (max-width: 1099px) {
-  html.adm-apple .shell.admin .botnav { left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px)); padding-bottom: 0; border-radius: 26px; background: var(--ad-side); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); border: 1px solid var(--ad-line); box-shadow: 0 14px 34px -18px rgb(0 0 0 / .4); }
-  html.adm-apple .shell.admin .botnav-b { color: var(--ad-dim); } html.adm-apple .shell.admin .botnav-b.on { color: var(--ad-ink); }
-  html.adm-apple .shell.admin .botnav-pill i { background: var(--ad-hov) !important; box-shadow: 0 0 0 .5px var(--ad-line) inset; border-radius: 18px; }
+  html.adm-apple .shell.admin:not(.adm-bn) .botnav { left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px)); padding-bottom: 0; border-radius: 26px; background: var(--ad-side); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); border: 1px solid var(--ad-line); box-shadow: 0 14px 34px -18px rgb(0 0 0 / .4); }
+  html.adm-apple .shell.admin:not(.adm-bn) .botnav-b { color: var(--ad-dim); } html.adm-apple .shell.admin:not(.adm-bn) .botnav-b.on { color: var(--ad-ink); }
+  html.adm-apple .shell.admin:not(.adm-bn) .botnav-pill i { background: var(--ad-hov) !important; box-shadow: 0 0 0 .5px var(--ad-line) inset; border-radius: 18px; }
   /* hap sekmeyi (simge + yazı) tam sarar, menünün ortasında */
-  html.adm-apple .shell.admin .botnav-pill { top: 4px !important; width: calc(var(--tw, 61px) - 2px); height: calc(100% - 8px); margin-top: 0; }
-  html.adm-apple .shell.admin .botnav-pill i { border-radius: 20px; }
-  html.adm-apple .shell.admin .botnav { padding-left: 4px; padding-right: 4px; }
-  html.adm-apple .shell.admin .botnav-b { font-size: 11px; letter-spacing: -.1px; white-space: nowrap; }
+  html.adm-apple .shell.admin:not(.adm-bn) .botnav-pill { top: 4px !important; width: calc(var(--tw, 61px) - 2px); height: calc(100% - 8px); margin-top: 0; }
+  html.adm-apple .shell.admin:not(.adm-bn) .botnav-pill i { border-radius: 20px; }
+  html.adm-apple .shell.admin:not(.adm-bn) .botnav { padding-left: 4px; padding-right: 4px; }
+  html.adm-apple .shell.admin:not(.adm-bn) .botnav-b { font-size: 11px; letter-spacing: -.1px; white-space: nowrap; }
   html.adm-apple .shell.admin .main { padding-bottom: calc(var(--bot-h, 64px) + env(safe-area-inset-bottom, 0px) + 28px); }
 }
 /* bilgisayar: solda sabit cam menü */
@@ -7477,7 +7477,7 @@ html.adm-apple .shell.admin :is(.btn.primary) { border-radius: 999px; }
   html.adm-apple .shell.admin .topbar-in > .me .me-t { align-items: flex-start; text-align: left; }
   html.adm-apple .shell.admin .main { margin-left: 256px; max-width: none; padding-left: 24px; padding-right: 28px; }
   html.adm-apple .shell.admin ~ .demo-strip, html.adm-apple .shell.admin .demo-strip { margin-left: 256px; }
-  html.adm-apple .shell.admin .botnav { display: none; }
+  html.adm-apple .shell.admin .botnav { display: none !important; }
 }
 
 html.adm-apple .shell.admin .dash-hero { background: radial-gradient(80% 140% at 100% 0%, #3a3a42 0%, #1f1f24 55%, #151518 100%) !important; }
@@ -8304,14 +8304,14 @@ html[data-theme="dark"] .pl-demo-tag { color: #e6a466; }
 .or-mob-p { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
 /* 6.11.2026 telefonda yönetim paneli belirgin (look.adminMark, varsayılan açık): alt menü tema renginde tonlu (koyu grafit denendi, kullanıcı beğenmedi) */
 @media (max-width: 1099px) {
-  html.adm-apple.adm-mark .shell.admin .botnav { background: color-mix(in oklab, var(--accent) 13%, #fff) !important; border-color: color-mix(in oklab, var(--accent) 26%, transparent) !important; box-shadow: 0 12px 30px -14px color-mix(in oklab, var(--accent) 55%, transparent) !important; }
-  html.adm-apple.adm-mark .shell.admin .botnav-b { color: color-mix(in oklab, var(--accent) 55%, #3b3f47) !important; }
-  html.adm-apple.adm-mark .shell.admin .botnav-b.on, html.adm-apple.adm-mark .shell.admin .botnav-b.hov { color: var(--accent) !important; }
-  html.adm-apple.adm-mark .shell.admin .botnav-pill i { background: #fff !important; box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 4px 12px -6px color-mix(in oklab, var(--accent) 50%, transparent) !important; }
-  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav { background: color-mix(in oklab, var(--accent) 22%, #171a21) !important; }
-  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav-b { color: rgb(255 255 255 / .62) !important; }
-  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav-b.on, html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav-b.hov { color: #fff !important; }
-  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin .botnav-pill i { background: rgb(255 255 255 / .14) !important; box-shadow: none !important; }
+  html.adm-apple.adm-mark .shell.admin:not(.adm-bn) .botnav { background: color-mix(in oklab, var(--accent) 13%, #fff) !important; border-color: color-mix(in oklab, var(--accent) 26%, transparent) !important; box-shadow: 0 12px 30px -14px color-mix(in oklab, var(--accent) 55%, transparent) !important; }
+  html.adm-apple.adm-mark .shell.admin:not(.adm-bn) .botnav-b { color: color-mix(in oklab, var(--accent) 55%, #3b3f47) !important; }
+  html.adm-apple.adm-mark .shell.admin:not(.adm-bn) .botnav-b.on, html.adm-apple.adm-mark .shell.admin:not(.adm-bn) .botnav-b.hov { color: var(--accent) !important; }
+  html.adm-apple.adm-mark .shell.admin:not(.adm-bn) .botnav-pill i { background: #fff !important; box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 4px 12px -6px color-mix(in oklab, var(--accent) 50%, transparent) !important; }
+  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin:not(.adm-bn) .botnav { background: color-mix(in oklab, var(--accent) 22%, #171a21) !important; }
+  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin:not(.adm-bn) .botnav-b { color: rgb(255 255 255 / .62) !important; }
+  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin:not(.adm-bn) .botnav-b.on, html.adm-apple.adm-mark[data-theme="dark"] .shell.admin:not(.adm-bn) .botnav-b.hov { color: #fff !important; }
+  html.adm-apple.adm-mark[data-theme="dark"] .shell.admin:not(.adm-bn) .botnav-pill i { background: rgb(255 255 255 / .14) !important; box-shadow: none !important; }
 }
 /* iPhone sayfa alanını kısa sanınca alttaki sabit öğeler görünen ekranın altına itilir (main.jsx setupResumeFix --vvd) */
 .botnav { translate: 0 var(--vvd, 0px); }
@@ -8331,8 +8331,8 @@ html.th-dash.nt-gr .topbar.hdr-g .topbar-in { background: rgb(30 31 35 / .74) !i
 html.th-dash.nt-gr .topbar.hdr-g .topnav-b, html.th-dash.nt-gr .shell.public :is(.view-sw, .seg, .mo-tabs) > button { color: #c7c7cc; }
 html.th-dash.nt-gr .topbar.hdr-g .topnav-b.on .ic { color: var(--accent); }
 @media (max-width: 899px) {
-  html.th-dash.nt-gr .shell.public .botnav { background: rgb(30 31 35 / .74) !important; }
-  html.th-dash.nt-gr .shell.public .botnav-b { color: #a1a1a8 !important; } html.th-dash.nt-gr .shell.public .botnav-b.on { color: #fff !important; }
+  html.th-dash.nt-gr .shell:is(.public, .adm-bn) .botnav { background: rgb(30 31 35 / .74) !important; }
+  html.th-dash.nt-gr .shell:is(.public, .adm-bn) .botnav-b { color: #a1a1a8 !important; } html.th-dash.nt-gr .shell:is(.public, .adm-bn) .botnav-b.on { color: #fff !important; }
   html.th-dash.nt-gr .shell.public .cart-bar { background: rgb(30 31 35 / .8) !important; }
 }
 html.th-dash.nt-gr .hd-p { background: rgb(30 31 35 / .92) !important; }
@@ -8423,3 +8423,9 @@ html.th-dash .csel-pop { background: var(--surface); border-color: var(--line); 
 
 /* Sayfa geçişinde yana kayan sayfa, bilgisayarda bir an yatay kaydırma çubuğu açtırıyordu (altta çizgi) → sayfa hiç yana taşmaz */
 html.nav-anim { overflow-x: clip; }
+
+/* 6.11.2026 yönetim telefon alt menüsü = mağazadaki cam alt menünün birebir aynısı (look.adminNav 'shop', varsayılan; 'old' = eski).
+   Seçili sekme koyu gri (look.adminNavTone 'ink', varsayılan) | 'accent' = mağazayla birebir tema renginde */
+.shell.adm-bn.bn-ink .botnav { --lg-pill: linear-gradient(180deg, rgb(255 255 255 / .75), rgb(255 255 255 / .3)), rgb(15 23 42 / .06); }
+html .shell.adm-bn.bn-ink .botnav .botnav-b.on, html .shell.adm-bn.bn-ink .botnav .botnav-b.hov { color: #2a2d33 !important; }
+html[data-theme="dark"] .shell.adm-bn.bn-ink .botnav .botnav-b.on, html[data-theme="dark"] .shell.adm-bn.bn-ink .botnav .botnav-b.hov { color: #fff !important; }

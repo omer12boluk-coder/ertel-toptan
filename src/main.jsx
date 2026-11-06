@@ -343,7 +343,7 @@ function useTheme() {
     applyStyle(r, pub ? L.style : null);
     setSfxGlobal(L.sound !== false); setSfxVol(L.soundVol);
     // 5.11.2026 yönetim paneli teması (Ayarlar › Bayi ve panel renkleri › Yönetim paneli görünümü, look.admin: apple | classic)
-    r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-mini', isAdm && ls.get('adm-mini', false) === true); /* 6.11.2026 daraltılmış yan menü (cihazda) */ r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic'); r.classList.toggle('adm-mark', isAdm && L.adminMark !== false); /* 6.11.2026 telefonda panel belirgin: koyu alt menü + Yönetim rozeti (kapatılabilir) */
+    r.classList.toggle('adm-on', isAdm); r.classList.toggle('adm-mini', isAdm && ls.get('adm-mini', false) === true); /* 6.11.2026 daraltılmış yan menü (cihazda) */ r.classList.toggle('adm-apple', isAdm && L.admin !== 'classic'); r.classList.toggle('adm-mark', isAdm && L.adminNav === 'old' && L.adminMark !== false); /* 6.11.2026 telefonda panel belirgin: koyu alt menü + Yönetim rozeti (kapatılabilir) */
     // 5.11.2026 hafif mod (look.lite: auto | on | off): eski bilgisayarda bulanık camlar kapanır → kaydırma akıcı
     r.classList.toggle('lite', L.lite === 'on' || (L.lite !== 'off' && LOW_END.v));
     applyLayout(r, pub ? L : {});
@@ -356,7 +356,7 @@ function useTheme() {
     ['gray', 'dark', 'hex'].forEach((k) => r.classList.toggle('addc-' + k, ac === k || (k === 'hex' && /^#/.test(ac))));
     if (/^#/.test(ac)) { r.style.setProperty('--add-hex', ac); r.style.setProperty('--add-hfg', hexLight(ac) ? '#111' : '#fff'); } // 5.11.2026 sayfa genişliği, kenar boşluğu, kutu deseni, zemin ışığı (Tasarım › Sayfa)
     // 3.11.2026 telefon alt menüsü görünümü (Tasarım › Renkler ve sayfa › Telefon alt menüsü); sadece mağazada
-    const bn = pub ? (['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass') : 'classic';
+    const bn = (pub || (isAdm && L.adminNav !== 'old')) ? (['glass', 'dark', 'bar', 'classic'].includes(L.botnav) ? L.botnav : 'glass') : 'classic';
     ['glass', 'dark', 'bar'].forEach((k) => r.classList.toggle('bn-' + k, bn === k));
     // 5.11.2026 site teması 'dash' (CRM paneli gibi bakır gece): her zaman koyu → mağazada gece modu zorlanır
     const forced = !!pub && L.site === 'dash';
@@ -663,7 +663,7 @@ function ShellFull() {
   const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' || tab === 'odemelink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
-    <div className={'shell tab-' + tab + (admin ? ' admin' : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
+    <div className={'shell tab-' + tab + (admin ? ' admin' + (S0.look?.adminNav !== 'old' ? ' adm-bn' + (S0.look?.adminNavTone === 'accent' ? '' : ' bn-ink') : '') : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
       {hs ? <header className="topbar hdr-g hdr-gs" ref={gsRef}>
         <div className="topbar-in">
           <div className="gs-r1">

@@ -205,6 +205,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 - **6.11.2026 Ödeme linki:** `src/paylink.jsx` yönetim `/admin/odeme-link` (tab `odemelink`, Form oluştur altında): tutar TL/USD (USD × o anki kur, elle değişir), KDV aç/kapa + oran, komisyon % (`(TL+KDV)×%`), son tutar → `paylinks/{id}` (kural: get herkes, yazma yönetici) + müşteri `/o/<id>` (tab `odeme`, `ROUTE.payId`; sadece toplam + açıklama, komisyon kalemi gösterilmez). Kartla öde 'Yakında' — POS gelince buraya bağlanacak. Listede Ödendi/İptal/Sil elle. Sayfa genişliği Form oluştur ile aynı (sadece içerik 1120px) → sekme değişince başlık kaymaz.
 
 - **6.11.2026 gece:** bilgisayarda sayfa geçişinde yana kayan sayfa yatay kaydırma çubuğu açtırıyordu ('altta çizgi', Setler/Markalar/Ürünler) → `html.nav-anim { overflow-x: clip }`. Denerken Playwright'ta `ignore_default_args=['--hide-scrollbars']` kullan (yoksa çubuk görünmez).
+- **6.11.2026 yönetim telefon alt menüsü = mağazanınki:** `look.adminNav` 'shop' (varsayılan; shell `adm-bn`, mağaza `.shell:is(:not(.admin), .adm-bn) .botnav` kurallarını kullanır, html `bn-*` yönetimde de) | 'old' (eski; `adm-mark` tonlu menü sadece burada). `look.adminNavTone` 'ink' (koyu gri seçili, shell `bn-ink`, varsayılan) | 'accent' (mağazayla birebir). Ayar: Ayarlar › Bayi ve panel renkleri. 900–1099px arası (tablet) shop modunda düz alt menü.
 
 ## 9. Önemli kararlar (neden böyle)
 
