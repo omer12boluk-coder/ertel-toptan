@@ -38,3 +38,20 @@ if (exS.length) note('Kayma örnek', exS.join(' | '));
 if (ex.length) note('Diğer değişen örnek', ex.join(' | '));
 const fmt = (p) => `${p.k || p.id} pi=${sh(p.pi)} im=${(p.im || []).length} ie=${p.ie ? 1 : 0}`;
 note('Şimdiki 5 örnek', cur.slice(0, 5).map(fmt).join(' | '));
+
+// 2) mağaza katalogu ve açıklamalar
+const pubOld = Object.entries(JSON.parse(fs.readFileSync(`${DIR}/pubcatalog.json`))).filter(([id]) => id !== '_meta').flatMap(([, d]) => d.items || []);
+const pubCur = (await db.collection('pubcatalog').get()).docs.filter((d) => d.id !== '_meta').flatMap((d) => d.data().items || []);
+const C = new Map(cur.map((p) => [String(p.id), p]));
+let pm = 0, pe = 0; const pex = [];
+for (const q of pubCur) { const p = C.get(String(q.id)); if (!p) continue; if ((q.pi || '') !== (p.pi || '')) { pm++; if (!q.pi) pe++; if (pex.length < 6) pex.push(`${p.k} kat=${sh(p.pi)} mağaza=${sh(q.pi)}`); } }
+note('Mağaza katalogu', `yedekte ${pubOld.length}, şimdi ${pubCur.length} · katalogla kapak resmi farklı ${pm} (boş ${pe}) · alanlar: ${Object.keys(pubCur[0] || {}).join(',')}`);
+if (pex.length) note('Mağaza fark örnek', pex.join(' | '));
+const cnt = (s) => ({ img: (s.match(/<img/gi) || []).length, pl: (s.match(/platincdn|ertelgsm\.com/gi) || []).length, r2: (s.match(/resim\.ertelmarket\.com/gi) || []).length, len: s.length });
+const sum = (docs) => { const t = { img: 0, pl: 0, r2: 0, len: 0, n: 0 }; for (const d of docs) { const c = cnt(JSON.stringify(d)); for (const k in c) t[k] += c[k]; t.n++; } return t; };
+for (const col of ['desc', 'descb']) {
+  const o = Object.values(JSON.parse(fs.readFileSync(`${DIR}/${col}.json`)));
+  const c = (await db.collection(col).get()).docs.map((d) => d.data());
+  const a = sum(o), b = sum(c);
+  note('Açıklama ' + col, `yedek: ${a.n} belge, ${a.img} resim, platin ${a.pl}, r2 ${a.r2}, ${(a.len / 1e6).toFixed(1)} MB → şimdi: ${b.n} belge, ${b.img} resim, platin ${b.pl}, r2 ${b.r2}, ${(b.len / 1e6).toFixed(1)} MB`);
+}
