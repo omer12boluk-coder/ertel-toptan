@@ -1390,6 +1390,7 @@ function BotNav({ items, tab, badge }) {
   const [geo, setGeo] = useState(null); // { cs: [sekme ortaları], top }
   const st = useRef(null);
   const live = useRef({});
+  const curX = useRef(null); // hapın ekranda gerçekte durduğu yer (parmakla taşınınca); geçiş animasyonu buradan başlar
   const keys = items.map((x) => x[0]).join(',');
   const measure = () => {
     const el = ref.current; if (!el) return;
@@ -1406,7 +1407,7 @@ function BotNav({ items, tab, badge }) {
   live.current = { geo, items };
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    const place = (x) => { if (pill.current) pill.current.style.transform = `translateX(${x}px) translateX(-50%)`; };
+    const place = (x) => { curX.current = x; if (pill.current) pill.current.style.transform = `translateX(${x}px) translateX(-50%)`; };
     const track = (cx) => {
       const { geo: g } = live.current; if (!g) return;
       const r = el.getBoundingClientRect(); const lx = cx - r.left;
@@ -1419,8 +1420,11 @@ function BotNav({ items, tab, badge }) {
     const finish = (go_) => {
       const s = st.current; st.current = null;
       el.classList.remove('dragging', 'pressing'); setHov(-1);
-      if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x}px) translateX(-50%)`; // aktif sekmeye yumuşakça döner
-      if (s && s.i != null && go_) go(live.current.items[s.i][0]);
+      const to = s && s.i != null && go_ ? live.current.items[s.i][0] : null;
+      const same = !to || to === store.s.tab;
+      // başka sekmeye geçiliyorsa hap parmağın bıraktığı yerden yeni sekmeye gider (önce eski sekmeye dönüp sonra gitmesi titreme yapıyordu)
+      if (same) { curX.current = null; if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x}px) translateX(-50%)`; }
+      if (to && !same) go(to);
     };
     // iPhone'da ekranın altındaki çizgiden yukarı kaydırma (uygulamadan çıkma / uygulama değiştirici) menünün alt boşluğundan başlar:
     // oradan başlayan dokunuş sekme değiştirmez (31.10.2026: uygulama arka plana giderken Kalıp/Sepet sekmesine geçiyordu)
@@ -1461,8 +1465,9 @@ function BotNav({ items, tab, badge }) {
   // 5.11.2026 sıvı geçiş: hap yeni sekmeye kayarken yolun ortasında uzayıp hafif basıklaşır, varınca toplanır (iOS cam sekme çubuğu hissi)
   const prevPx = useRef(px);
   useEffect(() => {
-    const a = prevPx.current; prevPx.current = px;
-    if (a == null || px == null || Math.abs(a - px) < 2) return;
+    const a0 = prevPx.current; prevPx.current = px;
+    const a = curX.current != null ? curX.current : a0; curX.current = null;
+    if (a0 == null || px == null || Math.abs(a - px) < 2) return;
     const i = pill.current?.firstElementChild; if (!i?.animate || ref.current?.classList.contains('dragging') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const pm = pillMode();
     if (pm === 'none') return;
