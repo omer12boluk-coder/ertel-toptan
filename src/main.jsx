@@ -41,7 +41,7 @@ import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome, HeaderSearch, withProdFallback } from './shophome.jsx';
-import { ShopDesigner } from './designer.jsx';
+import { DesignEntry } from './designv3.jsx'; // 7.11.2026: tasarım modu v3 (eski mod 'Gelişmiş')
 import { AdminHome } from './dashboard.jsx';
 import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
@@ -793,7 +793,7 @@ function ShellFull() {
         {tab === 'sorun' && pub && <IssuePage />}
         {tab === 'islem' && pub && <AuthAction />}
         {tab === 'ayarlar' && admin && <Settings />}
-        {tab === 'tasarim' && admin && <ShopDesigner />}
+        {tab === 'tasarim' && admin && <DesignEntry />}
       </main>
       {pub && !['katalog', 'sepet', 'hesap', 'kalip'].includes(tab) && <ShopFooter compact={tab !== 'anasayfa'} />}
       {!admin && tab !== 'lsepet' && tab !== 'odeme' && <CartBar />}

@@ -27,7 +27,7 @@ import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFon
 // raflara kalıcı kimlik ver, eski sıra kayıtlarını (rail:0) kimliğe çevir.
 // Aynı ayar nesnesi için hep aynı sonuç (kimlikler her çağrıda yeniden üretilip sıra kayıtlarıyla çelişmesin)
 const prepCache = new WeakMap();
-function prepare(S) {
+export function prepare(S) {
   if (prepCache.has(S)) return prepCache.get(S);
   const d = prepare0(S); prepCache.set(S, d); return d;
 }
@@ -456,6 +456,7 @@ export function ShopDesigner() {
     <div className={'page dz-page dz-mobile' + (sel ? ' has-panel' : '') + (pick ? ' has-pick' : '')}>
       <div className="dz-top">
         <span className="dz-title"><Icon n="brush" s={18} /><b>Tasarım modu</b><small>Bir bölüme ya da kutuya dokunun, alttaki düğmelerle düzenleyin</small></span>
+        <button className="btn sm ghost" onClick={() => { ls.set('dz-v', 'v3'); store.set({ v3tick: Date.now() }); }}>Sade mod</button>
         <button className="btn sm ghost" onClick={undo} disabled={!hist.current.list.length}><Icon n="undo" s={15} />Geri al</button>
         {dirty && <button className="btn sm ghost" onClick={discard}>Vazgeç</button>}
         <button className="btn sm primary" onClick={save} disabled={busy || !dirty}><Icon n="check" s={15} />{busy ? 'Yayınlanıyor…' : dirty ? 'Yayınla' : 'Yayında'}</button>
@@ -486,6 +487,7 @@ export function ShopDesigner() {
         <button className="dz2-search" onClick={() => setCmd(true)}><Icon n="search" s={15} /><span>Ayar ara</span><kbd>Ctrl K</kbd></button>
         <button className="dz2-ib" onClick={() => setVers(true)} title="Sürüm geçmişi"><Icon n="clock" s={17} /></button>
         <a className="dz2-ib" href="/" target="_blank" rel="noopener" title="Mağazayı yeni sekmede aç"><Icon n="ext" s={17} /></a>
+        <button className="btn sm ghost" onClick={() => { ls.set('dz-v', 'v3'); store.set({ v3tick: Date.now() }); }} title="Sade tasarım ekranına dön">Yeni tasarım modu</button>
         {dirty && <span className="dz2-changes" tabIndex={0}><i>{changes.length}</i>değişiklik<span className="dz2-changes-l">{changes.map((c) => <span key={c}>{c}</span>)}</span></span>}
         {dirty && <button className="btn sm ghost" onClick={discard}>Vazgeç</button>}
         <button className={'btn sm primary dz2-pub' + (dirty ? ' live' : '')} onClick={save} disabled={busy || !dirty}><Icon n="check" s={15} />{busy ? 'Yayınlanıyor…' : dirty ? 'Yayınla' : 'Yayında'}</button>
@@ -545,7 +547,7 @@ function BotNavPreview() {
 
 // ---- Orta alan: gerçek genişlikte önizleme çerçeveleri ---------------------------------------------------------------------
 const PHONES = [[430, 'iPhone 15/16 Pro Max · 430'], [393, 'iPhone 15/16 Pro · 393'], [390, 'iPhone 13/14 · 390'], [375, 'iPhone SE / mini · 375'], [412, 'Android · 412'], [360, 'Küçük Android · 360']];
-function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
+export function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   const ref = useRef(null); const { w, h } = useSize(ref);
   const L = view.look || {}; const pp = pack?.palette;
   const vars = {
@@ -1193,7 +1195,7 @@ function DevPick({ L, set, base = 'look', k, kM = k + 'M', def, label, hint, opt
 
 // ---- 5.11.2026 Tasarım paketleri ---------------------------------------------------------------------------------------------
 function swOf(data) { const L = data.look || {}; return [L.bg || '#f3f5f9', L.shopAccent || data.brand?.accent || '#2f55b0', data.promos?.[0]?.color || '#0f172a', data.promos?.[1]?.color || L.shopPrice || '#c2410c']; }
-function savePresets(list, A) {
+export function savePresets(list, A) {
   const s0 = store.s.settings; const dd = store.s.designDraft;
   store.set({ settings: { ...s0, dzPresets: list }, ...(dd ? { designDraft: { ...dd, dzPresets: list } } : {}) });
   queueSave('settings', () => A.saveSettings(store.s.settings));

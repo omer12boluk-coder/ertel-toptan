@@ -1,0 +1,308 @@
+// Tasarım modu v3 (7.11.2026): sade tasarım ekranı — solda Sayfa (bölümler: sırala, aç/kapa) | Görünüm (bütün sayfa için 5 ayar),
+// ortada sayfanın kendisi (eski moddaki önizleme çerçevesi), sağda sadece seçilen bölümün birkaç ayarı.
+// Eski tasarım modu silinmedi: üstteki "Gelişmiş" (cihazda ls 'dz-v' = 'old'); eski modda "Yeni tasarım modu" ile geri dönülür.
+// Kayıt eski modla AYNI taslak (store.designDraft) ve aynı Yayınla akışı.
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useStore, store, toast, go } from './store.js';
+import { Icon, Confirm } from './ui.jsx';
+import { withDefaults, norm, ls } from './utils.js';
+import { ShopHome, DesignCtx, blockLabel, moveItem, withProdFallback, RailFields } from './shophome.jsx';
+import { prepare, Stage, ShopDesigner } from './designer.jsx';
+import { queueSave } from './saveq.js';
+import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
+import { PB_BY, PB_TEXT, PHOTO_BANNERS } from './photobn.jsx';
+import { HERO_W, HERO_FILL, cdOf, shortOf } from './cdhome.jsx';
+import { liveSets } from './sets.jsx';
+
+const PREVIEW = typeof location !== 'undefined' && /--/.test(location.hostname);
+const setPath = (obj, path, v) => { const n = structuredClone(obj); const ks = path.split('.'); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k] = o[k] ?? {})); o[ks.at(-1)] = v; return n; };
+export const useV3 = () => ls.get('dz-v', 'v3') !== 'old';
+// Yönetim › Tasarım: v3 ya da eski mod (cihazda seçilir; değişince store.v3tick ile yeniden çizilir)
+export function DesignEntry() { useStore((s) => s.v3tick); return useV3() ? <DesignV3 /> : <ShopDesigner />; }
+export const toV3 = () => { ls.set('dz-v', 'v3'); store.set({ v3tick: Date.now() }); };
+// önizlemedeki bölüm: tıklayınca seçilir (içindeki linkler/düğmeler çalışmaz). Modül düzeyinde (her çizimde yeniden kurulmasın)
+const V3Sel = createContext(null);
+function Block({ k, hidden: hd, children }) {
+  const c = useContext(V3Sel);
+  return <div className={'v3-blk' + (c?.sel === k ? ' on' : '') + (hd ? ' off' : '')} data-k={k} data-name={c ? blockLabel(k, c.H) : ''} onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); c?.select(k); }}>{hd ? <div className="v3-hid">{c ? blockLabel(k, c.H) : k} · gizli</div> : children}</div>;
+}
+const IC = { 'cd:hero': 'image', hero: 'image', 'p0:hero': 'image', 'cd:pick': 'star', 'cd:sets': 'box', 'cd:brands': 'tag', 'cd:mq': 'tag', 'p0:find': 'search', 'p0:cats': 'grid', 'p0:trust': 'check', cta: 'wa' };
+const NOTE = { 'p0:find': 'Telefon modelini yazınca uyan kalıp ve parçaları gösterir. Ayarı yok.', 'p0:trust': 'Avantaj yazılarınız (Orijinal ürün, Hızlı kargo…). Yazılar Gelişmiş’te.', 'p0:cats': 'Kategoriler ürün sayısına göre otomatik dizilir.', cta: 'WhatsApp alt bandı. Yazısı Gelişmiş’te.' };
+
+function useMobile() {
+  const q = '(max-width: 800px), (pointer: coarse)';
+  const [m, setM] = useState(() => matchMedia(q).matches);
+  useEffect(() => { const mq = matchMedia(q); const f = () => setM(mq.matches); mq.addEventListener?.('change', f); return () => mq.removeEventListener?.('change', f); }, []);
+  return m;
+}
+const Seg = ({ v, opts, on }) => <span className="v3-seg">{opts.map(([k, l]) => <button key={k} type="button" className={(v ?? '') === k ? 'on' : ''} onClick={() => on(k)}>{l}</button>)}</span>;
+const Row = ({ label, hint, children }) => <label className="v3-f"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
+const TF = ({ v, ph, on, area }) => (area ? <textarea rows={2} value={v || ''} placeholder={ph} onChange={(e) => on(e.target.value)} /> : <input value={v || ''} placeholder={ph} onChange={(e) => on(e.target.value)} />);
+
+export function DesignV3() {
+  const { settings, designDraft, api: A } = useStore();
+  const d = designDraft || prepare(settings);
+  const baseObj = useMemo(() => prepare(settings), [settings]);
+  const dirty = !!designDraft && JSON.stringify(designDraft) !== JSON.stringify(baseObj);
+  const mobile = useMobile();
+  const [tab, setTab] = useState('page');
+  const [sel, setSel] = useState(null);
+  const [dev, setDevS] = useState(() => ls.get('dz3-dev', 'desk'));
+  const setDev = (v) => { setDevS(v); ls.set('dz3-dev', v); };
+  const [busy, setBusy] = useState(false); const [confirm, setConfirm] = useState(null);
+  const [sheet, setSheet] = useState(true);
+  const hist = useRef({ list: [], redo: [], t: 0 }); const [, bump] = useState(0);
+  const H = d.shopHome; const L = H.layout || []; const hidden = new Set(H.hidden || []);
+  const cdOn = !!d.look?.cd && L.includes('cd:hero');
+
+  const set = (path, v) => {
+    const cur = store.s.designDraft || prepare(store.s.settings); const now = Date.now();
+    if (now - hist.current.t > 600) { hist.current.list.push(cur); if (hist.current.list.length > 80) hist.current.list.shift(); hist.current.redo = []; }
+    hist.current.t = now; store.set({ designDraft: setPath(cur, path, v) });
+  };
+  const S = (k, v) => set('shopHome.' + k, v);
+  const setAll = (next) => { const cur = store.s.designDraft || prepare(store.s.settings); hist.current.list.push(cur); hist.current.redo = []; hist.current.t = 0; store.set({ designDraft: next }); };
+  const undo = () => { const h = hist.current; const p = h.list.pop(); if (!p) return; h.redo.push(store.s.designDraft || prepare(store.s.settings)); store.set({ designDraft: p }); h.t = 0; bump((x) => x + 1); };
+  const redo = () => { const h = hist.current; const n = h.redo.pop(); if (!n) return; h.list.push(store.s.designDraft || prepare(store.s.settings)); store.set({ designDraft: n }); h.t = 0; bump((x) => x + 1); };
+  useEffect(() => { const k = (e) => { if (e.target.closest?.('input, textarea, select')) return; const m = e.ctrlKey || e.metaKey; const c = (e.key || '').toLowerCase(); if (m && c === 'z' && !e.shiftKey) { e.preventDefault(); undo(); } else if (m && (c === 'y' || (c === 'z' && e.shiftKey))) { e.preventDefault(); redo(); } else if (e.key === 'Escape') setSel(null); }; addEventListener('keydown', k); return () => removeEventListener('keydown', k); });
+  useEffect(() => { if (!dirty) return; const h = (e) => { e.preventDefault(); e.returnValue = ''; }; addEventListener('beforeunload', h); return () => removeEventListener('beforeunload', h); }, [dirty]);
+  useEffect(() => { document.documentElement.classList.toggle('dz2-open', !mobile); return () => document.documentElement.classList.remove('dz2-open'); }, [mobile]);
+
+  async function save() {
+    if (PREVIEW) {
+      const x = JSON.parse(JSON.stringify(store.s.designDraft || prepare(store.s.settings)));
+      ls.set('pv-design', { look: x.look, shopHome: x.shopHome, brand: x.brand, cards: x.cards, brandLogos: x.brandLogos });
+      toast('Önizleme tasarımı bu tarayıcıya kaydedildi (canlı mağaza değişmedi). Mağaza yeni sekmede açılıyor.'); setTimeout(() => window.open('/', '_blank'), 400); return;
+    }
+    setBusy(true);
+    try {
+      try { const prev = { at: Date.now(), shopHome: baseObj.shopHome, look: baseObj.look, brandLogos: baseObj.brandLogos }; ls.set('dz-versions', [prev, ...ls.get('dz-versions', [])].slice(0, 12)); } catch {}
+      const clean = withProdFallback(withDefaults(JSON.parse(JSON.stringify(store.s.designDraft))));
+      store.set({ settings: clean, designDraft: null }); hist.current = { list: [], redo: [], t: 0 }; toast('Mağaza tasarımı yayınlandı');
+      queueSave('settings', () => A.saveSettings(store.s.settings));
+    } catch (e) { toast('Kaydedilemedi: ' + e.message, 'bad'); }
+    setBusy(false);
+  }
+  const discard = () => setConfirm({ title: 'Değişiklikleri at', text: 'Yayınlanmamış değişiklikler silinecek.', okLabel: 'At', tone: 'danger', onOk: () => { store.set({ designDraft: null }); hist.current = { list: [], redo: [], t: 0 }; bump((x) => x + 1); } });
+  const toOld = () => { ls.set('dz-v', 'old'); store.set({ v3tick: Date.now() }); };
+
+  const toggleHide = (k) => S('hidden', hidden.has(k) ? [...hidden].filter((x) => x !== k) : [...hidden, k]);
+  const move = (k, dir) => { const i = L.indexOf(k); const j = i + dir; if (i < 0 || j < 0 || j >= L.length) return; S('layout', moveItem(L, i, j)); };
+  const select = (k) => { setSel(k); setTab('page'); setSheet(true); };
+
+  const noop = () => {};
+  const E = useMemo(() => ({ H, L, get: (k) => H[k], mobile, sel: null, select: noop, tapBlock: noop, setSel: noop, set, setL: (v) => S('layout', v), toggleHide, removeBlock: noop, addBlock: noop, heroI: { current: 0 }, heroGo: new Set(), guide: null, pack: null, blockMenu: null, Block, HeroTools: () => null, fxDrag: noop, fxResize: null, imDrag: null, xDrag: noop, xScale: noop, penDown: noop, tool: null, v3: true }), [d, mobile]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ctx = { sel, select, H };
+  const view = useMemo(() => withDefaults(d), [d]);
+
+  const pagePanel = <PagePanel L={L} H={H} hidden={hidden} sel={sel} select={select} move={move} toggleHide={toggleHide} cdOn={cdOn} toCd={() => { setAll(applyPreset(d, CD.data)); toast('Claude düzeni yüklendi. Beğenirseniz Yayınla, vazgeçmek için Geri al.'); }} />;
+  const lookPanel = <LookPanel d={d} set={set} setAll={setAll} A={A} />;
+  const insp = sel ? <Inspector k={sel} d={d} H={H} S={S} close={() => setSel(null)} hidden={hidden.has(sel)} toggleHide={() => toggleHide(sel)} /> : null;
+
+  const top = (
+    <div className="v3-top">
+      <button className="dz2-ib" onClick={() => go('ayarlar')} title="Çık (taslak kaybolmaz)"><Icon n="back" s={18} /></button>
+      <span className="v3-title"><b>Tasarım</b><small>{PREVIEW ? 'Önizleme · Yayınla = sadece bu tarayıcı' : dirty ? 'Yayınlanmamış değişiklik var' : 'Mağaza ana sayfası'}</small></span>
+      {!mobile && <Seg v={dev} opts={[['desk', 'Bilgisayar'], ['phone', 'Telefon'], ['both', 'Yan yana']]} on={setDev} />}
+      <span className="v3-sp" />
+      <button className="dz2-ib" onClick={undo} disabled={!hist.current.list.length} title="Geri al (Ctrl Z)"><Icon n="undo" s={17} /></button>
+      <button className="dz2-ib" onClick={redo} disabled={!hist.current.redo.length} title="Yeniden yap"><Icon n="undo" s={17} className="dz2-flipx" /></button>
+      {!mobile && <a className="dz2-ib" href="/" target="_blank" rel="noopener" title="Mağazayı yeni sekmede aç"><Icon n="ext" s={17} /></a>}
+      <button className="btn sm ghost v3-adv" onClick={toOld} title="Eski tasarım modu: bütün ince ayarlar">Gelişmiş</button>
+      {dirty && <button className="btn sm ghost" onClick={discard}>Vazgeç</button>}
+      <button className={'btn sm primary' + (dirty ? ' live' : '')} onClick={save} disabled={busy || !dirty}><Icon n="check" s={15} />{busy ? 'Yayınlanıyor…' : dirty ? 'Yayınla' : 'Yayında'}</button>
+    </div>
+  );
+  const tabs = <div className="v3-tabs"><button type="button" className={tab === 'page' ? 'on' : ''} onClick={() => setTab('page')}>Sayfa</button><button type="button" className={tab === 'look' ? 'on' : ''} onClick={() => { setTab('look'); setSel(null); }}>Görünüm</button></div>;
+
+  if (mobile) return (
+    <div className={'v3 v3-m' + (sheet ? ' sheet-up' : '')}>
+      {top}
+      <div className="v3-m-canvas"><V3Sel.Provider value={ctx}><DesignCtx.Provider value={E}><ShopHome S={view} /></DesignCtx.Provider></V3Sel.Provider></div>
+      <div className="v3-m-sheet">
+        <button type="button" className="v3-m-hnd" onClick={() => setSheet((x) => !x)} aria-label={sheet ? 'Paneli küçült' : 'Paneli aç'}><i /></button>
+        {sel ? insp : <>{tabs}{tab === 'page' ? pagePanel : lookPanel}</>}
+      </div>
+      {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </div>
+  );
+  return (
+    <div className="v3">
+      {top}
+      <div className="v3-body">
+        <aside className="v3-left">{tabs}{tab === 'page' ? pagePanel : lookPanel}</aside>
+        <V3Sel.Provider value={ctx}><Stage dev={dev} pw={390} view={view} E={E} d={d} pack={null} onFrame={() => () => {}} /></V3Sel.Provider>
+        <aside className="v3-right">{insp || <div className="v3-empty"><Icon n="brush" s={22} /><b>Bir bölüm seçin</b><p>Soldaki listeden ya da sayfada bölümün üstüne tıklayın. Seçtiğiniz bölümün ayarları burada açılır.</p>
+          {!cdOn && <p className="fine">Bu sade ekran en iyi <b>Claude düzeni</b> ile çalışır. Soldaki listenin üstünden geçebilirsiniz; eski düzeninize Geri al ya da Görünüm › Paket ile dönersiniz.</p>}</div>}</aside>
+      </div>
+      {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </div>
+  );
+}
+
+// ---- Sol: Sayfa — bölümler (açık olanlar üstte sırayla, gizliler altta) ----
+function PagePanel({ L, H, hidden, sel, select, move, toggleHide, cdOn, toCd }) {
+  const [showOff, setShowOff] = useState(false);
+  const on = L.filter((k) => !hidden.has(k)); const off = L.filter((k) => hidden.has(k));
+  const row = (k, i, list) => (
+    <div key={k} className={'v3-row' + (sel === k ? ' on' : '') + (hidden.has(k) ? ' off' : '')}>
+      <button type="button" className="v3-row-n" onClick={() => select(k)}><Icon n={IC[k] || (k.startsWith('rail:') ? 'grid' : 'box')} s={15} /><span>{blockLabel(k, H)}</span></button>
+      {!hidden.has(k) && <span className="v3-row-mv"><button type="button" disabled={i === 0} onClick={() => move(k, -(L.indexOf(k) - L.indexOf(list[i - 1])))} aria-label="Yukarı"><Icon n="up" s={14} /></button><button type="button" disabled={i === list.length - 1} onClick={() => move(k, L.indexOf(list[i + 1]) - L.indexOf(k))} aria-label="Aşağı"><Icon n="down" s={14} /></button></span>}
+      <button type="button" className={'v3-tg' + (hidden.has(k) ? '' : ' on')} onClick={() => toggleHide(k)} aria-label={hidden.has(k) ? 'Göster' : 'Gizle'} title={hidden.has(k) ? 'Göster' : 'Gizle'} />
+    </div>
+  );
+  return <div className="v3-page">
+    {!cdOn && <div className="v3-cta"><b>Claude düzenine geç</b><p>Fotoğraflı bannerlar ve yeni bölümlerle sade ana sayfa. Hiçbir şey silinmez, eski reklamlarınız gizlenir.</p><button type="button" className="btn sm primary" onClick={toCd}>Geç</button></div>}
+    <span className="v3-cap">Sayfadaki bölümler</span>
+    {on.map((k, i) => row(k, i, on))}
+    {off.length > 0 && <button type="button" className="v3-more" onClick={() => setShowOff((x) => !x)}><Icon n={showOff ? 'down' : 'back'} s={13} className={showOff ? '' : 'flip'} />Gizli bölümler ({off.length})</button>}
+    {showOff && off.map((k, i) => row(k, i, off))}
+  </div>;
+}
+
+// ---- Sol: Görünüm — bütün sayfa için birkaç ayar ----
+const ACCENTS = ['#2f62d6', '#1d1d1f', '#0b7a52', '#c2410c', '#b4232a', '#0e7490'];
+function LookPanel({ d, set, setAll, A }) {
+  const Lk = d.look || {}; const st = Lk.style || {};
+  const acc = Lk.shopAccent || d.brand?.accent || '#2f62d6';
+  const corner = CORNERS.find(([, , v]) => v.rHero === st.rHero)?.[0] || (st.rHero == null ? 'soft' : '');
+  const font = st.head === 'intert' || (!st.head && Lk.cd) ? 'apple' : st.head ? 'other' : 'classic';
+  const saved = useStore((s) => s.settings.dzPresets) || [];
+  const packs = [CD, P0, APPLE, ...saved];
+  return <div className="v3-look">
+    <Row label="Ana renk" hint="Düğmeler, bağlantılar, seçili menü"><span className="v3-sw">{ACCENTS.map((c) => <button key={c} type="button" className={acc.toLowerCase() === c ? 'on' : ''} style={{ background: c }} onClick={() => set('look.shopAccent', c)} aria-label={c} />)}<input type="color" value={acc} onChange={(e) => set('look.shopAccent', e.target.value)} title="Başka renk" /></span></Row>
+    <Row label="Köşeler" hint="Banner, kartlar ve düğmeler birlikte değişir"><Seg v={corner} opts={CORNERS.map(([k, l]) => [k, l])} on={(k) => set('look.style', { ...st, ...CORNERS.find((x) => x[0] === k)[2] })} /></Row>
+    <Row label="Sayfa genişliği" hint="Banner hariç bütün bölümler (banner genişliği bannerın kendi ayarında)"><Seg v={Lk.width || ''} opts={WIDTHS.map(([k, l]) => [k, l])} on={(k) => set('look.width', k)} /></Row>
+    <Row label="Yazı tipi"><Seg v={font} opts={[['apple', 'Apple sade'], ['classic', 'Klasik']]} on={(k) => set('look.style', k === 'apple' ? { ...st, head: 'intert', body: 'inter', price: 'intert' } : { ...st, head: '', body: '', price: '' })} /></Row>
+    <Row label="Gece modu" hint="Otomatik: ziyaretçinin telefonu gece modundaysa mağaza da koyu"><Seg v={d.brand?.theme === 'auto' ? 'auto' : 'light'} opts={[['auto', 'Otomatik'], ['light', 'Hep gündüz']]} on={(k) => set('brand.theme', k)} /></Row>
+    <span className="v3-cap">Paketler</span>
+    <div className="v3-packs">{packs.map((p) => { const on = sameAs(d, p.data); return <button key={p.id} type="button" className={'v3-pack' + (on ? ' on' : '')} onClick={() => { setAll(applyPreset(d, p.data)); toast(p.name + ' yüklendi. Beğenirseniz Yayınla.'); }}><i>{(p.sw || []).slice(0, 4).map((c, j) => <b key={j} style={{ background: c }} />)}</i><span>{p.name}{on && <small>şu an bu</small>}</span></button>; })}</div>
+    <p className="fine">Daha fazla ayar (tema stüdyosu, menüler, cam, geçişler…) üstteki <b>Gelişmiş</b> düğmesinde.</p>
+  </div>;
+}
+
+// ---- Sağ: seçilen bölümün ayarları ----
+function Inspector({ k, d, H, S, close, hidden, toggleHide }) {
+  const body = k === 'cd:hero' || k === 'hero' || k === 'p0:hero' ? <HeroPanel H={H} S={S} k={k} />
+    : k === 'cd:pick' ? <PickPanel H={H} S={S} />
+    : k === 'cd:sets' ? <SetsPanel H={H} S={S} d={d} />
+    : k === 'cd:brands' ? <TextPanel H={H} S={S} part="brands" eye="Markalar" title="Ustaların güvendiği markalar." n={[[6, '6'], [10, '10'], [14, '14']]} />
+    : k === 'cd:mq' ? <MqPanel H={H} S={S} />
+    : k.startsWith('rail:') ? <RailPanel H={H} S={S} k={k} />
+    : <p className="fine">{NOTE[k] || 'Bu eski bir bölüm; ayrıntılı ayarları Gelişmiş tasarım modunda.'}</p>;
+  return <div className="v3-insp">
+    <div className="v3-insp-h"><button type="button" className="dz2-ib" onClick={close} aria-label="Kapat"><Icon n="back" s={17} /></button><b>{blockLabel(k, H)}</b>
+      <button type="button" className={'v3-tg' + (hidden ? '' : ' on')} onClick={toggleHide} title={hidden ? 'Göster' : 'Gizle'} aria-label={hidden ? 'Göster' : 'Gizle'} /></div>
+    {body}
+  </div>;
+}
+
+// Banner: reklam listesi (aç/kapa, sıra, yazılar) + genişlik ve yükseklik
+function HeroPanel({ H, S, k }) {
+  const sl = H.slides || [];
+  const [open, setOpen] = useState(null);
+  const up = (i, p) => S('slides', sl.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const mv = (i, dir) => { const j = i + dir; if (j < 0 || j >= sl.length) return; S('slides', moveItem(sl, i, j)); if (open === i) setOpen(j); };
+  const name = (s, i) => (s.pb ? PB_BY[s.pb]?.name || s.pb : s.title || s.tag || (i + 1) + '. reklam');
+  const missing = PHOTO_BANNERS.filter((b) => !sl.some((s) => s.pb === b.id));
+  const pbIn = sl.some((s) => s.pb);
+  return <>
+    {!pbIn && <div className="v3-cta"><b>Fotoğraflı bannerlar listede değil</b><p>Şu an koddan ekleniyorlar. Listeye alırsanız her birinin yazısını, sırasını ve görünürlüğünü buradan yönetirsiniz.</p><button type="button" className="btn sm primary" onClick={() => S('slides', [...PHOTO_BANNERS.map((b) => ({ pb: b.id })), ...sl])}>Listeye al</button></div>}
+    <span className="v3-cap">Bannerlar · {sl.filter((s) => !s.off).length} açık</span>
+    <p className="fine">Kapalı olan sitede görünmez, silinmez. Fotoğraf ve yerleşim hazır şablondan gelir; yazıları değiştirebilirsiniz.</p>
+    <div className="v3-bns">{sl.map((s, i) => (
+      <div key={i} className={'v3-bn' + (s.off ? ' off' : '') + (open === i ? ' open' : '')}>
+        <div className="v3-bn-h">
+          <button type="button" className="v3-bn-n" onClick={() => setOpen(open === i ? null : i)}><span className={'v3-bn-k' + (s.pb ? ' pb' : '')}>{s.pb ? 'Foto' : 'Reklam'}</span><span>{name(s, i)}</span></button>
+          <span className="v3-row-mv"><button type="button" disabled={i === 0} onClick={() => mv(i, -1)} aria-label="Yukarı"><Icon n="up" s={14} /></button><button type="button" disabled={i === sl.length - 1} onClick={() => mv(i, 1)} aria-label="Aşağı"><Icon n="down" s={14} /></button></span>
+          <button type="button" className={'v3-tg' + (s.off ? '' : ' on')} onClick={() => up(i, { off: !s.off, offBy: undefined })} aria-label={s.off ? 'Aç' : 'Kapat'} />
+        </div>
+        {open === i && <div className="v3-bn-b">{s.pb ? PB_TEXT.map(([f, l]) => {
+          const T = PB_BY[s.pb] || {}; const ph = f === 'c1' ? T.a1?.[0] : f === 'c2' ? T.a2?.[0] : T[f];
+          return <Row key={f} label={l}><TF v={s[f]} ph={ph} area={f === 'title' || f === 'sub'} on={(v) => up(i, { [f]: v || undefined })} /></Row>;
+        }) : <>
+          <Row label="Üst yazı"><TF v={s.tag} on={(v) => up(i, { tag: v })} /></Row>
+          <Row label="Başlık"><TF v={s.title} area on={(v) => up(i, { title: v })} /></Row>
+          <Row label="Açıklama"><TF v={s.text} area on={(v) => up(i, { text: v })} /></Row>
+          <Row label="Düğme"><TF v={s.cta} on={(v) => up(i, { cta: v })} /></Row>
+          <p className="fine">Resim, renk ve yerleşim Gelişmiş’te.</p>
+        </>}
+        {s.pb && <p className="fine">Boş bıraktığınız alan hazır yazıyı kullanır. Satır atlamak için Enter.</p>}</div>}
+      </div>))}</div>
+    {missing.length > 0 && pbIn && <div className="v3-addpb"><span className="v3-cap">Listede olmayan hazır bannerlar</span>{missing.map((b) => <button key={b.id} type="button" className="v3-more" onClick={() => S('slides', [{ pb: b.id }, ...sl])}><Icon n="plus" s={13} />{b.name}</button>)}</div>}
+    <p className="v3-tip">Yeni banner mı istiyorsunuz? Sohbette Claude’a ürünü söyleyin, fotoğraflı banner hazırlasın.</p>
+    {k === 'cd:hero' ? <>
+      <span className="v3-cap">Banner yerleşimi</span>
+      <Row label="Genişlik" hint="Sayfa genişliğinden ayrı. Kenardan kenara: ekranın iki ucuna kadar, köşesiz"><Seg v={H.heroW || ''} opts={HERO_W} on={(v) => S('heroW', v)} /></Row>
+      <Row label="Yükseklik" hint="Ekranı doldur: banner, başladığı yerden ekranın altına kadar uzar"><Seg v={H.heroFill || ''} opts={HERO_FILL} on={(v) => S('heroFill', v)} /></Row>
+    </> : <p className="fine">Genişlik ve yükseklik ayarı Claude düzenindeki banner bölümünde.</p>}
+  </>;
+}
+
+// Bu hafta masamızdan: başlıklar + ürünler (seç, sırala, kısa ad)
+function PickPanel({ H, S }) {
+  const C = cdOf(H).pick || {};
+  const byId = useStore((s) => s.byId); const catalog = useStore((s) => s.catalog);
+  const up = (p) => S('cd', { ...cdOf(H), pick: { ...C, ...p } });
+  const ids = (C.ids || []).map(Number);
+  const [q, setQ] = useState('');
+  const hits = useMemo(() => { const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return []; return catalog.filter((p) => p.a !== 0 && !p.so && !ids.includes(p.id) && t.every((w) => norm(p.n + ' ' + (p.b || '') + ' ' + (p.k || '')).includes(w))).slice(0, 8); }, [q, catalog, ids.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const names = C.names || {};
+  return <>
+    <Row label="Üst yazı"><TF v={C.eye} ph="Tamircinin seçimi" on={(v) => up({ eye: v })} /></Row>
+    <Row label="Başlık"><TF v={C.title} ph="Bu hafta masamızdan." on={(v) => up({ title: v })} /></Row>
+    <Row label="Büyük kutudaki etiket"><TF v={C.badge} ph="Haftanın ürünü" on={(v) => up({ badge: v })} /></Row>
+    <span className="v3-cap">Ürünler · ilki büyük kutuda</span>
+    {ids.map((id, i) => { const p = byId.get(id); if (!p) return null; const X = shortOf(p); return <div key={id} className="v3-prod">
+      <div className="v3-prod-h"><span className="v3-prod-n"><b>{X.n}</b><small>{p.b} · {p.k}</small></span>
+        <span className="v3-row-mv"><button type="button" disabled={i === 0} onClick={() => up({ ids: moveItem(ids, i, i - 1) })} aria-label="Yukarı"><Icon n="up" s={14} /></button><button type="button" disabled={i === ids.length - 1} onClick={() => up({ ids: moveItem(ids, i, i + 1) })} aria-label="Aşağı"><Icon n="down" s={14} /></button></span>
+        <button type="button" className="dz2-ib" onClick={() => up({ ids: ids.filter((x) => x !== id) })} aria-label="Çıkar"><Icon n="x" s={15} /></button></div>
+      <input className="v3-short" value={names[id] || ''} placeholder={'Kısa ad: ' + X.n} onChange={(e) => up({ names: { ...names, [id]: e.target.value || undefined } })} />
+    </div>; })}
+    {ids.length < 5 && <div className="v3-search"><Icon n="search" s={15} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ürün ekle: ad, marka ya da stok kodu" />
+      {hits.length > 0 && <div className="v3-hits">{hits.map((p) => <button key={p.id} type="button" onClick={() => { up({ ids: [...ids, p.id] }); setQ(''); }}><b>{shortOf(p).n}</b><small>{p.b} · {p.k}</small></button>)}</div>}</div>}
+    <label className="v3-chk"><input type="checkbox" checked={C.auto !== false} onChange={(e) => up({ auto: e.target.checked })} /><span>Boş kalan yerleri öne çıkanlar ve yeni gelenlerle doldur</span></label>
+  </>;
+}
+function SetsPanel({ H, S, d }) {
+  const C = cdOf(H).sets || {};
+  const live = liveSets(d);
+  const up = (p) => S('cd', { ...cdOf(H), sets: { ...C, ...p } });
+  const ids = C.ids || [];
+  return <>
+    <Row label="Üst yazı"><TF v={C.eye} ph="Atölyeni kur" on={(v) => up({ eye: v })} /></Row>
+    <Row label="Başlık"><TF v={C.title} ph="Birlikte al, daha az öde." on={(v) => up({ title: v })} /></Row>
+    <Row label="Kaç set"><Seg v={String(Number(C.n) || 3)} opts={[['1', '1'], ['2', '2'], ['3', '3']]} on={(v) => up({ n: Number(v) })} /></Row>
+    <span className="v3-cap">Gösterilecek setler {ids.length ? '(seçtikleriniz, bu sırayla)' : '(seçmezseniz yayındaki setler sırayla)'}</span>
+    {live.length ? live.map((x) => <label key={x.id} className="v3-chk"><input type="checkbox" checked={ids.includes(x.id)} onChange={(e) => up({ ids: e.target.checked ? [...ids, x.id] : ids.filter((y) => y !== x.id) })} /><span>{x.name}</span></label>)
+      : <p className="fine">Yayında set yok. Setleri Yönetim › Setler’den hazırlayın.</p>}
+    <p className="fine">Setin ürünleri ve fiyatı Yönetim › Setler’de düzenlenir.</p>
+  </>;
+}
+function TextPanel({ H, S, part, eye, title, n }) {
+  const C = cdOf(H)[part] || {};
+  const up = (p) => S('cd', { ...cdOf(H), [part]: { ...C, ...p } });
+  return <>
+    <Row label="Üst yazı"><TF v={C.eye} ph={eye} on={(v) => up({ eye: v })} /></Row>
+    <Row label="Başlık"><TF v={C.title} ph={title} on={(v) => up({ title: v })} /></Row>
+    {n && <Row label="Kaç tane"><Seg v={String(Number(C.n) || n[1][0])} opts={n.map(([a, b]) => [String(a), b])} on={(v) => up({ n: Number(v) })} /></Row>}
+    <p className="fine">Marka logoları Yönetim › Ayarlar › Markalar’dan gelir; en çok ürünü olan marka önde.</p>
+  </>;
+}
+function MqPanel({ H, S }) {
+  const C = cdOf(H).mq || {};
+  const up = (p) => S('cd', { ...cdOf(H), mq: { ...C, ...p } });
+  return <>
+    <Row label="Üstteki yazı" hint="Boş bırakırsanız yazı görünmez"><TF v={C.eye ?? 'Orijinal ürün, distribütör güvencesi'} on={(v) => up({ eye: v })} /></Row>
+    <Row label="Hız"><Seg v={String(Number(C.speed) || 40)} opts={[['24', 'Yavaş'], ['40', 'Normal'], ['64', 'Hızlı']]} on={(v) => up({ speed: Number(v) })} /></Row>
+  </>;
+}
+function RailPanel({ H, S, k }) {
+  const i = (H.sections || []).findIndex((r, j) => 'rail:' + (r.id || j) === k); const sec = H.sections?.[i];
+  if (!sec) return <p className="fine">Raf bulunamadı.</p>;
+  const up = (p) => S('sections', H.sections.map((r, j) => (j === i ? { ...r, ...p } : r)));
+  return <>
+    <Row label="Üst yazı" hint="İsteğe bağlı (başlığın üstündeki küçük yazı)"><TF v={sec.sub} on={(v) => up({ sub: v })} /></Row>
+    <RailFields x={sec} up={up} />
+  </>;
+}
