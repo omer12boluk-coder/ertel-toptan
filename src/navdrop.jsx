@@ -2,9 +2,11 @@
 // başlığa tıklamak yine o sayfaya gider, küçük oka tıklamak menüyü açar/kapatır. Telefonda / dokunmatikte hiç çizilmez (alt menü aynı kalır).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useStore, go, store, openAcct, toast } from './store.js';
-import { Icon } from './ui.jsx';
-import { ls } from './utils.js';
+import { useStore, go, store, openAcct, toast, openProduct } from './store.js';
+import { Icon, Thumb } from './ui.jsx';
+import { ls, priceFor, fmt } from './utils.js';
+import { feat } from './extras.jsx';
+import { ShopImg } from './shophome.jsx';
 import { useTree, useVisibleProducts } from './catalog.jsx';
 import { liveSets } from './sets.jsx';
 import { useBrandList, BrandTile, openBrand } from './brandsets.jsx';
@@ -44,6 +46,12 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     const place = () => {
       const b = wrap.current?.getBoundingClientRect(), el = pane.current; if (!b || !el) return;
       const w = el.offsetWidth, vw = document.documentElement.clientWidth;
+      // 7.11.2026 geniş menü (look.navMenu 'wide'): üst menü kartının TAM genişliğinde, hemen altından açılır (hepsi aynı)
+      if (cls.includes('hd-wide')) {
+        const card = wrap.current?.closest('.topbar')?.querySelector('.topbar-in') || wrap.current?.closest('.topbar');
+        const c = card?.getBoundingClientRect();
+        if (c) { el.style.left = Math.round(c.left) + 'px'; el.style.width = Math.round(c.width) + 'px'; el.style.top = Math.round(c.bottom + 8) + 'px'; return; }
+      }
       let x = align === 'right' ? b.right - w : b.left - (cls.includes('hd-mega') ? 40 : 6);
       x = Math.max(16, Math.min(x, vw - w - 16));
       // 5.11.2026 yönetim paneli bilgisayarda solda sabit menü (html.adm-apple): menü düğmenin SAĞINDA açılır
@@ -158,11 +166,13 @@ export function ProductsDrop({ children }) {
   const vis = useVisibleProducts(false);
   const S = useStore((s) => s.settings);
   const hasSets = useStore((s) => liveSets(s.settings).length > 0);
-  const cats = useMemo(() => {
+  const wide = useStore((s) => (s.settings.look?.navMenu || 'wide') !== 'old');
+  const [cats, cnt] = useMemo(() => {
     const cnt = new Map();
     for (const p of vis) for (const c of new Set([p.c, p.c2].filter((x) => x != null).flatMap((x) => tree.ancestors(x)))) cnt.set(c, (cnt.get(c) || 0) + 1);
-    return tree.roots.filter((n) => !n.hidden && cnt.get(n.id)).map((n) => ({ n, subs: n.children.filter((x) => !x.hidden && cnt.get(x.id)) }));
+    return [tree.roots.filter((n) => !n.hidden && cnt.get(n.id)).map((n) => ({ n, subs: n.children.filter((x) => !x.hidden && cnt.get(x.id)) })), cnt];
   }, [vis, tree]);
+  if (wide) return <HoverDrop cls="hd-wide" panel={(c) => <WideProducts cats={cats} cnt={cnt} vis={vis} S={S} hasSets={hasSets} close={c} />}>{children}</HoverDrop>;
   return <HoverDrop cls="hd-mega" panel={(c) => (
     <div className="hd-mega-in">
       <div className="hd-side">
@@ -178,6 +188,8 @@ export function ProductsDrop({ children }) {
 // 5.11.2026 üst menü 'Markalar ▾': ürünü olan markalar (çoktan aza), logo varsa logo; tıklayınca o markanın ürünleri
 export function BrandsDrop({ children }) {
   const all = useBrandList();
+  const wide = useStore((s) => (s.settings.look?.navMenu || 'wide') !== 'old');
+  if (wide) return <HoverDrop cls="hd-wide" panel={(c) => <WideBrands all={all} close={c} />}>{children}</HoverDrop>;
   const list = all.filter((b) => b.logo).slice(0, 15);
   const rest = all.filter((b) => !list.includes(b)).slice(0, 8);
   return <HoverDrop cls="hd-brands" panel={(c) => (
@@ -259,4 +271,115 @@ export function ProfileDrop({ children }) {
     <i className="hd-sep" />
     <Item close={c} icon="out" label="Çıkış yap" danger onClick={() => A.memberLogout().then(() => { openAcct(null); toast('Çıkış yapıldı'); })} />
   </>)}>{children}</HoverDrop>;
+}
+
+// ==== 7.11.2026 Geniş açılır menüler (Apple tarzı; look.navMenu 'wide' varsayılan, 'old' = eski menüler) ====
+// Hepsi üst menü kartının tam genişliğinde açılır; sol sütun büyük kalın yazı, sağda küçük sütunlar + göstergeler (sayılar, seçili satır, ok).
+const nf = (n) => Number(n || 0).toLocaleString('tr-TR');
+const Chev = ({ s = 13 }) => <svg className="ic hdw-chev" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>;
+function useIntent(init) {
+  const [v, setV] = useState(init); const t = useRef(0);
+  useEffect(() => () => clearTimeout(t.current), []);
+  // fare satırda kısa bir an durunca değişir (sağ sütuna çapraz giderken yoldaki satırlar değiştirmesin)
+  const enter = (x) => { clearTimeout(t.current); t.current = setTimeout(() => setV(x), 110); };
+  const now = (x) => { clearTimeout(t.current); setV(x); };
+  return [v, enter, now, () => clearTimeout(t.current)];
+}
+function WideCol1({ label, rows, cur, enter, now, onPick, leave }) {
+  return <div className="hdw-c1" onMouseLeave={leave}>
+    <span className="hdw-lbl">{label}</span>
+    <div className="hdw-big">{rows.map((r) => (
+      <button key={r.id} type="button" className={'hdw-bi' + (cur === r.id ? ' on' : '')} onMouseEnter={() => enter(r.id)} onFocus={() => now(r.id)} onClick={() => onPick(r)}>
+        <span className="hdw-bn">{r.name}</span><span className="hdw-bk"><small>{r.k}</small><Chev s={14} /></span>
+      </button>))}</div>
+  </div>;
+}
+function WideFoot({ hint, more, onMore }) {
+  return <div className="hdw-foot"><span><kbd>Esc</kbd> kapatır · {hint}</span><button type="button" className="hdw-more" onClick={onMore}>{more}<Chev /></button></div>;
+}
+function WideProducts({ cats, cnt, vis, S, hasSets, close }) {
+  const favN = useStore((s) => s.favs.length);
+  const user = useStore((s) => s.user); const up = useStore((s) => s.userPrices); const byId = useStore((s) => s.byId);
+  const [hov, enter, now, stop] = useIntent(cats[0]?.n.id);
+  const goCat = (id) => { stop(); close(); store.set({ catalogGo: { cat: id } }); go('katalog'); };
+  const goAll = (x = { all: true }) => { close(); store.set({ catalogGo: x }); go('katalog'); };
+  const cur = cats.find((x) => x.n.id === hov) || cats[0];
+  const subs = cur ? [...cur.subs].sort((a, b) => (cnt.get(b.id) || 0) - (cnt.get(a.id) || 0)) : [];
+  // 'Bu hafta' kutusu: Haftanın ürünü (Paket 0 seçimi) → öne çıkanlar → yeni gelenlerden resimli ilk ürün
+  const pick = useMemo(() => {
+    const ok = (p) => p && p.a !== 0 && !p.so && (p.pi || p.im);
+    const ids = [...(S.shopHome?.p0?.pick?.ids || []), ...feat(S).pins];
+    for (const id of ids) { const p = byId.get(Number(id)); if (ok(p)) return p; }
+    return vis.find((p) => p.nw && p.s > 0 && ok(p)) || vis.find((p) => p.s > 0 && ok(p)) || null;
+  }, [S, byId, vis]);
+  const pr = pick ? priceFor(pick, S, user, up) : null;
+  const badge = S.shopHome?.p0?.pick?.badge ?? 'Haftanın ürünü';
+  return <div className="hdw">
+    <div className="hdw-g hdw-gp">
+      <WideCol1 label="Kategoriler" rows={cats.map(({ n }) => ({ id: n.id, name: n.name, k: nf(cnt.get(n.id)) }))} cur={cur?.n.id} enter={enter} now={now} leave={stop} onPick={(r) => goCat(r.id)} />
+      <div className="hdw-c2">
+        <div className="hdw-h"><span className="hdw-lbl">{cur?.n.name} · {nf(cnt.get(cur?.n.id))} ürün</span>{subs.length > 0 && <span className="hdw-lbl lc">{subs.length} alt kategori</span>}</div>
+        {subs.length ? <div className={'hdw-subs' + (subs.length > 7 ? ' two' : '')} key={cur?.n.id}>{subs.map((x) => <button key={x.id} type="button" className="hdw-sub" onClick={() => goCat(x.id)}><span>{x.name}</span><small>{nf(cnt.get(x.id))}</small></button>)}</div>
+          : <p className="hdw-none">Bu kategoride alt kategori yok.</p>}
+        {cur && <button type="button" className="hdw-link" onClick={() => goCat(cur.n.id)}>{cur.n.name} — tümünü gör<Chev /></button>}
+      </div>
+      <div className="hdw-c3">
+        <span className="hdw-lbl">Hızlı erişim</span>
+        <div className="hdw-q">
+          <button type="button" onClick={() => goAll()}><span className="hdw-qi"><Icon n="grid" s={17} /></span><span><b>Tüm ürünler</b><small>{nf(vis.length)} ürün</small></span></button>
+          <button type="button" onClick={() => goAll({ nw: true })}><span className="hdw-qi ac"><Icon n="star" s={17} /></span><span><b>Yeni gelenler <em>YENİ</em></b><small>Son eklenenler</small></span></button>
+          {hasSets && <button type="button" onClick={() => { close(); go('setlist'); }}><span className="hdw-qi"><Icon n="box" s={17} /></span><span><b>Setler</b><small>Birlikte al, daha az öde</small></span></button>}
+          <button type="button" onClick={() => goAll({ fav: true })}><span className="hdw-qi rd"><Icon n="heart" s={17} /></span><span><b>Favorilerim</b><small>{favN ? favN + ' ürün' : 'Henüz yok'}</small></span></button>
+          <button type="button" onClick={() => { close(); go('kalip'); }}><span className="hdw-qi"><Icon n="mobile" s={17} /></span><span><b>Kalıp bulucu</b><small>Telefon modeline göre</small></span></button>
+        </div>
+      </div>
+      {pick && <div className="hdw-c4">
+        <span className="hdw-lbl">{badge || 'Bu hafta'}</span>
+        <button type="button" className="hdw-pick" onClick={() => { close(); openProduct(pick.id); }}>
+          <span className="hdw-pim"><Thumb p={pick} size="md" /></span>
+          <span className="hdw-pt">{pick.b && <small>{pick.b}</small>}<b>{pick.n}</b><span className="hdw-pp"><b className="num">{pr?.mine == null ? 'Fiyat sorun' : fmt(pr.mine, pick.cur)}</b><span className="hdw-go">İncele<Chev s={12} /></span></span></span>
+        </button>
+      </div>}
+    </div>
+    <WideFoot hint="başlığa tıklamak sayfaya gider" more={'Tüm ürünler (' + nf(vis.length) + ')'} onMore={() => goAll()} />
+  </div>;
+}
+function WideBrands({ all, close }) {
+  const tree = useTree(); const vis = useVisibleProducts(false);
+  const groups = useMemo(() => {
+    const roots = tree.roots.filter((n) => !n.hidden); const rid = new Set(roots.map((n) => n.id));
+    const m = new Map(roots.map((n) => [n.id, new Map()]));
+    for (const p of vis) {
+      if (!p.b || p.c == null) continue;
+      const r = tree.ancestors(p.c).find((id) => rid.has(id)); const g = r != null && m.get(r); if (!g) continue;
+      g.set(p.b, (g.get(p.b) || 0) + 1);
+    }
+    const out = [{ id: 'all', name: 'Tüm markalar', list: all, k: String(all.length) }];
+    for (const n of roots) { const g = m.get(n.id); if (g && g.size >= 2) out.push({ id: n.id, name: n.name, list: [...g].sort((a, b) => b[1] - a[1]).map(([b, c]) => ({ n: b, c })), k: String(g.size) }); }
+    return out;
+  }, [tree, vis, all]);
+  const look = useMemo(() => new Map(all.map((b) => [b.n, b])), [all]);
+  const [gid, enter, now, stop] = useIntent('all');
+  const g = groups.find((x) => x.id === gid) || groups[0];
+  const tiles = g.list.slice(0, 16).map((b) => ({ ...(look.get(b.n) || {}), ...b }));
+  const top = new Set(all.slice(0, 16).map((b) => b.n));
+  const az = all.filter((b) => !top.has(b.n)).sort((a, b) => a.n.localeCompare(b.n, 'tr')).slice(0, 24);
+  const pick = (n) => { stop(); close(); openBrand(n); };
+  return <div className="hdw">
+    <div className="hdw-g hdw-gb">
+      <WideCol1 label="Alana göre" rows={groups.map((x) => ({ id: x.id, name: x.name, k: x.k }))} cur={g.id} enter={enter} now={now} leave={stop} onPick={(r) => { if (r.id === 'all') { close(); go('markalar'); } else { stop(); close(); store.set({ catalogGo: { cat: r.id } }); go('katalog'); } }} />
+      <div className="hdw-c2">
+        <div className="hdw-h"><span className="hdw-lbl">{g.name} · ürün sayısına göre</span><span className="hdw-lbl lc">{g.list.length} marka</span></div>
+        <div className="hdw-tiles" key={g.id}>{tiles.map((b) => (
+          <button key={b.n} type="button" className="hdw-tile" title={b.n} onClick={() => pick(b.n)} style={b.color ? { '--bc': b.color } : undefined}>
+            {b.logo ? <ShopImg v={b.logo} className="logo" alt={b.n} /> : <b>{b.n}</b>}<small>{b.c}</small>
+          </button>))}</div>
+      </div>
+      {az.length > 0 && <div className="hdw-c3">
+        <span className="hdw-lbl">Diğer markalar A–Z</span>
+        <div className="hdw-az">{az.map((b) => <button key={b.n} type="button" onClick={() => pick(b.n)}><span>{b.n}</span><small>{b.c}</small></button>)}</div>
+      </div>}
+    </div>
+    <WideFoot hint="logoya tıklamak o markanın ürünlerini açar" more={'Tüm markalar (' + all.length + ')'} onMore={() => { close(); go('markalar'); }} />
+  </div>;
 }
