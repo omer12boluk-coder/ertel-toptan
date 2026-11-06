@@ -576,7 +576,7 @@ export function Catalog({ admin }) {
               </div>}
               <div className="search">
                 <Icon n="search" s={18} />
-                <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara… (tüm ürünlerde de bakarız)` : admin ? 'Ürün adına göre ara… (ör. jcid face id)' : 'Ürün adı veya stok kodu… (ör. jcid face id)'} value={q} onChange={(e) => setQ(e.target.value)} />
+                <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara… (tüm ürünlerde de bakarız)` : admin ? 'Ürün adına göre ara…' : 'Ürün adı veya stok kodu…'} value={q} onChange={(e) => setQ(e.target.value)} />
                 {q && <button className="icon-btn sm" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={16} /></button>}
               </div>
               {admin && <button className="btn primary new-prod" onClick={(e) => openMenu(e, [

@@ -8438,3 +8438,20 @@ html[data-theme="dark"] .shell.adm-bn.bn-ink .botnav .botnav-b.on, html[data-the
   .kf-ex.kf-ex button { flex: none; padding: 4px min(6px, 1.4vw); font-size: inherit; white-space: nowrap; }
 }
 @media (min-width: 701px) { .kf-hero:not(.pq-hero) .kf-ex { flex-wrap: nowrap; gap: 5px; } .kf-hero:not(.pq-hero) .kf-ex button { white-space: nowrap; flex: none; padding: 5px 10px; font-size: 12.5px; } }
+
+/* ===== Haftanın ürünü kutusu (7.11.2026): telefon ve bilgisayarda AYNI düzen + her temada görünen Sepete ekle =====
+   Eskiden: bilgisayarda ad solda / fiyat+düğme sağda sütun, telefonda alt alta; gri Sepete ekle açık mavi zeminde kayboluyordu
+   (addc-gray kuralı .p0-addw.big'i eziyordu). Şimdi: ad tam genişlik, altında tek satır fiyat (sol) + dolu tema renkli düğme (sağ). */
+.p0-b-big { background: linear-gradient(170deg, color-mix(in oklab, var(--accent) 8%, #fff) 0%, #fff 70%); box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 10%, transparent); }
+html[data-theme="dark"] .p0-b-big { background: linear-gradient(170deg, color-mix(in oklab, var(--accent) 14%, transparent), rgb(255 255 255 / .04) 70%); box-shadow: 0 0 0 1px rgb(255 255 255 / .07); }
+.p0-b-big .p0-b-f { flex-direction: column; align-items: stretch; gap: 16px; }
+.p0-b-big .p0-b-f .p0-b-p, .p0-b-big .p0-b-f .p0-b-p:has(> .p0-addw) { flex-direction: row; align-items: center; justify-content: space-between; width: auto; gap: 14px; padding-top: 16px; border-top: 1px solid color-mix(in oklab, currentColor 10%, transparent); }
+.p0-b-big .p0-b-f .p0-b-p > b { font-size: clamp(24px, 2vw, 30px); }
+.p0-b-big .p0-addw.big { flex: 0 1 240px; width: auto; min-width: 150px; }
+@media (max-width: 899px) { .p0-b-big .p0-addw.big { flex: 1 1 auto; max-width: 62%; } }
+html .shell.public .p0-b-big .p0-addw.big .abx .btn.add { background: var(--accent) !important; color: var(--btn-ink, #fff) !important; border: 0 !important; box-shadow: 0 10px 22px -14px var(--accent) !important; justify-content: center; font-size: 15px; font-weight: 650; }
+@media (hover: hover) { html .shell.public .p0-b-big .p0-addw.big .abx .btn.add:hover { background: color-mix(in oklab, var(--accent) 86%, #000) !important; } }
+html .shell.public .p0-b-big .p0-addw.big .abx .stepper { background: color-mix(in oklab, var(--accent) 12%, var(--surface)) !important; }
+html .shell.public .p0-b-big .p0-addw.big .abx .stepper :is(button, input) { color: var(--accent) !important; }
+html[data-theme="dark"] .shell.public .p0-b-big .p0-addw.big .abx .stepper { background: color-mix(in oklab, var(--accent) 22%, transparent) !important; }
+html[data-theme="dark"] .shell.public .p0-b-big .p0-addw.big .abx .stepper :is(button, input) { color: #fff !important; }
