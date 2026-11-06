@@ -3,7 +3,7 @@ import { ProdHub } from './p0home.jsx';
 import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
-import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm } from './ui.jsx';
+import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead } from './ui.jsx';
 import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid, fbSkip } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
@@ -537,7 +537,8 @@ export function Catalog({ admin }) {
   return (
     <div className="catalog">
       {hubBack && <button className="back-btn cat-hub-back" onClick={() => store.set({ catalogGo: { hub: true } })}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
-      {admin && <div className="prod-switch"><ProductsSwitch on="products" /></div>}
+      {/* 6.11.2026: Ürünler / Akıllı ekle / Setler üçünde de başlık + seçici AYNI yerde ve aynı genişlikte (sekme değişince kaymasın) */}
+      {admin && <div className="page adm-sub prod-top"><PageHead title="Ürünler" extra={<span className="muted"> · {all.length}</span>} /><ProductsSwitch on="products" /></div>}
       <div className={'cat-layout' + (admin ? ' resizable' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
         <aside className="cat-side" aria-label="Kategoriler">
           <h3 className="eyebrow">Kategoriler</h3>
