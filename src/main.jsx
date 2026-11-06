@@ -1,3 +1,4 @@
+import { savesPending } from './saveq.js';
 import { LinkCartPage, LinkCartsPage } from './lcart.jsx';
 import { PayLinkPage, PayLinkView } from './paylink.jsx';
 import { SaveDock } from './savedock.jsx';
@@ -1085,9 +1086,26 @@ function setupResumeFix() {
       requestAnimationFrame(() => { h.style.minHeight = ''; scrollTo(scrollX, y + 1); scrollTo(scrollX, y); });
     });
   };
+  // 6.11.2026 (5): uzun süre arka planda kalınca iPhone ekran ölçülerini bozuk getirebiliyor (alt/üst menü kayık) →
+  // 2 dakikadan uzun ayrı kalındıysa dönüşte sayfa sessizce yenilenir (aynı adres; giriş, sepet ve açılış ekranı korunur).
+  // Yenilenmez: açık pencere varken, kaydedilmeyi bekleyen iş varken, yazılmış bir alan duruyorken ya da tasarım modunda.
+  const AWAY_MS = 2 * 60 * 1000; let hiddenAt = 0;
+  const typed = new Set();
+  document.addEventListener('input', (e) => { const t = e.target; if (t && (t.tagName === 'TEXTAREA' || t.isContentEditable || (t.tagName === 'INPUT' && !/^(search|checkbox|radio|range|button|submit|file|color)$/i.test(t.type)))) typed.add(t); }, true);
+  const safeReload = () => {
+    if (!matchMedia('(pointer: coarse)').matches) return false;
+    if (savesPending()) return false;
+    if (store.s.tab === 'tasarim') return false;
+    if (document.querySelector('[aria-modal="true"], .sheet-bg')) return false;
+    for (const el of typed) { if (!el.isConnected) { typed.delete(el); continue; } if (String(el.value ?? el.textContent ?? '').trim()) return false; }
+    return true;
+  };
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') { const a = document.activeElement; if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) a.blur(); }
-    else fix();
+    if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); const a = document.activeElement; if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) a.blur(); }
+    else {
+      if (hiddenAt && Date.now() - hiddenAt > AWAY_MS && safeReload()) { hiddenAt = 0; location.reload(); return; }
+      hiddenAt = 0; fix();
+    }
   });
   addEventListener('pageshow', (e) => { if (e.persisted) fix(); });
   // 6.11.2026 (2): aynı bozulma klavye kapanınca da oluyordu (sepette yazı alanından çıkınca alt menü ortada, sayfa boş) →
