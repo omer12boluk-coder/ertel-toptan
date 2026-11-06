@@ -1,0 +1,23 @@
+# Geçici: banner tasarımı için ürün resimlerini indirir (sadece okuma; canlıya dokunmaz)
+name: Banner resimleri (geçici)
+on:
+  push:
+    branches: [banner-resim]
+jobs:
+  get:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: indir
+        run: |
+          mkdir -p out
+          while read -r n u; do
+            [ -z "$n" ] && continue
+            ext="${u##*.}"; ext="${ext%%\?*}"
+            curl -sfL --max-time 40 -o "out/$n.$ext" "$u" || echo "::notice::yok $n $u"
+          done < tools/banner-list.txt
+          ls -la out | head -100
+      - uses: actions/upload-artifact@v4
+        with:
+          name: resimler
+          path: out
