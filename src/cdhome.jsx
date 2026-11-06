@@ -49,6 +49,22 @@ function Head({ eye, title, more }) {
     {more && <button type="button" className="cd-more" onClick={more[1]}>{more[0]}<Icon n="back" s={14} className="flip" /></button>}</header>;
 }
 
+// ---- Küçük ürün kartı (raflar + 'Bu hafta masamızdan'), 7.11.2026 (4): HER kartta aynı yuvalar, aynı yükseklik —
+// logo satırı (logo yoksa boş), kare resim kutusu (resim ortada, kutuya sığar), ad 2 satır, açıklama 1 satır, fiyat satırı
+// (fiyat yoksa 'Fiyat sorun' AYNI yerde), Sepete ekle en altta → yan yana kartlarda fiyat ve düğme hep aynı hizada (banner-kurallari §6).
+function Tile({ p, X, pr, logos, onProduct, isNew }) {
+  return (
+    <div className="cd-tile" role="button" tabIndex={0} onClick={() => onProduct(p)}>
+      <span className="cd-t-lg"><Logo p={p} logos={logos} />{isNew && <span className="cd-new">Yeni</span>}</span>
+      <span className="cd-tile-im"><Thumb p={p} size="md" /></span>
+      <b className="cd-nm">{X.n}</b>
+      <small className="cd-sb">{X.sub || '\u00a0'}</small>
+      <span className="cd-t-pr">{pr ? <b className="cd-pr sm num">{pr}</b> : <small>Fiyat sorun</small>}</span>
+      <CardAdd p={p} />
+    </div>
+  );
+}
+
 // ---- Banner alanı: kullanıcının reklam listesi (fotoğraflı bannerlar dahil), genişlik ve yükseklik sayfadan ayrı ----
 export const HERO_W = [['', 'Sayfayla aynı'], ['narrow', 'Dar'], ['mid', 'Orta'], ['wide', 'Geniş'], ['full', 'Kenardan kenara']];
 export const HERO_FILL = [['', 'Normal'], ['screen', 'Ekranı doldur']];
@@ -102,14 +118,7 @@ export function CdPick({ H, S, onProduct }) {
           </div>
           <span className="cd-big-im"><Thumb p={a} size="lg" /></span>
         </div>
-        <div className="cd-grid">{rest.map((p) => { const X = shortOf(p, C.names); return (
-          <div key={p.id} className="cd-tile" role="button" tabIndex={0} onClick={() => onProduct(p)}>
-            <Logo p={p} logos={logos} />
-            <span className="cd-tile-im"><Thumb p={p} size="md" /></span>
-            <b className="cd-nm">{X.n}</b>{X.sub && <small className="cd-sb">{X.sub}</small>}
-            {price(p) && <b className="cd-pr sm num">{price(p)}</b>}
-            <CardAdd p={p} />
-          </div>); })}</div>
+        <div className="cd-grid">{rest.map((p) => <Tile key={p.id} p={p} X={shortOf(p, C.names)} pr={price(p)} logos={logos} onProduct={onProduct} />)}</div>
       </div>
     </section>
   );
@@ -203,15 +212,7 @@ export function CdRail({ sec, open, onProduct, edit }) {
       <header className="cd-head"><div>{sec.sub && <span className="cd-eye">{sec.sub}</span>}<h2>{sec.title || 'Ürünler'}</h2></div>
         <span className="cd-head-r">{!edit && <button type="button" className="cd-more" onClick={more}>Tümü<Icon n="back" s={14} className="flip" /></button>}
           <button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span></header>
-      <div className="cd-rail" ref={railRef}>{list.map((p) => { const X = shortOf(p); return (
-        <div key={p.id} className="cd-tile" role="button" tabIndex={0} onClick={() => onProduct(p)}>
-          <Logo p={p} logos={logos} />
-          {(sec.mode === 'new' || p.nw) && <span className="cd-new">Yeni</span>}
-          <span className="cd-tile-im"><Thumb p={p} size="md" /></span>
-          <b className="cd-nm">{X.n}</b>{X.sub && <small className="cd-sb">{X.sub}</small>}
-          {price(p) ? <b className="cd-pr sm num">{price(p)}</b> : <small className="cd-sb">Fiyat sorun</small>}
-          <CardAdd p={p} />
-        </div>); })}</div>
+      <div className="cd-rail" ref={railRef}>{list.map((p) => <Tile key={p.id} p={p} X={shortOf(p)} pr={price(p)} logos={logos} onProduct={onProduct} isNew={sec.mode === 'new' || p.nw} />)}</div>
     </section>
   );
 }

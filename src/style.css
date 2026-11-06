@@ -8944,3 +8944,38 @@ html[data-theme="dark"] .cd-bw-lg img { filter: var(--logo-dark, brightness(0) i
 .cd-ad small { color: #6e6e73; font-size: 14px; line-height: 1.35; }
 .cd-ad .cd-lnk { margin-top: 4px; font-size: 14.5px; }
 @media (hover: hover) { .cd-ad { transition: transform .35s cubic-bezier(.2, .7, .2, 1), box-shadow .35s; } .cd-ad:hover { transform: translateY(-3px); box-shadow: 0 22px 40px -30px rgb(16 24 40 / .4); } }
+
+/* 7.11.2026 (4) cd kart hizası: her kart aynı yuvalar (Tile, cdhome.jsx). Resim kutusu kare, açık gri zemin, resim ortada sığar;
+   beyaz zeminli ürün resimleri multiply ile kutuya karışır → her kartta aynı boy kutu. Fiyat satırı her zaman yer tutar. */
+.cd-sec .cd-tile { gap: 0; padding: 16px 16px 16px; }
+.cd-sec .cd-tile > * { flex: none; }
+.cd-t-lg { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 22px; margin-bottom: 10px; }
+.cd-t-lg .cd-lg { height: 16px; max-width: 84px; }
+.cd-t-lg .cd-lg.tx { height: auto; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cd-t-lg .cd-new { position: static; margin-left: auto; }
+.cd-sec .cd-tile .cd-tile-im { height: auto; aspect-ratio: 1; width: 100%; margin: 0 0 14px; border-radius: calc(var(--st-rcard, 24px) * .6); background: #f5f5f7; overflow: hidden; display: grid; place-items: center; }
+.cd-sec .cd-tile .cd-tile-im .thumb .thumb-ph { position: absolute; inset: 0; display: grid; place-items: center; }
+.cd-sec .cd-tile .cd-tile-im .thumb { position: relative; display: block; width: 84%; height: 84%; aspect-ratio: auto; background: transparent !important; border: 0 !important; border-radius: 0; }
+.cd-sec .cd-tile .cd-tile-im .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: transparent !important; mix-blend-mode: multiply; border-radius: 0; }
+html[data-theme="dark"] .cd-sec .cd-tile .cd-tile-im { background: #f4f1ec; }
+html[data-theme="dark"] .cd-sec .cd-tile .cd-tile-im .thumb img { background: transparent !important; border-radius: 0; }
+.cd-sec .cd-tile .cd-nm { margin: 0; min-height: 2.4em; }
+.cd-sec .cd-tile .cd-sb { margin: 4px 0 0; padding: 0; -webkit-line-clamp: 1; min-height: 1.35em; height: 1.35em; }
+.cd-t-pr { display: flex; align-items: center; height: 26px; margin: auto 0 10px; padding-top: 10px; box-sizing: content-box; }
+.cd-t-pr .cd-pr { margin: 0; padding: 0; }
+.cd-t-pr small { color: var(--cd-mut); font-size: 13px; }
+.cd-sec .cd-tile > .abx { margin-top: 0; }
+.cd-grid .cd-tile .cd-tile-im { aspect-ratio: 4 / 3; }
+@media (max-width: 899px) {
+  .cd-sec .cd-tile { padding: 12px; }
+  .cd-t-lg { height: 18px; margin-bottom: 8px; }
+  .cd-t-lg .cd-lg { height: 14px; max-width: 70px; }
+  .cd-sec .cd-tile .cd-tile-im { margin-bottom: 10px; border-radius: 14px; }
+  .cd-grid .cd-tile .cd-tile-im { aspect-ratio: 1; }
+  .cd-t-pr { height: 22px; padding-top: 6px; margin-bottom: 8px; }
+}
+/* resim kutuya sığsın: ızgara içindeki img'de %100 yükseklik çalışmıyordu (uzun resim kutudan taşıyordu) → mutlak konum */
+.cd-big-im .thumb, .cd-si .thumb { position: relative; display: block; }
+.cd-big-im .thumb img, .cd-si .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.cd-big-im .thumb .thumb-ph, .cd-si .thumb .thumb-ph { position: absolute; inset: 0; display: grid; place-items: center; }
+@media (min-width: 900px) { .cd-big-im { place-items: center; } }
