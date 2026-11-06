@@ -32,6 +32,50 @@ async function examples(q, catalog) {
   return Promise.all(pick.map(async (p) => ({ n: p.n, t: p.t, d: String((await api().getDesc(p.id).catch(() => '')) || '').replace(/<(iframe|script)[\s\S]*?<\/\1>/gi, '').replace(/<img[^>]*>/gi, '').replace(/<a [^>]*report\.aliexpress[\s\S]*?<\/a>/gi, '').replace(/\s(data-[\w-]+|ae_[\w-]+|st_page_id|clk_trigger|slate-data-type)="[^"]*"/gi, '').replace(/<div[^>]*>\s*<\/div>/gi, '').replace(/(<p>&nbsp;<\/p>\s*)+/g, '').slice(0, 1800) })));
 }
 
+// Resim ayıklama (tarayıcıda, ücretsiz): her resmi bekçi vekilinden açıp
+//  · küçük (galeride <500px, açıklamada <400px), şerit/afiş gibi aşırı en-boylu olanları atar (rozet, logo, reklam bandı)
+//  · aynı resmin farklı adres/boyuttaki kopyalarını "görsel parmak izi" (dHash) ile ayıklar
+async function imgPrint(u) {
+  const blob = await api().aiPicBlob(u);
+  const bmp = await createImageBitmap(blob);
+  const c = document.createElement('canvas'); c.width = 9; c.height = 8;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(bmp, 0, 0, 9, 8);
+  const d = x.getImageData(0, 0, 9, 8).data; let h = '';
+  for (let r = 0; r < 8; r++) for (let k = 0; k < 8; k++) { const i = (r * 9 + k) * 4, j = i + 4; h += d[i] + d[i + 1] + d[i + 2] > d[j] + d[j + 1] + d[j + 2] ? '1' : '0'; }
+  const out = { w: bmp.width, h: bmp.height, hash: h }; bmp.close?.(); return out;
+}
+// vekil açamazsa (ör. site engelledi) en azından boyutunu <img> ile öğren; parmak izi olmadan tutulur
+const imgSize = (u) => new Promise((res) => { const i = new Image(); i.referrerPolicy = 'no-referrer'; i.onload = () => res({ w: i.naturalWidth, h: i.naturalHeight, hash: null }); i.onerror = () => res(null); i.src = u; setTimeout(() => res(null), 15000); });
+const ham = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++; return n; };
+async function cleanImgs(urls, tall) {
+  const info = new Array(urls.length); let i = 0;
+  await Promise.all(Array.from({ length: 4 }, async () => { while (i < urls.length) { const k = i++; info[k] = (await imgPrint(urls[k]).catch(() => null)) || (await imgSize(urls[k])); } }));
+  const keep = [];
+  urls.forEach((u, k) => {
+    const f = info[k]; if (!f) return; // açılamayan resim
+    const mn = Math.min(f.w, f.h), ar = f.w / f.h;
+    // çok küçük (bulanık görünen) resimler: ürün galerisinde kısa kenarı 500px altı, açıklamada genişliği 400px altı alınmaz
+    if (tall ? f.w < 400 : mn < 500) return;
+    if (!tall && (ar > 2.2 || ar < 0.45)) return;
+    const dup = f.hash && keep.find((y) => y.f.hash && ham(y.f.hash, f.hash) <= 6);
+    if (dup) { if (f.w * f.h > dup.f.w * dup.f.h) { dup.u = u; dup.f = f; } return; } // aynısı: büyüğünü tut, sırasını bozma
+    keep.push({ u, f });
+  });
+  return keep.map((x) => x.u);
+}
+async function tidyDraft(d) {
+  try {
+    const gal = await cleanImgs((d.imgs || []).map((x) => x.u), false);
+    d.imgs = gal.map((u) => (d.imgs.find((x) => x.u === u) || { u }));
+    const di = [...String(d.desc || '').matchAll(/<img[^>]+src="([^"]+)"[^>]*>/g)].map((m) => m[1]);
+    if (di.length) {
+      const ok = new Set(await cleanImgs(di, true));
+      d.desc = d.desc.replace(/\n?<img[^>]+src="([^"]+)"[^>]*\/?>/g, (m, u) => (ok.has(u) ? m : ''));
+    }
+  } catch {}
+  return d;
+}
+
 // sıra modül düzeyinde: sayfadan çıkılsa da hazırlama sürer (yarıda kalıp boşuna yeniden ödenmesin)
 let Q = null; const subs = new Set(); let running = false;
 const getQ = () => (Q ||= loadQ());
@@ -46,7 +90,9 @@ function pump() {
       const { catalog, settings: S } = store.s;
       const brands = [...new Set(catalog.map((x) => x.b).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
       const r = await api().aiDraft({ name: next.q, hint: next.hint || '', link: next.link || '', search: !!next.search, hq: !!next.hq, cats: catPaths(catalog, S), brands, ex: await examples(next.q, catalog), vocab: examples.vocab || [] });
-      running = false; updQ(next.id, { st: 'ok', d: r.draft, err: '' }); balTick();
+      updQ(next.id, { st: 'run', sub: 'Resimler ayıklanıyor…' });
+      const d = await tidyDraft(r.draft);
+      running = false; updQ(next.id, { st: 'ok', d, err: '', sub: '' }); balTick();
     } catch (e) { running = false; updQ(next.id, { st: 'err', err: e.message }); }
   })();
 }
@@ -142,7 +188,7 @@ export function AiAdd() {
                     <small className="muted">{x.hq ? 'Kaliteli mod · ' : ''}Yazdığınız: “{x.q}”{d.note ? ' · ' + d.note : ''}</small>
                   </> : <>
                     <b>{x.q}</b>
-                    <small className={x.st === 'err' ? 'ai-err' : 'muted'}>{x.st === 'run' ? 'Hazırlanıyor…' : x.st === 'wait' ? 'Sırada' : 'Hazırlanamadı: ' + x.err}</small>
+                    <small className={x.st === 'err' ? 'ai-err' : 'muted'}>{x.st === 'run' ? x.sub || 'Hazırlanıyor…' : x.st === 'wait' ? 'Sırada' : 'Hazırlanamadı: ' + x.err}</small>
                   </>}
                 </div>
                 {x.st === 'ok' && <button type="button" className="btn sm primary" onClick={(e) => { e.stopPropagation(); setEdit(x); }}>İncele ve onayla</button>}

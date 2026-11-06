@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, toast } from './store.js';
 import { Icon, Sheet, openMenu } from './ui.jsx';
 import { picUrl, isVid, imageBlob, fileHash } from './utils.js';
-import { mediaUrl } from './catalog.jsx';
+import { mediaUrl, Lightbox } from './catalog.jsx';
 
 const VID_RE = /\.(mp4|webm|mov)(\?|#|$)/i;
 const kindOf = (x) => { const r = isVid(x) ? x.slice(2) : x; return r.startsWith('r2:') ? 'Depo' : /^(data|blob):/.test(r) ? 'Cihaz' : /^(https?:)?\/\//.test(r) ? 'Adres' : 'Site'; };
@@ -37,6 +37,7 @@ export function MediaEditor({ list, onChange, S, openRef }) {
   const [ups, setUps] = useState([]); // yüklenenler: {id, name, p (0-1|null), v}
   const [depot, setDepot] = useState(false);
   const [url, setUrl] = useState('');
+  const [zoom, setZoom] = useState(null); // resme dokununca büyük göster (6.11.2026)
   const fileRef = useRef(null);
   const listRef = useRef(list); listRef.current = list;
   if (openRef) openRef.current = () => fileRef.current?.click();
@@ -69,7 +70,7 @@ export function MediaEditor({ list, onChange, S, openRef }) {
     if (e.button > 0) return;
     const el = els.current.get(k); if (!el) return;
     const r = el.getBoundingClientRect();
-    const st = { k, x0: e.clientX, y0: e.clientY, gx: e.clientX - r.left, gy: e.clientY - r.top, px: e.clientX, py: e.clientY, on: false, id: e.pointerId, touch: e.pointerType !== 'mouse' };
+    const st = { t0: Date.now(), k, x0: e.clientX, y0: e.clientY, gx: e.clientX - r.left, gy: e.clientY - r.top, px: e.clientX, py: e.clientY, on: false, id: e.pointerId, touch: e.pointerType !== 'mouse' };
     const begin = () => { st.on = true; st.order = [...listRef.current]; dragRef.current = st; try { el.setPointerCapture(st.id); } catch {} setDrag({ k, order: st.order }); navigator.vibrate?.(8); };
     let timer = st.touch ? setTimeout(begin, 280) : 0;
     const move = (ev) => {
@@ -93,7 +94,14 @@ export function MediaEditor({ list, onChange, S, openRef }) {
     const tm = (ev) => { if (st.on && ev.cancelable) ev.preventDefault(); };
     const up = () => {
       const was = st.on; cleanup();
-      if (!was) return;
+      if (!was) {
+        // kısa dokunuş (sürükleme değil) → resmi büyüt
+        if (Date.now() - st.t0 < 600 && Math.hypot(st.px - st.x0, st.py - st.y0) < 8 && !isVid(k)) {
+          const imgs = listRef.current.filter((y) => !isVid(y));
+          setZoom({ urls: imgs.map((y) => picUrl(y, S?.catalog?.imageLarge || S?.catalog?.imageThumb, true) || y), start: Math.max(0, imgs.indexOf(k)) });
+        }
+        return;
+      }
       const el2 = els.current.get(k); const b0 = el2?.getBoundingClientRect();
       dragRef.current = null;
       if (el2) { el2.style.transform = ''; const b1 = el2.getBoundingClientRect(); el2.animate([{ transform: `translate(${b0.left - b1.left}px, ${b0.top - b1.top}px) scale(1.06)` }, { transform: 'none' }], { duration: 180, easing: 'ease-out' }); }
@@ -153,7 +161,8 @@ export function MediaEditor({ list, onChange, S, openRef }) {
         ))}
         <button type="button" className="md-t md-add" onClick={addMenu} aria-label="Resim ya da video ekle"><Icon n="plus" s={22} /><small>{list.length ? 'Ekle' : 'Resim / video ekle'}</small></button>
       </div>
-      <p className="fine md-help">İlk sıradaki resim <b>kapak</b> resmidir. Kutuları tutup sürükleyerek sırayı değiştirin (telefonda basılı tutup sürükleyin); videolar da sıraya girer. Dosyaları buraya bırakabilirsiniz. {busy && <b>Yükleme sürüyor…</b>}</p>
+      {zoom && <Lightbox urls={zoom.urls} start={zoom.start} title="Resimler" onClose={() => setZoom(null)} />}
+      <p className="fine md-help">Resme dokunursanız büyür. İlk sıradaki resim <b>kapak</b> resmidir. Kutuları tutup sürükleyerek sırayı değiştirin (telefonda basılı tutup sürükleyin); videolar da sıraya girer. Dosyaları buraya bırakabilirsiniz. {busy && <b>Yükleme sürüyor…</b>}</p>
       <div className="input-btn">
         <input placeholder="Resim / video adresi yapıştırın (https://…)" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }} />
         <button type="button" className="btn sm outline" disabled={!url.trim()} onClick={addUrl}>Ekle</button>

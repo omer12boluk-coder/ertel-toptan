@@ -104,13 +104,15 @@ export class DemoBackend {
     const q = String(name || '').trim(); const up = q.toUpperCase();
     const brand = /2UUL/.test(up) ? '2UUL' : (q.split(/\s+/)[0] || '').toUpperCase();
     const model = (up.replace(brand, '').replace(/\s+/g, '').match(/[A-Z]+\d+[A-Z]*/) || [''])[0];
+    const png = (t, c, w, h) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); x.fillStyle = c; x.fillRect(0, 0, w, h); x.fillStyle = '#fff'; const g = x.createLinearGradient(0, 0, /2/.test(t) ? w : 0, /3/.test(t) ? 0 : h); g.addColorStop(0, c); g.addColorStop(1, /3/.test(t) ? '#000' : '#fff'); x.fillStyle = g; x.fillRect(0, 0, w, h); x.fillStyle = '#fff'; x.font = Math.round(h / 10) + 'px Arial'; x.fillText(t, w * 0.5, h * 0.8); return cv.toDataURL('image/png'); };
     const pic = (t, c) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800"><rect width="800" height="800" fill="${c}"/><text x="400" y="420" font-family="Arial" font-size="64" text-anchor="middle" fill="#fff">${t}</text></svg>`);
     return { ok: true, left: 79, draft: {
       q, engine: 'demo', n: `${brand} ${model} Ürün Adı (demo taslak)`, b: brand, model, c: 42, c2: null,
       t: [brand, `${brand} ${model}`, model, model.replace(/(\D)(\d)/, '$1 $2'), model.replace(/(\D)(\d)/, '$1-$2'), 'Telefon Tamir', `${brand} ${model} Fiyat`, `${brand} ${model} Ne İşe Yarar`, `${brand} ${model} Türkiye Satıcısı`].join(','),
       desc: `<p dir="ltr">${brand} ${model}, cep telefonu tamirinde kullanılan … (demo: canlıda yapay zekâ ürünü araştırıp gerçek açıklamayı yazar).</p><p dir="ltr"><strong>Özellikler</strong></p><ul dir="ltr"><li>Örnek özellik</li></ul><p dir="ltr"><strong>Teknik Özellikler</strong></p><table><thead><tr><th scope="col">Özellik</th><th scope="col">Değer</th></tr></thead><tbody><tr><td>Marka / Model</td><td>${brand} ${model}</td></tr></tbody></table>\n<p>&nbsp;</p>\n<img loading="lazy" src="${pic('Tanıtım 1', '#555')}" />\n<img loading="lazy" src="${pic('Tanıtım 2', '#777')}" />`,
       note: 'Demo taslak: canlı sitede ürün web’de araştırılır.',
-      imgs: [pic(model || 'Resim 1', '#3b6ea8'), pic('Resim 2', '#6a8f3b'), pic('Resim 3', '#a8653b')].map((u) => ({ u, from: brand.toLowerCase() + '.com' })),
+      // demo: ayıklamayı göstermek için 1 kopya (farklı boyut) + 1 küçük + 1 afiş şeridi de gelir → ekranda 3 resim kalır
+      imgs: [png(model || 'Resim 1', '#3b6ea8', 800, 800), png('Resim 2', '#6a8f3b', 900, 900), png(model || 'Resim 1', '#3b6ea8', 1000, 1000), png('küçük', '#999', 200, 200), png('reklam', '#c33', 1600, 300), png('Resim 3', '#a8653b', 800, 800)].map((u) => ({ u, from: brand.toLowerCase() + '.com' })),
       src: [{ url: 'https://' + brand.toLowerCase() + '.com/', title: brand.toLowerCase() + '.com' }],
     } };
   }

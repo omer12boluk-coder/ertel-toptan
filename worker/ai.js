@@ -102,13 +102,15 @@ async function makeDraft(env, b) {
   // resimler: 1) marka mağazası 2) yapay zekânın bulduğu ürün sayfaları 3) aramada çıkan sayfalar
   const pages = [...new Set([...(d.pages || []), ...sources.map((s) => s.url)].filter((u) => /^https?:\/\//.test(u)))].slice(0, 8);
   const imgs = [];
-  const add = (arr, from) => arr.forEach((u) => { if (!imgs.some((x) => x.u === u) && imgs.length < 16) imgs.push({ u, from }); });
+  const add = (arr, from) => arr.forEach((u) => { if (!imgs.some((x) => x.u === u) && imgs.length < 14) imgs.push({ u, from }); });
   if (shop) add(shop.imgs, shops[shopKey]);
   if (linked) add(linked.imgs, host(b.link));
   const dom = shops[brand.toUpperCase()];
   if (dom && !shop) add(await shopifyImages(dom, d.model || name).catch(() => []), dom);
-  const got = await Promise.all(pages.map((p) => pageImages(p).then((l) => [p, l]).catch(() => [p, []])));
-  for (const [p, l] of got) add(l.slice(0, 8), host(p));
+  // aramada bulunan sayfalar: sadece ürün galerisi (AliExpress listesi, Shopify, JSON-LD Product) — og:image / sayfadaki
+  // rastgele resimler ALINMAZ (reklam, rozet, site logosu geliyordu). Yöneticinin linki ve marka sitesi bunun dışında.
+  const got = await Promise.all(pages.map((p) => pageImages(p, true).then((l) => [p, l]).catch(() => [p, []])));
+  for (const [p, l] of got) add(l.slice(0, 6), host(p));
   // açıklamanın altına markanın / sayfanın uzun tanıtım görselleri (yöneticinin elle yaptığı gibi), sırasıyla
   const descImgs = [...new Set([...(shop?.descImgs || []), ...(linked?.descImgs || [])])].slice(0, 20);
   let desc = cleanDesc(String(d.desc || ''));
@@ -249,7 +251,7 @@ async function shopifyImages(dom, q) {
 }
 
 export { pageInfo };
-export async function pageImages(u) {
+export async function pageImages(u, strict = false) {
   if (!/^https?:\/\//.test(u)) return [];
   const url = new URL(u);
   // Shopify ürün sayfası → .js
@@ -272,6 +274,7 @@ export async function pageImages(u) {
       walk(JSON.parse(m[1]));
     } catch {}
   }
+  if (strict) return out.slice(0, 8);
   // og:image
   for (const m of html.matchAll(/<meta[^>]+(?:property|name)=["'](?:og:image|og:image:secure_url|twitter:image)["'][^>]*>/gi)) { const c = /content=["']([^"']+)/i.exec(m[0]); if (c) push(c[1]); }
   // ürün galerisi gibi görünen büyük resimler (data-zoom / data-large / srcset'in en büyüğü)
