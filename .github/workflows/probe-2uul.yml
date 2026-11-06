@@ -7,16 +7,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Dene
+        shell: bash {0}
         run: |
           UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
           probe() {
             rm -f /tmp/b
             code=$(curl -g -sS -L --max-time 40 -A "$UA" -H 'Accept: text/html,*/*' -H 'Accept-Language: en-US,en;q=0.9' -o /tmp/b -w '%{http_code} %{size_download}B %{url_effective}' "$1" 2>&1 | tr '\n' ' ')
             [ -f /tmp/b ] || touch /tmp/b
-            shop=$(grep -o -m1 'cdn.shopify.com' /tmp/b | head -1)
-            ld=$(grep -c 'application/ld+json' /tmp/b)
-            og=$(grep -o -i '<meta[^>]*og:image[^>]*>' /tmp/b | head -2 | tr '\n' ' ' | cut -c1-300)
-            imgs=$(grep -o -i "$2" /tmp/b | sort -u | head -10 | tr '\n' ' ' | cut -c1-1200)
+            shop=$(grep -o -m1 'cdn.shopify.com' /tmp/b | head -1 || true)
+            ld=$(grep -c 'application/ld+json' /tmp/b || true)
+            og=$(grep -o -i '<meta[^>]*og:image[^>]*>' /tmp/b | head -2 | tr '\n' ' ' | cut -c1-300 || true)
+            imgs=$(grep -o -i "$2" /tmp/b | sort -u | head -10 | tr '\n' ' ' | cut -c1-1200 || true)
             echo "::notice title=$1::$code | shopify:$shop | ld+json:$ld | OG: $og | ESLESEN: $imgs"
           }
           probe "https://www.martview.com/2uul-da07-mini-heating-press-station-compatible-with-iphone-17-series.html" 'https://static.martview.com/[^"'"'"' )]*'
