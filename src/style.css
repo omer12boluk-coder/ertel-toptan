@@ -8416,3 +8416,7 @@ html.th-dash .csel-pop { background: var(--surface); border-color: var(--line); 
 /* 6.11.2026 (7) sayfa geçişi sırasında cam menüler neredeyse opak (iPhone'da altından geçen resim büyütülmüş görünüyordu) */
 .topbar.hdr-g .topbar-in, .shell .botnav { transition: background-color .18s ease; }
 @media (hover: none) { html.nav-mv.nav-mv.nav-mv .topbar.hdr-g .topbar-in, html.nav-mv.nav-mv.nav-mv .shell .botnav { background-color: color-mix(in oklab, var(--surface) 96%, transparent) !important; } }
+
+/* 6.11.2026 (7) yönetim yan menüsündeki ses düğmesi: kaydırıcı düğmenin ÜSTÜNDE açılır (alt köşede ekran dışına taşmasın) */
+.shell.admin .sfx-pop { top: auto; bottom: calc(100% + 8px); transform-origin: 50% 100%; }
+.shell.admin .sfx-pop::before { top: auto; bottom: -10px; }

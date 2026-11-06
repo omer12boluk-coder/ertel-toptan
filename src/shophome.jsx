@@ -816,29 +816,32 @@ function Marquee({ items, style, speed, speedM, ls = 1, z, zm }) { // speed: mas
     let raf = 0, last = performance.now(), pos = el.scrollLeft, held = false, visible = true, t = 0, ramp = 1;
     let sx = 0, sy = 0, touching = false, dragging = false;
     const dur = Number(speedM) || 46;
+    let halfW = el.scrollWidth / 2; const ro = 'ResizeObserver' in window ? new ResizeObserver(() => { halfW = el.scrollWidth / 2; }) : null; ro?.observe(inner); if (pos) el.scrollLeft = 0;
     const tick = (now) => {
       const dt = Math.min(64, now - last); last = now;
       if (!held && visible) {
-        const half = el.scrollWidth / 2;
+        const half = halfW; // 6.11.2026 (7): her karede scrollWidth okumak sayfa geçişinde yerleşimi zorla hesaplatıyordu (telefonda takılma) → ölçü ResizeObserver'dan
         if (half > 0) {
           if (ramp < 1) ramp = Math.min(1, ramp + dt / 700);
           const k = ramp * ramp * (3 - 2 * ramp); // yumuşak hızlanma
           pos += (half / dur) * dt / 1000 * k; if (pos >= half) pos -= half;
           // iPhone kaydırma konumunu tam piksele yuvarlıyor; yavaş kayarken takılmasın diye
           // tam kısmı kaydırmayla, kesirli kısmı transform ile veriyoruz (her karede pürüzsüz ilerler)
-          const base = Math.floor(pos); el.scrollLeft = base; inner.style.transform = `translate3d(${(base - pos).toFixed(3)}px,0,0)`;
+          // 6.11.2026 (7): kendi kendine kayarken SADECE transform (scrollLeft yazmak her karede yerleşimi zorluyordu → sayfa
+          // geçişinde takılma); parmakla çekince konum scrollLeft'e aktarılır, bırakınca geri transform'a döner
+          inner.style.transform = `translate3d(${(-pos).toFixed(2)}px,0,0)`;
         }
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    const resume = () => { const half = el.scrollWidth / 2; pos = half ? el.scrollLeft % half : 0; held = false; ramp = 0; last = performance.now(); };
+    const resume = () => { const half = halfW; pos = half ? el.scrollLeft % half : 0; held = false; ramp = 0; last = performance.now(); inner.style.transform = `translate3d(${(-pos).toFixed(2)}px,0,0)`; el.scrollLeft = 0; };
     const settle = () => { clearTimeout(t); t = setTimeout(() => { if (!touching) resume(); }, 160); };
     const start = (e) => { const p0 = e.touches[0]; sx = p0.clientX; sy = p0.clientY; touching = true; dragging = false; };
     const move = (e) => {
       if (!touching || dragging) return; const p0 = e.touches[0]; if (!p0) return;
       const dx = Math.abs(p0.clientX - sx), dy = Math.abs(p0.clientY - sy);
-      if (dx > 6 && dx > dy) { dragging = true; held = true; clearTimeout(t); inner.style.transform = ''; }
+      if (dx > 6 && dx > dy) { dragging = true; held = true; clearTimeout(t); el.scrollLeft = Math.round(pos); inner.style.transform = ''; }
       else if (dy > 6) touching = false; // dikey: sayfa kaydırılıyor, şerit karışmaz
     };
     const end = () => { touching = false; if (dragging) { dragging = false; settle(); } };
@@ -847,7 +850,7 @@ function Marquee({ items, style, speed, speedM, ls = 1, z, zm }) { // speed: mas
     el.addEventListener('touchend', end, { passive: true }); el.addEventListener('touchcancel', end, { passive: true });
     el.addEventListener('scroll', onScroll, { passive: true });
     const io = 'IntersectionObserver' in window ? new IntersectionObserver(([e]) => { visible = e.isIntersecting; last = performance.now(); }) : null; io?.observe(el);
-    return () => { cancelAnimationFrame(raf); clearTimeout(t); io?.disconnect(); inner.style.transform = '';
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); io?.disconnect(); ro?.disconnect(); inner.style.transform = '';
       el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); el.removeEventListener('scroll', onScroll); };
   }, [items.length, speedM, phone]);
   if (!items.length) return null;

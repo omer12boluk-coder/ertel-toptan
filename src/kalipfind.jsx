@@ -50,16 +50,23 @@ export function searchPhones(list, q, max = 8) {
 export const short = (c) => String(c || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/^(Qualcomm|Mediatek|MediaTek|Apple|Samsung|HiSilicon|Google|Unisoc)\s+/i, '').replace(/\b(SM|SDM|MSM|MT)\d{3,4}[A-Z0-9-]*\s*/g, '').trim();
 
 // kalıp ürünleri ve içerdikleri işlemci kodları
+// 6.11.2026 (7): sonuç modül düzeyinde saklanır — Kalıp sayfası her açılışta yeniden kuruluyor ve tüm kataloğu baştan tarıyordu
+// (telefonda sekmeye geçişte ~20-25 ms takılma, profil ile bulundu). Katalog / açıklamalar değişmedikçe tekrar hesaplanmaz.
+let DESCS = null; let SC = { cat: null, d: undefined, v: null };
 export function useStencils() {
   const { catalog } = useStore();
-  const [descs, setDescs] = useState(null);
-  useEffect(() => { let live = true; const A = api(); (A.loadDescMap ? A.loadDescMap() : Promise.resolve({})).then((d) => live && setDescs(d || {})).catch(() => live && setDescs({})); return () => { live = false; }; }, []);
-  return useMemo(() => catalog.filter((p) => p.a !== 0 && !p.so && (p.kc || isStencil(p))).map((p) => {
-    const keys = (p.kc || stencilKeys(p) || '').split(' ');
-    const txt = p.n + ' ' + (descs?.[p.id] || '');
-    const k = chipCodes(txt); keys.forEach((x) => x && x !== '-' && !x.startsWith('m:') && k.add(x));
-    return { p, k, t: norm(txt), m: keys.filter((x) => x.startsWith('m:')).map((x) => x.slice(2)) };
-  }), [catalog, descs]);
+  const [descs, setDescs] = useState(DESCS);
+  useEffect(() => { if (DESCS) return; let live = true; const A = api(); (A.loadDescMap ? A.loadDescMap() : Promise.resolve({})).then((d) => { DESCS = d || {}; if (live) setDescs(DESCS); }).catch(() => live && setDescs({})); return () => { live = false; }; }, []);
+  return useMemo(() => {
+    if (SC.cat === catalog && SC.d === descs) return SC.v;
+    const v = catalog.filter((p) => p.a !== 0 && !p.so && (p.kc || isStencil(p))).map((p) => {
+      const keys = (p.kc || stencilKeys(p) || '').split(' ');
+      const txt = p.n + ' ' + (descs?.[p.id] || '');
+      const k = chipCodes(txt); keys.forEach((x) => x && x !== '-' && !x.startsWith('m:') && k.add(x));
+      return { p, k, t: norm(txt), m: keys.filter((x) => x.startsWith('m:')).map((x) => x.slice(2)) };
+    });
+    SC = { cat: catalog, d: descs, v }; return v;
+  }, [catalog, descs]);
 }
 const isSetName = (n) => /\bset/i.test(n) || /\d+\s*adet\s*kal[ıi]p/i.test(n);
 export function matchStencils(stencils, sel) {

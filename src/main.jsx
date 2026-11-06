@@ -736,6 +736,7 @@ function ShellFull() {
           {!admin && <HeaderCart on={tab === 'sepet'} />}
           {!admin && !pub && <a className="icon-btn to-landing" href="/" title="Mağazaya git" aria-label="Mağazaya git"><Icon n="store" s={19} /></a>}
           {admin && <NotifBell />}
+          {admin && <SoundButton />}{/* 6.11.2026 (7): yönetimde de ses aç/kapat (yan menü altında zil ile ay arasında) */}
           <ThemeButton />
           {pub && (member
             ? <ProfileDrop><button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button></ProfileDrop>
@@ -1013,7 +1014,9 @@ function useHideTop(on, upShow, tab, layer) {
     // 5.11.2026 (3) headroom yöntemi: menü SADECE kullanıcının kaydırmasına tepki verir (tekerlek, parmak, klavye, kaydırma çubuğu).
     // Sayfa geçişinde site kaldığın yere kendisi kaydırınca (geri dönüş) menü gizlenmez; her sayfa geçişinde menü görünür gelir.
     r.classList.remove('top-hide');
-    let last = scrollY, acc = 0, raf = 0, userAt = 0; const born = Date.now();
+    // 6.11.2026 (7): scrollY burada OKUNMAZ — sekme değişince bu etki hemen çalışıyor ve scrollY yeni sayfanın tüm yerleşimini
+    // zorla hesaplatıyordu (telefonda geçişin başında ~40-50 ms takılma, ekran kaydıyla bulundu). İlk değer bir sonraki karede alınır.
+    let last = 0, acc = 0, raf = 0, userAt = 0; const born = Date.now(); const r0 = requestAnimationFrame(() => { last = scrollY; });
     const user = () => { userAt = Date.now(); };
     const busy = () => document.body.classList.contains('noscroll') || document.querySelector('.hsearch.mob-open, .hd-p, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
     const f = () => {
@@ -1029,7 +1032,7 @@ function useHideTop(on, upShow, tab, layer) {
     const EV = ['wheel', 'touchmove', 'keydown', 'pointerdown'];
     EV.forEach((e) => addEventListener(e, user, { passive: true, capture: true }));
     addEventListener('scroll', q, { passive: true });
-    return () => { EV.forEach((e) => removeEventListener(e, user, { capture: true })); removeEventListener('scroll', q); cancelAnimationFrame(raf); r.classList.remove('top-hide'); };
+    return () => { EV.forEach((e) => removeEventListener(e, user, { capture: true })); removeEventListener('scroll', q); cancelAnimationFrame(raf); cancelAnimationFrame(r0); r.classList.remove('top-hide'); };
   }, [on, upShow, tab, layer]);
 }
 // 5.11.2026 'akan hap' (kullanıcı: bir şeye tıklayınca seçili hap eskisinden yenisine akıyormuş gibi gitsin): tek seçimli düğme
@@ -1258,7 +1261,8 @@ function setupNavAnim() {
     // 6.11.2026 (6): bilgisayarda yönetim panelinde iç sekmeler (alt başlıklar, sayfa içi geçişler) yandan kaymasın — yorucu
     // bulundu; kısa, sakin bir belirme. Ana menü (yan menü) geçişi ve geri dönüş eskisi gibi kayar.
     if (!mob() && h !== 'back' && document.documentElement.classList.contains('adm-on')) {
-      for (const el of pageTargets(watched)) el.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 170, easing: 'ease-out', id: 'nav' });
+      // başlık + alt sekmeler (SubNav) sabit kalır, sadece altındaki içerik belirir (kullanıcı: Ödeme linkine geçince alt başlıklar oynuyordu)
+      for (const x of pageTargets(watched)) if (!x.matches('.page-h, .subnav, .prod-top')) x.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 170, easing: 'ease-out', id: 'nav' });
       return;
     }
     play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
