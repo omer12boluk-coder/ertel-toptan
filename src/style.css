@@ -9324,3 +9324,23 @@ html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }
 .bp-logo > b { font-size: 18px; }
 .bp-meta { padding: 8px 12px 10px; } .bp-meta b { font-size: 13px; } .bp-meta small { font-size: 12px; }
 @media (max-width: 700px) { .bp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .bp-tile { border-radius: 14px; } .bp-logo { height: 64px; padding: 10px; } .bp-logo img { max-height: 28px; } .bp-logo img.sq { max-height: 36px; } .bp-logo > b { font-size: 14px; } .bp-meta { padding: 6px 8px 8px; flex-direction: column; gap: 1px; } .bp-meta b { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .bp-meta small { font-size: 11px; } }
+/* 7.11.2026 (akşam) Ürünler v2: açılır arama, en üste çık, filtre çipleri animasyonu */
+.pv2-qbtn { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px 0 16px; border: 0; border-radius: 14px; background: color-mix(in oklab, var(--accent) 11%, var(--surface)); color: var(--accent); font: 600 15px/1 Inter, var(--f-body); letter-spacing: -.01em; cursor: pointer; transition: background .2s, transform .2s; animation: pv2QIn .28s cubic-bezier(.2, .8, .2, 1) backwards; }
+@media (hover: hover) and (pointer: fine) { .pv2-qbtn:hover { background: color-mix(in oklab, var(--accent) 17%, var(--surface)); } }
+.pv2-q.pv2-qopen { height: 44px; animation: pv2QGrow .36s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes pv2QGrow { from { max-width: 150px; opacity: .5; } to { max-width: 100%; } }
+@keyframes pv2QIn { from { opacity: 0; transform: scale(.94); } }
+.pv2-q.has { background: var(--surface); box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px color-mix(in oklab, var(--accent) 14%, transparent); }
+.pv2-q.has > svg { color: var(--accent); }
+.pv2-q .pv2-qx { width: 22px; height: 22px; }
+.pv2-trow { min-height: 44px; }
+@media (max-width: 899px) { .pv2-qbtn { align-self: flex-start; height: 42px; } .pv2-q.pv2-qopen { height: 42px; } }
+.pv2-top { position: fixed; z-index: 30; right: 22px; bottom: 26px; width: 48px; height: 48px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1px var(--line), 0 10px 28px -10px rgb(0 0 0 / .35); cursor: pointer; opacity: 0; transform: translateY(14px) scale(.9); pointer-events: none; transition: opacity .25s, transform .3s cubic-bezier(.2, .8, .2, 1); }
+.pv2-top.on { opacity: 1; transform: none; pointer-events: auto; }
+@media (max-width: 899px) { .pv2-top { right: 16px; bottom: calc(var(--bot-h, 64px) + 18px + env(safe-area-inset-bottom, 0px)); width: 44px; height: 44px; } }
+.pv2-af .af-chip { animation: pv2Chip .3s cubic-bezier(.2, .9, .3, 1.2) backwards; }
+.pv2-af { animation: pv2Up .3s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes pv2Chip { from { opacity: 0; transform: scale(.85); } }
+.pv2-tag { transition: background .22s, color .22s, transform .18s; }
+@media (hover: hover) and (pointer: fine) { .pv2-tag:active { transform: scale(.96); } }
+@media (prefers-reduced-motion: reduce) { .pv2-qbtn, .pv2-q.pv2-qopen, .pv2-af, .pv2-af .af-chip { animation: none; } }

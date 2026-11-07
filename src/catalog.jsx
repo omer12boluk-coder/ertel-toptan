@@ -3,7 +3,7 @@ import { ShopImg } from './shophome.jsx';
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ProdHub } from './p0home.jsx';
 import { CdHub } from './cdhome.jsx';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead, useMorph, ChipSelect } from './ui.jsx';
@@ -548,7 +548,8 @@ export function Catalog({ admin }) {
   // (telefonda dokunuşu 'takılmış' hissettiren asıl sebep buydu). Satırlar sepet/favori gibi değişiklikleri kendileri izler.
   const addCls = cardCls(S, user?.role);
   const pinKey = pinShow ? [...pinShow].join(',') : '';
-  const pv2 = !admin && user?.role === 'public' && S.look?.prodV2 !== false; // 7.11.2026 Ürünler v2 (false = eski)
+  const pv2 = !admin && user?.role === 'public' && S.look?.prodV2 !== false;
+  const [qOpen, setQOpen] = useState(false); // 7.11.2026 Ürünler v2 (false = eski)
   const listEl = useMemo(() => (
     <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' ' + addCls + (pv2 ? ' pv2l' : '')}>
       {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
@@ -573,11 +574,12 @@ export function Catalog({ admin }) {
         {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
         <div className="pv2-trow">
           <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
-          <div className="pv2-q">
+          {/* 7.11.2026 (akşam): arama açılır/kapanır — kapalıyken belirgin 'Ürün ara' düğmesi; basınca uzar, X ile kapanır. Boşken gri, yazı varken beyaz + mavi çerçeve */}
+          {qOpen || q ? <div className={'pv2-q pv2-qopen' + (q ? ' has' : '')}>
             <Icon n="search" s={17} />
-            <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} />
-            {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
-          </div>
+            <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} onBlur={(e) => { if (!e.target.value && !e.relatedTarget?.closest?.('.pv2-q')) setQOpen(false); }} />
+            <button type="button" className="pv2-qx" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(''); setQOpen(false); }} aria-label="Aramayı kapat"><Icon n="x" s={12} /></button>
+          </div> : <button type="button" className="pv2-qbtn" onClick={() => { flushSync(() => setQOpen(true)); document.getElementById('cat-search')?.focus(); }}><Icon n="search" s={18} />Ürün ara</button>}
         </div>
         <div className="pv2-bar">
           <div className="pv2-tags" role="group" aria-label="Filtreler">
@@ -596,6 +598,7 @@ export function Catalog({ admin }) {
           </span>
         </div>
         <CatPills tree={tree} counts={counts} cat={cat} onPick={setCat} />
+        <ToTop />
       </div>}
       <div className={'cat-layout' + (admin ? ' resizable' : '') + (pv2 ? ' pv2' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
         {!pv2 && <aside className="cat-side" aria-label="Kategoriler">
@@ -650,8 +653,8 @@ export function Catalog({ admin }) {
           )}
           
           {actives.length > (pv2 && cat != null ? 1 : 0) && (
-            <div className="af-row" aria-label="Seçili filtreler">
-              {actives.filter(([l]) => !(pv2 && cat != null && l === (tree.nodes.get(cat)?.name || catName(S, cat)))).map(([l, off], i) => <button key={i} className="af-chip" onClick={off} title="Filtreyi kaldır">{l}<Icon n="x" s={13} /></button>)}
+            <div className={'af-row' + (pv2 ? ' pv2-af' : '')} aria-label="Seçili filtreler">
+              {actives.filter(([l]) => !(pv2 && cat != null && l === (tree.nodes.get(cat)?.name || catName(S, cat)))).map(([l, off], i) => <button key={pv2 ? l : i} className="af-chip" onClick={off} title="Filtreyi kaldır">{l}<Icon n="x" s={13} /></button>)}
               {actives.length > 1 && <button className="link af-clear" onClick={clearAll}>Tümünü temizle</button>}
             </div>
           )}
@@ -674,7 +677,7 @@ export function Catalog({ admin }) {
             <Empty icon="heart" title="Henüz favoriniz yok"><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p></Empty>
           ) : shown.length === 0 ? (
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
-          ) : pv2 ? <div key={'l' + cat + '|' + brand + '|' + price + '|' + sort} className="pv2-in3">{listEl}</div> : (
+          ) : pv2 ? <div key={'l' + cat + '|' + brand + '|' + price + '|' + sort + '|' + newOnly + showOos + setsOnly + favOnly} className="pv2-in3">{listEl}</div> : (
             listEl
           )}
           {!(setsOnly && user?.role === 'public') && limit < list.length && <div ref={sentinel} className="more"><button className="btn ghost" onClick={more}>Daha fazla göster ({list.length - limit})</button></div>}
@@ -773,6 +776,17 @@ const _lgc = new WeakMap();
 const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
 // Ürünler v2 kartında logonun yanına yazı (logo sadece amblemse). src: kartta kullanılacak amblem (başka yerlerde tam logo kalır)
 const LG_TXT = { luban: { t: 'Luban' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'Mega-Idea' } }; // ilk harf büyük (kullanıcı); XZZ kısaltma
+// 7.11.2026 (akşam) Ürünler v2: çok aşağı inince 'en üste çık' düğmesi
+function ToTop() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    let raf = 0; const f = () => { raf = 0; setOn(scrollY > Math.max(900, innerHeight * 1.2)); };
+    const h = () => { if (!raf) raf = requestAnimationFrame(f); };
+    addEventListener('scroll', h, { passive: true }); f();
+    return () => { removeEventListener('scroll', h); if (raf) cancelAnimationFrame(raf); };
+  }, []);
+  return createPortal(<button type="button" className={'pv2-top' + (on ? ' on' : '')} aria-label="En üste çık" tabIndex={on ? 0 : -1} onClick={() => scrollTo({ top: 0, behavior: 'smooth' })}><Icon n="up" s={20} /></button>, document.body);
+}
 function logoOf(S, b) {
   if (!b) return null; const BL = S.brandLogos || {}; let m = _lgc.get(BL);
   if (!m) { m = new Map(); for (const x of S.shopHome?.brands || []) if (x?.name && x.logo) m.set(x.name.toLocaleLowerCase('tr'), x.logo); for (const [k, v] of Object.entries(BL)) if (v?.logo) m.set(k.toLocaleLowerCase('tr'), v.logo); _lgc.set(BL, m); }
