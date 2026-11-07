@@ -9303,3 +9303,5 @@ html .shell .pv2-tags .chip.select.csel::after { display: none; }
 @media (max-width: 899px) { html .shell .pv2-tags .chip.select select { transform: scale(.85); transform-origin: left center; margin-right: -12px; } } /* 16px (iPhone yakınlaştırmasın) ama diğer etiketlerle aynı boy görünsün */
 /* arama kutusu: içteki input'un kendi odak çerçevesi kapalı (çift çerçeve görünüyordu) */
 html .shell .pv2-q input, html .shell .pv2-q input:focus { border: 0 !important; outline: 0 !important; box-shadow: none !important; background: none !important; border-radius: 0 !important; padding: 0 !important; height: 100% !important; }
+.pv2-lgt { margin-left: 5px; font: 800 12.5px/1 Inter, var(--f-body); letter-spacing: .02em; color: var(--fg); } /* Luban: logo sadece amblem → yanına adı (sadece Ürünler v2 kartlarında) */
+html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }
