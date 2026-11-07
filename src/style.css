@@ -9641,3 +9641,11 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
 .arc-seg .chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, var(--surface)); }
 .arc-kinds { margin: 12px 0 0; }
 .arc-kinds .chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, var(--surface)); }
+
+/* 8.11.2026 alt bilgi: vergi/MERSİS satırı + kart logoları */
+.sfoot-bot { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 18px; }
+.sfoot-tax { color: var(--muted); }
+.sfoot-cards { display: inline-flex; align-items: center; gap: 6px; }
+.sfoot-cards > svg { width: 40px; height: 25px; display: block; }
+.sfoot-sec { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-size: 12px; color: var(--muted); }
+@media (max-width: 700px) { .sfoot-bot { flex-direction: column; gap: 8px; } }

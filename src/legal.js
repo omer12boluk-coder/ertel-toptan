@@ -13,6 +13,7 @@ export const LEGAL_DOCS = [
   { k: 'uyelik', slug: 'uyelik-sozlesmesi', title: 'Üyelik Sözleşmesi' },
   { k: 'onbilgi', slug: 'on-bilgilendirme-formu', title: 'Ön Bilgilendirme Formu' },
   { k: 'mesafeli', slug: 'mesafeli-satis-sozlesmesi', title: 'Mesafeli Satış Sözleşmesi' },
+  { k: 'iade', slug: 'iptal-ve-iade-kosullari', title: 'İptal ve İade Koşulları' }, // 8.11.2026: sanal POS başvurusu için ayrı sayfa
 ];
 export const legalDoc = (k) => LEGAL_DOCS.find((d) => d.k === k || d.slug === k) || null;
 
@@ -233,6 +234,59 @@ Ayıplı ürünlerde Alıcı, 6502 sayılı Kanun'un 11. maddesinde sayılan se�
 **MADDE 9 – YÜRÜRLÜK**
 
 Alıcı, sipariş sırasında işbu sözleşmeyi okuyup tüm koşulları kabul ettiğini elektronik ortamda onaylamıştır. Sözleşme, siparişin tamamlanmasıyla yürürlüğe girer. Sözleşmenin bir kopyası Alıcı'nın sipariş sayfasında (Hesabım > Siparişlerim) her zaman görüntülenebilir.`,
+
+  iade: `Bu sayfa, **{SATICI_UNVAN}** tarafından işletilen online mağazadan verilen siparişlerin iptali, iadesi ve değişimine ilişkin koşulları açıklar. Ayrıntılı hükümler **Mesafeli Satış Sözleşmesi** ve **Ön Bilgilendirme Formu**'nda yer alır.
+
+**1. Sipariş iptali**
+
+- Kargoya verilmemiş siparişinizi, {SATICI_TEL} numaralı telefon / WhatsApp hattından ya da {SATICI_EPOSTA} adresinden bize ulaşarak iptal edebilirsiniz.
+- İptal edilen siparişin bedeli, iptalin onaylanmasından itibaren en geç **14 gün** içinde ödeme yaptığınız yönteme iade edilir. Kartla yapılan ödemelerde iadenin hesabınıza yansıma süresi bankanıza bağlıdır.
+- Kargoya verilmiş siparişler için aşağıdaki iade koşulları geçerlidir.
+
+**2. Bireysel tüketiciler için cayma hakkı**
+
+Ürünü ticari veya mesleki amaç dışında satın aldıysanız, ürünü teslim aldığınız tarihten itibaren **14 gün** içinde hiçbir gerekçe göstermeksizin ve cezai şart ödemeksizin cayma hakkınızı kullanabilirsiniz.
+
+- Cayma bildiriminizi bu süre içinde WhatsApp / telefon ({SATICI_TEL}) ya da e-posta ({SATICI_EPOSTA}) ile iletin; iade adresini size bildiririz.
+- Ürünü, bildiriminizden itibaren **10 gün** içinde faturası, varsa orijinal kutusu ve aksesuarlarıyla birlikte gönderin.
+- Ürün ayıplı değilse **iade kargo ücreti alıcıya aittir**.
+- Ürün bize ulaştıktan sonra, cayma bildiriminizin bize ulaşmasından itibaren en geç **14 gün** içinde ürün bedeli ödeme yaptığınız yönteme iade edilir.
+- Ürünün olağan kullanımı dışında kullanılması, zarar görmesi veya eksik gönderilmesi nedeniyle oluşan değer kaybından alıcı sorumludur. Ürünü kutusundan çıkarıp incelemek değer kaybı sayılmaz.
+
+**Cayma hakkının kullanılamadığı ürünler (Mesafeli Sözleşmeler Yönetmeliği m.15):**
+
+- Ambalajı, bandı veya mührü açılmış olup sağlık ve hijyen açısından iadesi uygun olmayan ürünler,
+- Kullanımla birlikte tükenen ve teslimden sonra kullanılmış / açılmış tek kullanımlık sarf malzemeleri (ör. açılmış macun, flux, pasta, yapıştırıcı, sıvı ürünler),
+- Alıcının isteği veya kişisel ihtiyaçları doğrultusunda hazırlanan ürünler,
+- Tesliminden sonra başka ürünlerle karışan ve ayrıştırılması mümkün olmayan ürünler.
+
+Bu ürünler açılmamış ve kullanılmamış olduğu sürece cayma hakkı kapsamındadır.
+
+**3. Ticari alıcılar (tamirci, servis, bayi) için**
+
+Ürünü ticari veya mesleki amaçla (ör. telefon tamir atölyesi, servis, bayi olarak) satın aldıysanız tüketici sayılmazsınız ve yukarıdaki cayma hakkı uygulanmaz. Bu durumda:
+
+- Kullanılmış, kutusu açılmış veya ısı / kimyasal etkiyle özelliği değişebilen sarf malzemeleri iade ve değişime kabul edilmez.
+- Kullanılmamış, hasarsız ve orijinal kutusunda olan ürünlerin iadesi veya değişimi, teslimden itibaren 14 gün içinde bize ulaşıp onayımızı almanız koşuluyla yapılabilir. İade kargo ücreti alıcıya aittir.
+
+**4. Hasarlı, eksik veya hatalı gelen ürünler**
+
+- Siparişinizi teslim alırken paketi kontrol edin. Hasarlı pakette kargo görevlisine tutanak tutturmanızı öneririz.
+- Ürün size kusurlu, hasarlı, eksik veya siparişinizden farklı ulaştıysa, mümkünse fotoğraf / video ile birlikte en kısa sürede WhatsApp ya da e-posta ile bize bildirin.
+- Bu durumda, 6502 sayılı Kanun'un 11. maddesindeki seçimlik haklarınızı (ücretsiz değişim, onarım, bedel iadesi veya indirim) kullanabilirsiniz. Hatalı veya hasarlı gönderilen ürünlerde kargo ücreti Satıcı'ya aittir.
+
+**5. Garanti**
+
+Garantili olduğu ürün bilgisinde belirtilen ürünler (ör. JBC, Quick gibi markaların servis ürünleri), garanti belgesinde yazan süre ve koşullarla garanti kapsamındadır. Garanti başvurusu için bizimle iletişime geçin.
+
+**6. İade süreci**
+
+1. İade / değişim talebinizi WhatsApp ({SATICI_TEL}) ya da e-posta ({SATICI_EPOSTA}) ile sipariş numaranızla birlikte iletin.
+2. İade adresini ve gönderim bilgisini size bildirelim.
+3. Ürünü faturası ve orijinal kutusuyla birlikte gönderin.
+4. Ürün bize ulaşıp kontrol edildikten sonra bedeli ödeme yaptığınız yönteme iade edilir veya ürününüz değiştirilir.
+
+**İade adresi:** {SATICI_ADRES}`,
 };
 
 // Satıcı bilgileri ayarlardan (Alt bilgi: unvan, adres, telefon, e-posta + Yasal metinler: vergi, MERSİS)
