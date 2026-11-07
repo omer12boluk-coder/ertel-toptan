@@ -199,3 +199,22 @@ CLAUDE.md sadeleştirilirken §8 ve §10'daki tarihli satırlar buraya aynen ta�
 ### Eski 'SIRADAKİ İŞ' paragrafı (7.11.2026 öğlen)
 
 **SIRADAKİ İŞ (7.11.2026):** Yeni gelenler YAYINDA (7.11 11:25). YAYINDA (7.11 10:25): 6 yeni banner (`jbc-cd2`, `sugon8650`, `tbk288`, `sst12b`, `cx71r`, `su8`; genel yerleşim `lay` right|left|center|photo → `WideGen`/`PhoneGen`), sunum https://claude.ai/artifact/2wGpzu3erXTWt8vDKQYGzK; listede yoksa `withNew2` son fotoğraflı bannerın arkasına kendiliğinden ekler (kapatma = Tasarım › Banner anahtarı). Önceki: Sunum https://claude.ai/artifact/RnGmUZyyVV1ETkiKQqZDv7 — 'Yeni gelenler' bölümü (A kapak+raf / B tarihli şerit / C büyük+4; Tüm ürünler'e 'Yeni gelenler' sıralaması, geliş günü kaydı) + Kalıp bulucu Apple tasarımı: kullanıcı kararı bekleniyor. Önceki: Plan sunumu https://claude.ai/artifact/NRwWDyvjQCihbJ4Ej4ZxpH (5 adım: bannerlar normal reklam listesine + banner genişlik/yükseklik · yeni bannerlar · 'Bu hafta masamızdan'/'Atölyeni kur' banner diliyle · Tasarım modu v3 'Claude düzeni' paketi · kalan bölümler) — kullanıcı kararı bekleniyor. Dal `tasarim-v3`: köşe koyu çizgi düzeltmesi (`.pb-slide` zemini saydam, `.pb-box` radius inherit) + yeni bannerlar `mech-pp2`, `sm4ntp` (yayında DEĞİL). Dal `banner-foto` main'e birleşti, silinebilir. Geçici dallar `banner-resim`, `banner-resim-out` silinebilir.
+
+
+## 7.11.2026 gece — Katalog kopyası planı (kullanıcıyla konuşuldu, yeni sohbette uygulanacak)
+
+**Kararlar:**
+- Blaze'e geçilmeyecek (kullanıcı fatura durdurucusuna rağmen çekiniyor). Spark kalır; Cloudflare Workers Paid 5 $ kullanıcı limitli sanal kartla alacak (KV 1M yazma/ay, 10M istek/ay; aşım ucuz: 0,30 $/M istek).
+- Hedef: Spark'ta günde 60-70, mümkünse 100 sipariş.
+- Kabul edilen risk: üye kaydı/girişi/panel aşırı yüklenirse Firestore 50k/gün dolar → para çıkmaz, Türkiye saatiyle ~11:00'de (Pasifik gece yarısı) sıfırlanır.
+
+**Yapılacak iş (sadece bu):** herkese açık okumaları Cloudflare'den vermek: `pubcatalog/*` parçaları, `settings/public`, `revsum/main`, `descb/b<n>` açıklama kovaları (ve varsa `stats/public`).
+- Yöneticinin yayın/kaydet akışı (`_writeChunks('pubcatalog'…)`, `settings/public` setDoc, descb yazımı) aynı anda bekçiye (yönetici yetkisiyle, `adminOf`) aynı veriyi gönderir → R2'ye (ya da site varlığı/KV) yazılır, `version` ile. Ek Firestore okuması YOK.
+- Mağaza: önce Cloudflare kopyası; `pubcatalog/_meta` onSnapshot dinleyicisi KALIR (açık sayfalar anında güncellensin — kullanıcı "fiyat anında yansımalı, gecikme büyük sorun" dedi). Kopyanın `version`'ı _meta ile aynıysa kullan, değilse / gelmezse / hata → bugünkü Firebase okuması (sessiz yedek). Önbellek: güncel sürümü hemen vermeli (no-store ya da sürümlü adres `?v=`).
+- Ayar anahtarı ile kapatılabilir (eski yol). Varsayılan: kullanıcı onaylayınca açık.
+- DOKUNULMAYACAK: stok (sadece panel), sipariş (bekçi fiyatı Firestore pubcatalog'dan doğrular — aynen kalsın), gece yedeği, geri yükleme, PlatinMarket eşitleme, bayi kataloğu (`catalog/*`, toptan fiyatlı — Cloudflare'e KONMAZ), toptan fiyat `w` kopyaya asla girmez.
+- Bayi tarafı ve yönetim paneli okumaları şimdilik aynen.
+
+**Hesap (kodda bakıldı):** panel açılışı (datawin.js, pencere varsayılan 14 gün + açıklar + 62 gün yeni üyeler; ana ekran uygulamasında kalıcı önbellek yok → her açılış baştan) ≈ 60-70 siparişte ~1.500, 100'de ~2.000 okuma. Günde 10 açılış 15-20 bin, 20 açılış 30-40 bin. Ziyaretçi yükü kalkınca 60-70 rahat; 100'de panel sıklığına bağlı. Panel "değişeni oku" düzenlemesi şimdilik YOK; bir hafta `usage.yml` raporu izlenecek.
+
+**Ayrıca konuşulanlar (karar yok/ertelendi):** App Check sadece sayım (bilet kopyalanıp ~1 saat tekrar kullanılabilir — kullanıcıya dürüstçe söylendi; tek başına kale değil); Blaze'e geçilirse eksikler: sahte harcama denemesi düğmesi + hızlı kota bekçisi (kullanıcı "yapma" dedi). Kart ödemesi hâlâ DEMO (İş Bankası POS bilgileri bekleniyor). Siteyi açmadan önce yasal kontrol listesi (§10 madde 5).
