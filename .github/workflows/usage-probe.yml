@@ -1,0 +1,18 @@
+# Kullanım sayacı teşhisi (elle): bekçiye deneme kaydı gönderir, Analytics Engine'de son 1 saatin kayıtlarını sayar
+name: Kullanım sayacı kontrol
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Deneme kaydı + sorgu
+        run: |
+          c=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://ertel-b2b-watch.omer-12boluk.workers.dev/m -d '{"a":"bayi","u":"","n":"deneme","v":0,"c":{"_deneme":[1,0]}}')
+          echo "::notice title=/m cevabı::$c"
+          sleep 30
+          q="SELECT blob1 AS s, blob2 AS a, count() AS n, SUM(_sample_interval * double1) AS d1 FROM ertel_usage WHERE timestamp > NOW() - INTERVAL '1' HOUR GROUP BY s, a FORMAT JSON"
+          out=$(curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/analytics_engine/sql" -H "Authorization: Bearer $CF_TOKEN" --data "$q")
+          echo "::notice title=AE son 1 saat::$(echo "$out" | tr '\n' ' ' | cut -c1-900)"
