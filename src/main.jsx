@@ -1203,6 +1203,8 @@ function setupNavAnim() {
     const btn = t.closest('button, a, [role="button"]') || t;
     click = { el: btn, at: Date.now(), back: !!t.closest('.back-btn, .oa-back') }; // .oa-back: sipariş / linkle gelen sipariş geri düğmesi (31.10.2026: dönüş sağdan geliyordu)
   }, { capture: true, passive: true });
+  // 7.11.2026: sayfa içi 'geri' (Ürünler listesi → açılış sayfası; alt menüden de) — sıradaki sayfa içi geçiş soldan kayar
+  window.__navBackNext = () => { click = { el: document.createElement('i'), at: Date.now(), back: true }; };
   // Solma içeriğin kendisine DEĞİL, üstüne serilen sayfa renginde tek bir örtüye (.nav-cover) uygulanır: koca bir sayfayı
   // (ana sayfa: bulanık ışıklar, buzlu cam reklam…) saydamlıkla çizmek iPhone'da çok ağır, 'flaş' yapıyordu; örtüyü soldurmak
   // bedava. Sayfanın kendisi sadece kayar (transform). Örtü üst menü / alt menü / sepet çubuğunun ALTINDA (z 18).

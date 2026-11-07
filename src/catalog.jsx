@@ -3,7 +3,7 @@ import { ShopImg, useShopImg } from './shophome.jsx';
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ProdHub } from './p0home.jsx';
 import { CdHub, CAT_COVERS } from './cdhome.jsx';
-import { createPortal, flushSync } from 'react-dom';
+import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead, useMorph, ChipSelect } from './ui.jsx';
@@ -417,9 +417,7 @@ export function Catalog({ admin }) {
   const [favOnly, setFavOnly] = useState(false);
   const [setsOnly, setSetsOnly] = useState(false);
   const [fsOpen, setFsOpen] = useState(false); // v2 Filtrele paneli
-  const [hubOff, setHubOff] = useState(false);
-  const [hubAnim, setHubAnim] = useState(''); // açılış sayfası ↔ liste geçişi: 'l' açılış sayfasına dönüş (soldan), 'r' listeye giriş (sağdan)
-  const hubWas = useRef(null); // 6.11.2026 Ürünler açılış sayfası (look.prodHub) geçildi mi
+  const [hubOff, setHubOff] = useState(false); // 6.11.2026 Ürünler açılış sayfası (look.prodHub) geçildi mi
   const [asort, setAsort] = useState({ k: null, d: null }); // yönetici tablosu başlık sıralaması
   const sortBy = (k) => setAsort((s) => (s.k !== k ? { k, d: k === 'code' || k === 'name' ? 'asc' : 'desc' } : s.d === (k === 'code' || k === 'name' ? 'asc' : 'desc') ? { k, d: k === 'code' || k === 'name' ? 'desc' : 'asc' } : { k: null, d: null }));
   const favs = useStore((s) => s.favs);
@@ -558,10 +556,8 @@ export function Catalog({ admin }) {
     </ul>
   ), [list, limit, view, admin, addCls, asort, pinKey, pv2]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hubShown = pv2 && !!S.look?.prodHub && !hubOff && actives.length === 0;
-  useLayoutEffect(() => { if (hubWas.current !== null && hubWas.current !== hubShown) setHubAnim(hubVT ? 'vt' : hubShown ? 'l' : 'r'); hubWas.current = hubShown; }, [hubShown]);
   useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (pv2 && S.look?.prodHub && !hubOff && actives.length === 0) return <PV2Hub anim={hubAnim} tree={tree} counts={counts} total={all.length} setN={setN}
+  if (pv2 && S.look?.prodHub && !hubOff && actives.length === 0) return <PV2Hub tree={tree} counts={counts} total={all.length} setN={setN}
     onCat={(id) => hubSwap(() => { setCat(id); setHubOff(true); window.scrollTo(0, 0); }, 'r')} onAll={() => hubSwap(() => { setHubOff(true); window.scrollTo(0, 0); }, 'r')}
     onQ={(t) => hubSwap(() => { setQ(t); setHubOff(true); window.scrollTo(0, 0); }, 'r')} onNew={() => hubSwap(() => { setNewOnly(true); setHubOff(true); window.scrollTo(0, 0); }, 'r')}
     onSets={() => hubSwap(() => { setSetsOnly(true); setHubOff(true); window.scrollTo(0, 0); }, 'r')} />;
@@ -571,7 +567,7 @@ export function Catalog({ admin }) {
   const scopeBrands = pv2 ? (() => { const m = new Map(); for (const p of all) if (p.b && (cat == null || pcats.get(p.id)?.has(cat))) m.set(p.b, (m.get(p.b) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); })() : null;
   const catTitle = cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : 'Tüm ürünler';
   return (
-    <div className={'catalog' + (pv2 && hubAnim === 'r' ? ' pv2-go-r' : '')}>
+    <div className="catalog">
       {hubBack && <button className="back-btn cat-hub-back" onClick={() => hubSwap(() => store.set({ catalogGo: { hub: true } }), 'l')}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
       {/* 6.11.2026: Ürünler / Akıllı ekle / Setler üçünde de başlık + seçici AYNI yerde ve aynı genişlikte (sekme değişince kaymasın) */}
       {admin && <div className="page adm-sub prod-top"><PageHead title="Ürünler" extra={<span className="muted"> · {all.length}</span>} /><ProductsSwitch on="products" /></div>}
@@ -804,18 +800,12 @@ export function useHubRoots() {
     return tree.roots.filter((n) => !n.hidden && cnt.get(n.id)).map((n) => ({ id: n.id, name: n.name, n: cnt.get(n.id) }));
   }, [tree, vis]);
 }
-// 7.11.2026: açılış ⇄ liste geçişi. Tarayıcı destekliyorsa View Transition: eski ve yeni sayfanın anlık görüntüsü ekran kartında kayar,
-// yeni listenin çizimi animasyonu takılatmaz (telefonda 'takılarak geçme' buydu). Desteklemeyen tarayıcıda eski CSS kayması (pv2-go-*).
-let hubVT = false;
-export function hubSwap(fn, dir) {
-  const R0 = document.documentElement;
-  if (hubVT || !document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { fn(); return; }
-  hubVT = true; R0.classList.add('vt-hub', 'vt-hub-' + dir, 'vt-lite');
-  let t; try { t = document.startViewTransition(() => { flushSync(fn); }); } catch { hubVT = false; R0.classList.remove('vt-hub', 'vt-hub-' + dir, 'vt-lite'); fn(); return; }
-  t.finished.finally(() => { hubVT = false; R0.classList.remove('vt-hub', 'vt-hub-' + dir, 'vt-lite'); });
-}
+// 7.11.2026 (düzeltme): açılış ⇄ liste geçişini sitenin NORMAL sayfa geçişi yapar (main.jsx setupNavAnim: tıklanan kutu kaybolup
+// liste gelince aynı yandan kayma). Ayrı View Transition / CSS kayması KALDIRILDI (kullanıcı: pürüzsüz geçişi bozuyordu, ürünler
+// 'F5 gibi' oturuyordu). 'l' = açılış sayfasına dönüş → normal geçiş 'geri' yönünde (soldan) oynar.
+export function hubSwap(fn, dir) { if (dir === 'l') window.__navBackNext?.(); fn(); }
 export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
-function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets, anim }) {
+function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {
   const brands = useBrandList();
   const HC = useStore((st) => st.settings.shopHome?.p0?.hub) || {};
   const S0 = useStore((st) => st.settings); const sets = useMemo(() => liveSets(S0), [S0]); // Tasarım › Ürünler açılış sayfası: bg (resimler), hide2 (gizli kategoriler), img2 (kategori resmi)
@@ -825,7 +815,7 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets, a
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
   const key = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
-  return <div className={'catalog phub ' + (anim === 'l' ? 'pv2-go-l' : anim === 'vt' ? '' : 'pv2-in')}>
+  return <div className="catalog phub pv2-in">
     <nav className="pv2-crumb" aria-label="Konum"><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></nav>
     <div className="pv2-trow">
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
