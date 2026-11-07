@@ -53,7 +53,7 @@ export function styleOut(st) {
   if (has(s.hls)) { vars['--st-hls'] = s.hls + 'em'; cls.push('st-hls'); }
   if (has(s.hz)) { vars['--st-hz'] = String(s.hz); cls.push('st-hz'); }
   if (has(s.pw)) { vars['--st-pw'] = String(s.pw); cls.push('st-pw'); }
-  if (has(s.rCard)) { vars['--pcard-r'] = s.rCard + 'px'; }
+  if (has(s.rCard)) { vars['--pcard-r'] = s.rCard + 'px'; vars['--st-rcard'] = s.rCard + 'px'; } // 7.11.2026 (11) Claude düzeni kartları da --st-rcard okur
   if (has(s.rBox)) { vars['--st-rbox'] = s.rBox + 'px'; cls.push('st-rbox'); }
   if (has(s.rHero)) { vars['--st-rhero'] = s.rHero + 'px'; cls.push('st-rhero'); }
   if (has(s.rBtn)) { vars['--st-rbtn'] = s.rBtn + 'px'; cls.push('st-rbtn'); }

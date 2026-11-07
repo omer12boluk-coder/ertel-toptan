@@ -4,6 +4,8 @@
 // Kayıt eski modla AYNI taslak (store.designDraft) ve aynı Yayınla akışı.
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, toast, go } from './store.js';
+import { STYLE_PRESETS } from './stylekit.js';
+import { PACKS } from './presets.js';
 import { Icon, Confirm } from './ui.jsx';
 import { withDefaults, norm, ls } from './utils.js';
 import { ShopHome, DesignCtx, blockLabel, moveItem, withProdFallback, RailFields } from './shophome.jsx';
@@ -174,6 +176,12 @@ function PagePanel({ L, H, hidden, sel, select, move, toggleHide, cdOn, toCd, ad
 
 // ---- Sol: Görünüm — bütün sayfa için birkaç ayar ----
 const ACCENTS = ['#2f62d6', '#1d1d1f', '#0b7a52', '#c2410c', '#b4232a', '#0e7490'];
+// piksel kaydırıcısı (telefonda parmakla rahat): değer + 'sıfırla'
+function Px({ label, v, def, min = 0, max, show, on }) {
+  const val = v ?? def;
+  return <div className="v3-px"><span><b>{label}</b><code>{show ? show(val) : val + ' px'}</code>{v != null && <button type="button" className="v3-px-r" onClick={() => on(undefined)}>sıfırla</button>}</span>
+    <input type="range" min={min} max={max} step="1" value={val} onChange={(e) => on(Number(e.target.value))} /></div>;
+}
 function LookPanel({ d, set, setAll, A }) {
   const Lk = d.look || {}; const st = Lk.style || {};
   const acc = Lk.shopAccent || d.brand?.accent || '#2f62d6';
@@ -181,6 +189,7 @@ function LookPanel({ d, set, setAll, A }) {
   const font = st.head === 'intert' || (!st.head && Lk.cd) ? 'apple' : st.head ? 'other' : 'classic';
   const saved = useStore((s) => s.settings.dzPresets) || [];
   const packs = [CD, P0, APPLE, ...saved];
+  const upSt = (patch) => { const n = { ...st, ...patch }; Object.keys(n).forEach((k) => (n[k] == null || n[k] === '') && delete n[k]); set('look.style', n); };
   return <div className="v3-look">
     <Row label="Ana renk" hint="Düğmeler, bağlantılar, seçili menü"><span className="v3-sw">{ACCENTS.map((c) => <button key={c} type="button" className={acc.toLowerCase() === c ? 'on' : ''} style={{ background: c }} onClick={() => set('look.shopAccent', c)} aria-label={c} />)}<input type="color" value={acc} onChange={(e) => set('look.shopAccent', e.target.value)} title="Başka renk" /></span></Row>
     <Row label="Köşeler" hint="Banner, kartlar ve düğmeler birlikte değişir"><Seg v={corner} opts={CORNERS.map(([k, l]) => [k, l])} on={(k) => set('look.style', { ...st, ...CORNERS.find((x) => x[0] === k)[2] })} /></Row>
@@ -189,9 +198,31 @@ function LookPanel({ d, set, setAll, A }) {
     <Row label="Üst menü – banner arası" hint="Ana sayfada bannerın üstüne ek boşluk"><Seg v={String(Number(Lk.heroGap) || 0)} opts={[['0', 'Yok'], ['8', '+8'], ['16', '+16'], ['24', '+24'], ['36', '+36']]} on={(k) => set('look.heroGap', Number(k))} /></Row>
     <Row label="Üstüne gelince" hint="Bilgisayarda kartların üstüne gelince"><Seg v={Lk.hoverFx || ''} opts={[['', 'Yeni'], ['old', 'Eski (kalkar)']]} on={(k) => set('look.hoverFx', k)} /></Row>
     <Row label="Gece modu" hint="Otomatik: ziyaretçinin telefonu gece modundaysa mağaza da koyu"><Seg v={d.brand?.theme === 'auto' ? 'auto' : 'light'} opts={[['auto', 'Otomatik'], ['light', 'Hep gündüz']]} on={(k) => set('brand.theme', k)} /></Row>
+    {/* 7.11.2026 (11) telefonda da kullanılabilen basit ayarlar: hazır stiller, temalar, köşe pikselleri, gölge/çerçeve, boşluklar */}
+    <span className="v3-cap">Hazır stiller</span>
+    <div className="v3-sty">
+      <button type="button" className={!st.preset ? 'on' : ''} onClick={() => set('look.style', {})}><i style={{ background: '#fff' }}><em /></i><b>Standart</b></button>
+      {STYLE_PRESETS.map((p) => <button key={p.id} type="button" className={st.preset === p.id ? 'on' : ''} onClick={() => setAll({ ...d, look: { ...Lk, style: { ...p.s, preset: p.id }, ...(p.pal ? { shopAccent: p.pal.accent } : {}) } })}>
+        <i style={{ background: p.pv[0] }}><em style={{ borderRadius: Math.min(10, p.s.rCard), background: p.pv[2], boxShadow: p.s.shadow === 'none' ? 'none' : '0 3px 8px -3px rgb(0 0 0 / .25)' }}><u style={{ background: p.pv[1] }} /></em></i><b>{p.n}</b></button>)}
+    </div>
+    <span className="v3-cap">Tema (zemin ve renk paketi)</span>
+    <div className="v3-sty">
+      <button type="button" className={!Lk.pack?.id ? 'on' : ''} onClick={() => set('look.pack', {})}><i style={{ background: '#f5f5f7' }} /><b>Yok</b></button>
+      {PACKS.map((p) => <button key={p.id} type="button" className={Lk.pack?.id === p.id ? 'on' : ''} onClick={() => set('look.pack', { id: p.id, parts: {}, amt: 'md' })}><i style={{ background: `linear-gradient(135deg, ${(p.sw || []).join(', ')})` }} /><b>{p.n}</b></button>)}
+    </div>
+    <span className="v3-cap">Köşeler (piksel)</span>
+    <Px label="Banner" v={st.rHero} def={30} max={48} on={(v) => upSt({ rHero: v })} />
+    <Px label="Kutular" v={st.rBox} def={24} max={40} on={(v) => upSt({ rBox: v })} />
+    <Px label="Ürün kartları" v={st.rCard} def={18} max={36} on={(v) => upSt({ rCard: v })} />
+    <Px label="Düğmeler" v={st.rBtn === 999 ? 30 : st.rBtn} def={30} max={30} show={(v) => (v >= 30 ? 'Yuvarlak' : v + ' px')} on={(v) => upSt({ rBtn: v >= 30 ? 999 : v })} />
+    <Row label="Gölge"><Seg v={st.shadow || ''} opts={[['', 'Standart'], ['none', 'Yok'], ['soft', 'Hafif'], ['strong', 'Belirgin']]} on={(k) => upSt({ shadow: k })} /></Row>
+    <Row label="Çerçeve"><Seg v={st.border || ''} opts={[['', 'Standart'], ['none', 'Yok'], ['thin', 'İnce'], ['bold', 'Kalın']]} on={(k) => upSt({ border: k })} /></Row>
+    <span className="v3-cap">Boşluklar (piksel)</span>
+    <Px label="Bölümler arası" v={st.gap} def={44} min={16} max={96} on={(v) => upSt({ gap: v })} />
+    <Px label="Sayfa kenarı (bilgisayar)" v={Lk.edge} def={16} max={80} on={(v) => set('look.edge', v)} />
     <span className="v3-cap">Paketler</span>
     <div className="v3-packs">{packs.map((p) => { const on = sameAs(d, p.data); return <button key={p.id} type="button" className={'v3-pack' + (on ? ' on' : '')} onClick={() => { setAll(applyPreset(d, p.data)); toast(p.name + ' yüklendi. Beğenirseniz Yayınla.'); }}><i>{(p.sw || []).slice(0, 4).map((c, j) => <b key={j} style={{ background: c }} />)}</i><span>{p.name}{on && <small>şu an bu</small>}</span></button>; })}</div>
-    <p className="fine">Daha fazla ayar (tema stüdyosu, menüler, cam, geçişler…) üstteki <b>Gelişmiş</b> düğmesinde.</p>
+    <p className="fine">Yazı tipi seçimi, menüler, cam ve geçişler gibi ince ayarlar üstteki <b>Gelişmiş</b> düğmesinde (bilgisayarda).</p>
   </div>;
 }
 

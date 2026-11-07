@@ -9120,3 +9120,18 @@ html[data-theme=dark] .cd-cta-chat { background: #2c2c30; } html[data-theme=dark
   .sh-hero.dp-center .sh-dots { justify-content: center; }
   .sh-hero.dp-right .sh-dots { justify-content: flex-end; }
 }
+/* 7.11.2026 (11) sade tasarım paneli: stiller / temalar / piksel kaydırıcıları */
+.v3-sty { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.v3-sty button { display: flex; flex-direction: column; gap: 6px; padding: 6px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); cursor: pointer; text-align: left; min-width: 0; }
+.v3-sty button.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 22%, transparent); }
+.v3-sty i { display: grid; place-items: center; height: 46px; border-radius: 9px; border: 1px solid color-mix(in oklab, var(--fg) 8%, transparent); }
+.v3-sty i em { display: grid; align-items: end; width: 46%; height: 62%; padding: 4px; background: #fff; }
+.v3-sty i em u { display: block; height: 5px; border-radius: 3px; }
+.v3-sty b { font: 500 11.5px/1.2 Inter, var(--f-body); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v3-px { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 12px; }
+.v3-px > span { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.v3-px > span b { flex: 1; font-weight: 500; }
+.v3-px code { font: 600 12.5px/1 Inter, var(--f-body); color: var(--accent); }
+.v3-px-r { border: 0; background: none; color: var(--muted); font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+.v3-px input[type=range] { width: 100%; height: 30px; accent-color: var(--accent); }
+html.st-rbox .cd-cta, html.st-rbox .cd-newcov { border-radius: var(--st-rbox) !important; }
