@@ -11,7 +11,7 @@ jobs:
       - run: |
           V=10.12.2
           mkdir -p hosting/public/fb
-          for m in app auth firestore; do
+          for m in app auth firestore app-check; do
             curl -fsSL "https://www.gstatic.com/firebasejs/$V/firebase-$m.js" -o "hosting/public/fb/firebase-$m.js"
           done
           # birbirlerini gstatic'ten çağırmasınlar: kendi klasörümüzden
