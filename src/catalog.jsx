@@ -772,7 +772,7 @@ const _lgc = new WeakMap();
 // önizleme adresinde (…--dal.web.app) marka her zaman gösterilir (kullanıcı 7.11.2026: 'demoya özel aç, canlıya dokunma')
 const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
 // Ürünler v2 kartında logonun yanına yazı (logo sadece amblemse). src: kartta kullanılacak amblem (başka yerlerde tam logo kalır)
-const LG_TXT = { luban: { t: 'LUBAN' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'MEGA-IDEA' } };
+const LG_TXT = { luban: { t: 'Luban' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'Mega-Idea' } }; // ilk harf büyük (kullanıcı); XZZ kısaltma
 function logoOf(S, b) {
   if (!b) return null; const BL = S.brandLogos || {}; let m = _lgc.get(BL);
   if (!m) { m = new Map(); for (const x of S.shopHome?.brands || []) if (x?.name && x.logo) m.set(x.name.toLocaleLowerCase('tr'), x.logo); for (const [k, v] of Object.entries(BL)) if (v?.logo) m.set(k.toLocaleLowerCase('tr'), v.logo); _lgc.set(BL, m); }
