@@ -44,7 +44,7 @@ import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome, HeaderSearch, withProdFallback } from './shophome.jsx';
 import { DesignEntry } from './designv3.jsx'; // 7.11.2026: tasarım modu v3 (eski mod 'Gelişmiş')
-import { AdminHome } from './dashboard.jsx';
+import { AdminHome, Reports } from './dashboard.jsx';
 import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
@@ -525,7 +525,7 @@ function Login() {
 
 // [sekme, ad, ikon, telefondaki kısa ad]
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Siparişlerim', 'box', 'Siparişler'], ['profil', 'Hesabım', 'user']];
-const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Form oluştur', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['raporlar', 'Raporlar', 'chart'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Form oluştur', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Ürünler', 'grid', 'Ürünler'], ['kalip', 'Kalıp bulucu', 'chip', 'Kalıp'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 // Sayfa bulunamadı (tanınmayan mağaza adresi; Google'a noindex boot'ta eklenir)
 function NotFound() {
@@ -636,7 +636,7 @@ function ShellFull() {
     t = setTimeout(tryWarm, 1200); // 5.11.2026: 3,5 sn → 1,2 sn (ilk geçişler 'F5 gibi' takılıyordu)
     return () => { clearTimeout(t); window.cancelIdleCallback?.(idle); removeEventListener('scroll', onS); };
   }, [pub]);
-  const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
+  const nav = admin ? NAV_ADMIN.filter(([k]) => (k !== 'raporlar' || can('heavy')) && (k !== 'tasarim' || can('design'))) : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
   const prev = useRef(unread);
@@ -774,6 +774,7 @@ function ShellFull() {
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
         {tab === 'anasayfa' && admin && <AdminHome />}
+        {tab === 'raporlar' && admin && <Reports />}
         {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><HomeM /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'lsepet' && pub && <LinkCartPage id={ROUTE.lcartId} />}
@@ -810,7 +811,7 @@ function ShellFull() {
       {!admin && tab !== 'lsepet' && tab !== 'odeme' && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
-      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && !(admin && k === 'siparis'))} tab={navTab} badge={badge} />
+      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && k !== 'raporlar' && !(admin && k === 'siparis'))} tab={navTab} badge={badge} />
     </div>
   );
 }

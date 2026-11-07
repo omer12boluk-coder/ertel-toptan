@@ -62,6 +62,7 @@ const P = {
   out: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',
   upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
   tag: 'M3 12V4h8l9.5 9.5-8 8zM7.5 8.5a1 1 0 1 0 0-.01',
+  chart: 'M4 20V11M10 20V5M16 20v-6M21 20H3',
   clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
   store: 'M4 10v10h16V10M3 10l2-6h14l2 6zM9 20v-5h6v5',
   trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',
