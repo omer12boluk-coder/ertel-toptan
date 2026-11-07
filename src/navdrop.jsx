@@ -142,6 +142,7 @@ export function AdminDrop({ k, children }) {
   if (k === 'katalog') return <HoverDrop panel={(c) => (<>
     <Item close={c} icon="grid" label="Ürünler" sub="Katalog, fiyat, stok" onClick={() => go('katalog')} />
     <Item close={c} icon="sparkle" label="Akıllı ürün ekle" sub="Adı yazın, gerisini yapay zekâ hazırlasın" onClick={() => go('aiekle')} />
+    <Item close={c} icon="send" label="Claude’dan gelenler" sub="Sohbetten gelen ürün taslakları" onClick={() => go('gelen')} />
     <Item close={c} icon="box" label="Setler" sub="Ürün paketleri oluşturun" pill={(s.settings.sets || []).length ? String((s.settings.sets || []).length) : ''} onClick={() => go('setler')} />
   </>)}>{children}</HoverDrop>;
   if (k === 'musteriler') {

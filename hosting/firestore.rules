@@ -122,6 +122,10 @@ service cloud.firestore {
         && request.resource.data.subAt == request.time);
     }
     // ödeme linki (6.11.2026): linki bilen okur (kimlik tahmin edilemez), sadece yönetici yazar / listeler
+    // Claude'dan gelenler: Actions (servis hesabı) yazar, sadece yönetici okur/günceller
+    match /gelen/{id} {
+      allow read, update, delete: if isAdmin();
+    }
     match /paylinks/{id} {
       allow get: if true;
       allow list, create, update, delete: if isAdmin();

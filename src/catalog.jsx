@@ -585,6 +585,7 @@ export function Catalog({ admin }) {
                 { label: 'Boş ürün', icon: 'plus', hint: nextCode(store.s.catalog), onClick: () => setEdit({}) },
                 { label: 'Bir ürünü kopyala…', icon: 'copy', onClick: () => setCopyPick(true) },
                 { label: 'Akıllı ekle (adından)', icon: 'sparkle', hint: 'Yapay zekâ', onClick: () => go('aiekle') },
+                { label: 'Claude’dan gelenler', icon: 'send', hint: 'Sohbetten', onClick: () => go('gelen') },
               ], 'Yeni ürün')}><Icon n="plus" s={17} /><span>Yeni ürün</span><Icon n="chev" s={14} /></button>}
             </div>
             <div className="chips one-row" ref={chipRow} role="tablist" aria-label="Kategori">

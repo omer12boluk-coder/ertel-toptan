@@ -1,0 +1,24 @@
+# Claude'dan gelenler: gelen/ klasörüne eklenen taslakları panele (Firestore gelen/) yazar.
+# Claude taslakları 'gelen' dalına gönderir → bu iş kendiliğinden çalışır (canlı site yeniden yayınlanmaz).
+name: Gelenleri al
+on:
+  push:
+    branches: [gelen]
+    paths: ['gelen/**']
+  workflow_dispatch:
+concurrency:
+  group: gelen
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - name: Taslakları panele yaz
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node tools/gelen.mjs

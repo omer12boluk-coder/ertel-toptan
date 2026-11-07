@@ -1,0 +1,64 @@
+{
+ "_oku": "Kullanıcı bir bölümü ekrandaki adıyla söyler; ad değişebilir. 'adlar' içinde ara (büyük/küçük harf, Türkçe karakter fark etmez). Bulamazsan 'yer' tarifini okuyup TEK soru sor. Kullanıcı yeni bir ad kullanırsa o adı 'adlar'a ekle. Ekrandaki başlık canlı ayardan gelir (Tasarım modu), repoda varsayılanı yazar.",
+ "cd:hero": {
+  "adlar": ["banner", "bannerlar", "büyük reklam", "slayt", "manşet", "kayan reklam", "fotoğraflı banner"],
+  "yer": "Ana sayfanın en üstü, büyük kayan reklam alanı",
+  "veri": "src/icerik/bannerlar.json",
+  "resim": "hosting/public/bn/<ad>.webp (geniş ≤1400px, telefon ≤800px)",
+  "tarif": "claude/is/banner-ekle.md",
+  "kod": "src/photobn.jsx (PhotoBanner, WideGen/PhoneGen) — normalde DOKUNMA"
+ },
+ "cd:ads": {
+  "adlar": ["Keşfet", "Atölyen için", "tezgâh", "tezgah", "tezgahın için", "reklam kutuları", "küçük reklamlar", "keşfet kutuları", "dikey kutular"],
+  "yer": "Ana sayfa, ortalarda; dikey fotoğraflı kutular yan yana, oklarla kayar (kendiliğinden kaymaz)",
+  "varsayilan_baslik": "Keşfet · Atölyen için.",
+  "veri": "src/icerik/kesfet.json",
+  "resim": "hosting/public/bn/ad-<id>.webp (800×1000, üst %40 boş)",
+  "tarif": "claude/is/kesfet-ekle.md",
+  "ayar": "shopHome.cd.ads { off: [id], eye, title } — canlı ayar, Tasarım modundan"
+ },
+ "cd:new": {
+  "adlar": ["Yeni gelenler", "yeniler", "yeni ürünler", "son gelenler"],
+  "yer": "Ana sayfa, banner'ın hemen altı; ilk kart kapak, sonra yana kayan ürün kartları",
+  "tarif": "claude/is/yeni-gelen.md",
+  "ayar": "shopHome.cd.nw { eye, title, n, ids, hide } — canlı ayar"
+ },
+ "cd:pick": {
+  "adlar": ["Bu hafta masamızdan", "Tamircinin seçimi", "haftanın ürünleri", "öne çıkanlar", "seçtiklerimiz"],
+  "yer": "Ana sayfa; 1 büyük + 4 küçük ürün kartı",
+  "tarif": "claude/is/yeni-gelen.md (aynı mantık: sabitleme canlı ayar)",
+  "ayar": "shopHome.cd.pick { ids, names } — Tasarım › 'Bu hafta masamızdan'"
+ },
+ "cd:sets": {
+  "adlar": ["Setler", "Atölyeni kur", "Birlikte al daha az öde", "paketler"],
+  "yer": "Ana sayfa; set kartları",
+  "ayar": "Setler yönetimden (/admin/setler); bölüm ayarı shopHome.cd.sets"
+ },
+ "cd:brands": {
+  "adlar": ["Markalar", "Tüm markalar", "marka duvarı", "logolar"],
+  "yer": "Ana sayfa; marka logoları ızgarası (telefonda 2 sıra + yana kayar)",
+  "ayar": "shopHome.cd.brands { rows, ids, only, logosOnly }; yeni logo: hosting/public/brands/ + src/config.js brandLogos + style.css logo hizası satırı"
+ },
+ "cd:mq": {
+  "adlar": ["şerit", "kayan yazı", "marka şeridi", "distribütör güvencesi"],
+  "yer": "Ana sayfa; sürekli kayan ince şerit",
+  "ayar": "shopHome.cd.mq"
+ },
+ "cd:cta": {
+  "adlar": ["Aradığını bulamadın mı", "WhatsApp bandı", "alt bant"],
+  "yer": "Ana sayfanın en altı, WhatsApp düğmeli açık kart",
+  "ayar": "shopHome.cta { title, text }"
+ },
+ "hub": {
+  "adlar": ["Ürünler açılışı", "kategori kapakları", "kapaklar", "Ne arıyorsun"],
+  "yer": "Üst menüden Ürünler'e basınca açılan kategori ızgarası",
+  "veri": "src/icerik/kapaklar.json (kategori no → resim)",
+  "resim": "hosting/public/bn/cat-<kategori no>.webp (800×600)",
+  "tarif": "claude/is/kapak.md"
+ },
+ "gelen": {
+  "adlar": ["Claude'dan gelenler", "ürün ekle", "taslak", "gelenler"],
+  "yer": "Panel › Ürünler › Claude’dan gelenler (/admin/claude)",
+  "tarif": "claude/is/urun-ekle.md"
+ }
+}

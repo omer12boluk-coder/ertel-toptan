@@ -16,6 +16,8 @@ import { useVisibleProducts, useTree } from './catalog.jsx';
 import { CardAdd, ShopImg, Hero } from './shophome.jsx';
 import { heroList } from './photobn.jsx';
 import { useCatTiles } from './p0home.jsx';
+import KESFET from './icerik/kesfet.json';
+import KAPAKLAR from './icerik/kapaklar.json';
 
 export const cdOf = (H) => H?.cd || {};
 const sellable = (p) => p && p.a !== 0 && !p.so;
@@ -300,7 +302,8 @@ export function CdRail({ sec, open, onProduct, edit }) {
 // ---- Ürünler açılış sayfası (look.cd + look.prodHub): kapaklı kategori kartları + Tüm ürünler + marka duvarı (7.11.2026 (3)) ----
 // Kapaklar: Claude'un hazırladığı fotoğraflar hosting/public/bn/cat-<id>.webp ÖNCE (7.11.2026 (4) kullanıcı: kendi resimlerim çirkin); kapağı olmayan kategoride kullanıcının seçtiği (shopHome.p0catImg).
 // 'Tüm ürünler' artık ayrı büyük kart değil, ızgaranın ilk kartı (ilk 4 kapaktan kolaj) → 7 kategori + 1 = boşluksuz 4'lü/2'li ızgara.
-export const CAT_COVERS = { 42: '/bn/cat-42.webp', 31: '/bn/cat-31.webp', 6: '/bn/cat-6.webp', 14: '/bn/cat-14.webp', 3: '/bn/cat-3.webp', 5: '/bn/cat-5.webp', 24: '/bn/cat-24.webp' };
+// İÇERİK: src/icerik/kapaklar.json (kategori no → resim; tarif claude/is/kapak.md)
+export const CAT_COVERS = KAPAKLAR;
 export function CdHub({ onAll, total }) {
   const H = useStore((s) => s.settings.shopHome) || {}; const C = H.p0?.hub || {};
   const tiles = useCatTiles(H.p0catImg, H.p0?.cats?.hide).filter((c) => !c.off);
@@ -325,15 +328,8 @@ export function CdHub({ onAll, total }) {
 
 // ---- Reklam kutuları (cd:ads, 7.11.2026 (3)): banner kurallarıyla küçük reklamlar, yan yana; KENDİLİĞİNDEN KAYMAZ (parmak / oklar) ----
 // Fotoğraflar hosting/public/bn/ad-<id>.webp (üst kısım yazı için boş). Ayar: shopHome.cd.ads { off: [id], eye, title }.
-export const CD_ADS = [
-  { id: 'jbc', logo: '/brands/jbc.png', title: 'Ustanın havyası.', sub: 'JBC istasyonlar ve uçlar', link: 'brand:JBC', cta: 'JBC ürünleri' },
-  { id: 't420', logo: '/brands/aixun-dark.png', title: 'İki el tutamağı,\ntek gövde.', sub: 'Aixun T420D istasyonlu havya', link: 'p:2745', cta: 'İncele' },
-  { id: 'u70', logo: '/brands/jcid.png', title: 'UFS ve eMMC.\nOku, yaz.', sub: 'JCID U70 ISP modülü', link: 'p:3110', cta: 'İncele' },
-  { id: 'sf850', logo: '/brands/amscope.png', title: 'Yakından bak.', sub: 'Stereo mikroskoplar, başlıklar, lensler', link: 'cat:14', cta: 'Mikroskoplar' },
-  { id: 'chip', eye: 'Entegre', title: 'Doğru entegre,\nilk seferde.', sub: 'Şarj, güç ve ses entegreleri', link: 'cat:6', cta: 'Entegreler' },
-  { id: 'ersa', eye: 'Ersa ve Alpha', title: 'İnce iş,\nince uç.', sub: 'Havya uçları, lehim ve flux', link: 'cat:24', cta: 'Ürünleri gör' },
-  { id: 'masa', logo: '/brands/2uul.png', eye: 'Tamir ekipmanları', title: 'Masanın eksiği\nburada.', sub: 'Presler, açma kabloları, aparatlar', link: 'cat:42', cta: 'Tamir ekipmanları' },
-];
+// İÇERİK: src/icerik/kesfet.json (yeni kutu = bir satır; tarif claude/is/kesfet-ekle.md)
+export const CD_ADS = KESFET.filter((a) => !a.off); // "off": true = kod tarafında kapalı
 export function CdAds({ H, open }) {
   const C = cdOf(H).ads || {};
   const off = new Set(C.off || []);

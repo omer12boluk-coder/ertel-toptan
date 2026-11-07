@@ -490,6 +490,9 @@ export class FirebaseBackend {
   async getPaylink(id) { const s = await timeout(this.getSafe('paylinks', id)); return s.exists() ? { id, ...s.data() } : null; }
   async updatePaylink(id, patch) { await timeout(this.F.updateDoc(this.d('paylinks', id), patch)); }
   async deletePaylink(id) { await timeout(this.F.deleteDoc(this.d('paylinks', id))); }
+  // Claude'dan gelenler (gelen/{id}, gelen.jsx): Actions 'Gelenleri al' yazar, yönetici onaylar/reddeder (silinmez, st değişir)
+  watchGelen(cb) { return this.F.onSnapshot(this.F.query(this.c('gelen'), this.F.orderBy('at', 'desc'), this.F.limit(80)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => { console.warn(e); cb([]); }); }
+  async updateGelen(id, patch) { await timeout(this.F.updateDoc(this.d('gelen', id), patch)); }
   async deleteLcarts(ids) { const b = this.F.writeBatch(this.db); ids.forEach((id) => b.delete(this.d('lcarts', id))); await timeout(b.commit()); }
   async syncRevSum(pid) {
     const l = await this.reviewsOf(pid); const n = l.length; const avg = n ? Math.round((l.reduce((a, r) => a + (r.stars || 0), 0) / n) * 10) / 10 : 0;

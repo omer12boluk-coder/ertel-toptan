@@ -292,6 +292,9 @@ export class DemoBackend {
   async getPaylink(id) { const x = this.pl_()[id]; return x ? { id, ...JSON.parse(JSON.stringify(x)) } : null; }
   async updatePaylink(id, patch) { Object.assign(this.pl_()[id], patch); this.persist(); }
   async deletePaylink(id) { delete this.pl_()[id]; this.persist(); }
+  gl_() { return (this.db.gelen = this.db.gelen || { 'demo-da88': { kind: 'urun', st: 'new', at: now() - 3600e3, q: '2uul da88', d: { n: '2UUL DA88 Mini Isıtmalı Pres İstasyonu', b: '2UUL', c: 42, t: 'pres,arka kapak presi,ısıtmalı pres', desc: '<p>Demo taslak: Claude sohbetten bıraktı.</p>', imgs: [], note: 'Demo örneği' } }, 'demo-bnr': { kind: 'banner', st: 'new', at: now() - 7200e3, title: 'Banner önerisi · DA88', sub: 'Yerleşim: right · önizleme hazır', link: 'https://erteltoptan--gelen.web.app' } }); }
+  watchGelen(cb) { return this.sub(() => cb(Object.entries(this.gl_()).map(([id, x]) => ({ id, ...JSON.parse(JSON.stringify(x)) })).sort((a, b) => b.at - a.at))); }
+  async updateGelen(id, patch) { Object.assign(this.gl_()[id], patch); this.persist(); }
   async deleteLcarts(ids) { for (const id of ids) delete this.lc_()[id]; this.persist(); }
   async syncRevSum() {}
   watchRate(cb) { cb({ usd: 41.95, src: 'harem', at: now() }); return () => {}; }

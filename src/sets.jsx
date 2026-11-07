@@ -18,6 +18,7 @@ export function ProductsSwitch({ on }) {
   return <SubNav label="Ürünler" items={[
     { k: 'products', icon: 'grid', label: 'Ürünler', count: nP, on: on === 'products', onClick: () => go('katalog') },
     { k: 'ai', icon: 'sparkle', label: 'Akıllı ekle', on: on === 'ai', onClick: () => go('aiekle') },
+    { k: 'gelen', icon: 'send', label: 'Claude’dan gelenler', on: on === 'gelen', onClick: () => go('gelen') },
     { k: 'sets', icon: 'box', label: 'Setler', count: nS, on: on === 'sets', onClick: () => go('setler') },
   ]} />;
 }

@@ -1,5 +1,9 @@
 # Banner hazırlama kuralları (ana sayfa büyük reklam alanı)
 
+> **7.11.2026:** Rutin ekleme için kısa tarif `claude/is/banner-ekle.md` (bu dosya ayrıntı). Banner verisi artık
+> `src/icerik/bannerlar.json` (eskiden `photobn.jsx` içinde `PHOTO_BANNERS`); yeni bannerda `lay` genel yerleşimini kullan,
+> id'ye özel `Wide`/`Phone` dalı YAZMA. Keşfet kutuları `src/icerik/kesfet.json`, kapaklar `src/icerik/kapaklar.json`.
+
 > Kullanıcı yeni bir sohbette "banner hazırla" derse bu dosyayı örnek al. İlk örnek: 7.11.2026 fotoğraflı 5 banner
 > (`src/photobn.jsx` → `PHOTO_BANNERS`; sunum https://claude.ai/artifact/Gxz9YyMNLTE7VvDsn27PBQ). Kullanıcı bunları
 > "hepsi harika" diye onayladı. Aynı çizgide devam et, yeni bir tarz denemeden önce sor.
@@ -51,7 +55,7 @@ telefonda ~0.75:1. Bu yüzden banner sabit resim DEĞİL; `PhotoBanner` kutuyu �
 2. Resmi al: konteyner resim.ertelmarket.com'a ve Actions artifact'larına ULAŞAMAZ → geçici bir dalda Actions ile
    resimleri commit et, `git fetch origin <dal>` + `git show origin/<dal>:<dosya>` ile çek (önceki dal: `banner-resim`).
 3. Kes / temizle (§4), `hosting/public/bn/<ad>.webp` olarak kaydet (geniş ≤1400px, telefon ≤800px, webp q84–88).
-4. `PHOTO_BANNERS`'a kayıt ekle: `id, name, bg (bgM), dark, logo, logoWhite, lh, eye (eyeM), eyeC, title (titleM),
+4. `src/icerik/bannerlar.json`'a kayıt ekle (eski 5 bannerın id'ye özel dalları var; YENİLERDE `lay` kullan): `id, name, bg (bgM), dark, logo, logoWhite, lh, eye (eyeM), eyeC, title (titleM),
    tag, sub (subM), a1:[yazı, link], a2:[yazı, link] (a2M), btn, lnk`. Bağlantı biçimi: `p:<id>` ürün,
    `cart:<id>` sepete ekle (stok yoksa ürünü açar), `cat:<id>`, `brand:<Ad>`, `q:<arama>`, `new:`.
 5. `Wide` ve `Phone` içine `b.id` dalı yaz (mevcut 5 dal örnek: yazı sol + foto sağ kesik [Quick], ortalı + üç açı
@@ -61,10 +65,10 @@ telefonda ~0.75:1. Bu yüzden banner sabit resim DEĞİL; `PhotoBanner` kutuyu �
 
 ## 4. Fotoğraf hazırlama
 
-- Ürün resimlerinin çoğu beyaz zeminli. `docs/banner-oneri/cut.py`: kenara değen beyaz alanı saydam yapar
+- Ürün resimlerinin çoğu beyaz zeminli. `tools/banner/cut.py`: kenara değen beyaz alanı saydam yapar
   (thr 236, küçük adacıkları atar, 1.1px yumuşak kenar). Açık zemine konacaksa bu yeterli.
 - **Koyu zemine konacak resim** (Quick örneği): saydam olsa bile kenarda stüdyonun beyaz ışık yansıması (parlak çizgi)
-  kalır → `docs/banner-oneri/defringe.py <girdi> <çıktı> 34 4`: kenardan 34px içeriye kadar parlak pikselleri iç
+  kalır → `tools/banner/defringe.py <girdi> <çıktı> 34 4`: kenardan 34px içeriye kadar parlak pikselleri iç
   renge çeker (sadece koyulaştırır), alfayı 4px daraltır. Sonra siyah zemine bas ve webp kaydet. Büyüterek kontrol et
   (kablo iç kıvrımları, metal uçlar).
 - Arka plan silme kütüphanesi EKLENMEDİ (uygun olanı AGPL) — yukarıdaki iki betik yeterli.

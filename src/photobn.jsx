@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { store, setQty, toast, useStore } from './store.js';
 import { ensureFonts } from './slidex.jsx';
 import { useWin } from './dzframe.jsx';
+import BANNERS from './icerik/bannerlar.json';
 
 const ACC = '#2f62d6';
 const IMG = (f) => '/bn/' + f;
@@ -15,47 +16,10 @@ export const photoBnOn = (H) => H?.photoBn !== false;
 
 // Her banner: ad (panelde), zemin, logo, yazılar, iki bağlantı (a1 = dolu düğme, a2 = yazı bağlantısı).
 // Bağlantı: 'p:<id>' ürün · 'cart:<id>' sepete ekle · 'cat:<id>' · 'brand:<ad>' (shophome useOpenLink biçimi)
-export const PHOTO_BANNERS = [
-  { id: 'quick861', name: 'Quick 861 Pro Max', bg: '#000', dark: true, logo: '/brands/quick.png', logoWhite: true, lh: 34, eye: 'Yeni', eyeC: '#f5a54a',
-    title: '861 Pro Max', tag: 'Söyle, ısıtsın.', sub: 'Sesli komutla çalışan 1300W sıcak hava istasyonu.', subM: 'Sesli komutlu 1300W sıcak hava.',
-    a1: ['İncele', 'p:3066'], a2: ['Sepete ekle', 'cart:3066'], btn: ACC, lnk: '#5b9cff' },
-  { id: 'zm6745', name: 'AmScope ZM6745T', bg: '#fbfbfd', logo: '/brands/amscope.png', lh: 30, center: true,
-    title: 'ZM6745T', tag: 'Netlik. Her açıdan.', a1: ['İncele', 'p:3064'], a2: ['Mikroskoplar', 'cat:14'], btn: ACC, lnk: ACC },
-  { id: 'hands', name: 'AmScope — Tamircinin gözü', bg: '#fff', logo: '/brands/amscope.png', lh: 30, eye: 'Mikroskoplar', eyeC: '#bf4800',
-    title: 'Tamircinin\ngözü.', titleM: 'Tamircinin gözü.', sub: 'Stereo kafalar, objektifler, halka ışıklar ve aksesuarlar. Hepsi tek yerde.', subM: 'Stereo kafalar, objektifler ve aksesuarlar.',
-    a1: ['Mikroskoplara bak', 'cat:14'], a2: ['Aksesuarlar', 'cat:73'], btn: ACC, lnk: ACC },
-  { id: 'ht316', name: 'Aixun HT316', bg: 'radial-gradient(60% 80% at 30% 60%, #ffffff 0%, #f0f0f3 70%)', bgM: 'radial-gradient(80% 60% at 50% 75%, #ffffff 0%, #f0f0f3 75%)', logo: '/brands/aixun-dark.png', lh: 32, eye: 'HT316', eyeC: '#1d1d1f',
-    title: 'İki iş.\nTek istasyon.', sub: '1400W sıcak hava ve havya aynı gövdede. Masada yer açar, işi hızlandırır.', subM: '1400W sıcak hava ve havya tek gövdede.',
-    a1: ['İncele', 'p:2759'], a2: ['Havya istasyonları', 'cat:5'], a2M: 'İstasyonlar', btn: ACC, lnk: ACC },
-  { id: 'da07', name: '2UUL DA07', bg: 'linear-gradient(120deg, #f2fbf7 0%, #d3efe2 100%)', bgM: 'linear-gradient(170deg, #f2fbf7 0%, #d3efe2 100%)', logo: '/brands/2uul.png', lh: 40, eye: 'DA07 · iPhone 17 serisine uygun', eyeM: 'DA07', eyeC: '#0b7a52',
-    title: 'Arka kapak,\ntek presle.', titleC: '#0f241b', subC: '#4a5f55', sub: 'Mini ısıtmalı pres istasyonu. Kasa ve arka kapak yapıştırmada eşit baskı, eşit ısı.', subM: 'iPhone 17 serisine uygun mini ısıtmalı pres.',
-    a1: ['İncele', 'p:2756'], a2: ['2UUL ürünleri', 'brand:2UUL'], btn: '#0b7a52', lnk: '#0b7a52' },
-  { id: 'mech-pp2', name: 'Mechanic Power Pro Max 2.0', bg: '#fff', bgW: 'radial-gradient(70% 90% at 72% 60%, #ffffff 0%, #f1f1f4 80%)', logo: '/brands/mechanic-dark.png', lh: 26, eye: 'Power Pro Max 2.0', eyeC: '#1d1d1f',
-    title: 'Tek tuş.\nTam güç.', sub: 'iPhone X’ten 17 Pro Max’e kadar tek tuşla açma. Gerilimi ışıkla gösterir.', subM: 'iPhone X – 17 Pro Max, tek tuşla açma.',
-    a1: ['İncele', 'p:3062'], a2: ['Sepete ekle', 'cart:3062'], btn: ACC, lnk: ACC },
-  { id: 'sm4ntp', name: 'AmScope SM-4NTP', bg: 'linear-gradient(180deg, #fbfbfd 0%, #eeeef2 100%)', logo: '/brands/amscope.png', lh: 30, eye: 'SM-4NTP', eyeC: '#bf4800',
-    title: 'Uzun kol.\nGeniş masa.', sub: 'Çift kollu stand ve trinoküler kafa. Masanın her köşesine uzanır.', subM: 'Çift kollu stand, trinoküler kafa.',
-    a1: ['İncele', 'p:30'], a2: ['Mikroskoplar', 'cat:14'], btn: ACC, lnk: ACC },
-  // 7.11.2026 (9) ikinci tur: genel yerleşim 'lay' (right = yazı sol/ürün sağ, left = ürün sol/yazı sağ, center = başlık üstte/ürün altta,
-  // photo = sağ yarı fotoğraf). img = hosting/public/bn/ dosyası, ar = en/boy.
-  { id: 'jbc-cd2', name: 'JBC CD-2SQE', lay: 'right', img: 'jbc.webp', ar: 0.818, bg: 'radial-gradient(70% 90% at 72% 60%, #ffffff 0%, #f1f1f4 80%)', bgM: '#fff', logo: '/brands/jbc.png', lh: 26, eye: 'İstasyonlu havya', eyeC: '#1d1d1f',
-    title: 'Ustaların\nhavyası.', titleM: 'Ustaların havyası.', tag: 'Orijinal JBC, iki uçla birlikte.', sub: 'Yeni model istasyon. Kutudan çıkar, masaya kur, çalışmaya başla.', subM: 'Yeni model istasyon, iki orijinal uçla.',
-    a1: ['İncele', 'p:835'], a2: ['Havya istasyonları', 'cat:5'], a2M: 'İstasyonlar', btn: ACC, lnk: ACC },
-  { id: 'sugon8650', name: 'SUGON 8650 Pro', lay: 'center', img: 'sugon.webp', ar: 1.603, bg: 'linear-gradient(180deg, #fbfbfd 0%, #ececf0 100%)', logo: '/brands/sugon.png', lh: 24, eye: '1300W', eyeC: '#1d1d1f', center: true,
-    title: '8650 Pro', tag: 'Büyük işler için 1300W.', a1: ['İncele', 'p:2671'], a2: ['Sepete ekle', 'cart:2671'], btn: ACC, lnk: ACC },
-  { id: 'tbk288', name: 'TBK 288H', lay: 'left', img: 'tbk288.webp', ar: 1.154, bg: 'radial-gradient(60% 80% at 30% 60%, #ffffff 0%, #eeeef1 75%)', bgM: 'radial-gradient(80% 60% at 50% 75%, #ffffff 0%, #eeeef1 75%)', logo: '/brands/tbk.png', lh: 40, eye: '288H', eyeC: '#0f5f57',
-    title: 'Ekranı ayır.\nTek tuşla.', titleM: 'Ekranı ayır. Tek tuşla.', sub: 'iPhone ekran ve arka kapak için ısıtmalı, otomatik ayırma makinesi.', subM: 'Ekran ve arka kapak için otomatik ayırıcı.',
-    a1: ['İncele', 'p:3029'], a2: ['TBK ürünleri', 'brand:TBK'], btn: ACC, lnk: ACC },
-  { id: 'sst12b', name: 'Sunshine SS-T12B', lay: 'right', img: 'sst12.webp', ar: 1.038, bg: 'linear-gradient(120deg, #f4f9fd 0%, #dcebf7 100%)', bgM: 'linear-gradient(170deg, #f4f9fd 0%, #dcebf7 100%)', logo: '/brands/sunshine.png', lh: 28, eye: 'SS-T12B', eyeC: '#0b5c99',
-    title: 'Her model.\nTek ısıtıcı.', titleM: 'Her model. Tek ısıtıcı.', titleC: '#0c2233', subC: '#4a5d6b', sub: 'iPhone X’ten 17 Pro Max’e bord ısıtıcı. Face ID, CPU ve kamera tablaları kutuda.', subM: 'iPhone X – 17 Pro Max, tablalar kutuda.',
-    a1: ['İncele', 'p:1953'], a2: ['Sepete ekle', 'cart:1953'], btn: '#0b6fb8', lnk: '#0b6fb8' },
-  { id: 'cx71r', name: 'RF4 CX71R', lay: 'right', img: 'cx71r.webp', ar: 0.426, bg: 'radial-gradient(70% 90% at 75% 60%, #ffffff 0%, #eaf3f2 80%)', bgM: 'linear-gradient(180deg, #ffffff 0%, #e6f1f0 100%)', logo: '/brands/rf4.png', lh: 30, eye: 'Mikroskop', eyeC: '#0d7f78',
-    title: 'CX71R', tag: 'Net görüş. Rahat duruş.', sub: 'Trinoküler stereo mikroskop; uzun mesai için ergonomik tasarım.', subM: 'Trinoküler, ergonomik stereo mikroskop.',
-    a1: ['İncele', 'p:2330'], a2: ['Mikroskoplar', 'cat:14'], btn: ACC, lnk: ACC },
-  { id: 'su8', name: 'Qianli SU8 Lazer', lay: 'photo', img: 'su8.webp', pos: '40% 35%', posM: '45% 22%', bg: '#fff', logo: '/brands/qianli.png', lh: 30, eye: 'SU8 Lazer', eyeC: '#1d1d1f',
-    title: 'Arka camı\nlazerle sök.', titleM: 'Arka camı lazerle sök.', sub: 'Soğuk ışıklı UV lazer makinesi. 3W ve 5W seçenekli.', subM: 'UV lazer makinesi, 3W ve 5W.',
-    a1: ['İncele', 'p:2666'], a2: ['3W modeli', 'p:2650'], btn: ACC, lnk: ACC },
-];
+// İÇERİK: src/icerik/bannerlar.json (yeni banner = o dosyaya bir satır; tarif claude/is/banner-ekle.md)
+// "off": true = kod tarafında kapalı (mağazada hiç görünmez). "oto": true = kullanıcının reklam listesinde yoksa kendiliğinden eklenir
+// (son fotoğraflı bannerın arkasına; "bas": true ise en öne). Kullanıcı Tasarım'da kapatırsa satır 'off' olur, geri gelmez.
+export const PHOTO_BANNERS = BANNERS.filter((b) => !b.off);
 
 const Chev = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>;
 
@@ -272,12 +236,14 @@ export function pbOf(s) {
   return o;
 }
 // mağazada gösterilecek reklamlar (pb satırları çözülmüş, gizliler çıkarılmış)
-const NEW2 = ['jbc-cd2', 'sugon8650', 'tbk288', 'sst12b', 'cx71r', 'su8'];
+// 7.11.2026: eskiden sabit NEW2 listesiydi; artık bannerlar.json'da "oto": true olanlar (yeni banner = oto + istenirse bas)
 export function withNew2(sl) {
-  const miss = NEW2.filter((id) => !sl.some((s) => s?.pb === id)).map((id) => ({ pb: id }));
+  const miss = PHOTO_BANNERS.filter((b) => b.oto && !sl.some((s) => s?.pb === b.id));
   if (!miss.length) return sl;
+  const front = miss.filter((b) => b.bas).map((b) => ({ pb: b.id }));
+  const back = miss.filter((b) => !b.bas).map((b) => ({ pb: b.id }));
   let k = -1; sl.forEach((s, i) => { if (s?.pb) k = i; });
-  return [...sl.slice(0, k + 1), ...miss, ...sl.slice(k + 1)];
+  return [...front, ...sl.slice(0, k + 1), ...back, ...sl.slice(k + 1)];
 }
 export function heroList(H, edit) {
   const sl = H?.slides || [];

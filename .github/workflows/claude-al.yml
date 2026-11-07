@@ -1,0 +1,51 @@
+# Claude için getir: konteyner canlı veriye ve resim.ertelmarket.com / marka sitelerine ulaşamaz. Bu iş
+# (1) mağaza kataloğunun güncel özetini (toptan fiyat yok) ve (2) istenen resimleri 'claude-al' dalına koyar.
+# Claude: gh workflow run claude-al.yml --ref main -f resimler="da88=https://… da88-2=https://…"  → bitince
+#         git fetch origin claude-al && git show origin/claude-al:katalog.json   (resimler: resim/<ad>.<uzantı>)
+# Canlı siteye dokunmaz.
+name: Claude için getir
+on:
+  workflow_dispatch:
+    inputs:
+      resimler:
+        description: 'ad=adres çiftleri, boşlukla ayrılmış (boş olabilir)'
+        default: ''
+      katalog:
+        description: 'Güncel katalog özetini de getir'
+        type: boolean
+        default: true
+permissions:
+  contents: write
+concurrency:
+  group: claude-al
+  cancel-in-progress: false
+jobs:
+  get:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Katalog özeti
+        if: ${{ inputs.katalog }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: npm install --no-save --no-package-lock firebase-admin@12 && node tools/claude-al.mjs
+      - name: Resimler
+        env:
+          L: ${{ inputs.resimler }}
+        run: |
+          mkdir -p out/resim && cd out/resim
+          for pair in $L; do
+            n="${pair%%=*}"; u="${pair#*=}"
+            echo "$n" | grep -Eq '^[a-z0-9_-]{1,60}$' || { echo "::warning title=Ad geçersiz::$n"; continue; }
+            ext=$(echo "$u" | sed -E 's/[?#].*//' | grep -oiE '\.(jpe?g|png|webp|gif|avif)$' || echo .jpg)
+            if curl -sfL -A 'Mozilla/5.0' --max-time 40 -o "$n$ext" "$u"; then echo "::notice title=$n::$(stat -c%s "$n$ext") bayt"; else echo "::warning title=Alınamadı $n::$u"; rm -f "$n$ext"; fi
+          done
+      - name: claude-al dalına koy
+        run: |
+          cd out; touch .keep; git init -q; git checkout -q -b claude-al
+          git -c user.name=claude-al -c user.email=bot@users.noreply.github.com add -A
+          git -c user.name=claude-al -c user.email=bot@users.noreply.github.com commit -qm "Claude için getir" || exit 0
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:claude-al

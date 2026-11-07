@@ -9164,3 +9164,12 @@ html[data-theme=dark] .cd-when { color: #ff9f5a; }
 .cd-nw-nav.prev { left: -14px; }
 .cd-nw-nav.next { right: -14px; }
 @media (max-width: 899px), (hover: none) { .cd-nw-nav { display: none; } }
+
+/* Claude'dan gelenler (gelen.jsx, 7.11.2026) — Akıllı ekle satırlarını (.ai-row-c) kullanır */
+.gelen .gelen-fine { margin: 2px 2px 12px; color: var(--muted); }
+.gelen .gelen-seg { margin: 0 0 12px; }
+.gelen-k { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font: 600 11px/1.6 var(--f-body, Inter, sans-serif); vertical-align: 2px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.gelen-k.k-urun { background: color-mix(in srgb, #bf4800 12%, transparent); color: #bf4800; }
+.gelen-r.st-done { opacity: .62; }
+.gelen-load { display: grid; place-items: center; padding: 40px 0; }
+@media (max-width: 700px) { .gelen-r > .icon-btn { grid-column: 3; grid-row: 1; } .gelen-r > .btn { grid-row: 2; } }

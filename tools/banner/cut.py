@@ -1,3 +1,6 @@
+# Ürün fotoğrafının beyaz zeminini saydam yapar (kenara değen beyaz alan; küçük adacıklar atılır; 1.1px yumuşak kenar).
+# Kullanım: python3 tools/banner/cut.py <girdi> <cikti.png> [kırp: x0,y0,x1,y1 oran] [eşik=236]
+# Koyu zemine konacaksa sonra defringe.py. Kurallar: docs/banner-kurallari.md §4
 import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage
@@ -22,9 +25,9 @@ def cutout(src, dst, crop=None, thr=236, maxw=1600):
     bb = A.point(lambda v: 255 if v > 8 else 0).getbbox(); out = out.crop(bb)
     if out.width > maxw: out = out.resize((maxw, round(out.height*maxw/out.width)), Image.LANCZOS)
     out.save(dst); return out.size
-for src, dst, crop in [
-  ('raw/3064_0.webp','cut/zm_front.png',None), ('raw/3064_2.webp','cut/zm_left.png',None), ('raw/3064_4.webp','cut/zm_right.png',None),
-  ('raw/2759_0.webp','cut/ht316.png',(0,0.15,1,1)), ('raw/2756_4.webp','cut/da07.png',(0.1,0.12,0.9,0.72)),
-  ('raw/30_0.png','cut/sm4.png',None), ('raw/2817_0.jpeg','cut/v1s.png',(0,0.1,1,0.92)), ('raw/3062_0.png','cut/power.png',(0,0.2,1,1)),
-]:
-    print(dst, cutout(src, dst, crop))
+if __name__ == '__main__':
+    import sys
+    a = sys.argv[1:]
+    if len(a) < 2: sys.exit('kullanım: cut.py girdi cikti.png [x0,y0,x1,y1] [esik]')
+    crop = tuple(float(x) for x in a[2].split(',')) if len(a) > 2 and a[2] not in ('', '-') else None
+    print(a[1], cutout(a[0], a[1], crop, int(a[3]) if len(a) > 3 else 236))
