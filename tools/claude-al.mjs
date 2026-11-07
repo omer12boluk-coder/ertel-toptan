@@ -13,4 +13,7 @@ const items = parts.flatMap((x) => (x.exists ? x.data().items || [] : []))
   .sort((a, b) => (b.ft || 0) - (a.ft || 0) || b.id - a.id);
 fs.mkdirSync('out', { recursive: true });
 fs.writeFileSync('out/katalog.json', JSON.stringify(items));
+// mağazanın herkese açık ayarları (settings/public — sitede zaten herkese açık): görünüm sorunlarını demoda birebir kurmak için
+const pub = (await db.doc('settings/public').get()).data() || {};
+fs.writeFileSync('out/ayarlar.json', JSON.stringify(pub));
 console.log(`::notice title=Katalog::${items.length} ürün · en yeni: ${items.slice(0, 3).map((p) => `#${p.id} ${p.n}`).join(' | ').slice(0, 300)}`);
