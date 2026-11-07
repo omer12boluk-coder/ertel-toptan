@@ -24,7 +24,9 @@ export const PHOTO_BANNERS = BANNERS.filter((b) => !b.off);
 const Chev = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>;
 
 // 7.11.2026 Banner imzası: kendi logomuz (ert mobile, isimli) marka satırının devamında, ince çizgiyle ayrılmış
-// (bilgisayar 38, telefon 28 birim). Telefonda sağ alt köşe denendi, kullanıcı beğenmedi → telefon da PC gibi. Kapatma: banner satırında sig: false (Tasarım › Banner ›
+// (bilgisayar 38, telefon 28 birim). Telefonda sağ alt köşe denendi, kullanıcı beğenmedi → telefon da PC gibi.
+// Koyu zeminde logo TAM beyaz (saydamlık yok — %85 hâli gri görünüyordu, kullanıcı istemedi); açık zeminde kendi renkleri.
+// lgY (bannerlar.json): marka logosunu dikey kaydırma, logonun yüksekliğinin oranı (ör. Quick: yazılar logonun alt kısmında → yukarı) Kapatma: banner satırında sig: false (Tasarım › Banner ›
 // banner › 'Banner imzası'), kod tarafında bannerlar.json "imza": false (mağazanın kendi bannerı gibi).
 const SIG_LOGO = '/bn/ertel-logo.png';
 const sigOn = (b) => b.sig !== false && b.imza !== false;
@@ -40,9 +42,9 @@ function Txt({ b, m, hs = 64, act, center, w, br = 999 }) {
   return (
     <div className="pb-t" style={{ width: w, display: 'flex', flexDirection: 'column', alignItems: center ? 'center' : 'flex-start', textAlign: center ? 'center' : 'left', gap: m ? 8 : 12 }}>
       <span className="pb-eye" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: m ? 2 : 6, color: b.eyeC, font: `600 ${m ? 12.5 : 15}px/1.2 Inter, sans-serif` }}>
-        <img src={b.logo} alt="" style={{ height: Math.round(b.lh * (m ? 0.7 : 1)), width: 'auto', display: 'block', filter: b.logoWhite ? 'brightness(0) invert(1)' : undefined }} />
+        <img src={b.logo} alt="" style={{ height: Math.round(b.lh * (m ? 0.7 : 1)), width: 'auto', display: 'block', filter: b.logoWhite ? 'brightness(0) invert(1)' : undefined, transform: b.lgY ? `translateY(${b.lgY * b.lh * (m ? 0.7 : 1)}px)` : undefined }} />
         {eye && <span style={{ paddingLeft: 12, borderLeft: '1px solid currentColor', opacity: 0.9 }}>{eye}</span>}
-        {sigOn(b) && <span className="pb-sig" style={{ display: 'inline-flex', alignItems: 'center', paddingLeft: m ? 10 : 12, borderLeft: `1px solid ${b.dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.16)'}` }}><img className="pb-sig-i" src={SIG_LOGO} alt="ERTEL" style={{ height: m ? 28 : 38, width: 'auto', display: 'block', opacity: b.dark ? 0.85 : 1, filter: b.dark ? 'brightness(0) invert(1)' : undefined }} /></span>}
+        {sigOn(b) && <span className="pb-sig" style={{ display: 'inline-flex', alignItems: 'center', paddingLeft: m ? 10 : 12, borderLeft: `1px solid ${b.dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.16)'}` }}><img className="pb-sig-i" src={SIG_LOGO} alt="ERTEL" style={{ height: m ? 28 : 38, width: 'auto', display: 'block', filter: b.dark ? 'brightness(0) invert(1)' : undefined }} /></span>}
       </span>
       <h2 style={{ margin: 0, font: `600 ${m ? (b.center ? 38 : 34) : hs}px/1.03 'Inter Tight', Inter, sans-serif`, letterSpacing: m ? '-.03em' : '-.035em', color: b.titleC || ink, whiteSpace: 'pre-line' }}>{title}</h2>
       {b.tag && <p style={{ margin: 0, font: `500 ${m ? 19 : b.center ? 26 : 28}px/1.2 Inter, sans-serif`, letterSpacing: '-.015em', color: ink }}>{b.tag}</p>}
