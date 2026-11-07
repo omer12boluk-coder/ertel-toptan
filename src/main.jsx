@@ -317,8 +317,9 @@ function PvBadge() {
   return <div className="pv-badge"><b>Önizleme tasarımı</b><small>Sadece bu tarayıcıda</small><button type="button" onClick={() => { ls.set('pv-design', null); location.reload(); }}>Kaldır</button></div>;
 }
 // 6.11.2026: üst/alt menüden Ürünler'e basınca 'Ürünler açılış sayfası' açıksa her seferinde o sayfa gelir (Tüm ürünler'e bir kez basınca kaybolmasın)
-// 7.11.2026 (gece): menüden Ürünler'e basınca liste her zaman baştan (ilk sayfa, en üst) açılır — eski yüklenenler telefonu yormasın; üründen GERİ dönüş bu yoldan geçmez, kaldığı yer korunur
-const navGo = (k) => { if (k === 'katalog' && store.s.user?.role === 'public') store.set({ catalogGo: store.s.settings?.look?.prodHub ? { hub: true } : { all: true } }); go(k); };
+// 7.11.2026 (gece 2): menüden Ürünler'e dönünce kategori/filtre/yüklenen ürünler ve kaydırma yeri KORUNUR (kullanıcı: 'açtığımız her şey kayboluyor');
+// hafiflik ekran dışı kartların çizilmemesinden (content-visibility). Açılış sayfası açıksa eskisi gibi önce o.
+const navGo = (k) => { if (k === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub) store.set({ catalogGo: { hub: true } }); go(k); };
 function useTheme() {
   const liteTick = useLowEndProbe();
   const isAdm = useStore((s) => s.user?.role === 'admin');
