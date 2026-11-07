@@ -9354,3 +9354,7 @@ html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }
 .ts-box b { font-size: 15px; }
 .ts-box span { font-size: 13px; color: var(--muted, #6b7280); margin-bottom: 6px; }
 .ts-box .ts-w { min-height: 0; }
+/* 7.11.2026 (gece): Filtrele sayacı düğmenin köşesinde (düğme uzayıp diğerlerini kaydırmasın) */
+.pv2-tags .pv2-tag { position: relative; }
+.pv2-tag i.pv2-badge { position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 4px; font: 600 10.5px/17px Inter; box-shadow: 0 0 0 2px var(--bg, #fff); animation: pv2Chip .28s cubic-bezier(.2, .9, .3, 1.2) backwards; }
+.pv2-tags { padding-top: 5px; }

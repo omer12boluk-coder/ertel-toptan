@@ -3,7 +3,7 @@ import { ShopImg } from './shophome.jsx';
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ProdHub } from './p0home.jsx';
 import { CdHub } from './cdhome.jsx';
-import { createPortal, flushSync } from 'react-dom';
+import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead, useMorph, ChipSelect } from './ui.jsx';
@@ -548,8 +548,7 @@ export function Catalog({ admin }) {
   // (telefonda dokunuşu 'takılmış' hissettiren asıl sebep buydu). Satırlar sepet/favori gibi değişiklikleri kendileri izler.
   const addCls = cardCls(S, user?.role);
   const pinKey = pinShow ? [...pinShow].join(',') : '';
-  const pv2 = !admin && user?.role === 'public' && S.look?.prodV2 !== false;
-  const [qOpen, setQOpen] = useState(false); // 7.11.2026 Ürünler v2 (false = eski)
+  const pv2 = !admin && user?.role === 'public' && S.look?.prodV2 !== false; // 7.11.2026 Ürünler v2 (false = eski)
   const listEl = useMemo(() => (
     <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' ' + addCls + (pv2 ? ' pv2l' : '')}>
       {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
@@ -575,15 +574,15 @@ export function Catalog({ admin }) {
         <div className="pv2-trow">
           <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
           {/* 7.11.2026 (akşam): arama açılır/kapanır — kapalıyken belirgin 'Ürün ara' düğmesi; basınca uzar, X ile kapanır. Boşken gri, yazı varken beyaz + mavi çerçeve */}
-          {qOpen || q ? <div className={'pv2-q pv2-qopen' + (q ? ' has' : '')}>
+          <div className={'pv2-q' + (q ? ' has' : '')}>
             <Icon n="search" s={17} />
-            <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} onBlur={(e) => { if (!e.target.value && !e.relatedTarget?.closest?.('.pv2-q')) setQOpen(false); }} />
-            <button type="button" className="pv2-qx" onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(''); setQOpen(false); }} aria-label="Aramayı kapat"><Icon n="x" s={12} /></button>
-          </div> : <button type="button" className="pv2-qbtn" onClick={() => { flushSync(() => setQOpen(true)); document.getElementById('cat-search')?.focus(); }}><Icon n="search" s={18} />Ürün ara</button>}
+            <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} />
+            {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
+          </div>
         </div>
         <div className="pv2-bar">
           <div className="pv2-tags" role="group" aria-label="Filtreler">
-            <button type="button" className={'pv2-tag' + (fN ? ' on' : '')} onClick={() => setFsOpen(true)}><Icon n="filter" s={14} />Filtrele{fN > 0 && <i>{fN}</i>}</button>
+            <button type="button" className={'pv2-tag' + (fN ? ' on' : '')} onClick={() => setFsOpen(true)}><Icon n="filter" s={14} />Filtrele{fN > 0 && <i className="pv2-badge">{fN}</i>}</button>
             <ChipSelect id="cat-sort" icon="sort" value={sort} onChange={setSort} on={false} ariaLabel="Sıralama" options={[['default', 'Önerilen'], ['new', 'Yeni gelenler'], ['asc', 'Fiyat artan'], ['desc', 'Fiyat azalan'], ['name', 'İsim A–Z']]} />
             <span className="pv2-sep" aria-hidden="true" />
             {setN > 0 && <button type="button" className={'pv2-tag' + (setsOnly ? ' on' : '')} onClick={() => setSetsOnly(!setsOnly)}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
@@ -718,7 +717,7 @@ function CatPills({ tree, counts, cat, onPick }) {
   return <div className="pv2-cats" ref={ref}>{rows.map((r, i) => (
     <div key={i ? 's' + r.all : 'root'} className={'pv2-pills' + (i ? ' sub pv2-sub-in' : '')} role="tablist">
       <button type="button" className={'pv2-pill' + (r.on == null ? ' on' : '')} onClick={() => onPick(r.all)}>{i ? 'Tümü' : 'Tüm ürünler'}</button>
-      {r.nodes.map((n) => <button key={n.id} type="button" className={'pv2-pill' + (r.on === n.id ? ' on' : '')} onClick={() => onPick(n.id)}>{n.name}<small>{counts.get(n.id)}</small></button>)}
+      {r.nodes.map((n) => <button key={n.id} type="button" className={'pv2-pill' + (r.on === n.id ? ' on' : '')} onClick={() => onPick(r.on === n.id ? r.all : n.id)}>{n.name}<small>{counts.get(n.id)}</small></button>)}
     </div>))}</div>;
 }
 function FilterSheet({ onClose, n, brands, brand, setBrand, price, setPrice, showOos, setShowOos, newOnly, setNewOnly, favOnly, setFavOnly, favN, setsOnly, setSetsOnly, setN, clear }) {
