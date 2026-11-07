@@ -153,10 +153,8 @@ export function Reports() {
       <div className="arc-gate">
         <span className="arc-gate-ic"><Icon n="chart" s={26} /></span>
         <h1>Raporlar</h1>
-        <p>Ciro, satış tutarı, önceki dönemle karşılaştırma, son 14 günün grafiği ve çok satanlar.</p>
         <div className="arc-seg" role="group" aria-label="Dönem">{PERIODS.map(([k, l]) => <button key={k} type="button" className={'chip' + (per === k ? ' on' : '')} onClick={() => setP(k)}>{l}</button>)}</div>
         <button type="button" className="btn primary arc-go" onClick={() => setGo1(true)}><Icon n="chart" s={16} />Raporları görüntüle</button>
-        <small>Bu sayfa açılınca hiçbir şey okunmaz. Görüntüle’ye basınca seçili dönemin ve bir önceki dönemin siparişleri bir kez okunur (her sipariş 1 okuma). Yarım saat içinde tekrar bakmak bedava.</small>
       </div>
     </div>
   );
@@ -168,7 +166,7 @@ export function Reports() {
         <div className="dash-hello">
           <span className="dash-date">Raporlar</span>
           <h1>Satış özeti</h1>
-          <p>{err ? 'Yüklenemedi: ' + err : wait ? 'Yükleniyor… (bu sayfa sadece açılınca okunur)' : `${perName} · ${orders.length} sipariş okundu`}</p>
+          <p>{err ? 'Yüklenemedi: ' + err : wait ? 'Yükleniyor…' : perName}</p>
         </div>
         <div className="seg dash-seg" role="group" aria-label="Dönem">{PERIODS.map(([k, l]) => <button key={k} className={per === k ? 'on' : ''} onClick={() => setP(k)}>{l}</button>)}</div>
       </section>
@@ -206,7 +204,6 @@ export function Reports() {
           )}
         </section>
       </div>
-      <p className="fine">Bu sayfa açılınca seçili dönemin ve bir önceki dönemin siparişleri bir kez okunur (her sipariş 1 okuma); aynı döneme yarım saat içinde tekrar bakmak bedava. Ana sayfa artık hiç ek okuma yapmaz.</p>
     </div>
   );
 }

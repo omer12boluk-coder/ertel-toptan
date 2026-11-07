@@ -4,10 +4,10 @@
 // aralığa bakmadan bulunur (backend archiveFind, sadece eşleşen kadar okuma). Yetki: asıl yönetici + 'reports'.
 import { useMemo, useState } from 'react';
 import { useStore, store, go, openOrder, openLcart, openRequest, toast } from './store.js';
-import { Icon, SubNav, PageHead, StatusPill, Confirm } from './ui.jsx';
+import { Icon, PageHead, StatusPill, Confirm } from './ui.jsx';
 import { fmt } from './utils.js';
 import { ORDER_STATUS, STATUS } from './config.js';
-import { RangeSheet, rangeLabel } from './orders.jsx';
+import { RangeSheet, rangeLabel, OrdersSwitch } from './orders.jsx';
 import { can } from './team.js';
 import { NoPerm } from './ekip.jsx';
 
@@ -76,27 +76,26 @@ export function Archive() {
 
   return (
     <div className="page orders-page adm-sub arc">
-      <PageHead title="Geçmiş siparişler" />
-      <SubNav label="Tür" items={TABS.map(([k, l, ic]) => ({ k, icon: ic, label: l, on: tab === k, onClick: () => setTab(k) }))} />
+      <PageHead title="Siparişler" />
+      <OrdersSwitch on="gecmis" />
+      <div className="chips arc-kinds">{TABS.map(([k, l]) => <button key={k} type="button" className={'chip' + (tab === k ? ' on' : '')} onClick={() => setTab(k)}>{l}</button>)}</div>
       <div className="arc-bar">
         <button type="button" className="o-date on" onClick={() => setRangeOpen(true)}><Icon n="clock" s={17} /><span>{rangeLabel(range)}</span></button>
         <div className="search arc-q"><Icon n="search" s={18} /><input type="search" placeholder="Sipariş no, ad soyad, telefon (tam yazın)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} /></div>
         <button type="button" className="btn sm" disabled={busy || !q.trim()} onClick={search}><Icon n="search" s={15} />Bul</button>
       </div>
-      {found && <p className="fine arc-found">“{found.q}” için {found.items.length ? <b>{found.items.length} kayıt bulundu</b> : 'kayıt bulunamadı'} (tarih aralığından bağımsız) · <button type="button" className="linkish" onClick={() => { delete MEM.found[tab]; force((x) => x + 1); }}>temizle</button></p>}
+      {found && <p className="fine arc-found">“{found.q}”: {found.items.length ? found.items.length + ' sonuç' : 'bulunamadı'} · <button type="button" className="linkish" onClick={() => { delete MEM.found[tab]; force((x) => x + 1); }}>temizle</button></p>}
       {!data && (
         <div className="arc-gate">
           <span className="arc-gate-ic"><Icon n="clock" s={26} /></span>
-          <h2>{TABS.find((x) => x[0] === tab)[1]} · {rangeLabel(range)}</h2>
-          <p>Bu sayfa açılınca hiçbir şey okunmaz. Görüntüle’ye basınca seçili aralıktaki kayıtlar bir kez okunur.</p>
+          <h2>{rangeLabel(range)}</h2>
           <div className="arc-acts">
             <button type="button" className="btn ghost" onClick={() => setRangeOpen(true)}><Icon n="clock" s={16} />Tarihi değiştir</button>
-            <button type="button" className="btn primary arc-go" disabled={busy} onClick={() => load(false)}>{busy ? <><span className="spin" aria-hidden="true" />Yükleniyor…</> : <><Icon n="eye" s={16} />Siparişleri görüntüle</>}</button>
+            <button type="button" className="btn primary arc-go" disabled={busy} onClick={() => load(false)}>{busy ? <><span className="spin" aria-hidden="true" />Yükleniyor…</> : <><Icon n="eye" s={16} />Görüntüle</>}</button>
           </div>
-          <small>Her kayıt 1 okuma (ayda 100 sipariş ≈ 100 okuma). Yarım saat içinde aynı aralığa tekrar bakmak bedava. Sipariş no, ad ya da telefonu tam yazıp <b>Bul</b>’a basarsanız aralık yüklemeden bulunur.</small>
         </div>
       )}
-      {data && <p className="fine arc-info">{rangeLabel(range)} · {data.length} kayıt yüklendi{t ? ` · “${q.trim()}” süzgeci` : ''}</p>}
+      {data && <p className="fine arc-info">{data.length} kayıt</p>}
       {(data || found?.items?.length) ? (rows.length ? (
         <ul className="arc-list">
           {rows.map((x) => {

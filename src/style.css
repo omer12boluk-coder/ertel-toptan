@@ -9639,3 +9639,5 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
 @media (max-width: 700px) { .arc-list .pill { display: none; } .arc-no { min-width: 52px; } .arc-gate { margin: 16px 0; padding: 22px 16px; } }
 .arc-seg { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .arc-seg .chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, var(--surface)); }
+.arc-kinds { margin: 12px 0 0; }
+.arc-kinds .chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, var(--surface)); }
