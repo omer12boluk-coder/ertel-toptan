@@ -36,6 +36,25 @@ export const PHOTO_BANNERS = [
   { id: 'sm4ntp', name: 'AmScope SM-4NTP', bg: 'linear-gradient(180deg, #fbfbfd 0%, #eeeef2 100%)', logo: '/brands/amscope.png', lh: 30, eye: 'SM-4NTP', eyeC: '#bf4800',
     title: 'Uzun kol.\nGeniş masa.', sub: 'Çift kollu stand ve trinoküler kafa. Masanın her köşesine uzanır.', subM: 'Çift kollu stand, trinoküler kafa.',
     a1: ['İncele', 'p:30'], a2: ['Mikroskoplar', 'cat:14'], btn: ACC, lnk: ACC },
+  // 7.11.2026 (9) ikinci tur: genel yerleşim 'lay' (right = yazı sol/ürün sağ, left = ürün sol/yazı sağ, center = başlık üstte/ürün altta,
+  // photo = sağ yarı fotoğraf). img = hosting/public/bn/ dosyası, ar = en/boy.
+  { id: 'jbc-cd2', name: 'JBC CD-2SQE', lay: 'right', img: 'jbc.webp', ar: 0.818, bg: 'radial-gradient(70% 90% at 72% 60%, #ffffff 0%, #f1f1f4 80%)', bgM: '#fff', logo: '/brands/jbc.png', lh: 26, eye: 'İstasyonlu havya', eyeC: '#1d1d1f',
+    title: 'Ustaların\nhavyası.', titleM: 'Ustaların havyası.', tag: 'Orijinal JBC, iki uçla birlikte.', sub: 'Yeni model istasyon. Kutudan çıkar, masaya kur, çalışmaya başla.', subM: 'Yeni model istasyon, iki orijinal uçla.',
+    a1: ['İncele', 'p:835'], a2: ['Havya istasyonları', 'cat:5'], a2M: 'İstasyonlar', btn: ACC, lnk: ACC },
+  { id: 'sugon8650', name: 'SUGON 8650 Pro', lay: 'center', img: 'sugon.webp', ar: 1.603, bg: 'linear-gradient(180deg, #fbfbfd 0%, #ececf0 100%)', logo: '/brands/sugon.png', lh: 24, eye: '1300W', eyeC: '#1d1d1f', center: true,
+    title: '8650 Pro', tag: 'Büyük işler için 1300W.', a1: ['İncele', 'p:2671'], a2: ['Sepete ekle', 'cart:2671'], btn: ACC, lnk: ACC },
+  { id: 'tbk288', name: 'TBK 288H', lay: 'left', img: 'tbk288.webp', ar: 1.154, bg: 'radial-gradient(60% 80% at 30% 60%, #ffffff 0%, #eeeef1 75%)', bgM: 'radial-gradient(80% 60% at 50% 75%, #ffffff 0%, #eeeef1 75%)', logo: '/brands/tbk.png', lh: 40, eye: '288H', eyeC: '#0f5f57',
+    title: 'Ekranı ayır.\nTek tuşla.', titleM: 'Ekranı ayır. Tek tuşla.', sub: 'iPhone ekran ve arka kapak için ısıtmalı, otomatik ayırma makinesi.', subM: 'Ekran ve arka kapak için otomatik ayırıcı.',
+    a1: ['İncele', 'p:3029'], a2: ['TBK ürünleri', 'brand:TBK'], btn: ACC, lnk: ACC },
+  { id: 'sst12b', name: 'Sunshine SS-T12B', lay: 'right', img: 'sst12.webp', ar: 1.038, bg: 'linear-gradient(120deg, #f4f9fd 0%, #dcebf7 100%)', bgM: 'linear-gradient(170deg, #f4f9fd 0%, #dcebf7 100%)', logo: '/brands/sunshine.png', lh: 28, eye: 'SS-T12B', eyeC: '#0b5c99',
+    title: 'Her model.\nTek ısıtıcı.', titleM: 'Her model. Tek ısıtıcı.', titleC: '#0c2233', subC: '#4a5d6b', sub: 'iPhone X’ten 17 Pro Max’e bord ısıtıcı. Face ID, CPU ve kamera tablaları kutuda.', subM: 'iPhone X – 17 Pro Max, tablalar kutuda.',
+    a1: ['İncele', 'p:1953'], a2: ['Sepete ekle', 'cart:1953'], btn: '#0b6fb8', lnk: '#0b6fb8' },
+  { id: 'cx71r', name: 'RF4 CX71R', lay: 'right', img: 'cx71r.webp', ar: 0.426, bg: 'radial-gradient(70% 90% at 75% 60%, #ffffff 0%, #eaf3f2 80%)', bgM: 'linear-gradient(180deg, #ffffff 0%, #e6f1f0 100%)', logo: '/brands/rf4.png', lh: 30, eye: 'Mikroskop', eyeC: '#0d7f78',
+    title: 'CX71R', tag: 'Net görüş. Rahat duruş.', sub: 'Trinoküler stereo mikroskop; uzun mesai için ergonomik tasarım.', subM: 'Trinoküler, ergonomik stereo mikroskop.',
+    a1: ['İncele', 'p:2330'], a2: ['Mikroskoplar', 'cat:14'], btn: ACC, lnk: ACC },
+  { id: 'su8', name: 'Qianli SU8 Lazer', lay: 'photo', img: 'su8.webp', pos: '40% 35%', posM: '45% 22%', bg: '#fff', logo: '/brands/qianli.png', lh: 30, eye: 'SU8 Lazer', eyeC: '#1d1d1f',
+    title: 'Arka camı\nlazerle sök.', titleM: 'Arka camı lazerle sök.', sub: 'Soğuk ışıklı UV lazer makinesi. 3W ve 5W seçenekli.', subM: 'UV lazer makinesi, 3W ve 5W.',
+    a1: ['İncele', 'p:2666'], a2: ['3W modeli', 'p:2650'], btn: ACC, lnk: ACC },
 ];
 
 const Chev = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>;
@@ -71,6 +90,7 @@ const vmid = { top: 0, bottom: 0, display: 'flex', alignItems: 'center' };
 // geniş kutu yerleşimi (W ≥ 1000, H ≥ 560 tuval birimi)
 function Wide({ b, W, H, act, br }) {
   const T = (p) => <Txt b={b} act={act} br={br} {...p} />;
+  if (b.lay) return <WideGen b={b} W={W} H={H} T={T} />;
   if (b.id === 'quick861') {
     const iw = Math.min((H + 80) * 1.4, W - 380), ih = iw / 1.4;
     return <>
@@ -135,9 +155,52 @@ function Wide({ b, W, H, act, br }) {
   </>;
 }
 
+// 7.11.2026 (9) genel yerleşimler (yeni bannerlar)
+const Shadow = ({ l, r, bot, w }) => <div style={abs({ left: l, right: r, bottom: bot, width: w, height: 40, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.17), rgba(0,0,0,0))' })} />;
+function WideGen({ b, W, H, T }) {
+  if (b.lay === 'photo') {
+    const iw = Math.min(760, W * 0.52); const tw = W - iw - 88 - 40;
+    return <>
+      <img src={IMG(b.img)} alt={b.name} style={abs({ right: 0, top: 0, width: iw, height: H, objectFit: 'cover', objectPosition: b.pos || '50% 50%' })} />
+      <div style={abs({ left: 88, ...vmid })}>{T({ w: Math.min(520, tw), hs: tw < 420 ? 56 : 64 })}</div>
+    </>;
+  }
+  if (b.lay === 'center') {
+    const tt = 46 + (H - 560) * 0.25; const ih = Math.max(200, H - tt - 270); let iw = ih * b.ar; if (iw > W * 0.6) iw = W * 0.6;
+    return <>
+      <div style={abs({ left: 0, right: 0, top: tt, display: 'flex', justifyContent: 'center' })}>{T({ center: true, hs: 60 })}</div>
+      <Shadow l={(W - iw * 0.9) / 2} bot={18} w={iw * 0.9} />
+      <img src={IMG(b.img)} alt={b.name} style={abs({ left: (W - iw) / 2, bottom: 30, width: iw, height: iw / b.ar })} />
+    </>;
+  }
+  let ih = Math.min(470, H * (b.lay === 'left' ? 0.7 : 0.82)), iw = ih * b.ar; if (iw > W * 0.44) { iw = W * 0.44; ih = iw / b.ar; }
+  const bot = Math.max(40, (H - ih) / 2 - 10);
+  if (b.lay === 'left') {
+    const il = Math.max(60, W * 0.07); const tl = Math.max(il + iw + 70, W * 0.52); const tw = Math.min(520, W - tl - 50);
+    return <>
+      <Shadow l={il + iw * 0.05} bot={bot - 16} w={iw * 0.9} />
+      <img src={IMG(b.img)} alt={b.name} style={abs({ left: il, bottom: bot, width: iw, height: ih })} />
+      <div style={abs({ left: tl, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
+    </>;
+  }
+  const ir = Math.max(70, W * 0.09); const tw = Math.min(520, W - ir - iw - 88 - 30);
+  return <>
+    <Shadow r={ir + iw * 0.05} bot={bot - 16} w={iw * 0.9} />
+    <img src={IMG(b.img)} alt={b.name} style={abs({ right: ir, bottom: bot, width: iw, height: ih })} />
+    <div style={abs({ left: 88, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
+  </>;
+}
+function PhoneGen({ b, H, top }) {
+  const free = H - 225;
+  if (b.lay === 'photo') { const h = Math.min(300, free - 10); return <><img src={IMG(b.img)} alt={b.name} style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: b.posM || b.pos || '50% 50%' })} />{top}</>; }
+  let h = Math.max(120, Math.min(300, free - 30)), w = h * b.ar; if (w > 310) { w = 310; h = w / b.ar; }
+  return <>{top}<Shadow l={(358 - w * 0.9) / 2} bot={14} w={w * 0.9} /><img src={IMG(b.img)} alt={b.name} style={abs({ left: (358 - w) / 2, bottom: 26, width: w, height: h })} /></>;
+}
+
 // telefon yerleşimi (W = 358 tuval birimi; H kutuya göre ~450–600)
 function Phone({ b, H, act, br }) {
   const top = <div style={abs({ left: 0, right: 0, top: 30, padding: '0 24px', display: 'flex', justifyContent: 'center' })}><Txt b={b} m center act={act} br={br} w="100%" /></div>;
+  if (b.lay) return <PhoneGen b={b} H={H} top={top} />;
   const free = H - 225; // yazı bloğunun altında kalan yükseklik
   // 7.11.2026 (4): resim kutunun altından TAŞMAZ (eskiden eksi 'bottom' ile taşıyordu → iPhone'da yuvarlak köşeli kırpma kayarken titriyordu);
   // alttaki parça object-fit ile resmin kendisinden kırpılır, görünüm aynı.
