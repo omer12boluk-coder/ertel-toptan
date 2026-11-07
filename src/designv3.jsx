@@ -51,6 +51,8 @@ function HubRows({ d, set }) {
   return <>
     <Row label="Ürünler açılış sayfası" hint="Açık: üst menüden Ürünler'e basınca önce kategori dizini gelir"><Seg v={L.prodHub ? 'on' : ''} opts={[['on', 'Açık'], ['', 'Kapalı']]} on={(k) => set('look.prodHub', k === 'on')} /></Row>
     {L.prodHub && <>
+      <Row label="Tüm ürünler kutusu"><Seg v={C.allTone || 'acc'} opts={[['acc', 'Tema rengi'], ['dark', 'Siyah'], ['tint', 'Açık ton'], ['ring', 'Beyaz']]} on={(k) => up({ allTone: k === 'acc' ? undefined : k })} /></Row>
+      <Row label="Setler kutusu"><Seg v={C.setTone || 'ring'} opts={[['acc', 'Tema rengi'], ['dark', 'Siyah'], ['tint', 'Açık ton'], ['ring', 'Beyaz']]} on={(k) => up({ setTone: k === 'ring' ? undefined : k })} /></Row>
       <Row label="Kutularda ürün resmi" hint="Kategori kutularının arkasındaki silik resim"><Seg v={C.bg === false ? 'off' : ''} opts={[['', 'Var'], ['off', 'Yok']]} on={(k) => up({ bg: k === 'off' ? false : undefined })} /></Row>
       <Row label="Görünen kategoriler" hint="Kapattığın kategori açılış sayfasında görünmez (ürünleri yerinde kalır)"><span className="v3-seg wrap">{tiles.map((c) => <button key={c.id} type="button" className={hid.has(String(c.id)) ? '' : 'on'} onClick={() => tog(c.id)}>{c.name}</button>)}</span></Row>
     </>}

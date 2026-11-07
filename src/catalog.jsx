@@ -795,7 +795,6 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
   const HC = useStore((st) => st.settings.shopHome?.p0?.hub) || {};
   const S0 = useStore((st) => st.settings); const sets = useMemo(() => liveSets(S0), [S0]); // Tasarım › Ürünler açılış sayfası: bg (resimler), hide2 (gizli kategoriler), img2 (kategori resmi)
   const hid = new Set((HC.hide2 || []).map(String));
-  const [q, setQ] = useState('');
   const roots = tree.roots.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden && !hid.has(String(n.id)));
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
@@ -804,19 +803,15 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
     <nav className="pv2-crumb" aria-label="Konum"><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></nav>
     <div className="pv2-trow">
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
-      <form className={'pv2-q' + (q ? ' has' : '')} onSubmit={(e) => { e.preventDefault(); if (q.trim()) onQ(q.trim()); }}>
-        <Icon n="search" s={17} />
-        <input type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder="Ürün adı veya stok kodu" value={q} onChange={(e) => setQ(e.target.value)} />
-        {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
-      </form>
     </div>
     <div className="phub-lbl">Kategoriler</div>
     <div className="phub-grid">
-      <div role="button" tabIndex={0} className="phub-c phub-all" onClick={onAll} onKeyDown={key(onAll)}>
+      <div role="button" tabIndex={0} className={'phub-c phub-all phub-t-' + (HC.allTone || 'acc')} onClick={onAll} onKeyDown={key(onAll)}>
         <div className="phub-h"><b>Tüm ürünler</b><span>{nf(total)}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span></div>
       </div>
-      {sets.length > 0 && <div role="button" tabIndex={0} className="phub-c phub-set" onClick={onSets} onKeyDown={key(onSets)}>
+      {sets.length > 0 && <div role="button" tabIndex={0} className={'phub-c phub-set phub-t-' + (HC.setTone || 'ring')} onClick={onSets} onKeyDown={key(onSets)}>
+        <span className="phub-badge">{HC.setBadge ?? 'Hazır paket'}</span>
         <div className="phub-h"><b>Setler</b><span>{sets.length}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s">{sets.slice(0, 6).map((x) => <button key={x.id} type="button" onClick={(e) => { e.stopPropagation(); openSet(x.id); }}>{x.name}</button>)}</div>
       </div>}

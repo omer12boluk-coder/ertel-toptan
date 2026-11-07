@@ -9416,3 +9416,16 @@ html[data-theme="dark"] .phub-bl { filter: brightness(0) invert(1); opacity: .85
 .phub-set::after { display: none; }
 .phub-set .phub-h b { color: var(--accent); }
 .phub .pv2-trow { margin-bottom: 4px; }
+/* 7.11.2026 (gece 3) açılış sayfası: Tüm ürünler / Setler kutu renkleri (Tasarım › Görünüm) — acc tema rengi, dark siyah, tint açık ton, ring beyaz + tema çerçeve */
+.phub-c.phub-t-acc { background: var(--accent); color: var(--accent-ink, #fff); box-shadow: none; }
+.phub-c.phub-t-dark { background: #1d1d1f; color: #fff; box-shadow: none; }
+.phub-c:is(.phub-t-acc, .phub-t-dark) :is(.phub-h span, .phub-s span, .phub-s button) { color: rgb(255 255 255 / .78); }
+.phub-c:is(.phub-t-acc, .phub-t-dark) .phub-h b { color: inherit; }
+.phub-c.phub-t-tint { background: color-mix(in oklab, var(--accent) 8%, var(--surface)); color: var(--fg); box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent); }
+.phub-c.phub-t-ring { background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1.5px var(--accent); }
+.phub-c:is(.phub-t-tint, .phub-t-ring) .phub-h b { color: var(--accent); }
+.phub-c:is(.phub-t-tint, .phub-t-ring) :is(.phub-h span, .phub-s span) { color: var(--muted); }
+.phub-badge { display: inline-block; margin: -2px 0 8px; padding: 4px 7px; border-radius: 6px; font: 600 10.5px/1 Inter, var(--f-body); letter-spacing: .04em; text-transform: uppercase; background: var(--accent); color: var(--accent-ink, #fff); }
+.phub-t-acc .phub-badge, .phub-t-dark .phub-badge { background: #fff; color: #1d1d1f; }
+html[data-theme="dark"] .phub-c.phub-t-dark { background: #000; box-shadow: 0 0 0 1px rgb(255 255 255 / .14); }
+@media (hover: hover) and (pointer: fine) { .phub-c:is(.phub-t-acc, .phub-t-dark):hover { box-shadow: 0 18px 36px -16px rgb(0 0 0 / .45); } .phub-c:is(.phub-t-acc, .phub-t-dark):hover .phub-h b { color: inherit; } .phub-c:is(.phub-t-acc, .phub-t-dark) .phub-s button:hover { color: #fff; } }
