@@ -246,6 +246,8 @@ export function CdNew({ H, onProduct, edit }) {
   const list = useNewList(C);
   const price = usePrice(); const logos = useLogos();
   const railRef = useRef(null);
+  const [edge, setEdge] = useState([true, false]); // [başta, sonda]
+  const upd = () => { const el = railRef.current; if (!el) return; const a = el.scrollLeft < 8, b = el.scrollLeft + el.clientWidth > el.scrollWidth - 8; setEdge((e) => (e[0] === a && e[1] === b ? e : [a, b])); };
   if (list.length < 3) return edit ? <div className="dz-empty">Yeni gelenler: gösterilecek ürün yok</div> : null;
   const week = list.filter((p) => p.ft && Date.now() - p.ft < 7 * DAY).length;
   const title = C.title || (week >= 2 ? `Bu hafta\n${week} yeni ürün.` : 'Yeni gelenler.');
@@ -253,13 +255,15 @@ export function CdNew({ H, onProduct, edit }) {
   const by = (d) => { const el = railRef.current; if (el) el.scrollBy({ left: d * el.clientWidth * 0.8, behavior: 'smooth' }); };
   return (
     <section className="cd-sec cd-nwsec rv">
-      <div className="cd-rail" ref={railRef}>
+      {/* 7.11.2026: oklar kapak kartının içindeydi → kayınca kayboluyordu; artık rafın iki yanında sabit */}
+      {!edge[0] && <button type="button" className="cd-arr cd-nw-nav prev" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={18} /></button>}
+      {!edge[1] && <button type="button" className="cd-arr cd-nw-nav next" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={18} className="flip" /></button>}
+      <div className="cd-rail" ref={railRef} onScroll={upd}>
         <div className="cd-tile cd-newcov">
           <span className="cd-eye">{C.eye ?? 'Yeni gelenler'}</span>
           <h2>{title}</h2>
           <span className="cd-newcov-a">
             <button type="button" className="cd-newcov-b" onClick={all}>Hepsini gör<Icon n="back" s={13} className="flip" /></button>
-            <span className="cd-newcov-arr"><button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span>
           </span>
         </div>
         {list.map((p) => <Tile key={p.id} p={p} X={nameOf(p)} pr={price(p)} logos={logos} onProduct={onProduct} when={whenOf(p.ft)} />)}
