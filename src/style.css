@@ -9406,3 +9406,8 @@ html[data-theme="dark"] .phub-bl { filter: brightness(0) invert(1); opacity: .85
   .phub-br { height: 36px; padding: 0 11px; } .phub-bl { height: 16px; max-width: 70px; }
 }
 .phub-bt { margin-left: -3px; font: 650 12.5px/1 Inter, var(--f-body); color: var(--fg); }
+/* 7.11.2026 (gece 2): açılış sayfası resimleri ürünün tamamı görünsün (kesilmesin), sağ altta */
+.phub-c::after { left: 30%; height: 78%; background: var(--im, none) right 10px bottom 8px / contain no-repeat; filter: grayscale(1); opacity: .16; -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%); mask-image: linear-gradient(180deg, transparent, #000 45%); }
+@media (hover: hover) and (pointer: fine) { .phub-c:hover::after { opacity: .3; filter: grayscale(.6); } }
+@media (max-width: 899px) { .phub-c::after { left: auto; width: 42%; height: auto; background-position: right 8px center; background-size: contain; -webkit-mask-image: linear-gradient(90deg, transparent, #000 50%); mask-image: linear-gradient(90deg, transparent, #000 50%); } }
+.v3-seg.wrap { flex-wrap: wrap; height: auto; row-gap: 4px; }

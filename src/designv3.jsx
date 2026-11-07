@@ -17,6 +17,7 @@ import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList, useNewList } fro
 import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
 import { liveSets } from './sets.jsx';
+import { useCatTiles } from './p0home.jsx';
 
 const PREVIEW = typeof location !== 'undefined' && /--/.test(location.hostname);
 const setPath = (obj, path, v) => { const n = structuredClone(obj); const ks = path.split('.'); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k] = o[k] ?? {})); o[ks.at(-1)] = v; return n; };
@@ -40,6 +41,21 @@ function useMobile() {
   return m;
 }
 const Seg = ({ v, opts, on }) => <span className="v3-seg">{opts.map(([k, l]) => <button key={k} type="button" className={(v ?? '') === k ? 'on' : ''} onClick={() => on(k)}>{l}</button>)}</span>;
+// 7.11.2026 (gece) yeni Ürünler sayfasının açılış sayfası: aç/kapat, kutu resimleri, gizlenecek kategoriler (shopHome.p0.hub)
+function HubRows({ d, set }) {
+  const L = d.look || {}; const P = d.shopHome?.p0 || {}; const C = P.hub || {};
+  const up = (patch) => set('shopHome.p0', { ...P, hub: { ...C, ...patch } });
+  const tiles = useCatTiles(d.shopHome?.p0catImg, []);
+  const hid = new Set((C.hide2 || []).map(String));
+  const tog = (id) => { const h = new Set(hid); h.has(String(id)) ? h.delete(String(id)) : h.add(String(id)); up({ hide2: [...h] }); };
+  return <>
+    <Row label="Ürünler açılış sayfası" hint="Açık: üst menüden Ürünler'e basınca önce kategori dizini gelir"><Seg v={L.prodHub ? 'on' : ''} opts={[['on', 'Açık'], ['', 'Kapalı']]} on={(k) => set('look.prodHub', k === 'on')} /></Row>
+    {L.prodHub && <>
+      <Row label="Kutularda ürün resmi" hint="Kategori kutularının arkasındaki silik resim"><Seg v={C.bg === false ? 'off' : ''} opts={[['', 'Var'], ['off', 'Yok']]} on={(k) => up({ bg: k === 'off' ? false : undefined })} /></Row>
+      <Row label="Görünen kategoriler" hint="Kapattığın kategori açılış sayfasında görünmez (ürünleri yerinde kalır)"><span className="v3-seg wrap">{tiles.map((c) => <button key={c.id} type="button" className={hid.has(String(c.id)) ? '' : 'on'} onClick={() => tog(c.id)}>{c.name}</button>)}</span></Row>
+    </>}
+  </>;
+}
 const Row = ({ label, hint, children }) => <label className="v3-f"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
 const TF = ({ v, ph, on, area }) => (area ? <textarea rows={2} value={v || ''} placeholder={ph} onChange={(e) => on(e.target.value)} /> : <input value={v || ''} placeholder={ph} onChange={(e) => on(e.target.value)} />);
 
@@ -197,6 +213,7 @@ function LookPanel({ d, set, setAll, A }) {
     <Row label="Yazı tipi"><Seg v={font} opts={[['apple', 'Apple sade'], ['classic', 'Klasik']]} on={(k) => set('look.style', k === 'apple' ? { ...st, head: 'intert', body: 'inter', price: 'intert' } : { ...st, head: '', body: '', price: '' })} /></Row>
     <Row label="Üst menü – banner arası" hint="Ana sayfada bannerın üstüne ek boşluk"><Seg v={String(Number(Lk.heroGap) || 0)} opts={[['0', 'Yok'], ['8', '+8'], ['16', '+16'], ['24', '+24'], ['36', '+36']]} on={(k) => set('look.heroGap', Number(k))} /></Row>
     <Row label="Ürünler sayfası" hint="Yeni: üstte yazılı kategoriler, Filtrele paneli, sade kart. Eski: sol kategori menüsü"><Seg v={Lk.prodV2 === false ? 'old' : ''} opts={[['', 'Yeni'], ['old', 'Eski']]} on={(k) => set('look.prodV2', k === 'old' ? false : undefined)} /></Row>
+    {Lk.prodV2 !== false && <HubRows d={d} set={set} />}
     <Row label="Üstüne gelince" hint="Bilgisayarda kartların üstüne gelince"><Seg v={Lk.hoverFx || ''} opts={[['', 'Yeni'], ['old', 'Eski (kalkar)']]} on={(k) => set('look.hoverFx', k)} /></Row>
     <Row label="Gece modu" hint="Otomatik: ziyaretçinin telefonu gece modundaysa mağaza da koyu"><Seg v={d.brand?.theme === 'auto' ? 'auto' : 'light'} opts={[['auto', 'Otomatik'], ['light', 'Hep gündüz']]} on={(k) => set('brand.theme', k)} /></Row>
     {/* 7.11.2026 (11) telefonda da kullanılabilen basit ayarlar: hazır stiller, temalar, köşe pikselleri, gölge/çerçeve, boşluklar */}

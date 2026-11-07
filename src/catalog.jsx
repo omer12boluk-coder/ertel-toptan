@@ -565,7 +565,7 @@ export function Catalog({ admin }) {
   const hubBack = !pv2 && !admin && user?.role === 'public' && S.look?.prodHub && hubOff;
   const fN = (brand ? 1 : 0) + (price ? 1 : 0) + (showOos ? 1 : 0) + (newOnly ? 1 : 0) + (favOnly ? 1 : 0) + (setsOnly ? 1 : 0);
   const scopeBrands = pv2 ? (() => { const m = new Map(); for (const p of all) if (p.b && (cat == null || pcats.get(p.id)?.has(cat))) m.set(p.b, (m.get(p.b) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); })() : null;
-  const catTitle = cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : 'Ürünler';
+  const catTitle = cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : 'Tüm ürünler';
   return (
     <div className="catalog">
       {hubBack && <button className="back-btn cat-hub-back" onClick={() => store.set({ catalogGo: { hub: true } })}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
@@ -573,7 +573,7 @@ export function Catalog({ admin }) {
       {admin && <div className="page adm-sub prod-top"><PageHead title="Ürünler" extra={<span className="muted"> · {all.length}</span>} /><ProductsSwitch on="products" /></div>}
       {pv2 && <div className="pv2-head">
         {/* 7.11.2026: konum satırı HER ZAMAN var (Tüm ürünlerde 'Ana sayfa › Ürünler') → kategori değişince başlık yerinden oynamaz */}
-        <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
+        <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button>{S.look?.prodHub ? <span><i>›</i><button type="button" onClick={() => { setHubOff(false); window.scrollTo(0, 0); }}>Ürünler</button></span> : <span><i>›</i>Ürünler</span>}<span><i>›</i><b>Tüm ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
         {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
         <div className="pv2-trow">
           <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
@@ -781,10 +781,13 @@ const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
 const LG_TXT = { luban: { t: 'Luban' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'Mega-Idea' } }; // ilk harf büyük (kullanıcı); XZZ kısaltma
 // 7.11.2026 (gece) Ürünler v2 açılış sayfası (look.prodHub): yazılı kategori dizini — 'Tüm ürünler' en başta (tema rengi),
 // her ana kategori kutusunun arkasında silik kapak resmi (src/icerik/kapaklar.json), alt kategoriler tıklanır, markalar logolu haplar.
+export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
 function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {
   const brands = useBrandList();
+  const HC = useStore((st) => st.settings.shopHome?.p0?.hub) || {}; // Tasarım › Ürünler açılış sayfası: bg (resimler), hide2 (gizli kategoriler), img2 (kategori resmi)
+  const hid = new Set((HC.hide2 || []).map(String));
   const [q, setQ] = useState('');
-  const roots = tree.roots.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden);
+  const roots = tree.roots.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden && !hid.has(String(n.id)));
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
   const key = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
@@ -810,7 +813,7 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
         <div className="phub-h"><b>Tüm ürünler</b><span>{nf(total)}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span>{setN > 0 && <span>{setN} set</span>}</div>
       </div>
-      {roots.map((n) => { const cv = CAT_COVERS[n.id]; const go1 = () => onCat(n.id); return (
+      {roots.map((n) => { const cv = HC.bg === false ? null : (HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]; const go1 = () => onCat(n.id); return (
         <div key={n.id} role="button" tabIndex={0} className="phub-c" style={cv ? { '--im': `url(${cv})` } : undefined} onClick={go1} onKeyDown={key(go1)}>
           <div className="phub-h"><b>{n.name}</b><span>{nf(counts.get(n.id))}<Icon n="chev" s={14} /></span></div>
           <div className="phub-s">{subsOf(n).map((c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onCat(c.id); }}>{c.name}</button>)}</div>

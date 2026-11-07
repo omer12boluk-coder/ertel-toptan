@@ -11,7 +11,7 @@ import { liveSets, setView, openSet, SetCover } from './sets.jsx';
 import { useBrandList, openBrand } from './brandsets.jsx';
 import { ShopImg, CtaButton, isProdImg, PCard, DesignCtx, CardAdd, useHeroFull } from './shophome.jsx';
 import { loadPhones, mergePhones, searchPhones, short, useStencils, matchStencils } from './kalipfind.jsx';
-import { useTree, useVisibleProducts } from './catalog.jsx';
+import { useTree, useVisibleProducts, HUB_IMG } from './catalog.jsx';
 import { PhotoBanner } from './photobn.jsx';
 
 export { P0_KEYS } from './p0keys.js';
@@ -397,15 +397,32 @@ export function P0BrandsPanel({ H, S: set }) {
     <p className="fine">Logolar Ayarlar › Markalar’dan gelir; logosu olmayan marka bantta görünmez.</p>
   </>;
 }
+// 7.11.2026 (gece) yeni Ürünler sayfasının açılış sayfası (catalog.jsx PV2Hub) ayarları: resimler hep açık/kapalı, kategori gizle, kategori resmi
+function HubV2Panel({ C, up, H, ImgPick }) {
+  const tiles = useCatTiles(H.p0catImg, []);
+  const hid = new Set((C.hide2 || []).map(String));
+  const tog = (id) => { const h = new Set(hid); h.has(String(id)) ? h.delete(String(id)) : h.add(String(id)); up({ hide2: [...h] }); };
+  const upImg = (id, v) => { const m = { ...(C.img2 || {}) }; if (v) m[id] = v; else delete m[id]; up({ img2: m }); };
+  return <>
+    <Toggle id="phbg" label="Kutularda silik ürün resmi" hint="Kapalı = kategori kutuları sadece yazı." checked={C.bg !== false} onChange={(v) => up({ bg: v })} />
+    <h4 className="dz2-sub">Kategoriler</h4>
+    <p className="fine">Kapattığın kategori bu sayfada görünmez (ürünleri yerinde kalır). Resim seçmezsen hazır resim kullanılır.</p>
+    {tiles.map((c) => { const off = hid.has(String(c.id)); return <div key={c.id} className={'p0-pn-cat' + (off ? ' off' : '')}>
+      <Toggle id={'phc' + c.id} label={c.name + ' · ' + c.n + ' ürün'} checked={!off} onChange={() => tog(c.id)} />
+      {!off && C.bg !== false && <ImgPick v={(C.img2 || {})[c.id] || HUB_IMG[c.id] || ''} onChange={(v) => upImg(c.id, v)} label="Arka plan resmi" hint="Arkası şeffaf ya da beyaz ürün resmi en iyisi" prodOk />}
+    </div>; })}
+  </>;
+}
 export function P0HubPanel({ H, S: set, ImgPick, L, setLook }) {
   const [C, up] = useP0Set(H, set, 'hub');
   return <>
     <Toggle id="p0hub" label="Ürünler’e basınca önce bu sayfa" hint="Kapalı = üst menüden Ürünler doğrudan ürün listesini açar." checked={L.prodHub === true} onChange={(v) => setLook('look.prodHub', v)} />
     <div className="row2"><TF label="Üst yazı" v={C.eye ?? 'Ürünler'} on={(v) => up({ eye: v })} /><TF label="Başlık" v={C.title} ph="Ne arıyorsun?" on={(v) => up({ title: v })} /></div>
     <TF label="Tüm ürünler kutusundaki küçük yazı" v={C.allEye ?? 'Hepsi bir arada'} on={(v) => up({ allEye: v })} />
+    {L.prodV2 !== false ? <HubV2Panel C={C} up={up} H={H} ImgPick={ImgPick} /> : <>
     <Toggle id="p0hb" label="Altta markalar" checked={C.brands !== false} onChange={(v) => up({ brands: v })} />
     <h4 className="dz2-sub">Kategoriler ve kapak resimleri</h4>
-    <P0CatsPanel H={H} S={set} ImgPick={ImgPick} />
+    <P0CatsPanel H={H} S={set} ImgPick={ImgPick} /></>}
   </>;
 }
 export const P0_NOTES = {
