@@ -1,3 +1,5 @@
+import { can, secOK, secPerm } from './team.js';
+import { TeamPage, NoPerm } from './ekip.jsx';
 import { ShopHomeEditor, BrandLogosEditor, ImgPick, Rows, withProdFallback } from './shophome.jsx';
 import { QuotaSettings } from './quota.jsx';
 import { RichText as PageText } from './footer.jsx';
@@ -297,8 +299,8 @@ export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
             </Field>
           </div>
           <div className="row3">
-            <Field label="Satış fiyatı"><input id="pe-r" inputMode="decimal" value={f.r ?? ''} onChange={(e) => set('r', e.target.value)} /></Field>
-            <Field label="Toptan fiyat" hint={f.w == null || f.w === '' ? `Boş → otomatik ${fmt(auto, f.cur)}` : ''}><input id="pe-w" inputMode="decimal" placeholder="otomatik" value={f.w ?? ''} onChange={(e) => set('w', e.target.value === '' ? null : e.target.value)} /></Field>
+            <Field label="Satış fiyatı" hint={!isNew && !can('prices') ? 'Fiyat yetkin yok' : ''}><input id="pe-r" inputMode="decimal" disabled={!isNew && !can('prices')} value={f.r ?? ''} onChange={(e) => set('r', e.target.value)} /></Field>
+            <Field label="Toptan fiyat" hint={f.w == null || f.w === '' ? `Boş → otomatik ${fmt(auto, f.cur)}` : ''}><input id="pe-w" inputMode="decimal" placeholder="otomatik" disabled={!isNew && !can('prices')} value={f.w ?? ''} onChange={(e) => set('w', e.target.value === '' ? null : e.target.value)} /></Field>
             <Field label="Para birimi">
               <select id="pe-cur" value={f.cur} onChange={(e) => set('cur', e.target.value)}><option>USD</option><option>EUR</option><option value="TRY">TL</option></select>
             </Field>
@@ -666,18 +668,20 @@ const SECTIONS = [
   ['genel', 'Uygulama adı ve logo', 'Ad, alt başlık, logo, açılış ekranı', 'edit', 'sistem'],
   ['veri', 'Excel ve katalog', 'Excel’den ürün yükleme, site eşitleme, ayarları kopyala', 'upload', 'sistem'],
   ['kota', 'Veri, yedek ve kota', 'Ücretsiz plan sınırları, günlük kullanım, yedekler, panelin kaç günlük kayıt yüklediği', 'db', 'sistem'],
+  ['ekip', 'Ekip', 'Kişiler, yetkiler, bağlı cihazlar, kim ne yaptı', 'users', 'sistem'],
   ['hesap', 'Hesabım', 'Yönetici adı ve şifre', 'shield', 'sistem'],
 ];
 const SEC_BY = Object.fromEntries(SECTIONS.map((x) => [x[0], x]));
 // 7.11.2026 sade Ayarlar ana ekranı (Apple Ayarlar gibi gruplu listeler). Eski ekran: cihazda ls 'set-v' = 'old'.
 // [başlık, [bölüm anahtarları]] · '@tasarim' = Tasarım moduna git. Listede olmayan bölümler 'Diğer ayarlar'da.
 const SADE = [
+  ['Ekip', ['ekip']],
   ['Sık kullanılanlar', ['dukkan', 'fiyat', 'siparis', 'teslimat', 'odeme', 'bildirim']],
   ['Mağaza', ['@tasarim', 'markalar', 'altbilgi', 'ozellik']],
   ['Ürünler', ['katalog', 'kategori', 'setler', 'kalip']],
   ['Bayiler', ['anasayfa', 'kademe', 'talep', 'bayiuye']],
 ];
-const SADE_SHORT = { dukkan: 'Ad, adres, telefon, WhatsApp, saatler', fiyat: 'Toptan indirimi, KDV, kur', siparis: 'Mağaza açık/kapalı, üyelik, giriş', teslimat: 'Kargo, dükkandan teslim, firmalar', odeme: 'Havale, kart, dükkanda ödeme', bildirim: 'Telegram, e-posta, müşteri bildirimleri',
+const SADE_SHORT = { ekip: 'Kişiler, yetkiler, cihazlar, geçmiş', dukkan: 'Ad, adres, telefon, WhatsApp, saatler', fiyat: 'Toptan indirimi, KDV, kur', siparis: 'Mağaza açık/kapalı, üyelik, giriş', teslimat: 'Kargo, dükkandan teslim, firmalar', odeme: 'Havale, kart, dükkanda ödeme', bildirim: 'Telegram, e-posta, müşteri bildirimleri',
   markalar: 'Logolar ve renkler', altbilgi: 'İletişim, sosyal medya, yasal sayfalar', ozellik: 'Paylaş, haber ver, yorumlar…', katalog: 'Stok gösterimi, sayfa başına ürün', kategori: 'Adlar, sıra, gizleme', setler: 'Set fiyatı, yayına al', kalip: 'Telefon modelleri, kalıplar',
   anasayfa: 'Duyurular, bannerlar', kademe: 'İndirim kademeleri', talep: 'Fiyat sor, hazır cevaplar', bayiuye: 'Bayi kendi üye olsun, profil' };
 const SADE_C = ['#2f62d6', '#0b7a52', '#c2410c', '#0e7490', '#b4232a', '#3a3a42', '#a16207', '#1d4ed8'];
@@ -706,7 +710,8 @@ const pushRecent = (k) => { try { ls.set('set-recent', [k, ...recentSecs().filte
 
 function SadeHome({ openSec, dirty, q, setQ, results, toks, jump, toOld }) {
   const used = new Set(SADE.flatMap(([, ks]) => ks));
-  const rest = SECTIONS.filter(([k]) => !used.has(k));
+  const ok = (k) => (k === '@tasarim' ? can('design') : secOK(k));
+  const rest = SECTIONS.filter(([k]) => !used.has(k) && ok(k));
   const [more, setMore] = useState(false);
   let ci = 0;
   const row = (k) => {
@@ -718,10 +723,10 @@ function SadeHome({ openSec, dirty, q, setQ, results, toks, jump, toOld }) {
   return <div className="sd">
     <h1 className="sd-h">Ayarlar</h1>
     <div className="sd-find"><Icon n="search" s={17} /><input type="search" placeholder="Ayar ara (kargo, kdv, logo, banner…)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) jump(results[0].k, results[0].x); }} />{q && <button type="button" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={15} /></button>}</div>
-    {toks.length > 0 ? <div className="sd-card">{results.length ? results.slice(0, 30).map((r, i) => <button key={i} type="button" className="sd-row" onClick={() => jump(r.k, r.x)}><span className="sd-ic g"><Icon n={SEC_BY[r.k][3]} s={16} /></span><span className="sd-t"><b><Hl t={r.x || r.l} toks={toks} /></b><small>{r.l}{!r.x ? ' · bölüm' : ''}</small></span><Icon n="back" s={16} className="sd-go flip" /></button>)
+    {toks.length > 0 ? <div className="sd-card">{results.length ? results.filter((r) => secOK(r.k)).slice(0, 30).map((r, i) => <button key={i} type="button" className="sd-row" onClick={() => jump(r.k, r.x)}><span className="sd-ic g"><Icon n={SEC_BY[r.k][3]} s={16} /></span><span className="sd-t"><b><Hl t={r.x || r.l} toks={toks} /></b><small>{r.l}{!r.x ? ' · bölüm' : ''}</small></span><Icon n="back" s={16} className="sd-go flip" /></button>)
       : <p className="sd-none">“{q}” ile eşleşen ayar yok. Daha kısa bir kelime deneyin.</p>}</div>
     : <>
-      {SADE.map(([t, ks]) => <section key={t} className="sd-grp"><span className="sd-cap">{t}</span><div className="sd-card">{ks.map(row)}</div></section>)}
+      {SADE.map(([t, ks0]) => { const ks = ks0.filter(ok); return ks.length ? <section key={t} className="sd-grp"><span className="sd-cap">{t}</span><div className="sd-card">{ks.map(row)}</div></section> : null; })}
       <section className="sd-grp"><button type="button" className="sd-cap sd-more" onClick={() => setMore((x) => !x)}>Diğer ayarlar ({rest.length})<Icon n="back" s={13} className={"flip" + (more ? " sd-rot" : "")} /></button>
         {more && <div className="sd-card">{rest.map(([k]) => row(k))}</div>}</section>
       <p className="sd-foot"><button type="button" className="linkish" onClick={toOld}>Eski Ayarlar görünümü</button></p>
@@ -1134,7 +1139,7 @@ export function Settings() {
         <div className="set-find">
           <div className="search"><Icon n="search" s={18} /><input id="set-q" type="search" autoFocus placeholder="Ayar ara… (ör. kargo, kdv, logo, banner, set fiyatı)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && results[0]) jump(results[0].k, results[0].x); if (e.key === 'Escape') { setSearch(false); setQ(''); } }} /></div>
           {toks.length > 0 && (results.length
-            ? <ul className="set-res">{results.slice(0, 40).map((r, i) => <li key={i}><button onClick={() => jump(r.k, r.x)}><span className="set-res-ic"><Icon n={SEC_BY[r.k][3]} s={16} /></span><span><b><Hl t={r.x || r.l} toks={toks} /></b><small>{r.gl} › {r.l}{!r.x ? ' · bölüm' : ''}</small></span><Icon n="chev" s={16} className="set-res-go" /></button></li>)}</ul>
+            ? <ul className="set-res">{results.filter((r) => secOK(r.k)).slice(0, 40).map((r, i) => <li key={i}><button onClick={() => jump(r.k, r.x)}><span className="set-res-ic"><Icon n={SEC_BY[r.k][3]} s={16} /></span><span><b><Hl t={r.x || r.l} toks={toks} /></b><small>{r.gl} › {r.l}{!r.x ? ' · bölüm' : ''}</small></span><Icon n="chev" s={16} className="set-res-go" /></button></li>)}</ul>
             : <p className="fine set-none">“{q}” ile eşleşen ayar yok. Daha kısa ya da farklı bir kelime deneyin (ör. “fiyat”, “kargo”, “renk”).</p>)}
         </div>
       )}
@@ -1162,7 +1167,7 @@ export function Settings() {
 
       {grp && !sec && (
         <div className="set-rows">
-          {SECTIONS.filter((x) => x[4] === grp).map(([k, l, hint, ic]) => (
+          {SECTIONS.filter((x) => x[4] === grp && secOK(x[0])).map(([k, l, hint, ic]) => (
             <button key={k} type="button" className="set-row" onClick={() => openSec(k)}>
               <span className="acc-ic"><Icon n={ic} s={18} /></span>
               <span className="acc-t"><b>{l}</b><small>{hint}</small></span>
@@ -1175,7 +1180,7 @@ export function Settings() {
 
       {sec && (
         <section id={'acc-' + sec} className="set-sec">
-          {sec === 'hesap' ? <div className="acc-b"><Profile embedded /></div> : <div className="set-card acc-b">{body}</div>}
+          {sec === 'hesap' ? <div className="acc-b"><Profile embedded /></div> : sec === 'ekip' ? <div className="acc-b"><TeamPage /></div> : !secOK(sec) ? <NoPerm perm={[secPerm(sec)].flat()[0]} inline /> : <div className="set-card acc-b">{body}</div>}
         </section>
       )}
       {dirty && (

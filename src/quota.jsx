@@ -1,4 +1,5 @@
 // Ayarlar > Veri ve kota (31.10.2026): yönetim panelinin açılışta ne kadar geçmiş yüklediği + günlük kullanım raporu.
+import { can } from './team.js';
 // Ücretsiz Firebase planı günde 50.000 okuma verir; dolarsa site o gün veri çekemez. En büyük yük panelin açılışı.
 import { useEffect, useState } from 'react';
 import { api, toast } from './store.js';
@@ -37,8 +38,10 @@ export function QuotaSettings({ d, set }) {
   return <>
     <p className="fine">Site ücretsiz Firebase planında: veritabanından <b>günde 50.000 okuma</b> ve 20.000 yazma hakkı var. Dolarsa site o günün sonuna kadar ürün gösteremez, sipariş alamaz. Müşteriler çok az okuma yapar; en büyük yük <b>bu yönetim paneli</b>: panel açılınca aşağıda seçtiğiniz kadar günün siparişlerini ve taleplerini yükler (yarım saatten uzun kapalı kaldıysa baştan okur).</p>
 
-    <BillCard />
-    <BackupCard />
+    {can('pay') && <BillCard />}
+    {can('backup') ? <BackupCard /> : <p className="fine qt-np"><Icon n="lock" s={14} /> Yedekler: “Yedekler ve geri yükleme” yetkisi gerekiyor.</p>}
+    {!can('quota') && <p className="fine qt-np"><Icon n="lock" s={14} /> Aşağıdaki pencere ayarları için “Veri ve kota” yetkisi gerekiyor; görebilirsin ama değiştiremezsin.</p>}
+    <fieldset className="qt-fs0" disabled={!can('quota')}>
 
     <h4 className="qt-h">Son 24 saat</h4>
     {u === undefined ? <p className="fine">Yükleniyor…</p> : !u ? <p className="fine">Henüz rapor yok. Her gece 23:47'de hazırlanır.</p> : <div className="qt-box">
@@ -61,6 +64,7 @@ export function QuotaSettings({ d, set }) {
     <h4 className="qt-h">Günlük rapor</h4>
     <Toggle id="s-q-rep" label="Her gece kullanım raporu Telegram'a gelsin" hint="Sınırın %70'ini geçen satırda ⚠️ olur" checked={Q.report !== false} onChange={(v) => set('quota.report', v)} />
     <p className="fine">Değişiklikler panel bir sonraki açılışında uygulanır.</p>
+    </fieldset>
   </>;
 }
 

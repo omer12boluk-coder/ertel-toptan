@@ -5,7 +5,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().role == 'admin'; }
+    // 8.11.2026 ekip: engellenen (active false) yönetici hiçbir şey okuyamaz/yazamaz. Ekip üyesi = role admin + staff true.
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().role == 'admin' && me().get('active', true) != false; }
+    function isFull() { return isAdmin() && me().get('staff', false) != true; }                 // asıl yönetici
+    function canTeam() { return isFull() || (isAdmin() && me().get('perm', {}).get('team', false) == true); }
     function isActive() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && me().active != false; }
 
     // İlk kurulum: yönetici sahibi bir kez yazılır
@@ -32,6 +35,20 @@ service cloud.firestore {
     match /desc/{doc} { allow read: if true; allow write: if isAdmin(); }
     match /descb/{doc} { allow read: if true; allow write: if isAdmin(); } // açıklama kovaları (tek ürün)
 
+    // ekip cihaz oturumları (Ayarlar › Ekip): herkes kendi kaydını yazar; 'Ekip' yetkilisi 'Çıkar' (kick) der
+    match /staffSess/{sid} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin() && ((resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid)
+        || (canTeam() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kick'])));
+      allow delete: if isAdmin() && (resource.data.uid == request.auth.uid || canTeam());
+    }
+    // geçmiş (kim ne yaptı): günlük tek belge, sadece eklenir; 30 günden eskiyi bekçi siler
+    match /audit/{day} {
+      allow read: if canTeam();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && request.resource.data.e.hasAll(resource.data.e);
+    }
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
       // 1) bayi kendi başvurusunu yazar (pasif + onay bekliyor), 2) yönetici oluşturur, 3) ilk kurulumda sahip kendi kaydını yazar
@@ -41,13 +58,17 @@ service cloud.firestore {
           && request.resource.data.pending == true
           && request.resource.data.keys().hasOnly(['uid', 'username', 'name', 'shop', 'phone', 'role', 'active', 'pending', 'tier', 'createdAt'])
           && request.resource.data.tier == '')
-        || isAdmin()
+        || (isAdmin() && (request.resource.data.role != 'admin' || (canTeam() && request.resource.data.get('staff', false) == true)))
         || (signedIn() && request.auth.uid == uid
           && get(/databases/$(database)/documents/meta/owner).data.uid == uid);
       // bayi sadece ad / dükkan / telefon / foto değiştirebilir
-      allow update: if isAdmin() || (request.auth.uid == uid
+      // yönetici hesapları: asıl yöneticiye sadece kendisi; ekip üyelerine 'Ekip' yetkisi olan (ekip üyesi asıl yöneticiye çevrilemez)
+      allow update: if (isAdmin() && resource.data.role != 'admin' && request.resource.data.role != 'admin')
+        || (canTeam() && resource.data.get('staff', false) == true && request.resource.data.role == 'admin' && request.resource.data.get('staff', false) == true)
+        || (isFull() && request.auth.uid == uid && request.resource.data.role == 'admin' && request.resource.data.get('staff', false) != true)
+        || (request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'shop', 'phone', 'photo']));
-      allow delete: if isAdmin();
+      allow delete: if (isAdmin() && resource.data.role != 'admin') || (canTeam() && resource.data.get('staff', false) == true);
     }
     match /userNotes/{uid} { allow read, write: if isAdmin(); }
     match /userPrices/{uid} {

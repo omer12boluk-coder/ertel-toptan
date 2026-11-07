@@ -328,6 +328,40 @@ export class FirebaseBackend {
     return uid;
   }
   async updateUser(uid, patch) { const { password, ...rest } = patch; await this.F.updateDoc(this.d('users', uid), rest); }
+  // ---- Ekip (8.11.2026, team.js): yönetici hesapları, cihaz oturumları (staffSess), geçmiş (audit/{gün})
+  async teamList() {
+    const [us, ow] = await Promise.all([timeout(this.F.getDocs(this.F.query(this.c('users'), this.F.where('role', '==', 'admin')))), timeout(this.F.getDoc(this.d('meta', 'owner')))]);
+    const owner = ow.exists() ? ow.data().uid : null;
+    return us.docs.map((x) => { const { photo, ...u } = x.data(); return { uid: x.id, ...u, owner: x.id === owner }; });
+  }
+  async teamCreate({ username, password, name, perm }) {
+    const sec = this.A.getApps().find((a) => a.name === 'sec') || this.A.initializeApp(this.config, 'sec');
+    const sa = this.U.getAuth(sec);
+    let cred;
+    try { cred = await this.U.createUserWithEmailAndPassword(sa, toEmail(username), password); }
+    catch (e) { throw new Error(e.code === 'auth/email-already-in-use' ? 'Bu kullanıcı adı zaten var' : e.code === 'auth/weak-password' ? 'Şifre en az 6 karakter olmalı' : e.message); }
+    const uid = cred.user.uid;
+    await this.U.signOut(sa);
+    await this.F.setDoc(this.d('users', uid), { uid, username, name, shop: name, role: 'admin', staff: true, perm, active: true, createdAt: now(), by: this.user?.uid || '' });
+    return uid;
+  }
+  async teamUpdate(uid, patch) { await timeout(this.F.updateDoc(this.d('users', uid), patch)); }
+  async teamHello(sid, info) { await timeout(this.F.setDoc(this.d('staffSess', sid), info, { merge: true })); }
+  async teamDropSess(sid) { await timeout(this.F.deleteDoc(this.d('staffSess', sid)), 5000); }
+  watchSess(sid, cb) { return this.F.onSnapshot(this.d('staffSess', sid), (s) => cb(s.exists() ? s.data() : null), () => {}); }
+  watchMe(uid, cb) { return this.F.onSnapshot(this.d('users', uid), (s) => cb(s.exists() ? s.data() : null), () => {}); }
+  watchTeamSess(cb) { return this.F.onSnapshot(this.c('staffSess'), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), () => cb([])); }
+  async kickSess(sid) { await timeout(this.F.updateDoc(this.d('staffSess', sid), { kick: true })); }
+  async auditAdd(day, e) { await this.F.setDoc(this.d('audit', day), { e: this.F.arrayUnion(e), day }, { merge: true }); }
+  async auditDay(day) { const s = await timeout(this.F.getDoc(this.d('audit', day))); return s.exists() ? s.data().e || [] : []; }
+  async _staffCall(path, body) {
+    const tok = await this.idToken(); if (!tok) throw new Error('Oturum yok');
+    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) }), 20000);
+    const j = await r.json().catch(() => ({})); if (!j.ok) throw new Error(j.error || 'Bekçi cevap vermedi'); return j;
+  }
+  async staffPw(uid, password) { return this._staffCall('/staff/pw', { uid, password }); }
+  async staffRevoke(uid, disable) { return this._staffCall('/staff/revoke', { uid, disable: !!disable }); }
+  async geo() { const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/geo'), 4000); return r.ok ? r.json() : null; }
   async bumpStat(uid, key, d) { await this.F.updateDoc(this.d('users', uid), { ['stats.' + key]: this.F.increment(d) }); }
   async getNote(uid) { const s = await timeout(this.F.getDoc(this.d('userNotes', uid))); return s.exists() ? s.data().t : ''; }
   async setNote(uid, t) { await this.F.setDoc(this.d('userNotes', uid), { t }); }

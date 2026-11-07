@@ -1,3 +1,4 @@
+import { can } from './team.js';
 import { useBrandList, openBrand } from './brandsets.jsx';
 import { ShopImg, useShopImg } from './shophome.jsx';
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
@@ -126,11 +127,11 @@ const shortDT = (t) => {
   return { txt, full };
 };
 const PHONE = () => matchMedia('(max-width: 700px)').matches;
-function EditCell({ value, show, onSave, kind = 'num', label, className = '' }) {
+function EditCell({ value, show, onSave, kind = 'num', label, className = '', lock }) {
   const [ed, setEd] = useState(false);
   const [v, setV] = useState('');
   // telefonda tablodan yerinde düzenleme yok (klavye açılıp kalabalık oluyordu): dokunuş satıra geçer, ürün açılır
-  const start = (e) => { if (PHONE()) return; e.stopPropagation(); setV(value ?? ''); setEd(true); };
+  const start = (e) => { if (PHONE()) return; if (lock) { e.stopPropagation(); toast('Fiyat değiştirme yetkin yok (Ürün fiyatları)', 'bad'); return; } e.stopPropagation(); setV(value ?? ''); setEd(true); };
   const done = useRef(false);
   useEffect(() => { if (ed) done.current = false; }, [ed]);
   const save = async () => {
@@ -258,8 +259,8 @@ function AdminRow({ p, onEdit, onCopy, onDel, grip, gripReset }) {
         </button>
       </div>
       <div className="tc tc-s r"><EditCell className="r ac-s" value={p.s ?? 0} show={<b className={'num' + (p.s > 0 ? '' : ' zero')}>{p.s ?? 0}</b>} label="Stok" onSave={(v) => quickSave(p, { s: Math.round(v), ur: 's' }, 'Stok kaydedildi')} /></div>
-      <div className="tc tc-r r"><EditCell className="r ac-r" value={p.r} show={<b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b>} label="Satış fiyatı" onSave={(v) => quickSave(p, { r: v, pc: null, ur: 'r' }, 'Satış fiyatı kaydedildi')} /></div>
-      <div className="tc tc-w r"><EditCell className="r ac-w" value={p.w ?? ''} kind="opt" show={<><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</>} label="Toptan fiyat (boş = otomatik)" onSave={(v) => quickSave(p, { w: v, pc: null, ur: 'w' }, v == null ? 'Toptan otomatik' : 'Toptan kaydedildi')} /></div>
+      <div className="tc tc-r r"><EditCell className="r ac-r" lock={!can('prices')} value={p.r} show={<b className="num">{p.r > 0 ? fmt(p.r, p.cur) : '—'}</b>} label="Satış fiyatı" onSave={(v) => quickSave(p, { r: v, pc: null, ur: 'r' }, 'Satış fiyatı kaydedildi')} /></div>
+      <div className="tc tc-w r"><EditCell className="r ac-w" lock={!can('prices')} value={p.w ?? ''} kind="opt" show={<><b className="num">{pr.mine != null ? fmt(pr.mine, p.cur) : '—'}</b>{p.w == null && <i className="oto">oto</i>}</>} label="Toptan fiyat (boş = otomatik)" onSave={(v) => quickSave(p, { w: v, pc: null, ur: 'w' }, v == null ? 'Toptan otomatik' : 'Toptan kaydedildi')} /></div>
       <div className="tc tc-a c"><StatusPick p={p} /></div>
       <div className={'tc tc-ut' + (dt ? '' : ' none')}><span className="ac-ut" title={dt ? dt.full : undefined}>{dt ? <><b>{dt.txt}</b>{why && <small>{why}</small>}</> : <small>—</small>}</span></div>
       <div className="tc tc-ed"><button type="button" className="icon-btn sm at-ed" onClick={menu} aria-label="İşlemler" title="Düzenle, kopyala, sil"><Icon n="more" s={18} /></button></div>

@@ -91,8 +91,10 @@ const fixBrand = (b, n) => {
   if (/18\s*kinds?\b/i.test(n || '')) return '18 Kinds';
   return b;
 };
+// ekranda kullanılan biçim (team.js de kayıt farkını bununla çıkarır → düzeltilen ad/marka 'değişiklik' sayılmaz)
+export const normProd = (p0) => ({ ...p0, n: cleanText(p0.n) || '', b: fixBrand(p0.b ? cleanText(p0.b) : p0.b, p0.n) });
 export function setCatalog(items) {
-  const list = (items || []).map((p0) => { const p = { ...p0, n: cleanText(p0.n) || '', b: fixBrand(p0.b ? cleanText(p0.b) : p0.b, p0.n) }; return { ...p, _s: norm(p.n + ' ' + p.k + ' ' + (p.b || '')), _t: norm(p.t || '') }; });
+  const list = (items || []).map((p0) => { const p = normProd(p0); return { ...p, _s: norm(p.n + ' ' + p.k + ' ' + (p.b || '')), _t: norm(p.t || '') }; });
   store.set({ catalog: list, byId: new Map(list.map((p) => [p.id, p])) });
 }
 

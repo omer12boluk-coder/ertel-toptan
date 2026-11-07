@@ -25,6 +25,8 @@ import { seoRoute } from './seo.js';
 import { withDefaults, ls, cleanUsername, mediaFallback } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS, SPLASH_STYLES } from './config.js';
 import { DemoBackend } from './backend-demo.js';
+import { guardApi, startTeamSession, stopTeamSession, can } from './team.js';
+import { NoPerm } from './ekip.jsx';
 import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
 import { Catalog, ProductPage, hubSwap } from './catalog.jsx';
@@ -77,6 +79,7 @@ async function boot() {
   const area = ADMIN_ROUTE ? 'admin' : ROUTE.shop ? 'shop' : 'user';
   const A = fb ? new FirebaseBackend(cfg, area === 'user' ? undefined : area) : new DemoBackend(await loadSeed(), loadSeedDesc, area);
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
+  if (area === 'admin') guardApi(A); // 8.11.2026 ekip yetkileri + geçmiş + katalog ezme düzeltmesi (team.js)
   store.set({ api: A });
   startHistory(() => (store.s.user?.role === 'public' ? shopFirst() : 'anasayfa'));
   startRate(A);
@@ -105,8 +108,9 @@ async function boot() {
   setTimeout(() => { if (store.s.boot === 'loading' && !currentUid) store.set({ boot: 'login' }); }, 6000);
   A.onAuth(async (u, err) => {
     if (!u) {
-      stopWatchers(); currentUid = null;
-      store.set({ boot: 'login', user: null, loginError: err || '', requests: [], customers: [], openReq: null });
+      stopWatchers(); stopTeamSession(); currentUid = null;
+      const tOut = ls.get('team-out', ''); if (tOut) ls.del('team-out');
+      store.set({ boot: 'login', user: null, loginError: err || tOut || '', requests: [], customers: [], openReq: null });
       return;
     }
     if (currentUid === u.uid) { store.set({ user: u }); return; }
@@ -146,14 +150,14 @@ function startSession(u, A) {
   const admin = u.role === 'admin';
   stopWatchers();
   // yönetici: siparişler / talepler son 60 gün, üyeler son 62 gün (datawin.js); bayi: kendi talepleri
-  if (admin) startAdminWatchers(A, u); else unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
+  if (admin) { startAdminWatchers(A, u); startTeamSession(u, A); } else unsubs.push(A.watchRequests(u, (requests) => store.set({ requests })));
   if (A.watchCatalog) unsubs.push(A.watchCatalog((items) => items && setCatalog(items)));
   if (admin) unsubs.push(A.watchUsers((customers) => store.set({ customers })));
   if (admin && A.watchFeed) unsubs.push(A.watchFeed((feed) => store.set({ feed })));
   loadCart();
   if (admin) syncNow(false).catch(() => {});
   // mağaza resimlerindeki ürün bağlantılarına yedek adres yoksa bir kez ekle (ürün kapanınca kutu boş kalmasın)
-  if (admin && A.mode === 'firebase') { const S = store.s.settings; const S2 = withProdFallback(S); if (S2 !== S) A.saveSettings(S2).then(() => store.set({ settings: S2 })).catch((e) => console.warn(e)); }
+  if (admin && A.mode === 'firebase' && can('design')) { const S = store.s.settings; const S2 = withProdFallback(S); if (S2 !== S) A.saveSettings(S2).then(() => store.set({ settings: S2 })).catch((e) => console.warn(e)); }
   // Her girişte ana sayfadan başla; WhatsApp'tan gelen talep linki varsa onu aç
   store.set({ boot: 'ready', tab: tabFromPath() || 'anasayfa', openReq: null });
   if (ROUTE.reqId) { openRequest(ROUTE.reqId); history.replaceState(null, '', ADMIN_ROUTE ? '/admin' : '/b2b'); }
@@ -752,7 +756,7 @@ function ShellFull() {
             : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Giriş yap"><Icon n="user" s={16} /><span className="me-login-l">Giriş yap</span><span className="me-login-s">Giriş yap</span></button>)}
           {!pub && (
             <button className="me" onClick={() => go(admin ? 'ayarlar' : 'profil')} aria-label="Profil">
-              <span className="me-t"><b>{user.name || user.username}</b><small>{admin ? 'Yönetici' : user.shop}</small></span>
+              <span className="me-t"><b>{user.name || user.username}</b><small>{admin ? (user.staff ? 'Ekip üyesi' : 'Yönetici') : user.shop}</small></span>
               <Avatar u={user} size={34} />
             </button>
           )}
@@ -800,7 +804,7 @@ function ShellFull() {
         {tab === 'sorun' && pub && <IssuePage />}
         {tab === 'islem' && pub && <AuthAction />}
         {tab === 'ayarlar' && admin && <Settings />}
-        {tab === 'tasarim' && admin && <DesignEntry />}
+        {tab === 'tasarim' && admin && (can('design') ? <DesignEntry /> : <NoPerm perm="design" />)}
       </main>
       {pub && !['katalog', 'sepet', 'hesap', 'kalip'].includes(tab) && <ShopFooter compact={tab !== 'anasayfa'} />}
       {!admin && tab !== 'lsepet' && tab !== 'odeme' && <CartBar />}

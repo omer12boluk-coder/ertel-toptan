@@ -149,6 +149,48 @@ export class DemoBackend {
     if (password) this.db.users[uid].pw = password;
     this.persist();
   }
+  // ---- Ekip (demo: bu tarayıcıda) — canlıda backend-firebase.js aynı işlevler
+  _teamSeed() {
+    if (this.db.teamSeeded) return; this.db.teamSeeded = 1;
+    const t = now(), H = 3600e3, M = 60e3;
+    this.db.users.u_kerem = { uid: 'u_kerem', username: 'kerem', pw: '1234', role: 'admin', staff: true, name: 'Kerem (örnek eleman)', shop: 'Kerem', active: true, createdAt: t - 5 * 24 * H, perm: { orders: true, products: true, prices: false, customers: true } };
+    this.db.staffSess = {
+      s_demo1: { uid: 'u_kerem', name: 'Kerem (örnek eleman)', dev: { os: 'iPhone', br: 'Safari', pwa: true, kind: 'phone' }, city: 'İstanbul', since: t - 4 * 24 * H, last: t - 12 * M },
+      s_demo2: { uid: 'u_kerem', name: 'Kerem (örnek eleman)', dev: { os: 'Windows', br: 'Chrome', pwa: false, kind: 'pc' }, city: 'İstanbul', since: t - 3 * 24 * H, last: t - 20 * H },
+      s_demo3: { uid: 'u_admin', name: 'Ertel GSM', dev: { os: 'Mac', br: 'Safari', pwa: false, kind: 'pc' }, city: 'İstanbul', since: t - 9 * 24 * H, last: t - 2 * 24 * H },
+    };
+    const day = new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' });
+    const e = (m, x, k, c, u = 'u_kerem', n = 'Kerem (örnek eleman)', d = 'iPhone · Safari') => ({ t: t - m * M, u, n, d, k, x, c, r: rid().slice(0, 4) });
+    this.db.audit = { [day]: [
+      e(240, 'Giriş yaptı · İstanbul', 'oturum'),
+      e(200, 'Stok: örnek ürün', 'urun', [['Örnek ürün · Stok', '2', '5']]),
+      e(150, '3 ürünü açtı / kapattı', 'urun'),
+      e(95, 'Fiyat değiştirdi: örnek ürün', 'urun', [['Örnek ürün · Liste fiyatı', '118 $', '124 $']], 'u_admin', 'Ertel GSM', 'Mac · Safari'),
+      e(40, 'Bayi talebi B7K2 · Bağcılar GSM (örnek) → Hazır', 'siparis'),
+    ].map((x) => { if (!x.c) delete x.c; return x; }) };
+    this.persist();
+  }
+  async teamList() { this._teamSeed(); return Object.values(this.db.users).filter((u) => u.role === 'admin').map((u) => ({ ...this.pub(u), owner: u.uid === 'u_admin' })); }
+  async teamCreate({ username, password, name, perm }) {
+    const un = String(username || '').trim().toLowerCase();
+    if (Object.values(this.db.users).some((u) => u.username === un)) throw new Error('Bu kullanıcı adı zaten var');
+    if (String(password || '').length < 6) throw new Error('Şifre en az 6 karakter olmalı');
+    const uid = 'u_' + rid();
+    this.db.users[uid] = { uid, username: un, pw: password, name, shop: name, role: 'admin', staff: true, perm, active: true, createdAt: now() };
+    this.persist(); return uid;
+  }
+  async teamUpdate(uid, patch) { Object.assign(this.db.users[uid], patch); this.persist(); }
+  async teamHello(sid, info) { this._teamSeed(); const S = (this.db.staffSess = this.db.staffSess || {}); S[sid] = { ...(S[sid] || {}), ...info }; this.persist(); }
+  async teamDropSess(sid) { if (this.db.staffSess?.[sid]) { delete this.db.staffSess[sid]; this.persist(); } }
+  watchSess(sid, cb) { return this.sub(() => cb(this.db.staffSess?.[sid] || null)); }
+  watchMe(uid, cb) { return this.sub(() => cb(this.db.users[uid] ? this.pub(this.db.users[uid]) : null)); }
+  watchTeamSess(cb) { this._teamSeed(); return this.sub(() => cb(Object.entries(this.db.staffSess || {}).map(([id, x]) => ({ id, ...x })))); }
+  async kickSess(sid) { if (this.db.staffSess?.[sid]) { this.db.staffSess[sid].kick = true; this.persist(); } }
+  async auditAdd(day, e) { const a = (this.db.audit = this.db.audit || {}); (a[day] = a[day] || []).push(e); const ks = Object.keys(a).sort(); while (ks.length > 30) delete a[ks.shift()]; this.persist(); }
+  async auditDay(day) { this._teamSeed(); return (this.db.audit || {})[day] || []; }
+  async staffPw(uid, password) { if (String(password || '').length < 6) throw new Error('Şifre en az 6 karakter olmalı'); this.db.users[uid].pw = password; this.persist(); return { ok: true }; }
+  async staffRevoke(uid) { Object.keys(this.db.staffSess || {}).forEach((k) => { if (this.db.staffSess[k].uid === uid) this.db.staffSess[k].kick = true; }); this.persist(); return { ok: true }; }
+  async geo() { return { c: 'İstanbul' }; }
   async bumpStat(uid, key, d) { const u = this.db.users[uid]; if (!u) return; u.stats = u.stats || {}; u.stats[key] = (u.stats[key] || 0) + d; this.persist(); }
   async getNote(uid) { return this.db.notes[uid] || ''; }
   async setNote(uid, t) { this.db.notes[uid] = t; this.persist(); }

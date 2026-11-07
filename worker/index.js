@@ -28,6 +28,7 @@ export default {
     ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message)));
     // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 17) ctx.waitUntil(preqSweep(env).catch((e) => console.log('preqSweep', e.message)));
+    { const d = new Date(event.scheduledTime || Date.now()); if (d.getUTCHours() === 0 && d.getUTCMinutes() === 53) ctx.waitUntil(auditSweep(env).catch((e) => console.log('auditSweep', e.message))); }
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 37) ctx.waitUntil(issueSweep(env).catch((e) => console.log('issueSweep', e.message)));
     // sepet linki: süresi dolup onaylanmayan (status 'open') linkler 10 dakikada bir silinir (Ayarlar › Sepet linki)
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() % 10 === 4) ctx.waitUntil(lcartSweep(env).catch((e) => console.log('lcartSweep', e.message)));
@@ -101,8 +102,11 @@ export default {
       if (url.pathname === '/rev/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await revNew(req, env, b)); }
       if (url.pathname === '/push/member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushMember(env, b)); }
       // Yedekler (31.10.2026): yönetici listeler ve indirir (özel kutu ertel-yedek)
-      if (url.pathname === '/backup/list' && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); if (!env.R2Y) return json({ ok: false, error: 'Yedek kutusu bağlı değil' }); const out = []; let cur; do { const l = await env.R2Y.list({ prefix: 'db/', cursor: cur, limit: 1000 }); out.push(...l.objects.map((o) => ({ key: o.key, size: o.size, at: o.uploaded?.getTime?.() || 0 }))); cur = l.truncated ? l.cursor : null; } while (cur); out.sort((x, y) => y.at - x.at); return json({ ok: true, list: out.slice(0, 120) }); }
-      if (url.pathname === '/backup/get' && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); const k = String(b.key || ''); if (!/^db\/[\w/.-]+\.tar\.gz$/.test(k) || !env.R2Y) return json({ ok: false, error: 'geçersiz' }, 400); const o = await env.R2Y.get(k); if (!o) return json({ ok: false, error: 'yok' }, 404); return new Response(o.body, { headers: { ...cors, 'Content-Type': 'application/gzip', 'Content-Disposition': `attachment; filename="ertel-yedek-${k.split('/').pop()}"`, 'Cache-Control': 'no-store' } }); }
+      // 8.11.2026 ekip: yaklaşık şehir (Ekip › cihazlar; KV/Firestore yok), şifre ver, hesabı kilitle
+      if (url.pathname === '/geo') return json({ c: req.cf?.city || '', r: req.cf?.region || '', k: req.cf?.country || '' });
+      if ((url.pathname === '/staff/pw' || url.pathname === '/staff/revoke') && req.method === 'POST') { try { return json(await staffRoute(req, env, url.pathname)); } catch (e) { return json({ ok: false, error: e.message }); } }
+      if (url.pathname === '/backup/list' && req.method === 'POST') { const err = await permOf(req, 'backup'); if (err) return json({ ok: false, error: err }, 403); if (!env.R2Y) return json({ ok: false, error: 'Yedek kutusu bağlı değil' }); const out = []; let cur; do { const l = await env.R2Y.list({ prefix: 'db/', cursor: cur, limit: 1000 }); out.push(...l.objects.map((o) => ({ key: o.key, size: o.size, at: o.uploaded?.getTime?.() || 0 }))); cur = l.truncated ? l.cursor : null; } while (cur); out.sort((x, y) => y.at - x.at); return json({ ok: true, list: out.slice(0, 120) }); }
+      if (url.pathname === '/backup/get' && req.method === 'POST') { const err = await permOf(req, 'backup'); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); const k = String(b.key || ''); if (!/^db\/[\w/.-]+\.tar\.gz$/.test(k) || !env.R2Y) return json({ ok: false, error: 'geçersiz' }, 400); const o = await env.R2Y.get(k); if (!o) return json({ ok: false, error: 'yok' }, 404); return new Response(o.body, { headers: { ...cors, 'Content-Type': 'application/gzip', 'Content-Disposition': `attachment; filename="ertel-yedek-${k.split('/').pop()}"`, 'Cache-Control': 'no-store' } }); }
       if (url.pathname === '/backup/latest' && req.method === 'POST') { // geri yükleme işi için (anahtar: sha256('sync:'+TELEGRAM_TOKEN))
         const want = [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('sync:' + (env.TELEGRAM_TOKEN || ''))))].map((x) => x.toString(16).padStart(2, '0')).join('');
         if (!env.TELEGRAM_TOKEN || req.headers.get('X-Key') !== want || !env.R2Y) return json({ ok: false }, 403);
@@ -111,7 +115,7 @@ export default {
       }
       // Fatura (31.10.2026): Google bütçe bildirimi (Pub/Sub) → her 1 $'da bildirim; yönetici durumu görür / ücretli kullanımı durdurur
       if (url.pathname === '/billing/pubsub' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await billPubsub(env, url.searchParams.get('k') || '', b)); }
-      if (url.pathname.startsWith('/billing/') && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); return json(await billAdmin(env, url.pathname.slice(9), b)); }
+      if (url.pathname.startsWith('/billing/') && req.method === 'POST') { const err = await permOf(req, 'pay'); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); return json(await billAdmin(env, url.pathname.slice(9), b)); }
       if (url.pathname === '/notify-usage' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyUsage(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/notify-sync' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifySync(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname.startsWith('/dhl/') && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await dhl(env, url.pathname.slice(5), b)); }
@@ -699,10 +703,51 @@ async function notifyReq(env, b) {
 // Sadece platin/ klasörü. Cloudflare REST API toplu yüklemede koruma sayfası (403) döndürdüğü için bekçinin kendi R2 bağlantısı kullanılır.
 // POST /up (FormData big + th, Authorization: Bearer <Firebase oturum anahtarı>) → R2 up/<yıl+ay>/<rastgele>.<uzantı> (+ _t küçük resim)
 async function adminOf(req) {
+  const t = await teamOf(req); return t.err || null;
+}
+// 8.11.2026 ekip: yönetici (asıl ya da ekip üyesi) + yetkileri. Engellenen (active false) geçemez.
+async function teamOf(req) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''); const uid = tokUid(tok);
-  if (!uid) return 'Oturum yok';
+  if (!uid) return { err: 'Oturum yok' };
   const u = await fsAuth('users/' + uid, tok);
-  return u?.role === 'admin' ? null : 'Yönetici oturumu doğrulanamadı';
+  if (u?.role !== 'admin' || u.active === false) return { err: 'Yönetici oturumu doğrulanamadı' };
+  const full = u.staff !== true;
+  return { uid, u, full, can: (k) => full || !!(u.perm && u.perm[k]) };
+}
+async function permOf(req, k) { const t = await teamOf(req); return t.err || (t.can(k) ? null : 'Bu işlem için yetkin yok'); }
+// Firebase Auth hesabı (servis hesabıyla): şifre ver / oturumları düşür / kilitle
+async function authUpdate(env, body) {
+  const pid = JSON.parse(env.FIREBASE_SA || '{}').project_id || 'erteltoptan';
+  const tok = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:update`, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error?.message || 'Hesap güncellenemedi (' + r.status + ')');
+  return j;
+}
+async function staffRoute(req, env, path) {
+  const t = await teamOf(req); if (t.err) return { ok: false, error: t.err };
+  if (!t.can('team')) return { ok: false, error: 'Ekip yetkin yok' };
+  if (!env.FIREBASE_SA) return { ok: false, error: 'Sunucu anahtarı yok' };
+  const b = await req.json().catch(() => ({})); const uid = String(b.uid || '');
+  if (!/^[A-Za-z0-9]{10,40}$/.test(uid)) return { ok: false, error: 'geçersiz' };
+  const v = await fsDoc('users/' + uid); // servis hesabıyla
+  if (!v || v.role !== 'admin' || v.staff !== true) return { ok: false, error: 'Sadece ekip üyelerinde yapılabilir' };
+  if (path === '/staff/pw') {
+    const pw = String(b.password || ''); if (pw.length < 6) return { ok: false, error: 'Şifre en az 6 karakter olmalı' };
+    await authUpdate(env, { localId: uid, password: pw }); return { ok: true };
+  }
+  // /staff/revoke: disable true → hesap kilitlenir + açık oturumlar düşer; false → kilit kalkar
+  const off = !!b.disable;
+  await authUpdate(env, off ? { localId: uid, disableUser: true, validSince: String(Math.floor(Date.now() / 1000)) } : { localId: uid, disableUser: false });
+  return { ok: true };
+}
+// geçmiş (audit/{gün}) 30 günden eskisi her gece silinir
+async function auditSweep(env) {
+  if (!env.FIREBASE_SA) return;
+  const tok = await saToken(env);
+  for (let i = 31; i <= 36; i++) {
+    const day = new Date(Date.now() - i * 864e5).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' });
+    await fetch(FS + 'audit/' + day, { method: 'DELETE', headers: { Authorization: 'Bearer ' + tok } }).catch(() => {});
+  }
 }
 // Dosyanın parmak izi (h, istemci hesaplar) varsa anahtar up/h/<h>.<uzantı>: aynı dosya ikinci kez yüklenmez
 const hashKey = (h, ext) => (/^[0-9a-f]{16,64}$/.test(h || '') ? `up/h/${h}.${ext}` : null);
