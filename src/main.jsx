@@ -846,8 +846,12 @@ function IntroSplash() {
   useEffect(() => { if (!want) return; try { sessionStorage.setItem('intro-seen', '1'); } catch {} const sec = Math.min(8, Math.max(0.5, Number(S.brand.splashSec) || 1.4)); const t = setTimeout(() => setMinDone(true), sec * 1000); const max = setTimeout(() => setPhase('out'), Math.max(sec + 3, 4.5) * 1000); return () => { clearTimeout(t); clearTimeout(max); }; }, []);
   useEffect(() => { if (phase === 'in' && minDone && ready) setPhase('out'); }, [minDone, ready, phase]);
   useEffect(() => { if (phase === 'out') { const t = setTimeout(() => setPhase('off'), 500); return () => clearTimeout(t); } }, [phase]);
-  // arka plan seçeneği (Ayarlar > Genel > Açılış ekranı): navy | light | white | grad
-  const sty = SPLASH_STYLES[S.brand.splashStyle] ? S.brand.splashStyle : 'navy';
+  // arka plan seçeneği (Ayarlar > Genel > Açılış ekranı): navy | light | white (varsayılan) | grad | apple
+  // Ayarlar henüz gelmediyse (ilk çizim varsayılan ayarlarla olur → lacivert görünüp 0.1 sn sonra seçili renge geçiyordu)
+  // son bilinen seçimi (localStorage 'intro-sty') kullan; ayar gelince o geçerli olur.
+  const [cachedSty] = useState(() => { try { return localStorage.getItem('intro-sty') || ''; } catch { return ''; } });
+  const rawSty = S.brand.splashStyle || cachedSty;
+  const sty = SPLASH_STYLES[rawSty] ? rawSty : 'white'; // varsayılan düz beyaz (7.11.2026)
   // index.html başındaki düz renkli örtü (pre-intro): JS yüklenene kadar arkada bir şey çizilmesin; açılış ekranı çizilince kalkar
   useLayoutEffect(() => { const h = document.documentElement; [...h.classList].filter((c) => c.startsWith('pre-')).forEach((c) => h.classList.remove(c)); }, []);
   useEffect(() => { try { localStorage.setItem('intro-sty', S.brand.splashOn === false ? 'off' : sty); } catch {} }, [sty, S.brand.splashOn]);
