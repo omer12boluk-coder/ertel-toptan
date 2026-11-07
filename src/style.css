@@ -9187,3 +9187,121 @@ html[data-theme=dark] .cd-when { color: #ff9f5a; }
 .cd-sec .cd-big-add .abx .qty-morph > .stepper { height: 44px !important; }
 .cd-sec .abx .btn.add:active:not(.back), .cd-sec .abx .stepper button:active { transform: none !important; }
 
+/* ===== 7.11.2026 Ürünler sayfası v2 (look.prodV2; false = eski sol menü). Mağaza (public). Turuncu YOK; tek vurgu tema rengi. ===== */
+.pv2-head { padding: 8px 0 4px; }
+.pv2-crumb { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+.pv2-crumb button { border: 0; background: none; padding: 2px 0; color: var(--muted); font: inherit; cursor: pointer; }
+.pv2-crumb button:hover { color: var(--accent); }
+.pv2-crumb i { font-style: normal; margin: 0 7px; opacity: .6; } .pv2-crumb b { color: var(--fg); font-weight: 500; }
+.pv2-t { margin: 0 0 14px; font: 600 clamp(32px, 4vw, 52px)/1.04 'Inter Tight', var(--f-display); letter-spacing: -.035em; color: var(--fg); }
+.pv2-cats { display: grid; gap: 8px; }
+.pv2-pills { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; margin: 0 calc(-1 * var(--pg-x, 0px)); padding-left: var(--pg-x, 0px); padding-right: var(--pg-x, 0px); }
+.pv2-pills::-webkit-scrollbar { display: none; }
+.pv2-pill { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 500 14.5px/1 Inter, var(--f-body); white-space: nowrap; cursor: pointer; }
+.pv2-pill small { color: var(--muted); font-size: 12.5px; font-weight: 400; }
+.pv2-pill.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #fff); } /* 7.11.2026: seçili = tema rengi (siyah değil) */
+.pv2-pill.on small { color: color-mix(in oklab, var(--accent-ink, #fff) 75%, transparent); }
+@media (hover: hover) and (pointer: fine) { .pv2-pill:not(.on):hover { border-color: color-mix(in oklab, var(--fg) 35%, var(--line)); } }
+.pv2-pills.sub .pv2-pill { height: 32px; padding: 0 13px; font-size: 13.5px; background: transparent; }
+.pv2-pills.sub .pv2-pill.on { background: color-mix(in oklab, var(--accent) 13%, transparent); border-color: transparent; color: var(--accent); }
+.pv2-pills.sub .pv2-pill.on small { color: color-mix(in oklab, var(--accent) 70%, transparent); }
+.cat-layout.pv2 { grid-template-columns: minmax(0, 1fr) !important; }
+.pv2-tb { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0 14px; flex-wrap: wrap; }
+.pv2-cnt { color: var(--muted); font-size: 14.5px; }
+.pv2-tb-r { display: flex; align-items: center; gap: 8px; }
+.pv2-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 500 14px/1 Inter, var(--f-body); cursor: pointer; }
+.pv2-btn i { font-style: normal; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: #fff; font: 600 11.5px/18px Inter; text-align: center; }
+.pv2-btn.on { border-color: var(--accent); color: var(--accent); }
+/* kart: fiyat koyu, 'Fiyat:' yok (TL ve KDV dahil satırları KALIR); marka logosu; stok etiketi resmin köşesinde */
+.pv2l .price-mine { color: var(--fg) !important; }
+.pv2l .price-mine > small { display: none !important; }
+.pv2l .prow { position: relative; }
+.pv2-st { position: absolute; left: 12px; top: 12px; z-index: 2; padding: 4px 10px; border-radius: 999px; background: var(--surface); color: var(--fg); font: 600 11.5px/1 Inter; box-shadow: 0 1px 4px rgba(0,0,0,.1); pointer-events: none; }
+.pv2-st.out { color: var(--muted); }
+.pv2-lg { height: 15px; width: auto; max-width: 84px; object-fit: contain; object-position: left center; display: block; }
+html[data-theme="dark"] .pv2-lg { filter: brightness(0) invert(1); opacity: .85; }
+/* kategori sayfası 'Ustaların tercihi': çubuk ve yüzdeler yok, fiyat koyu */
+.cat-layout.pv2 .cat-top-bar, .cat-layout.pv2 .cat-top li small { display: none !important; }
+.cat-layout.pv2 .cat-top em { color: var(--fg) !important; }
+.cat-layout.pv2 .cat-top-h svg { color: var(--fg); }
+.cat-layout.pv2 .scope-intro h1 { display: none; }
+/* Filtrele paneli */
+.pv2-fsec { padding: 14px 0; border-top: 1px solid var(--line); } .pv2-fsec:first-child { border-top: 0; padding-top: 4px; }
+.pv2-fsec h4 { margin: 0 0 10px; font: 600 14px/1.2 Inter, var(--f-body); }
+.pv2-brands { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto; }
+.pv2-b { position: relative; height: 56px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 8px 10px 14px; cursor: pointer; }
+.pv2-b img { max-height: 20px; max-width: 90%; object-fit: contain; }
+.pv2-b b { font: 600 13px/1.1 Inter; color: var(--fg); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.pv2-b small { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 10.5px; color: var(--muted); }
+.pv2-b.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+html[data-theme="dark"] .pv2-b img { filter: brightness(0) invert(1); opacity: .85; }
+.pv2-seg { display: flex; background: color-mix(in oklab, var(--fg) 6%, transparent); border-radius: 12px; padding: 3px; }
+.pv2-seg button { flex: 1; border: 0; background: none; padding: 9px 4px; border-radius: 9px; font: 500 13.5px/1 Inter; color: var(--fg); cursor: pointer; white-space: nowrap; }
+.pv2-seg button.on { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+.pv2-tg { width: 100%; display: flex; align-items: center; justify-content: space-between; border: 0; background: none; padding: 9px 0; font: 400 15px/1.2 Inter, var(--f-body); color: var(--fg); cursor: pointer; }
+.pv2-tg i { width: 44px; height: 26px; border-radius: 99px; background: color-mix(in oklab, var(--fg) 14%, transparent); position: relative; transition: background .2s; flex: none; }
+.pv2-tg i::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+.pv2-tg.on i { background: var(--accent); } .pv2-tg.on i::after { transform: translateX(18px); }
+@media (max-width: 899px) {
+  .pv2-t { font-size: 34px; margin-bottom: 12px; }
+  .pv2-pill { height: 36px; padding: 0 14px; font-size: 14px; }
+  .pv2-tb { margin: 4px 0 12px; }
+  .pv2-tb-r .view-sw { display: none; }
+  .pv2-st { left: 8px; top: 8px; padding: 3px 8px; font-size: 11px; }
+}
+/* 7.11.2026 Ürünler v2 — kategori geçişlerinde animasyon (başlık, alt kategori satırı, Ustaların tercihi, ürünler) */
+.pv2-in { animation: pv2Up .36s cubic-bezier(.2, .8, .2, 1) backwards; }
+.pv2-sub-in { animation: pv2Sub .32s cubic-bezier(.2, .8, .2, 1) backwards; overflow: hidden; }
+.pv2-in2 { animation: pv2Up .4s .04s cubic-bezier(.2, .8, .2, 1) backwards; }
+.pv2-in3 { animation: pv2Up .42s .07s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes pv2Up { from { opacity: 0; transform: translateY(10px); } }
+@keyframes pv2Sub { from { opacity: 0; max-height: 0; transform: translateY(-6px); } to { max-height: 60px; } }
+.pv2-crumb { min-height: 22px; }
+@media (prefers-reduced-motion: reduce) { .pv2-in, .pv2-sub-in, .pv2-in2, .pv2-in3 { animation: none; } }
+/* 7.11.2026 (2) v2 üst kısım: başlık + arama aynı satırda; Filtrele/Sırala/etiketler kategorilerin üstünde */
+.pv2-trow { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; }
+.pv2-trow .pv2-t { margin: 0; min-width: 0; }
+.pv2-q { position: relative; flex: 0 1 380px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: color-mix(in oklab, var(--fg) 6%, transparent); color: var(--muted); transition: background .2s, box-shadow .2s; }
+.pv2-q:focus-within { background: var(--surface); box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent), 0 0 0 4px color-mix(in oklab, var(--accent) 14%, transparent); }
+.pv2-q input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; padding: 0; font: 400 16px/1 Inter, var(--f-body); letter-spacing: -.01em; color: var(--fg); -webkit-appearance: none; appearance: none; }
+.pv2-q input::placeholder { color: var(--muted); opacity: .9; }
+.pv2-q input::-webkit-search-cancel-button { display: none; }
+.pv2-qx { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; background: color-mix(in oklab, var(--fg) 28%, transparent); color: var(--surface); cursor: pointer; }
+.pv2-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
+.pv2-tags { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+.pv2-tags::-webkit-scrollbar { display: none; }
+.pv2-tag, .pv2-tags .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border-radius: 999px; border: 0; background: color-mix(in oklab, var(--fg) 6%, transparent); color: var(--fg); font: 500 13.5px/1 Inter, var(--f-body); white-space: nowrap; cursor: pointer; transition: background .18s, color .18s; }
+.pv2-tag b { font-weight: 500; color: var(--muted); }
+.pv2-tag i { font-style: normal; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-ink, #fff); font: 600 11px/18px Inter; text-align: center; }
+.pv2-tag.on { background: color-mix(in oklab, var(--accent) 14%, transparent); color: var(--accent); }
+.pv2-tag.on b { color: inherit; }
+.pv2-sep { flex: none; width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
+.pv2-bar .pv2-cnt { flex: none; }
+.pv2-bar .view-sw { flex: none; }
+.pv2-head .pv2-cats { margin-bottom: 4px; }
+/* kartlar: ad tam 2 satır, logo satırı sabit → fiyat ve düğmeler hep aynı hizada */
+.pv2l.pgrid .prow-name { height: 2.6em; min-height: 0; }
+.pv2l .prow-meta:empty { display: none; }
+/* marka logosu adın ÜSTÜNDE (mağaza sitelerindeki gibi): sabit 18px satır, ad ile fiyat arası ferah */
+.pv2-brand { display: flex; align-items: center; height: 18px; }
+.pv2-brand .brand-tag { font-size: 12px; }
+.pv2l.pgrid > li.prow .prow-info { flex: 1 0 auto; }
+.pv2-lg { height: 14px; max-width: 74px; }
+@media (max-width: 899px) {
+  .pv2-trow { flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 10px; }
+  .pv2-q { flex: none; height: 38px; }
+  .pv2-bar { margin: 0 calc(-1 * var(--pg-x, 0px)) 10px; }
+  .pv2-tags { padding-left: var(--pg-x, 0px); padding-right: var(--pg-x, 0px); }
+  .pv2-bar .pv2-cnt, .pv2-bar .view-sw { display: none; }
+}
+/* v2: Sırala seçicisi (telefonda yerel select) diğer etiketlerle aynı görünüm */
+html .shell .pv2-tags .chip.select { height: 34px; padding: 0 10px 0 13px; border: 0 !important; box-shadow: none !important; background: color-mix(in oklab, var(--fg) 6%, transparent) !important; color: var(--fg) !important; }
+html .shell .pv2-tags .chip.select select { -webkit-appearance: none; appearance: none; border: 0; background: transparent !important; box-shadow: none; height: 34px; padding: 0 16px 0 0; font: 500 16px/1 Inter, var(--f-body); letter-spacing: -.01em; color: inherit; cursor: pointer; }
+@media (min-width: 900px) { html .shell .pv2-tags .chip.select select { font-size: 13.5px; } }
+html .shell .pv2-tags .chip.select::after { content: ''; position: absolute; right: 12px; top: 50%; width: 6px; height: 6px; margin-top: -5px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); opacity: .55; pointer-events: none; }
+html .shell .pv2-tags .chip.select.csel::after { display: none; }
+@media (max-width: 899px) { html .shell .pv2-tags .chip.select select { transform: scale(.85); transform-origin: left center; margin-right: -12px; } } /* 16px (iPhone yakınlaştırmasın) ama diğer etiketlerle aynı boy görünsün */
+/* arama kutusu: içteki input'un kendi odak çerçevesi kapalı (çift çerçeve görünüyordu) */
+html .shell .pv2-q input, html .shell .pv2-q input:focus { border: 0 !important; outline: 0 !important; box-shadow: none !important; background: none !important; border-radius: 0 !important; padding: 0 !important; height: 100% !important; }
+.pv2-lgt { margin-left: 5px; font: 800 12.5px/1 Inter, var(--f-body); letter-spacing: .02em; color: var(--fg); } /* Luban: logo sadece amblem → yanına adı (sadece Ürünler v2 kartlarında) */
+html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }

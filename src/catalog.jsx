@@ -1,3 +1,5 @@
+import { useBrandList } from './brandsets.jsx';
+import { ShopImg } from './shophome.jsx';
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ProdHub } from './p0home.jsx';
 import { CdHub } from './cdhome.jsx';
@@ -414,6 +416,7 @@ export function Catalog({ admin }) {
   const [imgOnly, setImgOnly] = useState(false);
   const [favOnly, setFavOnly] = useState(false);
   const [setsOnly, setSetsOnly] = useState(false);
+  const [fsOpen, setFsOpen] = useState(false); // v2 Filtrele paneli
   const [hubOff, setHubOff] = useState(false); // 6.11.2026 Ürünler açılış sayfası (look.prodHub) geçildi mi
   const [asort, setAsort] = useState({ k: null, d: null }); // yönetici tablosu başlık sıralaması
   const sortBy = (k) => setAsort((s) => (s.k !== k ? { k, d: k === 'code' || k === 'name' ? 'asc' : 'desc' } : s.d === (k === 'code' || k === 'name' ? 'asc' : 'desc') ? { k, d: k === 'code' || k === 'name' ? 'desc' : 'asc' } : { k: null, d: null }));
@@ -545,31 +548,65 @@ export function Catalog({ admin }) {
   // (telefonda dokunuşu 'takılmış' hissettiren asıl sebep buydu). Satırlar sepet/favori gibi değişiklikleri kendileri izler.
   const addCls = cardCls(S, user?.role);
   const pinKey = pinShow ? [...pinShow].join(',') : '';
+  const pv2 = !admin && user?.role === 'public' && S.look?.prodV2 !== false; // 7.11.2026 Ürünler v2 (false = eski)
   const listEl = useMemo(() => (
-    <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' ' + addCls}>
+    <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' ' + addCls + (pv2 ? ' pv2l' : '')}>
       {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
         : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} pinned={!!pinShow?.has(p.id)} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
     </ul>
-  ), [list, limit, view, admin, addCls, asort, pinKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  ), [list, limit, view, admin, addCls, asort, pinKey, pv2]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!admin && user?.role === 'public' && S.look?.prodHub && !hubOff && actives.length === 0) return <div className="catalog">{S.look?.cd ? <CdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} /> : <ProdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} />}</div>;
-  const hubBack = !admin && user?.role === 'public' && S.look?.prodHub && hubOff;
+  if (!pv2 && !admin && user?.role === 'public' && S.look?.prodHub && !hubOff && actives.length === 0) return <div className="catalog">{S.look?.cd ? <CdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} /> : <ProdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} />}</div>;
+  const hubBack = !pv2 && !admin && user?.role === 'public' && S.look?.prodHub && hubOff;
+  const fN = (brand ? 1 : 0) + (price ? 1 : 0) + (showOos ? 1 : 0) + (newOnly ? 1 : 0) + (favOnly ? 1 : 0) + (setsOnly ? 1 : 0);
+  const scopeBrands = pv2 ? (() => { const m = new Map(); for (const p of all) if (p.b && (cat == null || pcats.get(p.id)?.has(cat))) m.set(p.b, (m.get(p.b) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); })() : null;
+  const catTitle = cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : 'Ürünler';
   return (
     <div className="catalog">
       {hubBack && <button className="back-btn cat-hub-back" onClick={() => store.set({ catalogGo: { hub: true } })}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
       {/* 6.11.2026: Ürünler / Akıllı ekle / Setler üçünde de başlık + seçici AYNI yerde ve aynı genişlikte (sekme değişince kaymasın) */}
       {admin && <div className="page adm-sub prod-top"><PageHead title="Ürünler" extra={<span className="muted"> · {all.length}</span>} /><ProductsSwitch on="products" /></div>}
-      <div className={'cat-layout' + (admin ? ' resizable' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
-        <aside className="cat-side" aria-label="Kategoriler">
+      {pv2 && <div className="pv2-head">
+        {/* 7.11.2026: konum satırı HER ZAMAN var (Tüm ürünlerde 'Ana sayfa › Ürünler') → kategori değişince başlık yerinden oynamaz */}
+        <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
+        {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
+        <div className="pv2-trow">
+          <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
+          <div className="pv2-q">
+            <Icon n="search" s={17} />
+            <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} />
+            {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
+          </div>
+        </div>
+        <div className="pv2-bar">
+          <div className="pv2-tags" role="group" aria-label="Filtreler">
+            <button type="button" className={'pv2-tag' + (fN ? ' on' : '')} onClick={() => setFsOpen(true)}><Icon n="filter" s={14} />Filtrele{fN > 0 && <i>{fN}</i>}</button>
+            <ChipSelect id="cat-sort" icon="sort" value={sort} onChange={setSort} on={false} ariaLabel="Sıralama" options={[['default', 'Önerilen'], ['new', 'Yeni gelenler'], ['asc', 'Fiyat artan'], ['desc', 'Fiyat azalan'], ['name', 'İsim A–Z']]} />
+            <span className="pv2-sep" aria-hidden="true" />
+            {setN > 0 && <button type="button" className={'pv2-tag' + (setsOnly ? ' on' : '')} onClick={() => setSetsOnly(!setsOnly)}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
+            {(favs.length > 0 || favOnly) && <button type="button" className={'pv2-tag' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
+            <button type="button" className={'pv2-tag' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>
+            <button type="button" className={'pv2-tag' + (showOos ? ' on' : '')} onClick={() => setShowOos(!showOos)}><Icon n={showOos ? 'eye' : 'eyeoff'} s={14} />Stokta olmayanlar</button>
+          </div>
+          <span className="pv2-cnt">{setsOnly ? setN + ' set' : list.length.toLocaleString('tr-TR') + ' ürün'}</span>
+          <span className="view-sw" role="group" aria-label="Görünüm">
+            <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Kutu kutu" title="Kutu kutu"><Icon n="grid" s={17} /></button>
+            <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Sıra sıra" title="Sıra sıra"><Icon n="list" s={17} /></button>
+          </span>
+        </div>
+        <CatPills tree={tree} counts={counts} cat={cat} onPick={setCat} />
+      </div>}
+      <div className={'cat-layout' + (admin ? ' resizable' : '') + (pv2 ? ' pv2' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
+        {!pv2 && <aside className="cat-side" aria-label="Kategoriler">
           <h3 className="eyebrow">Kategoriler</h3>
           <button className={'cat-link' + (cat == null ? ' on' : '')} onClick={() => setCat(null)}><span>Tümü</span><b>{all.length}</b></button>
           <CatTree nodes={tree.roots} counts={counts} cat={cat} open={openPath} onPick={setCat} />
-        </aside>
+        </aside>}
 
         {admin && <span className="cat-grip" role="separator" aria-orientation="vertical" aria-label="Kategoriler panelinin genişliği" title="Sürükleyerek daralt / genişlet" onPointerDown={gripDown} onDoubleClick={() => setCatW(240)} />}
         <section className="cat-main">
-          <div className="toolbar">
+          {pv2 ? null : <div className="toolbar">
             <div className={admin ? 'tb-top' : undefined}>
               {admin && <div className="search code-search">
                 <Icon n="tag" s={15} />
@@ -602,7 +639,7 @@ export function Catalog({ admin }) {
               {admin && <ChipSelect id="adm-filter" value={adminFilter} onChange={setAdminFilter} on={adminFilter !== 'all'} ariaLabel="Filtre" options={[['all', 'Tüm ürünler'], ['active', 'Aktif olanlar'], ['inactive', 'Pasif olanlar'], ['instock', 'Stoktakiler'], ['nostock', 'Stoğu bitenler'], ['nowholesale', 'Toptan fiyatı girilmemiş'], ['noimg', 'Resmi olmayanlar'], ['notags', 'Etiketi olmayanlar'], ['pricechanged', 'Toptanı kontrol edilecekler'], ['new', 'Siteden yeni gelenler'], ['siteoff', 'Sitede satışta olmayanlar']]} />}
 
             </div>
-          </div>
+          </div>}
 
           {admin && adminFilter === 'pricechanged' && (
             <div className="banner info price-alert"><Icon n="tag" /><div>{changedN ? <>Bu ürünlerin liste fiyatı değişti; elle girdiğiniz toptan fiyat korunuyor. Uygunsa dokunmayın, değilse <b>Düzenle</b>'den yeni toptan fiyatı yazın. Hepsine baktıysanız uyarıyı kaldırın.</> : 'Kontrol edilecek ürün kalmadı.'}</div>
@@ -612,16 +649,16 @@ export function Catalog({ admin }) {
             <div className="banner warn price-alert"><Icon n="tag" /><div><b>{changedN} ürünün liste fiyatı değişti ve elle girdiğiniz toptan fiyatı var.</b> Toptan fiyatı yeni liste fiyatına göre hâlâ uygun mu bakın (otomatik toptanlılar kendiliğinden güncellenir).</div><button className="btn sm outline" onClick={() => setAdminFilter('pricechanged')}>Göster</button></div>
           )}
           
-          {actives.length > 0 && (
+          {actives.length > (pv2 && cat != null ? 1 : 0) && (
             <div className="af-row" aria-label="Seçili filtreler">
-              {actives.map(([l, off], i) => <button key={i} className="af-chip" onClick={off} title="Filtreyi kaldır">{l}<Icon n="x" s={13} /></button>)}
+              {actives.filter(([l]) => !(pv2 && cat != null && l === (tree.nodes.get(cat)?.name || catName(S, cat)))).map(([l, off], i) => <button key={i} className="af-chip" onClick={off} title="Filtreyi kaldır">{l}<Icon n="x" s={13} /></button>)}
               {actives.length > 1 && <button className="link af-clear" onClick={clearAll}>Tümünü temizle</button>}
             </div>
           )}
           {widened && <div className="banner info widen"><Icon n="search" /><div><b>“{q.trim()}” {scopeName} içinde yok.</b> Tüm ürünlerde bulunan {list.length} sonucu gösteriyoruz.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Filtreyi kaldır</button></div>}
           {moreOutside > 0 && <div className="banner info widen"><Icon n="search" /><div>{scopeName} dışında da <b>{moreOutside} sonuç</b> var.</div><button className="btn sm outline" onClick={() => { setCat(null); setBrand(''); }}>Tüm ürünlerde ara</button></div>}
           {!admin && user?.role === 'public' && !q.trim() && <ScopeIntro S={S} cat={cat} brand={brand} name={scopeName} />}
-          <div className="result-line">
+          {!pv2 && <div className="result-line">
             <span>{setsOnly && user?.role === 'public' ? setN + ' set' : <>{list.length.toLocaleString('tr-TR')} ürün</>}{!(setsOnly && user?.role === 'public') && !widened && scopeName && <> · <b>{scopeName}</b></>}</span>
             {admin && <SyncButton icon />}
             <span className="view-sw" role="group" aria-label="Görünüm">
@@ -629,21 +666,22 @@ export function Catalog({ admin }) {
               <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Sıra sıra" title="Sıra sıra"><Icon n="list" s={17} /></button>
             </span>
             {!admin && cartCount > 0 && <button className="link" onClick={() => go('sepet')}>Sepette {cartCount} kalem →</button>}
-          </div>
+          </div>}
 
-          {!admin && user?.role === 'public' && cat != null && !q.trim() && <CatTop ids={catIds} onOpen={setOpen} />}
+          {!admin && user?.role === 'public' && cat != null && !q.trim() && (pv2 ? <div key={'c' + cat} className="pv2-in2"><CatTop ids={catIds} onOpen={setOpen} /></div> : <CatTop ids={catIds} onOpen={setOpen} />)}
           {!admin && user?.role === 'public' && !setsOnly && q.trim() && <SetHits q={q} />}
           {setsOnly && user?.role === 'public' ? <SetGrid /> : shown.length === 0 && favOnly && actives.length === 1 ? (
             <Empty icon="heart" title="Henüz favoriniz yok"><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p></Empty>
           ) : shown.length === 0 ? (
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
-          ) : (
+          ) : pv2 ? <div key={'l' + cat + '|' + brand + '|' + price + '|' + sort} className="pv2-in3">{listEl}</div> : (
             listEl
           )}
           {!(setsOnly && user?.role === 'public') && limit < list.length && <div ref={sentinel} className="more"><button className="btn ghost" onClick={more}>Daha fazla göster ({list.length - limit})</button></div>}
         </section>
       </div>
 
+      {fsOpen && pv2 && <FilterSheet onClose={() => setFsOpen(false)} n={setsOnly ? setN : list.length} brands={scopeBrands} brand={brand} setBrand={setBrand} price={price} setPrice={setPrice} showOos={showOos} setShowOos={setShowOos} newOnly={newOnly} setNewOnly={setNewOnly} favOnly={favOnly} setFavOnly={setFavOnly} favN={favs.length} setsOnly={setsOnly} setSetsOnly={setSetsOnly} setN={setN} clear={() => { setBrand(''); setPrice(''); setShowOos(false); setNewOnly(false); setFavOnly(false); setSetsOnly(false); }} />}
       {catSheet && (
         <Sheet title="Kategoriler" onClose={() => setCatSheet(false)}>
           <div className="cat-grid">
@@ -656,6 +694,47 @@ export function Catalog({ admin }) {
       {edit && <ProductEdit p={edit.id ? edit : null} copy={edit.copy} onClose={() => setEdit(null)} />}
       {copyPick && <CopyPick onClose={() => setCopyPick(false)} onPick={(p) => { setCopyPick(false); setEdit({ copy: p }); }} />}
     </div>
+  );
+}
+
+// ---- 7.11.2026 Ürünler sayfası v2 (look.prodV2; false = eski sol menü): yazılı kategori hapları (ana → alt → alt), Filtrele paneli ----
+function CatPills({ tree, counts, cat, onPick }) {
+  const vis = (arr) => arr.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden);
+  const chain = cat == null ? [] : [...tree.ancestors(cat)].reverse(); // kök → seçili
+  const rows = [{ nodes: vis(tree.roots), on: chain[0] ?? null, all: null }];
+  for (let i = 0; i < chain.length; i++) {
+    const n = tree.nodes.get(chain[i]); const kids = n ? vis(n.children) : [];
+    if (!kids.length) break;
+    rows.push({ nodes: kids, on: chain[i + 1] ?? null, all: n.id });
+  }
+  const ref = useRef(null);
+  useEffect(() => { // seçili hap görünür alana kayar (yana kaydırılmış satırda kaybolmasın)
+    const el = ref.current; if (!el) return;
+    el.querySelectorAll('.pv2-pills').forEach((row) => { const on = row.querySelector('.pv2-pill.on'); if (!on || on === row.firstElementChild) return; const l = on.offsetLeft - row.offsetLeft, w = on.offsetWidth; if (l < row.scrollLeft || l + w > row.scrollLeft + row.clientWidth) row.scrollTo({ left: Math.max(0, l - 24), behavior: 'smooth' }); });
+  }, [cat]);
+  return <div className="pv2-cats" ref={ref}>{rows.map((r, i) => (
+    <div key={i ? 's' + r.all : 'root'} className={'pv2-pills' + (i ? ' sub pv2-sub-in' : '')} role="tablist">
+      <button type="button" className={'pv2-pill' + (r.on == null ? ' on' : '')} onClick={() => onPick(r.all)}>{i ? 'Tümü' : 'Tüm ürünler'}</button>
+      {r.nodes.map((n) => <button key={n.id} type="button" className={'pv2-pill' + (r.on === n.id ? ' on' : '')} onClick={() => onPick(n.id)}>{n.name}<small>{counts.get(n.id)}</small></button>)}
+    </div>))}</div>;
+}
+function FilterSheet({ onClose, n, brands, brand, setBrand, price, setPrice, showOos, setShowOos, newOnly, setNewOnly, favOnly, setFavOnly, favN, setsOnly, setSetsOnly, setN, clear }) {
+  const blist = useBrandList();
+  const logos = useMemo(() => { const m = new Map(); for (const b of blist) if (b.logo) m.set(norm(b.n), b.logo); return m; }, [blist]);
+  const Tg = ({ on, set, label }) => <button type="button" className={'pv2-tg' + (on ? ' on' : '')} onClick={() => set(!on)}><span>{label}</span><i /></button>;
+  return (
+    <Sheet title="Filtrele" onClose={onClose} cls="pv2-fs" footer={<><button className="btn ghost" onClick={clear}>Temizle</button><button className="btn primary" onClick={onClose}>{n.toLocaleString('tr-TR')} ürünü göster</button></>}>
+      <div className="pv2-fsec"><h4>Marka</h4><div className="pv2-brands">
+        {brands.map(([b2, c]) => { const l = logos.get(norm(b2)); return <button key={b2} type="button" className={'pv2-b' + (brand === b2 ? ' on' : '')} onClick={() => setBrand(brand === b2 ? '' : b2)} title={b2}>{l ? <ShopImg v={l} alt={b2} /> : <b>{b2}</b>}<small>{c}</small></button>; })}
+      </div></div>
+      <div className="pv2-fsec"><h4>Fiyat</h4><div className="pv2-seg">{[['', 'Hepsi'], ['u10', '$10 altı'], ['10-50', '$10–50'], ['50-200', '$50–200'], ['200+', '$200+']].map(([k, l]) => <button key={k} type="button" className={price === k ? 'on' : ''} onClick={() => setPrice(k)}>{l}</button>)}</div></div>
+      <div className="pv2-fsec"><h4>Göster</h4>
+        <Tg on={showOos} set={setShowOos} label="Stokta olmayanlar da" />
+        <Tg on={newOnly} set={setNewOnly} label="Sadece yeni gelenler" />
+        {favN > 0 && <Tg on={favOnly} set={setFavOnly} label={`Favorilerim (${favN})`} />}
+        {setN > 0 && <Tg on={setsOnly} set={setSetsOnly} label={`Setler (${setN})`} />}
+      </div>
+    </Sheet>
   );
 }
 
@@ -688,6 +767,15 @@ function InlineQty({ qty, onChange, icon }) {
   );
 }
 
+// v2 kart: marka logosu (Ayarlar marka logoları + ana sayfa marka listesi; ayar nesnesi değişmedikçe önbellekte)
+const _lgc = new WeakMap();
+// önizleme adresinde (…--dal.web.app) marka her zaman gösterilir (kullanıcı 7.11.2026: 'demoya özel aç, canlıya dokunma')
+const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
+function logoOf(S, b) {
+  if (!b) return null; const BL = S.brandLogos || {}; let m = _lgc.get(BL);
+  if (!m) { m = new Map(); for (const x of S.shopHome?.brands || []) if (x?.name && x.logo) m.set(x.name.toLocaleLowerCase('tr'), x.logo); for (const [k, v] of Object.entries(BL)) if (v?.logo) m.set(k.toLocaleLowerCase('tr'), v.logo); _lgc.set(BL, m); }
+  return m.get(b.toLocaleLowerCase('tr')) || null;
+}
 function ProductRow({ p, admin, onOpen, pinned }) {
   // sadece ilgili parçaları izler (31.10.2026): başka bir şey değişince (bildirim, sipariş, pencere) 60 satırın hepsi yeniden çizilmesin
   const S = useStore((st) => st.settings); const user = useStore((st) => st.user);
@@ -698,6 +786,9 @@ function ProductRow({ p, admin, onOpen, pinned }) {
   const [ix, setIx] = useState(0);
   const multi = FINE && S.cards?.hoverImgs !== false && imgFiles(p).length > 1;
   const st = stockInfo(p, S);
+  const v2 = !admin && user?.role === 'public' && S.look?.prodV2 !== false;
+  const lg = v2 ? logoOf(S, p.b) : null;
+  const low = Number(S.catalog.lowStock) || 3;
   const site = links.product(p, S);
   const menu = (e) => openMenu(e, admin ? [
     { label: 'Düzenle', icon: 'edit', onClick: onOpen },
@@ -728,12 +819,14 @@ function ProductRow({ p, admin, onOpen, pinned }) {
       {pinned && <span className="pin-tag"><Icon n="tack" s={12} />Öne çıkan</span>}
       <button className="prow-main" onClick={onOpen}>
         <CardImg p={p} hov={hov && multi} ix={ix} setIx={setIx} />
+        {v2 && p.s <= low && <span className={'pv2-st' + (p.s <= 0 ? ' out' : '')}>{p.s <= 0 ? 'Tükendi' : 'Son ' + p.s}</span>}
         <div className="prow-info">
+          {v2 && (S.catalog.showBrand || PV_HOST) && <span className="pv2-brand">{p.b && (lg ? <><ShopImg v={lg} className="pv2-lg" alt={p.b} />{/^luban$/i.test(p.b) && <b className="pv2-lgt">LUBAN</b>}</> : <span className="brand-tag">{p.b}</span>)}</span>}
           <span className="prow-name">{p.n}</span>
           <span className="prow-meta">
             {admin && <code>{p.k}</code>}
-            {S.catalog.showBrand && p.b && <span className="brand-tag">{p.b}</span>}
-            {st && <span className={'dot tone-' + st.tone}>{st.t}</span>}
+            {!v2 && S.catalog.showBrand && p.b && <span className="brand-tag">{p.b}</span>}
+            {st && !v2 && <span className={'dot tone-' + st.tone}>{st.t}</span>}
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
             {admin && p.nw && <span className="dot tone-info">Siteden yeni</span>}
             {admin && p.so && <span className="dot tone-muted">Sitede satışta değil</span>}

@@ -114,6 +114,8 @@ export function ShopImg({ v, className, alt = '' }) {
   const onLoad = (e) => {
     const i = e.currentTarget; if (i.naturalWidth && i.naturalWidth / i.naturalHeight < 1.7) i.classList.add('sq');
     if (/sh-mq-logo/.test(className || '')) applyLogoBox(i, logoBox(i));
+    // 7.11.2026 Ürünler v2 kart logosu: eşit 'görsel ağırlık' (uzun logolar incelir, kareler büyür; Relife gibi iri yazılar taşmaz)
+    if (/pv2-lg/.test(className || '') && i.naturalWidth) { const r = i.naturalWidth / i.naturalHeight; let h = Math.max(9, Math.min(17, 22 * Math.pow(r, -0.4))), w = h * r; if (w > 68) { w = 68; h = w / r; } /* uzun logolar daha az küçülür, 2UUL gibi kısa logolar büyür */ const k = ({ '2uul': 1.3 })[(i.alt || '').toLowerCase()]; if (k) { h *= k; w *= k; } /* tek tek ayar (kullanıcı: 2UUL küçük) */ i.style.height = h.toFixed(1) + 'px'; i.style.width = w.toFixed(1) + 'px'; }
     // koyu yazılı logo mu? (gece modunda yalnız koyu kısımları açılır; renkler korunur)
     if (/logo/.test(className || '') && isInk(i)) i.classList.add('ink');
   };
