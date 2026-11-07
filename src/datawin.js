@@ -4,7 +4,6 @@
 //  - mağaza üyeleri: açılışta son 62 gün (Genel bakış + zil için); Müşteriler > Mağaza müşterileri açılınca hepsi
 // Durum store'da: win = { orders, reqs (başlangıç tarihi ms), membersAll }
 import { store } from './store.js';
-import { can, needPerm } from './team.js';
 import { ORDER_OPEN, OPEN_STATUSES } from './config.js';
 import { autoSum } from './reviews.jsx';
 import { PV, pvList } from './pvorders.js';
@@ -72,7 +71,6 @@ const LIST = { lcarts: 'lcarts', orders: 'orders', reqs: 'requests', preqs: 'pre
 export const olderStep = () => Math.max(30, wd());
 export function loadOlder(kind) {
   if (!A) return Promise.resolve(null);
-  if (!needPerm('heavy', 'Daha eski kayıtlar')) return Promise.resolve(null); // 8.11.2026 ekip: çok okuma yapan düğme
   const before = new Set((store.s[LIST[kind]] || []).map((x) => x.id));
   const to = store.s.win[kind];
   const w = { ...store.s.win }; w[kind] = to - olderStep() * DAY;
@@ -86,7 +84,6 @@ export function loadOlder(kind) {
 // Tüm mağaza üyeleri (Müşteriler > Mağaza müşterileri, üye penceresi)
 export function ensureAllMembers() {
   if (!A || store.s.win?.membersAll) return;
-  if (!can('heavy')) return; // 8.11.2026 ekip: tüm üyeler ~3.000 okuma → sadece yetkili
   store.set({ win: { ...store.s.win, membersAll: true } });
   watchMembers();
 }

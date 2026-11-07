@@ -1,6 +1,5 @@
 // Yönetim paneli > Siparişler: online mağazadan (/magaza) gelen siparişler ve mağaza üyeleri.
 // Sipariş: durum adımları (Onayla → Kargoya ver / Teslime hazır → Tamamlandı), müşteriye WhatsApp, kargo takip no, iç not.
-import { can } from './team.js';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, openOrder, go } from './store.js';
 import { CarrierMark, PageHead, SubNav, Thumb, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
@@ -54,9 +53,8 @@ export function OlderBtn({ kind, what = 'siparişleri', unit = 'sipariş', onDon
   return (
     <div className="older-row">
       <span className="muted">Son <b>{days} günün</b> {what} gösteriliyor ({dShort(since)} ve sonrası)</span>
-      {!can('heavy') ? <span className="muted older-np"><Icon n="lock" s={13} /> Daha eskisini yükleme: “Çok veri okuyan düğmeler” yetkisi gerekiyor</span> : <>
       {last && <span className="older-last">{dShort(last.from)} – {dShort(last.to)}: {last.added.length ? last.added.length + ' ' + unit + ' eklendi' : unit + ' yok'}</span>}
-      <button className="btn sm" disabled={busy} onClick={run}>{busy ? <><span className="spin" aria-hidden="true" />Yükleniyor…</> : <><Icon n="clock" s={15} />{olderStep()} gün daha eskisini yükle</>}</button></>}
+      <button className="btn sm" disabled={busy} onClick={run}>{busy ? <><span className="spin" aria-hidden="true" />Yükleniyor…</> : <><Icon n="clock" s={15} />{olderStep()} gün daha eskisini yükle</>}</button>
     </div>
   );
 }
@@ -372,7 +370,7 @@ function OrderDetail({ id }) {
   const allMem = useStore((st) => st.win?.membersAll);
   const memObj = mem ? members.find((m) => m.uid === mem) : null;
   // panel açılışında sadece son üyeler yüklü: bulunamazsa önce hepsini getir, yine yoksa haber ver
-  useEffect(() => { if (mem && !memObj) { if (!allMem && can('heavy')) ensureAllMembers(); else { if (!allMem) toast('Bu üye son günlerde kayıt olmamış; tüm üyeleri açmak için “Çok veri okuyan düğmeler” yetkisi gerekiyor', 'bad'); else toast('Üye kaydı bulunamadı', 'bad'); setMem(null); } } }, [mem, allMem, !!memObj]);
+  useEffect(() => { if (mem && !memObj) { if (!allMem) ensureAllMembers(); else { toast('Üye kaydı bulunamadı', 'bad'); setMem(null); } } }, [mem, allMem, !!memObj]);
   // listede yoksa (eski sipariş / linkten gelindi) tek başına getir
   useEffect(() => { if (fromList) return; const un = api().watchOrder(id, setOne); return () => un && un(); }, [id, !!fromList]);
   // sipariş açıkken telefondaki alt menü kayarak gizlenir, listeye dönünce geri gelir
@@ -502,7 +500,6 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
         <div className="search"><Icon n="search" s={18} /><input id="mem-search" type="search" placeholder="Ad, e-posta, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         {!outer && <button className="btn primary" onClick={() => setNewOpen(true)}><Icon n="plus" s={16} />Yeni üye</button>}
       </div>
-      {!can('heavy') && <p className="fine older-last mem-np"><Icon n="lock" s={13} /> Sadece son günlerde kayıt olan üyeler gösteriliyor. Tüm üyeleri açmak çok veri okuduğu için “Çok veri okuyan düğmeler” yetkisi gerekiyor.</p>}
       {list.length === 0 ? <Empty icon="users" title={members.length ? 'Eşleşen üye yok' : 'Henüz mağaza üyesi yok'}>{!members.length && <p>Müşteriler mağazada <b>Hesabım</b>’dan ya da sipariş verirken üye olabilir.</p>}</Empty> : (
         <ul className="olist">
           {list.map((m) => (
