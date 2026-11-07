@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect, useMemo } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, api, store, toast } from './store.js';
 import { initials, hue, vatOf, fmtTotals, picUrl, isAbsImg, fbSkip } from './utils.js';
@@ -417,13 +417,22 @@ export function Empty({ icon = 'box', title, children }) {
   );
 }
 
-export function useInfinite(cb) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const io = new IntersectionObserver((e) => e[0].isIntersecting && cb(), { rootMargin: '600px' });
-    io.observe(el); return () => io.disconnect();
-  }, [cb]);
+// Sonsuz liste: sayfanın sonuna gelmeden (ekranın ~2 boyu önceden) yeni ürünler eklenir. 7.11.2026 (gece): eskiden 600px idi ve
+// yükleme sonrası işaretçi hâlâ görünürdeyse bir daha tetiklenmiyordu ('sayfanın sonuna gelmiş gibi') → geri çağıran ref + her
+// eklemeden sonra yeniden yoklama (dep), işaretçi yakındaysa bir sonraki parti hemen gelir.
+export function useInfinite(cb, dep) {
+  const cbr = useRef(cb); cbr.current = cb;
+  const elr = useRef(null); const ior = useRef(null);
+  const margin = () => Math.max(1500, innerHeight * 3);
+  const near = () => { const el = elr.current; return !!el && el.isConnected && el.getBoundingClientRect().top < innerHeight + margin(); };
+  const ref = useCallback((el) => {
+    ior.current?.disconnect(); ior.current = null; elr.current = el;
+    if (!el) return;
+    const io = new IntersectionObserver((e) => { if (e[0].isIntersecting) cbr.current(); }, { rootMargin: margin() + 'px 0px' });
+    io.observe(el); ior.current = io;
+  }, []);
+  useEffect(() => () => ior.current?.disconnect(), []);
+  useEffect(() => { if (!near()) return; const t = setTimeout(() => near() && cbr.current(), 80); return () => clearTimeout(t); }, [dep]);
   return ref;
 }
 

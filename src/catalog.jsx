@@ -540,7 +540,7 @@ export function Catalog({ admin }) {
   const PS = (matchMedia('(max-width: 899px)').matches && Number(S.catalog.pageSizeM)) || Number(S.catalog.pageSize) || 60;
   useLayoutEffect(() => setLimit(PS), [q, qk, cat, sort, stockOnly, showOos, adminFilter, brand, price, newOnly, imgOnly, favOnly, PS]);
   const more = useCallback(() => setLimit((l) => l + PS), [PS]);
-  const sentinel = useInfinite(more);
+  const sentinel = useInfinite(more, limit);
   const shown = list.slice(0, limit);
   const cartCount = Object.keys(cart).length;
   const setN = useStore((st) => (st.user?.role === 'public' ? liveSets(st.settings).length : 0));
