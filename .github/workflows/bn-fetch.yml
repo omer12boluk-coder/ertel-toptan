@@ -1,0 +1,19 @@
+name: Banner resimleri (teşhis)
+on:
+  push:
+    branches: [img-probe]
+    paths: [tools/bn-list.json, tools/bn-fetch.mjs]
+permissions:
+  contents: write
+jobs:
+  get:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/bn-fetch.mjs
+      - run: |
+          git config user.name "bn-bot"; git config user.email "bot@users.noreply.github.com"
+          git checkout -b banner-resim2; git add bn-raw; git commit -qm "banner resimleri" || true; git push -f origin banner-resim2
