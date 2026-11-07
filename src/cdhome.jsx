@@ -168,7 +168,7 @@ export function CdSets({ H, S }) {
 }
 
 // ---- Markalar: TÜM markalar logo duvarı (beyaz kutular, logo ortada, ürün sayısı altında) — 7.11.2026 (3) ----
-export function BrandWall({ max, logosOnly, rows, ids, only }) {
+export function BrandWall({ max, logosOnly, rows, ids, only, scroll }) {
   const all = useBrandList();
   const base = logosOnly ? all.filter((b) => b.logo) : all;
   // 7.11.2026 (7) elle seçilen markalar önde (seçilen sırayla); 'only' ise sadece onlar
@@ -176,8 +176,12 @@ export function BrandWall({ max, logosOnly, rows, ids, only }) {
   if (ids?.length) { const by = new Map(all.map((b) => [b.n, b])); const pick = ids.map((n) => by.get(n)).filter(Boolean); list = only === false ? [...pick, ...base.filter((b) => !ids.includes(b.n))] : pick; }
   // kaç sıra: sütun sayısı ekrana göre (CSS ile aynı: telefon 3, ≥900 4-8) → tam sıra
   const cols = useBwCols();
-  if (rows) list = list.slice(0, rows * cols); else if (max) list = list.slice(0, max);
-  return <div className="cd-bwall" style={{ '--bw-cols': cols }}>{list.map((b) => (
+  // 7.11.2026 (12) telefonda (ana sayfa bölümü): en çok 2 sıra, kalan markalar yana kaydırılır (kesilmez)
+  const sc = scroll && cols === 3;
+  if (sc) { if (max && !rows) list = list.slice(0, max); }
+  else if (rows) list = list.slice(0, rows * cols); else if (max) list = list.slice(0, max);
+  const nr = sc ? Math.min(2, rows || 2, Math.ceil(list.length / 3)) : 0;
+  return <div className={'cd-bwall' + (sc ? ' bw-scroll' : '')} style={{ '--bw-cols': cols, '--bw-rows': nr || undefined }}>{list.map((b) => (
     <button key={b.n} type="button" className="cd-bw" style={b.color ? { '--bc': b.color } : undefined} onClick={() => openBrand(b.n)} title={b.n}>
       <span className="cd-bw-lg">{b.logo ? <ShopImg v={b.logo} alt={b.n} /> : <b>{b.n}</b>}</span>
       <small>{b.c} ürün</small>
@@ -196,7 +200,7 @@ export function CdBrands({ H }) {
   return (
     <section className="cd-sec rv">
       <Head eye={C.eye ?? 'Markalar'} title={C.title || 'Tüm markalar.'} more={['Markalar sayfası', () => go('markalar')]} />
-      <BrandWall max={Number(C.n) || 0} rows={Number(C.rows) || 0} ids={C.ids} only={C.only} logosOnly={!!C.logosOnly} />
+      <BrandWall max={Number(C.n) || 0} rows={Number(C.rows) || 0} ids={C.ids} only={C.only} logosOnly={!!C.logosOnly} scroll />
     </section>
   );
 }
