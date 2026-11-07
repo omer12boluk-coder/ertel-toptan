@@ -568,8 +568,9 @@ export function Catalog({ admin }) {
       {/* 6.11.2026: Ürünler / Akıllı ekle / Setler üçünde de başlık + seçici AYNI yerde ve aynı genişlikte (sekme değişince kaymasın) */}
       {admin && <div className="page adm-sub prod-top"><PageHead title="Ürünler" extra={<span className="muted"> · {all.length}</span>} /><ProductsSwitch on="products" /></div>}
       {pv2 && <div className="pv2-head">
-        {cat != null && <nav className="pv2-crumb" aria-label="Konum"><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></nav>}
-        <h1 className="pv2-t">{catTitle}.</h1>
+        {/* 7.11.2026: konum satırı HER ZAMAN var (Tüm ürünlerde 'Ana sayfa › Ürünler') → kategori değişince başlık yerinden oynamaz */}
+        <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
+        <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
         <CatPills tree={tree} counts={counts} cat={cat} onPick={setCat} />
       </div>}
       <div className={'cat-layout' + (admin ? ' resizable' : '') + (pv2 ? ' pv2' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
@@ -653,13 +654,13 @@ export function Catalog({ admin }) {
             {!admin && cartCount > 0 && <button className="link" onClick={() => go('sepet')}>Sepette {cartCount} kalem →</button>}
           </div>}
 
-          {!admin && user?.role === 'public' && cat != null && !q.trim() && <CatTop ids={catIds} onOpen={setOpen} />}
+          {!admin && user?.role === 'public' && cat != null && !q.trim() && (pv2 ? <div key={'c' + cat} className="pv2-in2"><CatTop ids={catIds} onOpen={setOpen} /></div> : <CatTop ids={catIds} onOpen={setOpen} />)}
           {!admin && user?.role === 'public' && !setsOnly && q.trim() && <SetHits q={q} />}
           {setsOnly && user?.role === 'public' ? <SetGrid /> : shown.length === 0 && favOnly && actives.length === 1 ? (
             <Empty icon="heart" title="Henüz favoriniz yok"><p>Ürünlerdeki kalp simgesine dokunarak beğendiklerinizi buraya ekleyin.</p></Empty>
           ) : shown.length === 0 ? (
             <Empty icon="search" title="Bu aramayla eşleşen ürün yok"><p>Kelimeyi kısaltmayı ya da filtreleri kaldırmayı deneyin.</p>{actives.length > 0 && <button className="btn primary" onClick={clearAll}><Icon n="x" s={15} />Tüm filtreleri temizle</button>}</Empty>
-          ) : (
+          ) : pv2 ? <div key={'l' + cat + '|' + brand + '|' + price + '|' + sort} className="pv2-in3">{listEl}</div> : (
             listEl
           )}
           {!(setsOnly && user?.role === 'public') && limit < list.length && <div ref={sentinel} className="more"><button className="btn ghost" onClick={more}>Daha fazla göster ({list.length - limit})</button></div>}
@@ -692,8 +693,13 @@ function CatPills({ tree, counts, cat, onPick }) {
     if (!kids.length) break;
     rows.push({ nodes: kids, on: chain[i + 1] ?? null, all: n.id });
   }
-  return <div className="pv2-cats">{rows.map((r, i) => (
-    <div key={i} className={'pv2-pills' + (i ? ' sub' : '')} role="tablist">
+  const ref = useRef(null);
+  useEffect(() => { // seçili hap görünür alana kayar (yana kaydırılmış satırda kaybolmasın)
+    const el = ref.current; if (!el) return;
+    el.querySelectorAll('.pv2-pills').forEach((row) => { const on = row.querySelector('.pv2-pill.on'); if (!on || on === row.firstElementChild) return; const l = on.offsetLeft - row.offsetLeft, w = on.offsetWidth; if (l < row.scrollLeft || l + w > row.scrollLeft + row.clientWidth) row.scrollTo({ left: Math.max(0, l - 24), behavior: 'smooth' }); });
+  }, [cat]);
+  return <div className="pv2-cats" ref={ref}>{rows.map((r, i) => (
+    <div key={i ? 's' + r.all : 'root'} className={'pv2-pills' + (i ? ' sub pv2-sub-in' : '')} role="tablist">
       <button type="button" className={'pv2-pill' + (r.on == null ? ' on' : '')} onClick={() => onPick(r.all)}>{i ? 'Tümü' : 'Tüm ürünler'}</button>
       {r.nodes.map((n) => <button key={n.id} type="button" className={'pv2-pill' + (r.on === n.id ? ' on' : '')} onClick={() => onPick(n.id)}>{n.name}<small>{counts.get(n.id)}</small></button>)}
     </div>))}</div>;

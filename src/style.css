@@ -9078,7 +9078,9 @@ img[src*="/brands/ersa."] { --lk: 1.080; --lc: -0.040; --ll: -0.011; }
 :is(.cd-big-add, .cd-tile) .qty-morph > .stepper { width: 100%; }
 :is(.cd-big-add, .cd-tile) .qty-morph.grow > .stepper { animation: abIn .26s cubic-bezier(.2, .8, .2, 1) backwards !important; transform-origin: center; }
 :is(.cd-big-add, .cd-tile) .qty-morph.grow > .stepper > * { animation: none !important; }
-:is(.cd-big-add, .cd-tile) .btn.add.back { animation: abIn .22s cubic-bezier(.2, .8, .2, 1) backwards !important; }
+:is(.cd-big-add, .cd-tile) .btn.add.back { animation: abBack .42s cubic-bezier(.2, .9, .25, 1) backwards !important; transform-origin: center; } /* 7.11.2026: kaldırma animasyonu = sitenin geri kalanıyla aynı (daralıp açılır) */
+.cd-sec .abx .btn.add.back > .add-l { animation: abLbl .36s .05s cubic-bezier(.3, 1.4, .5, 1) backwards !important; } /* yazı dönmez, büyüyerek gelir; + simgesi döner */
+@keyframes abLbl { from { opacity: 0; transform: scale(.6); } }
 .cd-big-add { align-items: center; }
 .cd-big-add .abx { flex: none; width: 200px; }
 @media (max-width: 899px) { .cd-big-add .abx { width: min(200px, 60vw); } }
@@ -9184,9 +9186,6 @@ html[data-theme=dark] .cd-when { color: #ff9f5a; }
 .cd-sec .cd-big-add .abx { height: 44px; }
 .cd-sec .cd-big-add .abx .qty-morph > .stepper { height: 44px !important; }
 .cd-sec .abx .btn.add:active:not(.back), .cd-sec .abx .stepper button:active { transform: none !important; }
-/* geri dönüşte (−1+ → Sepete ekle) yazı da dönerek/küçülerek geliyordu ('Sepete ekle kısmı oynuyor'): dönme sadece + simgesinde, yazı sadece belirir */
-.cd-sec .abx .btn.add.back > .add-l { animation: abFadeOnly .3s .05s ease backwards !important; }
-@keyframes abFadeOnly { from { opacity: 0; } }
 
 /* ===== 7.11.2026 Ürünler sayfası v2 (look.prodV2; false = eski sol menü). Mağaza (public). Turuncu YOK; tek vurgu tema rengi. ===== */
 .pv2-head { padding: 8px 0 4px; }
@@ -9250,3 +9249,12 @@ html[data-theme="dark"] .pv2-b img { filter: brightness(0) invert(1); opacity: .
   .pv2-tb-r .view-sw { display: none; }
   .pv2-st { left: 8px; top: 8px; padding: 3px 8px; font-size: 11px; }
 }
+/* 7.11.2026 Ürünler v2 — kategori geçişlerinde animasyon (başlık, alt kategori satırı, Ustaların tercihi, ürünler) */
+.pv2-in { animation: pv2Up .36s cubic-bezier(.2, .8, .2, 1) backwards; }
+.pv2-sub-in { animation: pv2Sub .32s cubic-bezier(.2, .8, .2, 1) backwards; overflow: hidden; }
+.pv2-in2 { animation: pv2Up .4s .04s cubic-bezier(.2, .8, .2, 1) backwards; }
+.pv2-in3 { animation: pv2Up .42s .07s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes pv2Up { from { opacity: 0; transform: translateY(10px); } }
+@keyframes pv2Sub { from { opacity: 0; max-height: 0; transform: translateY(-6px); } to { max-height: 60px; } }
+.pv2-crumb { min-height: 22px; }
+@media (prefers-reduced-motion: reduce) { .pv2-in, .pv2-sub-in, .pv2-in2, .pv2-in3 { animation: none; } }
