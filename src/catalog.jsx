@@ -771,6 +771,8 @@ function InlineQty({ qty, onChange, icon }) {
 const _lgc = new WeakMap();
 // önizleme adresinde (…--dal.web.app) marka her zaman gösterilir (kullanıcı 7.11.2026: 'demoya özel aç, canlıya dokunma')
 const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
+// Ürünler v2 kartında logonun yanına yazı (logo sadece amblemse). src: kartta kullanılacak amblem (başka yerlerde tam logo kalır)
+const LG_TXT = { luban: { t: 'LUBAN' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'MEGA-IDEA', src: '/brands/megaidea-i.png', c: '#f84344' } };
 function logoOf(S, b) {
   if (!b) return null; const BL = S.brandLogos || {}; let m = _lgc.get(BL);
   if (!m) { m = new Map(); for (const x of S.shopHome?.brands || []) if (x?.name && x.logo) m.set(x.name.toLocaleLowerCase('tr'), x.logo); for (const [k, v] of Object.entries(BL)) if (v?.logo) m.set(k.toLocaleLowerCase('tr'), v.logo); _lgc.set(BL, m); }
@@ -821,7 +823,7 @@ function ProductRow({ p, admin, onOpen, pinned }) {
         <CardImg p={p} hov={hov && multi} ix={ix} setIx={setIx} />
         {v2 && p.s <= low && <span className={'pv2-st' + (p.s <= 0 ? ' out' : '')}>{p.s <= 0 ? 'Tükendi' : 'Son ' + p.s}</span>}
         <div className="prow-info">
-          {v2 && (S.catalog.showBrand || PV_HOST) && <span className="pv2-brand">{p.b && (lg ? <><ShopImg v={lg} className="pv2-lg" alt={p.b} />{/^(luban|xzz)$/i.test(p.b) && <b className="pv2-lgt">{p.b.toUpperCase()}</b>}</> : <span className="brand-tag">{p.b}</span>)}</span>}
+          {v2 && (S.catalog.showBrand || PV_HOST) && <span className="pv2-brand">{p.b && (lg ? (() => { const lt = LG_TXT[p.b.toLowerCase()]; return <><ShopImg v={lt?.src || lg} className="pv2-lg" alt={p.b} />{lt && <b className="pv2-lgt" style={lt.c ? { color: lt.c } : undefined}>{lt.t}</b>}</>; })() : <span className="brand-tag">{p.b}</span>)}</span>}
           <span className="prow-name">{p.n}</span>
           <span className="prow-meta">
             {admin && <code>{p.k}</code>}
