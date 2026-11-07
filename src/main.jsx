@@ -319,7 +319,8 @@ function PvBadge() {
 // 6.11.2026: üst/alt menüden Ürünler'e basınca 'Ürünler açılış sayfası' açıksa her seferinde o sayfa gelir (Tüm ürünler'e bir kez basınca kaybolmasın)
 // 7.11.2026 (gece 2): menüden Ürünler'e dönünce kategori/filtre/yüklenen ürünler ve kaydırma yeri KORUNUR (kullanıcı: 'açtığımız her şey kayboluyor');
 // hafiflik ekran dışı kartların çizilmemesinden (content-visibility). Açılış sayfası açıksa eskisi gibi önce o.
-const navGo = (k) => { if (k === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub) store.set({ catalogGo: { hub: true } }); go(k); };
+// açılış sayfası: ilk girişte zaten o gelir; başka sayfadan dönünce listede kalınır, sadece Ürünler'deyken tekrar Ürünler'e basınca açılış sayfasına dönülür
+const navGo = (k) => { if (k === 'katalog' && store.s.tab === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub) store.set({ catalogGo: { hub: true } }); go(k); };
 function useTheme() {
   const liteTick = useLowEndProbe();
   const isAdm = useStore((s) => s.user?.role === 'admin');
@@ -1523,6 +1524,7 @@ function BotNav({ items, tab, badge }) {
       const to = s && s.i != null && go_ ? live.current.items[s.i][0] : null;
       if (to && to !== store.s.tab) { dragX.current = s.dragged ? s.x : null; navGo(to); return; } // hap bulunduğu yerden yeni sekmeye kayar
       dragX.current = null;
+      if (to && to === store.s.tab && !s.moved) navGo(to); // aynı sekmeye dokunuş (telefonda tıklama gelmiyor): en üste / Ürünler'de açılış sayfasına
       if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x}px) translateX(-50%)`; // aynı sekme / vazgeçti: yerine döner
     };
     // iPhone'da ekranın altındaki çizgiden yukarı kaydırma (uygulamadan çıkma / uygulama değiştirici) menünün alt boşluğundan başlar:
