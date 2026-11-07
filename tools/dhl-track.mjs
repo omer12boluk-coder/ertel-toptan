@@ -2,6 +2,7 @@
 // Şube barkodu okutunca DHL kaydına takip no (MNG_GONDERI_NO) düşer → sipariş "Kargoda" + kargo bilgisi yazılır,
 // müşteriye bildirim bekçiden gider (/push/status). Sadece OKUYAN DHL metodu kullanılır (KargoBilgileriByReferans).
 // Ortam: FIREBASE_SERVICE_ACCOUNT, DHL_USER, DHL_PASS, WATCH_URL. Değerler asla yazdırılmaz.
+import './meter.mjs'; // kullanım sayacı (Yönetim › Kullanım)
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 

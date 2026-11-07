@@ -26,6 +26,7 @@ import { withDefaults, ls, cleanUsername, mediaFallback } from './utils.js';
 import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS, SPLASH_STYLES } from './config.js';
 import { DemoBackend } from './backend-demo.js';
 import { guardApi, startTeamSession, stopTeamSession, can } from './team.js';
+import { meterInit, meterUser } from './usage.js';
 import { NoPerm } from './ekip.jsx';
 import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
@@ -45,6 +46,7 @@ import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome, HeaderSearch, withProdFallback } from './shophome.jsx';
 import { DesignEntry } from './designv3.jsx'; // 7.11.2026: tasarım modu v3 (eski mod 'Gelişmiş')
 import { AdminHome } from './dashboard.jsx';
+import { UsagePage } from './usagepage.jsx';
 import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
@@ -79,6 +81,7 @@ async function boot() {
   const area = ADMIN_ROUTE ? 'admin' : ROUTE.shop ? 'shop' : 'user';
   const A = fb ? new FirebaseBackend(cfg, area === 'user' ? undefined : area) : new DemoBackend(await loadSeed(), loadSeedDesc, area);
   try { await A.init(); } catch (e) { store.set({ boot: 'error', bootError: 'Sunucuya bağlanılamadı: ' + e.message }); return; }
+  meterInit(area === 'admin' ? 'panel' : area === 'shop' ? 'magaza' : 'bayi'); // kullanım sayacı (usage.js)
   if (area === 'admin') guardApi(A); // 8.11.2026 ekip yetkileri + geçmiş + katalog ezme düzeltmesi (team.js)
   store.set({ api: A });
   startHistory(() => (store.s.user?.role === 'public' ? shopFirst() : 'anasayfa'));
@@ -125,7 +128,7 @@ async function boot() {
       store.set({ boot: 'login', loginError: 'Yönetici hesabıyla bayi tarafına girilmez. Yönetim paneli: ' + location.origin + '/admin' });
       return;
     }
-    currentUid = u.uid;
+    currentUid = u.uid; meterUser(u);
     const admin = u.role === 'admin';
     store.set({ user: u });
     // Hızlı açılış: bu cihazda son açılıştan kalan ayar + katalog varsa ekranı hemen aç, yenisini arkada getir
@@ -525,7 +528,7 @@ function Login() {
 
 // [sekme, ad, ikon, telefondaki kısa ad]
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Siparişlerim', 'box', 'Siparişler'], ['profil', 'Hesabım', 'user']];
-const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Form oluştur', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Form oluştur', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['kullanim', 'Kullanım', 'chart'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Ürünler', 'grid', 'Ürünler'], ['kalip', 'Kalıp bulucu', 'chip', 'Kalıp'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 // Sayfa bulunamadı (tanınmayan mağaza adresi; Google'a noindex boot'ta eklenir)
 function NotFound() {
@@ -562,6 +565,7 @@ function pageMenu(e, role) {
     admin && { label: 'Yeni ürün ekle', icon: 'plus', onClick: () => { go('katalog'); store.set({ intent: 'newProduct' }); } },
     admin && { label: 'Yeni müşteri ekle', icon: 'users', onClick: () => { go('musteriler'); store.set({ intent: 'newCustomer' }); } },
     admin && { label: 'Mağaza tasarımı', icon: 'brush', onClick: () => go('tasarim') },
+    admin && can('quota') && { label: 'Kullanım ve kota', icon: 'chart', onClick: () => go('kullanim') },
     admin && { label: 'Vitrin linkini kopyala', icon: 'copy', hint: location.host, onClick: () => copyText(links.shop(), 'Vitrin linki kopyalandı') },
     '-',
     { label: 'Temayı değiştir', icon: 'moon', onClick: () => document.querySelector('[data-theme-btn]')?.click() },
@@ -636,7 +640,7 @@ function ShellFull() {
     t = setTimeout(tryWarm, 1200); // 5.11.2026: 3,5 sn → 1,2 sn (ilk geçişler 'F5 gibi' takılıyordu)
     return () => { clearTimeout(t); window.cancelIdleCallback?.(idle); removeEventListener('scroll', onS); };
   }, [pub]);
-  const nav = admin ? NAV_ADMIN : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
+  const nav = admin ? NAV_ADMIN.filter(([k]) => k !== 'kullanim' || can('quota')) : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
   const prev = useRef(unread);
@@ -774,6 +778,7 @@ function ShellFull() {
       <main className="main">
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
         {tab === 'anasayfa' && admin && <AdminHome />}
+        {tab === 'kullanim' && admin && <UsagePage />}
         {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><HomeM /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'lsepet' && pub && <LinkCartPage id={ROUTE.lcartId} />}
@@ -810,7 +815,7 @@ function ShellFull() {
       {!admin && tab !== 'lsepet' && tab !== 'odeme' && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
-      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && !(admin && k === 'siparis'))} tab={navTab} badge={badge} />
+      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && k !== 'kullanim' && !(admin && k === 'siparis'))} tab={navTab} badge={badge} />
     </div>
   );
 }

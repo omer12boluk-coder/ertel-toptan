@@ -2,7 +2,7 @@
 name: Önizleme (canlıya dokunmaz)
 on:
   push:
-    branches: [resim-adresi, ayarlar-duzen, tasarim-2, tasarim-3, kdv-odeme, ekip]
+    branches: [resim-adresi, ayarlar-duzen, tasarim-2, tasarim-3, kdv-odeme, ekip, kullanim]
   workflow_dispatch:
 jobs:
   preview:
@@ -14,7 +14,7 @@ jobs:
           node-version: 20
       # ekip dalı: güvenlik kuralları canlıya alınmadan denensin diye önizlemede DEMO modu (veriler tarayıcıda, canlı veriye dokunmaz)
       - name: Demo modu (ekip dalı)
-        if: github.ref_name == 'ekip'
+        if: github.ref_name == 'ekip' || github.ref_name == 'kullanim'
         run: cp DEMO.html hosting/public/index.html
       - name: Önizleme kanalına yükle
         working-directory: hosting

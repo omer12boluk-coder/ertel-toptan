@@ -5,6 +5,7 @@
 //   - Sitede satıştan kalkan ürünü gizler (so=1), geri gelince açar; yöneticinin elle gizlediğine dokunmaz
 //   - Ana resmi, adı ve markayı günceller; sitede yeni çıkan ürünleri "yeni" işaretiyle ekler
 // Kullanım: node tools/sync-platin.mjs [--dry]
+import './meter.mjs'; // kullanım sayacı (Yönetim › Kullanım)
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { cleanText } from '../src/clean.js';

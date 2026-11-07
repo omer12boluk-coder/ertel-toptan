@@ -191,6 +191,26 @@ export class DemoBackend {
   async staffPw(uid, password) { if (String(password || '').length < 6) throw new Error('Şifre en az 6 karakter olmalı'); this.db.users[uid].pw = password; this.persist(); return { ok: true }; }
   async staffRevoke(uid) { Object.keys(this.db.staffSess || {}).forEach((k) => { if (this.db.staffSess[k].uid === uid) this.db.staffSess[k].kick = true; }); this.persist(); return { ok: true }; }
   async geo() { return { c: 'İstanbul' }; }
+  // demo: Kullanım sayfası için örnek rapor (canlıda bekçi /usage)
+  async usageLive() {
+    const H = 3600e3, now = Date.now(), iso = (t) => new Date(t).toISOString().slice(0, 13) + ':00:00Z', sq = (t) => new Date(t).toISOString().slice(0, 13).replace('T', ' ') + ':00:00';
+    const shape = (h) => [2, 1, 1, 1, 1, 2, 4, 8, 14, 20, 24, 22, 18, 20, 26, 22, 17, 14, 10, 8, 6, 5, 4, 3][new Date(h).getUTCHours()] / 24;
+    const hours = [], cf = [], kv = [], days = [];
+    for (let i = 23; i >= 0; i--) { const t = now - i * H, f = shape(t); hours.push({ t: sq(t), s: 'fs', d1: Math.round(1500 * f * 24 / 10), d2: Math.round(60 * f * 2), d3: 0, d4: 0, d5: 0 }, { t: sq(t), s: 'bk', d1: Math.round(400 * f * 2), d2: Math.round(40 * f * 2), d3: Math.round(8 * f), d4: Math.round(25 * f), d5: f > 0.5 ? 1 : 0 }); cf.push({ s: 'ertel-site', t: iso(t), n: Math.round(250 * f * 2) }, { s: 'ertel-b2b-watch', t: iso(t), n: Math.round(400 * f * 2) }); kv.push({ a: 'write', t: iso(t), n: Math.round(25 * f) }); }
+    for (let i = 7; i >= 1; i--) { const t = now - i * 24 * H, k = [0.6, 0.7, 0.9, 1.1, 0.8, 1.3, 1][i - 1]; const day = new Date(t).toISOString().slice(0, 10) + ' 00:00:00'; days.push({ t: day, s: 'fs', d1: Math.round(19000 * k), d2: Math.round(1100 * k), d3: 0, d4: 0, d5: 0 }, { t: day, s: 'bk', d1: 0, d2: Math.round(900 * k), d3: Math.round(150 * k), d4: 0, d5: Math.round(9 * k) }); for (let h = 0; h < 24; h += 6) { cf.push({ s: 'ertel-b2b-watch', t: new Date(t + h * H).toISOString().slice(0, 13) + ':00:00Z', n: Math.round(1900 * k) }); kv.push({ a: 'write', t: new Date(t + h * H).toISOString().slice(0, 13) + ':00:00Z', n: Math.round(120 * k) }); } }
+    const fs = [
+      { a: 'magaza', col: 'pubcatalog', n: '', r: 6100, w: 0, v: 412 }, { a: 'magaza', col: 'settings', n: '', r: 2300, w: 0, v: 0 }, { a: 'magaza', col: 'descb', n: '', r: 900, w: 0, v: 0 }, { a: 'magaza', col: 'members', n: '', r: 300, w: 120, v: 0 },
+      { a: 'panel', col: 'orders', n: 'Ertel GSM', r: 2600, w: 40, v: 0 }, { a: 'panel', col: 'members', n: 'Ertel GSM', r: 1100, w: 0, v: 0 }, { a: 'panel', col: 'requests', n: 'Ertel GSM', r: 400, w: 12, v: 0 },
+      { a: 'panel', col: 'orders', n: 'Kerem (örnek eleman)', r: 1900, w: 55, v: 0 }, { a: 'panel', col: 'users', n: 'Kerem (örnek eleman)', r: 600, w: 0, v: 0 }, { a: 'panel', col: 'catalog', n: 'Kerem (örnek eleman)', r: 30, w: 14, v: 0 },
+      { a: 'bayi', col: 'catalog', n: '', r: 700, w: 0, v: 0 }, { a: 'bayi', col: 'requests', n: '', r: 400, w: 30, v: 0 },
+      { a: 'oto', col: 'orders', n: 'Gece yedeği', r: 900, w: 0, v: 1 }, { a: 'oto', col: 'catalog', n: 'Siteyle eşitleme', r: 40, w: 30, v: 1 }, { a: 'oto', col: 'orders', n: 'DHL takip', r: 300, w: 20, v: 1 },
+    ];
+    const bk = [
+      { cat: 'zamanli', d1: 1440, d2: 120, d3: 30, d4: 260, d5: 0 }, { cat: 'order', d1: 60, d2: 300, d3: 60, d4: 120, d5: 9 }, { cat: 'p', d1: 2900, d2: 0, d3: 0, d4: 0, d5: 0 }, { cat: 'rate', d1: 1500, d2: 0, d3: 0, d4: 24, d5: 0 },
+      { cat: 'm', d1: 520, d2: 0, d3: 0, d4: 0, d5: 0 }, { cat: 'pub', d1: 300, d2: 280, d3: 0, d4: 30, d5: 0 }, { cat: 'push', d1: 200, d2: 60, d3: 0, d4: 90, d5: 0 }, { cat: 'check', d1: 90, d2: 0, d3: 0, d4: 70, d5: 0 },
+    ];
+    return { ok: true, at: now, err: [], d1: new Date(now - 24 * H).toISOString(), fs, bk, hours, days, cf, kv };
+  }
   async bumpStat(uid, key, d) { const u = this.db.users[uid]; if (!u) return; u.stats = u.stats || {}; u.stats[key] = (u.stats[key] || 0) + d; this.persist(); }
   async getNote(uid) { return this.db.notes[uid] || ''; }
   async setNote(uid, t) { this.db.notes[uid] = t; this.persist(); }

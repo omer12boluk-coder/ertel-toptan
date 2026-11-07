@@ -28,4 +28,5 @@ jobs:
           DHL_USER: ${{ secrets.DHL_USER }}
           DHL_PASS: ${{ secrets.DHL_PASS }}
           WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         run: node tools/dhl-track.mjs ${{ inputs.dry && '--dry' || '' }}

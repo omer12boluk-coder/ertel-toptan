@@ -21,9 +21,11 @@ jobs:
       - name: Firestore'u oku
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
         run: |
           mkdir -p /tmp/b && cd /tmp/b && npm init -y >/dev/null && npm i firebase-admin@12 --silent --no-audit --no-fund
-          cp $GITHUB_WORKSPACE/tools/backup.mjs . && node backup.mjs
+          cp $GITHUB_WORKSPACE/tools/backup.mjs $GITHUB_WORKSPACE/tools/meter.mjs . && node backup.mjs
           tar czf yedek.tar.gz yedek && echo "SIZE=$(stat -c %s yedek.tar.gz)" >> $GITHUB_ENV
       - name: R2'ye yükle (özel kutu)
         run: |

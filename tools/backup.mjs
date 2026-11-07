@@ -1,5 +1,6 @@
 // Firestore'un TAMAMINI (tüm koleksiyonlar + alt koleksiyonlar) JSON olarak yedekler → yedek/<tarih>.tar.gz
 // Günlüklere (herkese açık repo!) VERİ YAZMAZ; sadece koleksiyon adları ve belge sayıları.
+import './meter.mjs'; // kullanım sayacı (Yönetim › Kullanım)
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import fs from 'node:fs';

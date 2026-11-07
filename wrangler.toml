@@ -26,6 +26,11 @@ bucket_name = "ertel-yedek"
 [ai]
 binding = "AI"
 
+# 8.11.2026 kullanım sayacı (Yönetim › Kullanım): ücretsiz Analytics Engine (günde 100 bin kayıt)
+[[analytics_engine_datasets]]
+binding = "AE"
+dataset = "ertel_usage"
+
 [[kv_namespaces]]
 binding = "KV"
 id = "__KV_ID__"

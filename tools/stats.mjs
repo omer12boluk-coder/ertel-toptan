@@ -4,6 +4,7 @@
 //   cnt  : son 120 günde ürünün geçtiği sipariş sayısı {ürün: adet}                        → kategoride "Ustaların tercihi"
 // Mağaza siparişleri (orders) + bayi siparişleri (requests type 'order'); iptaller sayılmaz. Sonuç stats/public (herkes okur).
 // Kullanım: node tools/stats.mjs [--dry]
+import './meter.mjs'; // kullanım sayacı (Yönetim › Kullanım)
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 

@@ -69,6 +69,9 @@ jobs:
           if [ -n "$FIREBASE_SA" ]; then printf '%s' "$FIREBASE_SA" | npx -y wrangler@3 secret put FIREBASE_SA 2>&1 | tail -n 2; else echo "::warning title=Sunucu siparişi kapalı::FIREBASE_SERVICE_ACCOUNT gizli ayarı yok"; fi
           if [ -n "$ANTHROPIC_KEY" ]; then printf '%s' "$ANTHROPIC_KEY" | npx -y wrangler@3 secret put ANTHROPIC_KEY 2>&1 | tail -n 2; else echo "::notice title=Akıllı ürün ekle::ANTHROPIC_KEY yok → ücretsiz Cloudflare yapay zekâsı kullanılır (web araması yok)."; fi
           if [ -n "$TURNSTILE_SECRET" ]; then printf '%s' "$TURNSTILE_SECRET" | npx -y wrangler@3 secret put TURNSTILE_SECRET 2>&1 | tail -n 2; else echo "::warning title=Robot koruması kapalı::TURNSTILE_SECRET gizli ayarı yok"; fi
+          # kullanım sayfası (Yönetim › Kullanım): Cloudflare istatistiklerini okumak için aynı anahtar
+          printf '%s' "$CLOUDFLARE_API_TOKEN" | npx -y wrangler@3 secret put CF_API 2>&1 | tail -n 2
+          printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | npx -y wrangler@3 secret put CF_ACCOUNT 2>&1 | tail -n 2
           echo "::notice title=Bekçi yayında::Dakikada bir siteyi kontrol ediyor."
       - name: Kur kontrol (Harem Altın)
         if: steps.ok.outputs.go == 'yes'

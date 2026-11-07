@@ -7,6 +7,7 @@ import { fmt } from './utils.js';
 import { AdminPush } from './admin.jsx';
 import { ORDER_STATUS } from './config.js';
 import { links } from './route.js';
+import { UsageBadge } from './usagepage.jsx';
 
 const DAY = 864e5;
 const startOf = (p) => { const d = new Date(); d.setHours(0, 0, 0, 0); if (p === 'week') d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); if (p === 'month') d.setDate(1); return d.getTime(); };
@@ -67,6 +68,7 @@ export function AdminHome() {
           <h1>{hello}, {(user.name || '').split(' ')[0] || 'hoş geldiniz'} 👋</h1>
           <p>{st.open > 0 ? <>Onay bekleyen <b>{st.open} sipariş</b> var.</> : 'Bekleyen yeni sipariş yok.'}{st.unread > 0 && <> Okunmamış <b>{st.unread} talep</b> var.</>}{st.pending > 0 && <> <b>{st.pending}</b> bayi başvurusu onay bekliyor.</>}</p>
         </div>
+        <UsageBadge />
         <div className="seg dash-seg" role="group" aria-label="Dönem">{PERIODS.map(([k, l]) => <button key={k} className={per === k ? 'on' : ''} onClick={() => setP(k)}>{l}</button>)}</div>
       </section>
       <AdminPush compact />

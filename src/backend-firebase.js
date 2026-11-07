@@ -2,6 +2,7 @@
 //  - Auth: kullanıcı adı + şifre (arka planda kullaniciadi@EMAIL_DOMAIN e-postasına çevrilir)
 //  - Firestore: katalog 1500'lük parçalar halinde birkaç dokümanda tutulur → her açılışta ~2-3 okuma
 //  - Resimler: küçültülüp Firestore'da (img/{id}) saklanır; Storage (ücretli plan) gerekmez
+import { meterFs } from './usage.js';
 import { isPv, pvGet, pvPatch, pvDelete } from './pvorders.js';
 import { pingWatch } from './push.js';
 import { EMAIL_DOMAIN } from './config.js';
@@ -46,7 +47,7 @@ export class FirebaseBackend {
     const acKey = /(^|\.)ertelmarket\.com$/.test(location.hostname) ? String(window.APPCHECK_KEY || '') : '';
     const acP = acKey ? import(/* @vite-ignore */ location.origin + '/fb/firebase-app-check.js').catch(() => null) : null;
     try { [A, U, F] = await timeout(load(location.origin + '/fb/'), 12000); } catch { own = false; [A, U, F] = await timeout(load(CDN), 20000); }
-    this.A = A; this.U = U; this.F = F;
+    this.A = A; this.U = U; this.F = meterFs(F); // 8.11.2026 kullanım sayacı (usage.js): davranış aynı, sadece sayar
     // Yönetici paneli ayrı bir Firebase örneği kullanır: aynı tarayıcıda yönetici ve bayi oturumları birbirini etkilemez
     this.app = this.appName ? A.initializeApp(this.config, this.appName) : A.initializeApp(this.config);
     if (acP && own) { // veritabanı açılmadan önce kurulmalı; dosya 3 sn'de gelmezse App Check'siz devam (sayım eksik kalır, site etkilenmez)
@@ -361,6 +362,7 @@ export class FirebaseBackend {
   }
   async staffPw(uid, password) { return this._staffCall('/staff/pw', { uid, password }); }
   async staffRevoke(uid, disable) { return this._staffCall('/staff/revoke', { uid, disable: !!disable }); }
+  async usageLive() { const tok = await this.idToken(); if (!tok) throw new Error('Oturum yok'); const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/usage', { method: 'POST', headers: { Authorization: 'Bearer ' + tok } }), 25000); return r.json(); }
   async geo() { const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/geo'), 4000); return r.ok ? r.json() : null; }
   async bumpStat(uid, key, d) { await this.F.updateDoc(this.d('users', uid), { ['stats.' + key]: this.F.increment(d) }); }
   async getNote(uid) { const s = await timeout(this.F.getDoc(this.d('userNotes', uid))); return s.exists() ? s.data().t : ''; }

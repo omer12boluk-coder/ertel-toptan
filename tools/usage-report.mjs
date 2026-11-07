@@ -1,6 +1,7 @@
 // Günlük kullanım raporu (31.10.2026): son 24 saatte Firestore okuma/yazma (Google Cloud Monitoring), Cloudflare Worker
 // istekleri ve KV yazmaları → meta/usage (Ayarlar > Veri ve kota'da görünür) + Telegram (Ayarlar'dan kapatılabilir).
 // Ortam: FIREBASE_SERVICE_ACCOUNT, CF_TOKEN, CF_ACCOUNT, TELEGRAM_TOKEN, WATCH_URL. Sadece okur (meta/usage hariç).
+import './meter.mjs'; // kullanım sayacı (Yönetim › Kullanım)
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import crypto from 'node:crypto';

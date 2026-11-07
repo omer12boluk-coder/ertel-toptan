@@ -13,17 +13,46 @@ import { storeSum, instList, storeVatOn, storeCardOn } from '../src/paycalc.js';
 //   POST /tg-link {code} Telegram botuna yazılan kodu bulup o sohbeti bildirim alıcısı yapar (sadece ilk bağlantı)
 // Ücretsiz KV günde 1.000 yazma: dolarsa put/delete HATA ATAR → sipariş, bildirim vb. dursun istemeyiz.
 // Yazma hatası günlüğe düşer, iş devam eder (okumalar dokunulmadan; ör. vapid anahtarı okunamazsa yeniden üretilmesin).
+// ---- Kullanım sayacı (8.11.2026, Yönetim › Kullanım): bekçinin kendi Firestore okuma/yazmaları, KV yazmaları, e-postalar
+// iş türüne (adresin ilk parçası / zamanlı iş) göre toplanır; her çağrının başında Analytics Engine'e (AE, ücretsiz günde
+// 100 bin kayıt) yazılır. Firestore'a ve KV'ye HİÇ yazmaz. Aynı anda gelen isteklerde sınıflandırma yaklaşık olabilir.
+const MET = {}; let metCat = 'diger';
+const metK = (c) => MET[c] || (MET[c] = [0, 0, 0, 0, 0]); // istek, fs okuma, fs yazma, kv yazma, e-posta
+function metFlush(env) {
+  if (!env?.AE) { for (const k in MET) delete MET[k]; return; }
+  let n = 0;
+  for (const k of Object.keys(MET)) { if (n++ < 12) { try { env.AE.writeDataPoint({ blobs: ['bk', k], doubles: MET[k], indexes: ['bk'] }); } catch {} } delete MET[k]; }
+}
+const _fetch = globalThis.fetch.bind(globalThis);
+globalThis.fetch = async (u, i) => {
+  const r = await _fetch(u, i);
+  try {
+    const s = String(u && u.url ? u.url : u); const m = String((i && i.method) || (u && u.method) || 'GET').toUpperCase();
+    if (s.startsWith('https://firestore.googleapis.com/')) {
+      const x = metK(metCat); const p = s.split('?')[0];
+      if (p.endsWith(':runQuery')) { const j = await r.clone().json().catch(() => []); x[1] += Math.max(1, Array.isArray(j) ? j.filter((d) => d && d.document).length : 1); }
+      else if (p.endsWith(':commit')) { let n = 1; try { n = JSON.parse(i.body).writes.length || 1; } catch {} x[2] += n; }
+      else if (p.endsWith(':batchGet')) { let n = 1; try { n = JSON.parse(i.body).documents.length || 1; } catch {} x[1] += n; }
+      else if (m === 'GET') { const seg = (p.split('/documents/')[1] || '').split('/').filter(Boolean).length; if (seg % 2 === 1) { const j = await r.clone().json().catch(() => ({})); x[1] += Math.max(1, (j.documents || []).length); } else x[1] += 1; }
+      else if (m === 'PATCH' || m === 'POST' || m === 'DELETE') x[2] += 1;
+    } else if (s.startsWith('https://api.resend.com/emails')) metK(metCat)[4] += 1;
+  } catch {}
+  return r;
+};
+const metCatOf = (path) => (path.split('/').filter(Boolean)[0] || 'kok').slice(0, 20);
+
 function safeEnv(env) {
   if (!env.KV || env.KV.__safe) return env;
   const kv = env.KV;
   const KV = { __safe: true, get: (...a) => kv.get(...a), list: (...a) => kv.list(...a), getWithMetadata: (...a) => kv.getWithMetadata(...a),
-    put: (...a) => kv.put(...a).catch((e) => console.log('KV yazma atlandı', a[0], String(e.message || e))),
-    delete: (...a) => kv.delete(...a).catch((e) => console.log('KV silme atlandı', a[0], String(e.message || e))) };
+    put: (...a) => { metK(metCat)[3] += 1; return kv.put(...a).catch((e) => console.log('KV yazma atlandı', a[0], String(e.message || e))); },
+    delete: (...a) => (metK(metCat)[3] += 1, kv.delete(...a)).catch((e) => console.log('KV silme atlandı', a[0], String(e.message || e))) };
   return { ...env, KV };
 }
 import { aiRoute, aiStatus } from './ai.js';
 export default {
   async scheduled(event, env, ctx) {
+    metFlush(env); metCat = 'zamanli'; metK('zamanli')[0] += 1;
     env = safeEnv(env); gEnv = env;
     ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message)));
     // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
@@ -34,8 +63,10 @@ export default {
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() % 10 === 4) ctx.waitUntil(lcartSweep(env).catch((e) => console.log('lcartSweep', e.message)));
   },
   async fetch(req, env, ctx) {
+    metFlush(env);
     env = safeEnv(env); gEnv = env;
     const url = new URL(req.url);
+    metCat = metCatOf(url.pathname); metK(metCat)[0] += 1;
     const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hash' };
     const json = (o, st = 200, extra = {}) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -102,6 +133,9 @@ export default {
       if (url.pathname === '/rev/new' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await revNew(req, env, b)); }
       if (url.pathname === '/push/member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushMember(env, b)); }
       // Yedekler (31.10.2026): yönetici listeler ve indirir (özel kutu ertel-yedek)
+      // 8.11.2026 kullanım sayacı: uygulamadan gelen okuma/yazma sayıları (Analytics Engine'e; Firestore/KV'ye yazmaz) + rapor
+      if (url.pathname === '/m' && req.method === 'POST') { try { await meterIn(env, req); } catch {} return new Response(null, { status: 204, headers: cors }); }
+      if (url.pathname === '/usage' && req.method === 'POST') { const err = await permOf(req, 'quota'); if (err) return json({ ok: false, error: err }, 403); try { return json(await usageReport(env)); } catch (e) { return json({ ok: false, error: e.message }); } }
       // 8.11.2026 ekip: yaklaşık şehir (Ekip › cihazlar; KV/Firestore yok), şifre ver, hesabı kilitle
       if (url.pathname === '/geo') return json({ c: req.cf?.city || '', r: req.cf?.region || '', k: req.cf?.country || '' });
       if ((url.pathname === '/staff/pw' || url.pathname === '/staff/revoke') && req.method === 'POST') { try { return json(await staffRoute(req, env, url.pathname)); } catch (e) { return json({ ok: false, error: e.message }); } }
@@ -705,6 +739,64 @@ async function notifyReq(env, b) {
 async function adminOf(req) {
   const t = await teamOf(req); return t.err || null;
 }
+// ---- Kullanım sayacı: gelen sayım + rapor (Yönetim › Kullanım)
+async function meterIn(env, req) {
+  if (!env.AE) return;
+  const t = await req.text(); if (t.length > 8000) return;
+  const b = JSON.parse(t || '{}');
+  let a = String(b.a || '');
+  if (a === 'oto') { // otomatik işler (GitHub Actions) sadece anahtarla
+    const want = env.TELEGRAM_TOKEN ? [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('sync:' + env.TELEGRAM_TOKEN)))].map((x) => x.toString(16).padStart(2, '0')).join('') : '-';
+    if (req.headers.get('X-Key') !== want) return;
+  } else if (!['panel', 'magaza', 'bayi'].includes(a)) return;
+  const num = (x) => Math.max(0, Math.min(200000, Number(x) || 0));
+  const u = String(b.u || '').slice(0, 40), n = String(b.n || '').slice(0, 40);
+  let v = num(b.v) ? 1 : 0, k = 0;
+  const cs = Object.entries(b.c || {}).slice(0, 12);
+  if (!cs.length && v) cs.push(['-', [0, 0]]);
+  for (const [col, x] of cs) { if (k++ >= 12) break; env.AE.writeDataPoint({ blobs: ['fs', a, String(col).slice(0, 24), u, n], doubles: [num(x?.[0]), num(x?.[1]), v], indexes: [a] }); v = 0; }
+}
+async function aeSql(env, q) {
+  const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT}/analytics_engine/sql`, { method: 'POST', headers: { Authorization: 'Bearer ' + env.CF_API }, body: q + ' FORMAT JSON' });
+  const t = await r.text(); if (!r.ok) throw new Error('AE ' + r.status + ' ' + t.slice(0, 120));
+  return (JSON.parse(t).data || []).map((x) => { const o = {}; for (const k in x) o[k] = /^(r|w|v|d\d|req|kv|mail)$/.test(k) ? Number(x[k]) || 0 : x[k]; return o; });
+}
+async function cfGql(env, query) {
+  const r = await fetch('https://api.cloudflare.com/client/v4/graphql', { method: 'POST', headers: { Authorization: 'Bearer ' + env.CF_API, 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) });
+  const j = await r.json().catch(() => ({})); if (j.errors?.length) throw new Error(j.errors[0].message);
+  return j.data?.viewer?.accounts?.[0] || {};
+}
+async function usageReport(env) {
+  if (!env.CF_API || !env.CF_ACCOUNT) return { ok: false, error: 'Cloudflare okuma anahtarı bekçiye eklenmemiş' };
+  const ck = new Request('https://usage.cache/v2'); const hit = await caches.default.match(ck).catch(() => null);
+  if (hit) return hit.json();
+  const S = 'ertel_usage', D1 = "timestamp > NOW() - INTERVAL '1' DAY", D7 = "timestamp > NOW() - INTERVAL '7' DAY";
+  const sums = 'SUM(_sample_interval * double1) AS d1, SUM(_sample_interval * double2) AS d2, SUM(_sample_interval * double3) AS d3, SUM(_sample_interval * double4) AS d4, SUM(_sample_interval * double5) AS d5';
+  const out = { ok: true, at: Date.now(), err: [] };
+  const run = async (k, f) => { try { out[k] = await f(); } catch (e) { out[k] = null; out.err.push(k + ': ' + String(e.message || e).slice(0, 140)); } };
+  const now = new Date(), d7 = new Date(now - 7 * 864e5).toISOString(), d1 = new Date(now - 864e5).toISOString(), E = now.toISOString();
+  await Promise.all([
+    run('fs', () => aeSql(env, `SELECT blob2 AS a, blob3 AS col, blob5 AS n, SUM(_sample_interval * double1) AS r, SUM(_sample_interval * double2) AS w, SUM(_sample_interval * double3) AS v FROM ${S} WHERE blob1 = 'fs' AND ${D1} GROUP BY a, col, n`)),
+    run('bk', () => aeSql(env, `SELECT blob2 AS cat, ${sums} FROM ${S} WHERE blob1 = 'bk' AND ${D1} GROUP BY cat`)),
+    run('hours', () => aeSql(env, `SELECT toStartOfInterval(timestamp, INTERVAL '1' HOUR) AS t, blob1 AS s, ${sums} FROM ${S} WHERE ${D1} GROUP BY t, s ORDER BY t`)),
+    run('days', () => aeSql(env, `SELECT toStartOfInterval(timestamp, INTERVAL '1' DAY) AS t, blob1 AS s, ${sums} FROM ${S} WHERE ${D7} GROUP BY t, s ORDER BY t`)),
+    run('cf', async () => {
+      const A = env.CF_ACCOUNT;
+      const w = await cfGql(env, `{viewer{accounts(filter:{accountTag:"${A}"}){workersInvocationsAdaptive(limit:2000,filter:{datetime_geq:"${d7}",datetime_leq:"${E}"}){sum{requests} dimensions{scriptName datetimeHour}}}}}`);
+      return (w.workersInvocationsAdaptive || []).map((x) => ({ s: x.dimensions?.scriptName || '', t: x.dimensions?.datetimeHour || '', n: x.sum?.requests || 0 }));
+    }),
+    run('kv', async () => {
+      const A = env.CF_ACCOUNT;
+      const k = await cfGql(env, `{viewer{accounts(filter:{accountTag:"${A}"}){kvOperationsAdaptiveGroups(limit:2000,filter:{datetime_geq:"${d7}",datetime_leq:"${E}"}){sum{requests} dimensions{actionType datetimeHour}}}}}`);
+      return (k.kvOperationsAdaptiveGroups || []).map((x) => ({ a: x.dimensions?.actionType || '', t: x.dimensions?.datetimeHour || '', n: x.sum?.requests || 0 }));
+    }),
+  ]);
+  out.d1 = d1;
+  const body = JSON.stringify(out);
+  await caches.default.put(ck, new Response(body, { headers: { 'Cache-Control': 'max-age=120', 'Content-Type': 'application/json' } })).catch(() => {});
+  return out;
+}
+
 // 8.11.2026 ekip: yönetici (asıl ya da ekip üyesi) + yetkileri. Engellenen (active false) geçemez.
 async function teamOf(req) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''); const uid = tokUid(tok);
