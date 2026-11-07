@@ -77,9 +77,10 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
     // ---- Online mağaza siparişleri: misafir ya da üye oluşturur (sadece "yeni" durumda); takip linki (tahmin edilemez kimlik) ile açılır
+    // 7.11.2026 (KVKK): siparişi SADECE yönetici ve sahibi üye okur. Linki bilen başkası / misafir bekçiden (/pub/o) kısaltılmış kopya alır.
     match /orders/{id} {
       function own() { return signedIn() && resource.data.uid == request.auth.uid; }
-      allow get: if true;
+      allow get: if isAdmin() || own();
       allow list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
       // 30.10.2026: mağaza siparişi SADECE bekçiden (POST /order; fiyat ve toplam sunucuda katalogdan hesaplanır) yazılır.
       // Müşteri doğrudan yazamaz (eskiden tarayıcıdan fiyat değiştirilerek ucuza sipariş yazılabiliyordu).
@@ -113,8 +114,9 @@ service cloud.firestore {
         && (!('addr' in s.delivery) || (s.delivery.addr is map && s.delivery.addr.size() <= 20))
         && lcStr(s, 'pay', 12) && lcStr(s, 'note', 500);
     }
+    // 7.11.2026 (KVKK): müşteri onayladıktan sonra (ad / telefon / adres yazıldı) sadece yönetici okur; linki açan bekçiden (/pub/k) kısaltılmış kopya alır.
     match /lcarts/{id} {
-      allow get: if lcLive(resource.data) || isAdmin();
+      allow get: if isAdmin() || (resource.data.status == 'open' && lcLive(resource.data));
       allow list, create, delete: if isAdmin();
       allow update: if isAdmin() || (resource.data.status == 'open' && lcLive(resource.data) && request.resource.data.status == 'sent'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'sub', 'subAt'])
