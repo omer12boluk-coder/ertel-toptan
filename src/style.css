@@ -9457,11 +9457,11 @@ html[data-theme="dark"] .phub-th { background: #fff; }
 }
 .phub-more { display: none; }
 /* geçiş animasyonu (sayfa geçişleriyle aynı his) */
-.pv2-go-r { animation: pv2GoR .38s cubic-bezier(.2, .8, .2, 1) backwards; }
-.pv2-go-l { animation: pv2GoL .38s cubic-bezier(.2, .8, .2, 1) backwards; }
+.pv2-go-r, html .main .catalog.pv2-go-r, html.nav-anim .main .catalog.pv2-go-r.pv2-go-r { animation: pv2GoR .38s cubic-bezier(.2, .8, .2, 1) backwards; }
+.pv2-go-l, html .main .catalog.pv2-go-l, html.nav-anim .main .catalog.pv2-go-l.pv2-go-l { animation: pv2GoL .38s cubic-bezier(.2, .8, .2, 1) backwards; }
 @keyframes pv2GoR { from { opacity: 0; transform: translateX(36px); } }
 @keyframes pv2GoL { from { opacity: 0; transform: translateX(-36px); } }
-@media (prefers-reduced-motion: reduce) { .pv2-go-r, .pv2-go-l { animation: none; } }
+@media (prefers-reduced-motion: reduce) { html .main .catalog:is(.pv2-go-r, .pv2-go-l) { animation: none !important; } }
 @media (max-width: 899px) {
   /* Setler etiketi başlığın üstünde (sayıyla bitişik durmasın) */
   .phub-badge { position: static; margin: 0 0 6px; align-self: flex-start; }
