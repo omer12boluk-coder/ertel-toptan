@@ -135,6 +135,7 @@ export function useOpenLink() {
     // 3.11.2026: set linkleri — 'set:<id>' o setin sayfası (yayında değilse Setler listesi), 'sets:' Ürünler'de Setler
     if (k === 'set') { if (v && liveSets(store.s.settings).some((x) => x.id === v)) openSet(v); else { store.set({ catalogGo: { sets: true } }); go('katalog'); } return; }
     if (k === 'sets') { store.set({ catalogGo: { sets: true } }); go('katalog'); return; }
+    if (k === 'go') { go(v); return; } // 'go:markalar', 'go:setlist', 'go:kalip' (7.11.2026, banner bağlantıları)
     let browse = {};
     if (k === 'brand') { const real = catalog.find((p) => p.b && norm(p.b) === norm(v))?.b || v; browse = { brand: real }; }
     else if (k === 'cat') browse = { cat: Number(v) };

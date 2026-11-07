@@ -237,6 +237,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - 7.11.2026 banner / Claude düzeni / v3 / kart-logo hizası / Yeni gelenler notları → `docs/gunluk.md` 'CLAUDE.md'den taşınan'. Bannerlar, Keşfet, kapaklar artık `src/icerik/*.json` (§0).
 
+- **7.11.2026 Banner imzası** (YAYINDA): `photobn.jsx` `sigOn`/`SigImg` — ert mobile logosu marka satırında (telefonda sağ üst); kapatma satırda `sig: false` (v3 › Banner › 'Banner imzası'), JSON `"imza": false`. Yeni banner `tezgah` (mağazanın kendi bannerı, `oto` YOK → Tasarım › Banner › 'Listede olmayan hazır bannerlar'dan eklenir). Bağlantı `go:<sekme>`.
+
 **SIRADAKİ İŞ (7.11.2026):** Hızlı işler düzeni YAYINDA (§0: tarifler, `src/icerik/*.json`, Claude’dan gelenler `/admin/claude`, Actions 'Gelenleri al' + 'Claude için getir'). Kullanıcı artık kısa komutlarla iş verecek. Eski sunum/karar listesi (banner turları, Yeni gelenler seçenekleri, Kalıp bulucu Apple tasarımı askıda): `docs/gunluk.md` 'CLAUDE.md'den taşınan'. Silinebilir dallar: `banner-foto`, `banner-resim*`, `tasarim-v3`, `img-probe`, `logo-raw`.
 **Karar bekleyen:** telefonda Gelişmiş tasarım modu kullanılamıyor (kullanıcı, 7.11) — öneri: telefonda Gelişmiş yerine ayarları sade modun panelinde aç · ödeme özeti 2 üründe kayıyor (çözüm önerildi) · elde kalan mal için dürüst raf/rozet · ana sayfa 'imza' etkileşimi · SMS (Netgsm) · Ürünler ve Bayi siparişleri PageHead/SubNav'a alınsın mı · "Birlikte iyi gider" rafı açıklamanın altında kalıyor.
 **Tartışılacak:** Blaze sonrası açılış penceresi 14 → 30 → 62 gün; Workers Paid sonrası DHL sorgusu 30 → 5 dk.

@@ -275,6 +275,7 @@ function HeroPanel({ H, S, k }) {
           <Row label="Düğme"><TF v={s.cta} on={(v) => up(i, { cta: v })} /></Row>
           <p className="fine">Resim, renk ve yerleşim Gelişmiş’te.</p>
         </>}
+        {s.pb && PB_BY[s.pb]?.imza !== false && <Row label="Banner imzası" hint="Logomuz marka logosunun yanında (telefonda sağ üstte)"><button type="button" className={'v3-tg' + (s.sig === false ? '' : ' on')} onClick={() => up(i, { sig: s.sig === false ? undefined : false })} aria-label={s.sig === false ? 'İmzayı aç' : 'İmzayı kapat'} /></Row>}
         {s.pb && <p className="fine">Boş bıraktığınız alan hazır yazıyı kullanır. Satır atlamak için Enter.</p>}</div>}
       </div>))}</div>
     {missing.length > 0 && pbIn && <div className="v3-addpb"><span className="v3-cap">Listede olmayan hazır bannerlar</span>{missing.map((b) => <button key={b.id} type="button" className="v3-more" onClick={() => S('slides', [{ pb: b.id }, ...sl])}><Icon n="plus" s={13} />{b.name}</button>)}</div>}
