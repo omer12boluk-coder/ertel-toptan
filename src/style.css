@@ -9411,3 +9411,8 @@ html[data-theme="dark"] .phub-bl { filter: brightness(0) invert(1); opacity: .85
 @media (hover: hover) and (pointer: fine) { .phub-c:hover::after { opacity: .3; filter: grayscale(.6); } }
 @media (max-width: 899px) { .phub-c::after { left: auto; width: 42%; height: auto; background-position: right 8px center; background-size: contain; -webkit-mask-image: linear-gradient(90deg, transparent, #000 50%); mask-image: linear-gradient(90deg, transparent, #000 50%); } }
 .v3-seg.wrap { flex-wrap: wrap; height: auto; row-gap: 4px; }
+/* açılış sayfası: Setler kutusu (tema renginin açık tonu) */
+.phub-set { background: color-mix(in oklab, var(--accent) 8%, var(--surface)); box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent); }
+.phub-set::after { display: none; }
+.phub-set .phub-h b { color: var(--accent); }
+.phub .pv2-trow { margin-bottom: 4px; }

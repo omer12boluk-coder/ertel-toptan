@@ -17,7 +17,7 @@ import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
 import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
-import { SetGrid, InSets, liveSets, ProductsSwitch, SetCard, searchSets } from './sets.jsx';
+import { SetGrid, InSets, liveSets, ProductsSwitch, SetCard, searchSets, openSet } from './sets.jsx';
 
 export function useTree() {
   const { catalog, settings: S } = useStore();
@@ -784,7 +784,8 @@ const LG_TXT = { luban: { t: 'Luban' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'Me
 export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
 function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {
   const brands = useBrandList();
-  const HC = useStore((st) => st.settings.shopHome?.p0?.hub) || {}; // Tasarım › Ürünler açılış sayfası: bg (resimler), hide2 (gizli kategoriler), img2 (kategori resmi)
+  const HC = useStore((st) => st.settings.shopHome?.p0?.hub) || {};
+  const S0 = useStore((st) => st.settings); const sets = useMemo(() => liveSets(S0), [S0]); // Tasarım › Ürünler açılış sayfası: bg (resimler), hide2 (gizli kategoriler), img2 (kategori resmi)
   const hid = new Set((HC.hide2 || []).map(String));
   const [q, setQ] = useState('');
   const roots = tree.roots.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden && !hid.has(String(n.id)));
@@ -801,18 +802,16 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
         {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
       </form>
     </div>
-    <div className="pv2-tags phub-tags">
-      <button type="button" className="pv2-tag" onClick={onNew}><Icon n="star" s={14} />Yeni gelenler</button>
-      {setN > 0 && <button type="button" className="pv2-tag" onClick={onSets}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
-      <button type="button" className="pv2-tag" onClick={() => go('kalip')}><Icon n="zoom" s={14} />Kalıp bulucu</button>
-      <button type="button" className="pv2-tag" onClick={() => go('markalar')}><Icon n="tag" s={14} />Markalar</button>
-    </div>
     <div className="phub-lbl">Kategoriler</div>
     <div className="phub-grid">
       <div role="button" tabIndex={0} className="phub-c phub-all" onClick={onAll} onKeyDown={key(onAll)}>
         <div className="phub-h"><b>Tüm ürünler</b><span>{nf(total)}<Icon n="chev" s={14} /></span></div>
-        <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span>{setN > 0 && <span>{setN} set</span>}</div>
+        <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span></div>
       </div>
+      {sets.length > 0 && <div role="button" tabIndex={0} className="phub-c phub-set" onClick={onSets} onKeyDown={key(onSets)}>
+        <div className="phub-h"><b>Setler</b><span>{sets.length}<Icon n="chev" s={14} /></span></div>
+        <div className="phub-s">{sets.slice(0, 6).map((x) => <button key={x.id} type="button" onClick={(e) => { e.stopPropagation(); openSet(x.id); }}>{x.name}</button>)}</div>
+      </div>}
       {roots.map((n) => { const cv = HC.bg === false ? null : (HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]; const go1 = () => onCat(n.id); return (
         <div key={n.id} role="button" tabIndex={0} className="phub-c" style={cv ? { '--im': `url(${cv})` } : undefined} onClick={go1} onKeyDown={key(go1)}>
           <div className="phub-h"><b>{n.name}</b><span>{nf(counts.get(n.id))}<Icon n="chev" s={14} /></span></div>
