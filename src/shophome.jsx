@@ -952,17 +952,21 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }
   };
   const grab = () => { target.current = null; clearTimeout(targetT.current); touching.current = true; clearTimeout(settleT.current); };
   const release = () => { touching.current = false; settle(); };
+  // 7.11.2026 (6) iPhone titremesi: açık/koyu banner sınıfı (eski 'pb-lt') KAYAN ŞERİDİN ÜST KUTUSUNDA değişince iPhone kaydırma
+  // sırasında şeridi yeniden çiziyor, oturma kayması titriyordu (sadece koyu Quick bannerına gidip gelirken). Artık sınıf sadece
+  // noktalara/oklara verilir; gölge her fotoğraflı bannerda sabit (pb-sh).
+  const LT = slides[i]?.pb && !slides[i].pb.dark ? ' lt' : '';
   return (
-    <section ref={fsRef} className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '') + (slides[i]?.pb && !slides[i].pb.dark ? ' pb-lt' : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
+    <section ref={fsRef} className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '') + (slides.some((x) => x?.pb) ? ' pb-sh' : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
         {slides.map((s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>
-        {nv.dots === 'num' ? <div className="sh-dots sh-num" aria-live="polite"><b>{i + 1}</b><span>/</span>{n}</div>
-          : nv.dots !== 'none' && <div className="sh-dots">{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>}
-        <button className="sh-hero-nav prev" onClick={() => goTo((i - 1 + n) % n)} aria-label="Önceki"><Icon n="back" s={20} /></button>
-        <button className="sh-hero-nav next" onClick={() => goTo((i + 1) % n)} aria-label="Sonraki"><Icon n="back" s={20} className="flip" /></button>
+        {nv.dots === 'num' ? <div className={'sh-dots sh-num' + LT} aria-live="polite"><b>{i + 1}</b><span>/</span>{n}</div>
+          : nv.dots !== 'none' && <div className={'sh-dots' + LT}>{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>}
+        <button className={'sh-hero-nav prev' + LT} onClick={() => goTo((i - 1 + n) % n)} aria-label="Önceki"><Icon n="back" s={20} /></button>
+        <button className={'sh-hero-nav next' + LT} onClick={() => goTo((i + 1) % n)} aria-label="Sonraki"><Icon n="back" s={20} className="flip" /></button>
       </>}
     </section>
   );

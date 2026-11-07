@@ -8549,7 +8549,7 @@ html[data-theme="dark"] .hd-p.hd-wide-p { background: #1e1f23 !important; }
 .p0-pan.pb-pan { padding: 0; cursor: default; background: transparent; }
 .sh-slide.pb-slide { display: block; padding: 0; background: transparent; }
 /* köşe: banner zemini kutunun köşesiyle birlikte kırpılır (alttaki zemin köşede sızıp koyu çizgi yapıyordu) */
-.pb-box { border-radius: inherit; isolation: isolate; -webkit-mask-image: -webkit-radial-gradient(white, black); }
+.pb-box { border-radius: inherit; isolation: isolate; }
 .pb-box .pb-cv img { user-select: none; -webkit-user-drag: none; pointer-events: none; }
 .pb-box button { -webkit-tap-highlight-color: transparent; transition: filter .2s, opacity .2s; }
 @media (hover: hover) { .pb-box .pb-b1:hover { filter: brightness(1.1); } .pb-box .pb-b2:hover { opacity: .75; } }
@@ -8558,12 +8558,12 @@ html[data-theme="dark"] .hd-p.hd-wide-p { background: #1e1f23 !important; }
 .dz2-pb { margin: 0 0 12px; padding: 4px 12px; border-radius: 14px; background: color-mix(in oklab, var(--fg) 4%, var(--surface)); }
 /* açık renkli fotoğraflı bannerda (pb-lt) koyu gölge bandı belli oluyordu → yumuşak gölge; nokta ve oklar koyu */
 .sh-hero { transition: box-shadow .5s ease; }
-.sh-hero.pb-lt { box-shadow: 0 1px 2px rgb(16 24 40 / .04), 0 16px 34px -28px rgb(16 24 40 / .18); }
-.sh-hero.pb-lt .sh-dot i { background: rgb(0 0 0 / .12); }
-.sh-hero.pb-lt .sh-dot.on i::after, .sh-hero.pb-lt.nd-dots .sh-dot.on i { background: #1d1d1f; }
-.sh-hero.pb-lt .sh-num { color: #1d1d1f; }
-.sh-hero.pb-lt .sh-hero-nav { color: #1d1d1f; background: rgb(255 255 255 / .7); border-color: rgb(0 0 0 / .08); }
-html[data-theme=dark] .sh-hero.pb-lt { box-shadow: none; }
+.sh-hero.pb-sh { box-shadow: 0 1px 2px rgb(16 24 40 / .04), 0 16px 34px -28px rgb(16 24 40 / .18); }
+.sh-hero .sh-dots.lt .sh-dot i { background: rgb(0 0 0 / .12); }
+.sh-hero .sh-dots.lt .sh-dot.on i::after, .sh-hero.nd-dots .sh-dots.lt .sh-dot.on i { background: #1d1d1f; }
+.sh-hero .sh-num.lt { color: #1d1d1f; }
+.sh-hero .sh-hero-nav.lt { color: #1d1d1f; background: rgb(255 255 255 / .7); border-color: rgb(0 0 0 / .08); }
+html[data-theme=dark] .sh-hero.pb-sh { box-shadow: none; }
 
 /* 7.11.2026 TAM EKRAN (heroNav.fs): kenardan kenara + ekranın altına kadar (--fs-top = bannerın sayfadaki başlangıcı, JS ölçer) */
 @media (min-width: 701px) {
