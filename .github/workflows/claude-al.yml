@@ -10,6 +10,12 @@ on:
       resimler:
         description: 'ad=adres çiftleri, boşlukla ayrılmış (boş olabilir)'
         default: ''
+      markalar:
+        description: 'Logo aranacak markalar, virgülle (boş olabilir)'
+        default: ''
+      siteler:
+        description: 'Marka=https://site çiftleri, boşlukla (logo aramasına ek)'
+        default: ''
       katalog:
         description: 'Güncel katalog özetini de getir'
         type: boolean
@@ -43,6 +49,12 @@ jobs:
             ext=$(echo "$u" | sed -E 's/[?#].*//' | grep -oiE '\.(jpe?g|png|webp|gif|avif)$' || echo .jpg)
             if curl -sfL -A 'Mozilla/5.0' --max-time 40 -o "$n$ext" "$u"; then echo "::notice title=$n::$(stat -c%s "$n$ext") bayt"; else echo "::warning title=Alınamadı $n::$u"; rm -f "$n$ext"; fi
           done
+      - name: Logo ara
+        if: ${{ inputs.markalar != '' }}
+        env:
+          MARKALAR: ${{ inputs.markalar }}
+          SITELER: ${{ inputs.siteler }}
+        run: node tools/logo-ara.mjs
       - name: claude-al dalına koy
         run: |
           cd out; touch .keep; git init -q; git checkout -q -b claude-al
