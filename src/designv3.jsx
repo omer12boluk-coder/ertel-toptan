@@ -11,7 +11,8 @@ import { prepare, Stage, ShopDesigner } from './designer.jsx';
 import { queueSave } from './saveq.js';
 import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
 import { PB_BY, PB_TEXT, PHOTO_BANNERS } from './photobn.jsx';
-import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS } from './cdhome.jsx';
+import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList } from './cdhome.jsx';
+import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
 import { liveSets } from './sets.jsx';
 
@@ -177,6 +178,7 @@ function LookPanel({ d, set, setAll, A }) {
     <Row label="Köşeler" hint="Banner, kartlar ve düğmeler birlikte değişir"><Seg v={corner} opts={CORNERS.map(([k, l]) => [k, l])} on={(k) => set('look.style', { ...st, ...CORNERS.find((x) => x[0] === k)[2] })} /></Row>
     <Row label="Sayfa genişliği" hint="Banner hariç bütün bölümler (banner genişliği bannerın kendi ayarında)"><Seg v={Lk.width || ''} opts={WIDTHS.map(([k, l]) => [k, l])} on={(k) => set('look.width', k)} /></Row>
     <Row label="Yazı tipi"><Seg v={font} opts={[['apple', 'Apple sade'], ['classic', 'Klasik']]} on={(k) => set('look.style', k === 'apple' ? { ...st, head: 'intert', body: 'inter', price: 'intert' } : { ...st, head: '', body: '', price: '' })} /></Row>
+    <Row label="Üst menü – banner arası" hint="Ana sayfada bannerın üstüne ek boşluk"><Seg v={String(Number(Lk.heroGap) || 0)} opts={[['0', 'Yok'], ['8', '+8'], ['16', '+16'], ['24', '+24'], ['36', '+36']]} on={(k) => set('look.heroGap', Number(k))} /></Row>
     <Row label="Üstüne gelince" hint="Bilgisayarda kartların üstüne gelince"><Seg v={Lk.hoverFx || ''} opts={[['', 'Yeni'], ['old', 'Eski (kalkar)']]} on={(k) => set('look.hoverFx', k)} /></Row>
     <Row label="Gece modu" hint="Otomatik: ziyaretçinin telefonu gece modundaysa mağaza da koyu"><Seg v={d.brand?.theme === 'auto' ? 'auto' : 'light'} opts={[['auto', 'Otomatik'], ['light', 'Hep gündüz']]} on={(k) => set('brand.theme', k)} /></Row>
     <span className="v3-cap">Paketler</span>
@@ -188,9 +190,9 @@ function LookPanel({ d, set, setAll, A }) {
 // ---- Sağ: seçilen bölümün ayarları ----
 function Inspector({ k, d, H, S, close, hidden, toggleHide }) {
   const body = k === 'cd:hero' || k === 'hero' || k === 'p0:hero' ? <HeroPanel H={H} S={S} k={k} />
-    : k === 'cd:pick' ? <PickPanel H={H} S={S} />
+    : k === 'cd:pick' ? <PickPanel H={H} S={S} d={d} />
     : k === 'cd:sets' ? <SetsPanel H={H} S={S} d={d} />
-    : k === 'cd:brands' ? <TextPanel H={H} S={S} part="brands" eye="Markalar" title="Tüm markalar." n={[[0, 'Hepsi'], [12, '12'], [18, '18']]} />
+    : k === 'cd:brands' ? <BrandsPanel H={H} S={S} />
     : k === 'cd:mq' ? <MqPanel H={H} S={S} />
     : k === 'cd:ads' ? <AdsPanel H={H} S={S} />
     : k.startsWith('rail:') ? <RailPanel H={H} S={S} k={k} />
@@ -213,6 +215,7 @@ function HeroPanel({ H, S, k }) {
   const pbIn = sl.some((s) => s.pb);
   return <>
     {!pbIn && <div className="v3-cta"><b>Fotoğraflı bannerlar listede değil</b><p>Şu an koddan ekleniyorlar. Listeye alırsanız her birinin yazısını, sırasını ve görünürlüğünü buradan yönetirsiniz.</p><button type="button" className="btn sm primary" onClick={() => S('slides', [...PHOTO_BANNERS.map((b) => ({ pb: b.id })), ...sl])}>Listeye al</button></div>}
+    <Row label="Banner içi düğme köşesi" hint="Banner köşesinden bağımsız"><Seg v={String(H.chipR ?? '')} opts={[['', 'Banner gibi'], ['999', 'Yuvarlak'], ['12', 'Yumuşak'], ['6', 'Az'], ['0', 'Düz']]} on={(v) => S('chipR', v === '' ? undefined : Number(v))} /></Row>
     <span className="v3-cap">Bannerlar · {sl.filter((s) => !s.off).length} açık</span>
     <p className="fine">Kapalı olan sitede görünmez, silinmez. Fotoğraf ve yerleşim hazır şablondan gelir; yazıları değiştirebilirsiniz.</p>
     <div className="v3-bns">{sl.map((s, i) => (
@@ -245,7 +248,8 @@ function HeroPanel({ H, S, k }) {
 }
 
 // Bu hafta masamızdan: başlıklar + ürünler (seç, sırala, kısa ad)
-function PickPanel({ H, S }) {
+function PickPanel({ H, S, d }) {
+  const S0 = d;
   const C = cdOf(H).pick || {};
   const byId = useStore((s) => s.byId); const catalog = useStore((s) => s.catalog);
   const up = (p) => S('cd', { ...cdOf(H), pick: { ...C, ...p } });
@@ -253,18 +257,24 @@ function PickPanel({ H, S }) {
   const [q, setQ] = useState('');
   const hits = useMemo(() => { const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return []; return catalog.filter((p) => p.a !== 0 && !p.so && !ids.includes(p.id) && t.every((w) => norm(p.n + ' ' + (p.b || '') + ' ' + (p.k || '')).includes(w))).slice(0, 8); }, [q, catalog, ids.join()]); // eslint-disable-line react-hooks/exhaustive-deps
   const names = C.names || {};
+  const live = usePickList(C, S0);
   return <>
     <Row label="Üst yazı"><TF v={C.eye} ph="Tamircinin seçimi" on={(v) => up({ eye: v })} /></Row>
     <Row label="Başlık"><TF v={C.title} ph="Bu hafta masamızdan." on={(v) => up({ title: v })} /></Row>
     <Row label="Büyük kutudaki etiket"><TF v={C.badge} ph="Haftanın ürünü" on={(v) => up({ badge: v })} /></Row>
-    <span className="v3-cap">Ürünler · ilki büyük kutuda</span>
-    {ids.map((id, i) => { const p = byId.get(id); if (!p) return null; const X = shortOf(p); return <div key={id} className="v3-prod">
-      <div className="v3-prod-h"><span className="v3-prod-n"><b>{X.n}</b><small>{p.b} · {p.k}</small></span>
+    <span className="v3-cap">5 ürün · ilki büyük kutuda</span>
+    {ids.map((id, i) => { const p = byId.get(id); if (!p) return null; return <div key={id} className="v3-prod">
+      <div className="v3-prod-h"><span className="v3-prod-n"><b>{p.n}</b><small>{i === 0 ? 'Büyük kutu · ' : ''}{p.b} · {p.k}</small></span>
         <span className="v3-row-mv"><button type="button" disabled={i === 0} onClick={() => up({ ids: moveItem(ids, i, i - 1) })} aria-label="Yukarı"><Icon n="up" s={14} /></button><button type="button" disabled={i === ids.length - 1} onClick={() => up({ ids: moveItem(ids, i, i + 1) })} aria-label="Aşağı"><Icon n="down" s={14} /></button></span>
         <button type="button" className="dz2-ib" onClick={() => up({ ids: ids.filter((x) => x !== id) })} aria-label="Çıkar"><Icon n="x" s={15} /></button></div>
-      <input className="v3-short" value={names[id] || ''} placeholder={'Kısa ad: ' + X.n} onChange={(e) => up({ names: { ...names, [id]: e.target.value || undefined } })} />
+      <input className="v3-short" value={names[id] || ''} placeholder="Kartta görünen ad (boşsa ürünün tam adı)" onChange={(e) => up({ names: { ...names, [id]: e.target.value || undefined } })} />
     </div>; })}
-    {ids.length < 5 && <div className="v3-search"><Icon n="search" s={15} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ürün ekle: ad, marka ya da stok kodu" />
+    {/* 7.11.2026 (7) boş yerler: kendiliğinden gelen ürün 'Otomatik' diye görünür, 'Sabitle' ile seçilenlere eklenir */}
+    {live.filter((p) => !ids.includes(p.id)).map((p) => <div key={p.id} className="v3-prod auto">
+      <div className="v3-prod-h"><span className="v3-prod-n"><b>{p.n}</b><small>Otomatik · {p.b} · {p.k}</small></span>
+        <button type="button" className="v3-pin" onClick={() => up({ ids: [...ids, p.id] })}>Sabitle</button></div>
+    </div>)}
+    {ids.length < 5 && <div className="v3-search"><Icon n="search" s={15} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={ids.length ? 'Ürün ekle (otomatik olanın yerine geçer)' : 'Ürün ekle: ad, marka ya da stok kodu'} />
       {hits.length > 0 && <div className="v3-hits">{hits.map((p) => <button key={p.id} type="button" onClick={() => { up({ ids: [...ids, p.id] }); setQ(''); }}><b>{shortOf(p).n}</b><small>{p.b} · {p.k}</small></button>)}</div>}</div>}
     <label className="v3-chk"><input type="checkbox" checked={C.auto !== false} onChange={(e) => up({ auto: e.target.checked })} /><span>Boş kalan yerleri öne çıkanlar ve yeni gelenlerle doldur</span></label>
   </>;
@@ -282,6 +292,28 @@ function SetsPanel({ H, S, d }) {
     {live.length ? live.map((x) => <label key={x.id} className="v3-chk"><input type="checkbox" checked={ids.includes(x.id)} onChange={(e) => up({ ids: e.target.checked ? [...ids, x.id] : ids.filter((y) => y !== x.id) })} /><span>{x.name}</span></label>)
       : <p className="fine">Yayında set yok. Setleri Yönetim › Setler’den hazırlayın.</p>}
     <p className="fine">Setin ürünleri ve fiyatı Yönetim › Setler’de düzenlenir.</p>
+  </>;
+}
+// 7.11.2026 (7) Markalar: kaç SIRA (ekran genişliğine göre tam sıra dolar, yarım sıra kalmaz) + istenen markalar elle, istenen sırayla
+function BrandsPanel({ H, S }) {
+  const C = cdOf(H).brands || {};
+  const up = (p) => S('cd', { ...cdOf(H), brands: { ...C, ...p } });
+  const all = useBrandList();
+  const ids = C.ids || [];
+  const [q, setQ] = useState('');
+  const rest = all.filter((b) => !ids.includes(b.n) && (!q || norm(b.n).includes(norm(q))));
+  return <>
+    <Row label="Üst yazı"><TF v={C.eye} ph="Markalar" on={(v) => up({ eye: v })} /></Row>
+    <Row label="Başlık"><TF v={C.title} ph="Tüm markalar." on={(v) => up({ title: v })} /></Row>
+    <Row label="Kaç sıra" hint="Sıra tam dolar; ekran daralınca sıradaki marka sayısı azalır"><Seg v={String(Number(C.rows) || 0)} opts={[['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['0', 'Hepsi']]} on={(v) => up({ rows: Number(v), n: 0 })} /></Row>
+    <label className="v3-chk"><input type="checkbox" checked={!!C.logosOnly} onChange={(e) => up({ logosOnly: e.target.checked })} /><span>Sadece logosu olan markalar</span></label>
+    <span className="v3-cap">{ids.length ? 'Seçtiğiniz markalar (bu sırayla önde)' : 'Marka seçmezseniz en çok ürünü olan önde'}</span>
+    {ids.map((n, i) => <div key={n} className="v3-row"><span className="v3-row-n"><span>{n}</span></span>
+      <span className="v3-row-mv"><button type="button" disabled={i === 0} onClick={() => up({ ids: moveItem(ids, i, i - 1) })} aria-label="Yukarı"><Icon n="up" s={14} /></button><button type="button" disabled={i === ids.length - 1} onClick={() => up({ ids: moveItem(ids, i, i + 1) })} aria-label="Aşağı"><Icon n="down" s={14} /></button></span>
+      <button type="button" className="dz2-ib" onClick={() => up({ ids: ids.filter((x) => x !== n) })} aria-label="Çıkar"><Icon n="x" s={15} /></button></div>)}
+    {ids.length > 0 && <label className="v3-chk"><input type="checkbox" checked={C.only !== false} onChange={(e) => up({ only: e.target.checked })} /><span>Sadece seçtiklerim (kapalıysa kalan yerleri diğer markalar doldurur)</span></label>}
+    <div className="v3-search"><Icon n="search" s={15} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Marka ekle" /></div>
+    <div className="v3-bpick">{rest.slice(0, q ? 30 : 40).map((b) => <button key={b.n} type="button" onClick={() => { up({ ids: [...ids, b.n] }); setQ(''); }}>{b.n}<small>{b.c}</small></button>)}</div>
   </>;
 }
 function TextPanel({ H, S, part, eye, title, n }) {

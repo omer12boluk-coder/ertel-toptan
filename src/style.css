@@ -9059,3 +9059,43 @@ img[src*="/brands/ersa."] { --lk: 1.080; --lc: -0.040; --ll: -0.011; }
 /* 7.11.2026 (5) iPhone'da banner yukarı-aşağı titriyordu: yatay kayan şerit (overflow-x: auto) dikeyde de 'auto' sayılır →
    içerik bir an taşınca parmakla dikey kaydırırken şerit kendi içinde birkaç px yukarı-aşağı oynuyordu. Dikey kaydırma tamamen kapalı. */
 .sh-hero-track { overflow-y: hidden !important; overscroll-behavior-y: auto; }
+/* 7.11.2026 (7) tam ürün adı: büyük kartta 3 satıra kadar, kartlarda 2 satır; alt satır kategori */
+.cd-big h3 { font-size: clamp(26px, 2.4vw, 36px) !important; line-height: 1.12 !important; letter-spacing: -.02em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+@media (max-width: 899px) { .cd-big h3 { font-size: 24px !important; } }
+.cd-sec .cd-tile .cd-nm { font-size: 15px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.5em; letter-spacing: -.01em; }
+@media (max-width: 899px) { .cd-sec .cd-tile .cd-nm { font-size: 13.5px; } }
+/* 7.11.2026 (7) marka duvarı sütun sayısı JS ile aynı (tam sıra) */
+.cd-sec .cd-bwall { grid-template-columns: repeat(var(--bw-cols, 8), minmax(0, 1fr)); }
+.v3-bpick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.v3-bpick button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 10px; font-size: 12.5px; display: inline-flex; gap: 5px; align-items: baseline; cursor: pointer; color: var(--ink); }
+.v3-bpick button small { color: var(--muted); font-size: 10.5px; }
+.v3-prod.auto { opacity: .78; border-style: dashed; }
+.v3-pin { border: 0; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 12px; border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+/* 7.11.2026 (7) Haftanın ürünü + cd kartları: Sepete ekle ⇄ − 1 + geçişi esnemesiz (qtyGrow'un taşan eğrisi telefonda düğmeyi
+   bir an aşağı/yukarı oynatıyordu) → Tüm ürünlerdeki sakin 'abIn'; kutu yerinde, ortadan belirir */
+:is(.cd-big-add, .cd-tile) .abx { display: block; position: relative; }
+:is(.cd-big-add, .cd-tile) .qty-morph { display: block; width: 100%; margin: 0; }
+:is(.cd-big-add, .cd-tile) .qty-morph > .stepper { width: 100%; }
+:is(.cd-big-add, .cd-tile) .qty-morph.grow > .stepper { animation: abIn .26s cubic-bezier(.2, .8, .2, 1) backwards !important; transform-origin: center; }
+:is(.cd-big-add, .cd-tile) .qty-morph.grow > .stepper > * { animation: none !important; }
+:is(.cd-big-add, .cd-tile) .btn.add.back { animation: abIn .22s cubic-bezier(.2, .8, .2, 1) backwards !important; }
+.cd-big-add { align-items: center; }
+.cd-big-add .abx { flex: none; width: 200px; }
+@media (max-width: 899px) { .cd-big-add .abx { width: min(200px, 60vw); } }
+/* 7.11.2026 (7) WhatsApp alt bandı (CdCta) — banner dili */
+.cd-cta { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(20px, 4vw, 56px); align-items: center; padding: clamp(28px, 4.5vw, 64px); border-radius: var(--st-rcard, 28px); background: radial-gradient(70% 90% at 85% 60%, #ffffff 0%, #f1f2f4 80%); box-shadow: 0 1px 2px rgb(16 24 40 / .04), 0 16px 34px -28px rgb(16 24 40 / .18); margin: clamp(24px, 4vw, 48px) 0; }
+.cd-cta-t h2 { margin: 6px 0 10px; font: 600 clamp(30px, 3.6vw, 52px)/1.04 var(--f-display); letter-spacing: -.03em; color: #1d1d1f; }
+.cd-cta-t p { margin: 0; max-width: 44ch; color: #6e6e73; font-size: clamp(15px, 1.2vw, 18px); line-height: 1.45; }
+.cd-cta-a { display: flex; align-items: center; gap: 22px; margin-top: 24px; flex-wrap: wrap; }
+.cd-cta-wa { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 22px; border-radius: var(--pb-chip-r, 999px); background: #1fa855; color: #fff; font-weight: 600; font-size: 16px; text-decoration: none; }
+.cd-cta-wa:hover { filter: brightness(1.06); }
+.cd-cta-chat { display: flex; flex-direction: column; gap: 10px; padding: clamp(16px, 2vw, 26px); border-radius: calc(var(--st-rcard, 28px) * .8); background: #fff; box-shadow: 0 24px 50px -34px rgb(16 24 40 / .35); }
+.cd-bub { max-width: 82%; padding: 10px 14px; border-radius: 20px; font-size: 15px; line-height: 1.35; }
+.cd-bub.me { align-self: flex-end; background: #1fa855; color: #fff; border-bottom-right-radius: 6px; }
+.cd-bub.them { align-self: flex-start; background: #f0f0f3; color: #1d1d1f; border-bottom-left-radius: 6px; }
+.cd-cta-chat small { display: flex; align-items: center; gap: 6px; color: #86868b; font-size: 12px; margin-top: 4px; }
+.cd-cta-chat small i { width: 7px; height: 7px; border-radius: 50%; background: #34c759; }
+html[data-theme=dark] .cd-cta { background: radial-gradient(70% 90% at 85% 60%, #2a2b2f 0%, #1c1d20 80%); box-shadow: none; }
+html[data-theme=dark] .cd-cta-t h2 { color: #f5f5f7; } html[data-theme=dark] .cd-cta-t p { color: #a1a1a6; }
+html[data-theme=dark] .cd-cta-chat { background: #2c2c30; } html[data-theme=dark] .cd-bub.them { background: #3a3a3f; color: #f5f5f7; }
+@media (max-width: 899px) { .cd-cta { grid-template-columns: 1fr; padding: 26px 20px; border-radius: 22px; } .cd-cta-chat { order: 2; } .cd-bub { font-size: 14px; } .cd-cta-a { gap: 16px; } }

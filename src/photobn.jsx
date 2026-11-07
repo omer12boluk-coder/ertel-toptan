@@ -157,7 +157,9 @@ export function PhotoBanner({ b, open, onProduct, edit }) {
   const win = useWin();
   // köşeler: Stil Stüdyosu'nda büyük reklam köşesi (look.style.rHero) küçültülünce düğmeler de aynı oranda sivrileşir (Apple yuvarlağı = hap)
   const rh = useStore((s) => s.settings?.look?.style?.rHero);
-  const br = rh == null || rh === '' || Number(rh) >= 16 ? 999 : Math.round(Number(rh) * 0.5);
+  // 7.11.2026 (7) kendi ayarı: shopHome.chipR (boş = eski davranış, banner köşesine bağlı)
+  const cr = useStore((s) => s.settings?.shopHome?.chipR);
+  const br = cr != null && cr !== '' ? Number(cr) : rh == null || rh === '' || Number(rh) >= 16 ? 999 : Math.round(Number(rh) * 0.5);
   useEffect(() => { ensureFonts(win.document, ['inter', 'intert']); }, [win]);
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;

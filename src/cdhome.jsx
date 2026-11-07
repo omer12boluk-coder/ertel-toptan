@@ -1,10 +1,12 @@
+import { baseCatName } from './cats.js';
 // 'Claude düzeni' (7.11.2026): fotoğraflı bannerların diliyle sıfırdan ana sayfa bölümleri (cd:*). Kurallar: docs/banner-kurallari.md
 // Sade zemin, marka logosu, kısa model adı, bir satır açıklama, fiyat, tek düğme. Mor yok; düğmeler tema renginde.
 // Bölümler sadece kayıtlı sırada (shopHome.layout) varsa çizilir — eski paketler (Paket 0, 1, Eski düzenim) birebir aynı kalır.
 // Ayarlar: shopHome.cd = { pick: {ids, auto, names{id: kısa ad}, eye, title, badge}, sets: {ids, n, eye, title}, brands: {n, eye, title},
 //   mq: {speed, eye}, rails: {} }; banner genişliği shopHome.heroW (''|narrow|mid|wide|full), yüksekliği shopHome.heroFill (''|screen).
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, go } from './store.js';
+import { waLink } from './route.js';
 import { Icon, Thumb } from './ui.jsx';
 import { fmt, norm, priceFor } from './utils.js';
 import { feat } from './extras.jsx';
@@ -22,6 +24,12 @@ const hasImg = (p) => !!(p && (p.pi || p.im || p.img));
 // kısa model adı: marka atılır; baştaki model parçaları (rakamlı/BÜYÜK harfli/Pro·Max·Mini…) alınır.
 // İlk kelime sıradan bir kelimeyse (Power, Mini…) parantez/virgüle kadar en çok 4 kelime. Elle ad (cd.pick.names) her zaman önce.
 const MODEL_W = new Set(['pro', 'max', 'mini', 'plus', 'ultra', 'se', 'lite', 'air', 'set', 'kit', 'ii', 'iii', 'iv', 'v2', 'v3', 'x']);
+// 7.11.2026 (7) kullanıcı: adı ikiye bölüp yarısını silik yazmak her ürün adına uymuyor → kartlarda TAM AD (2 satır), altında
+// silik satırda KATEGORİ. Tasarım modunda verilen 'Kısa ad' varsa o. shortOf eski yöntem (sadece panel listesinde).
+export function nameOf(p, names) {
+  const own = names?.[p.id];
+  return { n: own || String(p.n || '').trim(), sub: baseCatName(p.c) || '' };
+}
 export function shortOf(p, names) {
   const own = names?.[p.id]; if (own) return { n: own, sub: '' };
   let n = String(p.n || '').trim();
@@ -68,7 +76,7 @@ function Tile({ p, X, pr, logos, onProduct, isNew }) {
 // ---- Banner alanı: kullanıcının reklam listesi (fotoğraflı bannerlar dahil), genişlik ve yükseklik sayfadan ayrı ----
 export const HERO_W = [['', 'Sayfayla aynı'], ['narrow', 'Dar'], ['mid', 'Orta'], ['wide', 'Geniş'], ['full', 'Kenardan kenara']];
 export const HERO_FILL = [['', 'Normal'], ['screen', 'Ekranı doldur']];
-export function CdHero({ H, open, onProduct, brands, pkHero }) {
+export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   const ref = useRef(null);
   const w = H.heroW || ''; const fill = H.heroFill === 'screen';
   const slides = useMemo(() => heroList(H), [H.slides, H.photoBn]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -81,18 +89,19 @@ export function CdHero({ H, open, onProduct, brands, pkHero }) {
     m(); const t = setTimeout(m, 400); W.addEventListener('resize', m); return () => { clearTimeout(t); W.removeEventListener('resize', m); };
   }, [fill]);
   if (!slides.length) return null;
-  return <div ref={ref} className={'cd-hero' + (w ? ' hw-' + w : '') + (fill ? ' hh-screen' : '')}>
+  // 7.11.2026 (7) üst menü ile banner arası ek boşluk (look.heroGap px, Tasarım › Görünüm)
+  return <div ref={ref} className={'cd-hero' + (w ? ' hw-' + w : '') + (fill ? ' hh-screen' : '')} style={Number(gap) ? { marginTop: Number(gap) + 'px' } : undefined}>
     <Hero slides={slides} open={open} onProduct={onProduct} brands={brands} pkHero={pkHero} nv={{ ...(H.heroNav || {}), full: w === 'full' ? 'all' : '', fs: '' }} heroH={fill ? undefined : H.heroH} />
   </div>;
 }
 
 // ---- Bu hafta masamızdan: bir büyük (haftanın ürünü) + dört küçük ----
-export function CdPick({ H, S, onProduct }) {
-  const C = cdOf(H).pick || {};
+// 'Bu hafta masamızdan' listesi (5 ürün): önce seçilenler, boş yerler öne çıkanlar → yeni gelenler → stoklular. Tasarım paneli de
+// bunu kullanır (otomatik dolan yerleri 'Otomatik' diye gösterir).
+export function usePickList(C, S) {
   const byId = useStore((s) => s.byId); const vis = useVisibleProducts(false);
-  const price = usePrice(); const logos = useLogos();
   const ik = (C.ids || []).join(',');
-  const list = useMemo(() => {
+  return useMemo(() => {
     const out = []; const seen = new Set(); const add = (p) => { if (p && sellable(p) && !seen.has(p.id) && out.length < 5) { seen.add(p.id); out.push(p); } };
     (C.ids || []).forEach((id) => add(byId.get(Number(id))));
     if (C.auto !== false) {
@@ -102,8 +111,13 @@ export function CdPick({ H, S, onProduct }) {
     }
     return out;
   }, [S, byId, vis, ik, C.auto]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+export function CdPick({ H, S, onProduct }) {
+  const C = cdOf(H).pick || {};
+  const list = usePickList(C, S);
+  const price = usePrice(); const logos = useLogos();
   if (list.length < 3) return null;
-  const [a, ...rest] = list; const A = shortOf(a, C.names);
+  const [a, ...rest] = list; const A = nameOf(a, C.names);
   return (
     <section className="cd-sec rv">
       <Head eye={C.eye ?? 'Tamircinin seçimi'} title={C.title || 'Bu hafta masamızdan.'} />
@@ -118,7 +132,7 @@ export function CdPick({ H, S, onProduct }) {
           </div>
           <span className="cd-big-im"><Thumb p={a} size="lg" /></span>
         </div>
-        <div className="cd-grid">{rest.map((p) => <Tile key={p.id} p={p} X={shortOf(p, C.names)} pr={price(p)} logos={logos} onProduct={onProduct} />)}</div>
+        <div className="cd-grid">{rest.map((p) => <Tile key={p.id} p={p} X={nameOf(p, C.names)} pr={price(p)} logos={logos} onProduct={onProduct} />)}</div>
       </div>
     </section>
   );
@@ -154,14 +168,26 @@ export function CdSets({ H, S }) {
 }
 
 // ---- Markalar: TÜM markalar logo duvarı (beyaz kutular, logo ortada, ürün sayısı altında) — 7.11.2026 (3) ----
-export function BrandWall({ max, logosOnly }) {
+export function BrandWall({ max, logosOnly, rows, ids, only }) {
   const all = useBrandList();
-  const list = (logosOnly ? all.filter((b) => b.logo) : all).slice(0, max || 999);
-  return <div className="cd-bwall">{list.map((b) => (
+  const base = logosOnly ? all.filter((b) => b.logo) : all;
+  // 7.11.2026 (7) elle seçilen markalar önde (seçilen sırayla); 'only' ise sadece onlar
+  let list = base;
+  if (ids?.length) { const by = new Map(all.map((b) => [b.n, b])); const pick = ids.map((n) => by.get(n)).filter(Boolean); list = only === false ? [...pick, ...base.filter((b) => !ids.includes(b.n))] : pick; }
+  // kaç sıra: sütun sayısı ekrana göre (CSS ile aynı: telefon 3, ≥900 4-8) → tam sıra
+  const cols = useBwCols();
+  if (rows) list = list.slice(0, rows * cols); else if (max) list = list.slice(0, max);
+  return <div className="cd-bwall" style={{ '--bw-cols': cols }}>{list.map((b) => (
     <button key={b.n} type="button" className="cd-bw" style={b.color ? { '--bc': b.color } : undefined} onClick={() => openBrand(b.n)} title={b.n}>
       <span className="cd-bw-lg">{b.logo ? <ShopImg v={b.logo} alt={b.n} /> : <b>{b.n}</b>}</span>
       <small>{b.c} ürün</small>
     </button>))}</div>;
+}
+function bwCols() { if (typeof window === 'undefined') return 8; const w = window.innerWidth; return w < 900 ? 3 : w < 1100 ? 5 : w < 1400 ? 6 : 8; }
+function useBwCols() {
+  const [c, setC] = useState(bwCols);
+  useEffect(() => { const f = () => setC(bwCols()); addEventListener('resize', f); return () => removeEventListener('resize', f); }, []);
+  return c;
 }
 export function CdBrands({ H }) {
   const C = cdOf(H).brands || {};
@@ -170,7 +196,7 @@ export function CdBrands({ H }) {
   return (
     <section className="cd-sec rv">
       <Head eye={C.eye ?? 'Markalar'} title={C.title || 'Tüm markalar.'} more={['Markalar sayfası', () => go('markalar')]} />
-      <BrandWall max={Number(C.n) || 0} />
+      <BrandWall max={Number(C.n) || 0} rows={Number(C.rows) || 0} ids={C.ids} only={C.only} logosOnly={!!C.logosOnly} />
     </section>
   );
 }
@@ -212,7 +238,7 @@ export function CdRail({ sec, open, onProduct, edit }) {
       <header className="cd-head"><div>{sec.sub && <span className="cd-eye">{sec.sub}</span>}<h2>{sec.title || 'Ürünler'}</h2></div>
         <span className="cd-head-r">{!edit && <button type="button" className="cd-more" onClick={more}>Tümü<Icon n="back" s={14} className="flip" /></button>}
           <button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span></header>
-      <div className="cd-rail" ref={railRef}>{list.map((p) => <Tile key={p.id} p={p} X={shortOf(p)} pr={price(p)} logos={logos} onProduct={onProduct} isNew={sec.mode === 'new' || p.nw} />)}</div>
+      <div className="cd-rail" ref={railRef}>{list.map((p) => <Tile key={p.id} p={p} X={nameOf(p)} pr={price(p)} logos={logos} onProduct={onProduct} isNew={sec.mode === 'new' || p.nw} />)}</div>
     </section>
   );
 }
@@ -274,6 +300,31 @@ export function CdAds({ H, open }) {
             <span className="cd-lnk">{a.cta}<Icon n="back" s={13} className="flip" /></span>
           </span>
         </button>))}</div>
+    </section>
+  );
+}
+
+// ---- 7.11.2026 (7) Alt bant 'Aradığını bulamadın mı?' — banner dilinde: sade açık kart, büyük başlık, dolu düğme + yazı bağlantısı,
+// sağda WhatsApp konuşması gibi iki balon (fotoğrafsız, hızlı). Yazılar shopHome.cta'dan (başlık/metin), boşsa varsayılan.
+export function CdCta({ H, S, edit }) {
+  const C = H.cta || {}; const wa = S.shop?.whatsapp;
+  const title = C.title || 'Aradığını bulamadın mı?';
+  return (
+    <section className="cd-cta rv">
+      <div className="cd-cta-t">
+        <span className="cd-eye">Bize yazın</span>
+        <h2>{title}</h2>
+        <p>{C.text || 'Model kodunu ya da fotoğrafını WhatsApp’tan gönder; stokta yoksa senin için getirelim.'}</p>
+        <div className="cd-cta-a">
+          {wa && <a className="cd-cta-wa" href={edit ? undefined : waLink(wa, 'Merhaba, bir ürün soracaktım:')} target="_blank" rel="noopener"><Icon n="wa" s={18} />WhatsApp’tan yaz</a>}
+          <button type="button" className="cd-lnk" onClick={edit ? undefined : () => go('katalog')}>Tüm ürünler<Icon n="back" s={13} className="flip" /></button>
+        </div>
+      </div>
+      <div className="cd-cta-chat" aria-hidden="true">
+        <span className="cd-bub me">Merhaba, iPhone 15 Pro arka kapak için kalıbınız var mı?</span>
+        <span className="cd-bub them">Var. Fotoğrafı ve fiyatı hemen gönderiyoruz.</span>
+        <small><i />{S.shop?.name || 'ERTEL GSM'} · genelde birkaç dakikada yanıt</small>
+      </div>
     </section>
   );
 }
