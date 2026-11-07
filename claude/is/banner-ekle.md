@@ -31,7 +31,7 @@ anlaşılır Türkçe · kullanıcının kendi reklamlarına dokunma · **yeni k
    ```
    - `lay`: `right` yazı sol/ürün sağ · `left` ürün sol/yazı sağ · `center` başlık üstte/ürün altta (geniş, yatay ürün; `center: true` da yaz) · `photo` sağ yarı tam fotoğraf (`pos`/`posM` odak).
    - Bağlantılar: `p:<id>` ürün · `cart:<id>` sepete ekle · `cat:<id>` · `brand:<Ad>` · `q:<arama>` · `new:` · `all:` tüm ürünler · `go:markalar` / `go:setlist` / `go:kalip` sayfa.
-   - **Banner imzası:** her bannerda logomuz (`/bn/ertel-logo.png`) kendiliğinden çıkar — bilgisayarda marka satırının devamında, telefonda sağ üst köşede. Mağazanın kendi bannerında (logo zaten bizimki) `"imza": false`. Kullanıcı tek tek kapatır: Tasarım › Banner › banner › 'Banner imzası' (satırda `sig: false`).
+   - **Banner imzası:** her bannerda logomuz (`/bn/ertel-logo.png`) kendiliğinden çıkar — bilgisayarda marka satırının devamında, telefonda sağ alt köşede. Mağazanın kendi bannerında (logo zaten bizimki) `"imza": false`. Kullanıcı tek tek kapatır: Tasarım › Banner › banner › 'Banner imzası' (satırda `sig: false`).
    - Logolar `hosting/public/brands/` (açık zeminde koyu sürüm `-dark` varsa onu). Logo yoksa `eye` ile marka adını yaz.
    - Zemin tonları (mor yok): nane `#f2fbf7→#d3efe2` · buz `#f4f9fd→#dcebf7` · gri `#fbfbfd→#ececf0` · beyaz `#fff` · siyah `#000` (+`"dark":true`, logoya `"logoWhite":true`).
 5. **Kapatma / sıra / silme:** kod tarafında kapat `"off": true`. Sıra kullanıcının canlı listesindedir (Tasarım › Banner) —
