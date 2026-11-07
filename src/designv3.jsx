@@ -17,7 +17,8 @@ import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList, useNewList } fro
 import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
 import { liveSets } from './sets.jsx';
-import { useHubRoots } from './catalog.jsx';
+import { useHubRoots, HUB_IMG } from './catalog.jsx';
+import { ImgPick } from './shophome.jsx';
 
 const PREVIEW = typeof location !== 'undefined' && /--/.test(location.hostname);
 const setPath = (obj, path, v) => { const n = structuredClone(obj); const ks = path.split('.'); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k] = o[k] ?? {})); o[ks.at(-1)] = v; return n; };
@@ -53,8 +54,11 @@ function HubRows({ d, set }) {
     {L.prodHub && <>
       <Row label="Tüm ürünler kutusu"><Seg v={C.allTone || 'acc'} opts={[['acc', 'Tema rengi'], ['dark', 'Siyah'], ['tint', 'Açık ton'], ['ring', 'Beyaz']]} on={(k) => up({ allTone: k === 'acc' ? undefined : k })} /></Row>
       <Row label="Setler kutusu"><Seg v={C.setTone || 'ring'} opts={[['acc', 'Tema rengi'], ['dark', 'Siyah'], ['tint', 'Açık ton'], ['ring', 'Beyaz']]} on={(k) => up({ setTone: k === 'ring' ? undefined : k })} /></Row>
-      <Row label="Kutularda ürün resmi" hint="Kategori kutularının arkasındaki silik resim"><Seg v={C.bg === false ? 'off' : ''} opts={[['', 'Var'], ['off', 'Yok']]} on={(k) => up({ bg: k === 'off' ? false : undefined })} /></Row>
+      <Row label="Kutularda ürün resmi"><Seg v={C.imgMode || 'thumb'} opts={[['thumb', 'Küçük resim'], ['bg', 'Silik arka plan'], ['none', 'Yok']]} on={(k) => up({ imgMode: k === 'thumb' ? undefined : k })} /></Row>
+      <Row label="Alt kategori vurgusu" hint="Bilgisayarda alt kategorinin üstüne gelince yazının rengi"><Seg v={C.subHover || 'ink'} opts={[['ink', 'Siyah'], ['acc', 'Tema rengi']]} on={(k) => up({ subHover: k === 'ink' ? undefined : k })} /></Row>
       <Row label="Görünen kategoriler" hint="Kapattığın kategori açılış sayfasında görünmez (ürünleri yerinde kalır)"><span className="v3-seg wrap">{tiles.map((c) => <button key={c.id} type="button" className={hid.has(String(c.id)) ? '' : 'on'} onClick={() => tog(c.id)}>{c.name}</button>)}</span></Row>
+      {(C.imgMode || 'thumb') !== 'none' && <><span className="v3-cap">Kategori resimleri</span>
+        {tiles.filter((c) => !hid.has(String(c.id))).map((c) => <ImgPick key={c.id} v={(C.img2 || {})[c.id] || HUB_IMG[c.id] || ''} onChange={(v) => { const m = { ...(C.img2 || {}) }; if (v) m[c.id] = v; else delete m[c.id]; up({ img2: m }); }} label={c.name} hint="Ürün resmi seçebilir ya da yükleyebilirsin" prodOk />)}</>}
     </>}
   </>;
 }

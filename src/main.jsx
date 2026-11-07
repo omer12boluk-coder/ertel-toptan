@@ -320,7 +320,8 @@ function PvBadge() {
 // 7.11.2026 (gece 2): menüden Ürünler'e dönünce kategori/filtre/yüklenen ürünler ve kaydırma yeri KORUNUR (kullanıcı: 'açtığımız her şey kayboluyor');
 // hafiflik ekran dışı kartların çizilmemesinden (content-visibility). Açılış sayfası açıksa eskisi gibi önce o.
 // açılış sayfası: ilk girişte zaten o gelir; başka sayfadan dönünce listede kalınır, sadece Ürünler'deyken tekrar Ürünler'e basınca açılış sayfasına dönülür
-const navGo = (k) => { if (k === 'katalog' && store.s.tab === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub) store.set({ catalogGo: { hub: true } }); go(k); };
+// iPhone alışkanlığı: Ürünler'deyken 1. dokunuş listenin en üstüne kaydırır, en üstteyken 2. dokunuş açılış sayfasına döner
+const navGo = (k) => { if (k === 'katalog' && store.s.tab === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub && scrollY < 12) store.set({ catalogGo: { hub: true } }); go(k); };
 function useTheme() {
   const liteTick = useLowEndProbe();
   const isAdm = useStore((s) => s.user?.role === 'admin');

@@ -404,12 +404,12 @@ function HubV2Panel({ C, up, H, ImgPick }) {
   const tog = (id) => { const h = new Set(hid); h.has(String(id)) ? h.delete(String(id)) : h.add(String(id)); up({ hide2: [...h] }); };
   const upImg = (id, v) => { const m = { ...(C.img2 || {}) }; if (v) m[id] = v; else delete m[id]; up({ img2: m }); };
   return <>
-    <Toggle id="phbg" label="Kutularda silik ürün resmi" hint="Kapalı = kategori kutuları sadece yazı." checked={C.bg !== false} onChange={(v) => up({ bg: v })} />
+    <Field label="Kutularda ürün resmi"><span className="seg sw">{[['thumb', 'Küçük resim'], ['bg', 'Silik arka plan'], ['none', 'Yok']].map(([k, l]) => <button key={k} type="button" className={(C.imgMode || 'thumb') === k ? 'on' : ''} onClick={() => up({ imgMode: k === 'thumb' ? undefined : k })}>{l}</button>)}</span></Field>
     <h4 className="dz2-sub">Kategoriler</h4>
     <p className="fine">Kapattığın kategori bu sayfada görünmez (ürünleri yerinde kalır). Resim seçmezsen hazır resim kullanılır.</p>
     {tiles.map((c) => { const off = hid.has(String(c.id)); return <div key={c.id} className={'p0-pn-cat' + (off ? ' off' : '')}>
       <Toggle id={'phc' + c.id} label={c.name + ' · ' + c.n + ' ürün'} checked={!off} onChange={() => tog(c.id)} />
-      {!off && C.bg !== false && <ImgPick v={(C.img2 || {})[c.id] || HUB_IMG[c.id] || ''} onChange={(v) => upImg(c.id, v)} label="Arka plan resmi" hint="Arkası şeffaf ya da beyaz ürün resmi en iyisi" prodOk />}
+      {!off && (C.imgMode || 'thumb') !== 'none' && <ImgPick v={(C.img2 || {})[c.id] || HUB_IMG[c.id] || ''} onChange={(v) => upImg(c.id, v)} label="Resim" hint="Arkası şeffaf ya da beyaz ürün resmi en iyisi" prodOk />}
     </div>; })}
   </>;
 }

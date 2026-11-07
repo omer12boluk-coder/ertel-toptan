@@ -9438,3 +9438,45 @@ html[data-theme="dark"] .phub-c.phub-t-dark { background: #000; box-shadow: 0 0 
 /* uzun listede ekran dışındaki ürün kartları çizilmez (yüklü kalır, yaklaşınca anında çizilir) — telefon yorulmasın */
 .plist.pv2l > li { content-visibility: auto; contain-intrinsic-size: auto 420px; }
 .plist.pv2l:not(.pgrid) > li { contain-intrinsic-size: auto 132px; }
+/* 7.11.2026 (gece 5) açılış sayfası düzeltmeleri */
+/* resim türü: arka plan sadece 'bg' modunda */
+.phub-grid:not(.phub-m-bg) .phub-c::after { display: none; }
+.phub-th { flex: none; width: 40px; height: 40px; border-radius: 11px; background: var(--surface); box-shadow: 0 0 0 1px var(--line); display: grid; place-items: center; overflow: hidden; margin-right: 2px; align-self: center; }
+.phub-th img { width: 82%; height: 82%; object-fit: contain; display: block; }
+.phub-m-thumb .phub-h { align-items: center; }
+.phub-m-thumb .phub-h b { flex: 1; min-width: 0; }
+.phub-m-thumb .phub-s { margin-top: 12px; }
+html[data-theme="dark"] .phub-th { background: #fff; }
+/* alt kategori: mavi alt çizgi yok — yazı koyulaşır, yanına küçük › gelir */
+.phub-s button::after { content: '›'; display: inline-block; margin-left: 5px; opacity: 0; transform: translateX(-4px); transition: opacity .18s, transform .18s; }
+@media (hover: hover) and (pointer: fine) {
+  .phub-s button:hover { text-decoration: none !important; color: var(--fg) !important; }
+  .phub-hv-acc .phub-s button:hover { color: var(--accent) !important; }
+  .phub-s button:hover::after { opacity: .7; transform: none; }
+  .phub-c:is(.phub-t-acc, .phub-t-dark) .phub-s button:hover { color: #fff !important; }
+}
+.phub-more { display: none; }
+/* geçiş animasyonu (sayfa geçişleriyle aynı his) */
+.pv2-go-r { animation: pv2GoR .38s cubic-bezier(.2, .8, .2, 1) backwards; }
+.pv2-go-l { animation: pv2GoL .38s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes pv2GoR { from { opacity: 0; transform: translateX(36px); } }
+@keyframes pv2GoL { from { opacity: 0; transform: translateX(-36px); } }
+@media (prefers-reduced-motion: reduce) { .pv2-go-r, .pv2-go-l { animation: none; } }
+@media (max-width: 899px) {
+  /* Setler etiketi başlığın üstünde (sayıyla bitişik durmasın) */
+  .phub-badge { position: static; margin: 0 0 6px; align-self: flex-start; }
+  .phub-set { height: 120px; }
+  /* alt kategoriler: küçük gri haplar, tek satır, fazlası +N */
+  .phub-s { flex-wrap: nowrap; gap: 5px; max-height: none; overflow: hidden; padding-right: 0; margin-top: 8px; }
+  .phub-s button { flex: 0 1 auto; min-width: 0; max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 9px; border-radius: 999px; background: color-mix(in oklab, var(--fg) 5%, transparent); font-size: 12px; color: color-mix(in oklab, var(--fg) 78%, transparent); }
+  .phub-s button::after { display: none; }
+  .phub-s button:nth-of-type(n+3) { display: none; }
+  .phub-more { display: inline-flex; align-items: center; flex: none; font: 500 12px Inter, var(--f-body); font-style: normal; color: var(--muted); padding: 0 2px; }
+  .phub-c:is(.phub-t-acc, .phub-t-dark) .phub-s button { background: rgb(255 255 255 / .16); }
+  .phub-s span { padding: 4px 0; font-size: 12.5px; }
+  .phub-s span + span::before { content: '·'; margin-right: 6px; opacity: .6; }
+  .phub-c { height: 96px; }
+  .phub-m-thumb .phub-c { height: 106px; }
+  .phub-m-thumb .phub-s { margin-top: 8px; }
+  .phub-th { width: 34px; height: 34px; border-radius: 9px; }
+}

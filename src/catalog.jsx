@@ -417,7 +417,9 @@ export function Catalog({ admin }) {
   const [favOnly, setFavOnly] = useState(false);
   const [setsOnly, setSetsOnly] = useState(false);
   const [fsOpen, setFsOpen] = useState(false); // v2 Filtrele paneli
-  const [hubOff, setHubOff] = useState(false); // 6.11.2026 Ürünler açılış sayfası (look.prodHub) geçildi mi
+  const [hubOff, setHubOff] = useState(false);
+  const [hubAnim, setHubAnim] = useState(''); // açılış sayfası ↔ liste geçişi: 'l' açılış sayfasına dönüş (soldan), 'r' listeye giriş (sağdan)
+  const hubWas = useRef(null); // 6.11.2026 Ürünler açılış sayfası (look.prodHub) geçildi mi
   const [asort, setAsort] = useState({ k: null, d: null }); // yönetici tablosu başlık sıralaması
   const sortBy = (k) => setAsort((s) => (s.k !== k ? { k, d: k === 'code' || k === 'name' ? 'asc' : 'desc' } : s.d === (k === 'code' || k === 'name' ? 'asc' : 'desc') ? { k, d: k === 'code' || k === 'name' ? 'desc' : 'asc' } : { k: null, d: null }));
   const favs = useStore((s) => s.favs);
@@ -556,8 +558,10 @@ export function Catalog({ admin }) {
     </ul>
   ), [list, limit, view, admin, addCls, asort, pinKey, pv2]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const hubShown = pv2 && !!S.look?.prodHub && !hubOff && actives.length === 0;
+  useLayoutEffect(() => { if (hubWas.current !== null && hubWas.current !== hubShown) setHubAnim(hubShown ? 'l' : 'r'); hubWas.current = hubShown; }, [hubShown]);
   useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (pv2 && S.look?.prodHub && !hubOff && actives.length === 0) return <PV2Hub tree={tree} counts={counts} total={all.length} setN={setN}
+  if (pv2 && S.look?.prodHub && !hubOff && actives.length === 0) return <PV2Hub anim={hubAnim} tree={tree} counts={counts} total={all.length} setN={setN}
     onCat={(id) => { setCat(id); setHubOff(true); window.scrollTo(0, 0); }} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }}
     onQ={(t) => { setQ(t); setHubOff(true); window.scrollTo(0, 0); }} onNew={() => { setNewOnly(true); setHubOff(true); window.scrollTo(0, 0); }}
     onSets={() => { setSetsOnly(true); setHubOff(true); window.scrollTo(0, 0); }} />;
@@ -567,7 +571,7 @@ export function Catalog({ admin }) {
   const scopeBrands = pv2 ? (() => { const m = new Map(); for (const p of all) if (p.b && (cat == null || pcats.get(p.id)?.has(cat))) m.set(p.b, (m.get(p.b) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); })() : null;
   const catTitle = cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : 'Tüm ürünler';
   return (
-    <div className="catalog">
+    <div className={'catalog' + (pv2 && hubAnim === 'r' ? ' pv2-go-r' : '')}>
       {hubBack && <button className="back-btn cat-hub-back" onClick={() => store.set({ catalogGo: { hub: true } })}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
       {/* 6.11.2026: Ürünler / Akıllı ekle / Setler üçünde de başlık + seçici AYNI yerde ve aynı genişlikte (sekme değişince kaymasın) */}
       {admin && <div className="page adm-sub prod-top"><PageHead title="Ürünler" extra={<span className="muted"> · {all.length}</span>} /><ProductsSwitch on="products" /></div>}
@@ -782,11 +786,13 @@ const LG_TXT = { luban: { t: 'Luban' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'Me
 // 7.11.2026 (gece) Ürünler v2 açılış sayfası (look.prodHub): yazılı kategori dizini — 'Tüm ürünler' en başta (tema rengi),
 // her ana kategori kutusunun arkasında silik kapak resmi (src/icerik/kapaklar.json), alt kategoriler tıklanır, markalar logolu haplar.
 // Tasarım modunda seçilen resim ürün resmi ('prod:…') ya da yüklenen resim olabilir → useShopImg gerçek adrese çevirir (7.11.2026: düz url() ile seçilen resim görünmüyordu)
-function HubCat({ n, cnt, subs, onCat, kd, img }) {
-  const src = useShopImg(img || ''); const go1 = () => onCat(n.id);
-  return <div role="button" tabIndex={0} className="phub-c" style={img && src ? { '--im': `url("${src}")` } : undefined} onClick={go1} onKeyDown={kd(go1)}>
-    <div className="phub-h"><b>{n.name}</b><span>{cnt}<Icon n="chev" s={14} /></span></div>
-    <div className="phub-s">{subs.map((c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onCat(c.id); }}>{c.name}</button>)}</div>
+// mode: 'thumb' başlığın solunda küçük net resim (varsayılan) · 'bg' kutunun arkasında silik resim · 'none' resimsiz
+function HubCat({ n, cnt, subs, onCat, kd, img, mode }) {
+  const src = useShopImg(mode !== 'none' && img ? img : ''); const go1 = () => onCat(n.id);
+  const sub = (c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onCat(c.id); }}>{c.name}</button>;
+  return <div role="button" tabIndex={0} className="phub-c" style={mode === 'bg' && src ? { '--im': `url("${src}")` } : undefined} onClick={go1} onKeyDown={kd(go1)}>
+    <div className="phub-h">{mode === 'thumb' && <span className="phub-th">{src && <img src={src} alt="" loading="lazy" />}</span>}<b>{n.name}</b><span>{cnt}<Icon n="chev" s={14} /></span></div>
+    <div className="phub-s">{subs.map(sub)}{subs.length > 2 && <em className="phub-more">+{subs.length - 2}</em>}</div>
   </div>;
 }
 // Açılış sayfası ayar panelleri için ana kategoriler (sitede ürünü olan her ana kategori; yeni açılan kategori kendiliğinden gelir)
@@ -799,33 +805,34 @@ export function useHubRoots() {
   }, [tree, vis]);
 }
 export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
-function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {
+function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets, anim }) {
   const brands = useBrandList();
   const HC = useStore((st) => st.settings.shopHome?.p0?.hub) || {};
   const S0 = useStore((st) => st.settings); const sets = useMemo(() => liveSets(S0), [S0]); // Tasarım › Ürünler açılış sayfası: bg (resimler), hide2 (gizli kategoriler), img2 (kategori resmi)
   const hid = new Set((HC.hide2 || []).map(String));
+  const mode = HC.imgMode || 'thumb'; // Tasarım › Görünüm 'Kutularda ürün resmi'
   const roots = tree.roots.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden && !hid.has(String(n.id)));
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
   const key = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
-  return <div className="catalog phub pv2-in">
+  return <div className={'catalog phub ' + (anim === 'l' ? 'pv2-go-l' : 'pv2-in')}>
     <nav className="pv2-crumb" aria-label="Konum"><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></nav>
     <div className="pv2-trow">
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
     </div>
     <div className="phub-lbl">Kategoriler</div>
-    <div className="phub-grid">
+    <div className={'phub-grid phub-m-' + mode + ' phub-hv-' + (HC.subHover || 'ink')}>
       <div role="button" tabIndex={0} className={'phub-c phub-all phub-t-' + (HC.allTone || 'acc')} onClick={onAll} onKeyDown={key(onAll)}>
         <div className="phub-h"><b>Tüm ürünler</b><span>{nf(total)}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span></div>
       </div>
       {sets.length > 0 && <div role="button" tabIndex={0} className={'phub-c phub-set phub-t-' + (HC.setTone || 'ring')} onClick={onSets} onKeyDown={key(onSets)}>
-        <span className="phub-badge">{HC.setBadge ?? 'Hazır paket'}</span>
+        <span className="phub-badge">{HC.setBadge ?? 'Hazır paketler'}</span>
         <div className="phub-h"><b>Setler</b><span>{sets.length}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s">{sets.slice(0, 6).map((x) => <button key={x.id} type="button" onClick={(e) => { e.stopPropagation(); openSet(x.id); }}>{x.name}</button>)}</div>
       </div>}
-      {roots.map((n) => <HubCat key={n.id} n={n} cnt={nf(counts.get(n.id))} subs={subsOf(n)} onCat={onCat} kd={key}
-        img={HC.bg === false ? null : (HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]} />)}
+      {roots.map((n) => <HubCat key={n.id} n={n} cnt={nf(counts.get(n.id))} subs={subsOf(n)} onCat={onCat} kd={key} mode={mode}
+        img={(HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]} />)}
     </div>
     <div className="phub-lbl">Markalar</div>
     <div className="phub-brs">
