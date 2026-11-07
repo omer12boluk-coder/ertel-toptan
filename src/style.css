@@ -9120,3 +9120,9 @@ html[data-theme=dark] .cd-cta-chat { background: #2c2c30; } html[data-theme=dark
   .sh-hero.dp-center .sh-dots { justify-content: center; }
   .sh-hero.dp-right .sh-dots { justify-content: flex-end; }
 }
+/* 7.11.2026 (12) telefonda marka duvarı: en çok 2 sıra, yana kaydırılır (sayfa kenarına kadar akar) */
+@media (max-width: 899px) {
+  .cd-sec .cd-bwall.bw-scroll { grid-template-columns: none; grid-auto-flow: column; grid-template-rows: repeat(var(--bw-rows, 2), auto); grid-auto-columns: calc((100% - 16px) / 3.3); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; overscroll-behavior-x: contain; margin-inline: -16px; padding: 2px 16px 6px; scroll-padding-inline: 16px; }
+  .cd-sec .cd-bwall.bw-scroll::-webkit-scrollbar { display: none; }
+  .cd-sec .cd-bwall.bw-scroll > .cd-bw { scroll-snap-align: start; }
+}
