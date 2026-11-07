@@ -11,7 +11,6 @@
 //  - Onaylanınca: yöneticiye giden Telegram/e-postada müşteriye "tek dokunuşla WhatsApp özeti" linki; sipariş sayfasında
 //    "WhatsApp'tan özet gönder" + özet resmi (paylaş / indir). Gönderim zamanı `waAt`.
 // Kural (firestore.rules): linki bilen tek belgeyi okur; müşteri sadece açık + süresi dolmamış sepeti bir kez onaylar.
-import { can } from './team.js';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, api, toast, store, go, openLcart } from './store.js';
 import { PageHead, Icon, Thumb, Empty, Stepper, VatLines, Field, PhoneInput, phoneDigits, Sheet, Confirm, copyText, Toggle } from './ui.jsx';
@@ -195,7 +194,7 @@ export function LinkCarts({ page = false }) {
     <section className={'lc-list' + (page ? ' lc-list-page' : ' oform-saved')}>
       {!page && <h2>Linkle gelen siparişler</h2>}
       <div className="toolbar lc-tool">
-        {page && <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>{can('heavy') && <button type="button" className={'o-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Geçmiş siparişler (tarih aralığı)" aria-label="Geçmiş siparişler"><Icon n="clock" s={18} /><span>Geçmiş</span></button>}</div>}
+        {page && <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div><button type="button" className={'o-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Tarih aralığı" aria-label="Tarih aralığı"><Icon n="clock" s={18} /><span>Tarih</span></button></div>}
         <div className="chips lc-chips">
           {[['sent', 'Onaylandı'], ['open', 'Bekleyen'], ['done', 'Tamamlanan'], ...(range || f === 'all' ? [['all', 'Tümü']] : [])].map(([k, l]) => <button key={k} className={'chip' + (f === k ? ' on' : '')} onClick={() => setF(k)}>{l}{n(k) > 0 && (k === 'sent' || k === 'open') && <span className="num"> ({n(k)})</span>}</button>)}
           {page && (list || []).length > 0 && <button className={'chip chip-sel' + (sel ? ' on' : '')} onClick={() => setSel(sel ? null : new Set())}><Icon n={sel ? 'x' : 'check'} s={14} /><span className="chip-sel-t">{sel ? 'Seçimi kapat' : 'Seç'}</span></button>}
@@ -257,7 +256,7 @@ export function LinkCarts({ page = false }) {
           </ul>
         </div>
       )}
-      {page && !range && (f === 'done' || f === 'all') && <OlderBtn kind="lcarts" what="siparişleri" past />}
+      {page && !range && (f === 'done' || f === 'all') && <OlderBtn kind="lcarts" what="siparişleri" unit="sipariş" />}
       {cur && !page && <LinkCartAdmin c={cur} onBack={hide} />}
     </section>
   );

@@ -36,15 +36,27 @@ const custMsg = (o, S) => {
 // Liste sonunda (siparişlerde sadece SON sayfada): panel açılışta son N günü yükler; bu düğme 30 gün daha geriye açar.
 // Basınca: düğmede "Yükleniyor…", bitince hangi tarihlerden kaç kayıt geldiği yazılır, yeni gelenler onDone ile işaretlenir.
 const dShort = (ts) => new Date(ts).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
-export function OlderBtn({ kind, what = 'siparişleri', past }) {
-  // 8.11.2026: 'Daha eski yükle' kaldırıldı (her basışta 30 gün geriye tamamını okuyordu). Eski kayıtlar: 'Geçmiş' düğmesi
-  // (tarih aralığı, tek seferlik okuma) — sadece asıl yönetici / 'Raporlar ve geçmiş kayıtlar' yetkisi.
+export function OlderBtn({ kind, what = 'siparişleri', unit = 'sipariş', onDone }) {
   const since = useStore((st) => st.win?.[kind]);
+  const [busy, setBusy] = useState(false);
+  const [last, setLast] = useState(null);
   if (!since) return null;
   const days = Math.round((Date.now() - since) / 864e5);
+  const run = () => {
+    setBusy(true);
+    loadOlder(kind).then((r) => {
+      setBusy(false); if (!r) { toast('Yüklenemedi, tekrar deneyin', 'bad'); return; }
+      setLast(r);
+      toast(r.added.length ? `${dShort(r.from)} – ${dShort(r.to)} arası: ${r.added.length} ${unit} eklendi` : `${dShort(r.from)} – ${dShort(r.to)} arasında ${unit} yok`);
+      onDone?.(r);
+    });
+  };
   return (
     <div className="older-row">
-      <span className="muted">Son <b>{days} günün</b> {what} gösteriliyor ({dShort(since)} ve sonrası){past && can('heavy') ? <> · daha eskisi için üstteki <b>Geçmiş</b></> : ''}</span>
+      <span className="muted">Son <b>{days} günün</b> {what} gösteriliyor ({dShort(since)} ve sonrası)</span>
+      {!can('heavy') ? <span className="muted older-np"><Icon n="lock" s={13} /> Daha eskisini yükleme: “Çok veri okuyan düğmeler” yetkisi gerekiyor</span> : <>
+      {last && <span className="older-last">{dShort(last.from)} – {dShort(last.to)}: {last.added.length ? last.added.length + ' ' + unit + ' eklendi' : unit + ' yok'}</span>}
+      <button className="btn sm" disabled={busy} onClick={run}>{busy ? <><span className="spin" aria-hidden="true" />Yükleniyor…</> : <><Icon n="clock" s={15} />{olderStep()} gün daha eskisini yükle</>}</button></>}
     </div>
   );
 }
@@ -178,7 +190,7 @@ export function Orders() {
       <OrdersSwitch on="orders" />
       {view === 'members' ? <Members /> : <>
         <div className="toolbar">
-          <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>{can('heavy') && <button type="button" className={'o-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Geçmiş siparişler (tarih aralığı)" aria-label="Geçmiş siparişler"><Icon n="clock" s={18} /><span>Geçmiş</span></button>}</div>
+          <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div><button type="button" className={'o-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Tarih aralığı" aria-label="Tarih aralığı"><Icon n="clock" s={18} /><span>Tarih</span></button></div>
           <div className="chips">
             {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'open' ? ` (${cnt.open})` : ''}</button>)}
             {orders.length > 0 && <button className={'chip chip-sel' + (sel ? ' on' : '')} onClick={() => setSel(sel ? null : new Set())}><Icon n={sel ? 'x' : 'check'} s={14} /><span className="chip-sel-t">{sel ? 'Seçimi kapat' : 'Seç'}</span></button>}
@@ -249,7 +261,7 @@ export function Orders() {
             )}
           </div>
         )}
-        {!range && pg >= pages - 1 && <OlderBtn kind="orders" past />}
+        {!range && pg >= pages - 1 && <OlderBtn kind="orders" onDone={onOlder} />}
       </>}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
       {flow.sheets}
@@ -360,7 +372,7 @@ function OrderDetail({ id }) {
   const allMem = useStore((st) => st.win?.membersAll);
   const memObj = mem ? members.find((m) => m.uid === mem) : null;
   // panel açılışında sadece son üyeler yüklü: bulunamazsa önce hepsini getir, yine yoksa haber ver
-  useEffect(() => { if (mem && !memObj) { if (!allMem && can('heavy')) ensureAllMembers(); else { if (!allMem) toast('Bu üye son günlerde kayıt olmamış; tüm üyeleri açmak için “Raporlar ve geçmiş kayıtlar” yetkisi gerekiyor', 'bad'); else toast('Üye kaydı bulunamadı', 'bad'); setMem(null); } } }, [mem, allMem, !!memObj]);
+  useEffect(() => { if (mem && !memObj) { if (!allMem && can('heavy')) ensureAllMembers(); else { if (!allMem) toast('Bu üye son günlerde kayıt olmamış; tüm üyeleri açmak için “Çok veri okuyan düğmeler” yetkisi gerekiyor', 'bad'); else toast('Üye kaydı bulunamadı', 'bad'); setMem(null); } } }, [mem, allMem, !!memObj]);
   // listede yoksa (eski sipariş / linkten gelindi) tek başına getir
   useEffect(() => { if (fromList) return; const un = api().watchOrder(id, setOne); return () => un && un(); }, [id, !!fromList]);
   // sipariş açıkken telefondaki alt menü kayarak gizlenir, listeye dönünce geri gelir
@@ -490,7 +502,7 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
         <div className="search"><Icon n="search" s={18} /><input id="mem-search" type="search" placeholder="Ad, e-posta, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         {!outer && <button className="btn primary" onClick={() => setNewOpen(true)}><Icon n="plus" s={16} />Yeni üye</button>}
       </div>
-      {!can('heavy') && <p className="fine older-last mem-np"><Icon n="lock" s={13} /> Sadece son günlerde kayıt olan üyeler gösteriliyor. Tüm üyeleri açmak çok veri okuduğu için “Raporlar ve geçmiş kayıtlar” yetkisi gerekiyor.</p>}
+      {!can('heavy') && <p className="fine older-last mem-np"><Icon n="lock" s={13} /> Sadece son günlerde kayıt olan üyeler gösteriliyor. Tüm üyeleri açmak çok veri okuduğu için “Çok veri okuyan düğmeler” yetkisi gerekiyor.</p>}
       {list.length === 0 ? <Empty icon="users" title={members.length ? 'Eşleşen üye yok' : 'Henüz mağaza üyesi yok'}>{!members.length && <p>Müşteriler mağazada <b>Hesabım</b>’dan ya da sipariş verirken üye olabilir.</p>}</Empty> : (
         <ul className="olist">
           {list.map((m) => (
