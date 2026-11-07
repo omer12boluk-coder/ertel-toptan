@@ -9099,3 +9099,24 @@ html[data-theme=dark] .cd-cta { background: radial-gradient(70% 90% at 85% 60%, 
 html[data-theme=dark] .cd-cta-t h2 { color: #f5f5f7; } html[data-theme=dark] .cd-cta-t p { color: #a1a1a6; }
 html[data-theme=dark] .cd-cta-chat { background: #2c2c30; } html[data-theme=dark] .cd-bub.them { background: #3a3a3f; color: #f5f5f7; }
 @media (max-width: 899px) { .cd-cta { grid-template-columns: 1fr; padding: 26px 20px; border-radius: 22px; } .cd-cta-chat { order: 2; } .cd-bub { font-size: 14px; } .cd-cta-a { gap: 16px; } }
+
+/* 7.11.2026 (10) çok bannerda (13) noktalar/çizgiler taşıyordu → kutu genişliğiyle sınırlı, her çizgi gerekirse daralır */
+.sh-hero .sh-dots { max-width: calc(100% - 2 * clamp(28px, 5vw, 64px)); gap: clamp(4px, 0.8vw, 8px); }
+.sh-hero .sh-dot { flex: 0 1 34px; min-width: 8px; width: auto; }
+.sh-hero.nd-dots .sh-dot { flex: 0 1 18px; min-width: 10px; }
+.sh-hero.nd-pill .sh-dot { flex: 0 0 auto; }
+@media (max-width: 899px) { .sh-hero .sh-dots { max-width: calc(100% - 48px); } }
+/* 7.11.2026 (10) tasarım modu telefonda: panel kapalı başlar, tutamaçtan çekilir; kapalıyken 64px şerit + açıklama */
+.v3-m-sheet { height: 62vh; }
+.v3-m:not(.sheet-up) .v3-m-sheet { transform: translateY(calc(100% - 64px - env(safe-area-inset-bottom))); overflow: hidden; }
+.v3-m-hd { position: sticky; top: -4px; z-index: 2; margin: 0 -14px 8px; padding: 8px 14px 10px; background: var(--surface); touch-action: none; cursor: grab; text-align: center; }
+.v3-m-grip { display: block; width: 40px; height: 5px; margin: 0 auto 8px; border-radius: 3px; background: color-mix(in oklab, var(--fg) 22%, transparent); }
+.v3-m-lbl { display: flex; flex-direction: column; gap: 2px; font: 600 14.5px/1.2 Inter, var(--f-body); color: var(--fg); }
+.v3-m-lbl small { font: 400 12px/1.2 Inter, var(--f-body); color: var(--muted); }
+.v3-m .v3-m-canvas { padding-bottom: 90px; }
+.v3-m.sheet-up .v3-m-canvas { padding-bottom: 64vh; }
+@media (max-width: 899px) {
+  .sh-hero .sh-dots { left: 24px !important; right: 24px !important; max-width: none; translate: none !important; justify-content: flex-start; }
+  .sh-hero.dp-center .sh-dots { justify-content: center; }
+  .sh-hero.dp-right .sh-dots { justify-content: flex-end; }
+}

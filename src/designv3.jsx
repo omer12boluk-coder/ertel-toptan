@@ -52,7 +52,8 @@ export function DesignV3() {
   const [dev, setDevS] = useState(() => ls.get('dz3-dev', 'desk'));
   const setDev = (v) => { setDevS(v); ls.set('dz3-dev', v); };
   const [busy, setBusy] = useState(false); const [confirm, setConfirm] = useState(null);
-  const [sheet, setSheet] = useState(true);
+  const [sheet, setSheet] = useState(false); // 7.11.2026 (10) telefonda panel kapalı başlar (önizleme görünsün); parmakla çekilir
+  const sheetRef = useRef(null); const drag = useRef(null);
   const hist = useRef({ list: [], redo: [], t: 0 }); const [, bump] = useState(0);
   const H = d.shopHome; const L = H.layout || []; const hidden = new Set(H.hidden || []);
   const cdOn = !!d.look?.cd && L.includes('cd:hero');
@@ -121,8 +122,15 @@ export function DesignV3() {
     <div className={'v3 v3-m' + (sheet ? ' sheet-up' : '')}>
       {top}
       <div className="v3-m-canvas"><V3Sel.Provider value={ctx}><DesignCtx.Provider value={E}><ShopHome S={view} /></DesignCtx.Provider></V3Sel.Provider></div>
-      <div className="v3-m-sheet">
-        <button type="button" className="v3-m-hnd" onClick={() => setSheet((x) => !x)} aria-label={sheet ? 'Paneli küçült' : 'Paneli aç'}><i /></button>
+      <div className="v3-m-sheet" ref={sheetRef}>
+        <div className="v3-m-hd"
+          onTouchStart={(e) => { drag.current = { y: e.touches[0].clientY, dy: 0 }; const el = sheetRef.current; if (el) el.style.transition = 'none'; }}
+          onTouchMove={(e) => { const d = drag.current; if (!d) return; d.dy = e.touches[0].clientY - d.y; const el = sheetRef.current; if (!el) return; const base = sheet ? 0 : el.offsetHeight - 64; el.style.transform = `translateY(${Math.max(0, Math.min(el.offsetHeight - 64, base + d.dy))}px)`; }}
+          onTouchEnd={() => { const d = drag.current; drag.current = null; const el = sheetRef.current; if (el) { el.style.transition = ''; el.style.transform = ''; } if (!d) return; if (Math.abs(d.dy) < 8) setSheet((x) => !x); else if (d.dy > 40) setSheet(false); else if (d.dy < -40) setSheet(true); }}
+          onClick={(e) => { if (e.detail && !('ontouchstart' in window)) setSheet((x) => !x); }}>
+          <i className="v3-m-grip" />
+          <span className="v3-m-lbl">{sel ? 'Bölüm ayarları' : 'Bölümler ve görünüm'}<small>{sheet ? 'Aşağı çekin: sayfayı görün' : 'Yukarı çekin ya da dokunun'}</small></span>
+        </div>
         {sel ? insp : <>{tabs}{tab === 'page' ? pagePanel : lookPanel}</>}
       </div>
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
