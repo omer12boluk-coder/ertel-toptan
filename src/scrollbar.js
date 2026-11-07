@@ -15,7 +15,7 @@ export function setupScrollbar() {
     const vh = innerHeight, sh = root.scrollHeight;
     if (!live() || sh <= vh + 2) { box.classList.remove('on'); box.style.display = 'none'; return false; }
     box.style.display = '';
-    const h = Math.max(36, (vh * vh) / sh); const max = vh - h - 8;
+    const h = Math.max(48, (vh * vh) / sh); const max = vh - h - 8;
     th.style.height = h + 'px'; th.style.transform = `translateY(${4 + (scrollY / (sh - vh)) * max}px)`;
     return true;
   };
@@ -24,11 +24,18 @@ export function setupScrollbar() {
   addEventListener('resize', () => place(), { passive: true });
   addEventListener('mousemove', (e) => {
     if (drag || !live()) return;
-    const n = e.clientX >= innerWidth - 16; if (n === near) return; near = n;
+    const n = e.clientX >= innerWidth - 28; // 7.11.2026 (2): daha geniş yakalama alanı if (n === near) return; near = n;
     if (n) show(); else show(600);
   }, { passive: true });
+  // çubuğun boşluğuna tıklayınca oraya atlar ve sürüklemeye devam eder (7.11.2026 (2): tutması zordu)
+  box.addEventListener('pointerdown', (e) => {
+    if (e.target !== box || !box.classList.contains('on')) return;
+    const vh = innerHeight, sh = root.scrollHeight, h = th.offsetHeight;
+    scrollTo(0, ((e.clientY - h / 2 - 4) / Math.max(1, vh - h - 8)) * (sh - vh)); place();
+    th.dispatchEvent(new PointerEvent('pointerdown', { clientY: e.clientY, pointerId: e.pointerId, bubbles: false }));
+  });
   th.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); th.setPointerCapture?.(e.pointerId);
+    e.preventDefault(); try { th.setPointerCapture?.(e.pointerId); } catch {}
     drag = { y: e.clientY, s: scrollY }; box.classList.add('drag', 'on'); root.classList.add('sb-drag');
     const vh = innerHeight, sh = root.scrollHeight, h = th.offsetHeight, ratio = (sh - vh) / Math.max(1, vh - h - 8);
     const mv = (ev) => scrollTo(0, drag.s + (ev.clientY - drag.y) * ratio);

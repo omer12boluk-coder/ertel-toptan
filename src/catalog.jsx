@@ -821,7 +821,7 @@ function ProductRow({ p, admin, onOpen, pinned }) {
         <CardImg p={p} hov={hov && multi} ix={ix} setIx={setIx} />
         {v2 && p.s <= low && <span className={'pv2-st' + (p.s <= 0 ? ' out' : '')}>{p.s <= 0 ? 'Tükendi' : 'Son ' + p.s}</span>}
         <div className="prow-info">
-          {v2 && (S.catalog.showBrand || PV_HOST) && <span className="pv2-brand">{p.b && (lg ? <><ShopImg v={lg} className="pv2-lg" alt={p.b} />{/^luban$/i.test(p.b) && <b className="pv2-lgt">LUBAN</b>}</> : <span className="brand-tag">{p.b}</span>)}</span>}
+          {v2 && (S.catalog.showBrand || PV_HOST) && <span className="pv2-brand">{p.b && (lg ? <><ShopImg v={lg} className="pv2-lg" alt={p.b} />{/^(luban|xzz)$/i.test(p.b) && <b className="pv2-lgt">{p.b.toUpperCase()}</b>}</> : <span className="brand-tag">{p.b}</span>)}</span>}
           <span className="prow-name">{p.n}</span>
           <span className="prow-meta">
             {admin && <code>{p.k}</code>}

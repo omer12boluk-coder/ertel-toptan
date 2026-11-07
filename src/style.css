@@ -8460,12 +8460,15 @@ html[data-theme="dark"] .shell.public .p0-b-big .p0-addw.big .abx .stepper :is(b
 @media (hover: hover) and (pointer: fine) { html.sb-thin { scrollbar-width: none; } html.sb-thin::-webkit-scrollbar { display: none; } }
 .sbx { display: none; }
 @media (hover: hover) and (pointer: fine) {
-  html.sb-thin .sbx { display: block; position: fixed; top: 0; right: 0; bottom: 0; width: 16px; z-index: 2147483000; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
-  html.sb-thin .sbx.on { opacity: 1; transition-duration: .12s; }
-  .sbx i { position: absolute; top: 0; right: 3px; width: 6px; border-radius: 6px; background: rgb(20 22 28 / .36); pointer-events: auto; cursor: default; transition: width .15s, background .15s; }
-  .sbx.on i:hover, .sbx.drag i { width: 9px; background: rgb(20 22 28 / .55); }
-  html[data-theme="dark"] .sbx i { background: rgb(255 255 255 / .34); }
-  html[data-theme="dark"] .sbx.on i:hover, html[data-theme="dark"] .sbx.drag i { background: rgb(255 255 255 / .55); }
+  html.sb-thin .sbx { display: block; position: fixed; top: 0; right: 0; bottom: 0; width: 18px; z-index: 2147483000; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
+  html.sb-thin .sbx.on { opacity: 1; transition-duration: .12s; pointer-events: auto; } /* görünürken boşluğuna tıklanabilir */
+  /* 7.11.2026 (2): tutma alanı 16px (görünen çubuk ince kalır, üstüne gelince kalınlaşır) */
+  .sbx i { position: absolute; top: 0; right: 0; width: 18px; pointer-events: auto; cursor: default; }
+  .sbx:not(.on):not(.drag) i { pointer-events: none; }
+  .sbx i::before { content: ''; position: absolute; top: 0; bottom: 0; right: 3px; width: 6px; border-radius: 6px; background: rgb(20 22 28 / .36); transition: width .15s, background .15s; }
+  .sbx.on:hover i::before, .sbx.drag i::before { width: 10px; background: rgb(20 22 28 / .55); }
+  html[data-theme="dark"] .sbx i::before { background: rgb(255 255 255 / .34); }
+  html[data-theme="dark"] .sbx.on:hover i::before, html[data-theme="dark"] .sbx.drag i::before { background: rgb(255 255 255 / .55); }
   html.sb-drag, html.sb-drag * { user-select: none !important; }
 }
 
@@ -9261,7 +9264,7 @@ html[data-theme="dark"] .pv2-b img { filter: brightness(0) invert(1); opacity: .
 /* 7.11.2026 (2) v2 üst kısım: başlık + arama aynı satırda; Filtrele/Sırala/etiketler kategorilerin üstünde */
 .pv2-trow { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; }
 .pv2-trow .pv2-t { margin: 0; min-width: 0; }
-.pv2-q { position: relative; flex: 0 1 380px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: color-mix(in oklab, var(--fg) 6%, transparent); color: var(--muted); transition: background .2s, box-shadow .2s; }
+.pv2-q { position: relative; flex: 0 1 560px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: color-mix(in oklab, var(--fg) 6%, transparent); color: var(--muted); transition: background .2s, box-shadow .2s; }
 .pv2-q:focus-within { background: var(--surface); box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent), 0 0 0 4px color-mix(in oklab, var(--accent) 14%, transparent); }
 .pv2-q input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; padding: 0; font: 400 16px/1 Inter, var(--f-body); letter-spacing: -.01em; color: var(--fg); -webkit-appearance: none; appearance: none; }
 .pv2-q input::placeholder { color: var(--muted); opacity: .9; }
@@ -9303,5 +9306,5 @@ html .shell .pv2-tags .chip.select.csel::after { display: none; }
 @media (max-width: 899px) { html .shell .pv2-tags .chip.select select { transform: scale(.85); transform-origin: left center; margin-right: -12px; } } /* 16px (iPhone yakınlaştırmasın) ama diğer etiketlerle aynı boy görünsün */
 /* arama kutusu: içteki input'un kendi odak çerçevesi kapalı (çift çerçeve görünüyordu) */
 html .shell .pv2-q input, html .shell .pv2-q input:focus { border: 0 !important; outline: 0 !important; box-shadow: none !important; background: none !important; border-radius: 0 !important; padding: 0 !important; height: 100% !important; }
-.pv2-lgt { margin-left: 5px; font: 800 12.5px/1 Inter, var(--f-body); letter-spacing: .02em; color: var(--fg); } /* Luban: logo sadece amblem → yanına adı (sadece Ürünler v2 kartlarında) */
+.pv2-lgt { margin-left: 4px; font: 650 12px/1 Inter, var(--f-body); letter-spacing: .01em; color: var(--fg); } /* Luban: logo sadece amblem → yanına adı (sadece Ürünler v2 kartlarında) */
 html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }
