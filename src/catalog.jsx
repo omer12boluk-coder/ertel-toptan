@@ -827,8 +827,8 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
         <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span></div>
       </div>
       {sets.length > 0 && <div role="button" tabIndex={0} className={'phub-c phub-set phub-t-' + (HC.setTone || 'ring')} onClick={onSets} onKeyDown={key(onSets)}>
-        <span className="phub-badge">{HC.setBadge ?? 'Hazır paketler'}</span>
-        <div className="phub-h"><b>Setler</b><span>{sets.length}<Icon n="chev" s={14} /></span></div>
+        {!HC.lay && <span className="phub-badge">{HC.setBadge ?? 'Hazır paketler'}</span>}
+        <div className="phub-h"><b>Setler{HC.lay && (HC.setBadge ?? 'Hazır paketler') && <span className="phub-badge">{HC.setBadge ?? 'Hazır paketler'}</span>}</b><span>{sets.length}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s">{sets.slice(0, 6).map((x) => <button key={x.id} type="button" onClick={(e) => { e.stopPropagation(); openSet(x.id); }}>{x.name}</button>)}</div>
       </div>}
       {roots.map((n) => <HubCat key={n.id} n={n} cnt={nf(counts.get(n.id))} subs={subsOf(n)} onCat={onCat} kd={key} mode={mode}

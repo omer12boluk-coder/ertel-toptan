@@ -9483,7 +9483,8 @@ html[data-theme="dark"] .phub-th { background: #fff; }
   .phub-grid[class*="phub-lay-"] .phub-c { min-height: 0; height: auto; padding: 14px 18px; border-radius: 16px; display: flex; flex-direction: column; justify-content: center; }
   .phub-grid[class*="phub-lay-"] .phub-h { align-items: center; }
   .phub-grid[class*="phub-lay-"] .phub-h b { font-size: 16px; }
-  .phub-grid[class*="phub-lay-"] .phub-badge { margin: 0 0 6px; align-self: flex-start; }
+  .phub-grid[class*="phub-lay-"] .phub-c .phub-h .phub-badge { display: inline-block; margin: 0 0 0 10px; vertical-align: 2px; font: 600 10.5px/1 Inter, var(--f-body); color: var(--accent-ink, #fff); }
+  .phub-grid[class*="phub-lay-"] .phub-c:is(.phub-t-acc, .phub-t-dark) .phub-h .phub-badge { color: #1d1d1f; }
   .phub-grid[class*="phub-lay-"] .phub-s { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
   .phub-grid[class*="phub-lay-"] .phub-s button { padding: 5px 11px; border-radius: 999px; background: color-mix(in oklab, var(--fg) 5%, transparent); font-size: 12.5px; color: color-mix(in oklab, var(--fg) 78%, transparent); white-space: nowrap; }
   .phub-grid[class*="phub-lay-"] .phub-s button::after { display: none; }
@@ -9492,11 +9493,18 @@ html[data-theme="dark"] .phub-th { background: #fff; }
   .phub-grid[class*="phub-lay-"] .phub-s span + span::before { content: '·'; margin-right: 6px; opacity: .6; }
   .phub-grid[class*="phub-lay-"] .phub-th { width: 36px; height: 36px; border-radius: 10px; }
   .phub-grid[class*="phub-lay-"].phub-m-bg .phub-s { padding-right: 26%; }
-  .phub-grid[class*="phub-lay-"].phub-m-thumb .phub-s { padding-left: 48px; }
+  .phub-grid[class*="phub-lay-"].phub-m-thumb .phub-c:not(.phub-all, .phub-set) .phub-s { padding-left: 48px; }
   .phub-grid[class*="phub-lay-"] .phub-c::after { left: auto; top: 0; width: 28%; height: auto; background-position: right 12px center; background-size: contain; -webkit-mask-image: linear-gradient(90deg, transparent, #000 50%); mask-image: linear-gradient(90deg, transparent, #000 50%); }
 }
 @media (hover: hover) and (pointer: fine) and (min-width: 900px) {
   .phub-grid[class*="phub-lay-"] .phub-c:hover { transform: translateY(-2px); }
   .phub-grid[class*="phub-lay-"] .phub-s button:hover { background: color-mix(in oklab, var(--fg) 10%, transparent); }
   .phub-grid[class*="phub-lay-"].phub-hv-acc .phub-s button:hover { background: color-mix(in oklab, var(--accent) 12%, transparent); }
+}
+/* 8.11.2026 liste dizilişi: bütün satırlar aynı kalınlıkta (Tüm ürünler, Setler, kategoriler); alt kategoriler tek satır, sığmayan gizlenir */
+@media (min-width: 900px) {
+  .phub-grid[class*="phub-lay-"] .phub-c, .phub-grid[class*="phub-lay-"] .phub-c.phub-set { height: 92px; padding-top: 0; padding-bottom: 0; }
+  .phub-grid[class*="phub-lay-"].phub-m-thumb .phub-c { height: 104px; }
+  .phub-grid[class*="phub-lay-"] .phub-s { flex-wrap: wrap; max-height: 28px; overflow: hidden; min-height: 26px; }
+  .phub-grid[class*="phub-lay-"] .phub-more { display: none; }
 }
