@@ -1,8 +1,8 @@
-import { useBrandList } from './brandsets.jsx';
+import { useBrandList, openBrand } from './brandsets.jsx';
 import { ShopImg } from './shophome.jsx';
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ProdHub } from './p0home.jsx';
-import { CdHub } from './cdhome.jsx';
+import { CdHub, CAT_COVERS } from './cdhome.jsx';
 import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
@@ -557,6 +557,10 @@ export function Catalog({ admin }) {
   ), [list, limit, view, admin, addCls, asort, pinKey, pv2]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (pv2 && S.look?.prodHub && !hubOff && actives.length === 0) return <PV2Hub tree={tree} counts={counts} total={all.length} setN={setN}
+    onCat={(id) => { setCat(id); setHubOff(true); window.scrollTo(0, 0); }} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }}
+    onQ={(t) => { setQ(t); setHubOff(true); window.scrollTo(0, 0); }} onNew={() => { setNewOnly(true); setHubOff(true); window.scrollTo(0, 0); }}
+    onSets={() => { setSetsOnly(true); setHubOff(true); window.scrollTo(0, 0); }} />;
   if (!pv2 && !admin && user?.role === 'public' && S.look?.prodHub && !hubOff && actives.length === 0) return <div className="catalog">{S.look?.cd ? <CdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} /> : <ProdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} />}</div>;
   const hubBack = !pv2 && !admin && user?.role === 'public' && S.look?.prodHub && hubOff;
   const fN = (brand ? 1 : 0) + (price ? 1 : 0) + (showOos ? 1 : 0) + (newOnly ? 1 : 0) + (favOnly ? 1 : 0) + (setsOnly ? 1 : 0);
@@ -775,6 +779,50 @@ const _lgc = new WeakMap();
 const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
 // Ürünler v2 kartında logonun yanına yazı (logo sadece amblemse). src: kartta kullanılacak amblem (başka yerlerde tam logo kalır)
 const LG_TXT = { luban: { t: 'Luban' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'Mega-Idea' } }; // ilk harf büyük (kullanıcı); XZZ kısaltma
+// 7.11.2026 (gece) Ürünler v2 açılış sayfası (look.prodHub): yazılı kategori dizini — 'Tüm ürünler' en başta (tema rengi),
+// her ana kategori kutusunun arkasında silik kapak resmi (src/icerik/kapaklar.json), alt kategoriler tıklanır, markalar logolu haplar.
+function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {
+  const brands = useBrandList();
+  const [q, setQ] = useState('');
+  const roots = tree.roots.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden);
+  const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
+  const nf = (x) => (x || 0).toLocaleString('tr-TR');
+  const key = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
+  return <div className="catalog phub pv2-in">
+    <nav className="pv2-crumb" aria-label="Konum"><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></nav>
+    <div className="pv2-trow">
+      <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
+      <form className={'pv2-q' + (q ? ' has' : '')} onSubmit={(e) => { e.preventDefault(); if (q.trim()) onQ(q.trim()); }}>
+        <Icon n="search" s={17} />
+        <input type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder="Ürün adı veya stok kodu" value={q} onChange={(e) => setQ(e.target.value)} />
+        {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
+      </form>
+    </div>
+    <div className="pv2-tags phub-tags">
+      <button type="button" className="pv2-tag" onClick={onNew}><Icon n="star" s={14} />Yeni gelenler</button>
+      {setN > 0 && <button type="button" className="pv2-tag" onClick={onSets}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
+      <button type="button" className="pv2-tag" onClick={() => go('kalip')}><Icon n="zoom" s={14} />Kalıp bulucu</button>
+      <button type="button" className="pv2-tag" onClick={() => go('markalar')}><Icon n="tag" s={14} />Markalar</button>
+    </div>
+    <div className="phub-lbl">Kategoriler</div>
+    <div className="phub-grid">
+      <div role="button" tabIndex={0} className="phub-c phub-all" onClick={onAll} onKeyDown={key(onAll)}>
+        <div className="phub-h"><b>Tüm ürünler</b><span>{nf(total)}<Icon n="chev" s={14} /></span></div>
+        <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span>{setN > 0 && <span>{setN} set</span>}</div>
+      </div>
+      {roots.map((n) => { const cv = CAT_COVERS[n.id]; const go1 = () => onCat(n.id); return (
+        <div key={n.id} role="button" tabIndex={0} className="phub-c" style={cv ? { '--im': `url(${cv})` } : undefined} onClick={go1} onKeyDown={key(go1)}>
+          <div className="phub-h"><b>{n.name}</b><span>{nf(counts.get(n.id))}<Icon n="chev" s={14} /></span></div>
+          <div className="phub-s">{subsOf(n).map((c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onCat(c.id); }}>{c.name}</button>)}</div>
+        </div>); })}
+    </div>
+    <div className="phub-lbl">Markalar</div>
+    <div className="phub-brs">
+      {brands.slice(0, 18).map((b) => <button key={b.n} type="button" className={'phub-br' + (b.logo ? ' lg' : '')} onClick={() => openBrand(b.n)} title={b.n}>{b.logo ? <><ShopImg v={b.logo} className="phub-bl" alt={b.n} />{LG_TXT[b.n.toLowerCase()] && <b className="phub-bt">{LG_TXT[b.n.toLowerCase()].t}</b>}</> : <span>{b.n}</span>}<small>{b.c}</small></button>)}
+      <button type="button" className="phub-br more" onClick={() => go('markalar')}>Tüm markalar<Icon n="chev" s={13} /></button>
+    </div>
+  </div>;
+}
 // 7.11.2026 (akşam) Ürünler v2: çok aşağı inince 'en üste çık' düğmesi
 function ToTop() {
   const [on, setOn] = useState(false);
