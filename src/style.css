@@ -9324,3 +9324,9 @@ html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }
 .bp-logo > b { font-size: 18px; }
 .bp-meta { padding: 8px 12px 10px; } .bp-meta b { font-size: 13px; } .bp-meta small { font-size: 12px; }
 @media (max-width: 700px) { .bp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .bp-tile { border-radius: 14px; } .bp-logo { height: 64px; padding: 10px; } .bp-logo img { max-height: 28px; } .bp-logo img.sq { max-height: 36px; } .bp-logo > b { font-size: 14px; } .bp-meta { padding: 6px 8px 8px; flex-direction: column; gap: 1px; } .bp-meta b { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .bp-meta small { font-size: 11px; } }
+/* ÖNERİ (arama-oneri dalı): arama kutusu her zaman beyaz + belirgin çerçeve, mavi büyüteç; içinde yazı varken mavi çerçeve kalır */
+.pv2-q { height: 44px; background: var(--surface); border: 1px solid color-mix(in oklab, var(--fg) 16%, transparent); box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 4px 14px -8px rgb(0 0 0 / .18); color: var(--accent); padding: 0 14px; border-radius: 14px; }
+.pv2-q > svg { color: var(--accent); }
+.pv2-q input::placeholder { color: color-mix(in oklab, var(--fg) 55%, transparent); opacity: 1; }
+.pv2-q:hover { border-color: color-mix(in oklab, var(--fg) 28%, transparent); }
+.pv2-q:focus-within, .pv2-q.has { background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 14%, transparent); }

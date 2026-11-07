@@ -573,7 +573,7 @@ export function Catalog({ admin }) {
         {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
         <div className="pv2-trow">
           <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
-          <div className="pv2-q">
+          <div className={'pv2-q' + (q ? ' has' : '')}>
             <Icon n="search" s={17} />
             <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} />
             {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
