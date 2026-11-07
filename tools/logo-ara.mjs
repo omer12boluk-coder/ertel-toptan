@@ -9,16 +9,17 @@ const sites = (process.env.SITELER || '').split(/\s+/).filter(Boolean).map((p) =
 const SHOPS = ['https://www.diyfixtool.com', 'https://www.quecoo.com', 'https://www.iprogadgets.com', 'https://refoxtech.com', 'https://www.fonefunshop.com', 'https://brandshd.co.nz'];
 const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 const slug = (s) => norm(s) || 'x';
-const out = {}; const add = (b, url, from) => { (out[b] ||= []); if (!out[b].some((x) => x.url === url)) out[b].push({ url, from }); };
+const out = {}; const titles = []; const add = (b, url, from) => { (out[b] ||= []); if (!out[b].some((x) => x.url === url)) out[b].push({ url, from }); };
 const get = async (u, t = 20000) => { const c = new AbortController(); const tm = setTimeout(() => c.abort(), t); try { const r = await fetch(u, { headers: UA, signal: c.signal, redirect: 'follow' }); return r.ok ? r : null; } catch { return null; } finally { clearTimeout(tm); } };
 for (const shop of SHOPS) {
   for (let page = 1; page <= 8; page++) {
     const r = await get(`${shop}/collections.json?limit=250&page=${page}`); if (!r) break;
     let j; try { j = await r.json(); } catch { break; }
     const cs = j.collections || []; if (!cs.length) break;
+    for (const c of cs) titles.push(shop.replace(/^https:\/\/(www\.)?/, '') + '\t' + c.handle + '\t' + c.title + '\t' + (c.image?.src ? 'img' : '-'));
     for (const c of cs) for (const b of brands) {
       const t = norm(c.title), h = norm(c.handle), nb = norm(b);
-      if ((t === nb || h === nb || t === nb + 'tools' || h === nb + 'tools' || t === nb + 'brand' || t.startsWith(nb + 'tool')) && c.image?.src) add(b, c.image.src, shop + '/collections/' + c.handle);
+      if ((t === nb || t === nb + 'tool' || h === nb + 'tool' || h === nb || t === nb + 'tools' || h === nb + 'tools' || t === nb + 'brand' || t.startsWith(nb + 'tool')) && c.image?.src) add(b, c.image.src, shop + '/collections/' + c.handle);
     }
   }
 }
@@ -45,4 +46,6 @@ for (const [b, list] of Object.entries(out)) {
   console.log(`::notice title=${b}::${idx[b].length} aday`);
 }
 for (const b of brands) if (!idx[b]) console.log(`::warning title=${b}::aday yok`);
+fs.writeFileSync('out/logo/koleksiyonlar.txt', titles.join('\n'));
+for (const sh of SHOPS) console.log(`::notice title=Mağaza::${sh} ${titles.filter((t) => t.startsWith(sh.replace(/^https:\/\/(www\.)?/, ''))).length} koleksiyon`);
 fs.writeFileSync('out/logo/index.json', JSON.stringify(idx, null, 1));
