@@ -821,10 +821,11 @@ function ProductRow({ p, admin, onOpen, pinned }) {
         <CardImg p={p} hov={hov && multi} ix={ix} setIx={setIx} />
         {v2 && p.s <= low && <span className={'pv2-st' + (p.s <= 0 ? ' out' : '')}>{p.s <= 0 ? 'Tükendi' : 'Son ' + p.s}</span>}
         <div className="prow-info">
+          {v2 && <span className="pv2-brand">{(S.catalog.showBrand || PV_HOST) && p.b && (lg ? <ShopImg v={lg} className="pv2-lg" alt={p.b} /> : <span className="brand-tag">{p.b}</span>)}</span>}
           <span className="prow-name">{p.n}</span>
           <span className="prow-meta">
             {admin && <code>{p.k}</code>}
-            {(S.catalog.showBrand || PV_HOST) && p.b && (lg ? <ShopImg v={lg} className="pv2-lg" alt={p.b} /> : <span className="brand-tag">{p.b}</span>)}
+            {!v2 && S.catalog.showBrand && p.b && <span className="brand-tag">{p.b}</span>}
             {st && !v2 && <span className={'dot tone-' + st.tone}>{st.t}</span>}
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
             {admin && p.nw && <span className="dot tone-info">Siteden yeni</span>}
