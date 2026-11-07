@@ -570,7 +570,31 @@ export function Catalog({ admin }) {
       {pv2 && <div className="pv2-head">
         {/* 7.11.2026: konum satırı HER ZAMAN var (Tüm ürünlerde 'Ana sayfa › Ürünler') → kategori değişince başlık yerinden oynamaz */}
         <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
-        <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
+        {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
+        <div className="pv2-trow">
+          <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
+          <div className="pv2-q">
+            <Icon n="search" s={17} />
+            <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} />
+            {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
+          </div>
+        </div>
+        <div className="pv2-bar">
+          <div className="pv2-tags" role="group" aria-label="Filtreler">
+            <button type="button" className={'pv2-tag' + (fN ? ' on' : '')} onClick={() => setFsOpen(true)}><Icon n="filter" s={14} />Filtrele{fN > 0 && <i>{fN}</i>}</button>
+            <ChipSelect id="cat-sort" icon="sort" value={sort} onChange={setSort} on={false} ariaLabel="Sıralama" options={[['default', 'Önerilen'], ['new', 'Yeni gelenler'], ['asc', 'Fiyat artan'], ['desc', 'Fiyat azalan'], ['name', 'İsim A–Z']]} />
+            <span className="pv2-sep" aria-hidden="true" />
+            {setN > 0 && <button type="button" className={'pv2-tag' + (setsOnly ? ' on' : '')} onClick={() => setSetsOnly(!setsOnly)}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
+            {(favs.length > 0 || favOnly) && <button type="button" className={'pv2-tag' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
+            <button type="button" className={'pv2-tag' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>
+            <button type="button" className={'pv2-tag' + (showOos ? ' on' : '')} onClick={() => setShowOos(!showOos)}><Icon n={showOos ? 'eye' : 'eyeoff'} s={14} />Stokta olmayanlar</button>
+          </div>
+          <span className="pv2-cnt">{setsOnly ? setN + ' set' : list.length.toLocaleString('tr-TR') + ' ürün'}</span>
+          <span className="view-sw" role="group" aria-label="Görünüm">
+            <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Kutu kutu" title="Kutu kutu"><Icon n="grid" s={17} /></button>
+            <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Sıra sıra" title="Sıra sıra"><Icon n="list" s={17} /></button>
+          </span>
+        </div>
         <CatPills tree={tree} counts={counts} cat={cat} onPick={setCat} />
       </div>}
       <div className={'cat-layout' + (admin ? ' resizable' : '') + (pv2 ? ' pv2' : '')} style={admin ? { '--catw': catW + 'px' } : undefined}>
@@ -582,29 +606,7 @@ export function Catalog({ admin }) {
 
         {admin && <span className="cat-grip" role="separator" aria-orientation="vertical" aria-label="Kategoriler panelinin genişliği" title="Sürükleyerek daralt / genişlet" onPointerDown={gripDown} onDoubleClick={() => setCatW(240)} />}
         <section className="cat-main">
-          {pv2 ? <><div className="pv2-tb">
-            <div className="search pv2-q">
-              <Icon n="search" s={18} />
-              <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara…` : 'Ürün adı veya stok kodu…'} value={q} onChange={(e) => setQ(e.target.value)} />
-              {q && <button className="icon-btn sm" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={16} /></button>}
-            </div>
-            <span className="pv2-tb-r">
-              <button type="button" className={'pv2-btn' + (fN ? ' on' : '')} onClick={() => setFsOpen(true)}><Icon n="filter" s={15} />Filtrele{fN > 0 && <i>{fN}</i>}</button>
-              <ChipSelect id="cat-sort" icon="sort" value={sort} onChange={setSort} on={false} ariaLabel="Sıralama" options={[['default', 'Önerilen'], ['new', 'Yeni gelenler'], ['asc', 'Fiyat artan'], ['desc', 'Fiyat azalan'], ['name', 'İsim A–Z']]} />
-              <span className="view-sw" role="group" aria-label="Görünüm">
-                <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Kutu kutu" title="Kutu kutu"><Icon n="grid" s={17} /></button>
-                <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Sıra sıra" title="Sıra sıra"><Icon n="list" s={17} /></button>
-              </span>
-            </span>
-          </div>
-          {/* hızlı etiketler (eski sayfadaki çipler) — Filtrele panelindekilerle aynı ayarlar */}
-          <div className="pv2-tags" role="group" aria-label="Hızlı filtreler">
-            {setN > 0 && <button type="button" className={'pv2-tag' + (setsOnly ? ' on' : '')} onClick={() => setSetsOnly(!setsOnly)}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
-            {(favs.length > 0 || favOnly) && <button type="button" className={'pv2-tag' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
-            <button type="button" className={'pv2-tag' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>
-            <button type="button" className={'pv2-tag' + (showOos ? ' on' : '')} onClick={() => setShowOos(!showOos)}><Icon n={showOos ? 'eye' : 'eyeoff'} s={14} />Stokta olmayanlar</button>
-            <span className="pv2-cnt">{setsOnly ? setN + ' set' : list.length.toLocaleString('tr-TR') + ' ürün'}</span>
-          </div></> : <div className="toolbar">
+          {pv2 ? null : <div className="toolbar">
             <div className={admin ? 'tb-top' : undefined}>
               {admin && <div className="search code-search">
                 <Icon n="tag" s={15} />
