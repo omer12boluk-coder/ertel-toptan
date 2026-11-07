@@ -582,8 +582,12 @@ export function Catalog({ admin }) {
 
         {admin && <span className="cat-grip" role="separator" aria-orientation="vertical" aria-label="Kategoriler panelinin genişliği" title="Sürükleyerek daralt / genişlet" onPointerDown={gripDown} onDoubleClick={() => setCatW(240)} />}
         <section className="cat-main">
-          {pv2 ? <div className="pv2-tb">
-            <span className="pv2-cnt">{setsOnly ? setN + ' set' : list.length.toLocaleString('tr-TR') + ' ürün'}</span>
+          {pv2 ? <><div className="pv2-tb">
+            <div className="search pv2-q">
+              <Icon n="search" s={18} />
+              <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara…` : 'Ürün adı veya stok kodu…'} value={q} onChange={(e) => setQ(e.target.value)} />
+              {q && <button className="icon-btn sm" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={16} /></button>}
+            </div>
             <span className="pv2-tb-r">
               <button type="button" className={'pv2-btn' + (fN ? ' on' : '')} onClick={() => setFsOpen(true)}><Icon n="filter" s={15} />Filtrele{fN > 0 && <i>{fN}</i>}</button>
               <ChipSelect id="cat-sort" icon="sort" value={sort} onChange={setSort} on={false} ariaLabel="Sıralama" options={[['default', 'Önerilen'], ['new', 'Yeni gelenler'], ['asc', 'Fiyat artan'], ['desc', 'Fiyat azalan'], ['name', 'İsim A–Z']]} />
@@ -592,7 +596,15 @@ export function Catalog({ admin }) {
                 <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="Sıra sıra" title="Sıra sıra"><Icon n="list" s={17} /></button>
               </span>
             </span>
-          </div> : <div className="toolbar">
+          </div>
+          {/* hızlı etiketler (eski sayfadaki çipler) — Filtrele panelindekilerle aynı ayarlar */}
+          <div className="pv2-tags" role="group" aria-label="Hızlı filtreler">
+            {setN > 0 && <button type="button" className={'pv2-tag' + (setsOnly ? ' on' : '')} onClick={() => setSetsOnly(!setsOnly)}><Icon n="box" s={14} />Setler <b>{setN}</b></button>}
+            {(favs.length > 0 || favOnly) && <button type="button" className={'pv2-tag' + (favOnly ? ' on' : '')} onClick={() => setFavOnly(!favOnly)}><Icon n="heart" s={14} />Favorilerim <b>{favs.length}</b></button>}
+            <button type="button" className={'pv2-tag' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>
+            <button type="button" className={'pv2-tag' + (showOos ? ' on' : '')} onClick={() => setShowOos(!showOos)}><Icon n={showOos ? 'eye' : 'eyeoff'} s={14} />Stokta olmayanlar</button>
+            <span className="pv2-cnt">{setsOnly ? setN + ' set' : list.length.toLocaleString('tr-TR') + ' ürün'}</span>
+          </div></> : <div className="toolbar">
             <div className={admin ? 'tb-top' : undefined}>
               {admin && <div className="search code-search">
                 <Icon n="tag" s={15} />
@@ -755,6 +767,8 @@ function InlineQty({ qty, onChange, icon }) {
 
 // v2 kart: marka logosu (Ayarlar marka logoları + ana sayfa marka listesi; ayar nesnesi değişmedikçe önbellekte)
 const _lgc = new WeakMap();
+// önizleme adresinde (…--dal.web.app) marka her zaman gösterilir (kullanıcı 7.11.2026: 'demoya özel aç, canlıya dokunma')
+const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
 function logoOf(S, b) {
   if (!b) return null; const BL = S.brandLogos || {}; let m = _lgc.get(BL);
   if (!m) { m = new Map(); for (const x of S.shopHome?.brands || []) if (x?.name && x.logo) m.set(x.name.toLocaleLowerCase('tr'), x.logo); for (const [k, v] of Object.entries(BL)) if (v?.logo) m.set(k.toLocaleLowerCase('tr'), v.logo); _lgc.set(BL, m); }
@@ -808,7 +822,7 @@ function ProductRow({ p, admin, onOpen, pinned }) {
           <span className="prow-name">{p.n}</span>
           <span className="prow-meta">
             {admin && <code>{p.k}</code>}
-            {lg ? <ShopImg v={lg} className="pv2-lg" alt={p.b} /> : S.catalog.showBrand && p.b && <span className="brand-tag">{p.b}</span>}{/* v2: logo 'marka adını göster' kapalıyken de görünür */}
+            {(S.catalog.showBrand || PV_HOST) && p.b && (lg ? <ShopImg v={lg} className="pv2-lg" alt={p.b} /> : <span className="brand-tag">{p.b}</span>)}
             {st && !v2 && <span className={'dot tone-' + st.tone}>{st.t}</span>}
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
             {admin && p.nw && <span className="dot tone-info">Siteden yeni</span>}
