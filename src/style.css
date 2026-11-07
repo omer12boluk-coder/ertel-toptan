@@ -9459,8 +9459,10 @@ html[data-theme="dark"] .phub-th { background: #fff; }
 /* geçiş animasyonu (sayfa geçişleriyle aynı his) */
 .pv2-go-r, html .main .catalog.pv2-go-r, html.nav-anim .main .catalog.pv2-go-r.pv2-go-r { animation: pv2GoR .38s cubic-bezier(.2, .8, .2, 1) backwards; }
 .pv2-go-l, html .main .catalog.pv2-go-l, html.nav-anim .main .catalog.pv2-go-l.pv2-go-l { animation: pv2GoL .38s cubic-bezier(.2, .8, .2, 1) backwards; }
-@keyframes pv2GoR { from { opacity: 0; transform: translateX(36px); } }
-@keyframes pv2GoL { from { opacity: 0; transform: translateX(-36px); } }
+@keyframes pv2GoR { from { opacity: .45; transform: translate3d(28px, 0, 0); } }
+@keyframes pv2GoL { from { opacity: .45; transform: translate3d(-28px, 0, 0); } }
+/* açılış ⇄ liste geçişinde iç parçalar ayrıca soluklaşmasın (boş kare) */
+.catalog:is(.pv2-go-r, .pv2-go-l) :is(.pv2-in, .pv2-in2, .pv2-in3, .pv2-sub-in) { animation: none; }
 @media (prefers-reduced-motion: reduce) { html .main .catalog:is(.pv2-go-r, .pv2-go-l) { animation: none !important; } }
 @media (max-width: 899px) {
   /* Setler etiketi başlığın üstünde (sayıyla bitişik durmasın) */
@@ -9480,3 +9482,22 @@ html[data-theme="dark"] .phub-th { background: #fff; }
   .phub-m-thumb .phub-s { margin-top: 8px; }
   .phub-th { width: 34px; height: 34px; border-radius: 9px; }
 }
+
+/* 7.11.2026 (gece 6): Ürünler açılış ⇄ liste geçişi View Transition ile (catalog.jsx hubSwap). Sadece sayfa gövdesi kayar;
+   üst menü ve alt menü kendi katmanlarında sabit kalır, kökte animasyon yok. */
+html.vt-hub .topbar { view-transition-name: pv2top; }
+html.vt-hub .botnav { view-transition-name: pv2bot; }
+html.vt-hub::view-transition-group(pv2top), html.vt-hub::view-transition-group(pv2bot),
+html.vt-hub::view-transition-old(pv2top), html.vt-hub::view-transition-new(pv2top),
+html.vt-hub::view-transition-old(pv2bot), html.vt-hub::view-transition-new(pv2bot) { animation: none; }
+html.vt-hub::view-transition-old(pv2top), html.vt-hub::view-transition-old(pv2bot) { display: none; }
+html.vt-hub::view-transition-image-pair(root) { isolation: auto; }
+html.vt-hub::view-transition-old(root), html.vt-hub::view-transition-new(root) { mix-blend-mode: normal; }
+html.vt-hub-r::view-transition-old(root) { animation: vtHubOutL .22s cubic-bezier(.4, 0, 1, 1) both; }
+html.vt-hub-r::view-transition-new(root) { animation: vtHubInR .42s .04s cubic-bezier(.2, .8, .2, 1) both; }
+html.vt-hub-l::view-transition-old(root) { animation: vtHubOutR .22s cubic-bezier(.4, 0, 1, 1) both; }
+html.vt-hub-l::view-transition-new(root) { animation: vtHubInL .42s .04s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes vtHubOutL { to { opacity: 0; transform: translate3d(-32px, 0, 0); } }
+@keyframes vtHubOutR { to { opacity: 0; transform: translate3d(32px, 0, 0); } }
+@keyframes vtHubInR { from { opacity: 0; transform: translate3d(44px, 0, 0); } }
+@keyframes vtHubInL { from { opacity: 0; transform: translate3d(-44px, 0, 0); } }

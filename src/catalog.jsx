@@ -3,7 +3,7 @@ import { ShopImg, useShopImg } from './shophome.jsx';
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ProdHub } from './p0home.jsx';
 import { CdHub, CAT_COVERS } from './cdhome.jsx';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead, useMorph, ChipSelect } from './ui.jsx';
@@ -559,12 +559,12 @@ export function Catalog({ admin }) {
   ), [list, limit, view, admin, addCls, asort, pinKey, pv2]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hubShown = pv2 && !!S.look?.prodHub && !hubOff && actives.length === 0;
-  useLayoutEffect(() => { if (hubWas.current !== null && hubWas.current !== hubShown) setHubAnim(hubShown ? 'l' : 'r'); hubWas.current = hubShown; }, [hubShown]);
+  useLayoutEffect(() => { if (hubWas.current !== null && hubWas.current !== hubShown) setHubAnim(hubVT ? 'vt' : hubShown ? 'l' : 'r'); hubWas.current = hubShown; }, [hubShown]);
   useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
   if (pv2 && S.look?.prodHub && !hubOff && actives.length === 0) return <PV2Hub anim={hubAnim} tree={tree} counts={counts} total={all.length} setN={setN}
-    onCat={(id) => { setCat(id); setHubOff(true); window.scrollTo(0, 0); }} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }}
-    onQ={(t) => { setQ(t); setHubOff(true); window.scrollTo(0, 0); }} onNew={() => { setNewOnly(true); setHubOff(true); window.scrollTo(0, 0); }}
-    onSets={() => { setSetsOnly(true); setHubOff(true); window.scrollTo(0, 0); }} />;
+    onCat={(id) => hubSwap(() => { setCat(id); setHubOff(true); window.scrollTo(0, 0); }, 'r')} onAll={() => hubSwap(() => { setHubOff(true); window.scrollTo(0, 0); }, 'r')}
+    onQ={(t) => hubSwap(() => { setQ(t); setHubOff(true); window.scrollTo(0, 0); }, 'r')} onNew={() => hubSwap(() => { setNewOnly(true); setHubOff(true); window.scrollTo(0, 0); }, 'r')}
+    onSets={() => hubSwap(() => { setSetsOnly(true); setHubOff(true); window.scrollTo(0, 0); }, 'r')} />;
   if (!pv2 && !admin && user?.role === 'public' && S.look?.prodHub && !hubOff && actives.length === 0) return <div className="catalog">{S.look?.cd ? <CdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} /> : <ProdHub total={all.length} onAll={() => { setHubOff(true); window.scrollTo(0, 0); }} />}</div>;
   const hubBack = !pv2 && !admin && user?.role === 'public' && S.look?.prodHub && hubOff;
   const fN = (brand ? 1 : 0) + (price ? 1 : 0) + (showOos ? 1 : 0) + (newOnly ? 1 : 0) + (favOnly ? 1 : 0) + (setsOnly ? 1 : 0);
@@ -572,12 +572,12 @@ export function Catalog({ admin }) {
   const catTitle = cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : 'Tüm ürünler';
   return (
     <div className={'catalog' + (pv2 && hubAnim === 'r' ? ' pv2-go-r' : '')}>
-      {hubBack && <button className="back-btn cat-hub-back" onClick={() => store.set({ catalogGo: { hub: true } })}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
+      {hubBack && <button className="back-btn cat-hub-back" onClick={() => hubSwap(() => store.set({ catalogGo: { hub: true } }), 'l')}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
       {/* 6.11.2026: Ürünler / Akıllı ekle / Setler üçünde de başlık + seçici AYNI yerde ve aynı genişlikte (sekme değişince kaymasın) */}
       {admin && <div className="page adm-sub prod-top"><PageHead title="Ürünler" extra={<span className="muted"> · {all.length}</span>} /><ProductsSwitch on="products" /></div>}
       {pv2 && <div className="pv2-head">
         {/* 7.11.2026: konum satırı HER ZAMAN var (Tüm ürünlerde 'Ana sayfa › Ürünler') → kategori değişince başlık yerinden oynamaz */}
-        <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button>{S.look?.prodHub ? <span><i>›</i><button type="button" onClick={() => { setHubOff(false); window.scrollTo(0, 0); }}>Ürünler</button></span> : <span><i>›</i>Ürünler</span>}<span><i>›</i><b>Tüm ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
+        <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button>{S.look?.prodHub ? <span><i>›</i><button type="button" onClick={() => hubSwap(() => { setHubOff(false); window.scrollTo(0, 0); }, 'l')}>Ürünler</button></span> : <span><i>›</i>Ürünler</span>}<span><i>›</i><b>Tüm ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
         {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
         <div className="pv2-trow">
           <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
@@ -804,6 +804,16 @@ export function useHubRoots() {
     return tree.roots.filter((n) => !n.hidden && cnt.get(n.id)).map((n) => ({ id: n.id, name: n.name, n: cnt.get(n.id) }));
   }, [tree, vis]);
 }
+// 7.11.2026: açılış ⇄ liste geçişi. Tarayıcı destekliyorsa View Transition: eski ve yeni sayfanın anlık görüntüsü ekran kartında kayar,
+// yeni listenin çizimi animasyonu takılatmaz (telefonda 'takılarak geçme' buydu). Desteklemeyen tarayıcıda eski CSS kayması (pv2-go-*).
+let hubVT = false;
+export function hubSwap(fn, dir) {
+  const R0 = document.documentElement;
+  if (hubVT || !document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { fn(); return; }
+  hubVT = true; R0.classList.add('vt-hub', 'vt-hub-' + dir, 'vt-lite');
+  let t; try { t = document.startViewTransition(() => { flushSync(fn); }); } catch { hubVT = false; R0.classList.remove('vt-hub', 'vt-hub-' + dir, 'vt-lite'); fn(); return; }
+  t.finished.finally(() => { hubVT = false; R0.classList.remove('vt-hub', 'vt-hub-' + dir, 'vt-lite'); });
+}
 export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
 function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets, anim }) {
   const brands = useBrandList();
@@ -815,7 +825,7 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets, a
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
   const key = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
-  return <div className={'catalog phub ' + (anim === 'l' ? 'pv2-go-l' : 'pv2-in')}>
+  return <div className={'catalog phub ' + (anim === 'l' ? 'pv2-go-l' : anim === 'vt' ? '' : 'pv2-in')}>
     <nav className="pv2-crumb" aria-label="Konum"><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></nav>
     <div className="pv2-trow">
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>

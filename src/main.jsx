@@ -27,7 +27,7 @@ import { LOGO_MARK, LOGO_WIDE, DEFAULT_SETTINGS, SPLASH_STYLES } from './config.
 import { DemoBackend } from './backend-demo.js';
 import { FirebaseBackend } from './backend-firebase.js';
 import { Icon, Avatar, PhoneInput, PasswordInput, phoneDigits, ContextMenu, openMenu, copyText } from './ui.jsx';
-import { Catalog, ProductPage } from './catalog.jsx';
+import { Catalog, ProductPage, hubSwap } from './catalog.jsx';
 import { KalipFinder } from './kalipfind.jsx';
 import { PreqPage, PreqAdmin } from './preq.jsx';
 import { LegalPage } from './legalui.jsx';
@@ -321,7 +321,7 @@ function PvBadge() {
 // hafiflik ekran dışı kartların çizilmemesinden (content-visibility). Açılış sayfası açıksa eskisi gibi önce o.
 // açılış sayfası: ilk girişte zaten o gelir; başka sayfadan dönünce listede kalınır, sadece Ürünler'deyken tekrar Ürünler'e basınca açılış sayfasına dönülür
 // iPhone alışkanlığı: Ürünler'deyken 1. dokunuş listenin en üstüne kaydırır, en üstteyken 2. dokunuş açılış sayfasına döner
-const navGo = (k) => { if (k === 'katalog' && store.s.tab === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub && scrollY < 12) store.set({ catalogGo: { hub: true } }); go(k); };
+const navGo = (k) => { if (k === 'katalog' && store.s.tab === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub && scrollY < 12) { hubSwap(() => store.set({ catalogGo: { hub: true } }), 'l'); return; } go(k); };
 function useTheme() {
   const liteTick = useLowEndProbe();
   const isAdm = useStore((s) => s.user?.role === 'admin');
