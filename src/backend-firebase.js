@@ -479,7 +479,15 @@ export class FirebaseBackend {
   newLcartId() { return this.F.doc(this.c('lcarts')).id; }
   async createLcart(id, data) { await timeout(this.F.setDoc(this.d('lcarts', id), data)); }
   watchLcarts(cb, since = 0) { return this.F.onSnapshot(this.F.query(this.c('lcarts'), ...(since ? [this.F.where('at', '>=', since)] : []), this.F.orderBy('at', 'desc'), this.F.limit(since ? 1500 : 150)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() }))), (e) => { console.warn(e); cb([]); }); }
-  async getLcart(id) { const s = await timeout(this.getSafe('lcarts', id)); return s.exists() ? { id, ...s.data() } : null; }
+  // 7.11.2026 (KVKK): onaylanmış / süresi dolmuş sepeti sadece yönetici okur; linki açan müşteri bekçiden kısaltılmış kopyayı alır
+  async getLcart(id) {
+    const no = (e) => /permission|insufficient|REST 40[13]/i.test(String(e?.code || '') + ' ' + String(e?.message || ''));
+    try { const s = await timeout(this.F.getDoc(this.d('lcarts', id)), 4000); return s.exists() ? { id, ...s.data() } : null; }
+    catch (e) {
+      if (!no(e)) { try { const s = await timeout(this.getSafe('lcarts', id)); return s.exists() ? { id, ...s.data() } : null; } catch (e2) { if (!no(e2)) throw e2; } }
+      const d = await this.pubGet('k', id); if (d === undefined) throw e; return d ? { id, ...d } : null;
+    }
+  }
   async submitLcart(id, sub) { await timeout(this.F.updateDoc(this.d('lcarts', id), { status: 'sent', sub, subAt: this.F.serverTimestamp() })); }
   async updateLcart(id, patch) { await timeout(this.F.updateDoc(this.d('lcarts', id), patch)); }
   async deleteLcart(id) { await timeout(this.F.deleteDoc(this.d('lcarts', id))); }
@@ -709,14 +717,28 @@ export class FirebaseBackend {
       const t = setTimeout(() => this.restGet(col + '/' + id).then((d) => ok(fakeSnap(id, d)), bad), 3500);
     });
   }
-  // sipariş takip: canlı dinleyici; 3,5 sn içinde cevap gelmezse REST ile getirilir ve dinleyici sessiz kaldıkça 20 sn'de bir yenilenir
+  // bekçiden kısaltılmış (KVKK) kopya: belge | null (yok) | undefined (ulaşılamadı)
+  async pubGet(kind, id) {
+    try {
+      const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/pub/' + kind + '?id=' + encodeURIComponent(id), { cache: 'no-store' }), 15000);
+      if (r.status === 404) return null;
+      const j = await r.json().catch(() => null); return j?.ok ? j.doc : undefined;
+    } catch { return undefined; }
+  }
+  // sipariş takip: canlı dinleyici; 3,5 sn içinde cevap gelmezse REST ile getirilir ve dinleyici sessiz kaldıkça 20 sn'de bir yenilenir.
+  // 7.11.2026 (KVKK): siparişi sadece yönetici + sahibi üye okur. İzin yoksa (misafir / linki başkası açtı) bekçiden kısaltılmış kopya
+  // gelir (ad, telefon, açık adres yok): dakikada bir, sekme görünürken; teslim / iptal olunca durur.
   watchOrder(id, cb) {
     if (isPv(id)) { cb(pvGet(id)); const f = () => cb(pvGet(id)); addEventListener('pv-orders', f); return () => removeEventListener('pv-orders', f); } // önizleme demo siparişi
-    let live = false, stop = false, poll = null;
-    const un = this.F.onSnapshot(this.d('orders', id), (s) => { live = true; clearInterval(poll); cb(s.exists() ? { id: s.id, ...s.data() } : null); }, () => { if (!live) rest(); });
-    const rest = () => this.restGet('orders/' + id).then((d) => { if (!live && !stop) cb(d ? { id, ...d } : null); }).catch(() => {});
-    const t = setTimeout(() => { if (live || stop) return; rest(); poll = setInterval(() => (live || stop ? clearInterval(poll) : rest()), 20000); }, 3500);
-    return () => { stop = true; clearTimeout(t); clearInterval(poll); un(); };
+    let live = false, stop = false, poll = null, pub = false, fin = false;
+    const pubPoll = () => { if (stop || live || fin || document.hidden) return; this.pubGet('o', id).then((d) => { if (stop || live || d === undefined) return; if (d && ['done', 'cancelled'].includes(d.status)) fin = true; cb(d ? { id, ...d } : null); }); };
+    const onVis = () => { if (!document.hidden) pubPoll(); };
+    const goPub = () => { if (pub || stop || live) return; pub = true; clearInterval(poll); pubPoll(); poll = setInterval(pubPoll, 60000); addEventListener('visibilitychange', onVis); };
+    const denied = (e) => /permission|insufficient|REST 40[13]/i.test(String(e?.code || '') + ' ' + String(e?.message || ''));
+    const un = this.F.onSnapshot(this.d('orders', id), (s) => { live = true; clearInterval(poll); cb(s.exists() ? { id: s.id, ...s.data() } : null); }, (e) => { if (live) return; if (denied(e)) goPub(); else rest(); });
+    const rest = () => this.restGet('orders/' + id).then((d) => { if (!live && !stop && !pub) cb(d ? { id, ...d } : null); }).catch((e) => { if (denied(e)) goPub(); });
+    const t = setTimeout(() => { if (live || stop || pub) return; rest(); poll = setInterval(() => (live || stop || pub ? null : rest()), 20000); }, 3500);
+    return () => { stop = true; clearTimeout(t); clearInterval(poll); removeEventListener('visibilitychange', onVis); un(); };
   }
   watchMyOrders(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('orders'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.createdAt - a.createdAt)), (e) => { console.warn(e); cb([]); }); }
   watchFeed(cb) { return this.F.onSnapshot(this.d('meta', 'feed'), (s) => cb(s.exists() ? s.data().items || [] : []), () => cb([])); }

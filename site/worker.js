@@ -298,7 +298,9 @@ async function merchantFeed(ctx) {
 async function lcartSeo(id, ctx) {
   const key = new Request('https://seo-lcart.cache/' + VER + '/' + id);
   try { const r = await caches.default.match(key); if (r) return await r.json(); } catch {}
-  const c = await doc('lcarts/' + encodeURIComponent(id)); if (!c) return null;
+  // 7.11.2026 (KVKK): onaylanmış sepet herkese açık okunmuyor → bekçiden kısaltılmış kopya (ad/adres yok, önizlemede zaten kullanılmıyordu)
+  let c = null; try { const r = await fetch(WATCH + '/pub/k?id=' + encodeURIComponent(id)); const j = r.ok ? await r.json() : null; c = j?.doc || null; } catch {}
+  if (!c) return null;
   const q = c.sub?.q && typeof c.sub.q === 'object' ? c.sub.q : null;
   const its = (c.items || []).map((it) => ({ ...it, qty: q ? Number(q[String(it.id)]) || 0 : (c.sub?.items?.find?.((x) => x.id === it.id)?.qty ?? it.qty) })).filter((it) => it.qty > 0);
   const n = its.reduce((a, it) => a + Number(it.qty || 0), 0);

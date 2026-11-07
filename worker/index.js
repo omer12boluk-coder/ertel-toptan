@@ -24,7 +24,7 @@ function safeEnv(env) {
 import { aiRoute, aiStatus } from './ai.js';
 export default {
   async scheduled(event, env, ctx) {
-    env = safeEnv(env);
+    env = safeEnv(env); gEnv = env;
     ctx.waitUntil(check(env)); ctx.waitUntil(dhlWatch(env).catch((e) => console.log('dhlWatch', e.message)));
     // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 17) ctx.waitUntil(preqSweep(env).catch((e) => console.log('preqSweep', e.message)));
@@ -33,12 +33,20 @@ export default {
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() % 10 === 4) ctx.waitUntil(lcartSweep(env).catch((e) => console.log('lcartSweep', e.message)));
   },
   async fetch(req, env, ctx) {
-    env = safeEnv(env);
+    env = safeEnv(env); gEnv = env;
     const url = new URL(req.url);
     const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hash' };
     const json = (o, st = 200, extra = {}) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     try {
+      // KVKK (7.11.2026): giriş yapmamış biri sipariş takip / sepet linkini açınca kişisel bilgiler kısaltılmış gelir
+      if ((url.pathname === '/pub/o' || url.pathname === '/pub/k') && req.method === 'GET') {
+        const id = url.searchParams.get('id') || ''; const lc = url.pathname === '/pub/k';
+        if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return json({ ok: false, error: 'kimlik' }, 400);
+        const d = await fsDoc((lc ? 'lcarts/' : 'orders/') + id);
+        if (!d) return json({ ok: false, error: 'bulunamadı' }, fsLast === 404 ? 404 : 502, { 'Cache-Control': 'no-store' });
+        return json({ ok: true, doc: lc ? maskLcart(d) : maskOrder(d) }, 200, { 'Cache-Control': 'no-store' });
+      }
       if (url.pathname === '/rate' && url.searchParams.has('debug')) { const d = await haremDebug(); return json(d); }
       if (url.pathname === '/rate') {
         const r = await haremRate();
@@ -242,6 +250,7 @@ function fsVal(v) {
   if ('doubleValue' in v) return v.doubleValue;
   if ('booleanValue' in v) return v.booleanValue;
   if ('nullValue' in v) return null;
+  if ('timestampValue' in v) return Date.parse(v.timestampValue);
   if ('mapValue' in v) return Object.fromEntries(Object.entries(v.mapValue.fields || {}).map(([k, x]) => [k, fsVal(x)]));
   if ('arrayValue' in v) return (v.arrayValue.values || []).map(fsVal);
   return null;
@@ -255,7 +264,7 @@ const cardTxt = (o) => (o.pay === 'card' && o.sum ? 'Kart · ' + (o.sum.inst?.n 
 async function notifyOrder(env, id, internal) {
   if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
   if (!internal && await env.KV.get('n:' + id)) return { ok: true, already: true };
-  const r = await fetch(FS + 'orders/' + id);
+  const r = await fsGet(FS + 'orders/' + id);
   if (!r.ok) return { ok: false, error: 'sipariş yok' };
   const doc = await r.json();
   const o = Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
@@ -433,7 +442,15 @@ const PUSH_TEXTS = { confirmed: 'Siparişiniz onaylandı.', preparing: 'Sipariş
 // Firestore okuma: geçici hata (429 / 5xx / ağ) olursa kısa aralıkla 2 kez daha dener; son durum kodu fsLast'ta kalır
 // (sipariş hatasında müşteriye/Telegram'a kodla gösterilir → 6.11.2026 gece 'Katalog okunamadı' sebebi görünmüyordu).
 let fsLast = 0;
+// 7.11.2026 (KVKK): siparişler ve onaylanmış sepet linkleri artık herkese açık okunmuyor → bekçinin Firestore okumaları
+// servis hesabıyla yapılır (kurallara takılmaz). Servis anahtarı yoksa / alınamazsa eskisi gibi anahtarsız okunur.
+let gEnv = null;
+async function fsWithSa(url, init) {
+  if (!String(url).startsWith(FS) || !gEnv?.FIREBASE_SA || init?.headers?.Authorization) return init;
+  try { const tok = await saToken(gEnv); return { ...(init || {}), headers: { ...(init?.headers || {}), Authorization: 'Bearer ' + tok } }; } catch { return init; }
+}
 async function fsGet(url, init) {
+  init = await fsWithSa(url, init);
   let r = null;
   for (let i = 0; i < 3; i++) {
     try { r = await fetch(url, init); fsLast = r.status; } catch (e) { r = null; fsLast = 'ağ'; }
@@ -445,6 +462,25 @@ async function fsGet(url, init) {
 async function fsDoc(path) {
   const r = await fsGet(FS + path); if (!r.ok) return null;
   const doc = await r.json(); return Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
+}
+// ---- KVKK maskeleme (7.11.2026): linki bilen ama giriş yapmamış kişiye ad / telefon / e-posta / açık adres / TC-vergi no gösterilmez.
+// Kalan: durum, ürünler, tutar, kargo, il / ilçe. Tam bilgi sadece yöneticiye ve siparişin sahibi üyeye (Firestore kuralları).
+const mName = (s) => String(s || '').trim().split(/\s+/).filter(Boolean).map((w) => w[0] + '***').join(' ');
+const mPhone = (s) => { const d = String(s || '').replace(/\D/g, ''); return d.length >= 4 ? '0*** *** ** ' + d.slice(-2) : ''; };
+const mMail = (s) => { const [u, h] = String(s || '').split('@'); return h ? (u[0] || '') + '***@' + h : ''; };
+const mNo = (s) => { const d = String(s || '').replace(/\D/g, ''); return d ? '•••••' + d.slice(-2) : ''; };
+const mAddr = (a) => (a && typeof a === 'object' ? { city: a.city || '', district: a.district || '', ...(a.title ? { title: a.title } : {}), ...(a.name ? { name: mName(a.name) } : {}), ...(a.phone ? { phone: mPhone(a.phone) } : {}) } : a ?? null);
+const mInv = (v) => (v && typeof v === 'object' ? { type: v.type || 'person', ...('same' in v ? { same: v.same } : {}), ...(v.company ? { company: mName(v.company) } : {}), ...(v.taxOffice ? { taxOffice: v.taxOffice } : {}), ...(v.taxNo ? { taxNo: mNo(v.taxNo) } : {}), ...(v.tc ? { tc: mNo(v.tc) } : {}), ...(v.addr ? { addr: mAddr(v.addr) } : {}) } : v ?? null);
+function maskOrder(o) {
+  const { legal, uid, ...r } = o;
+  const c = o.contact || {};
+  return { ...r, uid: null, masked: true, contact: { name: mName(c.name), phone: mPhone(c.phone), email: mMail(c.email) },
+    delivery: o.delivery && typeof o.delivery === 'object' ? { ...o.delivery, addr: mAddr(o.delivery.addr) } : o.delivery ?? null, invoice: mInv(o.invoice) };
+}
+function maskLcart(c) {
+  const s = c.sub;
+  return { ...c, name: mName(c.name), masked: true, sub: s && typeof s === 'object' ? { ...s, contact: { name: mName(s.contact?.name), phone: mPhone(s.contact?.phone) },
+    delivery: s.delivery && typeof s.delivery === 'object' ? { ...s.delivery, addr: mAddr(s.delivery.addr) } : s.delivery ?? null } : s ?? null };
 }
 // Aboneliği listeye ekle — SADECE değiştiyse yaz (ücretsiz KV günde 1.000 yazma; her sayfa açılışında her sipariş için
 // yeniden yazmak 30.10.2026'da kotanın %90'ını doldurmuştu). Aynı cihaz zaten kayıtlıysa ve kaydı 20 günden yeniyse dokunulmaz.
@@ -617,7 +653,7 @@ async function lcartSweep(env) {
 async function notifyLcart(env, id) {
   if (!/^[\w-]{10,40}$/.test(id)) return { ok: false, error: 'kimlik' };
   if (await env.KV.get('nl:' + id)) return { ok: true, already: true };
-  const r = await fetch(FS + 'lcarts/' + id);
+  const r = await fsGet(FS + 'lcarts/' + id);
   if (!r.ok) return { ok: false, error: 'sepet yok' };
   const doc = await r.json();
   const c = Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, fsVal(v)]));
