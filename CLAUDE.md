@@ -201,6 +201,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - Firebase Spark kalıyor (Blaze'e geçiş kullanıcının elinde); arka plan işleri ücretsiz Cloudflare'de. PlatinMarket'te API yok → XML beslemesi + bekçi. Platin artık sadece veri girişi; dosyalar R2'de.
 - **Liste fiyatı = sitedeki gerçek satış fiyatı** (indirimli varsa o); toptan = `w` ya da `pricing.mode` 'steps' (fiyat aralığına göre sabit USD indirim). Mağaza ziyaretçisi liste fiyatını görür.
+- **KVKK (7.11.2026):** `orders` sadece yönetici + sahibi üye, onaylanmış `lcarts` sadece yönetici okur. Linki açan başkası/misafir bekçi `/pub/o`, `/pub/k`'den kısaltılmış kopya alır (`maskOrder`/`maskLcart`: ad baş harf, tel son 2, il/ilçe; `watchOrder`/`getLcart` izin yoksa kendiliğinden geçer, dakikada bir). Bekçi Firestore okumaları servis hesabıyla (`fsWithSa`). `paylinks` hâlâ açık (sadece ad + tutar).
 - Mağaza siparişini **bekçi yazar** (fiyatı pubcatalog'dan doğrular; kur/KDV `paycalc.js` ile aynı hesap). Müşteri `orders`'a doğrudan yazamaz.
 - Bayi siparişi mağaza siparişlerine karışmaz (requests `type:'order'`); sepet linki de siparişlere karışmaz (`lcarts`). Cari hesap tutulmaz.
 - Vitrin listesi veritabanına kaydedilmez. `/siparisformu` şifresiz değil (toptan fiyatlar sızardı).
