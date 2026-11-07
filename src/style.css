@@ -9344,3 +9344,13 @@ html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }
 .pv2-tag { transition: background .22s, color .22s, transform .18s; }
 @media (hover: hover) and (pointer: fine) { .pv2-tag:active { transform: scale(.96); } }
 @media (prefers-reduced-motion: reduce) { .pv2-qbtn, .pv2-q.pv2-qopen, .pv2-af, .pv2-af .af-chip { animation: none; } }
+
+/* Robot koruması (Turnstile, 7.11.2026, turnstile.js): sadece Cloudflare şüphelenirse görünür */
+.ts-box { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); z-index: 2147483000;
+  background: var(--surface, #fff); color: var(--fg, #111); border: 1px solid var(--line, #d6dce8); border-radius: 16px; padding: 14px 16px 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center;
+  width: min(340px, calc(100vw - 24px)); opacity: 0; pointer-events: none; visibility: hidden; transition: opacity .2s, transform .2s, visibility 0s .2s; }
+.ts-box.on { opacity: 1; pointer-events: auto; visibility: visible; transform: translate(-50%, 0); transition: opacity .2s, transform .2s; }
+.ts-box b { font-size: 15px; }
+.ts-box span { font-size: 13px; color: var(--muted, #6b7280); margin-bottom: 6px; }
+.ts-box .ts-w { min-height: 0; }

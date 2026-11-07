@@ -3,6 +3,7 @@
 //   OrderPage  sipariş alındı / takip sayfası (/magaza/s/<no>)
 //   Account    Hesabım: giriş, üye ol, şifre sıfırlama, siparişlerim, adreslerim, bilgilerim
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
+import { tsToken } from './turnstile.js';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders, setCatalog } from './store.js';
@@ -313,7 +314,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
         store.set({ justOrder: pv }); openOrder(pid, true); setBusy(false); setDone(false); return;
       }
       let res = null;
-      try { if (srv) res = await A.placeOrderSrv(order, id); else { const { seen, inst, ...o2 } = order; await A.placeOrder(o2, id); } } finally { if (signedUp) await A.memberDone(); }
+      try { if (srv) res = await A.placeOrderSrv(order, id, false, await tsToken()); else { const { seen, inst, ...o2 } = order; await A.placeOrder(o2, id); } } finally { if (signedUp) await A.memberDone(); }
       if (res && !res.ok) { if (res.code === 'price') { priceFix(res); setBusy(false); return; } if (res.code === 'rate') { rateFix(res); setBusy(false); return; } throw new Error(res.error || 'tekrar deneyin'); }
       if (res) { Object.assign(order, { no: res.no, items: res.items, total: res.total }); if (res.sum) order.sum = res.sum; else delete order.sum; } // sunucunun kaydettiği hâli
       delete order.seen; delete order.inst;

@@ -1295,6 +1295,18 @@ async function pubSets() {
   for (const x of Array.isArray(d?.sets) ? d.sets : []) if (x && x.on && x.id) map.set(String(x.id), x);
   setCache = { at: Date.now(), map }; return map;
 }
+const TS_GRACE = Date.parse('2026-11-15T00:00:00+03:00');
+async function tsVerify(env, tok, req) {
+  if (!env.TURNSTILE_SECRET) return { ok: true, off: true };
+  if (!tok) return { ok: Date.now() < TS_GRACE, missing: true };
+  try {
+    const fd = new FormData(); fd.append('secret', env.TURNSTILE_SECRET); fd.append('response', String(tok).slice(0, 2048));
+    const ip = req.headers.get('CF-Connecting-IP'); if (ip) fd.append('remoteip', ip);
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: fd });
+    if (!r.ok) return { ok: true, down: true }; // Cloudflare doğrulama servisine ulaşılamadı → siparişi kaçırma
+    const j = await r.json(); return { ok: !!j.success, codes: j['error-codes'] };
+  } catch { return { ok: true, down: true }; }
+}
 async function placeOrder(req, env, b, ctx) {
   const id = String(b.id || ''); const o = b.order || {};
   if (!/^[A-Za-z0-9]{15,40}$/.test(id)) return { ok: false, error: 'Geçersiz sipariş kimliği' };
@@ -1376,6 +1388,9 @@ async function placeOrder(req, env, b, ctx) {
     card = { brand: String(c.brand || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), last4: /^\d{4}$/.test(String(c.last4)) ? String(c.last4) : '', bank: String(c.bank || '').slice(0, 40), demo: true }; // gerçek ödeme altyapısı gelene kadar hep demo
   }
   if (b.check) return { ok: true, check: true }; // sadece fiyat kontrolü (siparişte üye olurken hesap açmadan önce)
+  // Robot koruması (Turnstile, 7.11.2026): gerçek siparişte tarayıcıdan gelen tek kullanımlık jeton Cloudflare'e doğrulatılır.
+  // Geçiş süresi (TS_GRACE'e kadar): jetonsuz gelen (eski sürüm açık kalmış) sipariş kabul edilir; jeton varsa ve geçersizse reddedilir.
+  { const v = await tsVerify(env, b.ts, req); if (!v.ok) return { ok: false, code: 'bot', error: 'Güvenlik doğrulaması tamamlanamadı. Sayfayı yenileyip tekrar deneyin.' }; }
   const t = Date.now(); const rate = sum ? { usd: sum.rate } : await haremRate().catch(() => null);
   const doc = {
     no: /^[A-Z0-9]{4,10}$/.test(String(o.no || '')) ? String(o.no) : Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join(''),

@@ -693,9 +693,9 @@ export class FirebaseBackend {
   newOrderId() { return this.F.doc(this.c('orders')).id; }
   // Mağaza siparişi bekçiden (fiyatlar sunucuda katalogdan yeniden hesaplanır; Firestore kuralı müşterinin doğrudan yazmasına izin vermez)
   // → { ok, id, no, items, total } | { ok:false, code:'price', items:[{id, price, gone}] } | { ok:false, error }
-  async placeOrderSrv(o, id, check) {
+  async placeOrderSrv(o, id, check, ts) {
     const tok = o.uid && !check ? await this.idToken() : null;
-    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/order', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ id, order: o, ...(check ? { check: true } : {}) }) }), 30000);
+    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/order', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ id, order: o, ...(check ? { check: true } : {}), ...(ts ? { ts } : {}) }) }), 30000);
     return await r.json().catch(() => ({ ok: false, error: 'Sunucu cevap vermedi (' + r.status + ')' }));
   }
   async placeOrder(o, id) { const ref = this.F.doc(this.c('orders'), id || this.newOrderId()); await timeout(this.F.setDoc(ref, o)); return ref.id; }
