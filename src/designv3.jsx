@@ -255,6 +255,7 @@ function HeroPanel({ H, S, k }) {
   const pbIn = sl.some((s) => s.pb);
   return <>
     {!pbIn && <div className="v3-cta"><b>Fotoğraflı bannerlar listede değil</b><p>Şu an koddan ekleniyorlar. Listeye alırsanız her birinin yazısını, sırasını ve görünürlüğünü buradan yönetirsiniz.</p><button type="button" className="btn sm primary" onClick={() => S('slides', [...PHOTO_BANNERS.map((b) => ({ pb: b.id })), ...sl])}>Listeye al</button></div>}
+    <Row label="Banner imzası (telefon)" hint="Logomuzun telefondaki yeri. Bilgisayarda hep marka satırında"><Seg v={H.sigM || ''} opts={[['', 'Marka satırında'], ['corner', 'Sağ alt köşe']]} on={(v) => S('sigM', v || undefined)} /></Row>
     <Row label="Banner içi düğme köşesi" hint="Banner köşesinden bağımsız"><Seg v={String(H.chipR ?? '')} opts={[['', 'Banner gibi'], ['999', 'Yuvarlak'], ['12', 'Yumuşak'], ['6', 'Az'], ['0', 'Düz']]} on={(v) => S('chipR', v === '' ? undefined : Number(v))} /></Row>
     <span className="v3-cap">Bannerlar · {sl.filter((s) => !s.off).length} açık</span>
     <p className="fine">Kapalı olan sitede görünmez, silinmez. Fotoğraf ve yerleşim hazır şablondan gelir; yazıları değiştirebilirsiniz.</p>
