@@ -23,18 +23,11 @@ export const PHOTO_BANNERS = BANNERS.filter((b) => !b.off);
 
 const Chev = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>;
 
-// 7.11.2026 Banner imzası: kendi logomuz (ert mobile, isimli). Bilgisayarda marka satırının devamında (ince çizgiyle
-// ayrılmış, 38 birim — kullanıcı 'çok sevdim, biraz büyük olsun'), telefonda sağ alt köşede yarı saydam hap içinde. Kapatma: banner satırında sig: false (Tasarım › Banner ›
+// 7.11.2026 Banner imzası: kendi logomuz (ert mobile, isimli) marka satırının devamında, ince çizgiyle ayrılmış
+// (bilgisayar 38, telefon 28 birim). Telefonda sağ alt köşe denendi, kullanıcı beğenmedi → telefon da PC gibi. Kapatma: banner satırında sig: false (Tasarım › Banner ›
 // banner › 'Banner imzası'), kod tarafında bannerlar.json "imza": false (mağazanın kendi bannerı gibi).
 const SIG_LOGO = '/bn/ertel-logo.png';
 const sigOn = (b) => b.sig !== false && b.imza !== false;
-// telefon imzası (sağ alt köşe)
-function Sig({ b, m }) {
-  const h = m ? 26 : 34;
-  return <span className="pb-sig" style={abs({ right: m ? 14 : 28, bottom: m ? 34 : 22, zIndex: 2, display: 'inline-flex', alignItems: 'center', padding: m ? '5px 9px 5px 6px' : '6px 10px 6px 7px', borderRadius: 999, background: b.dark ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.75)', pointerEvents: 'none' })}>
-    <img className="pb-sig-i" src={SIG_LOGO} alt="ERTEL" style={{ height: h, width: 'auto', display: 'block', opacity: b.dark ? 0.85 : 1, filter: b.dark ? 'brightness(0) invert(1)' : undefined }} />
-  </span>;
-}
 
 // yazı bloğu (logo · başlık · slogan · açıklama · düğmeler)
 function Txt({ b, m, hs = 64, act, center, w, br = 999 }) {
@@ -49,7 +42,7 @@ function Txt({ b, m, hs = 64, act, center, w, br = 999 }) {
       <span className="pb-eye" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: m ? 2 : 6, color: b.eyeC, font: `600 ${m ? 12.5 : 15}px/1.2 Inter, sans-serif` }}>
         <img src={b.logo} alt="" style={{ height: Math.round(b.lh * (m ? 0.7 : 1)), width: 'auto', display: 'block', filter: b.logoWhite ? 'brightness(0) invert(1)' : undefined }} />
         {eye && <span style={{ paddingLeft: 12, borderLeft: '1px solid currentColor', opacity: 0.9 }}>{eye}</span>}
-        {!m && sigOn(b) && <span className="pb-sig" style={{ display: 'inline-flex', alignItems: 'center', paddingLeft: 12, borderLeft: `1px solid ${b.dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.16)'}` }}><img className="pb-sig-i" src={SIG_LOGO} alt="ERTEL" style={{ height: 38, width: 'auto', display: 'block', opacity: b.dark ? 0.85 : 1, filter: b.dark ? 'brightness(0) invert(1)' : undefined }} /></span>}
+        {sigOn(b) && <span className="pb-sig" style={{ display: 'inline-flex', alignItems: 'center', paddingLeft: m ? 10 : 12, borderLeft: `1px solid ${b.dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.16)'}` }}><img className="pb-sig-i" src={SIG_LOGO} alt="ERTEL" style={{ height: m ? 28 : 38, width: 'auto', display: 'block', opacity: b.dark ? 0.85 : 1, filter: b.dark ? 'brightness(0) invert(1)' : undefined }} /></span>}
       </span>
       <h2 style={{ margin: 0, font: `600 ${m ? (b.center ? 38 : 34) : hs}px/1.03 'Inter Tight', Inter, sans-serif`, letterSpacing: m ? '-.03em' : '-.035em', color: b.titleC || ink, whiteSpace: 'pre-line' }}>{title}</h2>
       {b.tag && <p style={{ margin: 0, font: `500 ${m ? 19 : b.center ? 26 : 28}px/1.2 Inter, sans-serif`, letterSpacing: '-.015em', color: ink }}>{b.tag}</p>}
@@ -226,7 +219,6 @@ export function PhotoBanner({ b, open, onProduct, edit }) {
     else { s = Math.min(sz.h / 560, 1.3); W = sz.w / s; H = sz.h / s; if (W < 1000) { s = sz.w / 1000; W = 1000; H = sz.h / s; } }
     cv = <div className="pb-cv" style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `scale(${s})`, transformOrigin: '0 0', fontFamily: 'Inter, sans-serif' }}>
       {phone ? <Phone b={b} H={H} act={act} br={br} /> : <Wide b={b} W={W} H={H} act={act} br={br} />}
-      {phone && sigOn(b) && <Sig b={b} m />}
     </div>;
     if (phone && b.bgM) bg = b.bgM; else if (!phone && b.bgW) bg = b.bgW;
   }

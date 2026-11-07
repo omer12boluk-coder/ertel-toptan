@@ -237,7 +237,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 
 - 7.11.2026 banner / Claude düzeni / v3 / kart-logo hizası / Yeni gelenler notları → `docs/gunluk.md` 'CLAUDE.md'den taşınan'. Bannerlar, Keşfet, kapaklar artık `src/icerik/*.json` (§0).
 
-- **7.11.2026 Banner imzası** (YAYINDA): `photobn.jsx` `sigOn` — ert mobile logosu bilgisayarda marka satırında (38 birim, kullanıcı çok beğendi), telefonda sağ alt köşede hap içinde (`Sig`, noktaların üstünde); kapatma satırda `sig: false` (v3 › Banner › 'Banner imzası'), JSON `"imza": false`. Yeni banner `tezgah` (mağazanın kendi bannerı, `oto`+`bas` → listede İLK sırada, imzasız). Bağlantı `go:<sekme>`.
+- **7.11.2026 Banner imzası** (YAYINDA): `photobn.jsx` `sigOn` — ert mobile logosu marka satırında ince çizgiyle ayrılmış (bilgisayar 38, telefon 28 birim; telefonda sağ alt köşe denendi, beğenilmedi); kapatma satırda `sig: false` (v3 › Banner › 'Banner imzası'), JSON `"imza": false`. Yeni banner `tezgah` (mağazanın kendi bannerı, `oto`+`bas` → listede İLK sırada, imzasız). Bağlantı `go:<sekme>`.
 
 - **7.11.2026 cd kartları Sepete ekle:** kartlar oynuyordu → `.cd-sec .abx` sabit boy + `contain: layout paint`; geçiş animasyonları AYNEN (kullanıcı geri istedi), sadece geri dönüşte yazı dönmez (`abFadeOnly`), bilgisayarda basınca küçülme kapalı. Demoda canlı ayarlarla (Actions 'Claude için getir' → `ayarlar.json` = settings/public) kurup denendi.
 
