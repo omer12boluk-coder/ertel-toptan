@@ -808,7 +808,7 @@ function ProductRow({ p, admin, onOpen, pinned }) {
           <span className="prow-name">{p.n}</span>
           <span className="prow-meta">
             {admin && <code>{p.k}</code>}
-            {S.catalog.showBrand && p.b && (lg ? <ShopImg v={lg} className="pv2-lg" alt={p.b} /> : <span className="brand-tag">{p.b}</span>)}
+            {lg ? <ShopImg v={lg} className="pv2-lg" alt={p.b} /> : S.catalog.showBrand && p.b && <span className="brand-tag">{p.b}</span>}{/* v2: logo 'marka adını göster' kapalıyken de görünür */}
             {st && !v2 && <span className={'dot tone-' + st.tone}>{st.t}</span>}
             {admin && !p.t && <span className="dot tone-muted">Etiketsiz</span>}
             {admin && p.nw && <span className="dot tone-info">Siteden yeni</span>}
