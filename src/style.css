@@ -9308,3 +9308,19 @@ html .shell .pv2-tags .chip.select.csel::after { display: none; }
 html .shell .pv2-q input, html .shell .pv2-q input:focus { border: 0 !important; outline: 0 !important; box-shadow: none !important; background: none !important; border-radius: 0 !important; padding: 0 !important; height: 100% !important; }
 .pv2-lgt { margin-left: 4px; font: 650 12px/1 Inter, var(--f-body); letter-spacing: .01em; color: var(--fg); } /* Luban: logo sadece amblem → yanına adı (sadece Ürünler v2 kartlarında) */
 html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }
+/* 7.11.2026 (akşam): kategori hapları biraz küçük (bilgisayarda hepsi sığsın) + sığmazsa ince, belli belirsiz yatay kaydırma çubuğu */
+.pv2-pills { gap: 6px; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--fg) 16%, transparent) transparent; }
+.pv2-pills::-webkit-scrollbar { display: block; height: 3px; }
+.pv2-pills::-webkit-scrollbar-track { background: transparent; }
+.pv2-pills::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--fg) 16%, transparent); border-radius: 3px; }
+.pv2-pill { height: 34px; padding: 0 12px; gap: 5px; font-size: 13.5px; }
+.pv2-pill small { font-size: 11.5px; }
+.pv2-pills.sub .pv2-pill { height: 30px; padding: 0 11px; font-size: 13px; }
+/* Markalar sayfası: kutular daha küçük */
+.bp-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.bp-tile { border-radius: 18px; }
+.bp-logo { height: 88px; padding: 14px 16px; }
+.bp-logo img { max-height: 42px; } .bp-logo img.sq { max-height: 52px; }
+.bp-logo > b { font-size: 18px; }
+.bp-meta { padding: 8px 12px 10px; } .bp-meta b { font-size: 13px; } .bp-meta small { font-size: 12px; }
+@media (max-width: 700px) { .bp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .bp-tile { border-radius: 14px; } .bp-logo { height: 64px; padding: 10px; } .bp-logo img { max-height: 28px; } .bp-logo img.sq { max-height: 36px; } .bp-logo > b { font-size: 14px; } .bp-meta { padding: 6px 8px 8px; flex-direction: column; gap: 1px; } .bp-meta b { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .bp-meta small { font-size: 11px; } }

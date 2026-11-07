@@ -82,8 +82,15 @@ export const isAdmin = () => store.s.user?.role === 'admin';
 
 // 7.11.2026 marka düzeltmeleri (kullanıcı): yanlışlıkla açılmış 'Mega-idea' → 'Mega-Idea'; markasız ve adında Keguan geçen → 'Keguan'.
 // Yükleme anında uygulanır; yönetici bir ürünü kaydedince veriye de bu hâliyle yazılır.
-const BRAND_FIX = { 'mega-idea': 'Mega-Idea' };
-const fixBrand = (b, n) => (b ? BRAND_FIX[b.toLocaleLowerCase('tr')] || b : /keguan/i.test(n || '') ? 'Keguan' : b);
+// 7.11.2026 (akşam): adında Mr. Yang / M.R Yang / M.Yang geçen HER ürün → 'M.R Yang'; markasız ve adında '18 kinds' geçen → '18 Kinds'.
+const BRAND_FIX = { 'mega-idea': 'Mega-Idea', '18 kinds': '18 Kinds' };
+const fixBrand = (b, n) => {
+  if (/\bm\.?\s*r?\.?\s*yang\b/i.test(n || '')) return 'M.R Yang';
+  if (b) return BRAND_FIX[b.toLocaleLowerCase('tr')] || b;
+  if (/keguan/i.test(n || '')) return 'Keguan';
+  if (/18\s*kinds?\b/i.test(n || '')) return '18 Kinds';
+  return b;
+};
 export function setCatalog(items) {
   const list = (items || []).map((p0) => { const p = { ...p0, n: cleanText(p0.n) || '', b: fixBrand(p0.b ? cleanText(p0.b) : p0.b, p0.n) }; return { ...p, _s: norm(p.n + ' ' + p.k + ' ' + (p.b || '')), _t: norm(p.t || '') }; });
   store.set({ catalog: list, byId: new Map(list.map((p) => [p.id, p])) });
