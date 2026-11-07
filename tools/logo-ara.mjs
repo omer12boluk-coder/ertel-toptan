@@ -19,7 +19,7 @@ for (const shop of SHOPS) {
     for (const c of cs) titles.push(shop.replace(/^https:\/\/(www\.)?/, '') + '\t' + c.handle + '\t' + c.title + '\t' + (c.image?.src ? 'img' : '-'));
     for (const c of cs) for (const b of brands) {
       const t = norm(c.title), h = norm(c.handle), nb = norm(b);
-      if ((t === nb || t === nb + 'tool' || h === nb + 'tool' || h === nb || t === nb + 'tools' || h === nb + 'tools' || t === nb + 'brand' || t.startsWith(nb + 'tool')) && c.image?.src) add(b, c.image.src, shop + '/collections/' + c.handle);
+      if ((t === nb || t === nb + 'tool' || h === nb + 'tool' || h === nb || t === nb + 'tools' || h === nb + 'tools' || t === nb + 'brand' || t.startsWith(nb + 'tool') || t === nb + 'repairtools' || h === nb + 'repairtools') && c.image?.src) add(b, c.image.src, shop + '/collections/' + c.handle);
     }
   }
 }
