@@ -177,10 +177,10 @@ export const DEFAULT_SETTINGS = {
     Quick: { logo: '/brands/quick.png', color: '#d71920' }, Yihua: { logo: '/brands/yihua.png', color: '#e30613' },
     'Uni-T': { logo: '/brands/unit.png', color: '#d6001c' }, RF4: { logo: '/brands/rf4.png', color: '#119fa7' },
     // Logosu henüz olmayanlar: adları marka renginde yazılır (Ayarlar > Markalar'dan logo eklenebilir)
-    YCS: { color: '#0f766e' }, 'Mega-Idea': { color: '#b4232a' }, 'Ma Ant': { color: '#16a34a' }, Mijing: { color: '#0e7490' },
+    YCS: { color: '#0f766e' }, 'Mega-Idea': { color: '#b4232a' }, 'Ma Ant': { logo: '/brands/maant.png', color: '#16a34a' }, Mijing: { logo: '/brands/mijing.png', color: '#0e7490' },
     XZZ: { color: '#2563eb' }, Lanrui: { color: '#7c3aed' }, 'OSS Team': { color: '#ea580c' }, TBK: { logo: '/brands/tbk.png', color: '#0f5f57' },
     Doseer: { color: '#be123c' }, Kaisi: { logo: '/brands/kaisi.png', color: '#d6001c' }, SUGON: { logo: '/brands/sugon.png', color: '#111111' }, Ersa: { logo: '/brands/ersa.png', color: '#0b2d4f' },
-    Fluke: { logo: '/brands/fluke.png', color: '#c99700' }, iFixes: { logo: '/brands/ifixes.png', color: '#333333' }, Korad: { color: '#0b5394' }, Alpha: { color: '#334155' },
+    Fluke: { logo: '/brands/fluke.png', color: '#c99700' }, iFixes: { logo: '/brands/ifixes.png', color: '#333333' }, Korad: { color: '#0b5394' }, Alpha: { color: '#334155' }, LUOWEI: { logo: '/brands/luowei.png', color: '#111111' }, // 7.11.2026: Ma Ant, Mijing, Luowei logoları eklendi
   },
   // Online mağaza ana sayfası (Ayarlar > Mağaza ana sayfası). Resimler: 'si…' = shopimg kaydı, http… = dış link.
   // Link: 'brand:Aixun' | 'cat:3' | 'q:jbc uç' | 'p:1234' (ürün) | 'https://…' | ''
