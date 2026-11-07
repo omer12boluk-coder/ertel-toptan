@@ -9099,7 +9099,9 @@ img[src*="/brands/ersa."] { --lk: 1.080; --lc: -0.040; --ll: -0.011; }
 :is(.cd-big-add, .cd-tile) .qty-morph > .stepper { width: 100%; }
 :is(.cd-big-add, .cd-tile) .qty-morph.grow > .stepper { animation: abIn .26s cubic-bezier(.2, .8, .2, 1) backwards !important; transform-origin: center; }
 :is(.cd-big-add, .cd-tile) .qty-morph.grow > .stepper > * { animation: none !important; }
-:is(.cd-big-add, .cd-tile) .btn.add.back { animation: abIn .22s cubic-bezier(.2, .8, .2, 1) backwards !important; }
+:is(.cd-big-add, .cd-tile) .btn.add.back { animation: abBack .42s cubic-bezier(.2, .9, .25, 1) backwards !important; transform-origin: center; } /* 7.11.2026: kaldırma animasyonu = sitenin geri kalanıyla aynı (daralıp açılır) */
+.cd-sec .abx .btn.add.back > .add-l { animation: abLbl .36s .05s cubic-bezier(.3, 1.4, .5, 1) backwards !important; } /* yazı dönmez, büyüyerek gelir; + simgesi döner */
+@keyframes abLbl { from { opacity: 0; transform: scale(.6); } }
 .cd-big-add { align-items: center; }
 .cd-big-add .abx { flex: none; width: 200px; }
 @media (max-width: 899px) { .cd-big-add .abx { width: min(200px, 60vw); } }
@@ -9205,12 +9207,10 @@ html[data-theme=dark] .cd-when { color: #ff9f5a; }
 .cd-sec .cd-big-add .abx { height: 44px; }
 .cd-sec .cd-big-add .abx .qty-morph > .stepper { height: 44px !important; }
 .cd-sec .abx .btn.add:active:not(.back), .cd-sec .abx .stepper button:active { transform: none !important; }
-/* geri dönüşte (−1+ → Sepete ekle) yazı da dönerek/küçülerek geliyordu ('Sepete ekle kısmı oynuyor'): dönme sadece + simgesinde, yazı sadece belirir */
-.cd-sec .abx .btn.add.back > .add-l { animation: abFadeOnly .3s .05s ease backwards !important; }
-@keyframes abFadeOnly { from { opacity: 0; } }
+
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '649a1ee084';</script>
+<script>window.__BUILD = '6ff36b4c80';</script>
 </head>
 <body>
 <div id="root"></div>
