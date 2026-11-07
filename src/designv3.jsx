@@ -17,7 +17,7 @@ import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList, useNewList } fro
 import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
 import { liveSets } from './sets.jsx';
-import { useCatTiles } from './p0home.jsx';
+import { useHubRoots } from './catalog.jsx';
 
 const PREVIEW = typeof location !== 'undefined' && /--/.test(location.hostname);
 const setPath = (obj, path, v) => { const n = structuredClone(obj); const ks = path.split('.'); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k] = o[k] ?? {})); o[ks.at(-1)] = v; return n; };
@@ -45,7 +45,7 @@ const Seg = ({ v, opts, on }) => <span className="v3-seg">{opts.map(([k, l]) => 
 function HubRows({ d, set }) {
   const L = d.look || {}; const P = d.shopHome?.p0 || {}; const C = P.hub || {};
   const up = (patch) => set('shopHome.p0', { ...P, hub: { ...C, ...patch } });
-  const tiles = useCatTiles(d.shopHome?.p0catImg, []);
+  const tiles = useHubRoots();
   const hid = new Set((C.hide2 || []).map(String));
   const tog = (id) => { const h = new Set(hid); h.has(String(id)) ? h.delete(String(id)) : h.add(String(id)); up({ hide2: [...h] }); };
   return <>

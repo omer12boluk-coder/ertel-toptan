@@ -317,7 +317,8 @@ function PvBadge() {
   return <div className="pv-badge"><b>Önizleme tasarımı</b><small>Sadece bu tarayıcıda</small><button type="button" onClick={() => { ls.set('pv-design', null); location.reload(); }}>Kaldır</button></div>;
 }
 // 6.11.2026: üst/alt menüden Ürünler'e basınca 'Ürünler açılış sayfası' açıksa her seferinde o sayfa gelir (Tüm ürünler'e bir kez basınca kaybolmasın)
-const navGo = (k) => { if (k === 'katalog' && store.s.user?.role === 'public' && store.s.settings?.look?.prodHub) store.set({ catalogGo: { hub: true } }); go(k); };
+// 7.11.2026 (gece): menüden Ürünler'e basınca liste her zaman baştan (ilk sayfa, en üst) açılır — eski yüklenenler telefonu yormasın; üründen GERİ dönüş bu yoldan geçmez, kaldığı yer korunur
+const navGo = (k) => { if (k === 'katalog' && store.s.user?.role === 'public') store.set({ catalogGo: store.s.settings?.look?.prodHub ? { hub: true } : { all: true } }); go(k); };
 function useTheme() {
   const liteTick = useLowEndProbe();
   const isAdm = useStore((s) => s.user?.role === 'admin');
@@ -1519,7 +1520,7 @@ function BotNav({ items, tab, badge }) {
       const s = st.current; st.current = null;
       el.classList.remove('dragging', 'pressing'); setHov(-1);
       const to = s && s.i != null && go_ ? live.current.items[s.i][0] : null;
-      if (to && to !== store.s.tab) { dragX.current = s.dragged ? s.x : null; go(to); return; } // hap bulunduğu yerden yeni sekmeye kayar
+      if (to && to !== store.s.tab) { dragX.current = s.dragged ? s.x : null; navGo(to); return; } // hap bulunduğu yerden yeni sekmeye kayar
       dragX.current = null;
       if (pill.current) pill.current.style.transform = `translateX(${pill.current.dataset.x}px) translateX(-50%)`; // aynı sekme / vazgeçti: yerine döner
     };

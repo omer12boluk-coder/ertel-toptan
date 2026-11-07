@@ -441,7 +441,7 @@ export function Catalog({ admin }) {
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
   // useLayoutEffect: marka / kategori linkinden gelince süzme EKRANA ÇİZİLMEDEN uygulanır (önce eski liste görünüp 'patlamasın')
-  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort(browse.sort || 'default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); if (browse.hub) setHubOff(false); else if (browse.all || browse.q || browse.cat != null || browse.brand) setHubOff(true); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort(browse.sort || 'default'); setLimit((matchMedia('(max-width: 899px)').matches && Number(S.catalog.pageSizeM)) || Number(S.catalog.pageSize) || 60); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); if (browse.hub) setHubOff(false); else if (browse.all || browse.q || browse.cat != null || browse.brand) setHubOff(true); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   // Google'dan gelen /marka/<ad> ya da /kategori/<ad> adresi → ürünler yüklenince o marka / kategori seçili açılır
   const seoGo = useStore((s) => s.seoGo);
   useEffect(() => {
@@ -788,6 +788,15 @@ function HubCat({ n, cnt, subs, onCat, kd, img }) {
     <div className="phub-h"><b>{n.name}</b><span>{cnt}<Icon n="chev" s={14} /></span></div>
     <div className="phub-s">{subs.map((c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onCat(c.id); }}>{c.name}</button>)}</div>
   </div>;
+}
+// Açılış sayfası ayar panelleri için ana kategoriler (sitede ürünü olan her ana kategori; yeni açılan kategori kendiliğinden gelir)
+export function useHubRoots() {
+  const tree = useTree(); const vis = useVisibleProducts(false);
+  return useMemo(() => {
+    const cnt = new Map();
+    for (const p of vis) { const seen = new Set(); for (const c of [p.c, p.c2]) { if (c == null) continue; const a = tree.ancestors(c); const r = a[a.length - 1]; if (r != null && !seen.has(r)) { seen.add(r); cnt.set(r, (cnt.get(r) || 0) + 1); } } }
+    return tree.roots.filter((n) => !n.hidden && cnt.get(n.id)).map((n) => ({ id: n.id, name: n.name, n: cnt.get(n.id) }));
+  }, [tree, vis]);
 }
 export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
 function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {

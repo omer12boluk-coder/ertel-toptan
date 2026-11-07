@@ -423,7 +423,7 @@ export function Empty({ icon = 'box', title, children }) {
 export function useInfinite(cb, dep) {
   const cbr = useRef(cb); cbr.current = cb;
   const elr = useRef(null); const ior = useRef(null);
-  const margin = () => Math.max(1500, innerHeight * 3);
+  const margin = () => Math.max(700, innerHeight * 1.1); // 7.11.2026 (gece): ~1 ekran önce (3 ekran çok erkendi)
   const near = () => { const el = elr.current; return !!el && el.isConnected && el.getBoundingClientRect().top < innerHeight + margin(); };
   const ref = useCallback((el) => {
     ior.current?.disconnect(); ior.current = null; elr.current = el;

@@ -11,7 +11,7 @@ import { liveSets, setView, openSet, SetCover } from './sets.jsx';
 import { useBrandList, openBrand } from './brandsets.jsx';
 import { ShopImg, CtaButton, isProdImg, PCard, DesignCtx, CardAdd, useHeroFull } from './shophome.jsx';
 import { loadPhones, mergePhones, searchPhones, short, useStencils, matchStencils } from './kalipfind.jsx';
-import { useTree, useVisibleProducts, HUB_IMG } from './catalog.jsx';
+import { useTree, useVisibleProducts, HUB_IMG, useHubRoots } from './catalog.jsx';
 import { PhotoBanner } from './photobn.jsx';
 
 export { P0_KEYS } from './p0keys.js';
@@ -399,7 +399,7 @@ export function P0BrandsPanel({ H, S: set }) {
 }
 // 7.11.2026 (gece) yeni Ürünler sayfasının açılış sayfası (catalog.jsx PV2Hub) ayarları: resimler hep açık/kapalı, kategori gizle, kategori resmi
 function HubV2Panel({ C, up, H, ImgPick }) {
-  const tiles = useCatTiles(H.p0catImg, []);
+  const tiles = useHubRoots();
   const hid = new Set((C.hide2 || []).map(String));
   const tog = (id) => { const h = new Set(hid); h.has(String(id)) ? h.delete(String(id)) : h.add(String(id)); up({ hide2: [...h] }); };
   const upImg = (id, v) => { const m = { ...(C.img2 || {}) }; if (v) m[id] = v; else delete m[id]; up({ img2: m }); };
