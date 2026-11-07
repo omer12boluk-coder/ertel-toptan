@@ -64,7 +64,7 @@ listesinde ara (yeni ad duyarsan listeye ekle); bulamazsan TEK soru sor ("Ana sa
 - "Çok satanlar" sıralaması/rozeti istenmedi. Elde kalan malı "çok satılan" gibi göstermek yanıltıcı (6502) → yapma; dürüst seçenekler sunuldu (karar bekliyor).
 - Telefonda basma animasyonları ve ana sayfa dokunma efektleri KAPALI (App Store'a geçene kadar geri ekleme). Tek istisna: öne çıkan ürün kutusunda eğik resmin düzelmesi.
 - Saat/şarj şeridini (iPhone çentik) boyama denendi, kaldırıldı — dokunma.
-- Açılış ekranı fotoğrafsız (`.intro2`), fotoğraf geri gelmesin.
+- Açılış ekranı fotoğrafsız (`.intro2`), fotoğraf geri gelmesin. Varsayılan arka plan **düz beyaz** (`brand.splashStyle` boşsa 'white'); ayar gelmeden önce son seçim `localStorage intro-sty`'den okunur (lacivert flaşı buydu, 7.11.2026).
 - **STANDART GERİ DÜĞMESİ:** mağaza + bayi tarafındaki tüm geri düğmeleri `className="back-btn"` + `<Icon n="back" s={16} />` + kısa yazı. Yeni sayfada da sadece bu.
 - **Yönetim sayfa düzeni:** her sayfa `PageHead` (ui.jsx; 'Yeni …' düğmesi HER ZAMAN en sağda `ph-new`, ikincil `ph-sec` solunda) + altında `SubNav` (sadece yana kayar). Ürünler ve Bayi siparişleri henüz bu düzende değil.
 - Ödeme özeti / sepet özeti bilgisayarda **SABİT** (`useFixedSum`, `useFixedCartSum`), kaydırma çubuğu YOK (kullanıcı kızdı). "Yeni sipariş özeti" denemesi reddedildi.
