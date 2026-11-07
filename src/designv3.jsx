@@ -10,7 +10,7 @@ import { ShopHome, DesignCtx, blockLabel, moveItem, withProdFallback, RailFields
 import { prepare, Stage, ShopDesigner } from './designer.jsx';
 import { queueSave } from './saveq.js';
 import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
-import { PB_BY, PB_TEXT, PHOTO_BANNERS } from './photobn.jsx';
+import { PB_BY, PB_TEXT, PHOTO_BANNERS, withNew2 } from './photobn.jsx';
 import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList } from './cdhome.jsx';
 import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
@@ -206,7 +206,7 @@ function Inspector({ k, d, H, S, close, hidden, toggleHide }) {
 
 // Banner: reklam listesi (aç/kapa, sıra, yazılar) + genişlik ve yükseklik
 function HeroPanel({ H, S, k }) {
-  const sl = H.slides || [];
+  const sl0 = H.slides || []; const sl = sl0.some((x) => x?.pb) ? withNew2(sl0) : sl0;
   const [open, setOpen] = useState(null);
   const up = (i, p) => S('slides', sl.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const mv = (i, dir) => { const j = i + dir; if (j < 0 || j >= sl.length) return; S('slides', moveItem(sl, i, j)); if (open === i) setOpen(j); };

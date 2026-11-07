@@ -272,11 +272,21 @@ export function pbOf(s) {
   return o;
 }
 // mağazada gösterilecek reklamlar (pb satırları çözülmüş, gizliler çıkarılmış)
+const NEW2 = ['jbc-cd2', 'sugon8650', 'tbk288', 'sst12b', 'cx71r', 'su8'];
+export function withNew2(sl) {
+  const miss = NEW2.filter((id) => !sl.some((s) => s?.pb === id)).map((id) => ({ pb: id }));
+  if (!miss.length) return sl;
+  let k = -1; sl.forEach((s, i) => { if (s?.pb) k = i; });
+  return [...sl.slice(0, k + 1), ...miss, ...sl.slice(k + 1)];
+}
 export function heroList(H, edit) {
   const sl = H?.slides || [];
   const has = sl.some((s) => s?.pb);
   const pre = !has && photoBnOn(H) && !edit ? PHOTO_BANNERS.map((b) => ({ pb: b })) : [];
-  const own = sl.filter((s) => s && (edit || !s.off)).map((s) => (s.pb ? (pbOf(s) ? { ...s, pb: pbOf(s) } : null) : s)).filter(Boolean);
+  // 7.11.2026 (9) ikinci tur bannerlar listede yoksa kendiliğinden eklenir (son fotoğraflı bannerın arkasına). Kapatmak için
+  // Tasarım › Banner'da anahtarı kapat (satır 'off' olur, silinmez → geri gelmez).
+  const all = has ? withNew2(sl) : sl;
+  const own = all.filter((s) => s && (edit || !s.off)).map((s) => (s.pb ? (pbOf(s) ? { ...s, pb: pbOf(s) } : null) : s)).filter(Boolean);
   return [...pre, ...own];
 }
 // 'Claude düzeni' paketine geçerken: bannerlar listenin başına, kullanıcının eski reklamları gizli (silinmez)
