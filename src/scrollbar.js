@@ -9,14 +9,29 @@ export function setupScrollbar() {
   const th = document.createElement('i'); box.appendChild(th);
   document.body.appendChild(box);
   let hideT = 0, raf = 0, drag = null, near = false;
+  // 8.11.2026: liste aşağıda uzayınca (sonsuz liste) çubuk birden küçülüp yukarı zıplamasın → çubuğun hesapladığı sayfa boyu (shD)
+  // gerçek boya ~0,35 sn'de yumuşakça yetişir. Kaydırmayla hareket ANINDA kalır (gecikme yok); sayfa kısalınca (sekme değişimi) anında.
+  let shD = 0, easeRaf = 0;
   const live = () => root.classList.contains('sb-thin') && matchMedia(MQ).matches;
+  const draw = () => {
+    const vh = innerHeight; const sh = shD;
+    const h = Math.max(48, (vh * vh) / sh); const max = vh - h - 8;
+    const f = Math.min(1, Math.max(0, scrollY / Math.max(1, sh - vh)));
+    th.style.height = h + 'px'; th.style.transform = `translateY(${4 + f * max}px)`;
+  };
+  const ease = () => {
+    easeRaf = 0; const sh = root.scrollHeight;
+    if (drag || Math.abs(sh - shD) < 1) shD = sh; else { shD += (sh - shD) * 0.16; easeRaf = requestAnimationFrame(ease); }
+    draw();
+  };
   const place = () => {
     raf = 0;
     const vh = innerHeight, sh = root.scrollHeight;
-    if (!live() || sh <= vh + 2) { box.classList.remove('on'); box.style.display = 'none'; return false; }
+    if (!live() || sh <= vh + 2) { box.classList.remove('on'); box.style.display = 'none'; shD = sh; return false; }
     box.style.display = '';
-    const h = Math.max(48, (vh * vh) / sh); const max = vh - h - 8;
-    th.style.height = h + 'px'; th.style.transform = `translateY(${4 + (scrollY / (sh - vh)) * max}px)`;
+    if (!shD || sh < shD || drag || !box.classList.contains('on')) shD = sh; // ilk çizim / kısalma / sürükleme / çubuk görünmüyorken: anında
+    else if (sh > shD + 1 && !easeRaf) easeRaf = requestAnimationFrame(ease); // uzama: yumuşak
+    draw();
     return true;
   };
   const show = (ms = 900) => { if (!place()) return; box.classList.add('on'); clearTimeout(hideT); if (!drag && !near) hideT = setTimeout(() => box.classList.remove('on'), ms); };
