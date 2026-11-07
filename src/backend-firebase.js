@@ -362,6 +362,23 @@ export class FirebaseBackend {
   }
   async staffPw(uid, password) { return this._staffCall('/staff/pw', { uid, password }); }
   async staffRevoke(uid, disable) { return this._staffCall('/staff/revoke', { uid, disable: !!disable }); }
+  // Geçmiş siparişler › arama (8.11.2026): tam yazılan sipariş no / ad / telefon / e-posta, listede olmasa da bulunur (aranan kadar okuma)
+  async archiveFind(col, q) {
+    q = String(q || '').trim(); if (!q) return [];
+    const F = this.F, c = this.c(col), out = new Map();
+    const run = async (field, vals) => { vals = [...new Set(vals.filter(Boolean))].slice(0, 10); if (!field || !vals.length) return; try { const s = await timeout(F.getDocs(F.query(c, F.where(field, 'in', vals), F.limit(25)))); s.docs.forEach((d) => out.set(d.id, { id: d.id, ...d.data() })); } catch (e) { console.warn('arama', field, e.message); } };
+    const d = q.replace(/\D/g, ''), up = q.toLocaleUpperCase('tr'), lo = q.toLocaleLowerCase('tr');
+    const title = lo.replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toLocaleUpperCase('tr'));
+    const d10 = d.slice(-10), fp = d10.length === 10 ? '0(' + d10.slice(0, 3) + ') ' + d10.slice(3, 6) + ' ' + d10.slice(6, 8) + ' ' + d10.slice(8, 10) : '';
+    const K = { orders: ['no', 'contact.name', 'contact.phone', 'contact.email'], lcarts: ['no', 'sub.contact.name', 'sub.contact.phone', '', 'name'], requests: ['no', 'userName', '', '', 'shop'] }[col] || [];
+    const jobs = [];
+    if (/^[A-Za-z0-9-]{3,14}$/.test(q)) jobs.push(run(K[0], [up, q]));
+    if (d.length >= 10 && K[2]) jobs.push(run(K[2], [fp, d, d10, '0' + d10, fp.replace(/[()]/g, ''), '+90' + d10]));
+    if (q.includes('@') && K[3]) jobs.push(run(K[3], [q, lo]));
+    if (!/^[\d\s()+-]+$/.test(q)) { jobs.push(run(K[1], [q, up, title, lo])); if (K[4]) jobs.push(run(K[4], [q, up, title, lo])); }
+    await Promise.all(jobs);
+    return [...out.values()];
+  }
   async usageLive() { const tok = await this.idToken(); if (!tok) throw new Error('Oturum yok'); const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/usage', { method: 'POST', headers: { Authorization: 'Bearer ' + tok } }), 25000); return r.json(); }
   async geo() { const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/geo'), 4000); return r.ok ? r.json() : null; }
   async bumpStat(uid, key, d) { await this.F.updateDoc(this.d('users', uid), { ['stats.' + key]: this.F.increment(d) }); }

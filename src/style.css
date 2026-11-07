@@ -9612,3 +9612,30 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
 .us-badge.us-y { background: rgb(211 155 18 / .2); color: #f1d58c; } .us-badge.us-y i { background: #f0b429; }
 .us-badge.us-r { background: rgb(192 57 43 / .22); color: #f3a9ae; } .us-badge.us-r i { background: #ef5350; }
 @media (max-width: 700px) { .us-row { grid-template-columns: 1fr; padding-right: 22px; } .us-days { height: 130px; gap: 4px; } .us-day em { font-size: 10.5px; } }
+/* 8.11.2026 Geçmiş siparişler (archive.jsx) + Raporlar 'Görüntüle' kapısı */
+.arc-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 12px 0 6px; }
+.arc-bar .o-date { width: auto; padding: 0 14px; gap: 7px; }
+.arc-bar .o-date span { display: inline !important; white-space: nowrap; }
+.arc-q { flex: 1 1 260px; min-width: 0; }
+.arc-gate { max-width: 560px; margin: 28px auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; background: var(--surface); border-radius: 20px; padding: 26px 22px; box-shadow: 0 1px 2px rgb(16 24 40 / .05); }
+.arc-gate h1, .arc-gate h2 { margin: 4px 0 0; font: 600 20px/1.3 Inter, var(--f-body); }
+.arc-gate p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+.arc-gate small { color: var(--muted); font-size: 12.5px; line-height: 1.5; max-width: 440px; }
+.arc-gate-ic { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in oklab, var(--accent) 12%, var(--surface)); color: var(--accent); }
+.arc-acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 4px 0; }
+.arc-go { min-width: 220px; justify-content: center; }
+.arc-seg { margin: 4px 0; }
+.arc-info, .arc-found { margin: 4px 2px 8px; }
+.arc-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgb(16 24 40 / .05); }
+.arc-list li + li { border-top: 1px solid var(--line); }
+.arc-list button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; background: none; color: var(--fg); text-align: left; cursor: pointer; }
+@media (hover: hover) { .arc-list button:hover { background: color-mix(in oklab, var(--fg) 4%, var(--surface)); } }
+.arc-no { flex: none; min-width: 64px; font: 600 13.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+.arc-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.arc-t b { font: 500 15px/1.3 Inter, var(--f-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arc-t small { color: var(--muted); font-size: 12.5px; }
+.arc-v { flex: none; font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
+.arc-none { text-align: center; margin: 20px 0; }
+@media (max-width: 700px) { .arc-list .pill { display: none; } .arc-no { min-width: 52px; } .arc-gate { margin: 16px 0; padding: 22px 16px; } }
+.arc-seg { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.arc-seg .chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, var(--surface)); }

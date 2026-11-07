@@ -21,6 +21,7 @@ export const PERMS = [
   ['backup', 'Yedekler ve geri yükleme', 'Yedekleri indirme, eski hâline döndürme', false, 'k'],
   ['pay', 'Ödeme ve bildirim bağlantıları', 'Havale / kart seçenekleri, Telegram, e-posta, bildirim metinleri', false, 'k'],
   ['bulk', 'Toplu işlemler', 'Excel’den ürün yükleme, site eşitleme ayarları, toplu silme', false, 'k'],
+  ['reports', 'Raporlar ve geçmiş siparişler', 'Ciro ve grafikler, eski siparişleri tarih aralığıyla görme · açılınca çok okuma yapar', false, 'k'],
   ['team', 'Ekip', 'Kişi ekleme, yetki verme, cihazlar, geçmiş · senin hesabına dokunamaz', false, 'k'],
 ];
 export const PERM_GROUPS = [['g', 'Günlük işler'], ['r', 'Bozulabilecek yerler'], ['k', 'Kritik yerler']];

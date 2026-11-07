@@ -180,7 +180,8 @@ export function LinkCarts({ page = false }) {
   const n = (k) => (base || []).filter((c) => c.status === k).length;
   const t = q.trim().toLocaleLowerCase('tr');
   const shown = (base || []).filter((c) => (f === 'all' || c.status === f) && (!t || [c.no, c.name, c.sub?.contact?.name, c.sub?.contact?.phone].join(' ').toLocaleLowerCase('tr').includes(t)));
-  const cur = open && (list || []).find((c) => c.id === open);
+  const lcExtra = useStore((st) => st.lcExtra); // Geçmiş siparişler'den açılan eski kayıt (listede yok)
+  const cur = open && ((list || []).find((c) => c.id === open) || (lcExtra || []).find((c) => c.id === open));
   const toggle = (id) => setSel((x) => { const m = new Set(x || []); m.has(id) ? m.delete(id) : m.add(id); return m; });
   const allOn = shown.length > 0 && !!sel && shown.every((c) => sel.has(c.id));
   const setAll = (on) => setSel(on ? new Set(shown.map((c) => c.id)) : new Set());
@@ -194,7 +195,7 @@ export function LinkCarts({ page = false }) {
     <section className={'lc-list' + (page ? ' lc-list-page' : ' oform-saved')}>
       {!page && <h2>Linkle gelen siparişler</h2>}
       <div className="toolbar lc-tool">
-        {page && <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div><button type="button" className={'o-date' + (range ? ' on' : '')} onClick={() => setRangeOpen(true)} title="Tarih aralığı" aria-label="Tarih aralığı"><Icon n="clock" s={18} /><span>Tarih</span></button></div>}
+        {page && <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div></div>}
         <div className="chips lc-chips">
           {[['sent', 'Onaylandı'], ['open', 'Bekleyen'], ['done', 'Tamamlanan'], ...(range || f === 'all' ? [['all', 'Tümü']] : [])].map(([k, l]) => <button key={k} className={'chip' + (f === k ? ' on' : '')} onClick={() => setF(k)}>{l}{n(k) > 0 && (k === 'sent' || k === 'open') && <span className="num"> ({n(k)})</span>}</button>)}
           {page && (list || []).length > 0 && <button className={'chip chip-sel' + (sel ? ' on' : '')} onClick={() => setSel(sel ? null : new Set())}><Icon n={sel ? 'x' : 'check'} s={14} /><span className="chip-sel-t">{sel ? 'Seçimi kapat' : 'Seç'}</span></button>}
@@ -256,7 +257,7 @@ export function LinkCarts({ page = false }) {
           </ul>
         </div>
       )}
-      {page && !range && (f === 'done' || f === 'all') && <OlderBtn kind="lcarts" what="siparişleri" unit="sipariş" />}
+      {page && !range && (f === 'done' || f === 'all') && <OlderBtn kind="lcarts" what="siparişleri" past />}
       {cur && !page && <LinkCartAdmin c={cur} onBack={hide} />}
     </section>
   );

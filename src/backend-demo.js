@@ -191,6 +191,13 @@ export class DemoBackend {
   async staffPw(uid, password) { if (String(password || '').length < 6) throw new Error('Şifre en az 6 karakter olmalı'); this.db.users[uid].pw = password; this.persist(); return { ok: true }; }
   async staffRevoke(uid) { Object.keys(this.db.staffSess || {}).forEach((k) => { if (this.db.staffSess[k].uid === uid) this.db.staffSess[k].kick = true; }); this.persist(); return { ok: true }; }
   async geo() { return { c: 'İstanbul' }; }
+  async archiveFind(col, q) {
+    const t = String(q || '').trim().toLocaleLowerCase('tr'); if (!t) return [];
+    const d = t.replace(/\D/g, '');
+    const src = col === 'lcarts' ? Object.entries(this.lc_()).map(([id, x]) => ({ id, ...x })) : col === 'requests' ? Object.values(this.db.requests || {}) : Object.values(this.ord());
+    const vals = (x) => col === 'orders' ? [x.no, x.contact?.name, x.contact?.phone, x.contact?.email] : col === 'lcarts' ? [x.no, x.name, x.sub?.contact?.name, x.sub?.contact?.phone] : [x.no, x.userName, x.shop];
+    return src.filter((x) => vals(x).some((v) => v && (String(v).toLocaleLowerCase('tr') === t || (d.length >= 10 && String(v).replace(/\D/g, '').endsWith(d.slice(-10)))))).map((x) => ({ ...x }));
+  }
   // demo: Kullanım sayfası için örnek rapor (canlıda bekçi /usage)
   async usageLive() {
     const H = 3600e3, now = Date.now(), iso = (t) => new Date(t).toISOString().slice(0, 13) + ':00:00Z', sq = (t) => new Date(t).toISOString().slice(0, 13).replace('T', ' ') + ':00:00';
@@ -237,7 +244,23 @@ export class DemoBackend {
   async deleteShopImage(id) { delete this.db.shopimg?.[id]; this.persist(); }
   // ---- Online mağaza üyeleri + siparişleri (demo)
   mem() { return (this.db.members = this.db.members || {}); }
-  ord() { return (this.db.orders = this.db.orders || {}); }
+  ord() {
+    const o = (this.db.orders = this.db.orders || {});
+    // demo: Geçmiş siparişler sayfası boş görünmesin diye bir kez örnek eski siparişler (son 75 gün)
+    if (!this.db.ordSeeded) {
+      this.db.ordSeeded = 1;
+      const names = ['Murat Kaya', 'Elif Demir', 'Ahmet Yılmaz', 'Zeynep Arslan', 'Hasan Çelik', 'Ayşe Şahin', 'Mehmet Öztürk', 'Fatma Aydın', 'Can Polat', 'Emre Koç', 'Seda Kurt', 'Burak Aksoy'];
+      const st = ['done', 'done', 'done', 'cancelled', 'done', 'shipped', 'done'];
+      const seed = this.seed || [];
+      names.forEach((n, i) => {
+        const id = 'o_demo' + i, at = now() - (6 + i * 6) * 864e5 - i * 3600e3, p = seed[(i * 37) % Math.max(1, seed.length)] || { id: 1, n: 'Örnek ürün', r: 20, cur: 'USD' };
+        const q = 1 + (i % 3);
+        o[id] = { id, no: 'D' + (4101 + i), status: st[i % st.length], createdAt: at, updatedAt: at, contact: { name: n + ' (örnek)', phone: '0(532) 400 00 ' + String(10 + i).padStart(2, '0') }, items: [{ id: p.id, n: p.n, k: p.k, qty: q, price: p.r, cur: 'USD' }], total: { USD: Math.round(p.r * q * 100) / 100 }, delivery: { method: 'cargo', addr: { city: 'İstanbul' } } };
+      });
+      ls.set(KEY, this.db);
+    }
+    return o;
+  }
   onMember(cb) { this.memberCb = cb; const m = this.mem()[this.db.shopSession]; cb(m ? this.pub(m) : null); return () => {}; }
   async usernameFree(n) { return !Object.values(this.mem()).some((m) => m.username === n); }
   async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' } }, keep) {

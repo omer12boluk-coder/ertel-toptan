@@ -45,7 +45,8 @@ import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome, HeaderSearch, withProdFallback } from './shophome.jsx';
 import { DesignEntry } from './designv3.jsx'; // 7.11.2026: tasarım modu v3 (eski mod 'Gelişmiş')
-import { AdminHome } from './dashboard.jsx';
+import { AdminHome, Reports } from './dashboard.jsx';
+import { Archive } from './archive.jsx';
 import { UsagePage } from './usagepage.jsx';
 import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
@@ -528,7 +529,7 @@ function Login() {
 
 // [sekme, ad, ikon, telefondaki kısa ad]
 const NAV_USER = [['anasayfa', 'Ana sayfa', 'home'], ['katalog', 'Tüm ürünler', 'grid', 'Ürünler'], ['sepet', 'Sepet', 'cart'], ['talepler', 'Siparişlerim', 'box', 'Siparişler'], ['profil', 'Hesabım', 'user']];
-const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Form oluştur', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['kullanim', 'Kullanım', 'chart'], ['ayarlar', 'Ayarlar', 'gear']];
+const NAV_ADMIN = [['anasayfa', 'Ana sayfa', 'home', 'Özet'], ['raporlar', 'Raporlar', 'chart'], ['talepler', 'Bayi siparişleri', 'chat', 'Bayi'], ['siparisler', 'Siparişler', 'box'], ['siparis', 'Form oluştur', 'tag', 'Form'], ['katalog', 'Ürünler', 'grid'], ['musteriler', 'Müşteriler', 'users'], ['tasarim', 'Tasarım', 'brush'], ['kullanim', 'Kullanım', 'db'], ['ayarlar', 'Ayarlar', 'gear']];
 const NAV_PUBLIC = [['anasayfa', 'Ana sayfa', 'store'], ['katalog', 'Ürünler', 'grid', 'Ürünler'], ['kalip', 'Kalıp bulucu', 'chip', 'Kalıp'], ['sepet', 'Sepet', 'cart'], ['hesap', 'Hesabım', 'user']];
 // Sayfa bulunamadı (tanınmayan mağaza adresi; Google'a noindex boot'ta eklenir)
 function NotFound() {
@@ -565,7 +566,7 @@ function pageMenu(e, role) {
     admin && { label: 'Yeni ürün ekle', icon: 'plus', onClick: () => { go('katalog'); store.set({ intent: 'newProduct' }); } },
     admin && { label: 'Yeni müşteri ekle', icon: 'users', onClick: () => { go('musteriler'); store.set({ intent: 'newCustomer' }); } },
     admin && { label: 'Mağaza tasarımı', icon: 'brush', onClick: () => go('tasarim') },
-    admin && can('quota') && { label: 'Kullanım ve kota', icon: 'chart', onClick: () => go('kullanim') },
+    admin && can('quota') && { label: 'Kullanım ve kota', icon: 'db', onClick: () => go('kullanim') },
     admin && { label: 'Vitrin linkini kopyala', icon: 'copy', hint: location.host, onClick: () => copyText(links.shop(), 'Vitrin linki kopyalandı') },
     '-',
     { label: 'Temayı değiştir', icon: 'moon', onClick: () => document.querySelector('[data-theme-btn]')?.click() },
@@ -640,7 +641,7 @@ function ShellFull() {
     t = setTimeout(tryWarm, 1200); // 5.11.2026: 3,5 sn → 1,2 sn (ilk geçişler 'F5 gibi' takılıyordu)
     return () => { clearTimeout(t); window.cancelIdleCallback?.(idle); removeEventListener('scroll', onS); };
   }, [pub]);
-  const nav = admin ? NAV_ADMIN.filter(([k]) => k !== 'kullanim' || can('quota')) : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
+  const nav = admin ? NAV_ADMIN.filter(([k]) => (k !== 'kullanim' || can('quota')) && (k !== 'raporlar' || can('reports'))) : pub ? NAV_PUBLIC.filter(([k]) => (k !== 'anasayfa' || S0.shopHome?.enabled !== false) && (k !== 'kalip' || S0.kalip?.on !== false)) : NAV_USER;
   const unread = requests.reduce((n, r) => n + ((admin ? r.unreadAdmin : r.unreadUser) > 0 ? 1 : 0), 0);
   const cartN = Object.keys(cart).length;
   const prev = useRef(unread);
@@ -677,7 +678,7 @@ function ShellFull() {
   }, [hs]);
   const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && LK.hideTop !== false, LK.hideTop === 'up', tab, urunLayer);
-  const navTab = tab === 'sepetler' ? 'siparisler' : tab === 'sepetlink' || tab === 'odemelink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' || tab === 'gelen' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
+  const navTab = tab === 'sepetler' || tab === 'gecmis' ? 'siparisler' : tab === 'sepetlink' || tab === 'odemelink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' || tab === 'gelen' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' + (S0.look?.adminNav !== 'old' ? ' adm-bn' + (S0.look?.adminNavTone === 'accent' ? '' : ' bn-ink') : '') : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
@@ -779,6 +780,8 @@ function ShellFull() {
         {tab === 'anasayfa' && !admin && !pub && <HomePage />}
         {tab === 'anasayfa' && admin && <AdminHome />}
         {tab === 'kullanim' && admin && <UsagePage />}
+        {tab === 'raporlar' && admin && <Reports />}
+        {tab === 'gecmis' && admin && <Archive />}
         {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><HomeM /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'lsepet' && pub && <LinkCartPage id={ROUTE.lcartId} />}
@@ -815,7 +818,7 @@ function ShellFull() {
       {!admin && tab !== 'lsepet' && tab !== 'odeme' && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
-      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && k !== 'kullanim' && !(admin && k === 'siparis'))} tab={navTab} badge={badge} />
+      <BotNav items={nav.filter(([k]) => k !== 'tasarim' && k !== 'kullanim' && k !== 'raporlar' && !(admin && k === 'siparis'))} tab={navTab} badge={badge} />
     </div>
   );
 }
