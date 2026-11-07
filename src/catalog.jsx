@@ -1,5 +1,5 @@
 import { useBrandList, openBrand } from './brandsets.jsx';
-import { ShopImg } from './shophome.jsx';
+import { ShopImg, useShopImg } from './shophome.jsx';
 import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ProdHub } from './p0home.jsx';
 import { CdHub, CAT_COVERS } from './cdhome.jsx';
@@ -781,6 +781,14 @@ const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
 const LG_TXT = { luban: { t: 'Luban' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'Mega-Idea' } }; // ilk harf büyük (kullanıcı); XZZ kısaltma
 // 7.11.2026 (gece) Ürünler v2 açılış sayfası (look.prodHub): yazılı kategori dizini — 'Tüm ürünler' en başta (tema rengi),
 // her ana kategori kutusunun arkasında silik kapak resmi (src/icerik/kapaklar.json), alt kategoriler tıklanır, markalar logolu haplar.
+// Tasarım modunda seçilen resim ürün resmi ('prod:…') ya da yüklenen resim olabilir → useShopImg gerçek adrese çevirir (7.11.2026: düz url() ile seçilen resim görünmüyordu)
+function HubCat({ n, cnt, subs, onCat, kd, img }) {
+  const src = useShopImg(img || ''); const go1 = () => onCat(n.id);
+  return <div role="button" tabIndex={0} className="phub-c" style={img && src ? { '--im': `url("${src}")` } : undefined} onClick={go1} onKeyDown={kd(go1)}>
+    <div className="phub-h"><b>{n.name}</b><span>{cnt}<Icon n="chev" s={14} /></span></div>
+    <div className="phub-s">{subs.map((c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onCat(c.id); }}>{c.name}</button>)}</div>
+  </div>;
+}
 export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
 function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {
   const brands = useBrandList();
@@ -812,11 +820,8 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
         <div className="phub-h"><b>Setler</b><span>{sets.length}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s">{sets.slice(0, 6).map((x) => <button key={x.id} type="button" onClick={(e) => { e.stopPropagation(); openSet(x.id); }}>{x.name}</button>)}</div>
       </div>}
-      {roots.map((n) => { const cv = HC.bg === false ? null : (HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]; const go1 = () => onCat(n.id); return (
-        <div key={n.id} role="button" tabIndex={0} className="phub-c" style={cv ? { '--im': `url(${cv})` } : undefined} onClick={go1} onKeyDown={key(go1)}>
-          <div className="phub-h"><b>{n.name}</b><span>{nf(counts.get(n.id))}<Icon n="chev" s={14} /></span></div>
-          <div className="phub-s">{subsOf(n).map((c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onCat(c.id); }}>{c.name}</button>)}</div>
-        </div>); })}
+      {roots.map((n) => <HubCat key={n.id} n={n} cnt={nf(counts.get(n.id))} subs={subsOf(n)} onCat={onCat} kd={key}
+        img={HC.bg === false ? null : (HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]} />)}
     </div>
     <div className="phub-lbl">Markalar</div>
     <div className="phub-brs">
