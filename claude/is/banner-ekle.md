@@ -10,12 +10,12 @@ anlaşılır Türkçe · kullanıcının kendi reklamlarına dokunma · **yeni k
 
 ## Adımlar
 1. **Ürünü bul.** `git pull`. Ürün yeni geldiyse yerel `src/products.json` eski olabilir → güncel katalog:
-   `gh workflow run claude-al.yml --ref main` → `gh run watch` → `git fetch -q origin claude-al && git show origin/claude-al:katalog.json > /tmp/katalog.json`.
-   Ürünü ada/stok koduna göre ara (dosyayı okuma, `python3 -c` ile süz). Gerekenler: `id`, `n`, `b`, `c`, `pi`, `im`.
+   `gh workflow run claude-al.yml --ref main` → `gh run watch $(gh run list -w claude-al.yml -L1 --json databaseId -q ".[0].databaseId")` → `git fetch -q origin +claude-al:refs/remotes/origin/claude-al && git show origin/claude-al:katalog.json > /tmp/katalog.json`.
+   Katalog = mağazada aktif ürünler (en yeni başta, `ft`/id sırasıyla). Ürünü ada/stok koduna göre ara (dosyayı okuma, `python3 -c` ile süz). Gerekenler: `id`, `n`, `b`, `c`, `pi`, `im`.
 2. **Resimleri getir.** Resim adresi: `pi`/`im` `r2:x` → `https://resim.ertelmarket.com/x` · tam adres → aynen ·
    çıplak dosya adı → `https://resim.ertelmarket.com/platin/<dosya>`. Kullanıcı link verdiyse oradaki büyük resim de olur.
    `gh workflow run claude-al.yml --ref main -f katalog=false -f resimler="da88-0=<adres> da88-1=<adres>"` → bitince
-   `git fetch -q origin claude-al && git archive origin/claude-al resim | tar -x -C /tmp/bn`.
+   `git fetch -q origin +claude-al:refs/remotes/origin/claude-al && git archive origin/claude-al resim | tar -x -C /tmp/bn`.
    En temiz, beyaz zeminli, ürünün tamamı görünen resmi seç (filigran / üstünde yazı / <500px OLMAZ).
 3. **Kes.** `python3 tools/banner/cut.py /tmp/bn/resim/da88-0.jpg /tmp/da88.png` (gerekirse kırp: `0,0.1,1,0.9`).
    Koyu zemin seçersen sonra `python3 tools/banner/defringe.py /tmp/da88.png /tmp/da88d.png 34 4`.

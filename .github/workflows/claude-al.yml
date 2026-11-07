@@ -1,7 +1,7 @@
 # Claude için getir: konteyner canlı veriye ve resim.ertelmarket.com / marka sitelerine ulaşamaz. Bu iş
-# (1) mağaza kataloğunun güncel özetini (toptan fiyat yok) ve (2) istenen resimleri 'claude-al' dalına koyar.
+# (1) mağaza kataloğunun güncel özetini (sadece mağazada aktif ürünler, toptan fiyat yok) ve (2) istenen resimleri 'claude-al' dalına koyar.
 # Claude: gh workflow run claude-al.yml --ref main -f resimler="da88=https://… da88-2=https://…"  → bitince
-#         git fetch origin claude-al && git show origin/claude-al:katalog.json   (resimler: resim/<ad>.<uzantı>)
+#         git fetch -q origin +claude-al:refs/remotes/origin/claude-al && git show origin/claude-al:katalog.json   (resimler: resim/<ad>.<uzantı>)
 # Canlı siteye dokunmaz.
 name: Claude için getir
 on:

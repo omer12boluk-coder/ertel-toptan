@@ -23,7 +23,7 @@ der, fiyat + stok girer, kaydeder (Akıllı ekle'deki aynı `ProductEdit draft` 
    ```
 5. **Gönder — `gelen` dalına (main'e DEĞİL, canlı site yeniden yayınlanmasın):**
    ```
-   git fetch -q origin gelen && git checkout -q -B gelen origin/gelen || git checkout -q -b gelen origin/main
+   git fetch -q origin +gelen:refs/remotes/origin/gelen && git checkout -q -B gelen origin/gelen || git checkout -q -B gelen origin/main
    git add gelen/ && git commit -qm "Claude'dan gelen: DA88" && git push -q origin gelen && git checkout -q main
    ```
    Push'la birlikte Actions **Gelenleri al** (`gelen.yml` → `tools/gelen.mjs`) taslağı Firestore `gelen/<ad>` belgesine
