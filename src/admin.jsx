@@ -115,7 +115,7 @@ export function ProductEdit({ p, copy, draft, onClose, onSaved }) {
   const [delC, setDelC] = useState(false);
   const [f, setF] = useState(() => {
     if (p) return { ...p };
-    const base = { id: Math.max(9000000, ...catalog.map((x) => x.id)) + 1, k: nextCode(catalog), c: 0, r: 0, w: null, n: '', cur: 'USD', s: 0, a: 1, man: 1 };
+    const base = { id: Math.max(9000000, ...catalog.map((x) => x.id)) + 1, k: nextCode(catalog), c: 0, r: 0, w: null, n: '', cur: 'USD', s: 0, a: 1, man: 1, ft: Date.now() }; // ft: geliş anı (Yeni gelenler sırası)
     // Akıllı ürün ekle taslağı (aiadd.jsx): fiyat ve stok boş gelir, yönetici girer
     if (draft) { const m = draft.media || []; return { ...base, n: draft.n || '', b: draft.b || '', c: draft.c ?? 0, ...(draft.c2 != null && draft.c2 !== draft.c ? { c2: draft.c2 } : {}), t: draft.t || '', r: '', s: '', pi: m[0] || '', im: m.slice(1), ie: 1 }; }
     if (!copy) return base;

@@ -9,7 +9,7 @@ const meta = await db.doc('catalog/_meta').get();
 if (!meta.exists) throw new Error('Katalog yok');
 const parts = await Promise.all(Array.from({ length: meta.data().chunks }, (_, i) => db.doc(`catalog/c${i}`).get()));
 const cat = parts.flatMap((p) => (p.exists ? p.data().items : []));
-const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man', 't'];
+const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man', 't', 'ft'];
 const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; if (o.t) { const t = packTags(p); if (t) o.t = t; else delete o.t; } return o; };
 const items = cat.filter((p) => p.a).map(pubItem);
 const ps = []; let cur = [], size = 0;

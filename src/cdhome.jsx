@@ -8,7 +8,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, go } from './store.js';
 import { waLink } from './route.js';
 import { Icon, Thumb } from './ui.jsx';
-import { fmt, norm, priceFor } from './utils.js';
+import { fmt, norm, priceFor, byArrival } from './utils.js';
 import { feat } from './extras.jsx';
 import { liveSets, setView, openSet } from './sets.jsx';
 import { useBrandList, openBrand } from './brandsets.jsx';
@@ -60,10 +60,10 @@ function Head({ eye, title, more }) {
 // ---- Küçük ürün kartı (raflar + 'Bu hafta masamızdan'), 7.11.2026 (4): HER kartta aynı yuvalar, aynı yükseklik —
 // logo satırı (logo yoksa boş), kare resim kutusu (resim ortada, kutuya sığar), ad 2 satır, açıklama 1 satır, fiyat satırı
 // (fiyat yoksa 'Fiyat sorun' AYNI yerde), Sepete ekle en altta → yan yana kartlarda fiyat ve düğme hep aynı hizada (banner-kurallari §6).
-function Tile({ p, X, pr, logos, onProduct, isNew }) {
+function Tile({ p, X, pr, logos, onProduct, isNew, when }) {
   return (
     <div className="cd-tile" role="button" tabIndex={0} onClick={() => onProduct(p)}>
-      <span className="cd-t-lg"><Logo p={p} logos={logos} />{isNew && <span className="cd-new">Yeni</span>}</span>
+      <span className="cd-t-lg"><Logo p={p} logos={logos} />{when ? <span className="cd-when">{when}</span> : isNew && <span className="cd-new">Yeni</span>}</span>
       <span className="cd-tile-im"><Thumb p={p} size="md" /></span>
       <b className="cd-nm">{X.n}</b>
       <small className="cd-sb">{X.sub || '\u00a0'}</small>
@@ -217,6 +217,52 @@ export function CdMarquee({ H }) {
 }
 
 // ---- Ürün rafı: kayıtlı raf ayarları (mod/marka/kategori/elle seçim) + yeni kart dili ----
+// ---- 7.11.2026 (8) Yeni gelenler (banner'ın altı): solda banner gibi kapak kartı, sağda elle kaydırılan raf. Sıra kendiliğinden:
+// geliş anı (ft) yeniden eskiye, yoksa ürün numarası (byArrival). shopHome.cd.nw {eye,title,n,ids (öne sabit), hide}.
+// Kapak rafın İLK kartı (aynı boy) → kartların fiyat/Sepete ekle hizası bozulmaz.
+export function useNewList(C) {
+  const catalog = useStore((s) => s.catalog); const byId = useStore((s) => s.byId);
+  const ik = (C.ids || []).join(','); const hk = (C.hide || []).join(',');
+  return useMemo(() => {
+    const hide = new Set((C.hide || []).map(Number)); const n = Number(C.n) || 12;
+    const pins = (C.ids || []).map((id) => byId.get(Number(id))).filter((p) => p && sellable(p) && !hide.has(p.id));
+    const ps = new Set(pins.map((p) => p.id));
+    const rest = catalog.filter((p) => sellable(p) && p.s > 0 && hasImg(p) && !hide.has(p.id) && !ps.has(p.id)).sort(byArrival);
+    return [...pins, ...rest].slice(0, n);
+  }, [catalog, byId, ik, hk, C.n]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+const DAY = 864e5;
+function whenOf(ft) {
+  if (!ft) return '';
+  const d = Math.floor((new Date().setHours(0, 0, 0, 0) - new Date(ft).setHours(0, 0, 0, 0)) / DAY);
+  return d <= 0 ? 'Bugün' : d === 1 ? 'Dün' : d < 7 ? d + ' gün önce' : d < 14 ? 'Geçen hafta' : d < 31 ? Math.floor(d / 7) + ' hafta önce' : '';
+}
+export function CdNew({ H, onProduct, edit }) {
+  const C = cdOf(H).nw || {};
+  const list = useNewList(C);
+  const price = usePrice(); const logos = useLogos();
+  const railRef = useRef(null);
+  if (list.length < 3) return edit ? <div className="dz-empty">Yeni gelenler: gösterilecek ürün yok</div> : null;
+  const week = list.filter((p) => p.ft && Date.now() - p.ft < 7 * DAY).length;
+  const title = C.title || (week >= 2 ? `Bu hafta\n${week} yeni ürün.` : 'Yeni gelenler.');
+  const all = () => { if (edit) return; store.set({ catalogGo: { sort: 'new', all: true } }); go('katalog'); };
+  const by = (d) => { const el = railRef.current; if (el) el.scrollBy({ left: d * el.clientWidth * 0.8, behavior: 'smooth' }); };
+  return (
+    <section className="cd-sec cd-nwsec rv">
+      <div className="cd-rail" ref={railRef}>
+        <div className="cd-tile cd-newcov">
+          <span className="cd-eye">{C.eye ?? 'Yeni gelenler'}</span>
+          <h2>{title}</h2>
+          <span className="cd-newcov-a">
+            <button type="button" className="cd-newcov-b" onClick={all}>Hepsini gör<Icon n="back" s={13} className="flip" /></button>
+            <span className="cd-newcov-arr"><button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span>
+          </span>
+        </div>
+        {list.map((p) => <Tile key={p.id} p={p} X={nameOf(p)} pr={price(p)} logos={logos} onProduct={onProduct} when={whenOf(p.ft)} />)}
+      </div>
+    </section>
+  );
+}
 export function CdRail({ sec, open, onProduct, edit }) {
   const catalog = useStore((s) => s.catalog); const byId = useStore((s) => s.byId);
   const tree = useTree(); const price = usePrice(); const logos = useLogos();
@@ -305,7 +351,7 @@ export function CdAds({ H, open }) {
 }
 
 // ---- 7.11.2026 (7) Alt bant 'Aradığını bulamadın mı?' — banner dilinde: sade açık kart, büyük başlık, dolu düğme + yazı bağlantısı,
-// sağda WhatsApp konuşması gibi iki balon (fotoğrafsız, hızlı). Yazılar shopHome.cta'dan (başlık/metin), boşsa varsayılan.
+// (konuşma balonları kullanıcı istemedi, kaldırıldı). Yazılar shopHome.cta'dan (başlık/metin), boşsa varsayılan.
 export function CdCta({ H, S, edit }) {
   const C = H.cta || {}; const wa = S.shop?.whatsapp;
   const title = C.title || 'Aradığını bulamadın mı?';
@@ -319,11 +365,6 @@ export function CdCta({ H, S, edit }) {
           {wa && <a className="cd-cta-wa" href={edit ? undefined : waLink(wa, 'Merhaba, bir ürün soracaktım:')} target="_blank" rel="noopener"><Icon n="wa" s={18} />WhatsApp’tan yaz</a>}
           <button type="button" className="cd-lnk" onClick={edit ? undefined : () => go('katalog')}>Tüm ürünler<Icon n="back" s={13} className="flip" /></button>
         </div>
-      </div>
-      <div className="cd-cta-chat" aria-hidden="true">
-        <span className="cd-bub me">Merhaba, iPhone 15 Pro arka kapak için kalıbınız var mı?</span>
-        <span className="cd-bub them">Var. Fotoğrafı ve fiyatı hemen gönderiyoruz.</span>
-        <small><i />{S.shop?.name || 'ERTEL GSM'} · genelde birkaç dakikada yanıt</small>
       </div>
     </section>
   );

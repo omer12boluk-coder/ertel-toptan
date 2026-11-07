@@ -237,3 +237,6 @@ export function nextCode(catalog) {
   for (const x of catalog) { const m = /^([a-z]+)(\d+)$/i.exec(String(x.k || '').trim()); if (m && m[1].toLowerCase() === pre && m[2].length === +len) max = Math.max(max, +m[2]); }
   return pre + String(max + 1).padStart(+len, '0');
 }
+
+// 7.11.2026 Yeni gelenler sırası: geliş anı (ft; eşitleme / elle ekleme / Excel yeni ürüne yazar) yeniden eskiye; ft yoksa ürün numarası
+export const byArrival = (a, b) => (b.ft || 0) - (a.ft || 0) || b.id - a.id;

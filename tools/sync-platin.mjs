@@ -88,7 +88,7 @@ for (const p of cat) {
 }
 for (const f of feed.values()) {
   if (byId.has(f.id) || DELETED.has(f.id)) continue;
-  const p = { id: f.id, k: f.k, n: f.n, c: 0, r: round2(f.tl / rate), w: null, cur: 'USD', s: 1, a: 1, nw: 1 };
+  const p = { id: f.id, k: f.k, n: f.n, c: 0, r: round2(f.tl / rate), w: null, cur: 'USD', s: 1, a: 1, nw: 1, ft: Date.now() }; // ft: geliş anı (Yeni gelenler sırası)
   if (f.pi) p.pi = f.pi;
   if (f.b && f.b !== '-') p.b = f.b;
   if (f.u) p.u = f.u;
@@ -199,7 +199,7 @@ function chunks(arr, max = 650000) {
   for (const x of arr) { const s = JSON.stringify(x).length * 1.15; if (cur.length && size + s > max) { out.push(cur); cur = []; size = 0; } cur.push(x); size += s; }
   if (cur.length) out.push(cur); return out;
 }
-const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man', 't'];
+const PUB = ['id', 'k', 'c', 'c2', 'r', 'n', 'cur', 's', 'a', 'pi', 'im', 'b', 'u', 'img', 'vd', 'vdp', 'man', 't', 'ft'];
 const pubItem = (p) => { const o = {}; for (const k of PUB) if (p[k] !== undefined && p[k] !== null) o[k] = p[k]; const kc = stencilKeys(p); if (kc) o.kc = kc; if (o.t) { const t = packTags(p); if (t) o.t = t; else delete o.t; } return o; };
 async function writeChunked(col, items, key) {
   const ps = chunks(items);

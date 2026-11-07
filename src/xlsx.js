@@ -199,7 +199,7 @@ export function mergeCatalog(current, incomingIn) {
     if (!byId.has(n.id) && ck && byCode.has(ck)) { idMap[n.id] = byCode.get(ck); n = { ...n0, id: byCode.get(ck) }; matchedByCode++; }
     seen.add(n.id);
     const o = byId.get(n.id);
-    if (!o) { const p = { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n, nw: 1 }; byId.set(n.id, p); if (ck) byCode.set(ck, n.id); added++; continue; }
+    if (!o) { const p = { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n, nw: 1, ft: Date.now() }; byId.set(n.id, p); if (ck) byCode.set(ck, n.id); added++; continue; }
     const { _sale, ...nn } = n;
     if (o.ie) { delete nn.pi; delete nn.im; } // resimleri panelden elle düzenlenmiş ürün: Excel resim listesine dokunmaz
     const m = { ...o, ...nn };

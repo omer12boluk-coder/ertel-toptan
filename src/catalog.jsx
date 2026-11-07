@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { queueSave } from './saveq.js';
 import { useStore, setQty, go, api, toast, store, openRequest, setCatalog, openProduct, toggleFav } from './store.js';
 import { Icon, Thumb, Stepper, Sheet, Empty, useInfinite, openMenu, copyText, Confirm, PageHead, useMorph, ChipSelect } from './ui.jsx';
-import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid, fbSkip } from './utils.js';
+import { norm, fmt, priceFor, catName, now, ls, soon, needsCheck, nextCode, picUrl, imgFiles, mediaOf, isVid, fbSkip, byArrival } from './utils.js';
 import { links } from './route.js';
 import { ProductEdit, SyncButton, removeProduct, delText } from './admin.jsx';
 import { buildTree, productCats, cleanHtml } from './cats.js';
@@ -438,7 +438,7 @@ export function Catalog({ admin }) {
   const browse = useStore((s) => s.catalogGo);
   // diğer filtreler sıfırlanır: önceki ekrandan kalan stok / fiyat / yönetici filtresi aranan ürünü (ör. bildirimden gelinen pasif ürün) gizlemesin
   // useLayoutEffect: marka / kategori linkinden gelince süzme EKRANA ÇİZİLMEDEN uygulanır (önce eski liste görünüp 'patlamasın')
-  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort('default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); if (browse.hub) setHubOff(false); else if (browse.all || browse.q || browse.cat != null || browse.brand) setHubOff(true); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
+  useLayoutEffect(() => { if (!browse) return; setQ(browse.q || ''); setQk(browse.code || ''); setCat(browse.cat ?? null); setBrand(browse.brand || ''); setStockOnly(false); setPrice(''); setNewOnly(!!browse.nw); setImgOnly(false); setAdminFilter('all'); setSort(browse.sort || 'default'); setLimit(S.catalog.pageSize); setOpen(null); setFavOnly(!!browse.fav); setSetsOnly(!!browse.sets); if (browse.hub) setHubOff(false); else if (browse.all || browse.q || browse.cat != null || browse.brand) setHubOff(true); window.scrollTo(0, 0); store.set({ catalogGo: null }); }, [browse]);
   // Google'dan gelen /marka/<ad> ya da /kategori/<ad> adresi → ürünler yüklenince o marka / kategori seçili açılır
   const seoGo = useStore((s) => s.seoGo);
   useEffect(() => {
@@ -491,6 +491,7 @@ export function Catalog({ admin }) {
     if (sort === 'desc') r = [...r].sort((a, b) => b.r - a.r);
     if (sort === 'name') r = [...r].sort((a, b) => a.n.localeCompare(b.n, 'tr'));
     if (sort === 'stock') r = [...r].sort((a, b) => (b.s > 0) - (a.s > 0));
+    if (sort === 'new') r = [...r].sort(byArrival); // 7.11.2026 Yeni gelenler: geliş anı (ft), yoksa ürün numarası
     // kategoride öne çıkanlar (mağaza ve bayi; varsayılan sıralama, arama yokken) en başta, yöneticinin verdiği sırayla
     const pins = feat(S).pins;
     if (scoped && !admin && cat != null && sort === 'default' && !toks.length && pins.length) {
@@ -596,7 +597,7 @@ export function Catalog({ admin }) {
               {!admin && <button className={'chip' + (newOnly ? ' on' : '')} onClick={() => setNewOnly(!newOnly)}><Icon n="star" s={14} />Yeni gelenler</button>}
               <ChipSelect id="cat-price" icon="tag" value={price} onChange={setPrice} ariaLabel="Fiyat aralığı" options={[['', 'Tüm fiyatlar'], ['u10', '$10 altı'], ['10-50', '$10 – $50'], ['50-200', '$50 – $200'], ['200+', '$200 üstü']]} />
               {brands.length > 1 && <ChipSelect id="cat-brand" value={brand} onChange={setBrand} ariaLabel="Marka" options={[['', 'Tüm markalar'], ...brands.map(([b2, n]) => [b2, `${b2} (${n})`])]} />}
-              <ChipSelect id="cat-sort" icon="sort" value={sort} onChange={setSort} on={false} ariaLabel="Sıralama" options={[['default', 'Yeni eklenen'], ['asc', 'Fiyat artan'], ['desc', 'Fiyat azalan'], ['name', 'İsim A–Z'], ['stock', 'Stoktakiler önce']]} />
+              <ChipSelect id="cat-sort" icon="sort" value={sort} onChange={setSort} on={false} ariaLabel="Sıralama" options={[['default', 'Yeni eklenen'], ['new', 'Yeni gelenler'], ['asc', 'Fiyat artan'], ['desc', 'Fiyat azalan'], ['name', 'İsim A–Z'], ['stock', 'Stoktakiler önce']]} />
               {admin && <ChipSelect id="adm-filter" value={adminFilter} onChange={setAdminFilter} on={adminFilter !== 'all'} ariaLabel="Filtre" options={[['all', 'Tüm ürünler'], ['active', 'Aktif olanlar'], ['inactive', 'Pasif olanlar'], ['instock', 'Stoktakiler'], ['nostock', 'Stoğu bitenler'], ['nowholesale', 'Toptan fiyatı girilmemiş'], ['noimg', 'Resmi olmayanlar'], ['notags', 'Etiketi olmayanlar'], ['pricechanged', 'Toptanı kontrol edilecekler'], ['new', 'Siteden yeni gelenler'], ['siteoff', 'Sitede satışta olmayanlar']]} />}
 
             </div>

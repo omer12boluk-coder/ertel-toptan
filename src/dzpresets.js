@@ -144,7 +144,7 @@ export const P0 = {
 
 // ---- Claude düzeni (7.11.2026): fotoğraflı bannerların diliyle ana sayfa (cdhome.jsx, docs/banner-kurallari.md) ----------------------
 // Bannerlar kullanıcının reklam listesine taşınır (pb satırları), eski reklamlar GİZLENİR (off, silinmez). Eski bölümler gizlenir, rafların ilk ikisi yeni kartlarla.
-const CD_ORDER = ['cd:hero', 'p0:find', 'cd:pick', 'cd:ads', '@rail0', 'cd:sets', '@rail1', 'cd:brands', 'cd:mq', 'p0:trust'];
+const CD_ORDER = ['cd:hero', 'cd:new', 'p0:find', 'cd:pick', 'cd:ads', '@rail0', 'cd:sets', '@rail1', 'cd:brands', 'cd:mq', 'p0:trust'];
 export function cdLayout(H) {
   const L0 = (Array.isArray(H.layout) ? H.layout : []).filter((k) => !k.startsWith('p0:') && !k.startsWith('cd:'));
   const rails = (H.sections || []).map((r, i) => 'rail:' + (r.id || i)).filter((k) => !L0.length || L0.includes(k));

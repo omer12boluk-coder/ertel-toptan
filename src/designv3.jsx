@@ -11,7 +11,7 @@ import { prepare, Stage, ShopDesigner } from './designer.jsx';
 import { queueSave } from './saveq.js';
 import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
 import { PB_BY, PB_TEXT, PHOTO_BANNERS } from './photobn.jsx';
-import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList } from './cdhome.jsx';
+import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList, useNewList } from './cdhome.jsx';
 import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
 import { liveSets } from './sets.jsx';
@@ -28,7 +28,7 @@ function Block({ k, hidden: hd, children }) {
   const c = useContext(V3Sel);
   return <div className={'v3-blk' + (c?.sel === k ? ' on' : '') + (hd ? ' off' : '')} data-k={k} data-name={c ? blockLabel(k, c.H) : ''} onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); c?.select(k); }}>{hd ? <div className="v3-hid">{c ? blockLabel(k, c.H) : k} · gizli</div> : children}</div>;
 }
-const IC = { 'cd:hero': 'image', hero: 'image', 'p0:hero': 'image', 'cd:pick': 'star', 'cd:sets': 'box', 'cd:brands': 'tag', 'cd:mq': 'tag', 'p0:find': 'search', 'p0:cats': 'grid', 'p0:trust': 'check', cta: 'wa' };
+const IC = { 'cd:hero': 'image', hero: 'image', 'p0:hero': 'image', 'cd:pick': 'star', 'cd:new': 'sparkle', 'cd:sets': 'box', 'cd:brands': 'tag', 'cd:mq': 'tag', 'p0:find': 'search', 'p0:cats': 'grid', 'p0:trust': 'check', cta: 'wa' };
 const NOTE = { 'p0:find': 'Telefon modelini yazınca uyan kalıp ve parçaları gösterir. Ayarı yok.', 'p0:trust': 'Avantaj yazılarınız (Orijinal ürün, Hızlı kargo…). Yazılar Gelişmiş’te.', 'p0:cats': 'Kategoriler ürün sayısına göre otomatik dizilir.', cta: 'WhatsApp alt bandı. Yazısı Gelişmiş’te.' };
 
 function useMobile() {
@@ -97,7 +97,7 @@ export function DesignV3() {
   const ctx = { sel, select, H };
   const view = useMemo(() => withDefaults(d), [d]);
 
-  const pagePanel = <PagePanel L={L} H={H} hidden={hidden} sel={sel} select={select} move={move} toggleHide={toggleHide} cdOn={cdOn} add={(k) => { const i = L.indexOf('cta'); S('layout', i >= 0 ? [...L.slice(0, i), k, ...L.slice(i)] : [...L, k]); select(k); }} toCd={() => { setAll(applyPreset(d, CD.data)); toast('Claude düzeni yüklendi. Beğenirseniz Yayınla, vazgeçmek için Geri al.'); }} />;
+  const pagePanel = <PagePanel L={L} H={H} hidden={hidden} sel={sel} select={select} move={move} toggleHide={toggleHide} cdOn={cdOn} add={(k) => { const h = k === 'cd:new' ? L.findIndex((x) => x === 'cd:hero' || x === 'hero' || x === 'p0:hero') : -1; const i = h >= 0 ? h + 1 : L.indexOf('cta'); S('layout', i >= 0 ? [...L.slice(0, i), k, ...L.slice(i)] : [...L, k]); select(k); }} toCd={() => { setAll(applyPreset(d, CD.data)); toast('Claude düzeni yüklendi. Beğenirseniz Yayınla, vazgeçmek için Geri al.'); }} />;
   const lookPanel = <LookPanel d={d} set={set} setAll={setAll} A={A} />;
   const insp = sel ? <Inspector k={sel} d={d} H={H} S={S} close={() => setSel(null)} hidden={hidden.has(sel)} toggleHide={() => toggleHide(sel)} /> : null;
 
@@ -191,6 +191,7 @@ function LookPanel({ d, set, setAll, A }) {
 function Inspector({ k, d, H, S, close, hidden, toggleHide }) {
   const body = k === 'cd:hero' || k === 'hero' || k === 'p0:hero' ? <HeroPanel H={H} S={S} k={k} />
     : k === 'cd:pick' ? <PickPanel H={H} S={S} d={d} />
+    : k === 'cd:new' ? <NewPanel H={H} S={S} />
     : k === 'cd:sets' ? <SetsPanel H={H} S={S} d={d} />
     : k === 'cd:brands' ? <BrandsPanel H={H} S={S} />
     : k === 'cd:mq' ? <MqPanel H={H} S={S} />
@@ -292,6 +293,32 @@ function SetsPanel({ H, S, d }) {
     {live.length ? live.map((x) => <label key={x.id} className="v3-chk"><input type="checkbox" checked={ids.includes(x.id)} onChange={(e) => up({ ids: e.target.checked ? [...ids, x.id] : ids.filter((y) => y !== x.id) })} /><span>{x.name}</span></label>)
       : <p className="fine">Yayında set yok. Setleri Yönetim › Setler’den hazırlayın.</p>}
     <p className="fine">Setin ürünleri ve fiyatı Yönetim › Setler’de düzenlenir.</p>
+  </>;
+}
+// 7.11.2026 (8) Yeni gelenler: sıra kendiliğinden (geliş anı); istenirse ürün öne sabitlenir ya da gizlenir
+function NewPanel({ H, S }) {
+  const C = cdOf(H).nw || {};
+  const up = (p) => S('cd', { ...cdOf(H), nw: { ...C, ...p } });
+  const byId = useStore((s) => s.byId); const catalog = useStore((s) => s.catalog);
+  const pins = (C.ids || []).map(Number); const hide = (C.hide || []).map(Number);
+  const [q, setQ] = useState('');
+  const hits = useMemo(() => { const t = norm(q).split(/\s+/).filter(Boolean); if (!t.length) return []; return catalog.filter((p) => p.a !== 0 && !p.so && !pins.includes(p.id) && t.every((w) => norm(p.n + ' ' + (p.b || '') + ' ' + (p.k || '')).includes(w))).slice(0, 8); }, [q, catalog, pins.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const auto = useNewList({ ...C, ids: [] }).slice(0, 14);
+  return <>
+    <Row label="Kapak yazısı (üst)"><TF v={C.eye} ph="Yeni gelenler" on={(v) => up({ eye: v })} /></Row>
+    <Row label="Kapak başlığı" hint="Boşsa: 'Bu hafta N yeni ürün.'"><TF v={C.title} ph="Bu hafta 12 yeni ürün." on={(v) => up({ title: v })} /></Row>
+    <Row label="Kaç ürün"><Seg v={String(Number(C.n) || 12)} opts={[['8', '8'], ['12', '12'], ['16', '16'], ['24', '24']]} on={(v) => up({ n: Number(v) })} /></Row>
+    <span className="v3-cap">Öne sabitlenenler</span>
+    {pins.map((id, i) => { const p = byId.get(id); if (!p) return null; return <div key={id} className="v3-row"><span className="v3-row-n"><span>{p.n}</span></span>
+      <span className="v3-row-mv"><button type="button" disabled={i === 0} onClick={() => up({ ids: moveItem(pins, i, i - 1) })} aria-label="Yukarı"><Icon n="up" s={14} /></button><button type="button" disabled={i === pins.length - 1} onClick={() => up({ ids: moveItem(pins, i, i + 1) })} aria-label="Aşağı"><Icon n="down" s={14} /></button></span>
+      <button type="button" className="dz2-ib" onClick={() => up({ ids: pins.filter((x) => x !== id) })} aria-label="Çıkar"><Icon n="x" s={15} /></button></div>; })}
+    <div className="v3-search"><Icon n="search" s={15} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ürün sabitle: ad, marka ya da stok kodu" />
+      {hits.length > 0 && <div className="v3-hits">{hits.map((p) => <button key={p.id} type="button" onClick={() => { up({ ids: [...pins, p.id] }); setQ(''); }}><b>{p.n}</b><small>{p.b} · {p.k}</small></button>)}</div>}</div>
+    <span className="v3-cap">Kendiliğinden gelenler (en yeni önde)</span>
+    {auto.map((p) => <div key={p.id} className="v3-row"><span className="v3-row-n"><span>{p.n}</span></span>
+      <button type="button" className="v3-pin" onClick={() => up({ hide: [...hide, p.id] })}>Gizle</button></div>)}
+    {hide.length > 0 && <><span className="v3-cap">Gizlenenler</span>{hide.map((id) => { const p = byId.get(id); return <div key={id} className="v3-row off"><span className="v3-row-n"><span>{p?.n || id}</span></span><button type="button" className="v3-pin" onClick={() => up({ hide: hide.filter((x) => x !== id) })}>Geri al</button></div>; })}</>}
+    <p className="fine">Stokta olmayan ve resmi olmayan ürünler gösterilmez. Kapaktaki düğme Tüm ürünler’i ‘Yeni gelenler’ sıralamasıyla açar.</p>
   </>;
 }
 // 7.11.2026 (7) Markalar: kaç SIRA (ekran genişliğine göre tam sıra dolar, yarım sıra kalmaz) + istenen markalar elle, istenen sırayla
