@@ -16,7 +16,7 @@ import { SlideEls, useSlideFonts, FONT_BY, FONTS, ensureFonts } from './slidex.j
 import { BOX_COLORS, BOX_PATS } from './dzpresets.js';
 import { P0_KEYS } from './p0keys.js';
 import { PHOTO_BANNERS, PhotoBanner, photoBnOn, pbOf, heroList } from './photobn.jsx';
-import { CdCta, CdHero, CdPick, CdSets, CdBrands, CdMarquee, CdRail, CdAds } from './cdhome.jsx';
+import { CdCta, CdNew, CdHero, CdPick, CdSets, CdBrands, CdMarquee, CdRail, CdAds } from './cdhome.jsx';
 import { P0Hero, P0Finder, P0Cats, P0Pick, P0Sets, P0Brands, P0Trust } from './p0home.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
@@ -384,6 +384,7 @@ export function ShopHome({ S: Sover }) {
     if (k === 'promos') return promoGrid(promos, H.promosTitle || 'Öne çıkanlar', null, E && !E.mobile && ((t) => E.set('shopHome.promosTitle', t)), H.promosLay);
     if (k === 'sets') return <SetRail edit={!!E} />;
     // 7.11.2026 Claude düzeni bölümleri (cdhome.jsx)
+    if (k === 'cd:new') return <CdNew H={H} onProduct={E ? () => E.select(k) : setProduct} edit={!!E} />;
     if (k === 'cd:hero') return heroList(H, !!E).length ? <CdHero H={H} gap={S.look?.heroGap} open={link} onProduct={setProduct} pkHero={pk?.hero} brands={[...brands, ...Object.entries(BL).map(([name, v]) => ({ name, ...v }))]} /> : E && <Empty label="Banner yok" />;
     if (k === 'cd:pick') return <CdPick H={H} S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'cd:sets') return <CdSets H={H} S={S} />;
