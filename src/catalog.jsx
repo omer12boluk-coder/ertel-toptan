@@ -821,7 +821,7 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
     </div>
     <div className="phub-lbl">Kategoriler</div>
-    <div className={'phub-grid phub-m-' + mode + ' phub-hv-' + (HC.subHover || 'ink')}>
+    <div className={'phub-grid phub-m-' + mode + ' phub-hv-' + (HC.subHover || 'ink') + (HC.lay ? ' phub-lay-' + HC.lay : '')}>
       <div role="button" tabIndex={0} className={'phub-c phub-all phub-t-' + (HC.allTone || 'acc')} onClick={onAll} onKeyDown={key(onAll)}>
         <div className="phub-h"><b>Tüm ürünler</b><span>{nf(total)}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span></div>
