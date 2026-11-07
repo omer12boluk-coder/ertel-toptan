@@ -9199,6 +9199,9 @@ html[data-theme=dark] .cd-when { color: #ff9f5a; }
    boyda ve kendi içinde çizilir (contain) → kart ve komşuları kıpırdamaz. Geçiş animasyonları AYNEN (kullanıcı geri istedi);
    basınca küçülme (.btn:active scale, bilgisayarda) bu düğmelerde kapalı. */
 .cd-sec .abx { contain: layout paint; height: 38px; flex: none; }
+/* iPhone: dokununca/animasyonda düğme kendi katmanına geçip 1px yukarı zıplıyordu → hep katmanda kalsın, yeri sabit */
+.cd-sec .abx { transform: translateZ(0); backface-visibility: hidden; }
+.cd-sec .abx .btn.add, .cd-sec .abx .qty-morph { will-change: transform; }
 .cd-sec .cd-big-add .abx { height: 44px; }
 .cd-sec .cd-big-add .abx .qty-morph > .stepper { height: 44px !important; }
 .cd-sec .abx .btn.add:active:not(.back), .cd-sec .abx .stepper button:active { transform: none !important; }
