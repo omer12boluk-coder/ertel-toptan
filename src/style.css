@@ -9175,12 +9175,12 @@ html[data-theme=dark] .cd-when { color: #ff9f5a; }
 @media (max-width: 700px) { .gelen-r > .icon-btn { grid-column: 3; grid-row: 1; } .gelen-r > .btn { grid-row: 2; } }
 
 /* 7.11.2026 'Bu hafta masamızdan' / cd kartları: Sepete ekle ⇄ −1+ geçişinde kartlar oynuyordu (kullanıcı). Düğme alanı sabit
-   boyda ve kendi içinde çizilir (contain), geçiş ölçek/kaydırma yerine sadece belirme — kart ve komşuları hiç kıpırdamaz. */
+   boyda ve kendi içinde çizilir (contain) → kart ve komşuları kıpırdamaz. Geçiş animasyonları AYNEN (kullanıcı geri istedi);
+   basınca küçülme (.btn:active scale, bilgisayarda) bu düğmelerde kapalı. */
 .cd-sec .abx { contain: layout paint; height: 38px; flex: none; }
 .cd-sec .cd-big-add .abx { height: 44px; }
-.cd-sec .abx .qty-morph.grow > .stepper { animation: cdAddIn .22s ease both !important; transform: none !important; will-change: auto !important; }
-.cd-sec .abx .qty-morph.grow > .stepper > *, .cd-sec .abx .qty-morph.grow > .stepper > :first-child, .cd-sec .abx .qty-morph.grow > .stepper > :last-child, .cd-sec .abx .qty-morph.grow > .stepper > input { animation: none !important; transform: none !important; }
-.cd-sec .abx .btn.add.back { animation: cdAddIn .22s ease both !important; transform: none !important; }
-.cd-sec .abx .btn.add.back > * { animation: none !important; }
 .cd-sec .cd-big-add .abx .qty-morph > .stepper { height: 44px !important; }
-@keyframes cdAddIn { from { opacity: 0; } to { opacity: 1; } }
+.cd-sec .abx .btn.add:active:not(.back), .cd-sec .abx .stepper button:active { transform: none !important; }
+/* geri dönüşte (−1+ → Sepete ekle) yazı da dönerek/küçülerek geliyordu ('Sepete ekle kısmı oynuyor'): dönme sadece + simgesinde, yazı sadece belirir */
+.cd-sec .abx .btn.add.back > .add-l { animation: abFadeOnly .3s .05s ease backwards !important; }
+@keyframes abFadeOnly { from { opacity: 0; } }
