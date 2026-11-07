@@ -12,6 +12,8 @@ window.FIREBASE_CONFIG = {
   appId: "1:1053773699238:web:72cdb3d5513cad8c29bc67"
 };
 // Site bekçisinin (Cloudflare) adresi: dolar kuru ve "Şimdi eşitle" butonu bunu kullanır
+// App Check site anahtarı (Google Cloud › Fraud Defense, 7.11.2026). Boş bırakılırsa App Check kapalı.
+window.APPCHECK_KEY = "6Le_1hQuAAAAAGolsEjqy7yq5Ib9PaJWB8P4XkvA";
 window.WATCH_URL = "https://ertel-b2b-watch.omer-12boluk.workers.dev";
 // Resim/video adresi (Cloudflare R2 özel alan adı; bekçiden geçmez). Boşsa eski yol: yüklenenler bekçi /p/, ürün resimleri PlatinMarket.
 // Doldurunca ör. "https://resim.ornek.com/" (sonunda / olmalı). IMG_PLATIN: PlatinMarket ürün resimleri de bu adresten (platin/…).

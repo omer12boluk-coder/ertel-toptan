@@ -40,11 +40,20 @@ export class FirebaseBackend {
   async init() {
     // Firebase dosyaları önce kendi sitemizden (/fb/): telefon tarayıcılarının izleyici koruması gstatic.com'u geciktirebiliyor
     const load = (base) => Promise.all(['app', 'auth', 'firestore'].map((m) => import(/* @vite-ignore */ base + 'firebase-' + m + '.js')));
-    let A, U, F;
-    try { [A, U, F] = await timeout(load(location.origin + '/fb/'), 12000); } catch { [A, U, F] = await timeout(load(CDN), 20000); }
+    let A, U, F, own = true;
+    // App Check (7.11.2026): veritabanı sadece bizim siteden gelen istekleri tanısın (reCAPTCHA Enterprise / Fraud Defense, görünmez).
+    // Sadece ertelmarket.com'da. Firebase'de 'Enforce' basılmadıkça hiçbir isteği ENGELLEMEZ, sadece sayar. Kapatmak: config.js APPCHECK_KEY = ''.
+    const acKey = /(^|\.)ertelmarket\.com$/.test(location.hostname) ? String(window.APPCHECK_KEY || '') : '';
+    const acP = acKey ? import(/* @vite-ignore */ location.origin + '/fb/firebase-app-check.js').catch(() => null) : null;
+    try { [A, U, F] = await timeout(load(location.origin + '/fb/'), 12000); } catch { own = false; [A, U, F] = await timeout(load(CDN), 20000); }
     this.A = A; this.U = U; this.F = F;
     // Yönetici paneli ayrı bir Firebase örneği kullanır: aynı tarayıcıda yönetici ve bayi oturumları birbirini etkilemez
     this.app = this.appName ? A.initializeApp(this.config, this.appName) : A.initializeApp(this.config);
+    if (acP && own) { // veritabanı açılmadan önce kurulmalı; dosya 3 sn'de gelmezse App Check'siz devam (sayım eksik kalır, site etkilenmez)
+      try { const AC = await Promise.race([acP, new Promise((r) => setTimeout(() => r(null), 3000))]);
+        if (AC) AC.initializeAppCheck(this.app, { provider: new AC.ReCaptchaEnterpriseProvider(acKey), isTokenAutoRefreshEnabled: true });
+      } catch (e) { console.warn('App Check', e); }
+    }
     // Oturum: yönetici paneli ve "beni hatırlama" seçilen girişler sadece o sekmede yaşar (sekmeler birbirini etkilemez)
     this.tabOnly = this.appName !== 'shop' && sessionStorage.getItem('auth-tab') === '1'; // mağaza üyesi oturumu her zaman cihazda kalır
     // Oturum sadece localStorage'da: Firebase listedeki her saklama yerini açılışta yokluyor; Telegram / WhatsApp / Instagram içi
