@@ -34,6 +34,17 @@ export function useStoreSum(items, pay = 'havale', n = 1, on = true) {
   }, [items, rate?.usd, S.pricing.vatPct, S.pricing.storeVatInc, pay, n, list, on]);
 }
 
+// 8.11.2026 İkiz fiyat (Ayarlar > Fiyat: pricing.twinPrice; false = eski görünüm): listede/kartta görünen fiyat havale/EFT
+// fiyatıdır; ürün sayfasında ve sepette kartla tek çekim fiyatı baştan yanında yazar (ödeme adımında rakam 'zıplamaz').
+export const twinOn = (S) => S?.pricing?.twinPrice !== false && storeCardOn(S?.orders) && storeVatOn(S?.pricing);
+export function useTwin() { const S = useStore((s) => s.settings); return twinOn(S); }
+// items: [{offer, cur, qty}] → { h: havale KDV dahil TL, c: kart tek çekim TL } ya da null
+export function useTwinSum(items, on = true) {
+  const h = useStoreSum(items, 'havale', 1, on);
+  const c = useStoreSum(items, 'card', 1, on);
+  return h && c ? { h: h.pay, c: c.pay, sum: h } : null;
+}
+
 // Satır altı küçük TL ("799,04 ₺ +KDV")
 export function LineTL({ v, cur = 'USD', rate, vat = true }) {
   if (v == null || isNaN(v) || cur !== 'USD' || !(rate > 0)) return null;
@@ -64,7 +75,7 @@ export function SumRows({ sum, children, incRow, usd = true }) {
       <div><span>Ara toplam <small>(KDV hariç)</small></span><span className="v">{tl2(sum.tl)}{usd && sum.allUsd && <small className="ssum-usd">{usd2(sum.usd)}</small>}</span></div>
       {sum.vatPct > 0 && <div><span>KDV %{sum.vatPct.toLocaleString('tr-TR')}</span><span className="v">{tl2(sum.vat)}</span></div>}
       {(incRow || (sum.inst && sum.inst.fee > 0)) && sum.vatPct > 0 && <div className="ssum-inc"><span>KDV dahil</span><span className="v">{tl2(sum.inc)}</span></div>}
-      {sum.inst && sum.inst.fee > 0 && <div><span>Ödeme komisyonu{sum.inst.n > 1 && <small> ({instName(sum.inst)} · %{sum.inst.pct.toLocaleString('tr-TR')})</small>}</span><span className="v">+{tl2(sum.inst.fee)}</span></div>}
+      {sum.inst && sum.inst.fee > 0 && <div><span>Kart fiyat farkı{sum.inst.n > 1 && <small> ({instName(sum.inst)} · %{sum.inst.pct.toLocaleString('tr-TR')})</small>}</span><span className="v">+{tl2(sum.inst.fee)}</span></div>}
       {children}
     </div>
   );

@@ -12,7 +12,7 @@ import { encodeList, listLink, listItems, listRecord } from './listcode.js';
 import { ProductSheet, Lightbox, imageList } from './catalog.jsx';
 import { renderListImages, currentRate, ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { Checkout } from './checkout.jsx';
-import { useStoreVat, useStoreSum, LineTL, SumRows, PayableBox, tl2, usd2 } from './storepay.jsx';
+import { useStoreVat, useStoreSum, LineTL, SumRows, PayableBox, tl2, usd2, useTwin, useTwinSum } from './storepay.jsx';
 
 import { setCartItems, lineCount, SetCartLine } from './sets.jsx';
 // sepet satırları: set kalemleri tek satırda toplanır
@@ -151,6 +151,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
   // mağaza: KDV dahil satış (Ayarlar > Fiyat, KDV ve kur) → satırlarda TL, özette büyük "Ödenecek tutar (KDV dahil)"
   const sv = useStoreVat();
   const vsum = useStoreSum(items, 'havale', 1, pub && sv.on);
+  const twin = useTwinSum(items, useTwin() && pub && sv.on); // 8.11.2026 ikiz fiyat: kart tek çekim toplamı baştan görünür
   const k = vsum ? vsum.rate : null;
   const menu = (e, it) => openMenu(e, [
     { label: '1 tane daha', icon: 'plus', onClick: () => setQty(it.id, it.qty + 1) },
@@ -207,7 +208,8 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
           </div>
           {vsum ? <>
             <SumRows sum={vsum}>{setSave > 0 && <div className="sum-save"><span>Set indirimi <small>(dahil)</small></span><span className="v">−{fmt(setSave, items.find((i) => i.sk)?.cur || 'USD')}</span></div>}</SumRows>
-            <PayableBox sum={vsum} />
+            <PayableBox sum={vsum} label={twin ? 'Havale / EFT ile' : undefined} />
+            {twin && <div className="tw-cart"><span>Kredi kartı tek çekim<small>Taksit seçenekleri ödeme adımında</small></span><b className="num">{tl2(twin.c)}</b></div>}
           </> : <><div className="sum-rows">
             {!pub && S.pricing.showRetail && saving.length > 0 && <div><span>Liste toplamı</span><span className="num strike">{fmtTotals(tList)}</span></div>}
             {!pub && S.pricing.showSaving && saving.length > 0 && <div className="sum-save"><span>Avantajınız</span><span className="num">{saving.map(([c, v]) => fmt(v, c)).join(' + ')}</span></div>}
@@ -237,7 +239,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
       {ask && <Confirm title="Sepet temizlensin mi?" text={`Sepetteki ${lineCount(items)} ürün çıkarılacak.`} okLabel="Temizle" tone="danger" onOk={reset} onClose={() => setAsk(false)} />}
       {(orders || !pub) && <div className="cart-bar" aria-hidden="false">
         {vsum
-          ? <span className="cart-bar-t ssum-bar"><small>Ödenecek · KDV dahil</small><b className="num">{tl2(vsum.pay)}</b>{vsum.allUsd && <span className="num">{usd2(vsum.usdInc)}</span>}</span>
+          ? <span className="cart-bar-t ssum-bar"><small>{twin ? 'Havale/EFT · KDV dahil' : 'Ödenecek · KDV dahil'}</small><b className="num">{tl2(vsum.pay)}</b>{twin ? <span className="num">Kartla {tl2(twin.c)}</span> : vsum.allUsd && <span className="num">{usd2(vsum.usdInc)}</span>}</span>
           : <span className="cart-bar-t"><small>{pub ? 'Toplam' : 'Toptan toplam'}</small><b className="num">{fmtTotals(tot)}</b></span>}
         <button className="btn primary" onClick={onConfirm}><Icon n="check" s={18} />Sepeti onayla</button>
       </div>}

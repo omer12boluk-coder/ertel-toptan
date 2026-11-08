@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS = {
     b2bTL: false, b2bVatInc: false, b2bPlusVat: false, // bayi uygulamasında aynı seçenekler (ayrı)
     showTL: false, // dolar fiyatların TL karşılığını bayilere / vitrine de göster (yönetici her zaman görür)
     manualRate: '', // doluysa Harem Altın kuru yerine bu kur kullanılır (1 USD = ? TL)
+    twinPrice: true, // 8.11.2026 ikiz fiyat: ürün sayfası + sepette Havale/EFT ve kart tek çekim TL yan yana; listede not. false = eski
     storeVatInc: true, // mağaza sepeti + ödeme: KDV dahil TL "Ödenecek tutar", satırlarda TL; bekçi KDV'yi ekleyerek kaydeder (1.11.2026). Kapalı = eski görünüm
   },
   look: { // Ayarlar > Renkler ve görünüm (önizlemeli). Boş = varsayılan

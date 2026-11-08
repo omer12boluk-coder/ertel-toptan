@@ -16,6 +16,7 @@ import { slugify, catSlugs } from './seo.js';
 import CAT_TREE from './categories.json';
 import { TLHint, useRate, fmtTL } from './listsheet.jsx';
 import { GuestGuide } from './guestcart.jsx';
+import { useTwin, useTwinSum, tl2 } from './storepay.jsx';
 import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
 import { SetGrid, InSets, liveSets, ProductsSwitch, SetCard, searchSets, openSet } from './sets.jsx';
@@ -90,9 +91,19 @@ function useCountUp(target, ms = 420) {
   }, [target, ms]);
   return v;
 }
-function BuyTotal({ v, cur }) {
+function BuyTotal({ v, cur, card }) {
   const x0 = useCountUp(v); const x = Number.isInteger(v) ? Math.round(x0) : Math.round(x0 * 100) / 100; // tam sayı fiyatta ara kareler kuruşsuz
-  return <span className="pbuy-tot"><small>Toplam</small><b className="num">{fmt(x, cur)}</b><PriceExtras v={x} cur={cur} /></span>;
+  return <span className="pbuy-tot"><small>Toplam</small><b className="num">{fmt(x, cur)}</b><PriceExtras v={x} cur={cur} />{card != null && <span className="tw-tot num">Kredi kartı tek çekim <b>{tl2(card)}</b></span>}</span>;
+}
+// 8.11.2026 İkiz fiyat: ürün sayfasında fiyatın yanında Havale/EFT ve kredi kartı tek çekim (KDV dahil TL, 1 adet)
+function TwinBox({ t }) {
+  if (!t) return null;
+  return (
+    <div className="tw-box" aria-label="Ödeme yöntemine göre fiyat">
+      <div className="tw-row on"><span>Havale / EFT fiyatı</span><b className="num">{tl2(t.h)}</b></div>
+      <div className="tw-row"><span>Kredi kartı tek çekim</span><b className="num">{tl2(t.c)}</b></div>
+    </div>
+  );
 }
 function PlusVat({ S: So, role: ro }) { const S0 = useStore((s) => s.settings); const r0 = useStore((s) => s.user?.role); const S = So || S0; return priceShow(S, ro || r0).plus && Number(S.pricing.vatPct) > 0 ? <em className="plusvat">+KDV</em> : null; }
 
@@ -550,6 +561,7 @@ export function Catalog({ admin }) {
   const addCls = cardCls(S, user?.role);
   const pinKey = pinShow ? [...pinShow].join(',') : '';
   const pv2 = !admin && user?.role === 'public' && S.look?.prodV2 !== false; // 7.11.2026 Ürünler v2 (false = eski)
+  const twinNote = useTwin() && pv2;
   const listEl = useMemo(() => (
     <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' ' + addCls + (pv2 ? ' pv2l' : '')}>
       {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
@@ -577,7 +589,10 @@ export function Catalog({ admin }) {
         <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button>{S.look?.prodHub ? <span><i>›</i><button type="button" onClick={() => hubSwap(() => { setHubOff(false); window.scrollTo(0, 0); }, 'l')}>Ürünler</button></span> : <span><i>›</i>Ürünler</span>}<span><i>›</i><b>Tüm ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
         {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
         <div className="pv2-trow">
-          <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
+          <div className="pv2-tt">
+            <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
+            {twinNote && <p className="pv2-pnote"><span className="pn-l">Kartlardaki fiyatlar havale/EFT için geçerlidir. Kredi kartı fiyatları ürün sayfasında yazar.</span><span className="pn-s">Fiyatlar havale/EFT içindir. Kart fiyatı ürün sayfasında.</span></p>}
+          </div>
           {/* 7.11.2026 (akşam): arama açılır/kapanır — kapalıyken belirgin 'Ürün ara' düğmesi; basınca uzar, X ile kapanır. Boşken gri, yazı varken beyaz + mavi çerçeve */}
           <div className={'pv2-q' + (q ? ' has' : '')}>
             <Icon n="search" s={17} />
@@ -1034,6 +1049,9 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
   const add = () => { setQty(p.id, qty); toast(cart[p.id] ? 'Sepet güncellendi' : 'Sepete eklendi'); onDone?.(); };
   const buy = () => { onDone?.(); store.set({ buyNow: { id: p.id, qty } }); go('sepet'); };
   const ask = async () => { onDone?.(); await askAbout(p, qty); };
+  const twin = useTwin() && pub && pr.mine != null;
+  const tw1 = useTwinSum(useMemo(() => [{ offer: pr.mine, cur: p.cur, qty: 1 }], [pr.mine, p.cur]), twin);
+  const twQ = useTwinSum(useMemo(() => [{ offer: pr.mine, cur: p.cur, qty }], [pr.mine, p.cur, qty]), twin);
   return <>
     <div className="pdetail">
       <Gallery p={p} />
@@ -1045,12 +1063,12 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
         </div>
         {pub && <RatingLine p={p} />}
         <div className="prow-meta"><code>{p.k}</code>{p.b && <span className="brand-tag">{p.b}</span>}<span>{catName(S, p.c)}</span>{st && <span className={'dot tone-' + st.tone}>{st.t}</span>}</div>
-        <PriceBlock p={p} big />
+        {tw1 ? <div className="tw-prow"><PriceBlock p={p} big /><TwinBox t={tw1} /></div> : <PriceBlock p={p} big />}
         {!viewOnly && pub && outOfStock(p) && feat(S).notify ? <NotifyBox p={p} /> : !viewOnly && <div className="pbuy">
           <div className="qty-line">
             <span>Adet</span>
             <Stepper value={qty} min={1} onChange={setQ} onRemove={cart[p.id] ? () => { setQty(p.id, 0); toast('Sepetten çıkarıldı'); } : undefined} />
-            {pr.mine != null && <BuyTotal v={pr.mine * qty} cur={p.cur} />}
+            {pr.mine != null && <BuyTotal v={pr.mine * qty} cur={p.cur} card={twQ ? twQ.c : null} />}
           </div>
           <div className="pbuy-btns">
             {cart[p.id] && cart[p.id] === qty
