@@ -70,7 +70,8 @@ export function PayableBox({ sum, label = 'Ödenecek tutar', compact, usd = true
 // Ara toplam / KDV / ödeme komisyonu satırları (+ ek satırlar: kargo vb.)
 // blend (8.11.2026, müşteri ekranları): kartla ödemede ayrı 'fark' satırı YOK — kart fiyatının kendisi matrah + KDV olarak
 // gösterilir (faturadaki gibi, invoiceSplit). Yönetim ekranı blend'siz: farkı ayrı görür.
-export function SumRows({ sum, children, incRow, usd = true, blend }) {
+export function SumRows({ sum, children, incRow, usd = true, blend: blend0 }) {
+  const twin = useTwin(); const blend = blend0 && twin; // ikiz fiyat kapalı → eski özet (ayrı 'Ödeme komisyonu' satırı)
   if (!sum) return null;
   if (blend && sum.inst && sum.inst.fee > 0) {
     const sp = invoiceSplit(sum.pay, sum.vatPct);
@@ -87,7 +88,7 @@ export function SumRows({ sum, children, incRow, usd = true, blend }) {
       <div><span>Ara toplam <small>(KDV hariç)</small></span><span className="v">{tl2(sum.tl)}{usd && sum.allUsd && <small className="ssum-usd">{usd2(sum.usd)}</small>}</span></div>
       {sum.vatPct > 0 && <div><span>KDV %{sum.vatPct.toLocaleString('tr-TR')}</span><span className="v">{tl2(sum.vat)}</span></div>}
       {(incRow || (sum.inst && sum.inst.fee > 0)) && sum.vatPct > 0 && <div className="ssum-inc"><span>KDV dahil</span><span className="v">{tl2(sum.inc)}</span></div>}
-      {sum.inst && sum.inst.fee > 0 && <div><span>Kart fiyat farkı{sum.inst.n > 1 && <small> ({instName(sum.inst)} · %{sum.inst.pct.toLocaleString('tr-TR')})</small>}</span><span className="v">+{tl2(sum.inst.fee)}</span></div>}
+      {sum.inst && sum.inst.fee > 0 && <div><span>{twin ? 'Kart fiyat farkı' : 'Ödeme komisyonu'}{sum.inst.n > 1 && <small> ({instName(sum.inst)} · %{sum.inst.pct.toLocaleString('tr-TR')})</small>}</span><span className="v">+{tl2(sum.inst.fee)}</span></div>}
       {children}
     </div>
   );
@@ -121,6 +122,7 @@ export function cardErrors(c) {
 export const cardOut = (c) => { const d = digitsOf(c.num); return { brand: cardBrand(d) || 'kart', last4: d.slice(-4), bank: 'Demo Bank', demo: true }; };
 
 export function CardForm({ card, setCard, inc, list, err = {} }) {
+  const twin = useTwin();
   const d = digitsOf(card.num);
   const brand = cardBrand(d);
   const known = d.length >= 6;
@@ -147,7 +149,7 @@ export function CardForm({ card, setCard, inc, list, err = {} }) {
               return (
                 <button key={x.n} type="button" role="radio" aria-checked={on} className={'inst-o' + (on ? ' on' : '')} onClick={() => setCard({ ...card, n: x.n })}>
                   <span className="radio" aria-hidden="true" />
-                  <span className="inst-t"><b>{x.n > 1 ? x.n + ' taksit' : 'Tek çekim'}</b></span>
+                  <span className="inst-t"><b>{x.n > 1 ? x.n + ' taksit' : 'Tek çekim'}</b>{!twin && x.pct > 0 && x.n > 1 && <small>komisyon %{x.pct.toLocaleString('tr-TR')}</small>}</span>
                   <span className="inst-a num"><b>{tl2(tot)}</b>{x.n > 1 && <small>{x.n} × {tl2(r2(tot / x.n))}</small>}</span>
                 </button>
               );

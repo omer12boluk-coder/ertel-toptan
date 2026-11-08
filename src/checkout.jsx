@@ -16,7 +16,7 @@ import { FavGrid, WaitGrid } from './catalog.jsx';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
 import { pvSave, pvPatch } from './pvorders.js';
-import { useStoreVat, useStoreCard, useStoreSum, SumRows, PayableBox, CardForm, emptyCard, cardErrors, cardOut, LineTL, tl2, usd2, PREVIEW, OrderSumFoot, AdminPayCard, payLabel, cardLine, PaidNotice } from './storepay.jsx';
+import { useTwin, useStoreVat, useStoreCard, useStoreSum, SumRows, PayableBox, CardForm, emptyCard, cardErrors, cardOut, LineTL, tl2, usd2, PREVIEW, OrderSumFoot, AdminPayCard, payLabel, cardLine, PaidNotice } from './storepay.jsx';
 import { pushState, enablePush, autoPush, disablePush, isIOS, pingWatch, testPush, ensurePush } from './push.js';
 import { useShopNotifs, PushToggle, ShopNotifList } from './notif.jsx';
 import { LegalConsent, SignupConsent, legalFromOrder, OrderLegalLink } from './legalui.jsx';
@@ -201,6 +201,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   const payable = pays;
   useEffect(() => { if (!payable.includes(f.pay)) set({ pay: payable[0] || 'havale' }); }, [f.method, sc.on]);
   const tot = totals(items, 'offer');
+  const twinUi = useTwin();
   const vsum = useStoreSum(items, f.pay, card.n, sv.on || (f.pay === 'card' && sc.on)); // KDV kapalıyken de kartta komisyonlu tutar gösterilir
   const [showItems, setShowItems] = useState(false);
   useEffect(() => { dispatchEvent(new Event('resize')); }, [f.pay, f.method, !!vsum, card.n]); // özet satır sayısı değişti → sabit özet yeniden sığdırılır
@@ -477,7 +478,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
               <SumRows sum={vsum} blend>
                 <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span className="v">{f.method === 'pickup' ? 'Dükkandan' : (carrierInfo(S, pickCar(S, f.carrier))?.name || 'Onayda bildirilir')}{f.method !== 'pickup' && <small>(Alıcı ödemeli)</small>}</span></div>
               </SumRows>
-              <PayableBox sum={vsum} usd={!(vsum.inst && vsum.inst.fee > 0)} />
+              <PayableBox sum={vsum} usd={!(twinUi && vsum.inst && vsum.inst.fee > 0)} />
             </> : <>
               <div className="sum-rows">
                 <div><span>Ürünler</span><span className="num">{fmtTotals(tot)}</span></div>
