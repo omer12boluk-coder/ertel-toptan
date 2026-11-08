@@ -9694,3 +9694,14 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
 .arc-pend .fine { margin-left: 2px; }
 .arc-no .dot-new { margin-right: 6px; }
 .lc-new-bar > svg:last-child { transform: rotate(-90deg); flex: none; color: var(--muted); }
+
+/* 8.11.2026 okunabilirlik düzeltmeleri (Apple rehberi incelemesi): soluk/küçük yazılar 11px + tam renk, banner noktası basma alanı, avantaj simgesi düz tema rengi (mor geçiş kalktı). Geri almak için bu bloğu sil. */
+.vat-inc { opacity: 1; font-size: 11px; }
+.plusvat { font-size: 11px; }
+.sh-brand-cta { opacity: 1; }
+.sh-brand .sh-brand-f, .sh-brand.light .sh-brand-f, .sh-brand.has-logo .sh-brand-f { opacity: 1; }
+@media (max-width: 900px) { .sh-brand .sh-brand-f { font-size: 11px; } }
+@media (max-width: 560px) { .me-login-s { font-size: 11px; } }
+.sh-usp-ic { background: var(--accent); }
+.sh-hero .sh-dot { position: relative; }
+.sh-hero .sh-dot::before { content: ""; position: absolute; inset: -8px -4px; }
