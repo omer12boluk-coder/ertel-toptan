@@ -68,8 +68,20 @@ export function PayableBox({ sum, label = 'Ödenecek tutar', compact, usd = true
 }
 
 // Ara toplam / KDV / ödeme komisyonu satırları (+ ek satırlar: kargo vb.)
-export function SumRows({ sum, children, incRow, usd = true }) {
+// blend (8.11.2026, müşteri ekranları): kartla ödemede ayrı 'fark' satırı YOK — kart fiyatının kendisi matrah + KDV olarak
+// gösterilir (faturadaki gibi, invoiceSplit). Yönetim ekranı blend'siz: farkı ayrı görür.
+export function SumRows({ sum, children, incRow, usd = true, blend }) {
   if (!sum) return null;
+  if (blend && sum.inst && sum.inst.fee > 0) {
+    const sp = invoiceSplit(sum.pay, sum.vatPct);
+    return (
+      <div className="ssum-rows num">
+        <div><span>Ara toplam <small>(KDV hariç)</small></span><span className="v">{tl2(sp.base)}</span></div>
+        {sum.vatPct > 0 && <div><span>KDV %{sum.vatPct.toLocaleString('tr-TR')}</span><span className="v">{tl2(sp.vat)}</span></div>}
+        {children}
+      </div>
+    );
+  }
   return (
     <div className="ssum-rows num">
       <div><span>Ara toplam <small>(KDV hariç)</small></span><span className="v">{tl2(sum.tl)}{usd && sum.allUsd && <small className="ssum-usd">{usd2(sum.usd)}</small>}</span></div>
@@ -135,7 +147,7 @@ export function CardForm({ card, setCard, inc, list, err = {} }) {
               return (
                 <button key={x.n} type="button" role="radio" aria-checked={on} className={'inst-o' + (on ? ' on' : '')} onClick={() => setCard({ ...card, n: x.n })}>
                   <span className="radio" aria-hidden="true" />
-                  <span className="inst-t"><b>{x.n > 1 ? x.n + ' taksit' : 'Tek çekim'}</b>{x.pct > 0 && x.n > 1 && <small>komisyon %{x.pct.toLocaleString('tr-TR')}</small>}</span>
+                  <span className="inst-t"><b>{x.n > 1 ? x.n + ' taksit' : 'Tek çekim'}</b></span>
                   <span className="inst-a num"><b>{tl2(tot)}</b>{x.n > 1 && <small>{x.n} × {tl2(r2(tot / x.n))}</small>}</span>
                 </button>
               );
@@ -152,7 +164,7 @@ export const cardLine = (c) => (!c ? '' : [BRAND[c.brand] || c.brand, c.bank, c.
 
 // Sipariş kâğıdının (ListPaper) altına: satırlar + ödenen tutar — açılır kapanır, son hâli cihazda hatırlanır (ls 'osum-open')
 const osumGet = () => { try { return localStorage.getItem('osum-open') !== '0'; } catch { return true; } };
-export function OrderSumFoot({ o }) {
+export function OrderSumFoot({ o, blend }) {
   const [open, setOpen] = useState(osumGet);
   const sum = o?.sum; if (!sum) return null;
   const tog = () => { const v = !open; setOpen(v); try { localStorage.setItem('osum-open', v ? '1' : '0'); } catch {} };
@@ -164,7 +176,7 @@ export function OrderSumFoot({ o }) {
         {!open && <span className="osum-mini num">{label} · <b>{tl2(sum.pay)}</b>{sum.vatPct > 0 && <small> KDV dahil</small>}</span>}
         <Icon n="chev" s={16} className="osum-chev" />
       </button>
-      {open && <div className="osum-body"><SumRows sum={sum} usd={false} /><PayableBox sum={sum} label={label} usd={false} /></div>}
+      {open && <div className="osum-body"><SumRows sum={sum} usd={false} blend={blend} /><PayableBox sum={sum} label={label} usd={false} /></div>}
     </div>
   );
 }

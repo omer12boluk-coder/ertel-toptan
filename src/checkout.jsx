@@ -474,10 +474,10 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
               ))}
             </ul>
             {vsum ? <>
-              <SumRows sum={vsum}>
+              <SumRows sum={vsum} blend>
                 <div><span>{f.method === 'pickup' ? 'Teslimat' : 'Kargo'}</span><span className="v">{f.method === 'pickup' ? 'Dükkandan' : (carrierInfo(S, pickCar(S, f.carrier))?.name || 'Onayda bildirilir')}{f.method !== 'pickup' && <small>(Alıcı ödemeli)</small>}</span></div>
               </SumRows>
-              <PayableBox sum={vsum} />
+              <PayableBox sum={vsum} usd={!(vsum.inst && vsum.inst.fee > 0)} />
             </> : <>
               <div className="sum-rows">
                 <div><span>Ürünler</span><span className="num">{fmtTotals(tot)}</span></div>
@@ -619,7 +619,7 @@ export function OrderPage({ id }) {
 
 
       <PaidNotice o={o} payInfo={S.shop.payInfo} ibans={S.shop.ibans} onSend={() => setConfirm({ title: 'Ödemeyi bildir', text: 'Havale / EFT ödemesini yaptığınızı bize bildireceğiz. Gönderdiyseniz devam edin.', okLabel: 'Bildir', onOk: () => sendPaid(o) })} />
-      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={o.sum ? <OrderSumFoot o={o} /> : null} tlRate={o.sum?.allUsd ? o.sum.rate : null} />
+      <ListPaper r={{ no: o.no, gname: o.contact?.name, items, status: 'priced', createdAt: o.createdAt, updatedAt: o.createdAt, rate: o.rate ? { usd: o.rate, src: 'harem' } : null }} label="Sipariş" viewOnly foot={o.sum ? <OrderSumFoot o={o} blend /> : null} tlRate={o.sum?.allUsd ? o.sum.rate : null} />
       <OrderRate o={o} />
 
       <div className="o-info">
