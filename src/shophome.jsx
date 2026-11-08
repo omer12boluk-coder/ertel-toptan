@@ -17,6 +17,7 @@ import { BOX_COLORS, BOX_PATS } from './dzpresets.js';
 import { P0_KEYS } from './p0keys.js';
 import { PHOTO_BANNERS, PhotoBanner, photoBnOn, pbOf, heroList } from './photobn.jsx';
 import { CdCta, CdNew, CdHero, CdPick, CdSets, CdBrands, CdMarquee, CdRail, CdAds } from './cdhome.jsx';
+import { CdFilm, withFilm } from './filmblock.jsx';
 import { P0Hero, P0Finder, P0Cats, P0Pick, P0Sets, P0Brands, P0Trust } from './p0home.jsx';
 
 export const THEMES = { night: 'Gece mavisi', ember: 'Kor turuncu', volt: 'Elektrik yeşili', violet: 'Mor', carbon: 'Karbon siyah', ice: 'Buz beyazı', sand: 'Kum (açık)', rose: 'Gül', ocean: 'Okyanus', mint: 'Nane (açık)' };
@@ -216,7 +217,7 @@ export function layoutOf(H) {
   // Paket 0 bölümleri (p0:*) sadece kayıtlı sırada varsa gösterilir, kendiliğinden eklenmez (eski düzen değişmesin)
   const L = (Array.isArray(H.layout) ? H.layout : []).filter((k) => valid.includes(k) || P0_KEYS[k]);
   for (const k of valid) if (!L.includes(k)) { if (k !== 'cta' && L.includes('cta')) L.splice(L.indexOf('cta'), 0, k); else L.push(k); }
-  return L;
+  return withFilm(L);
 }
 export const blockLabel = (k, H) => FIXED[k] || (k.startsWith('rail:') ? 'Ürün rafı · ' + ((H.sections || []).find((r, i) => railKey(r, i) === k)?.title || '') : (H.blocks?.[k.slice(2)]?.t === 'banner' ? 'Görsel bant' : H.blocks?.[k.slice(2)]?.t === 'rate' ? 'Kur kutusu' : H.blocks?.[k.slice(2)]?.t === 'promos' ? 'Reklam kutuları' + (H.blocks[k.slice(2)].title ? ' · ' + H.blocks[k.slice(2)].title : '') : H.blocks?.[k.slice(2)]?.t === 'video' ? 'Video' + (H.blocks[k.slice(2)].title ? ' · ' + H.blocks[k.slice(2)].title : '') : 'Başlık · ' + (H.blocks?.[k.slice(2)]?.title || '')));
 // sürükleyerek sıralama: aynı gruptaki [data-dz][data-i] öğelerinin üstüne gelince yer değiştirir; hiç sürüklenmezse tıklama sayılır
@@ -394,6 +395,7 @@ export function ShopHome({ S: Sover }) {
     if (k === 'cd:brands') return <CdBrands H={H} />;
     if (k === 'cd:mq') return <CdMarquee H={H} />;
     if (k === 'cd:ads') return <CdAds H={H} open={link} />;
+    if (k === 'cd:film') return <CdFilm H={H} open={link} onProduct={setProduct} edit={!!E} />;
     if (k === 'p0:hero') return (H.slides || []).length || photoBnOn(H) ? <P0Hero slides={(H.slides || []).map((x) => (x?.pb ? (pbOf(x) ? { ...x, pb: pbOf(x) } : { ...x, off: true }) : x)).map((x) => (x.off && !E ? { ...x, p0: 'off' } : x))} nv={H.heroNav || {}} pre={photoBnOn(H) && !pbHas ? PHOTO_BANNERS : []} onProduct={setProduct} open={link} edit={!!E} /> : E && <Empty label="Reklam yok" />;
     if (k === 'p0:find') return <P0Finder S={S} onProduct={E ? () => E.select(k) : setProduct} />;
     if (k === 'p0:cats') return <P0Cats H={H} />;

@@ -16,6 +16,7 @@ import { PB_BY, PB_TEXT, PHOTO_BANNERS, withNew2 } from './photobn.jsx';
 import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList, useNewList } from './cdhome.jsx';
 import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
+import { withFilm, filmsOf, filmCfg } from './filmblock.jsx';
 import { liveSets } from './sets.jsx';
 import { useHubRoots, HUB_IMG } from './catalog.jsx';
 import { ImgPick } from './shophome.jsx';
@@ -32,7 +33,7 @@ function Block({ k, hidden: hd, children }) {
   const c = useContext(V3Sel);
   return <div className={'v3-blk' + (c?.sel === k ? ' on' : '') + (hd ? ' off' : '')} data-k={k} data-name={c ? blockLabel(k, c.H) : ''} onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); c?.select(k); }}>{hd ? <div className="v3-hid">{c ? blockLabel(k, c.H) : k} · gizli</div> : children}</div>;
 }
-const IC = { 'cd:hero': 'image', hero: 'image', 'p0:hero': 'image', 'cd:pick': 'star', 'cd:new': 'sparkle', 'cd:sets': 'box', 'cd:brands': 'tag', 'cd:mq': 'tag', 'p0:find': 'search', 'p0:cats': 'grid', 'p0:trust': 'check', cta: 'wa' };
+const IC = { 'cd:hero': 'image', hero: 'image', 'p0:hero': 'image', 'cd:pick': 'star', 'cd:new': 'sparkle', 'cd:sets': 'box', 'cd:brands': 'tag', 'cd:mq': 'tag', 'cd:film': 'play', 'p0:find': 'search', 'p0:cats': 'grid', 'p0:trust': 'check', cta: 'wa' };
 const NOTE = { 'p0:find': 'Telefon modelini yazınca uyan kalıp ve parçaları gösterir. Ayarı yok.', 'p0:trust': 'Avantaj yazılarınız (Orijinal ürün, Hızlı kargo…). Yazılar Gelişmiş’te.', 'p0:cats': 'Kategoriler ürün sayısına göre otomatik dizilir.', cta: 'WhatsApp alt bandı. Yazısı Gelişmiş’te.' };
 
 function useMobile() {
@@ -80,7 +81,7 @@ export function DesignV3() {
   const [sheet, setSheet] = useState(false); // 7.11.2026 (10) telefonda panel kapalı başlar (önizleme görünsün); parmakla çekilir
   const sheetRef = useRef(null); const drag = useRef(null);
   const hist = useRef({ list: [], redo: [], t: 0 }); const [, bump] = useState(0);
-  const H = d.shopHome; const L = H.layout || []; const hidden = new Set(H.hidden || []);
+  const H = d.shopHome; const L = withFilm(H.layout || []); const hidden = new Set(H.hidden || []);
   const cdOn = !!d.look?.cd && L.includes('cd:hero');
 
   const set = (path, v) => {
@@ -260,6 +261,7 @@ function Inspector({ k, d, H, S, close, hidden, toggleHide }) {
     : k === 'cd:brands' ? <BrandsPanel H={H} S={S} />
     : k === 'cd:mq' ? <MqPanel H={H} S={S} />
     : k === 'cd:ads' ? <AdsPanel H={H} S={S} />
+    : k === 'cd:film' ? <FilmPanel H={H} S={S} />
     : k.startsWith('rail:') ? <RailPanel H={H} S={S} k={k} />
     : <p className="fine">{NOTE[k] || 'Bu eski bir bölüm; ayrıntılı ayarları Gelişmiş tasarım modunda.'}</p>;
   return <div className="v3-insp">
@@ -429,6 +431,23 @@ function AdsPanel({ H, S }) {
     {CD_ADS.map((a) => <div key={a.id} className={'v3-row' + (off.has(a.id) ? ' off' : '')}><span className="v3-row-n"><span>{a.title.replace(/\n/g, ' ')}</span></span>
       <button type="button" className={'v3-tg' + (off.has(a.id) ? '' : ' on')} onClick={() => up({ off: off.has(a.id) ? [...off].filter((x) => x !== a.id) : [...off, a.id] })} aria-label="Aç / kapat" /></div>)}
     <p className="v3-tip">Yeni reklam kutusu mu istiyorsunuz? Sohbette Claude’a ürünü söyleyin, fotoğraflı hazırlasın.</p>
+  </>;
+}
+// 8.11.2026 Tanıtım videosu: başlık, kendiliğinden başlama, ses düğmesi, video sırası + aç/kapa (shopHome.cd.film)
+function FilmPanel({ H, S }) {
+  const C = filmCfg(H); const { all } = filmsOf(H); const off = new Set(C.off || []);
+  const up = (p) => S('cd', { ...cdOf(H), film: { ...C, ...p } });
+  const mv = (i, dir) => { const ids = all.map((f) => f.id); const j = i + dir; if (j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; up({ ids }); };
+  return <>
+    <Row label="Üst yazı" hint="Boşsa videonun ürün adı"><TF v={C.eye} ph={all[0]?.name || ''} on={(v) => up({ eye: v })} /></Row>
+    <Row label="Başlık"><TF v={C.title} ph="Yakından bak." on={(v) => up({ title: v })} /></Row>
+    <Row label="Kendiliğinden başlasın" hint="Ekrana gelince bir kez oynar, son karede durur"><Seg v={C.auto === false ? 'no' : ''} opts={[['', 'Açık'], ['no', 'Kapalı']]} on={(v) => up({ auto: v === 'no' ? false : undefined })} /></Row>
+    <Row label="Müzik düğmesi" hint="Ses kapalı başlar; izleyen hoparlöre basınca çalar"><Seg v={C.music === false ? 'no' : ''} opts={[['', 'Göster'], ['no', 'Gizle']]} on={(v) => up({ music: v === 'no' ? false : undefined })} /></Row>
+    <span className="v3-cap">Videolar · açık olanlar sırayla oynar</span>
+    {all.map((f, i) => <div key={f.id} className={'v3-row' + (off.has(f.id) ? ' off' : '')}><span className="v3-row-n"><span>{f.name}</span></span>
+      <span className="v3-row-mv"><button type="button" disabled={i === 0} onClick={() => mv(i, -1)} aria-label="Yukarı"><Icon n="up" s={14} /></button><button type="button" disabled={i === all.length - 1} onClick={() => mv(i, 1)} aria-label="Aşağı"><Icon n="down" s={14} /></button></span>
+      <button type="button" className={'v3-tg' + (off.has(f.id) ? '' : ' on')} onClick={() => up({ off: off.has(f.id) ? [...off].filter((x) => x !== f.id) : [...off, f.id] })} aria-label="Aç / kapat" /></div>)}
+    <p className="v3-tip">Yeni video mu istiyorsunuz? Sohbette Claude’a “… geldi, tanıtım videosu hazırla” deyin.</p>
   </>;
 }
 function MqPanel({ H, S }) {

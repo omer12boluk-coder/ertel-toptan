@@ -60,5 +60,15 @@
   "adlar": ["Claude'dan gelenler", "ürün ekle", "taslak", "gelenler"],
   "yer": "Panel › Ürünler › Claude’dan gelenler (/admin/claude)",
   "tarif": "claude/is/urun-ekle.md"
+ },
+ "cd:film": {
+  "adlar": ["Tanıtım videosu", "video", "tanıtım filmi", "reklam videosu", "Yakından bak", "film"],
+  "yer": "Ana sayfa; 'Bu hafta masamızdan'ın altı, büyük video kutusu (sayfa içinde çizilen sahneler, son karede durur)",
+  "varsayilan_baslik": "Yakından bak.",
+  "veri": "src/icerik/videolar.json",
+  "resim": "hosting/public/bn/film-<id>-*.webp ya da banner resmi",
+  "tarif": "claude/is/video-ekle.md",
+  "kod": "src/film.js (motor), src/filmses.js (telifsiz müzik), src/filmblock.jsx — normalde DOKUNMA",
+  "ayar": "shopHome.cd.film { ids, off, eye, title, auto, music } — Tasarım › Tanıtım videosu"
  }
 }

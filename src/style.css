@@ -9694,3 +9694,56 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
 .arc-pend .fine { margin-left: 2px; }
 .arc-no .dot-new { margin-right: 6px; }
 .lc-new-bar > svg:last-child { transform: rotate(-90deg); flex: none; color: var(--muted); }
+
+/* ---- 8.11.2026 Tanıtım videosu (cd:film, src/film.js) ---- */
+.flm-box { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--st-r-hero, 30px); overflow: hidden; background: #000; isolation: isolate; user-select: none; -webkit-user-select: none; }
+@media (min-width: 701px) { .flm-box { max-width: calc((100vh - 190px) * 16 / 9); margin: 0 auto; } }
+@media (max-width: 700px) { .flm-box { aspect-ratio: 4 / 5; border-radius: 22px; } }
+.flm { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+.flm .flm-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; }
+.flm .flm-scn { position: absolute; inset: 0; overflow: hidden; will-change: transform, clip-path, opacity, filter; }
+.flm .flm-el { position: absolute; white-space: pre-line; will-change: transform, opacity; }
+.flm .flm-el.c { text-align: center; }
+.flm .flm-ph { display: block; width: 100%; height: auto; }
+.flm .flm-xl { font-weight: 650; letter-spacing: -.045em; line-height: .98; }
+.flm .flm-l { font-weight: 650; letter-spacing: -.04em; line-height: 1.02; }
+.flm .flm-s { font-weight: 500; letter-spacing: -.01em; line-height: 1.32; }
+.flm .flm-eye { display: flex; align-items: center; }
+.flm .flm-eye img { display: block; width: auto; }
+.flm .flm-eye i { display: block; width: 1.5px; }
+.flm .flm-eye span { font-weight: 600; line-height: 1; }
+.flm .flm-card { background: #fff; border-radius: 34px; height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 0 36px; }
+.flm .flm-card b { font-weight: 650; letter-spacing: -.04em; line-height: 1; color: #1d1d1f; }
+.flm .flm-card span { color: #6e6e73; font-weight: 500; margin-top: .5em; font-size: .36em; }
+.flm .flm-wave { display: flex; align-items: center; justify-content: center; gap: 10px; height: 100%; }
+.flm .flm-wave i { display: block; width: 13px; border-radius: 8px; background: linear-gradient(180deg, #f5a54a, #ff6a2b); height: 16%; }
+.flm .flm-say { display: inline-flex; align-items: center; gap: .5em; padding: .5em 1em; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; font-weight: 500; white-space: nowrap; }
+.flm .flm-say svg { width: 1em; height: 1em; }
+.flm .flm-num { font-weight: 650; letter-spacing: -.05em; color: #fff; font-variant-numeric: tabular-nums; }
+.flm .flm-num small { font-size: .42em; letter-spacing: 0; margin-left: .08em; vertical-align: .95em; }
+.flm .flm-btns { display: flex; align-items: center; gap: 28px; }
+.flm .flm-btn { border: 0; background: #2f62d6; color: #fff; border-radius: 999px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.flm .flm-lnk { color: #5b9cff; font-weight: 500; cursor: pointer; background: none; border: 0; font-family: inherit; padding: 0; }
+.flm .flm-ui { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.flm .flm-ui > * { pointer-events: auto; }
+.flm .flm-go { position: absolute; top: 14px; right: 14px; height: 34px; padding: 0 14px; border-radius: 999px; border: 0; font: 500 14px/34px inherit; font-family: inherit; color: #fff; background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); cursor: pointer; transition: background .4s, color .4s, opacity .4s; }
+.flm.lt .flm-go { color: #1d1d1f; background: rgba(0,0,0,.06); }
+.flm.fin .flm-go { opacity: 0; pointer-events: none; }
+.flm .flm-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 14px; transition: opacity .35s; }
+.flm.idle .flm-bar { opacity: 0; pointer-events: none; }
+.flm .flm-thin { position: absolute; left: 0; bottom: 0; height: 2px; background: rgba(255,255,255,.55); opacity: 0; transition: opacity .35s; }
+.flm.lt .flm-thin { background: rgba(0,0,0,.35); }
+.flm.idle .flm-thin { opacity: 1; }
+.flm .flm-ib { width: 34px; height: 34px; border-radius: 50%; border: 0; display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); cursor: pointer; transition: background .4s, color .4s; padding: 0; flex: none; }
+.flm.lt .flm-ib { color: #1d1d1f; background: rgba(0,0,0,.06); }
+.flm .flm-ib svg { width: 15px; height: 15px; }
+.flm .flm-prog { flex: 1; height: 22px; display: flex; align-items: center; cursor: pointer; }
+.flm .flm-prog i { display: block; height: 3px; width: 100%; border-radius: 3px; background: rgba(255,255,255,.22); overflow: hidden; }
+.flm.lt .flm-prog i { background: rgba(0,0,0,.1); }
+.flm .flm-prog i b { display: block; height: 100%; width: 0; background: #fff; }
+.flm.lt .flm-prog i b { background: #1d1d1f; }
+.flm .flm-toast { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); background: rgba(29,29,31,.86); color: #fff; font-size: 13px; padding: 8px 14px; border-radius: 999px; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+.flm .flm-toast.on { opacity: 1; }
+.flm.flm-pfs { position: fixed !important; inset: 0; width: 100vw !important; height: 100vh; height: 100dvh; aspect-ratio: auto !important; border-radius: 0; z-index: 10000; }
+.flm:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; }
+html.flm-lock, html.flm-lock body { overflow: hidden; }
