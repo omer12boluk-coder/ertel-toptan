@@ -11,7 +11,9 @@ kutular, yan yana, oklarla kayar. Kod: `src/cdhome.jsx` `CdAds` — DOKUNMA.
    `python3 tools/banner/cut.py <girdi> /tmp/x.png` → zemin + gölge:
    `python3 tools/banner/kapak.py /tmp/x.png hosting/public/bn/ad-<id>.webp <ton> kesfet`
    Ton: `nane` · `buz` · `gri` · `kum` · `gul` (mor yok; yan yana kutularda aynı ton art arda gelmesin).
-   Çıkan resmi aç, bak: ürün tam görünüyor mu, kenarda beyaz hale var mı.
+   Çıkan resmi aç, bak: ürün tam görünüyor mu, kenarda beyaz hale var mı, **kablo halkalarının içi beyaz kalmış mı**
+   (cut.py artık kapalı beyaz alanları da siler; beyaz gövdeli üründe 5. değer `0`).
+   Var olan resmi DEĞİŞTİRDİYSEN satıra `"v": <sayı>` ekle/artır (telefonlar eskisini önbellekten göstermesin).
 3. **Kayıt ekle** — `src/icerik/kesfet.json`, tek satır (sıra = ekrandaki sıra):
    ```json
    {"id":"jbc-uc","logo":"/brands/jbc.png","eye":"Havya uçları","title":"Doğru uç,\ntemiz lehim.","sub":"JBC C210 ve C245 uçlar","link":"q:jbc uç","cta":"Uçlara bak"}

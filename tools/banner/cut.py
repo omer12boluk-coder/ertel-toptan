@@ -1,10 +1,12 @@
 # Ürün fotoğrafının beyaz zeminini saydam yapar (kenara değen beyaz alan; küçük adacıklar atılır; 1.1px yumuşak kenar).
-# Kullanım: python3 tools/banner/cut.py <girdi> <cikti.png> [kırp: x0,y0,x1,y1 oran] [eşik=236]
+# Kullanım: python3 tools/banner/cut.py <girdi> <cikti.png> [kırp: x0,y0,x1,y1 oran] [eşik=236] [delik=0.002]
+# delik: kenara değmeyen (kablo halkası içinde kalan) beyaz alanlar da, resmin bu oranından büyükse saydam olur; 0 = kapalı.
+#   Beyaz gövdeli üründe 0 ver (ürünün beyaz yüzü silinmesin). Ders 8.11.2026: JBC/Aixun kutularında halka içleri beyaz kalmıştı.
 # Koyu zemine konacaksa sonra defringe.py. Kurallar: docs/banner-kurallari.md §4
 import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage
-def cutout(src, dst, crop=None, thr=236, maxw=1600):
+def cutout(src, dst, crop=None, thr=236, maxw=1600, hole=0.002):
     im = Image.open(src).convert('RGB')
     if crop: W,H = im.size; im = im.crop((int(crop[0]*W), int(crop[1]*H), int(crop[2]*W), int(crop[3]*H)))
     a = np.asarray(im).astype(np.int16)
@@ -13,6 +15,9 @@ def cutout(src, dst, crop=None, thr=236, maxw=1600):
     lab, n = ndimage.label(bgc)
     border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:,0], lab[:,-1]]))) - {0}
     bg = np.isin(lab, list(border))
+    if hole > 0 and n:
+        sz = ndimage.sum(bgc, lab, range(1, n+1))
+        bg |= np.isin(lab, [i+1 for i, v in enumerate(sz) if v > bgc.size*hole])
     bg = ndimage.binary_opening(bg, iterations=1)
     alpha = (~bg).astype(np.float32)
     # küçük adacıkları at
@@ -30,4 +35,4 @@ if __name__ == '__main__':
     a = sys.argv[1:]
     if len(a) < 2: sys.exit('kullanım: cut.py girdi cikti.png [x0,y0,x1,y1] [esik]')
     crop = tuple(float(x) for x in a[2].split(',')) if len(a) > 2 and a[2] not in ('', '-') else None
-    print(a[1], cutout(a[0], a[1], crop, int(a[3]) if len(a) > 3 else 236))
+    print(a[1], cutout(a[0], a[1], crop, int(a[3]) if len(a) > 3 and a[3] not in ('', '-') else 236, hole=float(a[4]) if len(a) > 4 else 0.002))

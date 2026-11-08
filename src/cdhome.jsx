@@ -342,7 +342,7 @@ export function CdAds({ H, open }) {
       <header className="cd-head"><div>{(C.eye ?? 'Keşfet') && <span className="cd-eye">{C.eye ?? 'Keşfet'}</span>}<h2>{C.title || 'Atölyen için.'}</h2></div>
         <span className="cd-head-r"><button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span></header>
       <div className="cd-ads" ref={rail}>{list.map((a) => (
-        <button key={a.id} type="button" className="cd-ad" onClick={open(a.link)} style={{ backgroundImage: `url(/bn/ad-${a.id}.webp)` }}>
+        <button key={a.id} type="button" className="cd-ad" onClick={open(a.link)} style={{ backgroundImage: `url(/bn/ad-${a.id}.webp${a.v ? '?v=' + a.v : ''})` }}>
           <span className="cd-ad-t">
             <span className="cd-ad-eye">{a.logo && <img src={a.logo} alt="" />}{a.eye && <span>{a.eye}</span>}</span>
             <b>{a.title}</b>
