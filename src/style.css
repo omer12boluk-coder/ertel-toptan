@@ -9741,6 +9741,12 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
 .flm .flm-prog i { display: block; height: 3px; width: 100%; border-radius: 3px; background: rgba(255,255,255,.22); overflow: hidden; }
 .flm.lt .flm-prog i { background: rgba(0,0,0,.1); }
 .flm .flm-prog i b { display: block; height: 100%; width: 0; background: #fff; }
+.flm .flm-prog { touch-action: none; position: relative; }
+.flm .flm-prog i { transition: height .15s; }
+.flm .flm-prog:hover i, .flm.drag .flm-prog i { height: 5px; }
+.flm .flm-stage { cursor: pointer; }
+.flm.fin .flm-stage { cursor: default; }
+.flm.drag .flm-bar { opacity: 1 !important; pointer-events: auto !important; }
 .flm.lt .flm-prog i b { background: #1d1d1f; }
 .flm .flm-toast { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); background: rgba(29,29,31,.86); color: #fff; font-size: 13px; padding: 8px 14px; border-radius: 999px; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
 .flm .flm-toast.on { opacity: 1; }

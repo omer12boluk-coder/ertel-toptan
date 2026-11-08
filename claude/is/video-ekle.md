@@ -12,6 +12,9 @@ sayfada çizer. Kod (`film.js`, `filmses.js`, `filmblock.jsx`) — normalde DOKU
   Giriş sahnesi renkli (`blobs` ısı tonları), ürün adı ORTA boy (bilgisayar 96, telefon 80) — "çok aşırı" bulundu.
 - **Ert / ERTEL imzası YOK.** Logo satırı = marka logosu | turuncu "Yeni" (`eye`), logo dikey ayarı `logoY` (Quick −0.16).
 - Son kare = banner'ın aynısı: eye, ürün adı, slogan, tek satır açıklama, `btns` (İncele + Sepete ekle).
+- 8.11.2026 denendi, REDDEDİLDİ ("eskisi kalsın"): mavi–turkuaz giriş, ortalı son kare, son karede sol üstte ert logosu.
+  Turuncu giriş ve banner gibi son kare kaldı; yeni videoda sormadan bunları değiştirme.
+- Ses: Tasarım › Tanıtım videosu › 'Ses' (varsayılan kapalı; 'Açık başlasın' = ziyaretçinin ilk dokunuşunda girer).
 - Fotoğraf: **temiz kesim şart** (kol / kablo kenarında beyaz hale = "rezalet"). Banner için temizlenmiş `bn/*.webp` varsa onu
   kullan; yoksa `tools/banner/cut.py` + koyu zemin için `defringe.py` (docs/banner-kurallari.md §4). Büyük çözünürlük (≥1400 px).
 - Bilgiler ürünün kendi açıklamasından (`src/descs.json`), uydurma rakam yazma. Mor yok.
