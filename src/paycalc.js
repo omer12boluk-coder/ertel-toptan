@@ -26,7 +26,8 @@ export function instList(O) {
 // Mağazada KDV dahil satış açık mı
 export const storeVatOn = (P) => P?.storeVatInc !== false && Number(P?.vatPct ?? 20) > 0;
 // Mağazada kartla ödeme açık mı
-export const storeCardOn = (O) => O?.storeCard !== false;
+// önizleme adresinde (Firebase kanalı, adında '--') kart her zaman açık: denemek için. Bekçide location yok → etkilenmez
+export const storeCardOn = (O) => O?.storeCard !== false || (typeof location !== 'undefined' && /--/.test(location.hostname));
 
 // items: [{ price, cur, qty }] · rate: 1 USD kaç TL · vat: KDV eklensin mi · pay: 'havale' | 'card' | 'shop' · n: taksit
 // Dönüş: { rate, usd, usdInc, allUsd, tl, vatPct, vat, inc, inst: { n, pct, fee, per } | null, pay, lines: [satır TL] } ya da null
