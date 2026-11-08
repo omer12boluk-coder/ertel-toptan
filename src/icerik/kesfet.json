@@ -1,6 +1,6 @@
 [
  {"id": "jbc", "logo": "/brands/jbc.png", "title": "Ustanın havyası.", "sub": "JBC istasyonlar ve uçlar", "link": "brand:JBC", "cta": "JBC ürünleri", "v": 2},
- {"id": "t420", "logo": "/brands/aixun-dark.png", "title": "İki el tutamağı,\ntek gövde.", "sub": "Aixun T420D istasyonlu havya", "link": "p:2745", "cta": "İncele", "v": 2},
+ {"id": "t420", "logo": "/brands/aixun-dark.png", "title": "İki el tutamağı,\ntek gövde.", "sub": "Aixun T420D istasyonlu havya", "link": "p:2745", "cta": "İncele", "v": 3},
  {"id": "u70", "logo": "/brands/jcid.png", "title": "UFS ve eMMC.\nOku, yaz.", "sub": "JCID U70 ISP modülü", "link": "p:3110", "cta": "İncele"},
  {"id": "sf850", "logo": "/brands/amscope.png", "title": "Yakından bak.", "sub": "Stereo mikroskoplar, başlıklar, lensler", "link": "cat:14", "cta": "Mikroskoplar"},
  {"id": "chip", "eye": "Entegre", "title": "Doğru entegre,\nilk seferde.", "sub": "Şarj, güç ve ses entegreleri", "link": "cat:6", "cta": "Entegreler"},
