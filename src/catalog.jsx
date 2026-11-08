@@ -591,7 +591,7 @@ export function Catalog({ admin }) {
         <div className="pv2-trow">
           <div className="pv2-tt">
             <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
-            {twinNote && <p className="pv2-pnote"><span className="pn-l">Kartlardaki fiyatlar havale/EFT için geçerlidir. Kredi kartı fiyatları ürün sayfasında yazar.</span><span className="pn-s">Fiyatlar havale/EFT içindir. Kart fiyatı ürün sayfasında.</span></p>}
+            {twinNote && <p className="pv2-pnote"><span className="pn-l">Fiyatlar havale/EFT seçimine özel indirimli fiyatlardır. Kredi kartıyla tek çekim fiyatları ürün sayfasında yazmaktadır.</span><span className="pn-s">Fiyatlar havale/EFT'ye özel indirimli fiyatlardır. Kartla tek çekim fiyatı ürün sayfasında.</span></p>}
           </div>
           {/* 7.11.2026 (akşam): arama açılır/kapanır — kapalıyken belirgin 'Ürün ara' düğmesi; basınca uzar, X ile kapanır. Boşken gri, yazı varken beyaz + mavi çerçeve */}
           <div className={'pv2-q' + (q ? ' has' : '')}>
