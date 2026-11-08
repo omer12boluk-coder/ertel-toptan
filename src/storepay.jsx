@@ -36,7 +36,8 @@ export function useStoreSum(items, pay = 'havale', n = 1, on = true) {
 
 // 8.11.2026 İkiz fiyat (Ayarlar > Fiyat: pricing.twinPrice; false = eski görünüm): listede/kartta görünen fiyat havale/EFT
 // fiyatıdır; ürün sayfasında ve sepette kartla tek çekim fiyatı baştan yanında yazar (ödeme adımında rakam 'zıplamaz').
-export const twinOn = (S) => S?.pricing?.twinPrice !== false && storeCardOn(S?.orders) && storeVatOn(S?.pricing);
+// kart ödemesi kapalıyken görünmez (kart fiyatı yazmak yanlış olur); önizleme adresinde (PREVIEW) denemek için kart kapalı da görünür
+export const twinOn = (S) => S?.pricing?.twinPrice !== false && (storeCardOn(S?.orders) || PREVIEW) && storeVatOn(S?.pricing);
 export function useTwin() { const S = useStore((s) => s.settings); return twinOn(S); }
 // items: [{offer, cur, qty}] → { h: havale KDV dahil TL, c: kart tek çekim TL } ya da null
 export function useTwinSum(items, on = true) {
