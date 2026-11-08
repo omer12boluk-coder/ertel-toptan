@@ -9,9 +9,13 @@ sayfada çizer. Kod (`film.js`, `filmses.js`, `filmblock.jsx`) — normalde DOKU
 - Apple tarzı, konuşmasız, yazılar Türkçe ve kısa. **Makineye zum YOK**; her sahne ayrı "sayfa", aralarında geçiş
   (`blur`, `wipeUp`, `circle`, `push`, `wipeRight`; ilk sahne `cut`). Sahne 2,4–3 sn, toplam ~15 sn, son karede durur.
 - Koyu sahneler **bannerdaki tema**: siyah zemin, turuncu küçük etiket (`acc`), beyaz başlık, `#c7c7cc` açıklama.
-  Giriş sahnesi renkli (`blobs` ısı tonları), ürün adı ORTA boy (bilgisayar 96, telefon 80) — "çok aşırı" bulundu.
-- **Ert / ERTEL imzası YOK.** Logo satırı = marka logosu | turuncu "Yeni" (`eye`), logo dikey ayarı `logoY` (Quick −0.16).
-- Son kare = banner'ın aynısı: eye, ürün adı, slogan, tek satır açıklama, `btns` (İncele + Sepete ekle).
+  Giriş sahnesi renkli `blobs` ama **turuncu DEĞİL** (beğenilmedi): mavi–turkuaz `pal` (q861 örneği), ürün adı ORTA boy
+  (bilgisayar 96, telefon 80) — büyüğü "çok aşırı" bulundu.
+- Marka satırında ert imzası YOK (logo | "Yeni", `eye`; logo dikey ayarı `logoY`, Quick −0.16).
+- Son kare banner'ın birebir aynısı OLMASIN: ortalı düzen (eye, ad, slogan, düğmeler üstte; ürün altta ortada) +
+  **ayrı kapanış olarak sol üst köşede ert mobile logosu** (`img` `ertel-logo.png`, en son belirir).
+- Ses: sitede varsayılan "açık başlasın" (`shopHome.cd.film.sound` 'off' = kapalı); tarayıcı kuralı gereği müzik
+  ziyaretçinin sayfaya ilk dokunuşunda/tıklamasında girer.
 - Fotoğraf: **temiz kesim şart** (kol / kablo kenarında beyaz hale = "rezalet"). Banner için temizlenmiş `bn/*.webp` varsa onu
   kullan; yoksa `tools/banner/cut.py` + koyu zemin için `defringe.py` (docs/banner-kurallari.md §4). Büyük çözünürlük (≥1400 px).
 - Bilgiler ürünün kendi açıklamasından (`src/descs.json`), uydurma rakam yazma. Mor yok.

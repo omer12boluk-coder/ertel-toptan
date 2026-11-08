@@ -71,6 +71,7 @@ export const music = {
     G = graph(ctx); S = ctx.currentTime + 0.08; T0 = t0; on = true;
     nodes = schedule(ctx, G, cuts, end, t0, S);
   },
+  running() { return !!(on && ctx && ctx.state === 'running'); },
   now() { if (!on || !ctx) return null; const lat = (ctx.outputLatency || 0) + (ctx.baseLatency || 0); return Math.max(T0, T0 + (ctx.currentTime - S - lat)); },
   stop() { on = false; nodes.forEach((n) => { try { n.stop(); } catch {} }); nodes = []; if (G) { const m = G.master; try { m.gain.setTargetAtTime(0, ctx.currentTime, 0.03); } catch {} setTimeout(() => { try { m.disconnect(); } catch {} }, 250); G = null; } },
 };

@@ -442,7 +442,8 @@ function FilmPanel({ H, S }) {
     <Row label="Üst yazı" hint="Boşsa videonun ürün adı"><TF v={C.eye} ph={all[0]?.name || ''} on={(v) => up({ eye: v })} /></Row>
     <Row label="Başlık"><TF v={C.title} ph="Yakından bak." on={(v) => up({ title: v })} /></Row>
     <Row label="Kendiliğinden başlasın" hint="Ekrana gelince bir kez oynar, son karede durur"><Seg v={C.auto === false ? 'no' : ''} opts={[['', 'Açık'], ['no', 'Kapalı']]} on={(v) => up({ auto: v === 'no' ? false : undefined })} /></Row>
-    <Row label="Müzik düğmesi" hint="Ses kapalı başlar; izleyen hoparlöre basınca çalar"><Seg v={C.music === false ? 'no' : ''} opts={[['', 'Göster'], ['no', 'Gizle']]} on={(v) => up({ music: v === 'no' ? false : undefined })} /></Row>
+    <Row label="Müzik düğmesi" hint="Gizlerseniz video hep sessiz oynar"><Seg v={C.music === false ? 'no' : ''} opts={[['', 'Göster'], ['no', 'Gizle']]} on={(v) => up({ music: v === 'no' ? false : undefined })} /></Row>
+    {C.music !== false && <Row label="Ses" hint="Tarayıcılar sesi ziyaretçi sayfaya dokunana kadar açtırmaz; 'Açık başlasın' seçilince ilk dokunuşta / tıklamada müzik kendiliğinden girer"><Seg v={C.sound === 'off' ? 'off' : ''} opts={[['', 'Açık başlasın'], ['off', 'Kapalı başlasın']]} on={(v) => up({ sound: v === 'off' ? 'off' : undefined })} /></Row>}
     <span className="v3-cap">Videolar · açık olanlar sırayla oynar</span>
     {all.map((f, i) => <div key={f.id} className={'v3-row' + (off.has(f.id) ? ' off' : '')}><span className="v3-row-n"><span>{f.name}</span></span>
       <span className="v3-row-mv"><button type="button" disabled={i === 0} onClick={() => mv(i, -1)} aria-label="Yukarı"><Icon n="up" s={14} /></button><button type="button" disabled={i === all.length - 1} onClick={() => mv(i, 1)} aria-label="Aşağı"><Icon n="down" s={14} /></button></span>

@@ -26,8 +26,8 @@ export const endOf = (F) => F.scenes[F.scenes.length - 1].t0;
 
 function elHtml(F, E, P) {
   const acc = F.acc || '#f5a54a';
-  if (E.k === 'eye') { const h = P.h || 40; return `<div class="flm-eye" style="height:${h}px;${P.c ? 'justify-content:center;' : ''}"><img src="${IMGP(F.logo)}" alt="" style="height:${h}px;${F.logoWhite ? 'filter:brightness(0) invert(1);' : ''}transform:translateY(${(F.logoY || 0) * h}px)"><i style="height:${h * 0.6}px;background:${acc};margin:0 ${h * 0.36}px"></i><span style="color:${acc};font-size:${h * 0.6}px">${esc(E.txt)}</span></div>`; }
-  if (E.k === 'img') return `<img class="flm-ph" alt="" src="${IMGP(P.src || (P === E.t && E.srcM) || E.src)}">`;
+  if (E.k === 'eye') { const h = P.h || 40; const acc = E.col || F.acc || '#f5a54a'; return `<div class="flm-eye" style="height:${h}px;${P.c ? 'justify-content:center;' : ''}"><img src="${IMGP(F.logo)}" alt="" style="height:${h}px;${F.logoWhite ? 'filter:brightness(0) invert(1);' : ''}transform:translateY(${(F.logoY || 0) * h}px)"><i style="height:${h * 0.6}px;background:${acc};margin:0 ${h * 0.36}px"></i><span style="color:${acc};font-size:${h * 0.6}px">${esc(E.txt)}</span></div>`; }
+  if (E.k === 'img') return `<img class="flm-ph" alt="" src="${IMGP(P.src || (P === E.t && E.srcM) || E.src)}"${E.op ? ` style="opacity:${E.op}"` : ''}>`;
   if (E.k === 'say') return `<span class="flm-say">${SVG.mic} ${esc(E.txt)}</span>`;
   if (E.k === 'wave') return '<div class="flm-wave">' + '<i></i>'.repeat(28) + '</div>';
   if (E.k === 'num') return `<span class="flm-num"><b>${E.from}</b><small style="color:${acc}">${esc(E.unit || '')}</small></span>`;
@@ -41,7 +41,7 @@ function elHtml(F, E, P) {
 export function makeFilm(root, F, opts = {}) {
   const TOTAL = F.total || endOf(F) + 1.8;
   const cuts = cutsOf(F), END = endOf(F);
-  let snd = false, poke = 0, mode = '', t = 0, playing = false, last = 0, started = false, raf = 0, scs = [], W = 1600, H = 900, dead = false;
+  let snd = opts.sound === true, poke = 0, mode = '', t = 0, playing = false, last = 0, started = false, raf = 0, scs = [], W = 1600, H = 900, dead = false;
   root.classList.add('flm');
   root.innerHTML = `<div class="flm-stage"></div><div class="flm-ui"><div class="flm-toast"></div><button type="button" class="flm-go">Ürüne git ›</button><i class="flm-thin"></i>
     <div class="flm-bar"><button type="button" class="flm-ib flm-pp" aria-label="Oynat / durdur"></button><div class="flm-prog"><i><b></b></i></div>${opts.music === false ? '' : '<button type="button" class="flm-ib flm-snd" aria-label="Ses"></button>'}<button type="button" class="flm-ib flm-fs" aria-label="Tam ekran">${SVG.fs}</button></div></div>`;
@@ -99,7 +99,8 @@ export function makeFilm(root, F, opts = {}) {
         else if (E.a === 'pop') tr = `scale(${0.9 + 0.1 * qq})`;
         else if (E.a === 'mask') { clip = `inset(0 0 ${(1 - qq) * 100}% 0)`; tr = `translateY(${(1 - qq) * 60}px)`; op = k > 0 ? 1 : 0; }
         if (E.drift && !S.end) tr += ` translateX(${-lt * 8}px)`;
-        if (E.k === 'blobs') { const p = (a, b, c) => a + b * Math.sin(t * c); e.style.background = `radial-gradient(42% 60% at ${p(22, 8, 0.9)}% ${p(30, 10, 0.7)}%,rgba(255,138,40,.95),transparent 70%),radial-gradient(40% 55% at ${p(80, 7, 0.8)}% ${p(70, 9, 1.1)}%,rgba(255,64,40,.8),transparent 70%),radial-gradient(35% 50% at ${p(62, 10, 0.6)}% ${p(18, 8, 0.9)}%,rgba(255,196,90,.75),transparent 70%),radial-gradient(38% 55% at ${p(15, 6, 1)}% ${p(85, 8, 0.8)}%,rgba(28,140,150,.75),transparent 70%),#2a0e04`; }
+        if (E.k === 'blobs') { const p = (a, b, c) => a + b * Math.sin(t * c); const P4 = E.pal || ['rgba(255,138,40,.95)', 'rgba(255,64,40,.8)', 'rgba(255,196,90,.75)', 'rgba(28,140,150,.75)', '#2a0e04'];
+          e.style.background = `radial-gradient(42% 60% at ${p(22, 8, 0.9)}% ${p(30, 10, 0.7)}%,${P4[0]},transparent 70%),radial-gradient(40% 55% at ${p(80, 7, 0.8)}% ${p(70, 9, 1.1)}%,${P4[1]},transparent 70%),radial-gradient(35% 50% at ${p(62, 10, 0.6)}% ${p(18, 8, 0.9)}%,${P4[2]},transparent 70%),radial-gradient(38% 55% at ${p(15, 6, 1)}% ${p(85, 8, 0.8)}%,${P4[3]},transparent 70%),${P4[4]}`; }
         if (bars.length) { const [a, b] = E.on || [0.6, 2.1]; const on = lt > a && lt < b + 0.4; const amp = on ? Math.min(1, (lt - a) / 0.2) * (lt > b ? Math.max(0, (b + 0.4 - lt) / 0.4) : 1) : 0;
           if (lt > b + 0.4) op *= Math.max(0, 1 - (lt - b - 0.4) / 0.35);
           bars.forEach((x, j) => { const v = 0.16 + amp * (0.45 + 0.4 * Math.sin(lt * 11 + j * 1.7) * Math.sin(lt * 5.3 + j * 0.6)); x.style.height = Math.max(0.08, v) * 100 + '%'; }); }
@@ -116,11 +117,15 @@ export function makeFilm(root, F, opts = {}) {
   }
   function loop(now) {
     if (!playing || dead) return;
-    const at = snd ? music.now() : null; if (at !== null) t = Math.max(t, at); else t += Math.min(0.1, (now - last) / 1000); last = now;
+    const at = snd && music.running() ? music.now() : null; if (at !== null) t = Math.max(t, at); else t += Math.min(0.1, (now - last) / 1000); last = now;
     if (t >= TOTAL) { t = TOTAL; playing = false; draw(); opts.onEnd?.(); return; }
     draw(); raf = requestAnimationFrame(loop);
   }
-  function play() { if (t >= TOTAL - 0.01) t = 0; playing = true; started = true; if (snd) music.start(cuts, END, t); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); draw(); }
+  // Ses açık başlasın: tarayıcı, ziyaretçi sayfaya ilk dokunana / tıklayana kadar sesi bekletir → ilk dokunuşta o anki yerden başlar
+  let armed = false;
+  const unlock = () => { armed = false; ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.removeEventListener(ev, unlock, true)); if (snd && playing && !dead) music.start(cuts, END, t); };
+  const arm = () => { if (armed || music.running()) return; armed = true; ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, true)); };
+  function play() { if (t >= TOTAL - 0.01) t = 0; playing = true; started = true; if (snd) { music.start(cuts, END, t); setTimeout(() => { if (snd && playing && !music.running()) arm(); }, 150); } last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); draw(); }
   function pause() { playing = false; if (snd) music.stop(); draw(); }
   root._mute = () => { if (snd) { snd = false; draw(); } };
   root.addEventListener('pointermove', () => { poke = performance.now(); root.classList.remove('idle'); });
@@ -146,6 +151,6 @@ export function makeFilm(root, F, opts = {}) {
   layout();
   return {
     seek(x) { t = x; playing = false; draw(); }, play, pause,
-    destroy() { dead = true; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); document.removeEventListener('fullscreenchange', onFs); if (snd) music.stop(); if (root.classList.contains('flm-pfs')) exitPfs(); },
+    destroy() { dead = true; if (armed) unlock(); cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); document.removeEventListener('fullscreenchange', onFs); if (snd) music.stop(); if (root.classList.contains('flm-pfs')) exitPfs(); },
   };
 }

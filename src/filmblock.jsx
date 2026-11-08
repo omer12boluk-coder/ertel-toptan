@@ -1,5 +1,5 @@
 // Ana sayfa bölümü 'cd:film' — Tanıtım videosu (8.11.2026). Motor src/film.js, veri src/icerik/videolar.json.
-// Ayar shopHome.cd.film { eye, title, ids: [sıra], off: [id], auto: false = kendiliğinden başlamasın, music: false = ses düğmesi yok }.
+// Ayar shopHome.cd.film { eye, title, ids: [sıra], off: [id], auto: false = kendiliğinden başlamasın, music: false = ses düğmesi yok, sound: 'off' = ses kapalı başlasın (varsayılan açık: ziyaretçinin ilk dokunuşunda girer) }.
 // Birden çok açık video varsa sırayla oynar (biri bitince 4 sn sonra sıradaki). Tarif: claude/is/video-ekle.md
 import { useEffect, useRef, useState } from 'react';
 import { store, setQty, toast } from './store.js';
@@ -29,7 +29,7 @@ export function CdFilm({ H, open, onProduct, edit }) {
     if (!F || !box.current) return;
     let tm = 0;
     const fm = makeFilm(box.current, F, {
-      auto: !edit && C.auto !== false, music: C.music !== false,
+      auto: !edit && C.auto !== false, music: C.music !== false, sound: !edit && C.music !== false && C.sound !== 'off',
       open: edit ? null : (a) => {
         const p = store.s.byId?.get(Number(F.p));
         if (a === 'c') { if (p && p.s > 0 && p.a !== 0 && !p.so) { setQty(p.id, (store.s.cart?.[p.id] || 0) + 1); toast?.('Sepete eklendi'); } else if (p) onProduct?.(p); return; }
@@ -39,7 +39,7 @@ export function CdFilm({ H, open, onProduct, edit }) {
     });
     if (ix > 0) fm.play();
     return () => { clearTimeout(tm); fm.destroy(); };
-  }, [F?.id, edit, C.auto, C.music]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [F?.id, edit, C.auto, C.music, C.sound]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!F) return null;
   return (
     <section className="cd-sec rv">
