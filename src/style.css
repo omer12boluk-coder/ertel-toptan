@@ -9684,3 +9684,13 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
   .pv2-pnote .pn-l { display: none; }
 }
 @media (min-width: 701px) { .pv2-pnote .pn-s { display: none; } }
+
+/* 8.11.2026 Siparişler: Okunmamış / Onay bekliyor + linkle gelen uyarısı; Geçmiş: tarihten bağımsız bekleyenler */
+.chip .dot-new, .arc-no .dot-new { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.lc-new-bar { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 12px; padding: 11px 14px; border-radius: 14px; border: 0; background: color-mix(in oklab, var(--accent) 8%, transparent); color: var(--fg); font-size: 14px; text-align: left; cursor: pointer; }
+.lc-new-bar > span:nth-child(2) { flex: 1; min-width: 0; color: var(--muted); }
+.lc-new-bar b { color: var(--fg); font-weight: 600; }
+.arc-pend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+.arc-pend .fine { margin-left: 2px; }
+.arc-no .dot-new { margin-right: 6px; }
+.lc-new-bar > svg:last-child { transform: rotate(-90deg); flex: none; color: var(--muted); }

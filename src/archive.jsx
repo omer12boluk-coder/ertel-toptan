@@ -37,7 +37,7 @@ export function Archive() {
   const rows = useMemo(() => {
     const m = new Map();
     for (const x of found?.items || []) m.set(x.id, x);
-    for (const x of data || []) m.set(x.id, x);
+    if (!found?.all) for (const x of data || []) m.set(x.id, x);
     let l = [...m.values()];
     if (t && data) l = l.filter((x) => (found?.items || []).some((f) => f.id === x.id) || [x.no, x.contact?.name, x.contact?.phone, x.contact?.email, x.name, x.sub?.contact?.name, x.sub?.contact?.phone, x.userName, x.shop].join(' ').toLocaleLowerCase('tr').includes(t));
     const k = tab === 'lcarts' ? 'at' : tab === 'requests' ? 'updatedAt' : 'createdAt';
@@ -72,6 +72,14 @@ export function Archive() {
     else if (tab === 'lcarts') { store.set({ lcExtra: [x, ...(store.s.lcExtra || []).filter((y) => y.id !== x.id)].slice(0, 50) }); go('sepetler'); openLcart(x.id); }
     else openRequest(x.id);
   };
+  // Okunmamışlar / Onay bekleyenler: tarihten bağımsız (sadece eşleşenler okunur)
+  const pend = async (kind) => {
+    setBusy(true);
+    try { const items = A.findPending ? await A.findPending(tab, kind) : []; MEM.found[tab] = { q: kind === 'unread' ? 'Okunmamışlar' : 'Onay bekleyenler', items, all: true }; if (!items.length) toast(kind === 'unread' ? 'Okunmamış kayıt yok' : 'Onay bekleyen kayıt yok'); }
+    catch (e) { toast('Yüklenemedi: ' + e.message, 'bad'); }
+    setBusy(false); force((x) => x + 1);
+  };
+  const isNew = (x) => (tab === 'orders' ? !!x.unread : tab === 'lcarts' ? x.status === 'sent' && !x.seen : x.unreadAdmin > 0);
   const pick = (from, to) => { setRangeOpen(false); setRange({ from, to }); };
 
   return (
@@ -84,8 +92,13 @@ export function Archive() {
         <div className="search arc-q"><Icon n="search" s={18} /><input type="search" placeholder="Sipariş no, ad soyad, telefon (tam yazın)" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && search()} /></div>
         <button type="button" className="btn sm" disabled={busy || !q.trim()} onClick={search}><Icon n="search" s={15} />Bul</button>
       </div>
+      <div className="chips arc-pend">
+        <button type="button" className="chip" disabled={busy} onClick={() => pend('unread')}><span className="dot-new" aria-hidden="true" />Okunmamışlar</button>
+        <button type="button" className="chip" disabled={busy} onClick={() => pend('new')}>Onay bekleyenler</button>
+        <span className="fine">tüm tarihler</span>
+      </div>
       {found && <p className="fine arc-found">“{found.q}”: {found.items.length ? found.items.length + ' sonuç' : 'bulunamadı'} · <button type="button" className="linkish" onClick={() => { delete MEM.found[tab]; force((x) => x + 1); }}>temizle</button></p>}
-      {!data && (
+      {!data && !found?.all && (
         <div className="arc-gate">
           <span className="arc-gate-ic"><Icon n="clock" s={26} /></span>
           <h2>{rangeLabel(range)}</h2>
@@ -105,7 +118,7 @@ export function Archive() {
             const at = tab === 'lcarts' ? x.at : x.createdAt;
             return (
               <li key={x.id}><button type="button" onClick={() => open(x)}>
-                <span className="arc-no">#{x.no || String(x.id).slice(-5)}</span>
+                <span className="arc-no">{isNew(x) && <span className="dot-new" aria-label="Okunmamış" />}#{x.no || String(x.id).slice(-5)}</span>
                 <span className="arc-t"><b>{nm || '—'}</b><small>{when(at)}{tab === 'requests' ? ' · ' + (x.type === 'order' ? 'Bayi siparişi' : 'Talep') : ''}</small></span>
                 <StatusPill status={st} map={tab === 'requests' ? STATUS : ORDER_STATUS} />
                 <b className="arc-v">{tt}</b>

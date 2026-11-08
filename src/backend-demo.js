@@ -191,6 +191,11 @@ export class DemoBackend {
   async staffPw(uid, password) { if (String(password || '').length < 6) throw new Error('Şifre en az 6 karakter olmalı'); this.db.users[uid].pw = password; this.persist(); return { ok: true }; }
   async staffRevoke(uid) { Object.keys(this.db.staffSess || {}).forEach((k) => { if (this.db.staffSess[k].uid === uid) this.db.staffSess[k].kick = true; }); this.persist(); return { ok: true }; }
   async geo() { return { c: 'İstanbul' }; }
+  async findPending(col, kind) {
+    const src = col === 'lcarts' ? Object.entries(this.lc_()).map(([id, x]) => ({ id, ...x })) : col === 'requests' ? Object.values(this.db.requests || {}) : Object.values(this.ord());
+    const ok = col === 'orders' ? (x) => (kind === 'unread' ? x.unread : x.status === 'new') : col === 'lcarts' ? (x) => x.status === 'sent' && (kind !== 'unread' || !x.seen) : (x) => (kind === 'unread' ? x.unreadAdmin > 0 : x.status === 'new');
+    return src.filter(ok).map((x) => JSON.parse(JSON.stringify(x)));
+  }
   async archiveFind(col, q) {
     const t = String(q || '').trim().toLocaleLowerCase('tr'); if (!t) return [];
     const d = t.replace(/\D/g, '');

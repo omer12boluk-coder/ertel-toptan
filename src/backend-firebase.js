@@ -362,6 +362,14 @@ export class FirebaseBackend {
   }
   async staffPw(uid, password) { return this._staffCall('/staff/pw', { uid, password }); }
   async staffRevoke(uid, disable) { return this._staffCall('/staff/revoke', { uid, disable: !!disable }); }
+  // 8.11.2026 Geçmiş siparişler › Okunmamışlar / Onay bekleyenler: TARİHTEN BAĞIMSIZ, sadece eşleşen kayıtlar okunur
+  async findPending(col, kind) {
+    const F = this.F, c = this.c(col);
+    const q = (w, n) => timeout(F.getDocs(F.query(c, w, F.limit(n)))).then((s) => s.docs.map((d) => ({ id: d.id, ...d.data() })));
+    if (col === 'orders') return kind === 'unread' ? q(F.where('unread', '==', 1), 200) : q(F.where('status', '==', 'new'), 300);
+    if (col === 'lcarts') { const l = await q(F.where('status', '==', 'sent'), 300); return kind === 'unread' ? l.filter((x) => !x.seen) : l; }
+    return kind === 'unread' ? q(F.where('unreadAdmin', '>', 0), 200) : q(F.where('status', '==', 'new'), 300);
+  }
   // Geçmiş siparişler › arama (8.11.2026): tam yazılan sipariş no / ad / telefon / e-posta, listede olmasa da bulunur (aranan kadar okuma)
   async archiveFind(col, q) {
     q = String(q || '').trim(); if (!q) return [];

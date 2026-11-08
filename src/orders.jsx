@@ -16,7 +16,8 @@ import { labelPdf, needsPdfPrint } from './labelpdf.js';
 import { InvoiceText, addrLine, orderItems } from './checkout.jsx';
 
 // Durum filtreleri: üstte renkli sayaç kutuları (bir bakışta ne kadar iş bekliyor), yanında Tümü / Tamamlanan / İptal
-const FILTERS = [['open', 'Açık'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
+// 8.11.2026: 'Okunmamış' (sadece varsa) ve 'Onay bekliyor' eklendi
+const FILTERS = [['open', 'Açık'], ['unread', 'Okunmamış'], ['new', 'Onay bekliyor'], ['all', 'Tümü'], ['done', 'Tamamlanan'], ['cancelled', 'İptal']];
 // yönetici listesindeki açıklama (müşteri metninden farklı)
 // durum renkleri (liste, menü, seçici ortak; style.css --c-* ile aynı)
 export const ST_COLOR = { new: '#8a919e', confirmed: '#b08d2e', preparing: '#3f9a6b', shipped: '#3567c4', ready: '#7a62b8', done: '#1f6b47', cancelled: '#a3a7ae' };
@@ -110,7 +111,9 @@ export function Orders() {
   const [confirm, setConfirm] = useState(null);
   const [sel, setSel] = useState(null); // çoklu seçim (Set) ya da kapalı
   const newN = orders.filter((o) => o.status === 'new').length;
-  const cnt = useMemo(() => { const c = { open: 0 }; for (const o of orders) { c[o.status] = (c[o.status] || 0) + 1; if (ORDER_OPEN.includes(o.status)) c.open++; } return c; }, [orders]);
+  const cnt = useMemo(() => { const c = { open: 0, unread: 0 }; for (const o of orders) { c[o.status] = (c[o.status] || 0) + 1; if (ORDER_OPEN.includes(o.status)) c.open++; if (o.unread) c.unread++; } return c; }, [orders]);
+  const lcNewN = useStore((st) => (st.lcarts || []).filter((c) => c.status === 'sent' && !c.seen).length);
+  useEffect(() => { if (filter === 'unread' && !cnt.unread) setFilter('open'); }, [cnt.unread]);
   const flow = useStatusFlow(S);
   const live = useRate();
   useDhlSync(orders); // şube okuttuysa takip no'yu çek
@@ -137,6 +140,7 @@ export function Orders() {
     let r = found.length ? [...base, ...found.filter((f) => !base.some((o) => o.id === f.id))] : base;
     if (found.length) return r.filter((o) => found.some((f) => f.id === o.id)); // eski sipariş bulundu: sadece o
     if (filter === 'open') r = r.filter((o) => ORDER_OPEN.includes(o.status));
+    else if (filter === 'unread') r = r.filter((o) => o.unread);
     else if (filter !== 'all') r = r.filter((o) => o.status === filter);
     const t = norm(q.trim());
     if (t) r = r.filter((o) => norm([o.no, o.contact?.name, o.contact?.phone, o.contact?.email, o.invoice?.company].join(' ')).includes(t) || String(o.contact?.phone || '').replace(/\D/g, '').includes(t.replace(/\D/g, '') || '#'));
@@ -181,10 +185,11 @@ export function Orders() {
         <div className="toolbar">
           <div className="o-sr"><div className="search"><Icon n="search" s={18} /><input id="ord-search" type="search" placeholder="Sipariş no, ad, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div></div>
           <div className="chips">
-            {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '')} onClick={() => setFilter(k)}>{l}{k === 'open' ? ` (${cnt.open})` : ''}</button>)}
+            {FILTERS.filter(([k]) => k !== 'unread' || cnt.unread > 0).map(([k, l]) => <button key={k} className={'chip' + (filter === k ? ' on' : '') + (k === 'unread' ? ' chip-new' : '')} onClick={() => setFilter(k)}>{k === 'unread' && <span className="dot-new" aria-hidden="true" />}{l}{k === 'open' ? ` (${cnt.open})` : k === 'unread' ? ` (${cnt.unread})` : k === 'new' ? ` (${cnt.new || 0})` : ''}</button>)}
             {orders.length > 0 && <button className={'chip chip-sel' + (sel ? ' on' : '')} onClick={() => setSel(sel ? null : new Set())}><Icon n={sel ? 'x' : 'check'} s={14} /><span className="chip-sel-t">{sel ? 'Seçimi kapat' : 'Seç'}</span></button>}
           </div>
         </div>
+        {lcNewN > 0 && <button type="button" className="lc-new-bar" onClick={() => go('sepetler')}><span className="dot-new" aria-hidden="true" /><span><b>{lcNewN} yeni linkle gelen sipariş</b> · bu listede değil, “Linkle gelen siparişler”de</span><Icon n="chev" s={15} /></button>}
         {range && (
           <div className="range-bar">
             <Icon n="clock" s={15} /><span><b>{rangeLabel(range)}</b> · {range.items ? list.length + ' sipariş' : 'yükleniyor…'}</span>
