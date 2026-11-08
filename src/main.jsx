@@ -1,3 +1,4 @@
+import { setDarkLogos } from './darklogo.js';
 import { savesPending } from './saveq.js';
 import { LinkCartPage, LinkCartsPage } from './lcart.jsx';
 import { PayLinkPage, PayLinkView } from './paylink.jsx';
@@ -668,6 +669,9 @@ function ShellFull() {
   // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
   const lgOn = pub && LK.glass !== false;
   useEffect(() => { const c = document.documentElement.classList; c.toggle('hdr-gs-on', hs); c.toggle('hdr-c-on', hc); c.toggle('lg-on', lgOn); return () => c.remove('hdr-gs-on', 'hdr-c-on', 'lg-on'); }, [hs, hc, lgOn]);
+  // 8.11.2026 gece modunda marka logoları: 'color' (varsayılan, renkler korunur, siyah yazı beyaza döner) | 'mono' (eski: hepsi düz beyaz)
+  const lgMono = S0.look?.logoDark === 'mono';
+  useEffect(() => { document.documentElement.classList.toggle('lgd-mono', lgMono); setDarkLogos(!lgMono); }, [lgMono]);
   // cam + arama üst menü: sol (logo) ve sağ (simgeler) sütunu eşit genişlikte tutulur → arama kutusu tam ortada kalır, dar ekranda kısalır
   const gsRef = useRef(null);
   useLayoutEffect(() => {

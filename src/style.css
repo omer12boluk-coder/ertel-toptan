@@ -7811,7 +7811,7 @@ html[data-theme="dark"] .p0-cat-im, html[data-theme="dark"] .p0-b-sm .p0-b-im { 
 .p0-logo img { height: 100%; width: auto; max-width: 150px; object-fit: contain; filter: grayscale(1); opacity: .5; transition: filter .25s, opacity .25s; }
 .p0-logo img.sq { height: 120%; }
 @media (hover: hover) { .p0-logo:hover img { filter: none; opacity: 1; } }
-html[data-theme="dark"] .p0-logo img { filter: grayscale(1) brightness(0) invert(1); opacity: .55; }
+html[data-theme="dark"] .p0-logo img { filter: var(--logo-dark, brightness(0) invert(1)); opacity: .55; }
 .p0-brands-all { -webkit-mask-image: none; }
 @keyframes p0mq { to { transform: translateX(-50%); } }
 html.lite .p0-brands-in, .shell.reduce .p0-brands-in { animation: none; }
@@ -9222,7 +9222,7 @@ html[data-theme=dark] .cd-when { color: #ff9f5a; }
 .pv2-st { position: absolute; left: 12px; top: 12px; z-index: 2; padding: 4px 10px; border-radius: 999px; background: var(--surface); color: var(--fg); font: 600 11.5px/1 Inter; box-shadow: 0 1px 4px rgba(0,0,0,.1); pointer-events: none; }
 .pv2-st.out { color: var(--muted); }
 .pv2-lg { height: 15px; width: auto; max-width: 84px; object-fit: contain; object-position: left center; display: block; }
-html[data-theme="dark"] .pv2-lg { filter: brightness(0) invert(1); opacity: .85; }
+html[data-theme="dark"] .pv2-lg { filter: var(--logo-dark, brightness(0) invert(1)); opacity: .9; }
 /* kategori sayfası 'Ustaların tercihi': çubuk ve yüzdeler yok, fiyat koyu */
 .cat-layout.pv2 .cat-top-bar, .cat-layout.pv2 .cat-top li small { display: none !important; }
 .cat-layout.pv2 .cat-top em { color: var(--fg) !important; }
@@ -9237,7 +9237,7 @@ html[data-theme="dark"] .pv2-lg { filter: brightness(0) invert(1); opacity: .85;
 .pv2-b b { font: 600 13px/1.1 Inter; color: var(--fg); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .pv2-b small { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 10.5px; color: var(--muted); }
 .pv2-b.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-html[data-theme="dark"] .pv2-b img { filter: brightness(0) invert(1); opacity: .85; }
+html[data-theme="dark"] .pv2-b img { filter: var(--logo-dark, brightness(0) invert(1)); opacity: .9; }
 .pv2-seg { display: flex; background: color-mix(in oklab, var(--fg) 6%, transparent); border-radius: 12px; padding: 3px; }
 .pv2-seg button { flex: 1; border: 0; background: none; padding: 9px 4px; border-radius: 9px; font: 500 13.5px/1 Inter; color: var(--fg); cursor: pointer; white-space: nowrap; }
 .pv2-seg button.on { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
@@ -9393,7 +9393,7 @@ html[data-theme="dark"] .pv2-lgt { color: #fff; opacity: .85; }
 .phub-br.more { color: var(--accent); font-weight: 600; }
 .phub-br.more svg { transform: rotate(-90deg); }
 @media (hover: hover) and (pointer: fine) { .phub-br:hover { box-shadow: 0 0 0 1.5px var(--accent); transform: translateY(-2px); } }
-html[data-theme="dark"] .phub-bl { filter: brightness(0) invert(1); opacity: .85; }
+html[data-theme="dark"] .phub-bl { filter: var(--logo-dark, brightness(0) invert(1)); opacity: .9; }
 @media (max-width: 1100px) { .phub-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 899px) {
   .phub .pv2-trow { align-items: stretch; }
@@ -9684,3 +9684,8 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
   .pv2-pnote .pn-l { display: none; }
 }
 @media (min-width: 701px) { .pv2-pnote .pn-s { display: none; } }
+
+/* 8.11.2026 gece modu marka logoları: renk korunur (koyu yazı açığa döner, renkli zemin beyaz leke olmaz). look.logoDark 'mono' = eski düz beyaz */
+html[data-theme="dark"] { --logo-dark: invert(1) hue-rotate(180deg) saturate(1.15) brightness(1.04); }
+html.lgd-mono[data-theme="dark"] { --logo-dark: brightness(0) invert(1); }
+img.lgdk { filter: none !important; }
