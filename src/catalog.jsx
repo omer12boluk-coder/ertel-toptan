@@ -100,7 +100,7 @@ function TwinBox({ t }) {
   if (!t) return null;
   return (
     <div className="tw-box" aria-label="Ödeme yöntemine göre fiyat">
-      <div className="tw-row on"><span>Havale / EFT fiyatı</span><b className="num">{tl2(t.h)}</b></div>
+      <div className="tw-row on"><span>Havale/EFT'ye özel fiyat</span><b className="num">{tl2(t.h)}</b></div>
       <div className="tw-row"><span>Kredi kartı tek çekim</span><b className="num">{tl2(t.c)}</b></div>
     </div>
   );
