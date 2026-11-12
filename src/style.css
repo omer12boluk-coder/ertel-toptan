@@ -212,7 +212,8 @@ h1, h2, h3 { text-wrap: balance; }
 .thumb img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
 .thumb-ph { font: 700 12px/1 var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: color-mix(in oklab, hsl(var(--h) 45% 40%) 75%, var(--fg)); }
 .thumb-sm { width: 44px; height: 44px; }
-.thumb-lg { width: 100%; max-width: 100%; height: auto; aspect-ratio: 1; }
+.thumb-lg { width: 100%; max-width: 100%; height: auto; aspect-ratio: 1; position: relative; }
+.thumb-lg > img { position: absolute; inset: 0; } /* 12.11.2026: dikey resim kutuyu uzatıp aşağı kaymasın */
 .thumb-lg .thumb-ph { font-size: 28px; }
 
 .price { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; gap: 3px; min-width: 92px; }
@@ -532,7 +533,9 @@ kbd { font: 600 12px var(--f-mono); padding: 1px 5px; border: 1px solid var(--li
 .gallery { position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .gal-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 10px; border: 1px solid var(--line-2); background: #fff; aspect-ratio: 1; }
 .gal-track::-webkit-scrollbar { display: none; }
-.gal-slide { flex: 0 0 100%; scroll-snap-align: start; display: grid; place-items: center; }
+.gal-slide { flex: 0 0 100%; scroll-snap-align: start; display: grid; place-items: center; position: relative; overflow: hidden; min-height: 0; }
+/* 12.11.2026: büyük resim inince kutu resmin kendi boyuna uzuyordu (dikey resim aşağı 'düşüp' kesiliyordu) → kutu slayta sabit */
+.gal-slide > .gal-open { position: absolute; inset: 0; width: auto; height: auto; }
 .gal-slide img { width: 100%; height: 100%; object-fit: contain; }
 .gal-slide .thumb-lg { border: 0; border-radius: 0; }
 .gal-count { position: absolute; top: 8px; right: 8px; background: rgb(0 0 0 / .55); color: #fff; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 10px; }

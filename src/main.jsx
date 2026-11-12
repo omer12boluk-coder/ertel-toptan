@@ -1236,15 +1236,32 @@ function setupNavAnim() {
       ease: 'cubic-bezier(.32,.72,0,1)', cv: 0.75 }, // bilgisayar: telefondaki gibi yönlü yandan kayma (ekranın ~%13'ü)
     dfade: { dx: 0, ms: 0.7, ease: EASE },
   };
+  // 12.11.2026: art arda hızlı geçişte (alt menüye peş peşe basma) önceki geçiş bitmeden yenisi başlıyordu: eski kaymalar sürüyor,
+  // örtü yarım kaldığı yerden TAM opaklığa sıçrıyordu → ekran bir kare eski sayfa, bir kare bembeyaz 'yanıp sönüyordu'.
+  // Artık yarım kalan geçiş durdurulur, örtü o anki saydamlığından devam eder (yukarı sıçramaz).
+  let live = [], coverA = null, coverKf = null;
+  const coverNow = () => { // çalışan örtü animasyonunun şu anki saydamlığı (getComputedStyle yok: ağır sayfada stil hesabını zorlamasın)
+    if (!coverA || !coverKf || coverA.playState === 'finished' || coverA.playState === 'idle') return null;
+    const p = coverA.effect?.getComputedTiming?.().progress; if (p == null) return null;
+    const n = coverKf.length - 1; let a = coverKf[0], b = coverKf[n];
+    for (let i = 0; i < n; i++) { const o0 = coverKf[i].offset ?? i / n, o1 = coverKf[i + 1].offset ?? (i + 1) / n; if (p <= o1) { a = { ...coverKf[i], offset: o0 }; b = { ...coverKf[i + 1], offset: o1 }; break; } }
+    const f = b.offset > a.offset ? (p - a.offset) / (b.offset - a.offset) : 1; return a.opacity + (b.opacity - a.opacity) * Math.min(1, Math.max(0, f));
+  };
   const play = (els, kind, ms0, dk = 1) => {
+    const busy = live.some((a) => a.playState === 'running' || a.playState === 'paused');
+    const cur = busy ? coverNow() : null;
+    for (const a of live) { try { a.cancel(); } catch {} } live = [];
     const as = []; const LK0 = store.s.settings?.look || {};
     const M = mob() ? (MOT[LK0.motion] || MOT.clear) : LK0.motionD === 'fade' ? MOT.dfade : MOT.desk; const ms = Math.round(ms0 * M.ms);
     const dx = Math.round((typeof M.dx === 'function' ? M.dx() : M.dx) * dk);
     if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -dx : dx}px,0,0)` }, { transform: 'translate3d(0,0,0)' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: M.ease, id: 'nav' })); }
     const cv = getCover(); cv.classList.toggle('glass', !!M.glass);
-    const k0 = kind === 'tab' ? 0.65 : 1;
-    as.push(cv.animate(M.glass ? [{ opacity: kind === 'tab' ? 0.8 : 1 }, { opacity: 0.6, offset: 0.35 }, { opacity: 0 }]
-      : M.cv && kind !== 'tab' ? [{ opacity: k0 }, { opacity: 0, offset: M.cv }, { opacity: 0 }] : [{ opacity: k0 }, { opacity: 0 }], { duration: kind === 'tab' ? Math.min(ms, 220) : ms, easing: M.glass ? 'ease-out' : kind === 'tab' ? EASE : 'cubic-bezier(.2,.6,.3,1)' }));
+    const top = (v) => (cur == null ? v : Math.min(v, cur)); // yarım kalan geçişten devam: örtü yukarı sıçramaz
+    const k0 = top(kind === 'tab' ? 0.65 : 1);
+    coverKf = M.glass ? [{ opacity: top(kind === 'tab' ? 0.8 : 1) }, { opacity: top(0.6), offset: 0.35 }, { opacity: 0 }]
+      : M.cv && kind !== 'tab' ? [{ opacity: k0 }, { opacity: 0, offset: M.cv }, { opacity: 0 }] : [{ opacity: k0 }, { opacity: 0 }];
+    as.push(coverA = cv.animate(coverKf, { duration: kind === 'tab' ? Math.min(ms, 220) : ms, easing: M.glass ? 'ease-out' : kind === 'tab' ? EASE : 'cubic-bezier(.2,.6,.3,1)' }));
+    live = as;
     // 6.11.2026 (7): iPhone'da kayan sayfanın üstündeki cam menü, altındaki ürün resmini bulanık değil 'büyütülmüş' gösteriyordu
     // (WebKit: hareket eden katman üstünde backdrop-filter). Geçiş süresince menüler neredeyse opak (html.nav-mv), bitince eski cam.
     const R = document.documentElement; R.classList.add('nav-mv'); clearTimeout(R.__nmv); R.__nmv = setTimeout(() => R.classList.remove('nav-mv'), (kind === 'tab' ? Math.min(ms, 220) : ms) + 80);
