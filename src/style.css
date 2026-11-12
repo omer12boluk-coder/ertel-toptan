@@ -9261,7 +9261,9 @@ html[data-theme="dark"] .pv2-b img { filter: brightness(0) invert(1); opacity: .
 .pv2-in2 { animation: pv2Up .4s .04s cubic-bezier(.2, .8, .2, 1) backwards; }
 .pv2-in3 { animation: pv2Up .42s .07s cubic-bezier(.2, .8, .2, 1) backwards; }
 @keyframes pv2Up { from { opacity: 0; transform: translateY(10px); } }
-@keyframes pv2Sub { from { opacity: 0; max-height: 0; transform: translateY(-6px); } to { max-height: 60px; } }
+/* 12.11.2026: max-height animasyonu KALDIRILDI — satır 0'dan 60px'e büyürken altındaki kategori açıklaması ve ürünler kare kare aşağı itiliyor,
+   telefon her karede bütün sayfayı yeniden yerleştiriyordu (JBC / Quick / Yihua açıklaması takılarak geliyordu). Yeri baştan ayrılır, sadece belirir. */
+@keyframes pv2Sub { from { opacity: 0; transform: translateY(-6px); } }
 .pv2-crumb { min-height: 22px; }
 @media (prefers-reduced-motion: reduce) { .pv2-in, .pv2-sub-in, .pv2-in2, .pv2-in3 { animation: none; } }
 /* 7.11.2026 (2) v2 üst kısım: başlık + arama aynı satırda; Filtrele/Sırala/etiketler kategorilerin üstünde */
@@ -9757,8 +9759,8 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
 .flm:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; }
 html.flm-lock, html.flm-lock body { overflow: hidden; }
 /* 12.11.2026 pencereli ürün listesi (catalog.jsx WinUL): uzaktaki parçaların yerini tutan boş kutu (tam satır, ölçülmüş yükseklik).
-   Liste artık küçük kaldığı için kartlarda content-visibility gerekmez (ölçümü de yanıltıyordu) */
-.plist.win > li { content-visibility: visible; }
+   Kartlarda content-visibility: auto KALIR — kapatınca ekran dışındaki kartların resimleri de hemen istenip ekrandakileri geciktiriyordu
+   (karşılama → Tüm ürünler: 10 yerine 18 resim, görünenler ~170 ms geç) */
 .plist > li.win-gap { grid-column: 1 / -1; padding: 0 !important; margin: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; animation: none !important; pointer-events: none; list-style: none; }
 /* 12.11.2026: telefonda tarayıcıda (Safari / Chrome) yüzen alt menü adres çubuğuna yapışık (alttan 10px → 2px). Ana ekran uygulamasında AYNI (html.in-brw yok) */
 @media (max-width: 899px) {

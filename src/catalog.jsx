@@ -880,7 +880,8 @@ function logoOf(S, b) {
 function WinUL({ className, items, render, resetKey }) {
   const ul = useRef(null);
   const st = useRef({ H: new Map(), gap: 0, rowH: 0, key: null, raf: 0, sig: '' }).current;
-  const [cols, setCols] = useState(1);
+  // ilk çizimde sütun sayısı tahmin edilir (telefonda kutu görünümü 2): ölç → yeniden çiz turu olmasın, liste geç belirmesin
+  const [cols, setCols] = useState(() => (/\bpgrid\b/.test(className) && matchMedia('(max-width: 560px)').matches ? 2 : 1));
   const [act, setAct] = useState(null);
   if (st.key !== resetKey) { st.key = resetKey; st.H = new Map(); st.sig = ''; st.lastTop = null; } // filtre / sıralama değişti: ölçüler geçersiz
   const C = cols * Math.max(1, Math.ceil(8 / cols)); // parça küçük: kaydırırken yeni kartlar az az gelsin (16 iken tek karede takılıyordu)
@@ -921,7 +922,7 @@ function WinUL({ className, items, render, resetKey }) {
     const set = new Set();
     for (let i = 0; i < chunks.length; i++) { const h = hOf(i, chunks[i].length); if (h == null || (tops[i] < hi && tops[i] + h > lo)) set.add(i); }
     const sig = C + ':' + [...set].join(',');
-    if (sig !== st.sig) { st.sig = sig; setAct({ key: resetKey, C, set }); }
+    if (sig !== st.sig) { st.sig = sig; if (!live && set.size === chunks.length) return; setAct({ key: resetKey, C, set }); } // hepsi açıkken boşuna yeniden çizme
   };
   const runRef = useRef(run); runRef.current = run;
   const kick = () => { if (!st.raf) st.raf = requestAnimationFrame(() => runRef.current()); };
@@ -932,8 +933,8 @@ function WinUL({ className, items, render, resetKey }) {
     const n = grid ? cs.gridTemplateColumns.split(' ').filter(Boolean).length : 1;
     if (n !== cols) { st.H = new Map(); st.sig = ''; setCols(n); }
   };
-  useLayoutEffect(() => { measureCols(); }, [className]);
-  useLayoutEffect(() => { kick(); });
+  useEffect(() => { const f = requestAnimationFrame(() => measureCols()); return () => cancelAnimationFrame(f); }, [className]); // çizimden SONRA ölç: açılış gecikmesin
+  useEffect(() => { kick(); });
   useEffect(() => {
     const onS = () => kick(); const onR = () => { measureCols(); kick(); };
     addEventListener('scroll', onS, { passive: true, capture: true }); addEventListener('resize', onR);

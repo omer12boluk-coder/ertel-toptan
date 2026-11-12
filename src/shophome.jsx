@@ -162,7 +162,13 @@ function useReveal() {
     const o = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.setAttribute('data-in', ''); o.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
     io.current = o;
     // yedek: bazı tarayıcılarda (arka plandaki sekme, uygulama içi tarayıcı) gözlemci geç kalabiliyor
-    const check = () => el.querySelectorAll('.rv:not([data-in])').forEach((x) => { if (x.getBoundingClientRect().top < innerHeight * 0.95) x.setAttribute('data-in', ''); });
+    // 12.11.2026: ana sayfa GİZLİYKEN (.kp-off, başka sekmedeyken) de her kaydırmada çalışıp bütün sayfayı zorla ölçtürüyordu
+    // (Ürünler'e dönüşte ~85 ms donma, Ürünler'de kaydırırken de). Gizliyken ya da belirmeyi bekleyen bölüm kalmadıysa hiç ölçmez.
+    const check = () => {
+      if (!el.isConnected || el.closest('.kp-off')) return;
+      const rest = el.querySelectorAll('.rv:not([data-in])'); if (!rest.length) return;
+      const lim = innerHeight * 0.95; for (const x of rest) if (x.getBoundingClientRect().top < lim) x.setAttribute('data-in', '');
+    };
     const t = setTimeout(check, 600);
     let rq = 0; const onS = () => { if (!rq) rq = requestAnimationFrame(() => { rq = 0; check(); }); };
     addEventListener('scroll', onS, { passive: true });
