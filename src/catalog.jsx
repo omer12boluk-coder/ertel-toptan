@@ -1101,14 +1101,17 @@ function SwipeImgs({ p }) {
   const S = useStore((s) => s.settings);
   const urls = imageList(p, S, 'sm');
   const [k, setK] = useState(0);
+  // 12.11.2026: diğer resimler parmak karta değince yüklenir. Eskiden her çok resimli kart 8'e kadar resmi hemen indiriyordu: Ürünler'e
+  // her girişte onlarca resim çözülüp takılma yapıyor, ürün açarken ana resimle yarışıp onu geciktiriyordu.
+  const [all, setAll] = useState(false); const wake = () => { if (!all) setAll(true); };
   const ref = useRef(null);
-  const onScroll = () => { const el = ref.current; if (!el) return; const i = Math.round(el.scrollLeft / el.clientWidth); if (i !== k) setK(i); };
+  const onScroll = () => { wake(); const el = ref.current; if (!el) return; const i = Math.round(el.scrollLeft / el.clientWidth); if (i !== k) setK(i); };
   if (urls.length < 2) return <span className="cimg"><Thumb p={p} /></span>;
   return (
     <span className="cimg sw">
-      <span className="cimg-sw" ref={ref} onScroll={onScroll}>
+      <span className="cimg-sw" ref={ref} onScroll={onScroll} onTouchStart={wake} onPointerDown={wake}>
         <span className="cimg-sw-i"><Thumb p={p} /></span>
-        {urls.slice(1, 8).map((u, i) => <span key={i} className="cimg-sw-i"><img src={u} alt="" loading="lazy" draggable="false" /></span>)}
+        {urls.slice(1, 8).map((u, i) => <span key={i} className="cimg-sw-i">{all && <img src={u} alt="" loading="lazy" draggable="false" />}</span>)}
       </span>
       <span className="cimg-dots" aria-hidden="true">{urls.slice(0, 8).map((_, i) => <i key={i} className={i === k ? 'on' : ''} />)}</span>
     </span>
@@ -1230,6 +1233,10 @@ export function Gallery({ p }) {
     : urls[z] ? { t: 'img', u: urls[z], z: z, th: thumbs[z++] || urls[z - 1] } : null).filter(Boolean));
   const [i, setI] = useState(0);
   const [bad, setBad] = useState({});
+  // 12.11.2026: büyük resimler (orijinal boyut) sadece gösterilen resim + yanındakiler için yüklenir. Eskiden ürün açılınca TÜM resimler
+  // (9 resimli üründe 9 büyük dosya) aynı anda iniyordu: ana resim geç geliyor, açılış/geri dönüş takılıyordu. Diğerlerinde küçük resim durur.
+  const [near, setNear] = useState(() => new Set([0]));
+  const want = (ks) => setNear((st) => (ks.every((k) => st.has(k)) ? st : new Set([...st, ...ks])));
   const [zoom, setZoom] = useState(null);
   const track = useRef(null);
   const box = zoom != null && <Lightbox urls={urls} thumbs={thumbs} start={zoom} title={p.n} onClose={() => setZoom(null)} />;
@@ -1266,6 +1273,7 @@ export function Gallery({ p }) {
     };
     addEventListener('keydown', key); return () => removeEventListener('keydown', key);
   }, [slides.length]);
+  useEffect(() => { if (i > 0) want([i - 1, i, i + 1]); }, [i]);
   const onVid = slides[i]?.t === 'vid';
   return (
     <div className="gallery" ref={gref}>
@@ -1279,10 +1287,10 @@ export function Gallery({ p }) {
                 <button className="gal-open" onClick={() => setZoom(x.z)} aria-label="Resmi büyüt"
                   style={x.th && x.th !== x.u ? { backgroundImage: `url("${x.th}")` } : undefined}>
                   {/* büyük resim gelene kadar listede zaten inmiş küçük resim arkada görünür, büyük gelince yumuşakça üstüne biner (flaş yok) */}
-                  <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading={k ? 'lazy' : 'eager'} decoding="async" className="gal-big"
+                  {near.has(k) && <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading="eager" fetchPriority={k ? 'low' : 'high'} decoding="async" className="gal-big"
                     ref={(el) => { if (el && el.complete && el.naturalWidth) { el.classList.add('in'); el.parentElement.style.backgroundImage = 'none'; } }}
-                    onLoad={(e) => { const im = e.currentTarget; im.classList.add('in'); setTimeout(() => { if (im.parentElement) im.parentElement.style.backgroundImage = 'none'; }, 250); }}
-                    onError={(e) => { if (!fbSkip(e)) setBad((b) => ({ ...b, [k]: 1 })); }} />
+                    onLoad={(e) => { const im = e.currentTarget; im.classList.add('in'); if (k === i) want([k - 1, k + 1].filter((x) => x >= 0)); /* sadece gösterilen resim inince (zincirleme hepsi yüklenmesin) */ setTimeout(() => { if (im.parentElement) im.parentElement.style.backgroundImage = 'none'; }, 250); }}
+                    onError={(e) => { if (!fbSkip(e)) setBad((b) => ({ ...b, [k]: 1 })); }} />}
                 </button>
               )}
             </div>

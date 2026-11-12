@@ -9768,3 +9768,10 @@ html.flm-lock, html.flm-lock body { overflow: hidden; }
 @media (max-width: 899px) {
   html.in-brw:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav { bottom: max(2px, calc(env(safe-area-inset-bottom, 0px) - 12px)); }
 }
+
+/* 12.11.2026 gece modu: renkli zemin üstünde beyaz yazılı logolar (Luban, 2UUL, iFixes) siyah-beyaz filtrede bembeyaz daireye dönüyordu →
+   aynı ölçüde 'oyma' sürümü (beyaz, yazı/şekil delik; hosting/public/brands/*-gece.png). Sadece siyah-beyaz gösterilen yerlerde; renkli gösterimlere dokunmaz.
+   Yeni böyle bir logo eklenirse: aynı ölçüde -gece.png üret (açık pikseller saydam) + buraya satır ekle. */
+html[data-theme="dark"] :is(.pv2-lg, .cd-brand-lg, .cd-lg, .cd-mq-i img, .cd-set-lg img, .cd-bw-lg img)[src*="/brands/luban."], .sh-marquee .sh-mq-logo[src*="/brands/luban."] { content: url(/brands/luban-gece.png); }
+html[data-theme="dark"] :is(.pv2-lg, .cd-brand-lg, .cd-lg, .cd-mq-i img, .cd-set-lg img, .cd-bw-lg img)[src*="/brands/2uul."], .sh-marquee .sh-mq-logo[src*="/brands/2uul."] { content: url(/brands/2uul-gece.png); }
+html[data-theme="dark"] :is(.pv2-lg, .cd-brand-lg, .cd-lg, .cd-mq-i img, .cd-set-lg img, .cd-bw-lg img)[src*="/brands/ifixes."], .sh-marquee .sh-mq-logo[src*="/brands/ifixes."] { content: url(/brands/ifixes-gece.png); }

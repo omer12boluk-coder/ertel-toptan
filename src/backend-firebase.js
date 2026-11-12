@@ -765,8 +765,16 @@ export class FirebaseBackend {
   // → { ok, id, no, items, total } | { ok:false, code:'price', items:[{id, price, gone}] } | { ok:false, error }
   async placeOrderSrv(o, id, check, ts) {
     const tok = o.uid && !check ? await this.idToken() : null;
-    const r = await timeout(fetch(String(window.WATCH_URL || '').replace(/\/$/, '') + '/order', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ id, order: o, ...(check ? { check: true } : {}), ...(ts ? { ts } : {}) }) }), 30000);
-    return await r.json().catch(() => ({ ok: false, error: 'Sunucu cevap vermedi (' + r.status + ')' }));
+    // 12.11.2026: telefonda bağlantı bir an koparsa ('Load failed') sipariş aynı kimlikle 2 kez daha gönderilir (retry: bekçi önce
+    // kayıtlı mı diye bakar → ilk deneme kaydettiyse onu döndürür, ikinci sipariş/bildirim olmaz). Sunucunun verdiği cevap (hata dahil) tekrarlanmaz.
+    const url = String(window.WATCH_URL || '').replace(/\/$/, '') + '/order';
+    for (let k = 0; ; k++) {
+      let r;
+      try { r = await timeout(fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ id, order: o, ...(check ? { check: true } : {}), ...(ts ? { ts } : {}), ...(k ? { retry: k } : {}) }) }), 30000); }
+      catch (e) { if (k >= 2) throw e; await new Promise((ok) => setTimeout(ok, k ? 2000 : 800)); continue; }
+      if (r.status >= 500 && k < 2) { await new Promise((ok) => setTimeout(ok, k ? 2000 : 800)); continue; } // sunucu bir an cevap veremedi
+      return await r.json().catch(() => ({ ok: false, error: 'Sunucu cevap vermedi (' + r.status + ')' }));
+    }
   }
   async placeOrder(o, id) { const ref = this.F.doc(this.c('orders'), id || this.newOrderId()); await timeout(this.F.setDoc(ref, o)); return ref.id; }
   // REST ile tek belge (giriş varsa oturum anahtarıyla)

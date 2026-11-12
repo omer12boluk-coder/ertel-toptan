@@ -1444,6 +1444,9 @@ async function tsVerify(env, tok, req) {
     const j = await r.json(); return { ok: !!j.success, codes: j['error-codes'] };
   } catch { return { ok: true, down: true }; }
 }
+// aynı kimlikle tekrar gelen sipariş, kayıtlı olanla aynı kişinin mi (üye / e-posta / telefon) — 12.11.2026 otomatik tekrar deneme
+function sameOrd(ex, uid, c) { return !!ex && ex.via === 'srv' && (ex.uid || null) === (uid || null) && !!c && String(ex.contact?.email || '') === String(c.email || '') && String(ex.contact?.phone || '') === String(c.phone || ''); }
+const againOf = (ex, id) => ({ ok: true, id, no: ex.no, total: ex.total, items: ex.items, ...(ex.sum ? { sum: ex.sum } : {}), again: true });
 async function placeOrder(req, env, b, ctx) {
   const id = String(b.id || ''); const o = b.order || {};
   if (!/^[A-Za-z0-9]{15,40}$/.test(id)) return { ok: false, error: 'Geçersiz sipariş kimliği' };
@@ -1527,6 +1530,8 @@ async function placeOrder(req, env, b, ctx) {
   if (b.check) return { ok: true, check: true }; // sadece fiyat kontrolü (siparişte üye olurken hesap açmadan önce)
   // Robot koruması (Turnstile, 7.11.2026): gerçek siparişte tarayıcıdan gelen tek kullanımlık jeton Cloudflare'e doğrulatılır.
   // Geçiş süresi (TS_GRACE'e kadar): jetonsuz gelen (eski sürüm açık kalmış) sipariş kabul edilir; jeton varsa ve geçersizse reddedilir.
+  // 12.11.2026: telefonun OTOMATİK tekrar denemesi (bağlantı koptu): sipariş ilk denemede kaydedildiyse jeton zaten kullanıldı → önce kayıt aranır
+  if (b.retry && !b.check) { const ex = await fsDoc('orders/' + id).catch(() => null); if (sameOrd(ex, uid, o.contact)) return againOf(ex, id); }
   { const v = await tsVerify(env, b.ts, req); if (!v.ok) return { ok: false, code: 'bot', error: 'Güvenlik doğrulaması tamamlanamadı. Sayfayı yenileyip tekrar deneyin.' }; }
   const t = Date.now(); const rate = sum ? { usd: sum.rate } : await haremRate().catch(() => null);
   const doc = {
@@ -1540,6 +1545,12 @@ async function placeOrder(req, env, b, ctx) {
   if (typeof doc.note === 'string') doc.note = doc.note.slice(0, 1000);
   if (JSON.stringify(doc).length > 200000) return { ok: false, error: 'Sipariş çok büyük' };
   const w = await fsCreate(env, 'orders', id, doc);
+  if (!w.ok && w.exists) {
+    // 12.11.2026: telefon bağlantısı koptuğunda aynı sipariş (aynı kimlik) otomatik tekrar gönderilir. İlk istek kaydedip cevabı müşteriye
+    // ulaşamadıysa ikinci istek 'zaten kayıtlı' hatası vermesin: aynı kişinin siparişiyse kayıtlı hâli başarı olarak döner (ikinci kayıt/bildirim yok).
+    const ex = await fsDoc('orders/' + id).catch(() => null);
+    if (sameOrd(ex, doc.uid, doc.contact)) return againOf(ex, id);
+  }
   if (!w.ok) return { ok: false, error: w.exists ? 'Bu sipariş zaten kayıtlı' : 'Sipariş kaydedilemedi, tekrar deneyin' };
   await env.KV.put(kr, String(nr + 1), { expirationTtl: 7200 });
   ctx.waitUntil(notifyOrder(env, id, true).catch((e) => console.log('notify', e.message)));

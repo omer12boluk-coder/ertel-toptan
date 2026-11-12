@@ -1315,11 +1315,12 @@ function setupNavAnim() {
     const shell = document.querySelector('.shell');
     if (tries < 3 && shell && !shell.classList.contains('tab-' + store.s.tab)) { pend = requestAnimationFrame(() => runKey(tries + 1)); return; }
     const prev = last; last = k; click = null;
+    if (!watched?.isConnected) { attach(); last = k; } // 12.11.2026: siteye doğrudan bir sayfa adresiyle girilince ilk geçiş animasyonsuz kalıyordu
     if (!on() || !watched?.isConnected) return;
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
     // 5.11.2026 alt menüyle sekme değişimi de yandan kayar: sağdaki sekmeye geçince sağdan, soldakine geçince soldan (iOS sekme hissi)
     const ti = navIdx();
-    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : 0; lastIdx = ti; if (d) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 365, 0.6, 0.45); else play([], 'tab', 180); return; } // 12.11.2026: alt menü geçişinde örtü %45'ten başlar — tam beyaz ilk kare hızlı geçişte 'göz kırpma' gibi görünüyordu
+    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : ti >= 0 ? (ti === 0 ? -1 : 1) : 0; /* 12.11.2026: alt menüde olmayan sayfadan (Markalar…) dönüşte de kayar: Ana sayfa soldan, diğerleri sağdan (eskiden animasyonsuzdu) */ lastIdx = ti; if (d) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 365, 0.6); else play([], 'tab', 180); return; } // (12.11.2026 örtüyü %45'ten başlatma denendi, GERİ ALINDI: yeni sayfa ilk 1–5 karede henüz çizilmemiş (boş) geliyor, tam örtü bunu saklıyordu; yarı saydamda her geçiş pürüzlü göründü)
     lastIdx = ti;
     // 6.11.2026: bilgisayarda Hesabım içinde bölüm değişince (sol menü sabit) bütün sayfa kayıp örtü solmasın — ekran 'sekiyordu';
     // sadece sağdaki içerik kısa ve hafif kayarak belirir, sol menü yerinden oynamaz
