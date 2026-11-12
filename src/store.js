@@ -187,7 +187,7 @@ export function startHistory(defTab) {
     const tab = st.tab || tabFromPath() || defTab();
     store.set({ urunLayer: tab === 'urun' ? store.s.urunLayer : false, tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, setId: tab === 'set' ? st.setId ?? (/\/set\/([\w-]+)/.exec(lpath()) || [])[1] ?? null : null, openOrder: st.openOrder || null, openReq: st.openReq || null, lcOpen: st.lcOpen || null, orderJust: false });
     // ilk karede (React çizdikten hemen sonra) yerine kaydır → üstte bir kare görünüp zıplamaz; içerik geç uzarsa bir kez daha
-    requestAnimationFrame(() => { window.scrollTo(0, st.y || 0); requestAnimationFrame(() => { if (Math.abs(scrollY - (st.y || 0)) > 2) window.scrollTo(0, st.y || 0); }); });
+    const yy = Math.round(st.y || 0); requestAnimationFrame(() => { window.scrollTo(0, yy); requestAnimationFrame(() => { if (Math.abs(scrollY - yy) > 2) window.scrollTo(0, yy); }); });
   });
 }
 // arkada açık kalan sekmeler (mağaza: ana sayfa, Tüm ürünler) dönünce kaldığı yerden devam eder
@@ -195,7 +195,9 @@ const tabY = {};
 const KEEP = ['anasayfa', 'katalog'];
 export function go(tab) {
   const from = store.s.tab;
-  if (KEEP.includes(from) && !store.s.acct && !store.s.openOrder) tabY[from] = scrollY;
+  // 12.11.2026: konum TAM piksele yuvarlanır — iPhone küsuratlı (ör. 1520,67) bırakıyordu; dönüşte geçiş animasyonu bitince sayfa
+  // farklı yuvarlamayla yeniden çizilip her şey ~1 px yukarı 'oturuyordu' (kullanıcı videosu, 60 kare/sn)
+  if (KEEP.includes(from) && !store.s.acct && !store.s.openOrder) tabY[from] = Math.round(scrollY);
   if (tab !== from || store.s.openOrder || store.s.openReq || store.s.acct || store.s.lcOpen) pushTab(tab);
   const y = tab !== from && (store.s.user?.role === 'public' || (store.s.user?.role === 'admin' && tab === 'katalog')) && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
   // zaten o sayfadaysak (alt menüde aynı sekmeye tekrar basmak) en üste ŞAK diye atlamak yerine yumuşakça kayarak çıkılır
@@ -204,7 +206,7 @@ export function go(tab) {
   if (same) store.set({ tabTap: (store.s.tabTap || 0) + 1 }); // aynı sekmeye tekrar basıldı (ör. Ayarlar içindeyken Ayarlar → ana ekran)
   if (same && !store.s.catalogGo) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   window.scrollTo(0, 0);
-  if (y) requestAnimationFrame(() => window.scrollTo(0, y)); // gizli sayfa görünür olduktan sonra (React çizdikten sonraki ilk kare)
+  if (y) requestAnimationFrame(() => window.scrollTo(0, Math.round(y))); // gizli sayfa görünür olduktan sonra (React çizdikten sonraki ilk kare)
 }
 // sipariş açılınca adres de değişir (31.10.2026): eskiden adres eski sayfada kalıyordu (mağazada /sepet, yönetimde /admin/urunler)
 // → yenileyince / uygulamayı kapatıp açınca oraya dönüyordu
