@@ -882,7 +882,7 @@ function WinUL({ className, items, render, resetKey }) {
   const st = useRef({ H: new Map(), gap: 0, rowH: 0, key: null, raf: 0, sig: '' }).current;
   const [cols, setCols] = useState(1);
   const [act, setAct] = useState(null);
-  if (st.key !== resetKey) { st.key = resetKey; st.H = new Map(); st.sig = ''; } // filtre / sıralama değişti: ölçüler geçersiz
+  if (st.key !== resetKey) { st.key = resetKey; st.H = new Map(); st.sig = ''; st.lastTop = null; } // filtre / sıralama değişti: ölçüler geçersiz
   const C = cols * Math.max(1, Math.ceil(8 / cols)); // parça küçük: kaydırırken yeni kartlar az az gelsin (16 iken tek karede takılıyordu)
   const chunks = []; for (let i = 0; i < items.length; i += C) chunks.push(items.slice(i, i + C));
   const live = act && act.key === resetKey && act.C === C ? act.set : null;
@@ -890,7 +890,14 @@ function WinUL({ className, items, render, resetKey }) {
   const run = () => {
     st.raf = 0;
     const el = ul.current; if (!el || !el.isConnected) return;
-    const r = el.getBoundingClientRect(); if (!r.height) return; // gizli sayfa (.kp-off): ölçme
+    if (el.closest('.kp-off')) return; // gizli sayfa: dokunma (gizliyken de boyu ölçülebiliyor → kartları söküyordu; dönüşte resimler baştan yükleniyordu)
+    const r = el.getBoundingClientRect(); if (!r.height) return;
+    // 12.11.2026 (2): sayfa değişip dönerken kaydırma konumu bir an 0'a gidip geri geliyor → liste 'en üstteyim' sanıp görünen kartları
+    // söküp yeniden kuruyordu (resimler baştan yükleniyordu). Konum tek karede 3 ekrandan fazla sıçradıysa 250 ms beklenir;
+    // sıçrama geçiciyse (dönüş) hiçbir kart sökülmez, kalıcıysa (gerçek atlama) o zaman yeni yere göre kurulur.
+    if (st.jump) return;
+    if (st.lastTop != null && !st.jumpOk && Math.abs(r.top - st.lastTop) > innerHeight * 3) { st.jump = setTimeout(() => { st.jump = 0; st.jumpOk = true; kick(); }, 250); return; }
+    st.jumpOk = false; st.lastTop = r.top;
     const kids = el.children; let p = 0; const tops = [];
     for (let i = 0; i < chunks.length; i++) {
       const c = kids[p]; if (!c) return;
@@ -919,7 +926,7 @@ function WinUL({ className, items, render, resetKey }) {
   const runRef = useRef(run); runRef.current = run;
   const kick = () => { if (!st.raf) st.raf = requestAnimationFrame(() => runRef.current()); };
   const measureCols = () => {
-    const el = ul.current; if (!el || !el.getBoundingClientRect().height) return;
+    const el = ul.current; if (!el || el.closest('.kp-off') || !el.getBoundingClientRect().height) return;
     const cs = getComputedStyle(el); const grid = cs.display === 'grid';
     st.gap = grid ? parseFloat(cs.rowGap) || 0 : 0;
     const n = grid ? cs.gridTemplateColumns.split(' ').filter(Boolean).length : 1;
