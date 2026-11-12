@@ -9800,10 +9800,11 @@ html[data-theme="dark"] :is(.pv2-lg, .cd-brand-lg, .cd-lg, .cd-mq-i img, .cd-set
 /* 12.11.2026 iPhone: sayfa geçişinde (html.nav-mv, ~400 ms) yana kaydırılan kutular (çok resimli kart resmi, banner, raflar, kategori hapları)
    ayrı kaydırma katmanında YANLIŞ YERDE çiziliyordu (videoda ürün fotoğrafları sayfadan önce havada belirdi). Geçiş süresince kaydırılamaz
    (overflow: hidden konumu korur, katman oluşmaz), bitince eski hâline döner. */
-html.nav-mv .main :is(.cimg-sw, .sh-hero-track, .sh-rail, .cd-rail, .p0-pr-rail, .pv2-pills, .pair-list) { overflow: hidden !important; }
+/* (12.11.2026 banner/raflar/haplar da eklenmişti → iPhone'da Ana sayfaya gelince geçiş bitince (~0,5 sn) sayfa milim oynadı; SADECE kart resmi kaldı) */
+html.nav-mv .main .cimg-sw { overflow: hidden !important; }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'afda9f933f';</script>
+<script>window.__BUILD = '93e7bc8997';</script>
 </head>
 <body>
 <div id="root"></div>
