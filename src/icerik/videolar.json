@@ -43,5 +43,48 @@
      {"k": "tx", "s": "s", "txt": "Sesli komutla çalışan 1300W\nsıcak hava istasyonu.", "col": "#c7c7cc", "a": "rise", "d": 0.55, "w": {"x": 110, "y": 470, "fs": 30}, "t": {"x": 400, "y": 320, "fs": 26, "c": 1}},
      {"k": "btns", "a": "rise", "d": 0.65, "w": {"x": 110, "y": 580, "fs": 24}, "t": {"x": 400, "y": 408, "fs": 24, "c": 1}}]}
   ]
- }
+ },
+ {
+   "id": "t420",
+   "name": "Aixun T420D",
+   "p": 2745,
+   "logo": "/brands/aixun.png",
+   "logoWhite": true,
+   "logoY": 0,
+   "acc": "#f5a54a",
+   "total": 14.8,
+   "scenes": [
+    {"t0": 0, "bg": "#1a0a03", "in": "cut", "els": [
+      {"k": "blobs", "a": "fade", "d": 0, "w": {"x": 0, "y": 0, "wd": 1600, "ht": 900}, "t": {"x": 0, "y": 0, "wd": 800, "ht": 1000}},
+      {"k": "eye", "txt": "Yeni", "a": "rise", "d": 0.25, "w": {"x": 800, "y": 330, "h": 48, "c": 1}, "t": {"x": 400, "y": 390, "h": 40, "c": 1}},
+      {"k": "tx", "s": "xl", "txt": "T420D", "col": "#fff", "a": "mask", "d": 0.55, "w": {"x": 800, "y": 415, "fs": 96, "c": 1}, "t": {"x": 400, "y": 465, "fs": 80, "c": 1}},
+      {"k": "tx", "s": "s", "txt": "İki el, tek gövde.", "col": "rgba(255,255,255,.82)", "a": "rise", "d": 1.0, "w": {"x": 800, "y": 535, "fs": 34, "c": 1}, "t": {"x": 400, "y": 565, "fs": 32, "c": 1}}]},
+    {"t0": 2.2, "bg": "#000", "in": "blur", "els": [
+      {"k": "img", "src": "film-t420-on.webp", "a": "left", "d": 0, "drift": 1, "w": {"x": 880, "y": 50, "wd": 640}, "t": {"x": 190, "y": 440, "wd": 420}},
+      {"k": "tx", "s": "s", "txt": "Çift kanal", "acc": 1, "a": "rise", "d": 0.25, "w": {"x": 110, "y": 330, "fs": 30}, "t": {"x": 400, "y": 110, "fs": 28, "c": 1}},
+      {"k": "tx", "s": "l", "txt": "İki tutamak,\naynı anda.", "col": "#fff", "a": "rise", "d": 0.35, "w": {"x": 106, "y": 380, "fs": 100}, "t": {"x": 400, "y": 155, "fs": 80, "c": 1}},
+      {"k": "tx", "s": "s", "txt": "İki kanal birlikte çalışır.\nT245, T210 ve T115 tutamak destekler.", "col": "#c7c7cc", "a": "rise", "d": 0.55, "w": {"x": 110, "y": 610, "fs": 32}, "t": {"x": 400, "y": 340, "fs": 28, "c": 1}}]},
+    {"t0": 5.2, "bg": "#000", "in": "wipeUp", "els": [
+      {"k": "tx", "s": "s", "txt": "Hızlı ısınma", "acc": 1, "a": "rise", "d": 0.25, "w": {"x": 110, "y": 250, "fs": 30}, "t": {"x": 400, "y": 110, "fs": 28, "c": 1}},
+      {"k": "tx", "s": "l", "txt": "2 saniyede\n380°C.", "col": "#fff", "a": "rise", "d": 0.35, "w": {"x": 106, "y": 300, "fs": 104}, "t": {"x": 400, "y": 155, "fs": 88, "c": 1}},
+      {"k": "tx", "s": "s", "txt": "400 W tepe güç, halka trafo.\nBeklemeden lehime başla.", "col": "#c7c7cc", "a": "rise", "d": 0.55, "w": {"x": 110, "y": 540, "fs": 32}, "t": {"x": 400, "y": 355, "fs": 30, "c": 1}},
+      {"k": "num", "from": 90, "to": 380, "unit": "°C", "at": [0.8, 2.0], "a": "fade", "d": 0.6, "w": {"x": 1140, "y": 330, "fs": 190, "c": 1, "wd": 700}, "t": {"x": 400, "y": 600, "fs": 160, "c": 1}}]},
+    {"t0": 8.2, "bg": "#f5f5f7", "light": 1, "in": "circle", "els": [
+      {"k": "tx", "s": "l", "txt": "Her derecede hassas.", "col": "#1d1d1f", "a": "rise", "d": 0.3, "w": {"x": 800, "y": 120, "fs": 80, "c": 1}, "t": {"x": 400, "y": 130, "fs": 60, "c": 1}},
+      {"k": "card", "v": "400 W", "l": "Tepe güç", "a": "up", "d": 0.5, "w": {"x": 120, "y": 330, "wd": 420, "ht": 330, "fs": 72}, "t": {"x": 100, "y": 270, "wd": 600, "ht": 190, "fs": 66}},
+      {"k": "card", "v": "90–450°C", "l": "Sıcaklık aralığı", "a": "up", "d": 0.65, "w": {"x": 590, "y": 330, "wd": 420, "ht": 330, "fs": 72}, "t": {"x": 100, "y": 480, "wd": 600, "ht": 190, "fs": 66}},
+      {"k": "card", "v": "%1 altı", "l": "Sıcaklık sapması", "a": "up", "d": 0.8, "w": {"x": 1060, "y": 330, "wd": 420, "ht": 330, "fs": 72}, "t": {"x": 100, "y": 690, "wd": 600, "ht": 190, "fs": 66}}]},
+    {"t0": 10.6, "bg": "#ffffff", "light": 1, "in": "push", "els": [
+      {"k": "img", "src": "film-t420-t115.webp", "a": "right", "d": 0.15, "drift": 1, "w": {"x": 840, "y": 130, "wd": 720}, "t": {"x": 130, "y": 460, "wd": 560}},
+      {"k": "tx", "s": "l", "txt": "JBC uçlarıyla\nuyumlu.", "col": "#1d1d1f", "a": "rise", "d": 0.35, "w": {"x": 110, "y": 290, "fs": 96}, "t": {"x": 400, "y": 130, "fs": 68, "c": 1}},
+      {"k": "tx", "s": "s", "txt": "Isınma hızı ve sıcaklık kontrolü\nJBC uçlarıyla birebir.", "col": "#6e6e73", "a": "rise", "d": 0.55, "w": {"x": 113, "y": 520, "fs": 34}, "t": {"x": 400, "y": 290, "fs": 30, "c": 1}}]},
+    {"t0": 13.0, "bg": "#000", "in": "wipeRight", "end": 1, "els": [
+      {"k": "img", "src": "film-t420-on.webp", "a": "fade", "d": 0.1, "w": {"x": 910, "y": 70, "wd": 620}, "t": {"x": 225, "y": 480, "wd": 350}},
+      {"k": "eye", "txt": "Yeni", "a": "rise", "d": 0.3, "w": {"x": 110, "y": 205, "h": 40}, "t": {"x": 400, "y": 110, "h": 34, "c": 1}},
+      {"k": "tx", "s": "xl", "txt": "T420D", "col": "#fff", "a": "rise", "d": 0.4, "w": {"x": 106, "y": 275, "fs": 100}, "t": {"x": 400, "y": 165, "fs": 84, "c": 1}},
+      {"k": "tx", "s": "s", "txt": "İki el, tek gövde.", "col": "#fff", "a": "rise", "d": 0.5, "w": {"x": 110, "y": 400, "fs": 46}, "t": {"x": 400, "y": 265, "fs": 38, "c": 1}},
+      {"k": "tx", "s": "s", "txt": "200W çift kanallı akıllı\nhavya istasyonu.", "col": "#c7c7cc", "a": "rise", "d": 0.55, "w": {"x": 110, "y": 470, "fs": 30}, "t": {"x": 400, "y": 320, "fs": 26, "c": 1}},
+      {"k": "btns", "a": "rise", "d": 0.65, "w": {"x": 110, "y": 580, "fs": 24}, "t": {"x": 400, "y": 408, "fs": 24, "c": 1}}]}
+   ]
+  }
 ]
