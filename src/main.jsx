@@ -1286,7 +1286,19 @@ function setupNavAnim() {
     // (WebKit: hareket eden katman üstünde backdrop-filter). Geçiş süresince menüler neredeyse opak (html.nav-mv), bitince eski cam.
     const R = document.documentElement; R.classList.add('nav-mv'); clearTimeout(R.__nmv); R.__nmv = setTimeout(() => R.classList.remove('nav-mv'), (kind === 'tab' ? Math.min(ms, 220) : ms) + 80);
     as.forEach((a) => a.pause());
-    requestAnimationFrame(() => as.forEach((a) => { try { a.play(); } catch {} }));
+    requestAnimationFrame(() => { as.forEach((a) => { try { a.play(); } catch {} }); hold(as); });
+  };
+  // 12.11.2026 (kullanıcı videosu, 60 kare/sn): Ana sayfaya geçerken telefon ağır banner'ları basarken 2 kare donuyor, animasyonun saati
+  // işlemeye devam ettiği için sayfa sonra birden ileri SIÇRIYORDU ('takıla takıla geçiyor'). Geçişin ilk ~0,45 sn'sinde bir kare geç
+  // gelirse (>28 ms) animasyonlar o kadar geri alınır: donma anında sıçrama olmaz, kaldığı yerden yumuşak devam eder.
+  const hold = (as) => {
+    let last = performance.now(); const t0 = last;
+    const tick = () => {
+      const now = performance.now(); const d = now - last; last = now;
+      if (d > 28) { const back = d - 16.7; for (const a of as) { try { if (a.playState === 'running') a.currentTime = Math.max(0, (a.currentTime || 0) - back); } catch {} } }
+      if (now - t0 < 450 && as.some((a) => a.playState === 'running')) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   };
   const pageTargets = (main) => {
     const layer = main.querySelector?.(':scope > .pp-layer'); if (layer) return [layer]; // ürün katmanı açılırken sadece o kayar
