@@ -914,7 +914,11 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }
     const el = track.current; if (!el || !('IntersectionObserver' in window)) return;
     const io = new IntersectionObserver(([e]) => {
       const v = e.isIntersecting && e.boundingClientRect.height > 0; setVis(v);
-      if (v) { const k = Math.max(0, Math.min(n - 1, Math.round(el.scrollLeft / (step(el) || 1)))); target.current = null; setI(k); setPlay(k); }
+      // 12.11.2026: kendiliğinden kayma yarıdayken sayfa değişince banner iki reklamın arasında donup dönüşte yarım görünüyordu →
+      // gizlenirken de görünürken de en yakın reklama ANINDA (kaymasız) hizalanır
+      const k = Math.max(0, Math.min(n - 1, Math.round(el.scrollLeft / (step(el) || 1)))); const want = k * step(el);
+      if (Math.abs(el.scrollLeft - want) > 1) el.scrollTo({ left: want, behavior: 'instant' });
+      if (v) { target.current = null; setI(k); setPlay(k); }
     });
     io.observe(el); return () => io.disconnect();
   }, [n]);
