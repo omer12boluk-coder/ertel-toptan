@@ -1194,8 +1194,11 @@ function setupResumeFix() {
       const rb = nav.getBoundingClientRect().bottom - cur; // itme olmadan menünün altı
       let d = Math.round(want - rb); if (d < 24) d = 0; // sadece aşağı (yukarı itmek menüyü ortaya taşıyordu) // küçük farklar (esneme, adres çubuğu) yok sayılır
       if (d !== cur) { cur = d; d ? r.style.setProperty('--vvd', d + 'px') : r.style.removeProperty('--vvd'); }
-      if (d && Date.now() - lastFix > 1500) { lastFix = Date.now(); fix(); }
+      // 12.11.2026: ekranı yeniden ölçtürme (fix: kaydırma konumunu oynatır) kullanıcı KAYDIRIRKEN yapılmaz — kaydırmayı bozup takılma yapıyordu;
+      // kaydırma durunca yapılır. İtme (--vvd) beklemeden uygulanır.
+      if (d && Date.now() - lastFix > 1500) { if (Date.now() - lastScr < 600) { clearTimeout(fixT); fixT = setTimeout(req, 650); } else { lastFix = Date.now(); fix(); } }
     };
+    let lastScr = 0, fixT = 0; addEventListener('scroll', () => { lastScr = Date.now(); }, { passive: true });
     const req = () => { if (!q) q = requestAnimationFrame(upd); };
     vv.addEventListener('resize', req); vv.addEventListener('scroll', req); addEventListener('resize', req); addEventListener('scroll', req, { passive: true }); addEventListener('pageshow', req);
     document.addEventListener('focusout', () => setTimeout(req, 150)); document.addEventListener('visibilitychange', () => setTimeout(req, 300));
@@ -1264,7 +1267,7 @@ function setupNavAnim() {
     for (let i = 0; i < n; i++) { const o0 = coverKf[i].offset ?? i / n, o1 = coverKf[i + 1].offset ?? (i + 1) / n; if (p <= o1) { a = { ...coverKf[i], offset: o0 }; b = { ...coverKf[i + 1], offset: o1 }; break; } }
     const f = b.offset > a.offset ? (p - a.offset) / (b.offset - a.offset) : 1; return a.opacity + (b.opacity - a.opacity) * Math.min(1, Math.max(0, f));
   };
-  const play = (els, kind, ms0, dk = 1) => {
+  const play = (els, kind, ms0, dk = 1, c0 = 1) => { // c0: örtünün başlangıç saydamlığı (1 = tam)
     const busy = live.some((a) => a.playState === 'running' || a.playState === 'paused');
     const cur = busy ? coverNow() : null;
     for (const a of live) { try { a.cancel(); } catch {} } live = [];
@@ -1274,8 +1277,8 @@ function setupNavAnim() {
     if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -dx : dx}px,0,0)` }, { transform: 'translate3d(0,0,0)' }]; for (const el of els) as.push(el.animate(kf, { duration: ms, easing: M.ease, id: 'nav' })); }
     const cv = getCover(); cv.classList.toggle('glass', !!M.glass);
     const top = (v) => (cur == null ? v : Math.min(v, cur)); // yarım kalan geçişten devam: örtü yukarı sıçramaz
-    const k0 = top(kind === 'tab' ? 0.65 : 1);
-    coverKf = M.glass ? [{ opacity: top(kind === 'tab' ? 0.8 : 1) }, { opacity: top(0.6), offset: 0.35 }, { opacity: 0 }]
+    const k0 = top(kind === 'tab' ? 0.65 : c0);
+    coverKf = M.glass ? [{ opacity: top(kind === 'tab' ? 0.8 : c0) }, { opacity: top(0.6), offset: 0.35 }, { opacity: 0 }]
       : M.cv && kind !== 'tab' ? [{ opacity: k0 }, { opacity: 0, offset: M.cv }, { opacity: 0 }] : [{ opacity: k0 }, { opacity: 0 }];
     as.push(coverA = cv.animate(coverKf, { duration: kind === 'tab' ? Math.min(ms, 220) : ms, easing: M.glass ? 'ease-out' : kind === 'tab' ? EASE : 'cubic-bezier(.2,.6,.3,1)' }));
     live = as;
@@ -1316,7 +1319,7 @@ function setupNavAnim() {
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
     // 5.11.2026 alt menüyle sekme değişimi de yandan kayar: sağdaki sekmeye geçince sağdan, soldakine geçince soldan (iOS sekme hissi)
     const ti = navIdx();
-    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : 0; lastIdx = ti; if (d) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 365, 0.6); else play([], 'tab', 180); return; }
+    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : 0; lastIdx = ti; if (d) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 365, 0.6, 0.45); else play([], 'tab', 180); return; } // 12.11.2026: alt menü geçişinde örtü %45'ten başlar — tam beyaz ilk kare hızlı geçişte 'göz kırpma' gibi görünüyordu
     lastIdx = ti;
     // 6.11.2026: bilgisayarda Hesabım içinde bölüm değişince (sol menü sabit) bütün sayfa kayıp örtü solmasın — ekran 'sekiyordu';
     // sadece sağdaki içerik kısa ve hafif kayarak belirir, sol menü yerinden oynamaz

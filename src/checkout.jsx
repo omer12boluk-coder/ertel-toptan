@@ -3,7 +3,7 @@
 //   OrderPage  sipariş alındı / takip sayfası (/magaza/s/<no>)
 //   Account    Hesabım: giriş, üye ol, şifre sıfırlama, siparişlerim, adreslerim, bilgilerim
 // Misafir de sipariş verebilir (bilgileri her seferinde yazar); üye olunca bilgileri otomatik dolar (ekranda görür, değiştirebilir).
-import { tsToken } from './turnstile.js';
+import { tsToken, tsPrefetch } from './turnstile.js';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore, store, api, toast, go, clearCart, openOrder, openAcct, orderSeen, unseenOrders, setCatalog } from './store.js';
@@ -168,6 +168,10 @@ function useFixedSum(sideRef, sumRef) {
   }, []);
 }
 export function Checkout({ items, onBack, single }) { // single: "Hemen satın al" — sadece o ürün; sepete dokunulmaz
+  useEffect(() => { // robot kontrolü önceden hazırlanır + sipariş sunucusuna bağlantı önceden açılır: 'Siparişi tamamla' beklemesin (12.11.2026)
+    tsPrefetch();
+    try { for (const u of [window.WATCH_URL, 'https://challenges.cloudflare.com']) { const o = u && new URL(u).origin; if (o && !document.querySelector(`link[rel=preconnect][href="${o}"]`)) { const l = document.createElement('link'); l.rel = 'preconnect'; l.href = o; l.crossOrigin = ''; document.head.appendChild(l); } } } catch {}
+  }, []);
   const { settings: S, member, api: A } = useStore();
   const O = S.orders || {};
   const sideRef = useRef(null), sumRef = useRef(null);

@@ -8318,6 +8318,8 @@ html[data-theme="dark"] .pl-demo-tag { color: #e6a466; }
 }
 /* iPhone sayfa alanını kısa sanınca alttaki sabit öğeler görünen ekranın altına itilir (main.jsx setupResumeFix --vvd) */
 .botnav { translate: 0 var(--vvd, 0px); }
+/* 12.11.2026: 'yukarı çık' düğmesi de menüyle birlikte ortaya kayıyordu (videoda ikisi aynı anda) → aynı itme */
+.pv2-top { translate: 0 var(--vvd, 0px); }
 
 
 /* ===== 6.11.2026 Gece renkleri 'Grafit (panel)' (html.th-dash.nt-gr, look.night varsayılan): mağaza gecesi yönetim panelinin

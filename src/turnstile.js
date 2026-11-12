@@ -13,8 +13,22 @@ const load = () => loadP || (loadP = new Promise((ok, bad) => {
 }));
 export const tsOn = () => /(^|\.)ertelmarket\.com$/.test(location.hostname);
 // jeton | null (servis yüklenemedi / süre doldu → bekçi geçiş süresinde kabul eder)
+// 12.11.2026: 'Siparişi tamamla'ya basınca servis SIFIRDAN yükleniyor + kontrol çalışıyordu → bekleme ekranı birkaç saniye takılı
+// kalıyordu. Artık ödeme sayfası açılınca (tsPrefetch) arka planda hazırlanır; basınca hazır jeton kullanılır (jeton ~5 dk geçerli,
+// 4 dk'dan eskiyse yenisi alınır). Önceden hazırlarken Cloudflare soru sormak isterse (kutu) vazgeçilir; basınca eskisi gibi kutu çıkar.
+let pre = null;
+export function tsPrefetch() {
+  if (!tsOn() || (pre && Date.now() - pre.at < 240000)) return;
+  const p = getTok(90000, true); pre = { at: Date.now(), p };
+  p.then((v) => { if (!v && pre?.p === p) pre = null; });
+}
 export async function tsToken(ms = 90000) {
   if (!tsOn()) return null;
+  if (pre && Date.now() - pre.at < 240000) { const p = pre.p; pre = null; const v = await p; if (v) return v; }
+  pre = null;
+  return getTok(ms, false);
+}
+async function getTok(ms, quiet) {
   let T; try { T = await Promise.race([load(), new Promise((_, r) => setTimeout(() => r(new Error('ts')), 10000))]); } catch { return null; }
   let box = document.getElementById('ts-box');
   if (!box) {
@@ -22,15 +36,17 @@ export async function tsToken(ms = 90000) {
     box.innerHTML = '<b>Güvenlik kontrolü</b><span>Siparişinizi tamamlamak için kutuyu işaretleyin.</span><div class="ts-w"></div>';
     document.body.appendChild(box);
   }
-  const w = box.querySelector('.ts-w');
+  // sessiz hazırlık kendi gizli kutusunda (ekranda hiçbir şey çıkmaz)
+  let w = box.querySelector('.ts-w');
+  if (quiet) { w = document.createElement('div'); w.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden'; document.body.appendChild(w); }
   return new Promise((ok) => {
     let done = false, wid = null;
-    const fin = (v) => { if (done) return; done = true; clearTimeout(t); box.classList.remove('on'); try { if (wid != null) T.remove(wid); } catch {} ok(v); };
+    const fin = (v) => { if (done) return; done = true; clearTimeout(t); if (!quiet) box.classList.remove('on'); try { if (wid != null) T.remove(wid); } catch {} if (quiet) w.remove(); ok(v); };
     const t = setTimeout(() => fin(null), ms);
     try {
       wid = T.render(w, { sitekey: SITE_KEY, appearance: 'interaction-only', language: 'tr', action: 'order',
         callback: (tok) => fin(tok), 'error-callback': () => { fin(null); return true; }, 'expired-callback': () => fin(null),
-        'before-interactive-callback': () => box.classList.add('on') });
+        'before-interactive-callback': () => (quiet ? fin(null) : box.classList.add('on')) });
     } catch { fin(null); }
   });
 }
