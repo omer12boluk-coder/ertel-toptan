@@ -1166,7 +1166,24 @@ function setupResumeFix() {
     // bildirince o değer kalıcı kaydoluyor, menü ekranın altından taşıyordu. Artık: menü sadece AŞAĞI itilir (görünen alan kısa
     // bildirildiğinde yukarı, ekranın ortasına itilmez); uzun aradan dönüşte sayfa zaten yenilenir (yukarıda).
     try { localStorage.removeItem('vv-good'); } catch {}
-    const visBottom = () => vv.height;
+    // 12.11.2026: bozulunca iPhone görünen alanı da (vv.height) kısa bildiriyor (klavye açıkmış gibi; ekranın ~%57'si) → ölçecek doğru
+    // değer kalmıyor, menü ortada kalıyordu. Açılışta (uygulama yeni açılınca ölçü hep doğru) birkaç kez ölçülüp EN KÜÇÜĞÜ 'sağlıklı
+    // yükseklik' sayılır: sadece bellekte (kalıcı kayıt yok → 6.11'deki 'uzun ölçü kaydoldu' hatası olmaz), ekran dönünce yeniden
+    // ölçülür, ekran boyuna göre mantıksızsa kullanılmaz. Yazı alanı açık değilken görünen alan bundan kısaysa bu değer esas alınır.
+    const port = () => (screen.orientation?.type ? !/landscape/.test(screen.orientation.type) : Math.abs(window.orientation || 0) !== 90);
+    let good = 0, goodPort = port(), samp = [];
+    const learn = () => {
+      good = 0; samp = []; goodPort = port();
+      const take = (last) => {
+        if (document.visibilityState === 'visible' && !isField(document.activeElement) && port() === goodPort) samp.push(vv.height);
+        if (!last || samp.length < 2) return;
+        const m = Math.min(...samp); const full = goodPort ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width);
+        if (m <= full + 1 && m >= full * 0.7) good = m;
+      };
+      setTimeout(take, 500); setTimeout(take, 1400); setTimeout(() => take(true), 2600);
+    };
+    learn(); addEventListener('orientationchange', learn); screen.orientation?.addEventListener?.('change', learn);
+    const visBottom = () => (good && port() === goodPort ? Math.max(vv.height, good) : vv.height);
     const upd = () => {
       q = 0; const nav = document.querySelector('.botnav'); if (!nav || isField(document.activeElement)) { if (cur) { cur = 0; r.style.removeProperty('--vvd'); } return; }
       const cs = getComputedStyle(nav); if (cs.position !== 'fixed' || cs.display === 'none') return;
