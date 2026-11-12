@@ -1282,7 +1282,7 @@ function setupNavAnim() {
     el.style.willChange = 'transform'; lingering.push(el);
     // 12.11.2026 (gece): DOKUNUŞTA bırakmak, alt menüye basınca sayfanın (setler, markalar) bir an milim oynamasına yol açtı →
     // sadece sayfa GERÇEKTEN kaydırılınca bırakılır (fark hareketin içinde kalır); başka sayfaya geçişte play() bırakır (sayfa zaten gizlenir)
-    if (lingering.length === 1 && !lingerOff) { const y0 = scrollY; lingerOff = () => { if (Math.abs(scrollY - y0) >= 3) unlinger(); }; addEventListener('scroll', lingerOff, { capture: true, passive: true }); }
+    if (lingering.length === 1 && !lingerOff) { let y0 = scrollY; lingerOff = () => { if (live.some((x) => x.playState === 'running' || x.playState === 'paused')) { y0 = scrollY; return; } /* geçiş sürerken (kaldığı yere geri kaydırma) sayılmaz */ if (Math.abs(scrollY - y0) >= 3) unlinger(); }; addEventListener('scroll', lingerOff, { capture: true, passive: true }); }
   };
   const play = (els, kind, ms0, dk = 1, c0 = 1) => { // c0: örtünün başlangıç saydamlığı (1 = tam)
     unlinger();
@@ -1292,7 +1292,7 @@ function setupNavAnim() {
     const as = []; const LK0 = store.s.settings?.look || {};
     const M = mob() ? (MOT[LK0.motion] || MOT.clear) : LK0.motionD === 'fade' ? MOT.dfade : MOT.desk; const ms = Math.round(ms0 * M.ms);
     const dx = Math.round((typeof M.dx === 'function' ? M.dx() : M.dx) * dk);
-    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -dx : dx}px,0,0)` }, { transform: 'translate3d(0,0,0)' }]; for (const el of els) { const an = el.animate(kf, { duration: ms, easing: M.ease, id: 'nav' }); an.onfinish = () => linger(el); as.push(an); } }
+    if (kind !== 'tab') { const kf = [{ transform: `translate3d(${kind === 'back' ? -dx : dx}px,0,0)` }, { transform: 'translate3d(0,0,0)' }]; for (const el of els) { linger(el); const an = el.animate(kf, { duration: ms, easing: M.ease, id: 'nav' }); as.push(an); } } // katman animasyon BAŞLARKEN alınır: bitiş anında (bitti haberi bir kare geç gelebiliyor) katman değişmez → 1 px oturma olmaz
     const cv = getCover(); cv.classList.toggle('glass', !!M.glass);
     const top = (v) => (cur == null ? v : Math.min(v, cur)); // yarım kalan geçişten devam: örtü yukarı sıçramaz
     const k0 = top(kind === 'tab' ? 0.65 : c0);
