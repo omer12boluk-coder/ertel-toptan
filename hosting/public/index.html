@@ -9803,10 +9803,12 @@ html[data-theme="dark"] :is(.pv2-lg, .cd-brand-lg, .cd-lg, .cd-mq-i img, .cd-set
    ayrı kaydırma katmanında YANLIŞ YERDE çiziliyordu (videoda ürün fotoğrafları sayfadan önce havada belirdi). Geçiş süresince kaydırılamaz
    (overflow: hidden konumu korur, katman oluşmaz), bitince eski hâline döner. */
 /* (12.11.2026 banner/raflar/haplar da eklenmişti → iPhone'da Ana sayfaya gelince geçiş bitince (~0,5 sn) sayfa milim oynadı; SADECE kart resmi kaldı) */
-html.nav-mv .main .cimg-sw { overflow: hidden !important; }
+/* 12.11.2026 (gece): kullanıcı: Ana sayfada da (en alttaki markalar başta) aynı yanlış çizim → Ana sayfanın yana kayan bölümleri de.
+   (Önceki '0,5 sn sonra milim kayma' bu kuraldan değil, animasyon bitişindeki katman değişiminden çıktı → main.jsx linger ile çözüldü) */
+html.nav-mv .main :is(.cimg-sw, .sh-hero-track, .cd-rail, .cd-ads, .cd-sets, .cd-bwall) { overflow: hidden !important; }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'e16c196eef';</script>
+<script>window.__BUILD = '3ef4cdcf41';</script>
 </head>
 <body>
 <div id="root"></div>
