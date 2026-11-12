@@ -4828,6 +4828,8 @@ html:has(.kf) { scrollbar-gutter: stable; }
 .main > .kp { animation: none; }
 /* gizli sayfa: content-visibility ile çizilmez ama yerleşimi ve çözülmüş resimleri korunur → açılınca anında, resimler yanıp sönmez */
 .kp-off { content-visibility: hidden; height: 0; overflow: hidden; pointer-events: none; }
+/* 12.11.2026: alt menü düğmesine parmak değince hedef sayfa önceden hesaplanır (main.jsx pointerdown, data-warm): görünmez kalır, sadece hazırlanır */
+.kp-off[data-warm] { content-visibility: visible; } /* 0 yükseklik + taşma kesik: görünmez; visibility KULLANMA (miras → açılınca tüm stil yeniden) */
 @supports not (content-visibility: hidden) { .kp-off { display: none !important; } }
 .main > .kp > * { animation: rise .32s var(--ease) backwards; }
 /* telefonda sayfa açılışlarını setupNavAnim yapar (yön bilgisiyle) → eski "aşağıdan yükselme" ile çakışmasın */

@@ -782,14 +782,14 @@ function ShellFull() {
         {tab === 'kullanim' && admin && <UsagePage />}
         {tab === 'raporlar' && admin && <Reports />}
         {tab === 'gecmis' && admin && <Archive />}
-        {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><HomeM /></section>}
+        {pub && (tab === 'anasayfa' || kept.current.has('anasayfa')) && <section data-kp="anasayfa" className={'kp' + (tab === 'anasayfa' || (tab === 'urun' && urunLayer) ? '' : ' kp-off')}><HomeM /></section>}
         {tab === 'liste' && pub && <CodeList code={ROUTE.listCode} />}
         {tab === 'lsepet' && pub && <LinkCartPage id={ROUTE.lcartId} />}
         {tab === 'odeme' && pub && <PayLinkView id={ROUTE.payId} />}
         {tab === 'sepetlink' && admin && <OrderForm linkMode />}
         {tab === 'sepetler' && admin && <LinkCartsPage />}
         {tab === 'odemelink' && admin && <PayLinkPage />}
-        {(tab === 'katalog' || ((pub || admin) && kept.current.has('katalog'))) && <section className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><CatalogM admin={admin} /></section>}
+        {(tab === 'katalog' || ((pub || admin) && kept.current.has('katalog'))) && <section data-kp="katalog" className={'kp' + (tab === 'katalog' ? '' : ' kp-off')}><CatalogM admin={admin} /></section>}
         {tab === 'sepet' && !admin && <Cart />}
         {tab === 'talepler' && <Requests />}
         {tab === 'profil' && !pub && <Profile />}
@@ -1228,6 +1228,11 @@ function setupNavAnim() {
   addEventListener('pointerdown', (e) => {
     const t = e.target instanceof Element ? e.target : null; if (!t) return;
     if (t.closest('.back-btn, .oa-back')) mark('back'); else if (t.closest('.botnav, .topbar .topnav')) { mark('tab'); lastIdx = navIdx(); }
+    // 12.11.2026 (iPhone ~70 ms takılma): gizli Ana sayfa / Ürünler gösterilince iPhone'un stil + yerleşimi baştan hesaplaması geçişin
+    // başında donma yapıyordu. Alt menü düğmesine parmak DEĞDİĞİ an (bırakmadan ~100 ms önce) hedef sayfa gizliyken hesaplatılır
+    // (content-visibility açılır, sayfa hâlâ 0 yükseklikte ve görünmez) → bırakınca sayfa hazır, kayma ilk kareden akıcı.
+    const bt = t.closest('.botnav-b[data-tab]'); const tk = bt?.dataset.tab;
+    if (tk) { const sec = document.querySelector(`.shell > .main > section[data-kp="${tk}"].kp-off`); if (sec) { sec.setAttribute('data-warm', ''); clearTimeout(sec.__warmT); sec.__warmT = setTimeout(() => sec.removeAttribute('data-warm'), 1500); } }
   }, { capture: true, passive: true });
   // sayfa içi geçişler (sepet → ödeme, sipariş detayı, adımlar…): adres değişmese de tıklanan düğme kaybolup yerine büyük bir bölüm gelirse
   addEventListener('click', (e) => {
@@ -1664,7 +1669,7 @@ function BotNav({ items, tab, badge }) {
     <nav ref={ref} className="botnav" aria-label="Alt menü">
       {geo && px != null && <span ref={pill} className="botnav-pill" data-x={px} style={{ top: geo.top, transform: `translateX(${px}px) translateX(-50%)` }} aria-hidden="true"><i /></span>}
       {items.map(([k, l, i, sh], n) => (
-        <button key={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => { if (tab !== k) sfx('tap'); navGo(k); }}>
+        <button key={k} data-tab={k} className={'botnav-b' + (tab === k ? ' on' : '') + (hov === n ? ' hov' : '')} onClick={() => { if (tab !== k) sfx('tap'); navGo(k); }}>
           <span className="botnav-i"><Icon n={i} s={22} />{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}</span>
           <span>{sh || l}</span>
         </button>
