@@ -1275,12 +1275,14 @@ function setupNavAnim() {
   // 12.11.2026 (kullanıcı videosu, 60 kare/sn): geçiş bitince sayfa ayrı katmandan normal çizime dönerken farklı piksel yuvarlamasıyla
   // ~1 px yukarı 'oturuyordu'. Bitince katman korunur (will-change), kullanıcının bir sonraki dokunuşu / kaydırması / geçişinde
   // bırakılır → o milimlik fark hareketin içinde kalır, durağan ekranda görünmez.
-  let lingering = [];
-  const unlinger = () => { for (const el of lingering) { try { el.style.willChange = ''; } catch {} } lingering = []; };
+  let lingering = [], lingerOff = null;
+  const unlinger = () => { for (const el of lingering) { try { el.style.willChange = ''; } catch {} } lingering = []; if (lingerOff) { removeEventListener('scroll', lingerOff, true); lingerOff = null; } };
   const linger = (el) => {
     if (!el.isConnected || el.querySelector('.pv2-top')) return; // ekrana sabitli öğe içeren bölüm: katman onu yerinden oynatır
     el.style.willChange = 'transform'; lingering.push(el);
-    if (lingering.length === 1) { const off = () => { unlinger(); for (const ev of ['touchstart', 'wheel', 'pointerdown', 'keydown']) removeEventListener(ev, off, true); }; for (const ev of ['touchstart', 'wheel', 'pointerdown', 'keydown']) addEventListener(ev, off, { capture: true, passive: true }); }
+    // 12.11.2026 (gece): DOKUNUŞTA bırakmak, alt menüye basınca sayfanın (setler, markalar) bir an milim oynamasına yol açtı →
+    // sadece sayfa GERÇEKTEN kaydırılınca bırakılır (fark hareketin içinde kalır); başka sayfaya geçişte play() bırakır (sayfa zaten gizlenir)
+    if (lingering.length === 1 && !lingerOff) { const y0 = scrollY; lingerOff = () => { if (Math.abs(scrollY - y0) >= 3) unlinger(); }; addEventListener('scroll', lingerOff, { capture: true, passive: true }); }
   };
   const play = (els, kind, ms0, dk = 1, c0 = 1) => { // c0: örtünün başlangıç saydamlığı (1 = tam)
     unlinger();
