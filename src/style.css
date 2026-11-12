@@ -9756,3 +9756,7 @@ html[data-theme="dark"] .us-verdict.us-g { background: #12301f; color: #9fe0b8; 
 .flm.flm-pfs { position: fixed !important; inset: 0; width: 100vw !important; height: 100vh; height: 100dvh; aspect-ratio: auto !important; border-radius: 0; z-index: 10000; }
 .flm:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; }
 html.flm-lock, html.flm-lock body { overflow: hidden; }
+/* 12.11.2026 pencereli ürün listesi (catalog.jsx WinUL): uzaktaki parçaların yerini tutan boş kutu (tam satır, ölçülmüş yükseklik).
+   Liste artık küçük kaldığı için kartlarda content-visibility gerekmez (ölçümü de yanıltıyordu) */
+.plist.win > li { content-visibility: visible; }
+.plist > li.win-gap { grid-column: 1 / -1; padding: 0 !important; margin: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; animation: none !important; pointer-events: none; list-style: none; }

@@ -562,11 +562,11 @@ export function Catalog({ admin }) {
   const pinKey = pinShow ? [...pinShow].join(',') : '';
   const pv2 = !admin && user?.role === 'public' && S.look?.prodV2 !== false; // 7.11.2026 Ürünler v2 (false = eski)
   const twinNote = useTwin() && pv2;
-  const listEl = useMemo(() => (
-    <ul className={'plist' + (view === 'grid' ? ' pgrid' : '') + ' ' + addCls + (pv2 ? ' pv2l' : '')}>
-      {admin && view !== 'grid' ? <AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} />
-        : shown.map((p) => <ProductRow key={p.id} p={p} admin={admin} pinned={!!pinShow?.has(p.id)} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />)}
-    </ul>
+  const listCls = 'plist' + (view === 'grid' ? ' pgrid' : '') + ' ' + addCls + (pv2 ? ' pv2l' : '');
+  const listEl = useMemo(() => (admin && view !== 'grid'
+    ? <ul className={listCls}><AdminTable list={shown} asort={asort} sortBy={sortBy} onEdit={setEdit} onCopy={(p) => setEdit({ copy: p })} /></ul>
+    : <WinUL className={listCls} items={shown} resetKey={list}
+        render={(p) => <ProductRow key={p.id} p={p} admin={admin} pinned={!!pinShow?.has(p.id)} onOpen={() => (admin ? setEdit(p) : setOpen(p))} />} />
   ), [list, limit, view, admin, addCls, asort, pinKey, pv2]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (actives.length && !hubOff) setHubOff(true); }, [actives.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -873,6 +873,75 @@ function logoOf(S, b) {
   if (!m) { m = new Map(); for (const x of S.shopHome?.brands || []) if (x?.name && x.logo) m.set(x.name.toLocaleLowerCase('tr'), x.logo); for (const [k, v] of Object.entries(BL)) if (v?.logo) m.set(k.toLocaleLowerCase('tr'), v.logo); _lgc.set(BL, m); }
   return m.get(b.toLocaleLowerCase('tr')) || null;
 }
+// 12.11.2026 pencereli liste: sonsuz kaydırmada yüklenen ürünler hiç sayfadan çıkmıyordu (1.000+ kart, her biri resim + sepet/favori
+// takibi → sayfa değişimi takılıyordu; content-visibility sadece çizimi atlatıyordu). Ürünler parçalara (telefon 8, bilgisayar sütun
+// sayısına göre ~10) bölünür; ekranın ~2 ekran üstü/altındaki parçalar gerçek kart, uzaktakiler ÖLÇÜLMÜŞ yükseklikte boş kutu
+// (.win-gap) → kaydırma çubuğu ve konum oynamaz, geri kaydırınca kartlar yeniden gelir. Sıra ve sonsuz yükleme aynı.
+function WinUL({ className, items, render, resetKey }) {
+  const ul = useRef(null);
+  const st = useRef({ H: new Map(), gap: 0, rowH: 0, key: null, raf: 0, sig: '' }).current;
+  const [cols, setCols] = useState(1);
+  const [act, setAct] = useState(null);
+  if (st.key !== resetKey) { st.key = resetKey; st.H = new Map(); st.sig = ''; } // filtre / sıralama değişti: ölçüler geçersiz
+  const C = cols * Math.max(1, Math.ceil(8 / cols)); // parça küçük: kaydırırken yeni kartlar az az gelsin (16 iken tek karede takılıyordu)
+  const chunks = []; for (let i = 0; i < items.length; i += C) chunks.push(items.slice(i, i + C));
+  const live = act && act.key === resetKey && act.C === C ? act.set : null;
+  const hOf = (i, n) => { const m = st.H.get(i); return m && m.n === n ? m.h : st.rowH ? Math.ceil(n / cols) * st.rowH : null; };
+  const run = () => {
+    st.raf = 0;
+    const el = ul.current; if (!el || !el.isConnected) return;
+    const r = el.getBoundingClientRect(); if (!r.height) return; // gizli sayfa (.kp-off): ölçme
+    const kids = el.children; let p = 0; const tops = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const c = kids[p]; if (!c) return;
+      tops.push(c.getBoundingClientRect().top - r.top);
+      p += c.classList.contains('win-gap') ? 1 : chunks[i].length;
+    }
+    // gerçek kart olarak duran parçaların yüksekliğini güncelle (bir sonraki parçanın başına kadar = satır arası boşluk dahil)
+    p = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      const c = kids[p]; const gap = c.classList.contains('win-gap'); const n = chunks[i].length;
+      if (!gap) {
+        let h;
+        if (i + 1 < chunks.length) h = tops[i + 1] - tops[i];
+        else { let b = 0; for (let k = Math.max(p, p + n - cols); k < p + n; k++) b = Math.max(b, kids[k]?.getBoundingClientRect().bottom - r.top || 0); h = b - tops[i] + st.gap; }
+        if (h > 0) { st.H.set(i, { h, n }); if (n === C) st.rowH = h / Math.ceil(n / cols); }
+      }
+      p += gap ? 1 : n;
+    }
+    const M = Math.max(1200, innerHeight * 2); // ekranın 2 ekran üstü / altı hazır (~15 ürün)
+    const lo = -r.top - M, hi = -r.top + innerHeight + M;
+    const set = new Set();
+    for (let i = 0; i < chunks.length; i++) { const h = hOf(i, chunks[i].length); if (h == null || (tops[i] < hi && tops[i] + h > lo)) set.add(i); }
+    const sig = C + ':' + [...set].join(',');
+    if (sig !== st.sig) { st.sig = sig; setAct({ key: resetKey, C, set }); }
+  };
+  const runRef = useRef(run); runRef.current = run;
+  const kick = () => { if (!st.raf) st.raf = requestAnimationFrame(() => runRef.current()); };
+  const measureCols = () => {
+    const el = ul.current; if (!el || !el.getBoundingClientRect().height) return;
+    const cs = getComputedStyle(el); const grid = cs.display === 'grid';
+    st.gap = grid ? parseFloat(cs.rowGap) || 0 : 0;
+    const n = grid ? cs.gridTemplateColumns.split(' ').filter(Boolean).length : 1;
+    if (n !== cols) { st.H = new Map(); st.sig = ''; setCols(n); }
+  };
+  useLayoutEffect(() => { measureCols(); }, [className]);
+  useLayoutEffect(() => { kick(); });
+  useEffect(() => {
+    const onS = () => kick(); const onR = () => { measureCols(); kick(); };
+    addEventListener('scroll', onS, { passive: true, capture: true }); addEventListener('resize', onR);
+    return () => { removeEventListener('scroll', onS, { capture: true }); removeEventListener('resize', onR); cancelAnimationFrame(st.raf); st.raf = 0; };
+  });
+  return (
+    <ul ref={ul} className={className + ' win'}>
+      {chunks.map((ch, i) => {
+        const h = live && !live.has(i) ? hOf(i, ch.length) : null;
+        return h != null ? <li key={'g' + i} className="win-gap" data-i={i} aria-hidden="true" style={{ height: Math.max(0, h - st.gap) + 'px' }} /> : ch.map(render);
+      })}
+    </ul>
+  );
+}
+
 function ProductRow({ p, admin, onOpen, pinned }) {
   // sadece ilgili parçaları izler (31.10.2026): başka bir şey değişince (bildirim, sipariş, pencere) 60 satırın hepsi yeniden çizilmesin
   const S = useStore((st) => st.settings); const user = useStore((st) => st.user);
