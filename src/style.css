@@ -9760,3 +9760,7 @@ html.flm-lock, html.flm-lock body { overflow: hidden; }
    Liste artık küçük kaldığı için kartlarda content-visibility gerekmez (ölçümü de yanıltıyordu) */
 .plist.win > li { content-visibility: visible; }
 .plist > li.win-gap { grid-column: 1 / -1; padding: 0 !important; margin: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; animation: none !important; pointer-events: none; list-style: none; }
+/* 12.11.2026: telefonda tarayıcıda (Safari / Chrome) yüzen alt menü adres çubuğuna yapışık (alttan 10px → 2px). Ana ekran uygulamasında AYNI (html.in-brw yok) */
+@media (max-width: 899px) {
+  html.in-brw:is(.bn-glass, .bn-dark) .shell:is(:not(.admin), .adm-bn) .botnav { bottom: max(2px, calc(env(safe-area-inset-bottom, 0px) - 12px)); }
+}

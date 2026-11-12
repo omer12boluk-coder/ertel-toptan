@@ -1645,3 +1645,6 @@ function BotNav({ items, tab, badge }) {
     </nav>
   );
 }
+
+// 12.11.2026: telefonda TARAYICIDA (Safari / Chrome; ana ekran uygulaması DEĞİL) alt menü adres çubuğuna yapışık dursun → html.in-brw
+try { if (!(navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) && matchMedia('(hover: none) and (pointer: coarse)').matches) document.documentElement.classList.add('in-brw'); } catch {}
