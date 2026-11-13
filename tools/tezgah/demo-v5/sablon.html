@@ -18,8 +18,14 @@ h1{font-size:22px;letter-spacing:-.02em;margin:0}.lead{margin:2px 0 0;color:var(
 .stage{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:1.15;background:#d9d3c9}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}#cv:active{cursor:grabbing}
 .ov{position:absolute;inset:0;pointer-events:none;overflow:hidden}.ov .plus{pointer-events:auto}
-.moving .tag{opacity:0!important;transition:opacity .12s}
-.help{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;white-space:nowrap;z-index:75;background:rgba(29,29,31,.62);color:#fff;font-size:11px;border-radius:999px;padding:5px 10px;pointer-events:none;transition:opacity .6s}
+
+.pad{position:absolute;right:8px;bottom:8px;z-index:75;display:flex;align-items:center;gap:3px;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:16px;padding:4px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.pad .col{display:flex;flex-direction:column;gap:3px}
+.pad button{width:30px;height:28px;border:0;border-radius:9px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;touch-action:none;user-select:none;-webkit-user-select:none}
+.pad .col button{height:22px}
+.pad button:active{background:#e8e8ed}
+.pad svg{width:16px;height:16px;stroke:#1d1d1f;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.help{position:absolute;left:50%;transform:translateX(-50%);top:10px;white-space:nowrap;z-index:75;background:rgba(29,29,31,.62);color:#fff;font-size:11px;border-radius:999px;padding:5px 10px;pointer-events:none;transition:opacity .6s}
 .sc img{position:absolute;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none}
 .sc img.hide,.hide{display:none!important}
 .L{transition:opacity .28s ease,transform .55s cubic-bezier(.2,1.25,.35,1);will-change:transform,opacity}
@@ -36,7 +42,7 @@ h1{font-size:22px;letter-spacing:-.02em;margin:0}.lead{margin:2px 0 0;color:var(
 .plus::before{content:"+";font-size:14px;line-height:1;font-weight:600}
 .notags .tag{opacity:0!important}
 .bak .plus{opacity:0!important;pointer-events:none!important}
-.mode{position:absolute;left:8px;top:8px;z-index:75;display:flex;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:999px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.mode{position:absolute;left:8px;bottom:8px;z-index:75;display:flex;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:999px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 .mode button{border:0;background:transparent;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--mut);cursor:pointer;display:flex;align-items:center;gap:5px}
 .mode button.on{background:#1d1d1f;color:#fff}
 .mode svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -90,6 +96,7 @@ h1{font-size:22px;letter-spacing:-.02em;margin:0}.lead{margin:2px 0 0;color:var(
 .dim.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:91;background:#fff;border-radius:22px 22px 0 0;padding:8px 14px calc(16px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .38s cubic-bezier(.2,.9,.25,1);max-height:86vh;overflow:auto}
 .sheet.on{transform:none}
+.sheet:not(.on){pointer-events:none;visibility:hidden;transition:transform .38s cubic-bezier(.2,.9,.25,1),visibility 0s .38s}
 .sheet .grab{width:38px;height:5px;border-radius:3px;background:#d1d1d6;margin:2px auto 10px}
 .sheet h2{font-size:17px;margin:0 0 2px}.sheet .sub{color:var(--mut);font-size:12.5px;margin:0 0 12px}
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -135,8 +142,17 @@ body.full .tag small{font-size:7.5px}body.full .tag b{font-size:10px}
  .tb{width:38px;height:38px}
  .sheet{left:50%;right:auto;bottom:50%;width:560px;border-radius:22px;transform:translate(-50%,58%) scale(.96);opacity:0;transition:transform .3s cubic-bezier(.2,.9,.25,1),opacity .2s;padding:18px 20px 20px}
  .sheet.on{transform:translate(-50%,50%);opacity:1}.sheet .grab{display:none}
+ .sheet:not(.on){transition:transform .3s,opacity .2s,visibility 0s .3s}
 }
-@media(max-width:959px){.side{display:none}}
+@media(max-width:959px){.side{display:none}
+ body:not(.full) .stage{aspect-ratio:auto;height:calc((100vw - 24px) / 1.1 + 46px);max-height:calc(100vh - 210px);background:#fff}
+ body:not(.full) #cv,body:not(.full) .ov{bottom:auto;height:calc(100% - 46px)}
+ body:not(.full) .mode{left:6px;bottom:6px;box-shadow:none;background:#f2f2f6}
+ body:not(.full) .pad{right:6px;bottom:4px;box-shadow:none;background:#f2f2f6;padding:2px;border-radius:12px}
+ body:not(.full) .pad button{height:36px;width:28px}body:not(.full) .pad .col{flex-direction:row}body:not(.full) .pad .col button{height:36px}
+ body:not(.full) .mode button{padding:6px 9px}
+ .mode .lng{display:none}.mode button[data-m=bak]{text-transform:capitalize}
+ body:not(.full) .help{top:auto;bottom:54px;font-size:10.5px}}
 </style></head><body><main>
 <a class="back" href="/">‹ Mağaza</a>
 <div class="top"><div><h1>Tezgâhını kur.</h1><p class="lead">Cihaza dokun, modelini seç. Eksikleri hemen gör.</p></div>
@@ -144,7 +160,14 @@ body.full .tag small{font-size:7.5px}body.full .tag b{font-size:10px}
 <div id="vTez" class="view">
  <div class="layout">
   <div><div class="stage" id="stage"><canvas id="cv"></canvas><div class="ov" id="ov"></div>
-     <div class="help" id="help">Kaydır: döndür · İki parmak: yaklaş</div><div class="mode" id="mode"><button data-m="kur" class="on"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Kur</button><button data-m="bak"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Sadece bak</button></div><div class="tools"><button class="tb" id="bTag" title="Etiketler"><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg></button>
+     <div class="help" id="help">Kaydır: döndür · İki parmak: yaklaş</div><div class="mode" id="mode"><button data-m="kur" class="on"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Kur</button><button data-m="bak"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span class="lng">Sadece&nbsp;</span>bak</button></div><div class="pad" id="pad">
+  <button data-a="yaw" data-v="-.06" title="Sola çevir"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <div class="col"><button data-a="pitch" data-v=".05" title="Yukarıdan bak"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+  <button data-a="pitch" data-v="-.05" title="Alçaktan bak"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
+  <button data-a="yaw" data-v=".06" title="Sağa çevir"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+  <div class="col"><button data-z=".9" title="Yaklaş"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></button>
+  <button data-z="1.11" title="Uzaklaş"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button></div></div>
+<div class="tools"><button class="tb" id="bTag" title="Etiketler"><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg></button>
      <button class="tb" id="bReset" title="Görünümü sıfırla"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg></button>
      <button class="tb" id="bFull" title="Tam ekran"><svg viewBox="0 0 24 24" id="iFull"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div></div>
    <div class="prog" id="prog"></div>
@@ -157,12 +180,13 @@ body.full .tag small{font-size:7.5px}body.full .tag b{font-size:10px}
 <div class="bar"><div class="t"><small id="bc"></small><b id="bt"></b></div><button id="badd">Hepsini sepete ekle</button></div>
 <div class="dim" id="dim"></div><div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div><div class="hint">Daha büyük görmek için telefonu yan çevir</div>
-<script src="motor.js"></script>
+<script src="motor2.js"></script>
 <script>
 const META=__META__, SLOTS=__SLOTS__, KALIP=__KALIP__;
 const $=id=>document.getElementById(id), usd=v=>'$'+(Math.round(v*100)/100).toLocaleString('tr-TR');
 const S=k=>SLOTS.find(s=>s.k===k), O=(k,id)=>S(k).opts.find(o=>o.id===id);
-setTimeout(()=>{const h=document.getElementById('help');if(h)h.style.opacity=0},6000);
+setTimeout(()=>{const h=document.getElementById('help');if(h&&matchMedia('(hover:hover)').matches)h.textContent='Sol tuş: kaydır · Sağ tuş: döndür · Tekerlek: yaklaş';},0);
+setTimeout(()=>{const h=document.getElementById('help');if(h)h.style.opacity=0},7000);
 const pick={}; SLOTS.forEach(s=>pick[s.k]=s.tip==='coklu'?s.ilk.slice():s.tip==='adet'?{}:s.opts[0].id);
 KALIP.slice(0,6).forEach(k=>pick.kalip[k[0]]=1);
 const kcount=()=>Object.values(pick.kalip).reduce((a,b)=>a+b,0);
@@ -267,6 +291,11 @@ $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('seg').querySele
 $('bTag').onclick=()=>{stage.classList.toggle('notags');$('bTag').classList.toggle('off')};
 function setMode(m){stage.classList.toggle('bak',m==='bak');$('mode').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));refresh(false)}
 $('mode').querySelectorAll('button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+// açı tuşları: basılı tutunca sürekli
+$('pad').querySelectorAll('button').forEach(b=>{let t=0;const go=()=>{if(!E)return;if(b.dataset.z)E.zoom(+b.dataset.z);else E.nudge(b.dataset.a,+b.dataset.v)};
+  const stop=()=>{clearInterval(t);t=0};
+  b.addEventListener('pointerdown',e=>{e.preventDefault();go();stop();t=setInterval(go,90)});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+  b.addEventListener('contextmenu',e=>e.preventDefault())});
 function setFull(on){document.body.classList.toggle('full',on);$('iFull').innerHTML=on?'<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>':'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>';
   try{if(on&&document.documentElement.requestFullscreen&&!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});if(!on&&document.fullscreenElement)document.exitFullscreen()}catch(e){}
   setTimeout(()=>{E&&E.resize();place();declutter()},50)}
