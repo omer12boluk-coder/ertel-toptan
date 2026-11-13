@@ -690,7 +690,7 @@ const secKey = (k) => (k && (SEC_BY[k] ? k : ALIAS[k])) || null;
 const groupOf = (k) => SEC_BY[k]?.[4] || null;
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için; 'a.b' = alt alan)
 const SEC_KEYS = {
-  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
+  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.heroGate', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
   anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], talep: ['requests'],
   katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.pageSizeM', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
   resim: ['catalog.imageThumb', 'catalog.imageLarge'],
@@ -855,6 +855,7 @@ export function Settings() {
               {d.brand.logo && <button className="btn sm ghost" onClick={() => set('brand.logo', '')}>ERT Mobile logosuna dön</button>}
             </div>
           </Field>
+          <Toggle id="s-hero" label="Giriş sayfası (logo efekti)" hint="Mağaza ana sayfası açılmadan önce hareketli logo ve “Alışverişe başla” düğmesi görünür (oturumda bir kez; ürün ve sipariş linkleri etkilenmez)" checked={d.brand.heroGate !== false} onChange={(v) => set('brand.heroGate', v)} />
           <Toggle id="s-splash" label="Açılış ekranı" hint="Mağaza ve bayi uygulaması açılırken kısa süre logolu açılış ekranı görünür (oturumda bir kez, dokununca geçer)" checked={d.brand.splashOn !== false} onChange={(v) => set('brand.splashOn', v)} />
           {d.brand.splashOn !== false && <Field label="Arka plan"><div className="spl-pick">{Object.entries(SPLASH_STYLES).map(([k, v]) => <button type="button" key={k} className={'spl-opt' + ((d.brand.splashStyle || 'white') === k ? ' on' : '')} onClick={() => set('brand.splashStyle', k)}><span className={'spl-sw sp-' + k}><i /></span>{v.n}</button>)}</div></Field>}
           {d.brand.splashOn !== false && <Field label="Görünme süresi" hint="En az bu kadar görünür; dokununca hemen geçer. Site daha geç yüklenirse en fazla 3 sn daha bekler."><span className="she-scale"><input type="range" min="0.5" max="6" step="0.1" value={Number(d.brand.splashSec) || 1.4} onChange={(e) => set('brand.splashSec', Number(e.target.value))} /><code>{(Number(d.brand.splashSec) || 1.4).toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} sn</code></span></Field>}

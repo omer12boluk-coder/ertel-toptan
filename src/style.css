@@ -9785,3 +9785,79 @@ html[data-theme="dark"] :is(.pv2-lg, .cd-brand-lg, .cd-lg, .cd-mq-i img, .cd-set
 /* 12.11.2026 (gece): kullanıcı: Ana sayfada da (en alttaki markalar başta) aynı yanlış çizim → Ana sayfanın yana kayan bölümleri de.
    (Önceki '0,5 sn sonra milim kayma' bu kuraldan değil, animasyon bitişindeki katman değişiminden çıktı → main.jsx linger ile çözüldü) */
 html.nav-mv .main :is(.cimg-sw, .sh-hero-track, .cd-rail, .cd-ads, .cd-sets, .cd-bwall) { overflow: hidden !important; }
+
+/* 13.11.2026 Giriş sayfası (herogate.jsx, logo parçacık efekti). Önek eh- (sh- telefonda silinir) */
+.eh-root{--eh-bg:#f5f5f7;--eh-fg:#1d1d1f;--eh-acc:#2f55b0;--eh-sub:#6e6e73;
+  --eh-font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;
+  position:fixed;inset:0;z-index:2147483000;width:100%;height:100svh;overflow:hidden;isolation:isolate;container-type:size;
+  background:var(--eh-bg);color:var(--eh-fg);font-family:var(--eh-font);-webkit-font-smoothing:antialiased;
+  touch-action:pan-y;display:flex;flex-direction:column;box-sizing:border-box;transition:background-color .6s ease,color .6s ease}
+.eh-root.eh-dark{--eh-bg:#0a0b0f;--eh-fg:#f5f5f7;--eh-acc:#4f8dff;--eh-sub:#a1a1a6}
+
+.eh-brand img{height:28px;width:auto}
+.eh-root.leaving{pointer-events:none}
+body.eh-lock{overflow:hidden}
+.eh-root *,.eh-root *::before,.eh-root *::after{box-sizing:border-box}
+.eh-stage{position:absolute;inset:0;z-index:0;pointer-events:none;transition:transform 1s cubic-bezier(.7,0,.2,1),opacity .8s ease}
+.eh-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .5s ease}
+.eh-fallback{position:absolute;display:block;max-width:none;user-select:none;-webkit-user-drag:none;transition:opacity .5s ease}
+.eh-root[data-gl="on"] .eh-canvas{opacity:1}
+.eh-root[data-gl="on"] .eh-fallback{opacity:0}
+.eh-backdrop{position:absolute;left:50%;z-index:0;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;user-select:none;
+  font-weight:700;letter-spacing:-.06em;line-height:.8;color:color-mix(in srgb,var(--eh-fg) 4%,transparent)}
+.eh-nav{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px clamp(20px,3.2cqw,48px) 0}
+.eh-brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;letter-spacing:-.01em;color:inherit;text-decoration:none}
+.eh-tag{font-size:13px;color:var(--eh-sub)}
+.eh-hint{position:absolute;z-index:1;transform:translate(-50%,0);display:flex;align-items:center;gap:10px;white-space:nowrap;
+  font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--eh-sub);pointer-events:none;transition:opacity .8s ease;
+  opacity:0;animation:eh-in .9s 2.6s cubic-bezier(.2,.7,.2,1) forwards}
+.eh-hint::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--eh-acc);animation:eh-pulse 2.4s ease-in-out infinite}
+.eh-root[data-touched="1"] .eh-hint{opacity:0!important;animation:none}
+@keyframes eh-pulse{0%,100%{transform:scale(.6);opacity:.45}50%{transform:scale(1);opacity:1}}
+.eh-spacer{flex:1 1 auto;min-height:0}
+.eh-content{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);align-items:end;
+  gap:clamp(24px,4cqw,72px);padding:0 clamp(20px,3.2cqw,48px) clamp(28px,3.4cqw,52px);transition:opacity .5s ease,transform .7s cubic-bezier(.7,0,.2,1)}
+.eh-eyebrow{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--eh-sub);margin:0 0 clamp(14px,1.6cqw,22px);
+  display:block}
+.eh-h1{font-weight:700;font-size:clamp(40px,min(6.2cqw,11cqh),112px);line-height:.98;letter-spacing:-.045em;margin:0;text-wrap:balance}
+.eh-line{display:block}
+.eh-accent{color:var(--eh-acc)}
+.eh-aside{max-width:400px;justify-self:end;padding-bottom:.6em}
+.eh-body{font-size:clamp(15px,1.1cqw,17px);line-height:1.5;letter-spacing:-.01em;margin:0 0 26px;color:var(--eh-sub);text-wrap:pretty}
+.eh-btn{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 28px;border:0;border-radius:999px;background:var(--eh-acc);cursor:pointer;
+  color:#fff;font:inherit;font-size:16px;font-weight:600;letter-spacing:-.01em;box-shadow:0 10px 30px -10px color-mix(in srgb,var(--eh-acc) 70%,transparent);
+  transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s}
+.eh-btn:hover{transform:translateY(-2px);box-shadow:0 16px 36px -12px color-mix(in srgb,var(--eh-acc) 80%,transparent)}
+.eh-btn svg{transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+.eh-btn:hover svg{transform:translateX(3px)}
+.eh-root button:focus-visible{outline:2px solid var(--eh-acc);outline-offset:4px}
+/* giriş animasyonu: yazılar sırayla yukarı süzülür */
+.eh-a{opacity:0;transform:translateY(18px);animation:eh-in .9s cubic-bezier(.2,.7,.2,1) forwards}
+.eh-a1{animation-delay:1.2s}.eh-a2{animation-delay:1.35s}.eh-a3{animation-delay:1.5s}.eh-a4{animation-delay:1.7s}.eh-a5{animation-delay:1.85s}
+.eh-nav.eh-a{animation-delay:.2s}
+@keyframes eh-in{to{opacity:1;transform:none}}
+/* Alışverişe başla → çıkış */
+.eh-root.leaving{background:transparent;transition:background-color .5s ease .35s}
+.eh-root.leaving .eh-backdrop,.eh-root.leaving .eh-hint{opacity:0;transition:opacity .3s}
+.eh-root.leaving .eh-content{opacity:0;transform:translateY(-14px)}
+.eh-root.leaving .eh-nav{animation:eh-out .5s ease forwards}
+@keyframes eh-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-14px)}}
+.eh-root.leaving .eh-stage{transform:scale(1.25);opacity:0}
+@container (max-width:1023px){
+  .eh-content{grid-template-columns:1fr;gap:24px}
+  .eh-aside{justify-self:start;max-width:520px;padding-bottom:0}
+  .eh-h1{font-size:clamp(40px,min(9.5cqw,9cqh),96px)}
+}
+@container (max-width:639px){
+  .eh-nav{padding-top:18px}.eh-tag{display:none}
+  .eh-h1{font-size:clamp(34px,min(11cqw,6.6cqh),56px);line-height:1}
+  .eh-body{font-size:15px;margin-bottom:18px}
+  .eh-eyebrow{font-size:11px}
+  .eh-btn{width:100%;justify-content:center;height:54px}
+  .eh-content{padding-bottom:max(28px,env(safe-area-inset-bottom))}
+}
+@media (prefers-reduced-motion:reduce){
+  .eh-a,.eh-hint{animation:none;opacity:1;transform:none}
+  .eh-canvas,.eh-fallback,.eh-btn,.eh-btn svg{transition:none}
+}
+

@@ -44,6 +44,7 @@ import { CodeList, VitrinListEditor, OpenVitrinList } from './listsheet.jsx';
 import { CartBar, HeaderCart } from './guestcart.jsx';
 import { OrderPage, Account, AuthAction } from './checkout.jsx';
 import { ShopHome, HeaderSearch, withProdFallback } from './shophome.jsx';
+import { HeroGate, HERO_WANTED } from './herogate.jsx'; // 13.11.2026 giriş sayfası (logo efekti)
 import { DesignEntry } from './designv3.jsx'; // 7.11.2026: tasarım modu v3 (eski mod 'Gelişmiş')
 import { AdminHome, Reports } from './dashboard.jsx';
 import { Archive } from './archive.jsx';
@@ -856,7 +857,7 @@ function Toast() {
 function IntroSplash() {
   const S = useStore((s) => s.settings);
   const ready = useStore((s) => s.boot !== 'loading');
-  const want = S.brand.splashOn !== false && !ADMIN_ROUTE && (() => { try { return !sessionStorage.getItem('intro-seen'); } catch { return true; } })();
+  const want = S.brand.splashOn !== false && !ADMIN_ROUTE && !HERO_WANTED && (() => { try { return !sessionStorage.getItem('intro-seen'); } catch { return true; } })();
   const [phase, setPhase] = useState(want ? 'in' : 'off');
   const [minDone, setMinDone] = useState(false);
   useEffect(() => { if (!want) return; try { sessionStorage.setItem('intro-seen', '1'); } catch {} const sec = Math.min(8, Math.max(0.5, Number(S.brand.splashSec) || 1.4)); const t = setTimeout(() => setMinDone(true), sec * 1000); const max = setTimeout(() => setPhase('out'), Math.max(sec + 3, 4.5) * 1000); return () => { clearTimeout(t); clearTimeout(max); }; }, []);
@@ -891,6 +892,9 @@ function App() {
   useTheme();
   const { boot: b, bootError } = useStore();
   const pub = useStore((s) => s.user?.role === 'public');
+  // giriş sayfası açıkken mağaza çizilmez (banner/video oynamaz); 'Alışverişe başla'ya basınca çizilir
+  const [gate, setGate] = useState(HERO_WANTED ? 'on' : 'off');
+  const shell = gate !== 'on';
   return (
     <>
       {b === 'loading' && <Splash />}
@@ -898,11 +902,12 @@ function App() {
       {b === 'error' && <div className="splash"><Brand /><p className="err">{bootError}</p><button className="btn outline" onClick={() => location.reload()}>Tekrar dene</button></div>}
       {b === 'login' && <Login />}
       {b === 'login' && store.s.api?.mode === 'demo' && <DemoSwitch admin />}
-      {b === 'ready' && <Shell />}
-      {b === 'ready' && <StoreDecor />}
+      {b === 'ready' && shell && <Shell />}
+      {b === 'ready' && shell && <StoreDecor />}
       {b === 'ready' && pub && <RatePrompt />}
       {b === 'ready' && <SaveDock />}
       <IntroSplash />
+      {gate !== 'off' && <HeroGate onOpen={() => setGate((g) => (g === 'on' ? 'opening' : g))} onDone={() => setGate('off')} />}
       <Toast />
       <ContextMenu />
     </>
