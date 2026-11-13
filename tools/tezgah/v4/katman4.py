@@ -7,9 +7,20 @@ from ras import run
 OUT = '/home/claude/tezgah-ui5/img'; os.makedirs(OUT, exist_ok=True); os.makedirs('lay', exist_ok=True)
 SCALE = 2
 L = {}
-S = SC.build(eksik=SC.SLOTS, ghosts=False); L['taban'] = S.render(only={'base'})
-L['on'] = SC.build(ghosts=False).render(only={'decor'}, base=False, vig=False)
+S = SC.build(eksik=SC.SLOTS, ghosts=False, twz=(0, 0, 0, 0), stack=0, sivi=(0, 0, 0, 0)); L['taban'] = S.render(only={'base'})
+for slot, ids in (('cimbiz', SC.TWZ_IDS), ('sivi', SC.SIVI_IDS)):
+    for tid in ids:
+        for i in range(4):
+            tw = [0]*4; tw[i] = tid
+            B = SC.build(ghosts=False, **{'twz' if slot == 'cimbiz' else 'sivi': tw})
+            L[f'{slot}-{tid}-{i}'] = B.render(only={f'{slot}{i}'}, part='obj', base=False, vig=False)
+            L[f'sh-{slot}-{tid}-{i}'] = B.render(only={f'{slot}{i}'}, part='shadow', base=False, vig=False)
+for lv in (1, 2, 3, 4):
+    L[f'kalip-{lv}'] = SC.build(ghosts=False, stack=lv).render(only={'kalip'}, part='obj', base=False, vig=False)
+    L[f'sh-kalip-{lv}'] = SC.build(ghosts=False, stack=lv).render(only={'kalip'}, part='shadow', base=False, vig=False)
 anchors = {}
+for k, kw in (('cimbiz', dict(twz=(0, 0, 0, 0))), ('kalip', dict(stack=0)), ('sivi', dict(sivi=(0, 0, 0, 0)))):
+    G = SC.build(**kw); L[f'bos-{k}'] = G.render(only={'_'}, base=False, vig=False, tops=True); anchors[k] = G.anchors[k]
 for slot in SC.SLOTS:
     for pid in SC.OPTS[slot]:
         kw = dict(sel={slot: pid}, ghosts=False)
