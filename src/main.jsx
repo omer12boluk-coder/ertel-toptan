@@ -1,4 +1,5 @@
 import { savesPending } from './saveq.js';
+import { HcSearch } from './hcsearch.jsx';
 import { LinkCartPage, LinkCartsPage } from './lcart.jsx';
 import { PayLinkPage, PayLinkView } from './paylink.jsx';
 import { SaveDock } from './savedock.jsx';
@@ -716,7 +717,7 @@ function ShellFull() {
             <b className="hc-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b>
           </button>
           <span className="hc-r">
-            {!phoneUI && <><HeaderSearch /><ShopBell /></>}
+            {!phoneUI && <>{LK.hcSearch === 'old' ? <HeaderSearch /> : <HcSearch />}<ShopBell /></>}
             <HeaderCart on={tab === 'sepet'} />
             {phoneUI && <><SoundButton /><ThemeButton /></>}
             {member

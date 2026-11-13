@@ -15,6 +15,9 @@ import { useBrandList, openBrand } from './brandsets.jsx';
 import { useVisibleProducts, useTree } from './catalog.jsx';
 import { CardAdd, ShopImg, Hero } from './shophome.jsx';
 import { heroList } from './photobn.jsx';
+import { useMQ } from './heroframe.jsx';
+import { lookFor } from './dzpresets.js';
+const PHONE_MQ = '(max-width: 899px)';
 import { useCatTiles } from './p0home.jsx';
 import KESFET from './icerik/kesfet.json';
 import KAPAKLAR from './icerik/kapaklar.json';
@@ -80,7 +83,12 @@ export const HERO_W = [['', 'Sayfayla aynı'], ['narrow', 'Dar'], ['mid', 'Orta'
 export const HERO_FILL = [['', 'Normal'], ['screen', 'Ekranı doldur']];
 export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   const ref = useRef(null);
-  const w = H.heroW || ''; const fill = H.heroFill === 'screen';
+  // 14.11.2026 'Ortada logo' üst menüde banner menüye yapışık + kenardan kenara (shopHome.heroStick 'off' = eski, boşluklu)
+  const LK0 = useStore((s) => s.settings?.look);
+  const phoneH = useMQ(PHONE_MQ);
+  const frame = H.heroFrame || '';
+  const stick = H.heroStick !== 'off' && lookFor(LK0, phoneH).header === 'center' && !['deck', 'glow', 'side'].includes(frame);
+  const w = stick ? 'full' : H.heroW || ''; const fill = H.heroFill === 'screen';
   const slides = useMemo(() => heroList(H), [H.slides, H.photoBn]); // eslint-disable-line react-hooks/exhaustive-deps
   const out = !!w; // sayfanın kenarından taşabilir → sayfa kırpması açılır
   useEffect(() => { if (!out) return; const c = document.documentElement.classList; c.add('hf-on', 'hf-wide'); return () => c.remove('hf-on', 'hf-wide'); }, [out]);
@@ -88,11 +96,21 @@ export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
     const el = ref.current; if (!el || !fill) return;
     const W = el.ownerDocument.defaultView || window;
     const m = () => { const t = el.getBoundingClientRect().top + W.scrollY; el.style.setProperty('--fs-top', Math.max(0, Math.min(260, Math.round(t))) + 'px'); };
-    m(); const t = setTimeout(m, 400); W.addEventListener('resize', m); return () => { clearTimeout(t); W.removeEventListener('resize', m); };
+    // 14.11.2026: ilk ölçüm (çizim bitmeden) birkaç px eksik çıkıyordu → giriş sayfasından sonra banner kısalıp sonra oturuyordu.
+    // Bir sonraki karede de ölçülür; sayfanın üst kısmı (menü yüksekliği vb.) değişirse ResizeObserver ile yeniden.
+    m(); const raf = requestAnimationFrame(() => { m(); requestAnimationFrame(m); }); const t = setTimeout(m, 400);
+    const ro = 'ResizeObserver' in W ? new W.ResizeObserver(m) : null; const top = el.ownerDocument.querySelector('.topbar'); if (ro && top) ro.observe(top);
+    W.addEventListener('resize', m); return () => { cancelAnimationFrame(raf); clearTimeout(t); ro?.disconnect(); W.removeEventListener('resize', m); };
   }, [fill]);
+  // yapışık: sayfanın ilk bölümüyse sayfa üst boşluğu (main padding) kalkar → html.hst-on
+  useLayoutEffect(() => {
+    const el = ref.current; const c = document.documentElement.classList;
+    const first = !!el && el.parentElement?.firstElementChild === el && !!el.closest('.shell.public');
+    c.toggle('hst-on', stick && first); return () => c.remove('hst-on');
+  }, [stick, slides.length]);
   if (!slides.length) return null;
   // 7.11.2026 (7) üst menü ile banner arası ek boşluk (look.heroGap px, Tasarım › Görünüm)
-  return <div ref={ref} className={'cd-hero' + (w ? ' hw-' + w : '') + (fill ? ' hh-screen' : '')} style={Number(gap) ? { marginTop: Number(gap) + 'px' } : undefined}>
+  return <div ref={ref} className={'cd-hero' + (w ? ' hw-' + w : '') + (fill ? ' hh-screen' : '') + (stick ? ' hst' : '')} style={Number(gap) && !stick ? { marginTop: Number(gap) + 'px' } : undefined}>
     <Hero slides={slides} open={open} onProduct={onProduct} brands={brands} pkHero={pkHero} nv={{ ...(H.heroNav || {}), full: w === 'full' ? 'all' : '', fs: '' }} heroH={fill ? undefined : H.heroH} />
   </div>;
 }

@@ -3,6 +3,7 @@
 // Eski tasarım modu silinmedi: üstteki "Gelişmiş" (cihazda ls 'dz-v' = 'old'); eski modda "Yeni tasarım modu" ile geri dönülür.
 // Kayıt eski modla AYNI taslak (store.designDraft) ve aynı Yayınla akışı.
 import { TA_OPTS } from './textanim.jsx';
+import { HERO_FRAMES, HERO_PAGERS, HERO_STICK } from './heroframe.jsx';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, store, toast, go } from './store.js';
 import { STYLE_PRESETS } from './stylekit.js';
@@ -220,6 +221,7 @@ function LookPanel({ d, set, setAll, A }) {
     <Row label="Köşeler" hint="Banner, kartlar ve düğmeler birlikte değişir"><Seg v={corner} opts={CORNERS.map(([k, l]) => [k, l])} on={(k) => set('look.style', { ...st, ...CORNERS.find((x) => x[0] === k)[2] })} /></Row>
     <Row label="Sayfa genişliği" hint="Banner hariç bütün bölümler (banner genişliği bannerın kendi ayarında)"><Seg v={Lk.width || ''} opts={WIDTHS.map(([k, l]) => [k, l])} on={(k) => set('look.width', k)} /></Row>
     <Row label="Yazı tipi"><Seg v={font} opts={[['apple', 'Apple sade'], ['classic', 'Klasik']]} on={(k) => set('look.style', k === 'apple' ? { ...st, head: 'intert', body: 'inter', price: 'intert' } : { ...st, head: '', body: '', price: '' })} /></Row>
+    {Lk.header === 'center' && <Row label="Ortada logo menüsünde arama" hint="Bilgisayarda. Tam genişlik: logonun yanından açılan arama + son aramalar + size özel ürünler"><Seg v={Lk.hcSearch || ''} opts={[['', 'Tam genişlik'], ['old', 'Küçük kutu (eski)']]} on={(k) => set('look.hcSearch', k || undefined)} /></Row>}
     <Row label="Üst menü – banner arası" hint="Ana sayfada bannerın üstüne ek boşluk"><Seg v={String(Number(Lk.heroGap) || 0)} opts={[['0', 'Yok'], ['8', '+8'], ['16', '+16'], ['24', '+24'], ['36', '+36']]} on={(k) => set('look.heroGap', Number(k))} /></Row>
     <Row label="Ürünler sayfası" hint="Yeni: üstte yazılı kategoriler, Filtrele paneli, sade kart. Eski: sol kategori menüsü"><Seg v={Lk.prodV2 === false ? 'old' : ''} opts={[['', 'Yeni'], ['old', 'Eski']]} on={(k) => set('look.prodV2', k === 'old' ? false : undefined)} /></Row>
     {Lk.prodV2 !== false && <HubRows d={d} set={set} />}
@@ -284,6 +286,9 @@ function HeroPanel({ H, S, k }) {
   return <>
     {!pbIn && <div className="v3-cta"><b>Fotoğraflı bannerlar listede değil</b><p>Şu an koddan ekleniyorlar. Listeye alırsanız her birinin yazısını, sırasını ve görünürlüğünü buradan yönetirsiniz.</p><button type="button" className="btn sm primary" onClick={() => S('slides', [...PHOTO_BANNERS.map((b) => ({ pb: b.id })), ...sl])}>Listeye al</button></div>}
     <Row label="Banner yazı animasyonu" hint="Banner her geldiğinde yazılar sırayla belirir"><Seg v={H.txtAnim || ''} opts={TA_OPTS} on={(v) => S('txtAnim', v || undefined)} /></Row>
+    <Row label="Banner çerçevesi" hint="Bannerın etrafı: alttaki çizgiler, ürün rafı, kart destesi… İçindeki tasarım aynı kalır. Bugünkü = eski hâl"><Seg v={H.heroFrame || ''} opts={HERO_FRAMES} on={(v) => S('heroFrame', v || undefined)} /></Row>
+    <Row label="Sayfa seçici" hint="Bugünkü ve Ortam ışığı çerçevesinde geçerli. Kapalı = hiç gösterme"><Seg v={H.heroPager || ''} opts={HERO_PAGERS} on={(v) => S('heroPager', v || undefined)} /></Row>
+    <Row label="Ortada logo menüsünde" hint="Üst menü 'Ortada logo' iken banner menüye yapışık, kenardan kenara"><Seg v={H.heroStick || ''} opts={HERO_STICK} on={(v) => S('heroStick', v || undefined)} /></Row>
     <Row label="Banner imzası (telefon)" hint="Logomuzun telefondaki yeri. Bilgisayarda hep marka satırında"><Seg v={H.sigM || ''} opts={[['', 'Marka satırında'], ['corner', 'Sağ alt köşe']]} on={(v) => S('sigM', v || undefined)} /></Row>
     <Row label="Banner içi düğme köşesi" hint="Banner köşesinden bağımsız"><Seg v={String(H.chipR ?? '')} opts={[['', 'Banner gibi'], ['999', 'Yuvarlak'], ['12', 'Yumuşak'], ['6', 'Az'], ['0', 'Düz']]} on={(v) => S('chipR', v === '' ? undefined : Number(v))} /></Row>
     <span className="v3-cap">Bannerlar · {sl.filter((s) => !s.off).length} açık</span>

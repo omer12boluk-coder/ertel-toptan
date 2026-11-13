@@ -16,6 +16,7 @@ import { SlideEls, useSlideFonts, FONT_BY, FONTS, ensureFonts } from './slidex.j
 import { BOX_COLORS, BOX_PATS } from './dzpresets.js';
 import { P0_KEYS } from './p0keys.js';
 import { PHOTO_BANNERS, PhotoBanner, photoBnOn, pbOf, heroList } from './photobn.jsx';
+import { slideMeta, useMQ, HeroPager, StoryBar, RailBar, DeckBar, SideList, GlowBg, HoldBtn } from './heroframe.jsx';
 import { CdCta, CdNew, CdHero, CdPick, CdSets, CdBrands, CdMarquee, CdRail, CdAds } from './cdhome.jsx';
 import { CdFilm, withFilm } from './filmblock.jsx';
 import { P0Hero, P0Finder, P0Cats, P0Pick, P0Sets, P0Brands, P0Trust } from './p0home.jsx';
@@ -894,13 +895,22 @@ function Marquee({ items, style, speed, speedM, ls = 1, z, zm }) { // speed: mas
 const TOUCH = typeof matchMedia !== 'undefined' && matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 // ---- büyük reklam alanı (kaydırmalı) -----------------------------------------------------------
-export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }) {
+export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProduct }) {
+  // 14.11.2026 çerçeve + sayfa seçici (heroframe.jsx; shopHome.heroFrame / heroPager, boş = bugünkü)
+  const hxPhone = useMQ('(max-width: 700px)'); const hxWide = useMQ('(min-width: 900px)');
+  let frame = useStore((st) => st.settings?.shopHome?.heroFrame) || '';
+  const pagerSet = useStore((st) => st.settings?.shopHome?.heroPager) || '';
+  if (frame === 'side' && !hxWide) frame = '';
+  // kart destesi / ortam ışığı / yanında sıradakiler sayfa genişliğinde durur (kenardan kenara olmaz)
+  const nv = ['deck', 'glow', 'side'].includes(frame) ? { ...nv0, full: '', fs: '' } : nv0;
   // boydan boya banner: sayfa kırpması html sınıfıyla (eskiden :has() seçiciydi — her DOM değişikliğinde bütün sayfanın stilini yeniden hesaplatıyordu)
   const fsRef = useHeroFull(nv);
   useSlideFonts(slides);
   const E = useContext(DesignCtx);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [hold, setHold] = useState(false); // çerçevedeki duraklat düğmesi
+  const deck = frame === 'deck';
   const resumeT = useRef(0);
   const track = useRef(null);
   const n = slides.length;
@@ -914,6 +924,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }
     const el = track.current; if (!el || !('IntersectionObserver' in window)) return;
     const io = new IntersectionObserver(([e]) => {
       const v = e.isIntersecting && e.boundingClientRect.height > 0; setVis(v);
+      if (deck) return; // destede kaydırma yok
       // 12.11.2026: kendiliğinden kayma yarıdayken sayfa değişince banner iki reklamın arasında donup dönüşte yarım görünüyordu →
       // gizlenirken de görünürken de en yakın reklama ANINDA (kaymasız) hizalanır
       const k = Math.max(0, Math.min(n - 1, Math.round(el.scrollLeft / (step(el) || 1)))); const want = k * step(el);
@@ -921,13 +932,13 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }
       if (v) { target.current = null; setI(k); setPlay(k); }
     });
     io.observe(el); return () => io.disconnect();
-  }, [n]);
+  }, [n, deck]);
   useEffect(() => {
-    if (n < 2 || paused || E || !vis) return;
+    if (n < 2 || paused || hold || E || !vis) return;
     since.current = Date.now();
     const t = setTimeout(() => goTo((i + 1) % n), Math.max(300, left.current));
     return () => { clearTimeout(t); left.current -= Date.now() - since.current; };
-  }, [i, paused, n, vis]);
+  }, [i, paused, hold, n, vis]);
   // telefonda reklamlar arasında boşluk var (ayrık kartlar) → bir adım = genişlik + boşluk
   const step = (el) => el.clientWidth + (parseFloat(getComputedStyle(el).columnGap) || 0);
   // yazı giriş animasyonu (play): sadece reklam kendiliğinden / nokta-ok ile geldiğinde oynar. Parmakla kaydırırken yazı zaten
@@ -950,6 +961,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }
   }, []);
   const target = useRef(null); const targetT = useRef(0);
   function goTo(k) {
+    if (deck) { setI(k); setPlay(k); return; }
     const el = track.current; if (!el) return;
     target.current = k; clearTimeout(targetT.current); targetT.current = setTimeout(() => { target.current = null; }, 1200);
     el.scrollTo({ left: k * step(el), behavior: 'smooth' }); setI(k); setPlay(k);
@@ -978,20 +990,54 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }
   // sırasında şeridi yeniden çiziyor, oturma kayması titriyordu (sadece koyu Quick bannerına gidip gelirken). Artık sınıf sadece
   // noktalara/oklara verilir; gölge her fotoğraflı bannerda sabit (pb-sh).
   const LT = slides[i]?.pb && !slides[i].pb.dark ? ' lt' : '';
-  return (
-    <section ref={fsRef} className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '') + (slides.some((x) => x?.pb) ? ' pb-sh' : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
-      <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
-        {slides.map((s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? ' ta-go' : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />)}
-      </div>
+  const metas = useMemo(() => slides.map(slideMeta), [slides]);
+  const pz = paused || hold || !vis;
+  const toggle = () => setHold((h) => !h);
+  const pagerK = frame === '' ? pagerSet : frame === 'glow' ? pagerSet || 'smart' : '';
+  const legacyDots = frame === '' && !pagerSet;
+  const ownArrows = frame === 'story' || frame === 'deck';
+  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? ' ta-go' : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
+  // deste: parmakla sağa/sola çekince önceki/sonraki (tıklamayla karışmasın diye çekilmişse tık yutulur)
+  const sw = useRef(null);
+  const dkDown = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };
+  const dkUp = (e) => { const o = sw.current; if (!o) return; const dx = e.clientX - o.x, dy = e.clientY - o.y; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) { o.moved = true; goTo(((i + (dx < 0 ? 1 : -1)) % n + n) % n); } };
+  const dkClick = (e) => { if (sw.current?.moved) { e.stopPropagation(); e.preventDefault(); sw.current = null; } };
+  const tStart = () => { grab(); clearTimeout(resumeT.current); setPaused(true); };
+  const tEnd = () => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); };
+  const tCancel = () => { release(); setPaused(false); };
+  const section = (
+    <section ref={fsRef} className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '') + (slides.some((x) => x?.pb) ? ' pb-sh' : '') + (frame ? ' hx-on hx-' + frame : '') + (pz ? ' hx-pz' : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
+      {deck ? <div className="hx-dk" ref={track} onPointerDown={dkDown} onPointerUp={dkUp} onClickCapture={dkClick} onTouchStart={tStart} onTouchEnd={tEnd} onTouchCancel={tCancel}>
+        {slides.map((s, k) => { const r = (k - i + n) % n; const c = r === 0 ? '0' : r === 1 ? '1' : r === 2 && n > 3 ? '2' : r === n - 1 ? 'p' : 'h'; return <div key={k} className={'hx-dc dk-' + c} aria-hidden={r === 0 ? undefined : 'true'} onClick={r === 1 ? (e) => { e.stopPropagation(); goTo(k); } : undefined}>{renderSlide(s, k)}</div>; })}
+      </div> : <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={tStart} onTouchEnd={tEnd} onTouchCancel={tCancel}>
+        {slides.map(renderSlide)}
+      </div>}
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>
-        {nv.dots === 'num' ? <div className={'sh-dots sh-num' + LT} aria-live="polite"><b>{i + 1}</b><span>/</span>{n}</div>
-          : nv.dots !== 'none' && <div className={'sh-dots' + LT}>{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>}
-        <button className={'sh-hero-nav prev' + LT} onClick={() => goTo((i - 1 + n) % n)} aria-label="Önceki"><Icon n="back" s={20} /></button>
-        <button className={'sh-hero-nav next' + LT} onClick={() => goTo((i + 1) % n)} aria-label="Sonraki"><Icon n="back" s={20} className="flip" /></button>
+        {legacyDots && (nv.dots === 'num' ? <div className={'sh-dots sh-num' + LT} aria-live="polite"><b>{i + 1}</b><span>/</span>{n}</div>
+          : nv.dots !== 'none' && <div className={'sh-dots' + LT}>{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>)}
+        {!ownArrows && <><button className={'sh-hero-nav prev' + LT} onClick={() => goTo((i - 1 + n) % n)} aria-label="Önceki"><Icon n="back" s={20} /></button>
+        <button className={'sh-hero-nav next' + LT} onClick={() => goTo((i + 1) % n)} aria-label="Sonraki"><Icon n="back" s={20} className="flip" /></button></>}
+        {frame === 'story' && hxPhone && <div className={'hx-st-top' + (metas[i]?.dark ? ' dk' : '')}><HeroPager kind="seg" metas={metas} i={i} goTo={goTo} /></div>}
       </>}
     </section>
   );
+  if (!frame && (!pagerK || pagerK === 'off' || n < 2)) return section;
+  const P = { metas, i, goTo, hold, toggle };
+  const cls = 'hx-wrap hx-w-' + (frame || 'none') + (pz ? ' hx-pz' : '');
+  if (frame === 'side') return <div className={cls}>{section}{n > 1 && <SideList {...P} />}</div>;
+  return <div className={cls}>
+    {frame === 'glow' && <GlowBg metas={metas} i={i} />}
+    {section}
+    {n > 1 && <>
+      {frame === 'story' && <StoryBar {...P} phone={hxPhone} />}
+      {frame === 'rail' && <RailBar {...P} phone={hxPhone} vis={vis} />}
+      {frame === 'deck' && <DeckBar {...P} />}
+      {pagerK && pagerK !== 'off' && (frame === 'glow'
+        ? <div className="hx-pill"><HeroPager kind={pagerK} {...P} /><i className="hx-sep" aria-hidden="true" /><span className="hx-pn"><b>{metas[i]?.brand}</b> {metas[i]?.name}</span><HoldBtn hold={hold} toggle={toggle} className="hx-btn sm" /></div>
+        : <div className="hx-under"><HeroPager kind={pagerK} {...P} /></div>)}
+    </>}
+  </div>;
 }
 // 7.11.2026 boydan boya (nv.full) + TAM EKRAN (nv.fs: pc|m|all): sayfa genişliği ayarından bağımsız kenardan kenara;
 // tam ekranda yükseklik = ekranın bannerın başladığı yerden altına kadarı (--fs-top ölçülür). Eski Hero ve Paket 0 vitrini ortak.
@@ -1003,7 +1049,7 @@ export function useHeroFull(nv = {}) {
     const el = ref.current; if (!el || !nv.fs) return;
     const W = el.ownerDocument.defaultView || window;
     const m = () => { const t = el.getBoundingClientRect().top + W.scrollY; el.style.setProperty('--fs-top', Math.max(0, Math.min(260, Math.round(t))) + 'px'); };
-    m(); const t = setTimeout(m, 400); W.addEventListener('resize', m); return () => { clearTimeout(t); W.removeEventListener('resize', m); };
+    m(); const raf = requestAnimationFrame(() => { m(); requestAnimationFrame(m); }); const t = setTimeout(m, 400); W.addEventListener('resize', m); return () => { cancelAnimationFrame(raf); clearTimeout(t); W.removeEventListener('resize', m); };
   }, [nv.fs]);
   return ref;
 }
