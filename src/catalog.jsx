@@ -828,7 +828,21 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
   const list = [...roots].sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0));
   const img = (n) => MOS_IMG[n.id] || CAT_COVERS[n.id] || HUB_IMG[n.id];
-  return <div className="pmo">
+  // 14.11.2026 sayfaya sığsın: satır boyu = (ekran yüksekliği − mozaiğin başladığı yer − Setler şeridi) / 3 (aşağı kaydırmadan hepsi görünür)
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    const m = () => {
+      const R = el.getBoundingClientRect(); if (!R.width) return; const top = R.top + scrollY; const strip = sets.length ? 82 : 0;
+      const h = Math.floor((innerHeight - top - 36 - strip - 28) / 3);
+      const v = Math.max(110, Math.min(250, h)) + 'px'; if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
+    };
+    // sayfa gizliyken (geçiş) ilk ölçüm yanlış çıkıyor → görünür olunca / boyu değişince yeniden
+    m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); addEventListener('resize', m);
+    const ro = new ResizeObserver(m); ro.observe(el);
+    return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', m); };
+  }, [sets.length]);
+  return <div className="pmo" ref={ref}>
     <div className="pmo-g">
       {list.map((n, i) => { const f = () => onCat(n.id); return <div key={n.id} role="button" tabIndex={0} className={'pmo-t' + (i === 0 ? ' big' : '')} onClick={f} onKeyDown={kd(f)}>
         <b className="pmo-n">{n.name}</b><span className="pmo-c">{nf(counts.get(n.id))} ürün</span><span className="pmo-iw"><MosImg v={img(n)} /></span>
@@ -856,13 +870,13 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
   const key = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
-  const mos = HC.mos !== 'off';
-  return <div className={'catalog phub pv2-in' + (mos ? ' phub-mos' : '')}>
+  const mos = HC.mos !== 'off'; const mosM = HC.mosM !== 'off'; // 14.11.2026 bilgisayar / telefon ayrı
+  return <div className={'catalog phub pv2-in' + (mos ? ' phub-mos' : '') + (mosM ? ' phub-mos-m' : '')}>
     <nav className="pv2-crumb" aria-label="Konum"><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></nav>
     <div className="pv2-trow">
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
     </div>
-    {mos && <HubMosaic roots={roots} counts={counts} total={total} brandsN={brands.length} sets={sets} onCat={onCat} onAll={onAll} onSets={onSets} kd={key} />}
+    {(mos || mosM) && <HubMosaic roots={roots} counts={counts} total={total} brandsN={brands.length} sets={sets} onCat={onCat} onAll={onAll} onSets={onSets} kd={key} />}
     <div className="phub-lbl">Kategoriler</div>
     <div className={'phub-grid phub-m-' + mode + ' phub-hv-' + (HC.subHover || 'ink') + (HC.lay ? ' phub-lay-' + HC.lay : '')}>
       <div role="button" tabIndex={0} className={'phub-c phub-all phub-t-' + (HC.allTone || 'acc')} onClick={onAll} onKeyDown={key(onAll)}>
