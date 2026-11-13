@@ -1,0 +1,215 @@
+# Hazır tezgâh seti sayfasını üretir: noktalar.json + ../kat.json → index.html (resim: on.webp, ürün kapakları u/<id>.webp)
+import json, os
+H = os.path.dirname(os.path.abspath(__file__))
+K = {p['id']: p for p in json.load(open(os.path.join(H, '..', 'kat.json')))}
+P = json.load(open(os.path.join(H, 'noktalar.json')))
+for p in P:
+    p['u'] = [{'id': i, 'n': K[i]['n'], 'r': K[i]['r']} for i in p['ids']]
+CSS = r'''
+:root{--ink:#1d1d1f;--mut:#6e6e73;--line:#e5e5ea;--bg:#f5f5f7;--acc:#2f62d6;--accl:#eaf0fc}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:hidden}
+body{margin:0;font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+button{font:inherit;color:inherit}
+main{max-width:1280px;margin:0 auto;padding:12px 12px 110px}
+.back{display:inline-block;margin:0 2px 6px;color:var(--acc);font-weight:600;font-size:14px;text-decoration:none}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:2px 2px 10px}
+h1{font-size:22px;letter-spacing:-.02em;margin:0}.lead{margin:2px 0 0;color:var(--mut);font-size:13px}
+.seg{display:inline-flex;background:#e8e8ed;border-radius:11px;padding:3px;flex:none}
+.seg button{border:0;background:transparent;border-radius:9px;padding:7px 14px;font-size:13.5px;font-weight:600;color:var(--mut);cursor:pointer;transition:.2s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.layout{display:grid;gap:12px}.layout>div{min-width:0}
+.stage{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:1.5;background:#2a2622}
+#vp{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab}#vp.drag{cursor:grabbing}
+#st{position:absolute;left:0;top:0;width:1536px;height:1024px;transform-origin:0 0;will-change:transform}
+#st img{display:block;width:100%;height:100%;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.zone{position:absolute;border-radius:14px;cursor:pointer;transition:background .2s,box-shadow .2s}
+@media(hover:hover){.zone:hover{background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(255,255,255,.7) inset}}
+.zone.on{box-shadow:0 0 0 3px var(--acc) inset;background:rgba(47,98,214,.08)}
+.ov{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.tag{position:absolute;transform:translate(-50%,-100%);z-index:60;display:flex;flex-direction:column;align-items:center;transition:opacity .3s;pointer-events:auto;cursor:pointer;border:0;background:none;padding:0}
+.tag div{background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-radius:5px;padding:1px 5px 2px;box-shadow:0 1px 4px rgba(0,0,0,.18);text-align:center;white-space:nowrap;line-height:1.15}
+.tag small{display:block;font-size:6.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a8a90}
+.tag b{display:block;font-size:8.5px;font-weight:700;color:#1d1d1f}
+.tag i{display:block;width:1px;height:6px;background:rgba(255,255,255,.95);box-shadow:0 0 2px rgba(0,0,0,.3)}
+.tag.hv div,.tag.on div{background:var(--acc)}.tag.hv small,.tag.on small{color:rgba(255,255,255,.75)}.tag.hv b,.tag.on b{color:#fff}
+.notags .tag{opacity:0;pointer-events:none}
+.tools{position:absolute;right:8px;top:8px;z-index:75;display:flex;gap:6px}
+.tb{width:30px;height:30px;border-radius:50%;border:0;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.tb svg{width:17px;height:17px;stroke:#1d1d1f;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tb.off{opacity:.55}
+.pad{position:absolute;right:8px;bottom:8px;z-index:75;display:flex;align-items:center;gap:3px;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:16px;padding:4px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.pad .col{display:flex;flex-direction:column;gap:3px}
+.pad button{width:30px;height:28px;border:0;border-radius:9px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;touch-action:none;user-select:none}
+.pad .col button{height:22px}.pad button:active{background:#e8e8ed}
+.pad svg{width:16px;height:16px;stroke:#1d1d1f;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.help{position:absolute;left:50%;transform:translateX(-50%);top:10px;white-space:nowrap;z-index:75;background:rgba(29,29,31,.62);color:#fff;font-size:11px;border-radius:999px;padding:5px 10px;pointer-events:none;transition:opacity .6s}
+.strip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:10px 2px 4px}.strip::-webkit-scrollbar{display:none}
+.it{flex:0 0 auto;width:150px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:7px;cursor:pointer;text-align:left;display:flex;gap:7px;align-items:center}
+.it img{width:38px;height:38px;object-fit:contain;border-radius:8px;flex:none}
+.it b{display:block;font-size:11.5px}.it span{display:block;font-size:10.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px}
+.it.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.side{background:#fff;border-radius:18px;padding:14px}
+.side h3{margin:0 0 4px;font-size:15px}.side h3 span{color:var(--mut);font-weight:500;font-size:13px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 4px;border-top:1px solid #f0f0f2;cursor:pointer;border-radius:8px}
+.row:first-of-type{border-top:0}.row.on{background:#f4f7fe}
+.row img{width:36px;height:36px;object-fit:contain;flex:none}
+.row .t{flex:1;min-width:0}.row small{display:block;color:var(--mut);font-size:11px}.row .n{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .p{font-weight:700;font-size:13px}
+.tot{display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-top:6px;padding-top:10px;border-top:1px solid var(--line)}
+.note{font-size:11.5px;color:var(--mut);margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.card{background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;animation:rise .4s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.card .im{aspect-ratio:1;display:flex;align-items:center;justify-content:center;padding:10px;position:relative}
+.card .im img{max-width:100%;max-height:100%;object-fit:contain}
+.card .lab{position:absolute;left:10px;top:10px;background:rgba(245,245,247,.92);border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700;color:var(--mut)}
+.card .b{padding:10px 12px 12px;border-top:1px solid #f2f2f4;display:flex;flex-direction:column;gap:6px;flex:1}
+.card .n{font-size:13px;font-weight:600;line-height:1.3;min-height:2.6em}
+.card .p{font-weight:700;font-size:15px}
+.add{height:38px;border:0;border-radius:10px;background:var(--accl);color:var(--acc);font-size:13px;font-weight:700;cursor:pointer;width:100%}
+.add.ok{background:var(--acc);color:#fff}
+.dim{position:fixed;inset:0;background:rgba(0,0,0,.32);opacity:0;pointer-events:none;transition:opacity .25s;z-index:90}.dim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:91;background:#fff;border-radius:22px 22px 0 0;padding:8px 14px calc(16px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .38s cubic-bezier(.2,.9,.25,1);max-height:86vh;overflow:auto}
+.sheet.on{transform:none}
+.sheet:not(.on){pointer-events:none;visibility:hidden;transition:transform .38s cubic-bezier(.2,.9,.25,1),visibility 0s .38s}
+.sheet .grab{width:38px;height:5px;border-radius:3px;background:#d1d1d6;margin:2px auto 10px}
+.sheet h2{font-size:17px;margin:0 0 2px}.sheet .sub{color:var(--mut);font-size:12.5px;margin:0 0 12px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;display:flex;flex-direction:column}
+.opt .im{aspect-ratio:1;display:flex;align-items:center;justify-content:center;padding:8px}
+.opt .im img{max-width:100%;max-height:100%;object-fit:contain}
+.opt .b{padding:9px 11px 11px;border-top:1px solid #f2f2f4;display:flex;flex-direction:column;gap:6px;flex:1}
+.opt .n{font-size:12.5px;font-weight:600;line-height:1.3;flex:1}.opt .p{font-size:15px;font-weight:700}
+.opts.one{grid-template-columns:1fr}.opts.one .opt{flex-direction:row}.opts.one .opt .im{width:46%;flex:none}.opts.one .opt .b{border-top:0;border-left:1px solid #f2f2f4;justify-content:center}
+.all{margin-top:10px;width:100%;border:0;background:var(--acc);color:#fff;border-radius:12px;height:44px;font-weight:700;cursor:pointer}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px;z-index:50}
+.bar .t{flex:1}.bar small{display:block;color:var(--mut);font-size:12px}.bar b{font-size:18px}
+.bar button{height:46px;padding:0 20px;border:0;border-radius:14px;background:var(--acc);color:#fff;font-weight:700;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,16px);background:#1d1d1f;color:#fff;padding:9px 14px;border-radius:12px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:95}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.view{animation:fade .3s ease}@keyframes fade{from{opacity:0}}.hide{display:none!important}
+body.full{overflow:hidden}
+body.full .stage{position:fixed;inset:0;border-radius:0;aspect-ratio:auto;z-index:80}
+body.full .bar{display:none}
+body.full .tag small{font-size:7.5px}body.full .tag b{font-size:10px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:960px){
+ main{padding:24px 18px 120px}h1{font-size:30px}.lead{font-size:14px}
+ .layout{grid-template-columns:1fr 330px;align-items:start}.side{position:sticky;top:16px}
+ .strip{display:none}
+ .tag small{font-size:8px}.tag b{font-size:10.5px}.tag div{padding:2px 7px 3px}.tag i{height:8px}
+ .tb{width:38px;height:38px}
+ .sheet{left:auto;right:max(18px,calc((100vw - 1280px)/2 + 18px));top:50%;bottom:auto;width:360px;border-radius:22px;transform:translate(24px,-50%);opacity:0;transition:transform .3s cubic-bezier(.2,.9,.25,1),opacity .2s;padding:18px 18px 18px;box-shadow:0 18px 50px rgba(0,0,0,.22)}
+ .sheet.on{transform:translate(0,-50%);opacity:1}.sheet .grab{display:none}
+ .dim{background:transparent}
+ .opts.one .opt{flex-direction:column}.opts.one .opt .im{width:auto}.opts.one .opt .b{border-left:0;border-top:1px solid #f2f2f4}
+ .sheet:not(.on){transition:transform .3s,opacity .2s,visibility 0s .3s}
+}
+@media(max-width:959px){.side{display:none}
+ body:not(.full) .stage{aspect-ratio:auto;height:calc((100vw - 24px) / 1.1);max-height:calc(100vh - 230px)}
+ body:not(.full) .pad{right:6px;bottom:6px}
+ body:not(.full) .help{top:auto;bottom:50px;font-size:10.5px}}
+'''
+BODY = r'''<main>
+<a class="back" href="/">‹ Mağaza</a>
+<div class="top"><div><h1>Hazır tezgâh.</h1><p class="lead">Ürüne dokun, incele. Beğendiğini sepete ekle.</p></div>
+ <div class="seg" id="seg"><button data-v="tez" class="on">Tezgâh</button><button data-v="urun">Ürünler</button></div></div>
+<div id="vTez" class="view"><div class="layout">
+ <div><div class="stage" id="stage">
+   <div id="vp"><div id="st"><img src="on.webp" alt="Hazır tamir tezgâhı" draggable="false"></div></div>
+   <div class="ov" id="ov"></div>
+   <div class="help" id="help">Sürükle: gez · İki parmak: yaklaş</div>
+   <div class="tools"><button class="tb" id="bTag" title="Etiketler"><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg></button>
+    <button class="tb" id="bReset" title="Görünümü sıfırla"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg></button>
+    <button class="tb" id="bFull" title="Tam ekran"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
+   <div class="pad" id="pad">
+    <button data-x="1" title="Sola"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div class="col"><button data-y="1" title="Yukarı"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+    <button data-y="-1" title="Aşağı"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <button data-x="-1" title="Sağa"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div class="col"><button data-z="1.25" title="Yaklaş"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></button>
+    <button data-z="0.8" title="Uzaklaş"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button></div></div>
+  </div><div class="strip" id="strip"></div></div>
+ <div class="side" id="side"></div>
+</div></div>
+<div id="vUrun" class="view hide"><div class="grid" id="grid"></div><p class="note" style="margin:12px 4px">Fotoğraflar sitedeki ürün kapakları.</p></div>
+</main>
+<div class="bar"><div class="t"><small id="bc"></small><b id="bt"></b></div><button id="badd">Hepsini sepete ekle</button></div>
+<div class="dim" id="dim"></div><div class="sheet" id="sheet"></div><div class="toast" id="toast"></div>'''
+JS = r'''
+const $=id=>document.getElementById(id), usd=v=>'$'+(Math.round(v*100)/100).toLocaleString('tr-TR');
+const W=1536,H=1024, img=id=>'u/'+id+'.webp', ALL=P.flatMap(p=>p.u);
+const vp=$('vp'),st=$('st'),ov=$('ov'),stage=$('stage');
+let s=1,tx=0,ty=0,minS=1,anim=0,cur=-1;
+// bölgeler + etiketler
+P.forEach((p,i)=>{const [a,b,c,d]=p.z,z=document.createElement('div');z.className='zone';Object.assign(z.style,{left:a+'px',top:b+'px',width:(c-a)+'px',height:(d-b)+'px'});
+ z.onclick=e=>{if(moved<8)openP(i)};z.onmouseenter=()=>p.tag.classList.add('hv');z.onmouseleave=()=>p.tag.classList.remove('hv');st.appendChild(z);p.zone=z;
+ const t=document.createElement('button');t.className='tag';t.innerHTML=`<div><small>${p.ad}</small><b>${p.kisa}</b></div><i></i>`;t.onclick=()=>openP(i);ov.appendChild(t);p.tag=t});
+function place(){P.forEach(p=>{p.tag.style.left=(p.x*s+tx)+'px';p.tag.style.top=(p.y*s+ty)+'px'})}
+function clamp(){const w=stage.clientWidth,h=stage.clientHeight,iw=W*s,ih=H*s;tx=iw<=w?(w-iw)/2:Math.min(0,Math.max(w-iw,tx));ty=ih<=h?(h-ih)/2:Math.min(0,Math.max(h-ih,ty))}
+function apply(){clamp();st.style.transform=`translate(${tx}px,${ty}px) scale(${s})`;place()}
+function fit(){minS=Math.max(stage.clientWidth/W,stage.clientHeight/H)*(stage.clientWidth<700?1:1);minS=Math.max(stage.clientWidth/W,stage.clientHeight/H)}
+function anim2(ns,cx,cy,dur){cancelAnimationFrame(anim);ns=Math.max(minS,Math.min(minS*4,ns));const s0=s,x0=tx,y0=ty,t0=performance.now();
+ const gx=cx(ns),gy=cy(ns);const f=t=>{let k=Math.min(1,(t-t0)/dur);k=1-Math.pow(1-k,3);s=s0+(ns-s0)*k;tx=x0+(gx-x0)*k;ty=y0+(gy-y0)*k;apply();if(k<1)anim=requestAnimationFrame(f)};anim=requestAnimationFrame(f)}
+function zoomAt(ns,px,py,dur=300){const wx=(px-tx)/s,wy=(py-ty)/s;anim2(ns,n=>px-wx*n,n=>py-wy*n,dur)}
+function focusP(p){const w=stage.clientWidth,h=stage.clientHeight,[a,b,c,d]=p.z;const ns=Math.min(minS*3,Math.max(minS*1.4,Math.min(w/((c-a)*2.2),h/((d-b)*2.2))));
+ anim2(ns,n=>w/2-p.x*n,n=>h/2-((b+d)/2)*n,550)}
+function reset(){anim2(minS,n=>(stage.clientWidth-W*n)/2,n=>(stage.clientHeight-H*n)/2,450)}
+fit();s=minS;tx=(stage.clientWidth-W*s)/2;ty=(stage.clientHeight-H*s)/2;apply();
+addEventListener('resize',()=>{fit();s=Math.max(s,minS);apply()});
+vp.addEventListener('scroll',()=>{vp.scrollLeft=0;vp.scrollTop=0});
+// sürükle / iki parmak / tekerlek
+const pts=new Map();let last=null,moved=0;
+vp.addEventListener('pointerdown',e=>{pts.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=0;vp.classList.add('drag');cancelAnimationFrame(anim)});
+addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const pr=pts.get(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pts.size===1){tx+=e.clientX-pr.x;ty+=e.clientY-pr.y;moved+=Math.abs(e.clientX-pr.x)+Math.abs(e.clientY-pr.y);apply()}
+ else if(pts.size===2){const[a,b]=[...pts.values()],r=stage.getBoundingClientRect(),d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;
+  if(last){const ns=Math.max(minS,Math.min(minS*4,s*d/last.d));tx=cx-(last.cx-tx)*ns/s;ty=cy-(last.cy-ty)*ns/s;s=ns;apply()}last={d,cx,cy};moved=99}});
+addEventListener('pointerup',e=>{pts.delete(e.pointerId);if(pts.size<2)last=null;vp.classList.remove('drag');setTimeout(()=>{if(!pts.size)moved=0},0)});
+addEventListener('pointercancel',e=>{pts.delete(e.pointerId);last=null});
+vp.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect();zoomAt(s*Math.exp(-e.deltaY*0.0018),e.clientX-r.left,e.clientY-r.top,120)},{passive:false});
+// tuşlar
+$('pad').querySelectorAll('button').forEach(b=>b.onclick=()=>{const w=stage.clientWidth,h=stage.clientHeight;
+ if(b.dataset.z)zoomAt(s*+b.dataset.z,w/2,h/2);else{const dx=(+b.dataset.x||0)*w*.25,dy=(+b.dataset.y||0)*h*.25;anim2(s,()=>tx+dx,()=>ty+dy,300)}});
+$('bTag').onclick=()=>{stage.classList.toggle('notags');$('bTag').classList.toggle('off')};
+$('bReset').onclick=reset;
+$('bFull').onclick=()=>{document.body.classList.toggle('full');requestAnimationFrame(()=>{fit();s=minS;apply();reset()})};
+setTimeout(()=>{if(matchMedia('(hover:hover)').matches)$('help').textContent='Sürükle: gez · Tekerlek: yaklaş · Ürüne tıkla'},0);
+setTimeout(()=>$('help').style.opacity=0,6000);
+// liste
+const sum=p=>p.u.reduce((a,u)=>a+u.r,0), TOT=P.reduce((a,p)=>a+sum(p),0);
+const nm=p=>p.u.length>1?p.kisa+' · '+p.u.length+' ürün':p.u[0].n;
+$('side').innerHTML=`<h3>Tezgâhtakiler <span>· ${P.length} kalem</span></h3>`+P.map((p,i)=>`<div class="row" data-i="${i}"><img src="${img(p.u[0].id)}" alt=""><div class="t"><small>${p.ad}</small><div class="n">${nm(p)}</div></div><div class="p">${usd(sum(p))}</div></div>`).join('')+`<div class="tot"><span>Set toplamı</span><span>${usd(TOT)}</span></div><p class="note">Fiyatlar USD liste fiyatı; TL ve KDV sepette.</p>`;
+$('strip').innerHTML=P.map((p,i)=>`<button class="it" data-i="${i}"><img src="${img(p.u[0].id)}" alt=""><div><b>${p.ad}</b><span>${p.kisa}</span></div></button>`).join('');
+document.querySelectorAll('[data-i]').forEach(r=>r.onclick=()=>{const i=+r.dataset.i;openP(i)});
+$('bc').textContent=ALL.length+' ürün · set toplamı';$('bt').textContent=usd(TOT);
+$('grid').innerHTML=P.flatMap(p=>p.u.map(u=>`<div class="card"><div class="im"><span class="lab">${p.ad}</span><img src="${img(u.id)}" alt="" loading="lazy"></div><div class="b"><div class="n">${u.n}</div><div class="p">${usd(u.r)}</div><button class="add" data-id="${u.id}">Sepete ekle</button></div></div>`)).join('');
+// sayfa (ürün kartı)
+function openP(i){const p=P[i];cur=i;P.forEach((q,j)=>{q.zone.classList.toggle('on',j===i);q.tag.classList.toggle('on',j===i)});
+ document.querySelectorAll('[data-i]').forEach(r=>r.classList.toggle('on',+r.dataset.i===i));
+ focusP(p);
+ $('sheet').innerHTML=`<div class="grab"></div><h2>${p.ad}</h2><p class="sub">${p.u.length>1?p.u.length+' ürün · toplam '+usd(sum(p)):p.kisa}</p>
+  <div class="opts${p.u.length===1?' one':''}">${p.u.map(u=>`<div class="opt"><div class="im"><img src="${img(u.id)}" alt=""></div><div class="b"><div class="n">${u.n}</div><div class="p">${usd(u.r)}</div><button class="add" data-id="${u.id}">Sepete ekle</button></div></div>`).join('')}</div>
+  ${p.u.length>1?`<button class="all" id="sAll">Hepsini sepete ekle · ${usd(sum(p))}</button>`:''}`;
+ if($('sAll'))$('sAll').onclick=()=>add(p.u.map(u=>u.id),p.ad+' sepete eklendi');
+ setTimeout(()=>{$('sheet').classList.add('on');$('dim').classList.add('on')},matchMedia('(min-width:960px)').matches?380:250)}
+function closeP(){$('sheet').classList.remove('on');$('dim').classList.remove('on');P.forEach(q=>{q.zone.classList.remove('on');q.tag.classList.remove('on')});document.querySelectorAll('[data-i]').forEach(r=>r.classList.remove('on'))}
+$('dim').onclick=closeP;addEventListener('keydown',e=>{if(e.key==='Escape'){closeP();document.body.classList.remove('full')}});
+let ty0=null;$('sheet').addEventListener('touchstart',e=>{ty0=$('sheet').scrollTop<=0?e.touches[0].clientY:null},{passive:true});
+$('sheet').addEventListener('touchend',e=>{if(ty0!=null&&e.changedTouches[0].clientY-ty0>70)closeP();ty0=null},{passive:true});
+// sepet
+function add(ids,msg){let o={};try{o=JSON.parse(sessionStorage.getItem('tezgah-ekle')||'{}')}catch(e){}ids.forEach(i=>o[i]=(o[i]||0)+1);try{sessionStorage.setItem('tezgah-ekle',JSON.stringify(o))}catch(e){}
+ toast(msg||'Sepete eklendi');if(LIVE)setTimeout(()=>location.href='/sepet',600)}
+document.addEventListener('click',e=>{const b=e.target.closest('.add');if(!b)return;add([+b.dataset.id],'Sepete eklendi');b.classList.add('ok');b.textContent='Eklendi ✓'});
+$('badd').onclick=()=>add(ALL.map(u=>u.id),'Set sepete eklendi'+(LIVE?'':' (önizleme)'));
+function toast(t){const x=$('toast');x.textContent=t;x.classList.add('on');clearTimeout(x._t);x._t=setTimeout(()=>x.classList.remove('on'),1800)}
+const LIVE=/ertelmarket\.com$/.test(location.hostname);
+// görünüm
+$('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('seg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('vTez').classList.toggle('hide',b.dataset.v!=='tez');$('vUrun').classList.toggle('hide',b.dataset.v==='tez');if(b.dataset.v==='tez'){fit();apply()}});
+'''
+html = ('<!DOCTYPE html>\n<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+        '<title>Hazır tezgâh · ERTEL GSM</title><style>' + CSS + '</style></head><body>' + BODY +
+        '<script>const P=' + json.dumps([{k: v for k, v in p.items() if k != 'ids'} for p in P], ensure_ascii=False) + ';' + JS + '</script></body></html>')
+open(os.path.join(H, 'index.html'), 'w').write(html)
+print('ok', len(html))
