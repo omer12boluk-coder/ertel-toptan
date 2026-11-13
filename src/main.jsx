@@ -680,8 +680,22 @@ function ShellFull() {
   }, [hs]);
   const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
   useHideTop(pub && LK.hideTop !== false, LK.hideTop === 'up', tab, urunLayer);
+  // 14.11.2026 ortada logo menüsünün görünümü (look.hcStyle): '' bugünkü | 'glass2' cam iki satır | 'glass1' cam tek satır (menü logonun iki yanında) | 'clear' üstte şeffaf, kayınca cam.
+  // Banner her durumda menünün BİTTİĞİ yerden başlar (menü bannerın üstüne binmez).
+  const hcSt = hc ? (LK.hcStyle || '') : '';
+  const hcOne = hcSt === 'glass1' && !phoneUI;
+  useEffect(() => { const c = document.documentElement.classList; c.toggle('hc-one', hcOne); return () => c.remove('hc-one'); }, [hcOne]);
+  useEffect(() => { if (hcSt !== 'clear') return; const c = document.documentElement.classList; const f = () => c.toggle('hc-scr', scrollY > 4); f(); addEventListener('scroll', f, { passive: true }); return () => { removeEventListener('scroll', f); c.remove('hc-scr'); }; }, [hcSt]);
   const navTab = tab === 'sepetler' || tab === 'gecmis' ? 'siparisler' : tab === 'sepetlink' || tab === 'odemelink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' || tab === 'gelen' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
+  const hcNav = hc ? [
+    ...nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l]) => {
+      const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+      return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
+    }),
+    <BrandsDrop key="markalar"><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>,
+    hasSets && <button key="setlist" className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><span className="topnav-l">Setler</span></button>,
+  ].filter(Boolean) : null;
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' + (S0.look?.adminNav !== 'old' ? ' adm-bn' + (S0.look?.adminNavTone === 'accent' ? '' : ' bn-ink') : '') : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
       {hs ? <header className="topbar hdr-g hdr-gs" ref={gsRef}>
@@ -708,15 +722,16 @@ function ShellFull() {
             {hasSets && <button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><Icon n="box" s={16} /><span className="topnav-l">Setler</span></button>}
           </nav>
         </div>
-      </header> : hc ? <header className="topbar hdr-c">
+      </header> : hc ? <header className={'topbar hdr-c' + (hcSt ? ' hcs-' + hcSt : '')}>
         <div className="topbar-in">
           {/* 6.11.2026: bilgisayarda solda ses + gece düğmesi, sağda arama (logoya doğru uzar, diğerlerinin üstüne binmez) + bildirim; telefonda eskisi gibi */}
-          <span className="hc-l">{phoneUI ? <><HeaderSearch /><ShopBell /></> : <><SoundButton /><ThemeButton /></>}</span>
+          <span className="hc-l">{phoneUI ? <><HeaderSearch /><ShopBell /></> : <><SoundButton /><ThemeButton />{hcOne && <nav className="topnav hc-nav1" aria-label="Ana menü">{hcNav.slice(0, 3)}</nav>}</>}</span>
           <button className="hc-mid" onClick={home} aria-label="Ana sayfa" title="Ana sayfa">
             <img className="brand-logo" src={S0.brand.logo || LOGO_MARK} alt="" />
             <b className="hc-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b>
           </button>
           <span className="hc-r">
+            {hcOne && <nav className="topnav hc-nav1" aria-label="Ana menü (devam)">{hcNav.slice(3)}</nav>}
             {!phoneUI && <>{LK.hcSearch === 'old' ? <HeaderSearch /> : <HcSearch />}<ShopBell /></>}
             <HeaderCart on={tab === 'sepet'} />
             {phoneUI && <><SoundButton /><ThemeButton /></>}
@@ -724,14 +739,7 @@ function ShellFull() {
               ? <ProfileDrop><button className={'me' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Hesabım"><span className="me-t"><b>{member.name || member.email}</b><small>Hesabım</small></span><Avatar u={member} size={34} /></button></ProfileDrop>
               : <button className={'btn sm outline me-login' + (tab === 'hesap' ? ' on' : '')} onClick={() => go('hesap')} aria-label="Giriş yap"><Icon n="user" s={16} /><span className="me-login-l">Giriş yap</span><span className="me-login-s">Giriş yap</span></button>}
           </span>
-          <nav className="topnav hc-nav" aria-label="Ana menü">
-            {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
-              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
-              return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
-            })}
-            <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
-            {hasSets && <button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><span className="topnav-l">Setler</span></button>}
-          </nav>
+          {!hcOne && <nav className="topnav hc-nav" aria-label="Ana menü">{hcNav}</nav>}
         </div>
       </header> : <header className={'topbar' + (pub && LK.header === 'glass' ? ' hdr-g' : '')}>
         <div className="topbar-in">

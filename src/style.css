@@ -10098,3 +10098,23 @@ html.hcs-open .hdr-c .hc-r .hcs-btn { visibility: hidden; }
 .hx-on.hx-story .sh-dots, .hx-on .sh-dots { display: none; }
 /* artık altta parça yok → banner kısalmaz */
 .cd-hero.hh-screen .hx-w-story, .cd-hero.hh-screen .hx-w-glow, .cd-hero.hh-screen .hx-w-none { --hxu: 0px !important; }
+/* 14.11.2026 'Ortada logo' menüsünün cam görünümleri (look.hcStyle; main.jsx). Menü yerinde durur (yapışkan), banner menünün BİTTİĞİ yerden başlar;
+   cam etkisi aşağı kaydırınca altından geçen içerikte görünür. '' = bugünkü düz beyaz. */
+.hdr-c:is(.hcs-glass2, .hcs-glass1) { background: color-mix(in oklab, var(--surface) 64%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.7); backdrop-filter: blur(22px) saturate(1.7); border-bottom: 1px solid color-mix(in oklab, var(--fg) 8%, transparent); }
+.hdr-c.hcs-clear { background: transparent; border-bottom-color: transparent; transition: background .35s ease, border-color .35s ease, backdrop-filter .35s ease; }
+html.hc-scr .hdr-c.hcs-clear { background: color-mix(in oklab, var(--surface) 64%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.7); backdrop-filter: blur(22px) saturate(1.7); border-bottom-color: color-mix(in oklab, var(--fg) 8%, transparent); }
+.hdr-c:is(.hcs-glass2, .hcs-clear) .hc-nav { border-top: 1px solid color-mix(in oklab, var(--fg) 6%, transparent); }
+@media (min-width: 900px) {
+  html.hdr-c-on.hc-one { --top-h: 80px; }
+  .hdr-c.hcs-glass1 .topbar-in { grid-template-rows: 80px; column-gap: 28px; }
+  .hdr-c.hcs-glass1 .hc-mid .brand-logo { width: 38px !important; height: 38px !important; }
+  .hdr-c.hcs-glass1 .hc-name { font-size: 22px; letter-spacing: .14em; }
+  .hdr-c .hc-nav1 { display: flex; align-items: stretch; gap: 26px; height: 80px; margin: 0 10px; }
+  .hdr-c .hc-nav1 .topnav-b { height: 80px; padding: 0 2px; border-radius: 0; background: none !important; color: var(--fg); font: 600 12.5px/1 var(--f-body); letter-spacing: .12em; text-transform: uppercase; position: relative; gap: 4px; white-space: nowrap; }
+  .hdr-c .hc-nav1 .topnav-b::after { content: ""; position: absolute; left: 0; right: 0; bottom: 20px; height: 2px; border-radius: 2px; background: var(--accent); transform: scaleX(0); transition: transform .16s var(--ease); }
+  .hdr-c .hc-nav1 .topnav-b:hover::after, .hdr-c .hc-nav1 .topnav-b.on::after { transform: scaleX(1); }
+  .hdr-c .hc-nav1 .topnav-b.on { color: var(--accent); }
+  .hdr-c .hc-nav1 .topnav-chev { opacity: .5; }
+  .hdr-c.hcs-glass1 .hc-r .me-login-l { display: none; }
+}
+@media (min-width: 900px) and (max-width: 1280px) { .hdr-c .hc-nav1 { gap: 16px; } .hdr-c .hc-nav1 .topnav-b { font-size: 11.5px; letter-spacing: .08em; } .hdr-c.hcs-glass1 .hc-name { font-size: 18px; } }
