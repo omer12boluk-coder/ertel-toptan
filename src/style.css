@@ -9870,3 +9870,18 @@ body.eh-lock{overflow:hidden}
   .eh-canvas,.eh-fallback,.eh-btn,.eh-btn svg{transition:none}
 }
 
+
+/* ---- 13.11.2026 Banner yazı animasyonu (.ta; textanim.jsx — Magic UI text-animate uyarlaması). Sadece etkin bannerda oynar. ---- */
+.ta .ta-p { display: inline-block; white-space: pre; }
+.ta .ta-wd { display: inline-block; white-space: nowrap; }
+.sh-slide.on .ta .ta-p { animation: var(--ta-k, taBlurUp) .55s cubic-bezier(.2, .7, .2, 1) var(--d, 0s) both; }
+.ta-blurIn { --ta-k: taBlur; } .ta-slideUp { --ta-k: taUp; } .ta-scaleUp { --ta-k: taScale; } .ta-char { --ta-k: taBlurUp; }
+.sh-slide.on .ta-char .ta-p { animation-duration: .45s; }
+.sh-slide.on .ta .pb-eye { animation: taFade .6s ease .05s both; }
+.sh-slide.on .ta .ta-btns { animation: taUp .6s cubic-bezier(.2, .7, .2, 1) var(--d3, .6s) both; }
+@keyframes taBlurUp { from { opacity: 0; filter: blur(10px); transform: translateY(18px); } }
+@keyframes taBlur { from { opacity: 0; filter: blur(10px); } }
+@keyframes taUp { from { opacity: 0; transform: translateY(20px); } }
+@keyframes taScale { from { opacity: 0; transform: scale(.5); } }
+@keyframes taFade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sh-slide.on .ta .ta-p, .sh-slide.on .ta .pb-eye, .sh-slide.on .ta .ta-btns { animation: none; } }

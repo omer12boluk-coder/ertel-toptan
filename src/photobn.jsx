@@ -4,6 +4,7 @@
 // Tasarım: docs/banner-oneri/ (gen.py = sunumdaki HTML). Resimler hosting/public/bn/, logolar /brands/.
 // Kutu boyu her yerde farklı (P0 büyük kutu ~1.45:1, eski banner ~2.6:1, telefon ~0.75:1) → banner bir "tuval"e çizilir:
 // geniş kutuda yükseklik 560 birim (en az 1000 birim genişlik), telefonda genişlik 358 birim; yerleşim tuval boyuna göre hesaplanır.
+import { TA, taLen, taStep } from './textanim.jsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { store, setQty, toast, useStore } from './store.js';
 import { ensureFonts } from './slidex.jsx';
@@ -47,17 +48,22 @@ function Txt({ b, m, hs = 64, act, center, w, br = 999 }) {
   const title = m ? b.titleM || b.title : b.title;
   const s = m ? b.subM || b.sub : b.sub;
   const fs = m ? 15 : 16;
+  // 13.11.2026 yazı animasyonu (shopHome.txtAnim; textanim.jsx): başlık → slogan → açıklama → düğmeler sırayla
+  const ta = useStore((st) => st.settings?.shopHome?.txtAnim) || '';
+  const by = ta === 'char' ? 'char' : 'word';
+  const d1 = 0.15 + taLen(title, by) * taStep(by) + 0.05; const d2 = d1 + (b.tag ? taLen(b.tag) * taStep('word') + 0.05 : 0);
+  const d3 = d2 + (s ? Math.min(taLen(s), 14) * 0.03 + 0.1 : 0);
   return (
-    <div className="pb-t" style={{ width: w, display: 'flex', flexDirection: 'column', alignItems: center ? 'center' : 'flex-start', textAlign: center ? 'center' : 'left', gap: m ? 8 : 12 }}>
+    <div className={'pb-t' + (ta === 'off' ? '' : ' ta ta-' + (ta || 'blurInUp'))} style={{ '--d3': d3.toFixed(2) + 's', width: w, display: 'flex', flexDirection: 'column', alignItems: center ? 'center' : 'flex-start', textAlign: center ? 'center' : 'left', gap: m ? 8 : 12 }}>
       <span className="pb-eye" style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: m ? 2 : 6, color: b.eyeC, font: `600 ${m ? 12.5 : 15}px/1.2 Inter, sans-serif` }}>
         <img src={b.logo} alt="" style={{ height: Math.round(b.lh * (m ? 0.7 : 1)), width: 'auto', display: 'block', filter: b.logoWhite ? 'brightness(0) invert(1)' : undefined, transform: b.lgY ? `translateY(${b.lgY * b.lh * (m ? 0.7 : 1)}px)` : undefined }} />
         {eye && <span style={{ paddingLeft: 12, borderLeft: '1px solid currentColor', opacity: 0.9 }}>{eye}</span>}
         {sigOn(b) && !(m && sigM === 'corner') && <span className="pb-sig" style={{ display: 'inline-flex', alignItems: 'center', paddingLeft: m ? 10 : 12, borderLeft: `1px solid ${b.dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.16)'}` }}><img className="pb-sig-i" src={SIG_LOGO} alt="ERTEL" style={{ height: m ? 28 : 38, width: 'auto', display: 'block', opacity: b.dark ? 0.85 : 1, filter: b.dark ? 'brightness(0) invert(1)' : undefined }} /></span>}
       </span>
-      <h2 style={{ margin: 0, font: `600 ${m ? (b.center ? 38 : 34) : hs}px/1.03 'Inter Tight', Inter, sans-serif`, letterSpacing: m ? '-.03em' : '-.035em', color: b.titleC || ink, whiteSpace: 'pre-line' }}>{title}</h2>
-      {b.tag && <p style={{ margin: 0, font: `500 ${m ? 19 : b.center ? 26 : 28}px/1.2 Inter, sans-serif`, letterSpacing: '-.015em', color: ink }}>{b.tag}</p>}
-      {s && <p style={{ margin: 0, font: `400 ${m ? 15 : 20}px/1.4 Inter, sans-serif`, color: sub, maxWidth: m ? '100%' : 440 }}>{s}</p>}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 8 }}>
+      <h2 style={{ margin: 0, font: `600 ${m ? (b.center ? 38 : 34) : hs}px/1.03 'Inter Tight', Inter, sans-serif`, letterSpacing: m ? '-.03em' : '-.035em', color: b.titleC || ink, whiteSpace: 'pre-line' }}>{ta === 'off' ? title : <TA text={title} by={by} d={0.15} />}</h2>
+      {b.tag && <p style={{ margin: 0, font: `500 ${m ? 19 : b.center ? 26 : 28}px/1.2 Inter, sans-serif`, letterSpacing: '-.015em', color: ink }}>{ta === 'off' ? b.tag : <TA text={b.tag} d={d1} />}</p>}
+      {s && <p style={{ margin: 0, font: `400 ${m ? 15 : 20}px/1.4 Inter, sans-serif`, color: sub, maxWidth: m ? '100%' : 440 }}>{ta === 'off' ? s : <TA text={s} d={d2} by="word" />}</p>}
+      <div className="ta-btns" style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 8 }}>
         <button type="button" className="pb-b1" onClick={act(b.a1[1])} style={{ height: m ? 42 : 48, padding: '0 24px', borderRadius: br, background: b.btn, color: '#fff', font: `500 ${fs}px/1 Inter, sans-serif`, border: 0, cursor: 'pointer' }}>{b.a1[0]}</button>
         <button type="button" className="pb-b2" onClick={act(b.a2[1])} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 0, padding: 0, color: b.lnk, font: `500 ${fs}px/1 Inter, sans-serif`, cursor: 'pointer' }}>{(m && b.a2M) || b.a2[0]} <Chev /></button>
       </div>
