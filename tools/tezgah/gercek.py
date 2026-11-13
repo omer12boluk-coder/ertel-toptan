@@ -45,7 +45,8 @@ for slot, ids in SEC.items():
         dst = f'{OUT}/{slot}-{pid}.png'
         if os.path.exists(dst) and str(pid) not in YENI: continue
         demo.log(f'gerçek: {slot} {pid}')
-        res = demo.api('images/edits', files=[('image[]', (f'k-{slot}.png', open(f'{D}/k-{slot}.png', 'rb').read(), 'image/png')),
+        pz = f'{D}/k-{slot}-{pid}.png' if os.path.exists(f'{D}/k-{slot}-{pid}.png') else f'{D}/k-{slot}.png'
+        res = demo.api('images/edits', files=[('image[]', ('poz.png', open(pz, 'rb').read(), 'image/png')),
                                              ('image[]', (f'{pid}.png', ref(pid), 'image/png'))],
                        data={'prompt': CIHAZ.format(ne=NE[slot]), 'size': '1024x1024', 'quality': 'high', 'n': '1'})
         if res: res.convert('RGB').save(f'{OUT}/{slot}-{pid}-ham.png'); key(res.convert('RGB'), trimit=False).save(dst)
