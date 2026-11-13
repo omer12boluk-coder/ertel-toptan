@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'banner'))
 from cut import cutout
 
 KEY = os.environ['OPENAI_API_KEY']
-MODEL = os.environ.get('IMG_MODEL', 'gpt-image-1')
+MODELS = os.environ.get('IMG_MODELS', 'gpt-image-2,gpt-image-1.5,chatgpt-image-latest').split(',')
+MODEL = MODELS[0]
 QUAL = os.environ.get('IMG_QUALITY', 'medium')
 OUT = 'out'; os.makedirs(OUT, exist_ok=True)
 W, H = 1536, 1024
@@ -29,12 +30,22 @@ SCENE = ("Use the product in the input image EXACTLY as it is: same shape, propo
          "No added text, no watermark, no extra objects in the foreground.")
 
 def api(path, **kw):
-    for t in range(3):
+    """Model yoksa sıradakine geçer; desteklenmeyen parametreyi (input_fidelity, quality) atıp tekrar dener."""
+    global MODEL
+    for t in range(6):
+        body = kw.get('json') or kw.get('data'); body['model'] = MODEL
         r = requests.post('https://api.openai.com/v1/' + path, headers={'Authorization': 'Bearer ' + KEY}, timeout=300, **kw)
         if r.ok:
-            j = r.json(); log('  kullanım:', json.dumps(j.get('usage', {})))
+            j = r.json(); log(f'  model={MODEL} kullanım:', json.dumps(j.get('usage', {})))
             return Image.open(io.BytesIO(base64.b64decode(j['data'][0]['b64_json']))).convert('RGB')
-        log(f'  HATA {r.status_code}: {r.text[:400]}')
+        log(f'  HATA {r.status_code} ({MODEL}): {r.text[:300]}')
+        try: err = r.json().get('error', {})
+        except Exception: err = {}
+        prm, msg = err.get('param') or '', (err.get('message') or '').lower()
+        if r.status_code == 400 and (prm == 'model' or 'does not exist' in msg) and MODEL in MODELS and MODELS.index(MODEL) + 1 < len(MODELS):
+            MODEL = MODELS[MODELS.index(MODEL) + 1]; continue
+        if r.status_code == 400 and prm in body and prm not in ('model', 'prompt', 'size'):
+            body.pop(prm); continue
         if r.status_code in (400, 401, 403): break
         time.sleep(8)
     return None
@@ -76,7 +87,7 @@ urunler = json.load(open(os.path.join(os.path.dirname(__file__), 'urunler.json')
 desks = []
 for i, pr in enumerate(DESKS):
     log(f'masa {i+1}')
-    d = api('images/generations', json={'model': MODEL, 'prompt': pr, 'size': f'{W}x{H}', 'quality': QUAL, 'n': 1})
+    d = api('images/generations', json={'prompt': pr, 'size': f'{W}x{H}', 'quality': QUAL, 'n': 1})
     if d: d.save(f'{OUT}/masa-{i+1}.webp', quality=88); desks.append(d)
 
 for n, u in enumerate(urunler):
@@ -89,7 +100,7 @@ for n, u in enumerate(urunler):
     # A: GPT tam sahne
     buf = io.BytesIO(); src.save(buf, 'PNG'); buf.seek(0)
     a = api('images/edits', files={'image[]': (f"{u['id']}.png", buf, 'image/png')},
-            data={'model': MODEL, 'prompt': SCENE, 'size': f'{W}x{H}', 'quality': QUAL, 'input_fidelity': 'high', 'n': '1'})
+            data={'prompt': SCENE, 'size': f'{W}x{H}', 'quality': QUAL, 'input_fidelity': 'high', 'n': '1'})
     if a: save(a, f"{u['id']}-a")
     # B: boş masa + gerçek ürün
     if desks:
