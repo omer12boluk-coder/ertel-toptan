@@ -153,7 +153,7 @@ function fit(){minS=Math.max(stage.clientWidth/W,stage.clientHeight/H)*(stage.cl
 function anim2(ns,cx,cy,dur){cancelAnimationFrame(anim);ns=Math.max(minS,Math.min(minS*4,ns));const s0=s,x0=tx,y0=ty,t0=performance.now();
  const gx=cx(ns),gy=cy(ns);const f=t=>{let k=Math.min(1,(t-t0)/dur);k=1-Math.pow(1-k,3);s=s0+(ns-s0)*k;tx=x0+(gx-x0)*k;ty=y0+(gy-y0)*k;apply();if(k<1)anim=requestAnimationFrame(f)};anim=requestAnimationFrame(f)}
 function zoomAt(ns,px,py,dur=300){const wx=(px-tx)/s,wy=(py-ty)/s;anim2(ns,n=>px-wx*n,n=>py-wy*n,dur)}
-function focusP(p){const w=stage.clientWidth,h=stage.clientHeight,[a,b,c,d]=p.z;const ns=Math.min(minS*3,Math.max(minS*1.4,Math.min(w/((c-a)*2.2),h/((d-b)*2.2))));
+function focusP(p){const w=stage.clientWidth,h=stage.clientHeight,[a,b,c,d]=p.z;const ns=Math.min(minS*2,Math.max(minS*1.3,Math.min(w/((c-a)*2.2),h/((d-b)*2.2))));
  anim2(ns,n=>w/2-p.x*n,n=>h/2-((b+d)/2)*n,550)}
 function reset(){anim2(minS,n=>(stage.clientWidth-W*n)/2,n=>(stage.clientHeight-H*n)/2,450)}
 fit();s=minS;tx=(stage.clientWidth-W*s)/2;ty=(stage.clientHeight-H*s)/2;apply();
