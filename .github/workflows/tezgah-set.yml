@@ -30,7 +30,7 @@ jobs:
           N: '2'
           QUAL: high
         run: |
-          case "$(git log -1 --format=%s)" in *'[duzelt]'*) python3 tools/tezgah-set/duzelt.py ;; *'[uyum]'*) python3 tools/tezgah-set/uyum.py ;; *'[tester]'*) python3 tools/tezgah-set/tester.py ;; *) python3 tools/tezgah-set/uret.py tools/tezgah-set/kat.json ;; esac
+          case "$(git log -1 --format=%s)" in *'[duzelt]'*) python3 tools/tezgah-set/duzelt.py ;; *'[uyum]'*) python3 tools/tezgah-set/uyum.py ;; *'[tester]'*) python3 tools/tezgah-set/tester.py ;; *'[maske]'*) python3 tools/tezgah-set/maske.py ;; *) python3 tools/tezgah-set/uret.py tools/tezgah-set/kat.json ;; esac
       - name: tezgah-set-out dalına koy
         if: always()
         run: |
