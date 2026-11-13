@@ -820,6 +820,31 @@ export function useHubRoots() {
 // liste gelince aynı yandan kayma). Ayrı View Transition / CSS kayması KALDIRILDI (kullanıcı: pürüzsüz geçişi bozuyordu, ürünler
 // 'F5 gibi' oturuyordu). 'l' = açılış sayfasına dönüş → normal geçiş 'geri' yönünde (soldan) oynar.
 export function hubSwap(fn, dir) { if (dir === 'l') window.__navBackNext?.(); fn(); }
+// 14.11.2026 Ürünler açılış sayfası MOZAİK (sadece bilgisayar ≥900px; shopHome.p0.hub.mos 'off' = eski kutular/liste aynen).
+// En kalabalık kategori 2×2 büyük kutu, diğerleri 1×1, 'Tüm ürünler' 2 sütun mavi kutu; markalar yok; Setler altta ince şerit.
+const MOS_IMG = { 3: '/bn/cat-3b.webp', 5: '/bn/cat-5b.webp', 24: '/bn/cat-24b.webp' };
+function MosImg({ v }) { const src = useShopImg(v || ''); return src ? <img className="pmo-im" src={src} alt="" loading="lazy" /> : null; }
+function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, kd }) {
+  const nf = (x) => (x || 0).toLocaleString('tr-TR');
+  const list = [...roots].sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0));
+  const img = (n) => MOS_IMG[n.id] || CAT_COVERS[n.id] || HUB_IMG[n.id];
+  return <div className="pmo">
+    <div className="pmo-g">
+      {list.map((n, i) => { const f = () => onCat(n.id); return <div key={n.id} role="button" tabIndex={0} className={'pmo-t' + (i === 0 ? ' big' : '')} onClick={f} onKeyDown={kd(f)}>
+        <b className="pmo-n">{n.name}</b><span className="pmo-c">{nf(counts.get(n.id))} ürün</span><span className="pmo-iw"><MosImg v={img(n)} /></span>
+      </div>; })}
+      <div role="button" tabIndex={0} className="pmo-t pmo-all" onClick={onAll} onKeyDown={kd(onAll)}>
+        <div className="pmo-ah"><div><b className="pmo-n">Tüm ürünler</b><span className="pmo-c">{list.length} kategori · {brandsN} marka</span></div><span className="pmo-go">Hepsini gör<Icon n="back" s={13} className="flip" /></span></div>
+        <div className="pmo-af"><span className="pmo-big num">{nf(total)}</span><span className="pmo-dots">{list.map((n) => <span key={n.id}><MosImg v={img(n)} /></span>)}</span></div>
+      </div>
+    </div>
+    {sets.length > 0 && <div className="pmo-set">
+      <span className="pmo-si"><Icon n="box" s={20} /></span><b>Setler</b><span className="pmo-sd">Hazır paketler — birlikte al, tek seferde kur</span><span className="pmo-sp" />
+      {sets.slice(0, 4).map((x) => <button key={x.id} type="button" className="pmo-chip" onClick={() => openSet(x.id)}>{x.name}</button>)}
+      <button type="button" className="pmo-arr" aria-label="Setler" onClick={onSets}><Icon n="back" s={18} className="flip" /></button>
+    </div>}
+  </div>;
+}
 export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
 function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {
   const brands = useBrandList();
@@ -831,11 +856,13 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
   const key = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
-  return <div className="catalog phub pv2-in">
+  const mos = HC.mos !== 'off';
+  return <div className={'catalog phub pv2-in' + (mos ? ' phub-mos' : '')}>
     <nav className="pv2-crumb" aria-label="Konum"><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button><span><i>›</i><b>Ürünler</b></span></nav>
     <div className="pv2-trow">
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
     </div>
+    {mos && <HubMosaic roots={roots} counts={counts} total={total} brandsN={brands.length} sets={sets} onCat={onCat} onAll={onAll} onSets={onSets} kd={key} />}
     <div className="phub-lbl">Kategoriler</div>
     <div className={'phub-grid phub-m-' + mode + ' phub-hv-' + (HC.subHover || 'ink') + (HC.lay ? ' phub-lay-' + HC.lay : '')}>
       <div role="button" tabIndex={0} className={'phub-c phub-all phub-t-' + (HC.allTone || 'acc')} onClick={onAll} onKeyDown={key(onAll)}>
@@ -850,7 +877,7 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
       {roots.map((n) => <HubCat key={n.id} n={n} cnt={nf(counts.get(n.id))} subs={subsOf(n)} onCat={onCat} kd={key} mode={mode}
         img={(HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]} />)}
     </div>
-    <div className="phub-lbl">Markalar</div>
+    <div className="phub-lbl phub-lbl-br">Markalar</div>
     <div className="phub-brs">
       {brands.slice(0, 18).map((b) => <button key={b.n} type="button" className={'phub-br' + (b.logo ? ' lg' : '')} onClick={() => openBrand(b.n)} title={b.n}>{b.logo ? <><ShopImg v={b.logo} className="phub-bl" alt={b.n} />{LG_TXT[b.n.toLowerCase()] && <b className="phub-bt">{LG_TXT[b.n.toLowerCase()].t}</b>}</> : <span>{b.n}</span>}<small>{b.c}</small></button>)}
       <button type="button" className="phub-br more" onClick={() => go('markalar')}>Tüm markalar<Icon n="chev" s={13} /></button>
