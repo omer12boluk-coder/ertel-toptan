@@ -963,8 +963,12 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   function goTo(k) {
     if (deck) { setI(k); setPlay(k); return; }
     const el = track.current; if (!el) return;
-    target.current = k; clearTimeout(targetT.current); targetT.current = setTimeout(() => { target.current = null; }, 1200);
-    el.scrollTo({ left: k * step(el), behavior: 'smooth' }); setI(k); setPlay(k);
+    // 14.11.2026: animasyon banner YERİNE OTURUNCA başlar (eskiden kayarken başlıyordu → bilgisayarda ok/nokta ile geçince
+    // banner geldiğinde ürün/yazı animasyonu çoktan bitmiş oluyordu). Kayarken gelen bannerın yazı/resmi gizli, giden görünür.
+    const there = Math.abs(el.scrollLeft - k * step(el)) < 2;
+    target.current = k; clearTimeout(targetT.current); targetT.current = setTimeout(() => { if (target.current === k) { target.current = null; setPlay(k); } }, 1200);
+    el.scrollTo({ left: k * step(el), behavior: 'smooth' }); setI(k); setPlay(there ? k : -2);
+    if (there) { target.current = null; clearTimeout(targetT.current); }
   }
   // parmakla kaydırma: gelen reklamın yazısı kaydırırken gizli (CSS), reklam yerine OTURUNCA (parmak kalkmış + kayma 140 ms
   // durmuş) yazılar yeniden dökülür. Yarı yolda değil — eskiden ortada kaybolup yeniden beliriyordu.
@@ -978,7 +982,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   useEffect(() => { if (!E?.heroGo) return; const f = (k) => k !== i && goTo(k); E.heroGo.add(f); return () => E.heroGo.delete(f); });
   const onScroll = (e) => {
     const el = e.currentTarget; const s = step(el);
-    if (target.current != null) { if (Math.abs(el.scrollLeft - target.current * s) < 2) target.current = null; return; }
+    if (target.current != null) { const tk = target.current; if (Math.abs(el.scrollLeft - tk * s) < 2) { target.current = null; clearTimeout(targetT.current); setPlay(tk); } return; }
     const k = Math.round(el.scrollLeft / s); if (k !== i) setI(k);
     // parmak kalktıysa ve reklam yerine %70 yaklaştıysa hemen dök (iPhone'un oturma kayması bitene kadar BEKLEME — 1-2 sn boş kalıyordu)
     if (!touching.current && Math.abs(el.scrollLeft - k * s) < s * 0.3) { clearTimeout(settleT.current); if (k !== playRef.current) setPlay(k); return; }
