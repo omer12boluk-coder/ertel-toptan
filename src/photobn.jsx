@@ -80,7 +80,8 @@ function Wide({ b, W, H, act, br }) {
   const T = (p) => <Txt b={b} act={act} br={br} {...p} />;
   if (b.lay) return <WideGen b={b} W={W} H={H} T={T} />;
   if (b.id === 'quick861') {
-    const iw = Math.min((H + 80) * 1.4, W - 380), ih = iw / 1.4;
+    // 14.11.2026: geniş ekranda resim bannerdan büyük çiziliyordu (üst/alt 40 birim taşıyordu → tabanca ucu kesik). Artık kutuya sığar.
+    const iw = Math.min((H - 24) * 1.4, W - 380), ih = iw / 1.4;
     return <>
       <img className="pb-im" src={IMG('q861-pc.webp')} alt="Quick 861 Pro Max" style={abs({ right: -40, top: (H - ih) / 2, width: iw, height: ih })} />
       <div style={abs({ left: 0, top: 0, bottom: 0, width: 560, background: 'linear-gradient(90deg, #000 62%, rgba(0,0,0,0))' })} />
@@ -127,7 +128,7 @@ function Wide({ b, W, H, act, br }) {
     </>;
   }
   if (b.id === 'sm4ntp') {
-    const iw = Math.min(720, W * 0.5), ih = iw * 0.765; const ir = Math.min(90, W * 0.05); const tw = Math.min(520, W - ir - iw - 88 - 20);
+    let iw = Math.min(720, W * 0.5), ih = iw * 0.765; if (ih > H - 56 - 24) { ih = H - 80; iw = ih / 0.765; } const ir = Math.min(90, W * 0.05); const tw = Math.min(520, W - ir - iw - 88 - 20); // 14.11.2026: üstten taşmasın
     return <>
       <div className="pb-shd" style={abs({ right: ir + iw * 0.06, bottom: 40, width: iw * 0.84, height: 44, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.2), rgba(0,0,0,0))' })} />
       <img className="pb-im" src={IMG('sm4.webp')} alt="AmScope SM-4NTP" style={abs({ right: ir, bottom: 56, width: iw, height: ih })} />
@@ -162,7 +163,9 @@ function WideGen({ b, W, H, T }) {
     </>;
   }
   let ih = Math.min(470, H * (b.lay === 'left' ? 0.7 : 0.82)), iw = ih * b.ar; if (iw > W * 0.44) { iw = W * 0.44; ih = iw / b.ar; }
-  const bot = Math.max(40, (H - ih) / 2 - 10);
+  // dip: resmin altı düz kesik (tam fotoğrafı yok) → bannerın alt kenarına oturur, gölge yok; kesik yer görünmez (14.11.2026)
+  if (b.dip) { ih = Math.min(H * 0.9, 520); iw = ih * b.ar; }
+  const bot = b.dip ? 0 : Math.max(40, (H - ih) / 2 - 10);
   if (b.lay === 'left') {
     const il = Math.max(60, W * 0.07); const tl = Math.max(il + iw + 70, W * 0.52); const tw = Math.min(520, W - tl - 50);
     return <>
@@ -173,7 +176,7 @@ function WideGen({ b, W, H, T }) {
   }
   const ir = Math.max(70, W * 0.09); const tw = Math.min(520, W - ir - iw - 88 - 30);
   return <>
-    <Shadow r={ir + iw * 0.05} bot={bot - 16} w={iw * 0.9} />
+    {!b.dip && <Shadow r={ir + iw * 0.05} bot={bot - 16} w={iw * 0.9} />}
     <img className="pb-im" src={IMG(b.img)} alt={b.name} style={abs({ right: ir, bottom: bot, width: iw, height: ih })} />
     <div style={abs({ left: 88, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
   </>;
@@ -182,6 +185,7 @@ function PhoneGen({ b, H, top }) {
   const free = H - 225;
   if (b.lay === 'photo') { const h = Math.min(300, free - 10); return <><img className="pb-im pb-ph" src={IMG(b.img)} alt={b.name} style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: b.posM || b.pos || '50% 50%' })} />{top}</>; }
   let h = Math.max(120, Math.min(300, free - 30)), w = h * b.ar; if (w > 310) { w = 310; h = w / b.ar; }
+  if (b.dip) { h = Math.max(120, Math.min(320, free)); w = h * b.ar; return <>{top}<img className="pb-im" src={IMG(b.img)} alt={b.name} style={abs({ left: (358 - w) / 2, bottom: 0, width: w, height: h })} /></>; }
   return <>{top}<Shadow l={(358 - w * 0.9) / 2} bot={14} w={w * 0.9} /><img className="pb-im" src={IMG(b.img)} alt={b.name} style={abs({ left: (358 - w) / 2, bottom: 26, width: w, height: h })} /></>;
 }
 
