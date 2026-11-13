@@ -1287,9 +1287,11 @@ export function Gallery({ p }) {
                 <button className="gal-open" onClick={() => setZoom(x.z)} aria-label="Resmi büyüt"
                   style={x.th && x.th !== x.u ? { backgroundImage: `url("${x.th}")` } : undefined}>
                   {/* büyük resim gelene kadar listede zaten inmiş küçük resim arkada görünür, büyük gelince yumuşakça üstüne biner (flaş yok) */}
+                  {/* 13.11.2026: data-ld = resim indi ve onLoad işledi. Eskiden onLoad'dan sonraki yeniden çizimde ref, arkadaki küçük resmi büyük resim
+                      daha görünmeden (opacity 0'dan yeni başlarken) siliyordu → kutu bir an bembeyaz olup geri geliyordu: çok resimli üründe 'F5 gibi' açılış */}
                   {near.has(k) && <img src={x.u} alt={`${p.n} – resim ${k + 1}`} loading="eager" fetchPriority={k ? 'low' : 'high'} decoding="async" className="gal-big"
-                    ref={(el) => { if (el && el.complete && el.naturalWidth) { el.classList.add('in'); el.parentElement.style.backgroundImage = 'none'; } }}
-                    onLoad={(e) => { const im = e.currentTarget; im.classList.add('in'); if (k === i) want([k - 1, k + 1].filter((x) => x >= 0)); /* sadece gösterilen resim inince (zincirleme hepsi yüklenmesin) */ setTimeout(() => { if (im.parentElement) im.parentElement.style.backgroundImage = 'none'; }, 250); }}
+                    ref={(el) => { if (el && !el.dataset.ld && el.complete && el.naturalWidth) { el.dataset.ld = '1'; el.classList.add('in'); el.parentElement.style.backgroundImage = 'none'; } }}
+                    onLoad={(e) => { const im = e.currentTarget; im.dataset.ld = '1'; im.classList.add('in'); if (k === i) want([k - 1, k + 1].filter((x) => x >= 0)); /* sadece gösterilen resim inince (zincirleme hepsi yüklenmesin) */ setTimeout(() => { if (im.parentElement) im.parentElement.style.backgroundImage = 'none'; }, 250); }}
                     onError={(e) => { if (!fbSkip(e)) setBad((b) => ({ ...b, [k]: 1 })); }} />}
                 </button>
               )}
