@@ -33,7 +33,7 @@ jobs:
           ADIM: ${{ github.event.head_commit.message }}
         run: |
           ADIM="$(cat tools/tezgah/ADIM.txt 2>/dev/null || echo "$ADIM")"; echo "adım: $ADIM"
-          case "$ADIM" in *'[kes]'*) python3 tools/tezgah/kes.py ;; *'[kombin]'*) python3 tools/tezgah/kombin.py ;; *'[gercek]'*) python3 tools/tezgah/gercek.py ;; *'[sahne]'*) python3 tools/tezgah/kes.py && python3 tools/tezgah/sahne.py ;; *'[demo]'*) python3 tools/tezgah/demo.py ;; *) echo "adım yok, bir şey üretilmedi" ;; esac
+          case "$ADIM" in *'[kes]'*) python3 tools/tezgah/kes.py ;; *'[kombin]'*) python3 tools/tezgah/kombin.py ;; *'[gercek]'*) python3 tools/tezgah/gercek.py ;; *'[sahne]'*) python3 tools/tezgah/kes.py && python3 tools/tezgah/sahne.py ;; *'[demo]'*) python3 tools/tezgah/demo.py ;; *'[foto]'*) python3 tools/tezgah/foto.py ;; *) echo "adım yok, bir şey üretilmedi" ;; esac
       - name: tezgah-demo-out dalına koy
         if: always()
         run: |
