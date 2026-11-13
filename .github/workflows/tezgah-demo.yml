@@ -30,7 +30,9 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MASA: '0'
-        run: python3 tools/tezgah/demo.py
+          ADIM: ${{ github.event.head_commit.message }}
+        run: |
+          case "$ADIM" in *'[kes]'*) python3 tools/tezgah/kes.py ;; *) python3 tools/tezgah/demo.py ;; esac
       - name: tezgah-demo-out dalına koy
         if: always()
         run: |

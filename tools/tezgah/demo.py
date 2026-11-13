@@ -29,7 +29,7 @@ SCENE = ("Use the product in the input image EXACTLY as it is: same shape, propo
          "Product sits flat on the desk with a realistic soft contact shadow. Soft daylight studio lighting, photorealistic premium product photography, camera slightly above. "
          "No added text, no watermark, no extra objects in the foreground.")
 
-def api(path, **kw):
+def api(path, raw=False, **kw):
     """Model yoksa sıradakine geçer; desteklenmeyen parametreyi (input_fidelity, quality) atıp tekrar dener."""
     global MODEL
     for t in range(6):
@@ -37,7 +37,8 @@ def api(path, **kw):
         r = requests.post('https://api.openai.com/v1/' + path, headers={'Authorization': 'Bearer ' + KEY}, timeout=300, **kw)
         if r.ok:
             j = r.json(); log(f'  model={MODEL} kullanım:', json.dumps(j.get('usage', {})))
-            return Image.open(io.BytesIO(base64.b64decode(j['data'][0]['b64_json']))).convert('RGB')
+            im = Image.open(io.BytesIO(base64.b64decode(j['data'][0]['b64_json'])))
+            return im if raw else im.convert('RGB')
         log(f'  HATA {r.status_code} ({MODEL}): {r.text[:300]}')
         try: err = r.json().get('error', {})
         except Exception: err = {}
@@ -83,28 +84,33 @@ def place(desk, cut):
     log(f'  yerleşim x={x} y={y} w={p.width} h={p.height} (sol pay {x/W:.0%}, sağ pay {(W-x-p.width)/W:.0%})')
     return bg.convert('RGB')
 
-urunler = json.load(open(os.path.join(os.path.dirname(__file__), 'urunler.json')))
-desks = []
-for i, pr in enumerate(DESKS if os.environ.get('MASA', '1') == '1' else []):
-    log(f'masa {i+1}')
-    d = api('images/generations', json={'prompt': pr, 'size': f'{W}x{H}', 'quality': QUAL, 'n': 1})
-    if d: d.save(f'{OUT}/masa-{i+1}.webp', quality=88); desks.append(d)
+def main():
+    urunler = json.load(open(os.path.join(os.path.dirname(__file__), 'urunler.json')))
+    global desks
+    desks = []
+    for i, pr in enumerate(DESKS if os.environ.get('MASA', '1') == '1' else []):
+        log(f'masa {i+1}')
+        d = api('images/generations', json={'prompt': pr, 'size': f'{W}x{H}', 'quality': QUAL, 'n': 1})
+        if d: d.save(f'{OUT}/masa-{i+1}.webp', quality=88); desks.append(d)
 
-for n, u in enumerate(urunler):
-    log(f"ürün {u['id']} {u['ad']}")
-    url = 'https://resim.ertelmarket.com/platin/' + urllib.parse.quote(u['pi'])
-    r = requests.get(url, timeout=60, headers={'User-Agent': 'Mozilla/5.0'})
-    if not r.ok: log('  resim alınamadı', r.status_code, url); continue
-    src = Image.open(io.BytesIO(r.content)).convert('RGB')
-    src.save(f"/tmp/{u['id']}.png"); src.save(f"{OUT}/{u['id']}-asil.webp", quality=85)
-    # A: GPT tam sahne
-    buf = io.BytesIO(); src.save(buf, 'PNG'); png = buf.getvalue()
-    a = api('images/edits', files={'image[]': (f"{u['id']}.png", png, 'image/png')},
-            data={'prompt': SCENE, 'size': f'{W}x{H}', 'quality': QUAL, 'n': '1'})
-    if a: save(a, f"{u['id']}-a")
-    # B: boş masa + gerçek ürün
-    if desks:
-        cutout(f"/tmp/{u['id']}.png", f"/tmp/{u['id']}-cut.png", hole=0.002)
-        b = place(desks[n % len(desks)], Image.open(f"/tmp/{u['id']}-cut.png").convert('RGBA'))
-        save(b, f"{u['id']}-b")
-log('bitti')
+    for n, u in enumerate(urunler):
+        log(f"ürün {u['id']} {u['ad']}")
+        url = 'https://resim.ertelmarket.com/platin/' + urllib.parse.quote(u['pi'])
+        r = requests.get(url, timeout=60, headers={'User-Agent': 'Mozilla/5.0'})
+        if not r.ok: log('  resim alınamadı', r.status_code, url); continue
+        src = Image.open(io.BytesIO(r.content)).convert('RGB')
+        src.save(f"/tmp/{u['id']}.png"); src.save(f"{OUT}/{u['id']}-asil.webp", quality=85)
+        # A: GPT tam sahne
+        buf = io.BytesIO(); src.save(buf, 'PNG'); png = buf.getvalue()
+        a = api('images/edits', files={'image[]': (f"{u['id']}.png", png, 'image/png')},
+                data={'prompt': SCENE, 'size': f'{W}x{H}', 'quality': QUAL, 'n': '1'})
+        if a: save(a, f"{u['id']}-a")
+        # B: boş masa + gerçek ürün
+        if desks:
+            cutout(f"/tmp/{u['id']}.png", f"/tmp/{u['id']}-cut.png", hole=0.002)
+            b = place(desks[n % len(desks)], Image.open(f"/tmp/{u['id']}-cut.png").convert('RGBA'))
+            save(b, f"{u['id']}-b")
+    log('bitti')
+
+if __name__ == '__main__':
+    main()

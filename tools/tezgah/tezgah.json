@@ -1,0 +1,74 @@
+[
+ {
+  "slot": "havya",
+  "ad": "Havya",
+  "urunler": [
+   {
+    "id": 835,
+    "ad": "JBC İstasyonlu Havya (Yeni Model) (130W) (2 adet orijinal uç fiyata dahildir.) (2 YIL GARANTİ)",
+    "fiyat": 585.0,
+    "pi": "CTHFKWFUID228202102253_cd-2sqe_2.jpg"
+   },
+   {
+    "id": 2745,
+    "ad": "Aixun T420D İstasyonlu Havya (T245 VE T210 el tutamağı) (6 adet havya ucu fiyata dahildir!)",
+    "fiyat": 300.0,
+    "pi": "GLAFARWYAE652023154542_1665307552.jpg"
+   }
+  ]
+ },
+ {
+  "slot": "sicak",
+  "ad": "Sıcak hava",
+  "urunler": [
+   {
+    "id": 3066,
+    "ad": "Quick 861 Pro Max Sesli Komutlu Sıcak Hava İstasyonu (1300W)",
+    "fiyat": 330.0,
+    "pi": "HDXSFEEZXK106202621252_imgi_96_107182923122--2--1784686563712.webp"
+   },
+   {
+    "id": 2671,
+    "ad": "SUGON 8650 PRO (1300W) Sıcak Hava İstasyonu",
+    "fiyat": 270.0,
+    "pi": "CJTBGRTOED2172026121519_imgi_27_Sc22ffad3a523472188dac34fa5203f1dY.jpg_960.jpeg"
+   }
+  ]
+ },
+ {
+  "slot": "mikro",
+  "ad": "Mikroskop",
+  "urunler": [
+   {
+    "id": 3030,
+    "ad": "Mr. Yang 85 Ultra Mikroskop",
+    "fiyat": 340.0,
+    "pi": "AXYEJLRLVT9282026174656_imgi_12_S92af6703300e4fbdb686cfa3d7906bf4f.jpg_960.jpeg"
+   },
+   {
+    "id": 2913,
+    "ad": "MY-7S Mikroskop",
+    "fiyat": 280.0,
+    "pi": "FIEIPUWOFA7302026152839_Gemini_Generated_Image_iz1cw6iz1cw6iz1c.jpg"
+   }
+  ]
+ },
+ {
+  "slot": "isitici",
+  "ad": "Isıtıcı / pres",
+  "urunler": [
+   {
+    "id": 2756,
+    "ad": "2uul DA07 Mini Sıcak Pres İstasyonu, iPhone 17 Serisi ile Uyumlu",
+    "fiyat": 60.0,
+    "pi": "FATYTLBIXZ4302026201856_DA07_1_2048x2048.webp"
+   },
+   {
+    "id": 2455,
+    "ad": "Aixun iHeater Pro Bord Isıtıcı (iPhone X-17PM)(17 serisi için Air modeli dahildir.)",
+    "fiyat": 340.0,
+    "pi": "MALXCBUOSQ112220251257_WhatsApp-Image-2025-11-22-at-11.54.23.jpeg"
+   }
+  ]
+ }
+]
