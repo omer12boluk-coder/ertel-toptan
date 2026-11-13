@@ -1,7 +1,7 @@
 # Ham Gemini fotoğrafında (ham.jpg) sadece maskeli bölgeleri GPT'ye düzelttirir. Çıktı out/maske/maske-1.png
 # (Claude sonucu ham fotoğrafa yalnız bu bölgelerden yapıştırır; geri kalan piksel piksel aynı kalır.)
 import base64, io, json, os, sys
-import requests, numpy as np
+import requests
 from PIL import Image, ImageDraw
 HERE = os.path.dirname(__file__); KEY = os.environ['OPENAI_API_KEY']; OUT = 'out/maske'; os.makedirs(OUT, exist_ok=True)
 LOG = open('out/log.txt', 'a')
