@@ -21,14 +21,20 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -q pillow numpy scipy requests
+      - name: Önceki çıktıları al
+        run: |
+          mkdir -p out
+          if git fetch -q --depth 1 origin tezgah-demo-out; then git --work-tree=out checkout FETCH_HEAD -- . ; git reset -q; fi
+          rm -f out/log.txt; ls out
       - name: Görselleri üret
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MASA: '0'
         run: python3 tools/tezgah/demo.py
       - name: tezgah-demo-out dalına koy
         if: always()
         run: |
-          mkdir -p out; cd out; touch .keep; git init -q; git checkout -q -b tezgah-demo-out
+          mkdir -p out; cd out; rm -rf .git; touch .keep; git init -q; git checkout -q -b tezgah-demo-out
           git -c user.name=actions -c user.email=actions@github.com add -A
           git -c user.name=actions -c user.email=actions@github.com commit -qm "Tezgah demosu $(date -u +%FT%TZ)"
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" tezgah-demo-out

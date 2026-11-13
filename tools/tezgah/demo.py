@@ -85,7 +85,7 @@ def place(desk, cut):
 
 urunler = json.load(open(os.path.join(os.path.dirname(__file__), 'urunler.json')))
 desks = []
-for i, pr in enumerate(DESKS):
+for i, pr in enumerate(DESKS if os.environ.get('MASA', '1') == '1' else []):
     log(f'masa {i+1}')
     d = api('images/generations', json={'prompt': pr, 'size': f'{W}x{H}', 'quality': QUAL, 'n': 1})
     if d: d.save(f'{OUT}/masa-{i+1}.webp', quality=88); desks.append(d)
@@ -98,9 +98,9 @@ for n, u in enumerate(urunler):
     src = Image.open(io.BytesIO(r.content)).convert('RGB')
     src.save(f"/tmp/{u['id']}.png"); src.save(f"{OUT}/{u['id']}-asil.webp", quality=85)
     # A: GPT tam sahne
-    buf = io.BytesIO(); src.save(buf, 'PNG'); buf.seek(0)
-    a = api('images/edits', files={'image[]': (f"{u['id']}.png", buf, 'image/png')},
-            data={'prompt': SCENE, 'size': f'{W}x{H}', 'quality': QUAL, 'input_fidelity': 'high', 'n': '1'})
+    buf = io.BytesIO(); src.save(buf, 'PNG'); png = buf.getvalue()
+    a = api('images/edits', files={'image[]': (f"{u['id']}.png", png, 'image/png')},
+            data={'prompt': SCENE, 'size': f'{W}x{H}', 'quality': QUAL, 'n': '1'})
     if a: save(a, f"{u['id']}-a")
     # B: boş masa + gerçek ürün
     if desks:
