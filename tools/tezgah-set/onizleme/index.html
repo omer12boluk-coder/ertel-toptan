@@ -1,0 +1,74 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Hazır tezgâh seti — önizleme</title>
+<style>
+*{box-sizing:border-box;margin:0}html,body{height:100%;background:#0e0f11;color:#111;font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+#vp{position:fixed;inset:0;overflow:hidden;touch-action:none;cursor:grab}#vp.drag{cursor:grabbing}
+#st{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#st img{display:block;width:100%;height:100%;user-select:none;-webkit-user-drag:none}
+.sp{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border:0;padding:0;background:none;cursor:pointer}
+.sp i{position:absolute;inset:9px;border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.45)}
+.sp:before{content:"";position:absolute;inset:3px;border-radius:50%;border:2px solid rgba(255,255,255,.85);animation:p 2.2s infinite}
+.sp.on i{background:#0a84ff}.sp.on:before{border-color:#0a84ff}
+@keyframes p{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.5);opacity:0}}
+.hide-sp .sp{opacity:0;pointer-events:none}
+#card{position:fixed;right:18px;top:50%;width:300px;transform:translate(24px,-50%);opacity:0;pointer-events:none;transition:.25s;background:rgba(255,255,255,.96);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.35);overflow:hidden}
+#card.show{opacity:1;transform:translate(0,-50%);pointer-events:auto}
+#card .t{padding:16px 18px 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6b6f76}
+#card .x{position:absolute;right:10px;top:8px;border:0;background:none;font-size:22px;color:#999;cursor:pointer}
+.it{display:flex;gap:12px;padding:10px 18px;align-items:center;border-top:1px solid #eee}.it:first-of-type{border-top:0}
+.it img{width:62px;height:62px;object-fit:contain;background:#f5f5f7;border-radius:10px;flex:none}
+.it b{display:block;font-size:14px;font-weight:600;color:#111}.it span{font-size:13px;color:#0a84ff;font-weight:600}
+#card .add{margin:12px 18px 18px;width:calc(100% - 36px);height:42px;border:0;border-radius:12px;background:#e8f1ff;color:#0a64d8;font-weight:600;font-size:15px;cursor:pointer}
+#bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:6px;background:rgba(20,20,22,.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:6px;border-radius:14px}
+#bar button{border:0;background:none;color:#fff;font-size:14px;padding:8px 12px;border-radius:9px;cursor:pointer}#bar button:hover{background:rgba(255,255,255,.12)}
+#hint{position:fixed;left:50%;top:14px;transform:translateX(-50%);color:#fff;background:rgba(20,20,22,.6);padding:7px 14px;border-radius:20px;font-size:13px;transition:opacity .6s}
+#tot{position:fixed;left:16px;top:14px;color:#fff;background:rgba(20,20,22,.6);padding:7px 12px;border-radius:12px;font-size:13px}
+@media(max-width:700px){#hint{top:52px}#bar button{padding:8px 9px}#card{left:10px;right:10px;top:auto;bottom:70px;width:auto;transform:translateY(24px)}#card.show{transform:none}}
+</style></head><body>
+<div id="vp"><div id="st"><img id="im" src="on.webp" alt="Hazır tezgâh seti" draggable="false"></div></div>
+<div id="tot"></div><div id="hint">Sürükle · yakınlaştır · ürüne dokun</div>
+<div id="card"><button class="x" onclick="closeC()">×</button><div class="t" id="ct"></div><div id="cl"></div><button class="add" id="ca">Sepete ekle</button></div>
+<div id="bar"><button onclick="fit(1)">Tümü</button><button onclick="zoomBy(1.4)">＋</button><button onclick="zoomBy(1/1.4)">－</button><button onclick="document.body.classList.toggle('hide-sp')">Noktalar</button><button onclick="addAll()">Seti ekle</button></div>
+<script>
+const S=[{"k": "guc", "ad": "Güç kaynağı", "x": 12.37, "y": 41.99, "u": [{"id": 1916, "n": "Aixun P3208 320W / 32V / 8A Power Supply", "r": 170, "img": "u/1916.webp"}]}, {"k": "sicak", "ad": "Sıcak hava", "x": 27.67, "y": 42.97, "u": [{"id": 3066, "n": "Quick 861 Pro Max Sesli Komutlu Sıcak Hava İstasyonu (1300W)", "r": 330, "img": "u/3066.webp"}]}, {"k": "havya", "ad": "Havya istasyonu", "x": 38.93, "y": 48.83, "u": [{"id": 835, "n": "JBC İstasyonlu Havya (Yeni Model) (130W) (2 adet orijinal uç fiyata dahildir.) (2 YIL GARANTİ)", "r": 530, "img": "u/835.webp"}]}, {"k": "mikro", "ad": "Mikroskop", "x": 54.04, "y": 32.23, "u": [{"id": 30, "n": "AmScope SM-4NTP Siyah Full Mikroskop", "r": 770, "img": "u/30.webp"}]}, {"k": "fan", "ad": "Duman emici fan", "x": 75.85, "y": 46.88, "u": [{"id": 2242, "n": "2UUL DA98 Aiolos Duman Emici Fan", "r": 24, "img": "u/2242.webp"}]}, {"k": "tornavida", "ad": "Tornavida seti", "x": 93.75, "y": 59.57, "u": [{"id": 2246, "n": "2UUL SD20 KaKa Torklu Tornavida Seti (Pentalobe 0.8mm / Philips 1.2mm ve 1.5mm / Tri-point 0.6mm)", "r": 42, "img": "u/2246.webp"}]}, {"k": "tel", "ad": "Lehim teli", "x": 82.81, "y": 63.48, "u": [{"id": 492, "n": "ALPHA 0.3mm 100gr Lehim Teli", "r": 19, "img": "u/492.webp"}]}, {"k": "wick", "ad": "Lehim çekme teli", "x": 83.53, "y": 70.51, "u": [{"id": 126, "n": "Gootwick CP-20B Lehim Çekme Teli (30m / 2.0mm)", "r": 27, "img": "u/126.webp"}]}, {"k": "sivi", "ad": "Sıvı lehim", "x": 76.69, "y": 67.38, "u": [{"id": 51, "n": "ALPHA 138 Derece Sıvı Lehim (50gr)", "r": 13, "img": "u/51.webp"}, {"id": 79, "n": "ALPHA 183 Derece Sıvı Lehim (50gr)", "r": 10, "img": "u/79.webp"}]}, {"k": "tutucu", "ad": "Bord tutucu", "x": 53.06, "y": 67.38, "u": [{"id": 2037, "n": "2UUL BH08 Bord Tutucu", "r": 23, "img": "u/2037.webp"}]}, {"k": "kalip", "ad": "Kalıplar", "x": 16.28, "y": 78.61, "u": [{"id": 2422, "n": "Amaoe iPhone 17/17Pro/17Promax/Air Entegre Kalıbı (A19/A19Pro)", "r": 6, "img": "u/2422.webp"}, {"id": 2003, "n": "Amaoe iPhone 16/16Plus/16Pro/16Promax Entegre Kalıbı (A18/A18Pro)", "r": 6, "img": "u/2003.webp"}, {"id": 3090, "n": "Amaoe SM6850 İşlemci Kalıbı", "r": 6, "img": "u/3090.webp"}]}, {"k": "isitici", "ad": "Bord ısıtıcı", "x": 9.11, "y": 62.5, "u": [{"id": 2455, "n": "Aixun iHeater Pro Bord Isıtıcı (iPhone X-17PM)(17 serisi için Air modeli dahildir.)", "r": 320, "img": "u/2455.webp"}]}, {"k": "cimbiz", "ad": "Cımbızlar", "x": 76.17, "y": 81.05, "u": [{"id": 1790, "n": "2UUL Ti21 Entegre Cımbızı (Düz)", "r": 11, "img": "u/1790.webp"}, {"id": 2978, "n": "JC SW-01 Cımbız", "r": 5, "img": "u/2978.webp"}, {"id": 2709, "n": "Luban 3D-3 Cımbız", "r": 10, "img": "u/2709.webp"}, {"id": 3056, "n": "Mijing TCN-02 Seramik Uçlu Eğri Cımbız", "r": 10, "img": "u/3056.webp"}]}, {"k": "keski", "ad": "Yan keski", "x": 89.06, "y": 81.25, "u": [{"id": 402, "n": "Piergiacomi TRE-03-NB Yan Keski", "r": 10, "img": "u/402.webp"}]}, {"k": "dramel", "ad": "Dramel", "x": 91.47, "y": 73.44, "u": [{"id": 2464, "n": "2UUL DA85 CVT Grinder Pro Dramel", "r": 39, "img": "u/2464.webp"}, {"id": 2303, "n": "2UUL DA51 Torque Master Oca Temizleyici Dramel", "r": 28, "img": "u/2303.webp"}]}];const W=1536,H=1024;
+const vp=document.getElementById('vp'),st=document.getElementById('st');
+st.style.width=W+'px';st.style.height=H+'px';
+let s=1,tx=0,ty=0,minS=1,anim=null;
+S.forEach((p,i)=>{const b=document.createElement('button');b.className='sp';b.style.left=p.x+'%';b.style.top=p.y+'%';b.innerHTML='<i></i>';b.title=p.ad;
+ b.onpointerenter=e=>{if(e.pointerType==='mouse')openC(i)};b.onclick=e=>{e.stopPropagation();openC(i,1)};p.el=b;st.appendChild(b)});
+const usd=v=>v.toLocaleString('tr-TR')+' $';
+document.getElementById('tot').textContent='Set: '+S.length+' kalem · '+usd(S.reduce((a,p)=>a+p.u.reduce((b,u)=>b+u.r,0),0));
+function cover(){return Math.max(innerWidth/W,innerHeight/H)} function contain(){return Math.min(innerWidth/W,innerHeight/H)}
+function clamp(){const vw=innerWidth,vh=innerHeight,w=W*s,h=H*s;tx=w<=vw?(vw-w)/2:Math.min(0,Math.max(vw-w,tx));ty=h<=vh?(vh-h)/2:Math.min(0,Math.max(vh-h,ty))}
+function apply(){clamp();st.style.transform=`translate(${tx}px,${ty}px) scale(${s})`;S.forEach(p=>p.el.style.transform=`scale(${1/Math.sqrt(s/minS)})`)}
+function go(ns,cx,cy,dur=450){cancelAnimationFrame(anim);const s0=s,x0=tx,y0=ty;ns=Math.max(minS,Math.min(minS*5,ns));
+ const wx=(cx-tx)/s,wy=(cy-ty)/s,t0=performance.now();
+ const step=t=>{let k=Math.min(1,(t-t0)/dur);k=1-Math.pow(1-k,3);s=s0+(ns-s0)*k;const tgx=cx-wx*ns,tgy=cy-wy*ns;tx=x0+(tgx-x0)*k;ty=y0+(tgy-y0)*k;apply();if(k<1)anim=requestAnimationFrame(step)};anim=requestAnimationFrame(step)}
+function focus(p){const ns=Math.max(s,minS*2.2),wx=p.x/100*W,wy=p.y/100*H;const cw=innerWidth>700?innerWidth-340:innerWidth,ch=innerWidth>700?innerHeight:innerHeight-260;
+ cancelAnimationFrame(anim);const s0=s,x0=tx,y0=ty,t0=performance.now(),tgx=cw/2-wx*ns,tgy=ch/2-wy*ns;
+ const step=t=>{let k=Math.min(1,(t-t0)/550);k=1-Math.pow(1-k,3);s=s0+(ns-s0)*k;tx=x0+(tgx-x0)*k;ty=y0+(tgy-y0)*k;apply();if(k<1)anim=requestAnimationFrame(step)};anim=requestAnimationFrame(step)}
+function fit(a){minS=innerWidth>700?contain():cover()*0.62;minS=Math.max(minS,contain());if(a)go(minS,innerWidth/2,innerHeight/2);else{s=minS;tx=(innerWidth-W*s)/2;ty=(innerHeight-H*s)/2;apply()}}
+function zoomBy(f){go(s*f,innerWidth/2,innerHeight/2,300)}
+let cur=-1;
+function openC(i,zoom){const p=S[i];cur=i;S.forEach(q=>q.el.classList.toggle('on',q===p));
+ document.getElementById('ct').textContent=p.ad;
+ document.getElementById('cl').innerHTML=p.u.map(u=>`<div class="it"><img src="${u.img}" alt="" onerror="this.style.visibility='hidden'"><div><b>${u.n}</b><span>${usd(u.r)}</span></div></div>`).join('');
+ document.getElementById('ca').textContent=p.u.length>1?`${p.u.length} ürünü sepete ekle`:'Sepete ekle';
+ document.getElementById('card').classList.add('show');if(zoom)focus(p)}
+function closeC(){document.getElementById('card').classList.remove('show');S.forEach(q=>q.el.classList.remove('on'));cur=-1}
+function toCart(ids){const o=JSON.parse(sessionStorage.getItem('tezgah-ekle')||'{}');ids.forEach(i=>o[i]=(o[i]||0)+1);try{sessionStorage.setItem('tezgah-ekle',JSON.stringify(o))}catch(e){}
+ const b=document.getElementById('ca');b.textContent='Sepete eklendi ✓';setTimeout(()=>cur>=0&&openC(cur),1400)}
+document.getElementById('ca').onclick=()=>cur>=0&&toCart(S[cur].u.map(u=>u.id));
+function addAll(){toCart(S.flatMap(p=>p.u.map(u=>u.id)));const h=document.getElementById('hint');h.textContent='Önizleme: canlı sayfada set sepete eklenip sepet açılacak';h.style.opacity=1;setTimeout(()=>h.style.opacity=0,3000)}
+// sürükle + iki parmak
+const pts=new Map();let last=null,moved=0;
+vp.onpointerdown=e=>{if(e.target.closest('.sp'))return;vp.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=0;vp.classList.add('drag');cancelAnimationFrame(anim)};
+vp.onpointermove=e=>{if(!pts.has(e.pointerId))return;const pr=pts.get(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pts.size===1){tx+=e.clientX-pr.x;ty+=e.clientY-pr.y;moved+=Math.abs(e.clientX-pr.x)+Math.abs(e.clientY-pr.y);apply()}
+ else if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
+  if(last){const ns=Math.max(minS,Math.min(minS*5,s*d/last.d));tx=cx-(last.cx-tx)*ns/s;ty=cy-(last.cy-ty)*ns/s;s=ns;apply()}last={d,cx,cy};moved=99}};
+vp.onpointerup=vp.onpointercancel=e=>{pts.delete(e.pointerId);if(pts.size<2)last=null;vp.classList.remove('drag');if(moved<6&&e.target===document.getElementById('im'))closeC()};
+vp.addEventListener('wheel',e=>{e.preventDefault();go(s*Math.exp(-e.deltaY*0.0018),e.clientX,e.clientY,120)},{passive:false});
+// fare ile hafif derinlik
+vp.addEventListener('scroll',()=>{vp.scrollLeft=0;vp.scrollTop=0});addEventListener('resize',()=>fit());fit();setTimeout(()=>document.getElementById('hint').style.opacity=0,3500);
+</script></body></html>
