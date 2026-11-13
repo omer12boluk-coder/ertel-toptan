@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tezgâhını kur — gerçek görseller</title>
+<style>
+:root{--ink:#1d1d1f;--mut:#6e6e73;--line:#e5e5ea;--bg:#f5f5f7;--acc:#2f62d6;--accl:#eaf0fc}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:hidden}
+body{margin:0;font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+main{max-width:1240px;margin:0 auto;padding:12px 12px 100px}
+h1{font-size:22px;letter-spacing:-.02em;margin:0}.lead{margin:0 0 8px;color:var(--mut);font-size:13px}
+.wrap{display:grid;gap:10px}.wrap>div{min-width:0}
+.stagebox{position:sticky;top:0;z-index:5;background:var(--bg);padding:4px 0 6px}
+.stage{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:1.45;background:#ddd}
+@media(min-width:960px){.stage{aspect-ratio:1.864}}
+.stage .sc{position:absolute;aspect-ratio:1536/1024}
+.stage .sc img{position:absolute;inset:0;width:100%;height:100%;transition:opacity .35s ease}
+.stage .sc img.off{opacity:0}
+.zone{position:absolute;cursor:pointer;border-radius:12px}
+.zone.on{box-shadow:0 0 0 2px var(--acc) inset;background:rgba(47,98,214,.06)}
+.zone .tag{pointer-events:none;position:absolute;left:50%;top:6px;transform:translate(-50%,0);background:#fff;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.14);opacity:0;transition:opacity .2s}
+.zone.on .tag{opacity:1}
+.prog{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.95);border-radius:999px;padding:6px 12px 8px;font-size:12px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.prog span{color:var(--acc);margin-left:8px}.prog i{display:block;height:3px;border-radius:2px;background:#e3e3e8;margin-top:4px;overflow:hidden}.prog i b{display:block;height:100%;background:var(--acc);transition:width .3s}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.tab{min-width:0;border:1px solid var(--line);background:#fff;border-radius:12px;padding:6px 4px;cursor:pointer;font:inherit;color:inherit;text-align:center}
+.tab img{width:36px;height:30px;object-fit:contain;display:block;margin:0 auto 2px}
+.tab .ph{width:30px;height:30px;margin:0 auto 2px;border:2px dashed var(--acc);border-radius:8px;opacity:.6}
+.tab b{display:block;font-size:12px}.tab span{display:block;font-size:10.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset;background:var(--accl)}
+.panel{background:#fff;border-radius:16px;padding:12px}
+.panel h2{font-size:15px;margin:0 0 8px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt{border:1px solid var(--line);border-radius:14px;padding:8px;cursor:pointer;background:#fff;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;gap:6px}
+.opt .im{height:110px;background:#f3f3f5;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:6px}
+.opt .im img{max-width:100%;max-height:100%}
+.opt .n{font-size:12.5px;font-weight:600;line-height:1.25;min-height:2.5em}.opt .p{font-size:14px;font-weight:700}
+.opt .st{font-size:11px;color:var(--mut)}
+.opt.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}.opt.on .st{color:var(--acc);font-weight:600}
+.none{margin-top:8px;width:100%;border:1px dashed #c7c7cc;background:transparent;border-radius:12px;padding:8px;font:inherit;font-size:12px;color:var(--mut);cursor:pointer}
+.sum{background:#fff;border-radius:16px;padding:12px;margin-top:10px}
+.sum h3{margin:0 0 6px;font-size:14px}
+.row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:4px 0;border-top:1px solid #f0f0f2}
+.row:first-of-type{border-top:0}.row span:first-child{color:var(--mut)}.row .miss{color:var(--acc);font-weight:600}
+.tot{display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
+.note{font-size:11.5px;color:var(--mut);margin-top:6px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px;z-index:6}
+.bar .t{flex:1}.bar small{display:block;color:var(--mut);font-size:12px}.bar b{font-size:18px}
+.bar button{height:44px;padding:0 18px;border:0;border-radius:13px;background:var(--acc);color:#fff;font:inherit;font-weight:700}
+.toast{position:fixed;left:50%;bottom:86px;transform:translate(-50%,16px);background:#1d1d1f;color:#fff;padding:9px 14px;border-radius:12px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:9}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media(min-width:960px){main{padding:24px 16px 110px}h1{font-size:28px}.wrap{grid-template-columns:1fr 360px;align-items:start}.stagebox{position:static}
+ .side{position:sticky;top:16px}.zone .tag{font-size:13px}.prog{font-size:14px}}
+</style></head><body><main>
+<h1>Tezgâhını kur.</h1><p class="lead">Tezgâhtaki cihaza ya da alttaki kutuya dokun, başka model seç ya da boş bırak.</p>
+<div class="wrap">
+ <div class="stagebox"><div class="stage" id="stage"><div class="sc" id="sc"></div><div class="prog" id="prog"></div></div><div class="tabs" id="tabs"></div></div>
+ <div class="side"><div class="panel" id="panel"></div><div class="sum" id="sum"></div></div>
+</div></main>
+<div class="bar"><div class="t"><small id="bc"></small><b id="bt"></b></div><button id="badd">Sepete ekle</button></div>
+<div class="toast" id="toast"></div>
+<script>
+// Katman sırası: arkadan öne. z = dokunma alanı (sahne %'si; sahne üstten %24.3 kırpık gösterilir).
+const SLOTS=[
+ {k:'guc',ad:'Güç kaynağı',z:[28.5, 30.0, 36.7, 41.1],opts:[{id:1996,n:'SUGON 3005PM (30V 5A)',p:100},{id:1916,n:'Aixun P3208 (32V 8A)',p:190}]},
+ {k:'sicak',ad:'Sıcak hava',z:[16.2, 35.4, 35.0, 67.6],opts:[{id:3066,n:'Quick 861 Pro Max (1300W)',p:330},{id:2671,n:'SUGON 8650 PRO (1300W)',p:270}]},
+ {k:'mikro',ad:'Mikroskop',z:[38.4, 31.8, 58.6, 76.1],opts:[{id:2913,n:'MY-7S Mikroskop',p:280},{id:3030,n:'Mr. Yang 85 Ultra Mikroskop',p:340}]},
+ {k:'havya',ad:'Havya',z:[59.0, 52.2, 74.8, 89.0],opts:[{id:835,n:'JBC CD-2 İstasyonlu Havya',p:585},{id:2745,n:'Aixun T420D İstasyonlu Havya',p:300}]},
+];
+const TAB_ORDER=['guc','havya','mikro','sicak'];
+const pick={}; SLOTS.forEach(s=>pick[s.k]=s.opts[0].id); let cur='havya';
+const $=id=>document.getElementById(id), usd=v=>'$'+v.toLocaleString('tr-TR');
+const sc=$('sc');
+function view(){ // telefonda yakınlaştırılmış kırpım, bilgisayarda tüm tezgâh
+  const m=matchMedia('(min-width:960px)').matches, k=m?1:1.36, ox=m?0:-18, ar=m?1.864:1.45, y0=m?.19:.235, sh=k*1024/1536*ar*100, oy=-y0*sh;
+  sc.style.width=k*100+'%'; sc.style.left=ox+'%'; sc.style.top=oy+'%';
+  SLOTS.forEach(s=>{if(!s.el)return;const [x0,yA,x1,yB]=s.z;s.el.style.left=(ox+x0*k)+'%';s.el.style.width=((x1-x0)*k)+'%';s.el.style.top=(oy+yA/100*sh)+'%';s.el.style.height=((yB-yA)/100*sh)+'%'});
+}
+addEventListener('resize',view);
+const add=(src,cls)=>{const i=document.createElement('img');i.src=src;i.alt='';if(cls)i.className=cls;sc.appendChild(i);return i};
+add('img/taban.webp');
+const L={};
+SLOTS.forEach(s=>{L[s.k]={}; s.opts.forEach(o=>L[s.k][o.id]=add(`img/${s.k}-${o.id}.webp`,'off')); L[s.k].bos=add(`img/bos-${s.k}.webp`,'off')});
+add('img/on.webp');
+const stage=$('stage');
+SLOTS.forEach(s=>{const z=document.createElement('div');z.className='zone';const [x0,y0,x1,y1]=s.z;
+  z.innerHTML='<span class="tag">'+s.ad+'</span>';z.onclick=()=>{cur=s.k;render()};stage.appendChild(z);s.el=z});
+function draw(){SLOTS.forEach(s=>{const v=pick[s.k];Object.entries(L[s.k]).forEach(([id,img])=>img.classList.toggle('off',!((v===null&&id==='bos')||String(v)===id)))})}
+function render(){
+  draw(); SLOTS.forEach(s=>s.el.classList.toggle('on',s.k===cur));
+  const S=k=>SLOTS.find(s=>s.k===k);
+  $('tabs').innerHTML=TAB_ORDER.map(k=>{const s=S(k),o=s.opts.find(o=>o.id===pick[k]);return `<button class="tab ${k===cur?'on':''}" data-k="${k}">${o?`<img src="img/t-${k}-${o.id}.webp" alt="">`:'<div class="ph"></div>'}<b>${s.ad}</b><span>${o?o.n:'Eksik'}</span></button>`}).join('');
+  $('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{cur=b.dataset.k;render()});
+  const s=S(cur);
+  $('panel').innerHTML=`<h2>${s.ad} seç</h2><div class="opts">${s.opts.map(o=>`<button class="opt ${pick[cur]===o.id?'on':''}" data-id="${o.id}"><div class="im"><img src="img/t-${cur}-${o.id}.webp" alt=""></div><div class="n">${o.n}</div><div class="p">${usd(o.p)}</div><div class="st">${pick[cur]===o.id?'✓ Tezgâhta':'Tezgâha koy'}</div></button>`).join('')}</div><button class="none">${pick[cur]===null?'Bu yuva boş':'Bu yuvayı boş bırak'}</button>`;
+  $('panel').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{pick[cur]=+b.dataset.id;render()});
+  $('panel').querySelector('.none').onclick=()=>{pick[cur]=null;render()};
+  const ch=TAB_ORDER.map(k=>[S(k),S(k).opts.find(o=>o.id===pick[k])]), have=ch.filter(([,o])=>o), tot=have.reduce((a,[,o])=>a+o.p,0), miss=4-have.length;
+  const pct=Math.round(have.length/4*100);
+  $('prog').innerHTML=`Tezgâhın %${pct} hazır${miss?`<span>${miss} eksik</span>`:''}<i><b style="width:${pct}%"></b></i>`;
+  $('sum').innerHTML=`<h3>Tezgâhın</h3>${ch.map(([s,o])=>`<div class="row"><span>${s.ad}</span>${o?`<b>${usd(o.p)}</b>`:'<span class="miss">Eksik</span>'}</div>`).join('')}<div class="tot"><span>Toplam</span><span>${usd(tot)}</span></div><div class="note">Demo: liste fiyatı (USD). Mağazada TL ve KDV dahil gösterilir.</div>`;
+  $('bc').textContent=have.length+' ürün · tezgâh toplamı';$('bt').textContent=usd(tot);
+}
+$('badd').onclick=()=>{const t=$('toast');t.textContent='Demo: seçilen ürünler sepete eklenecek';t.classList.add('on');setTimeout(()=>t.classList.remove('on'),1600)};
+view();render();
+</script></body></html>
