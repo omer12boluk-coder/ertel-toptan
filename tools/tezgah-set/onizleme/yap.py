@@ -3,6 +3,8 @@ import json, os
 H = os.path.dirname(os.path.abspath(__file__))
 K = {p['id']: p for p in json.load(open(os.path.join(H, '..', 'kat.json')))}
 P = json.load(open(os.path.join(H, 'noktalar.json')))
+from PIL import Image
+IW, IH = Image.open(os.path.join(H, 'on.webp')).size
 for p in P:
     p['u'] = [{'id': i, 'n': K[i]['n'], 'r': K[i]['r']} for i in p['ids']]
 CSS = r'''
@@ -21,7 +23,7 @@ h1{font-size:22px;letter-spacing:-.02em;margin:0}.lead{margin:2px 0 0;color:var(
 .layout{display:grid;gap:12px}.layout>div{min-width:0}
 .stage{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:1.5;background:#2a2622}
 #vp{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab}#vp.drag{cursor:grabbing}
-#st{position:absolute;left:0;top:0;width:1536px;height:1024px;transform-origin:0 0;will-change:transform}
+#st{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 #st img{display:block;width:100%;height:100%;user-select:none;-webkit-user-drag:none;pointer-events:none}
 .zone{position:absolute;border-radius:14px;cursor:pointer;transition:background .2s,box-shadow .2s}
 @media(hover:hover){.zone:hover{background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(255,255,255,.7) inset}}
@@ -139,8 +141,8 @@ BODY = r'''<main>
 <div class="dim" id="dim"></div><div class="sheet" id="sheet"></div><div class="toast" id="toast"></div>'''
 JS = r'''
 const $=id=>document.getElementById(id), usd=v=>'$'+(Math.round(v*100)/100).toLocaleString('tr-TR');
-const W=1536,H=1024, img=id=>'u/'+id+'.webp', ALL=P.flatMap(p=>p.u);
-const vp=$('vp'),st=$('st'),ov=$('ov'),stage=$('stage');
+const W=IW,H=IH, img=id=>'u/'+id+'.webp', ALL=P.flatMap(p=>p.u);
+const vp=$('vp'),st=$('st'),ov=$('ov'),stage=$('stage');st.style.width=W+'px';st.style.height=H+'px';
 let s=1,tx=0,ty=0,minS=1,anim=0,cur=-1;
 // bölgeler + etiketler
 P.forEach((p,i)=>{const [a,b,c,d]=p.z,z=document.createElement('div');z.className='zone';Object.assign(z.style,{left:a+'px',top:b+'px',width:(c-a)+'px',height:(d-b)+'px'});
@@ -210,6 +212,6 @@ $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('seg').querySele
 '''
 html = ('<!DOCTYPE html>\n<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
         '<title>Hazır tezgâh · ERTEL GSM</title><style>' + CSS + '</style></head><body>' + BODY +
-        '<script>const P=' + json.dumps([{k: v for k, v in p.items() if k != 'ids'} for p in P], ensure_ascii=False) + ';' + JS + '</script></body></html>')
+        '<script>const IW='+str(IW)+',IH='+str(IH)+';const P=' + json.dumps([{k: v for k, v in p.items() if k != 'ids'} for p in P], ensure_ascii=False) + ';' + JS + '</script></body></html>')
 open(os.path.join(H, 'index.html'), 'w').write(html)
 print('ok', len(html))
