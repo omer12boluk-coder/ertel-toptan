@@ -1,5 +1,5 @@
 // Cloudflare site bekçisiyle konuşan küçük yardımcılar (adres: hosting/public/config.js → window.WATCH_URL)
-import { store } from './store.js';
+import { store, api } from './store.js';
 
 // Dolar kuru (Harem Altın satış): bekçi adresinden dakikada bir alınır
 export function startRate(A) {
@@ -19,7 +19,9 @@ export function startRate(A) {
 export async function syncNow(force) {
   const W = window.WATCH_URL;
   if (!W) throw new Error('Bekçi adresi ayarlı değil');
-  const r = await fetch(W.replace(/\/$/, '') + (force ? '/sync' : '/check'), { method: 'POST' });
+  // 13.11.2026: bekçi bu kapıları sadece yönetici oturumuyla açar → oturum anahtarı eklenir
+  const tok = await api()?.idToken?.(); if (!tok) throw new Error('Oturum yok');
+  const r = await fetch(W.replace(/\/$/, '') + (force ? '/sync' : '/check'), { method: 'POST', headers: { Authorization: 'Bearer ' + tok } });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
   return j.result;

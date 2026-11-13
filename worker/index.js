@@ -111,8 +111,8 @@ export default {
         if (!r.ok) return new Response(null, { status: r.status, headers: cors });
         return new Response(r.body, { headers: { 'Content-Type': r.headers.get('content-type') || 'image/jpeg', 'Cache-Control': 'public, max-age=604800', ...cors } });
       }
-      if (url.pathname === '/check' && req.method === 'POST') return json({ result: await check(env) }); // sadece değişiklik varsa eşitler
-      if (url.pathname === '/sync' && req.method === 'POST') return json({ result: await check(env, { force: true }) });
+      // 13.11.2026 güvenlik: eşitleme kapıları sadece yönetici oturumuyla (eskiden adresi bilen herkes GitHub eşitlemesini tetikleyebiliyordu)
+      if ((url.pathname === '/check' || url.pathname === '/sync') && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); return json({ result: await check(env, { force: url.pathname === '/sync' }) }); }
       // Mağaza siparişi bekçiden geçer: fiyatlar kataloğdan yeniden hesaplanır, sipariş sunucu anahtarıyla yazılır (fiyat oynanamaz)
       if (url.pathname === '/order' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await placeOrder(req, env, b, ctx)); }
       if (url.pathname === '/notify' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyOrder(env, String(b.id || ''))); }
