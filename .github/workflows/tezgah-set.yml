@@ -1,0 +1,40 @@
+# Hazır tezgâh seti: GPT ile ürünlerle birlikte tek fotoğraf (tools/tezgah-set/uret.py) → 'tezgah-set-out' dalı.
+# Sadece 'tezgah-set' dalına push'ta çalışır; canlı siteye dokunmaz. Gizli ayar: OPENAI_API_KEY.
+name: Tezgah seti
+on:
+  push:
+    branches: [tezgah-set]
+    paths: ['tools/tezgah-set/**', '.github/workflows/tezgah-set.yml']
+permissions:
+  contents: write
+concurrency:
+  group: tezgah-set
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q pillow requests
+      - name: Önceki çıktıları al
+        run: |
+          mkdir -p out
+          if git fetch -q --depth 1 origin tezgah-set-out; then git --work-tree=out checkout FETCH_HEAD -- . ; git reset -q; fi
+      - name: Üret
+        if: ${{ !contains(github.event.head_commit.message, '[uretme]') }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          N: '2'
+          QUAL: high
+        run: python3 tools/tezgah-set/uret.py tools/tezgah-set/kat.json
+      - name: tezgah-set-out dalına koy
+        if: always()
+        run: |
+          cd out; rm -rf .git; touch .keep; git init -q; git checkout -q -b tezgah-set-out
+          git -c user.name=actions -c user.email=actions@github.com add -A
+          git -c user.name=actions -c user.email=actions@github.com commit -qm "Tezgah seti $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" tezgah-set-out
+          echo "::notice title=Tezgah seti::$(tail -n 4 log.txt | tr '\n' ' ')"

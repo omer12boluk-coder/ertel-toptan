@@ -1,0 +1,21 @@
+{
+  "_not": "Hazır tezgâh seti. 'ref' = GPT'ye verilen referans görsel grubu (aynı ref = tek görselde yan yana). 'ne' = sahnede nasıl durduğu (İngilizce, GPT için). Kart: ad (tür) + n (ürün adı).",
+  "urunler": [
+    {"k": "mikro",   "ad": "Mikroskop",        "ids": [30],   "ref": "mikro",  "ne": "a BLACK AmScope SM-4NTP trinocular stereo microscope on its black articulating boom arm stand, LED ring light under the head, head positioned right above the board holder, the boom base sits at the back of the desk"},
+    {"k": "tutucu",  "ad": "Bord tutucu",      "ids": [2037], "ref": "tutucu", "ne": "the 2UUL BH08 board holder lying flat on the mat directly under the microscope objective, clamping an iPhone logic board"},
+    {"k": "havya",   "ad": "Havya istasyonu",  "ids": [835],  "ref": "havya",  "ne": "the JBC soldering station (control unit with its display) standing on the desk to the RIGHT of the microscope, its iron handle resting in the JBC stand next to it, cable running to the unit"},
+    {"k": "sicak",   "ad": "Sıcak hava",       "ids": [3066], "ref": "sicak",  "ne": "the Quick 861 Pro Max hot air rework station standing on the desk to the LEFT of the microscope, its hot air handle resting in the side holder, hose connected"},
+    {"k": "guc",     "ad": "Güç kaynağı",      "ids": [1916], "ref": "guc",    "ne": "the Aixun P3208 bench power supply on the back left of the desk next to the hot air station, its display lit"},
+    {"k": "isitici", "ad": "Bord ısıtıcı",     "ids": [2455], "ref": "isitici","ne": "the Aixun iHeater Pro board preheater on the mat to the left of the board holder, between the hot air station and the microscope, slightly in front"},
+    {"k": "fan",     "ad": "Duman emici fan",  "ids": [2242], "ref": "fan",    "ne": "the 2UUL Aiolos fume extractor fan standing on the mat right of the board holder, aimed at the work area"},
+    {"k": "test",    "ad": "Test ve boot",     "ids": [2068, 3062], "ref": "test", "ne": "the Qianli iSocket board tester lying on the mat in front-left of the microscope, and the Mechanic Power Pro Max boot cable coiled next to it, its plug leads going to the power supply"},
+    {"k": "cimbiz",  "ad": "Cımbızlar",        "ids": [1790, 2978, 2709, 3056], "ref": "cimbiz", "ne": "exactly FOUR precision tweezers lying neatly side by side, parallel, on the mat in front-right of the board holder (the four shown in the reference)"},
+    {"k": "kalip",   "ad": "Kalıplar",         "ids": [2422, 2003, 3090], "ref": "kalip", "ne": "a small neat pile of 4-5 Amaoe BGA reballing stencils (thin square steel plates) stacked overlapping on top of each other at the front-left corner of the mat"},
+    {"k": "sivi",    "ad": "Sıvı lehim",       "ids": [51, 79], "ref": "sivi", "ne": "two ALPHA solder paste syringes (138 and 183, as in the reference) lying side by side on the mat at the front, left of center"},
+    {"k": "tel",     "ad": "Lehim teli",       "ids": [492],  "ref": "tel",    "ne": "the ALPHA solder wire spool standing on the desk right of the JBC station, front"},
+    {"k": "wick",    "ad": "Lehim çekme teli", "ids": [126],  "ref": "wick",   "ne": "the Goot Wick CP-20B desoldering wick spool lying on the mat next to the solder wire spool"},
+    {"k": "keski",   "ad": "Yan keski",        "ids": [402],  "ref": "keski",  "ne": "the Piergiacomi side cutter lying on the mat at the front right"},
+    {"k": "tornavida","ad": "Tornavida seti",  "ids": [2246], "ref": "tornavida", "ne": "the 2UUL KaKa torque screwdriver set (screwdrivers in their stand/case) at the front right of the mat, next to the side cutter"},
+    {"k": "dramel",  "ad": "Dramel",           "ids": [2464, 2303], "ref": "dramel", "ne": "the two 2UUL dremel grinders (the CVT Grinder Pro and the DA51 OCA cleaner) lying side by side on the mat at the right side, between the tweezers and the JBC station"}
+  ]
+}
