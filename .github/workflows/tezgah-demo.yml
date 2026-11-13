@@ -1,0 +1,34 @@
+# Tezgâh demosu: GPT ile ürün başına 2 görsel üretir (tools/tezgah/demo.py) → 'tezgah-demo-out' dalı.
+# Sadece 'tezgah-demo' dalına push'ta (ya da elle) çalışır; canlı siteye dokunmaz. Gizli ayar: OPENAI_API_KEY.
+name: Tezgah demosu
+on:
+  push:
+    branches: [tezgah-demo]
+    paths: ['tools/tezgah/**', '.github/workflows/tezgah-demo.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: tezgah-demo
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -q pillow numpy scipy requests
+      - name: Görselleri üret
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python3 tools/tezgah/demo.py
+      - name: tezgah-demo-out dalına koy
+        if: always()
+        run: |
+          mkdir -p out; cd out; touch .keep; git init -q; git checkout -q -b tezgah-demo-out
+          git -c user.name=actions -c user.email=actions@github.com add -A
+          git -c user.name=actions -c user.email=actions@github.com commit -qm "Tezgah demosu $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" tezgah-demo-out
