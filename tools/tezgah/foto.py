@@ -1,7 +1,7 @@
 # Tezgâh için ürün fotoğrafları (ücretsiz: sadece indirir, GPT yok) → out/foto/<id>-<n>.jpg
 import json, os, io, urllib.parse, requests
 from PIL import Image
-IDS = [2035, 2455, 1953, 94, 1892, 1638]
+IDS = [30]
 P = {p['id']: p for p in json.load(open('src/products.json'))}
 os.makedirs('out/foto', exist_ok=True)
 for i in IDS:
