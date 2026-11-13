@@ -12,7 +12,8 @@ from kes import key
 D = os.path.join(os.path.dirname(__file__), 'poz')
 OUT = 'out/gercek'; os.makedirs(OUT, exist_ok=True)
 YENI = os.environ.get('YENI', '')
-SEC = json.loads(os.environ.get('SEC', '{"guc":[1996],"havya":[835],"mikro":[2913],"sicak":[3066]}'))
+SECF = os.path.join(os.path.dirname(__file__), 'SEC.json')
+SEC = json.load(open(SECF)) if os.path.exists(SECF) else {'guc': [1996], 'havya': [835], 'mikro': [2913], 'sicak': [3066]}
 NE = {'guc': 'DC bench power supply (with its red and black test leads)', 'havya': 'soldering station with its iron standing in the holder',
       'mikro': 'stereo microscope on its boom stand with LED ring light', 'sicak': 'hot air rework station with its handle in the side holder'}
 
