@@ -1,0 +1,18 @@
+Create ONE photorealistic photograph of a real, professional mobile-phone repair technician's workbench, fully set up and ready for work, shot with a full-frame camera from the technician's seat: front view, camera slightly above desk height looking a little down, the whole bench in frame. The bench: a solid light oak desk covered by a large grey-green anti-static ESD silicone mat; behind it a matte off-white wall. Every product below must be PHYSICALLY ON this desk, at real-world scale relative to each other, resting with real contact shadows, correct perspective, the same light, reflections and depth of field as the rest of the photo, like one real photograph taken in a shop. Nothing floats, nothing is cut out or pasted, nothing is cropped by the frame edges; leave a small margin around the whole bench. Reproduce each product faithfully from its reference image: same model, shape, colours, logos, screens and buttons. Cables are real and connected naturally. Arrangement is tidy, realistic and functional, as a real technician uses it:
+Image 1: a BLACK AmScope SM-4NTP trinocular stereo microscope on its black articulating boom arm stand, LED ring light under the head, head positioned right above the board holder, the boom base sits at the back of the desk.
+Image 2: the 2UUL BH08 board holder lying flat on the mat directly under the microscope objective, clamping an iPhone logic board.
+Image 3: the JBC soldering station (control unit with its display) standing on the desk to the RIGHT of the microscope, its iron handle resting in the JBC stand next to it, cable running to the unit.
+Image 4: the Quick 861 Pro Max hot air rework station standing on the desk to the LEFT of the microscope, its hot air handle resting in the side holder, hose connected.
+Image 5: the Aixun P3208 bench power supply on the back left of the desk next to the hot air station, its display lit.
+Image 6: the Aixun iHeater Pro board preheater on the mat to the left of the board holder, between the hot air station and the microscope, slightly in front.
+Image 7: the 2UUL Aiolos fume extractor fan standing on the mat right of the board holder, aimed at the work area.
+Image 8: the Qianli iSocket board tester lying on the mat in front-left of the microscope, and the Mechanic Power Pro Max boot cable coiled next to it, its plug leads going to the power supply.
+Image 9: exactly FOUR precision tweezers lying neatly side by side, parallel, on the mat in front-right of the board holder (the four shown in the reference).
+Image 10: a small neat pile of 4-5 Amaoe BGA reballing stencils (thin square steel plates) stacked overlapping on top of each other at the front-left corner of the mat.
+Image 11: two ALPHA solder paste syringes (138 and 183, as in the reference) lying side by side on the mat at the front, left of center.
+Image 12: the ALPHA solder wire spool standing on the desk right of the JBC station, front.
+Image 13: the Goot Wick CP-20B desoldering wick spool lying on the mat next to the solder wire spool.
+Image 14: the Piergiacomi side cutter lying on the mat at the front right.
+Image 15: the 2UUL KaKa torque screwdriver set (screwdrivers in their stand/case) at the front right of the mat, next to the side cutter.
+Image 16: the two 2UUL dremel grinders (the CVT Grinder Pro and the DA51 OCA cleaner) lying side by side on the mat at the right side, between the tweezers and the JBC station.
+Do NOT add any other devices or tools that are not listed. No people, no hands, no text overlays, no watermark. Soft natural daylight from the upper left plus the microscope ring light, premium commercial photography, sharp details.

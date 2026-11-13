@@ -1,0 +1,34 @@
+referans sayısı: 16
+HATA 400 (gpt-image-2): {
+  "error": {
+    "message": "The model 'gpt-image-2' does not support the 'input_fidelity' parameter.",
+    "type": "image_generation_user_error",
+    "param": "input_fidelity",
+    "code": "invalid_input_fidelity_model"
+  }
+}
+model=gpt-image-1.5 kullanım: {"input_tokens": 47796, "input_tokens_details": {"image_tokens": 45390, "text_tokens": 2406}, "output_tokens": 13523, "output_tokens_details": {"image_tokens": 12416, "text_tokens": 1107}, "total_tokens": 61319}
+bitti: 2 görsel
+iş: guc
+  model=gpt-image-1.5 kullanım: {"input_tokens": 8935, "input_tokens_details": {"image_tokens": 8708, "text_tokens": 227}, "output_tokens": 4606, "output_tokens_details": {"image_tokens": 4160, "text_tokens": 446}, "total_tokens": 13541}
+iş: sicak
+  model=gpt-image-1.5 kullanım: {"input_tokens": 8922, "input_tokens_details": {"image_tokens": 8708, "text_tokens": 214}, "output_tokens": 4579, "output_tokens_details": {"image_tokens": 4160, "text_tokens": 419}, "total_tokens": 13501}
+iş: jbc
+  model=gpt-image-1.5 kullanım: {"input_tokens": 9067, "input_tokens_details": {"image_tokens": 8837, "text_tokens": 230}, "output_tokens": 4567, "output_tokens_details": {"image_tokens": 4160, "text_tokens": 407}, "total_tokens": 13634}
+iş: isitici
+  model=gpt-image-1.5 kullanım: {"input_tokens": 11118, "input_tokens_details": {"image_tokens": 10917, "text_tokens": 201}, "output_tokens": 4542, "output_tokens_details": {"image_tokens": 4160, "text_tokens": 382}, "total_tokens": 15660}
+iş: sivi
+  model=gpt-image-1.5 kullanım: {"input_tokens": 8962, "input_tokens_details": {"image_tokens": 8708, "text_tokens": 254}, "output_tokens": 4628, "output_tokens_details": {"image_tokens": 4160, "text_tokens": 468}, "total_tokens": 13590}
+iş: isocket
+  model=gpt-image-1.5 kullanım: {"input_tokens": 11123, "input_tokens_details": {"image_tokens": 10885, "text_tokens": 238}, "output_tokens": 6626, "output_tokens_details": {"image_tokens": 6208, "text_tokens": 418}, "total_tokens": 17749}
+iş: isik
+  model=gpt-image-1.5 kullanım: {"input_tokens": 8906, "input_tokens_details": {"image_tokens": 8708, "text_tokens": 198}, "output_tokens": 4544, "output_tokens_details": {"image_tokens": 4160, "text_tokens": 384}, "total_tokens": 13450}
+iş: tutucu
+  model=gpt-image-1.5 kullanım: {"input_tokens": 8918, "input_tokens_details": {"image_tokens": 8708, "text_tokens": 210}, "output_tokens": 4605, "output_tokens_details": {"image_tokens": 4160, "text_tokens": 445}, "total_tokens": 13523}
+düzeltme bitti
+uyum kullanım: {"input_tokens": 44436, "input_tokens_details": {"image_tokens": 43540, "text_tokens": 896}, "output_tokens": 13662, "output_tokens_details": {"image_tokens": 12416, "text_tokens": 1246}, "total_tokens": 58098}
+uyum bitti
+tester kullanım: {"input_tokens": 11033, "input_tokens_details": {"image_tokens": 10885, "text_tokens": 148}, "output_tokens": 6665, "output_tokens_details": {"image_tokens": 6208, "text_tokens": 457}, "total_tokens": 17698}
+tester bitti
+maske kullanım: {"input_tokens": 13204, "input_tokens_details": {"image_tokens": 12933, "text_tokens": 271}, "output_tokens": 6671, "output_tokens_details": {"image_tokens": 6208, "text_tokens": 463}, "total_tokens": 19875}
+maske bitti
