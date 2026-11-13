@@ -947,9 +947,13 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const [play, setPlay] = useState(0);
   // 14.11.2026 fotoğraflı banner yazı/resim animasyonu: oynayan = ta-go (animasyon), bir önceki = ta-stay (kayıp çıkarken yazısı görünür kalır),
   // diğerleri gizli (parmakla kaydırırken gelen bannerın yazısı önce görünüp sonra silinmesin; oturunca bir kez dökülür)
-  const playPrev = useRef({ cur: 0, prev: -1 });
-  if (play !== playPrev.current.cur) playPrev.current = { cur: play, prev: playPrev.current.cur >= 0 ? playPrev.current.cur : playPrev.current.prev };
-  const prevPlay = playPrev.current.prev;
+  const playPrev = useRef({ cur: 0, prev: -1, back: false });
+  if (play !== playPrev.current.cur) {
+    const o = playPrev.current;
+    // 14.11.2026 telefonda ileri-geri: az önce görünür kalan (ta-stay) bannera dönülünce animasyon baştan oynamaz (yazı kaybolup yeniden geliyordu = flaş)
+    playPrev.current = { cur: play, prev: o.cur >= 0 ? o.cur : o.prev, back: play >= 0 && play === (o.cur >= 0 ? o.prev : -9) };
+  }
+  const prevPlay = playPrev.current.prev; const playBack = playPrev.current.back;
   // 5.11.2026 iPhone: uygulama arka plana atılıp dönünce reklam yazıları görünmüyordu (giriş animasyonu 'başlamadan' durumda donup
   // kalıyordu). (1) yazı animasyonu bitince .done = animasyon yok, tam görünür; (2) sayfa yeniden görünür olunca animasyon baştan oynar.
   const [done, setDone] = useState(-1); const lastPlay = useRef(0);
@@ -1002,7 +1006,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const ownArrows = frame === 'story' || frame === 'deck';
   const pagerOn = !!pagerK && pagerK !== 'off';
   const inner = frame === 'story' ? (hxPhone ? '' : 'story') : frame === 'glow' ? (pagerOn ? 'glow' : '') : frame === '' && pagerOn ? 'p' : '';
-  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? ' ta-go' : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
+  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
   // deste: parmakla sağa/sola çekince önceki/sonraki (tıklamayla karışmasın diye çekilmişse tık yutulur)
   const sw = useRef(null);
   const dkDown = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };

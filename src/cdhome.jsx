@@ -80,7 +80,7 @@ function Tile({ p, X, pr, logos, onProduct, isNew, when }) {
 
 // ---- Banner alanı: kullanıcının reklam listesi (fotoğraflı bannerlar dahil), genişlik ve yükseklik sayfadan ayrı ----
 export const HERO_W = [['', 'Sayfayla aynı'], ['narrow', 'Dar'], ['mid', 'Orta'], ['wide', 'Geniş'], ['full', 'Kenardan kenara']];
-export const HERO_FILL = [['', 'Normal'], ['screen', 'Ekranı doldur']];
+export const HERO_FILL = [['', 'Normal'], ['screen', 'Ekranı doldur'], ['full', 'Tam kapla']];
 export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   const ref = useRef(null);
   // 14.11.2026 'Ortada logo' üst menüde banner menüye yapışık + kenardan kenara (shopHome.heroStick 'off' = eski, boşluklu)
@@ -90,20 +90,25 @@ export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   // heroStick: '' = sadece 'Ortada logo' menüsünde | 'all' = her menüde | 'off' = kapalı (boşluklu, eski)
   const hdr = lookFor(LK0, phoneH).header || 'search';
   const stick = !['deck', 'glow', 'side'].includes(frame) && (H.heroStick === 'all' || (H.heroStick !== 'off' && hdr === 'center'));
-  const w = stick ? 'full' : H.heroW || ''; const fill = H.heroFill === 'screen';
+  const w = stick ? 'full' : H.heroW || ''; const fill = H.heroFill === 'screen' || H.heroFill === 'full'; const full = H.heroFill === 'full';
   const slides = useMemo(() => heroList(H), [H.slides, H.photoBn]); // eslint-disable-line react-hooks/exhaustive-deps
   const out = !!w; // sayfanın kenarından taşabilir → sayfa kırpması açılır
   useEffect(() => { if (!out) return; const c = document.documentElement.classList; c.add('hf-on', 'hf-wide'); return () => c.remove('hf-on', 'hf-wide'); }, [out]);
   useLayoutEffect(() => {
     const el = ref.current; if (!el || !fill) return;
     const W = el.ownerDocument.defaultView || window;
-    const m = () => { const t = el.getBoundingClientRect().top + W.scrollY; el.style.setProperty('--fs-top', Math.max(0, Math.min(260, Math.round(t))) + 'px'); };
+    const m = () => {
+      const t = el.getBoundingClientRect().top + W.scrollY; el.style.setProperty('--fs-top', Math.max(0, Math.min(260, Math.round(t))) + 'px');
+      // 14.11.2026 'Tam kapla': telefonda banner alt menünün (botnav) üst kenarında biter → alt menü bannerı kapatmaz
+      if (full) { const bn = el.ownerDocument.querySelector('.botnav'); const r = bn && getComputedStyle(bn).display !== 'none' ? bn.getBoundingClientRect() : null;
+        const sp = r && r.height > 10 && r.top < W.innerHeight ? Math.max(0, Math.min(160, Math.round(W.innerHeight - r.top + 8))) : 0; el.style.setProperty('--bn-sp', sp + 'px'); }
+    };
     // 14.11.2026: ilk ölçüm (çizim bitmeden) birkaç px eksik çıkıyordu → giriş sayfasından sonra banner kısalıp sonra oturuyordu.
     // Bir sonraki karede de ölçülür; sayfanın üst kısmı (menü yüksekliği vb.) değişirse ResizeObserver ile yeniden.
     m(); const raf = requestAnimationFrame(() => { m(); requestAnimationFrame(m); }); const t = setTimeout(m, 400);
     const ro = 'ResizeObserver' in W ? new W.ResizeObserver(m) : null; const top = el.ownerDocument.querySelector('.topbar'); if (ro && top) ro.observe(top);
     W.addEventListener('resize', m); return () => { cancelAnimationFrame(raf); clearTimeout(t); ro?.disconnect(); W.removeEventListener('resize', m); };
-  }, [fill]);
+  }, [fill, full]);
   // yapışık: sayfanın ilk bölümüyse sayfa üst boşluğu (main padding) kalkar → html.hst-on
   useLayoutEffect(() => {
     const el = ref.current; const c = document.documentElement.classList;
@@ -126,7 +131,7 @@ export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   }, [stick, slides.length, hdr]);
   if (!slides.length) return null;
   // 7.11.2026 (7) üst menü ile banner arası ek boşluk (look.heroGap px, Tasarım › Görünüm)
-  return <div ref={ref} className={'cd-hero' + (w ? ' hw-' + w : '') + (fill ? ' hh-screen' : '') + (stick ? ' hst' : '')} style={Number(gap) && !stick ? { marginTop: Number(gap) + 'px' } : undefined}>
+  return <div ref={ref} className={'cd-hero' + (w ? ' hw-' + w : '') + (fill ? ' hh-screen' : '') + (full ? ' hh-full' : '') + (stick ? ' hst' : '')} style={Number(gap) && !stick ? { marginTop: Number(gap) + 'px' } : undefined}>
     <Hero slides={slides} open={open} onProduct={onProduct} brands={brands} pkHero={pkHero} nv={{ ...(H.heroNav || {}), full: w === 'full' ? 'all' : '', fs: '' }} heroH={fill ? undefined : H.heroH} />
   </div>;
 }

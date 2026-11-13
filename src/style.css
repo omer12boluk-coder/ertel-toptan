@@ -10118,3 +10118,8 @@ html.hc-scr .hdr-c.hcs-clear { background: color-mix(in oklab, var(--surface) 64
   .hdr-c.hcs-glass1 .hc-r .me-login-l { display: none; }
 }
 @media (min-width: 900px) and (max-width: 1280px) { .hdr-c .hc-nav1 { gap: 16px; } .hdr-c .hc-nav1 .topnav-b { font-size: 11.5px; letter-spacing: .08em; } .hdr-c.hcs-glass1 .hc-name { font-size: 18px; } }
+
+/* 14.11.2026 'Tam kapla' (shopHome.heroFill 'full'; geri: 'Normal' ya da 'Ekranı doldur'): banner menünün bittiği yerden ekranın altına
+   kadar, boşluksuz; telefonda alt menünün üst kenarında biter (--bn-sp ölçülür). Çerçeve parçaları (--hxu) yine düşülür. */
+.cd-hero.hh-screen.hh-full .sh-slide, .cd-hero.hh-screen.hh-full .hx-wrap .sh-slide { min-height: max(380px, calc(100svh - var(--fs-top, 120px) - var(--bn-sp, 0px) - var(--hxu, 0px))) !important; }
+@media (max-width: 700px) { .cd-hero.hh-screen.hh-full .sh-slide, .cd-hero.hh-screen.hh-full .hx-wrap .sh-slide { min-height: max(380px, calc(100svh - var(--fs-top, 90px) - var(--bn-sp, 0px) - var(--hxu, 0px))) !important; } }
