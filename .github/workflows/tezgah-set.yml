@@ -29,7 +29,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           N: '2'
           QUAL: high
-        run: python3 tools/tezgah-set/uret.py tools/tezgah-set/kat.json
+        run: |
+          case "$(git log -1 --format=%s)" in *'[duzelt]'*) python3 tools/tezgah-set/duzelt.py ;; *) python3 tools/tezgah-set/uret.py tools/tezgah-set/kat.json ;; esac
       - name: tezgah-set-out dalına koy
         if: always()
         run: |

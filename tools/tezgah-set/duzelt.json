@@ -1,0 +1,205 @@
+{
+ "_not": "Temel fotoğrafta (taban.webp) bölge bölge düzeltme. crop = kesilip GPT'ye verilen pencere, mask = yeniden çizilecek dikdörtgenler (taban koordinatı, 1536x1024).",
+ "isler": [
+  {
+   "ad": "guc",
+   "crop": [
+    0,
+    180,
+    512,
+    692
+   ],
+   "mask": [
+    [
+     50,
+     285,
+     335,
+     590
+    ]
+   ],
+   "ids": [
+    1916
+   ],
+   "ne": "Replace the bench power supply in the masked area with the EXACT Aixun P3208 power supply from image 2: compact silver-grey aluminium case, the same front panel with its colour LCD screen, buttons, USB ports and the red and black terminals, the AiXun logo. Keep it the same size and position, standing on the desk. Its red and black test leads plug into the front terminals and hang down naturally onto the desk."
+  },
+  {
+   "ad": "sicak",
+   "crop": [
+    200,
+    250,
+    712,
+    762
+   ],
+   "mask": [
+    [
+     318,
+     325,
+     540,
+     552
+    ],
+    [
+     330,
+     520,
+     450,
+     738
+    ]
+   ],
+   "ids": [
+    3066
+   ],
+   "ne": "Replace the hot air station in the masked areas with the EXACT Quick 861 Pro Max from image 2: dark grey metal case with side handles, the QUICK logo, its LCD screen and button panel, and its hot air handle (black with blue ring) resting nozzle-down in the matching Quick side holder on the desk, hose connected to the unit. Same size and place."
+  },
+  {
+   "ad": "jbc",
+   "crop": [
+    400,
+    250,
+    912,
+    762
+   ],
+   "mask": [
+    [
+     528,
+     372,
+     708,
+     606
+    ]
+   ],
+   "ids": [
+    835
+   ],
+   "ne": "Replace the soldering iron holder in the masked area with the COMPLETE JBC soldering station from image 2: the black JBC control unit with its blue display showing 350°C and the integrated iron stand on its side, the thin JBC iron resting in the stand, its thin cable running behind. Same scale as the hot air station next to it, standing on the desk at the same spot."
+  },
+  {
+   "ad": "isitici",
+   "crop": [
+    0,
+    420,
+    512,
+    932
+   ],
+   "mask": [
+    [
+     22,
+     572,
+     265,
+     715
+    ]
+   ],
+   "ids": [
+    2455
+   ],
+   "ne": "Replace the object in the masked area with the EXACT Aixun iHeater Pro board preheater from image 2: blue/white body with its small digital display and a gold heating module on top, lying on the mat at the same place and size."
+  },
+  {
+   "ad": "sivi",
+   "crop": [
+    1000,
+    450,
+    1512,
+    962
+   ],
+   "mask": [
+    [
+     1052,
+     612,
+     1224,
+     738
+    ],
+    [
+     1222,
+     698,
+     1345,
+     768
+    ]
+   ],
+   "ids": [
+    51,
+    79,
+    126
+   ],
+   "ne": "In the masked areas: (1) replace the small jar with the TWO ALPHA solder paste jars from image 2, side by side: the green-lid ALPHA jar and the white-lid ALPHA jar, labels as in the reference; (2) replace the small spool with the Goot Wick CP-20B desoldering wick spool from image 2: a wide flat spool with the yellow 'goot wick' label and transparent centre, lying flat on the mat. Keep the silver solder wire spool that is outside the mask exactly as it is."
+  },
+  {
+   "ad": "isocket",
+   "crop": [
+    380,
+    500,
+    1148,
+    1012
+   ],
+   "mask": [
+    [
+     440,
+     745,
+     1060,
+     905
+    ]
+   ],
+   "ids": [
+    593,
+    844,
+    1319,
+    1714,
+    2068,
+    2498,
+    3062
+   ],
+   "ne": "On the empty mat in the masked area, add: a neat stack of SIX Qianli iSocket iPhone motherboard testers lying flat on top of each other (grey metal frames with clear acrylic tops, as in image 2), and next to the stack the Mechanic Power Pro Max 2.0 boot cable from image 2 neatly coiled on the mat. Realistic contact shadows, same light as the rest of the photo."
+  },
+  {
+   "ad": "isik",
+   "crop": [
+    600,
+    300,
+    1112,
+    812
+   ],
+   "mask": [
+    [
+     735,
+     470,
+     912,
+     556
+    ]
+   ],
+   "ids": [
+    30
+   ],
+   "ne": "Fix the microscope LED ring light in the masked area: a clean, perfectly round, continuous diffused white LED ring light mounted under the black AmScope objective, smooth frosted diffuser with even soft glow, no visible jagged individual dots, no artifacts. Keep the microscope body and the desk unchanged."
+  },
+  {
+   "ad": "tutucu",
+   "crop": [
+    560,
+    420,
+    1072,
+    932
+   ],
+   "mask": [
+    [
+     655,
+     628,
+     980,
+     752
+    ],
+    [
+     832,
+     540,
+     888,
+     640
+    ],
+    [
+     600,
+     588,
+     760,
+     648
+    ]
+   ],
+   "ids": [
+    2037
+   ],
+   "ne": "In the masked areas: the 2UUL BH08 board holder (image 2) lying flat on the mat, clamping an iPhone logic board, with NO cable connected to it at all. Remove every cable that ran to the holder and show the clean grey-green mat instead. Do not change the microscope ring light or anything outside the mask."
+  }
+ ]
+}
