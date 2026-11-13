@@ -90,7 +90,9 @@ export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   // heroStick: '' = sadece 'Ortada logo' menüsünde | 'all' = her menüde | 'off' = kapalı (boşluklu, eski)
   const hdr = lookFor(LK0, phoneH).header || 'search';
   const stick = !['deck', 'glow', 'side'].includes(frame) && (H.heroStick === 'all' || (H.heroStick !== 'off' && hdr === 'center'));
-  const w = stick ? 'full' : H.heroW || ''; const fill = H.heroFill === 'screen' || H.heroFill === 'full'; const full = H.heroFill === 'full';
+  const w = stick ? 'full' : H.heroW || ''; // 14.11.2026 yükseklik telefon/bilgisayar ayrı: heroFillM boşsa (hiç seçilmemişse) bilgisayarınkini kullanır (eski davranış)
+  const fillV = phoneH && H.heroFillM != null ? H.heroFillM : H.heroFill;
+  const fill = fillV === 'screen' || fillV === 'full'; const full = fillV === 'full';
   const slides = useMemo(() => heroList(H), [H.slides, H.photoBn]); // eslint-disable-line react-hooks/exhaustive-deps
   const out = !!w; // sayfanın kenarından taşabilir → sayfa kırpması açılır
   useEffect(() => { if (!out) return; const c = document.documentElement.classList; c.add('hf-on', 'hf-wide'); return () => c.remove('hf-on', 'hf-wide'); }, [out]);

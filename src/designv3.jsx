@@ -320,7 +320,8 @@ function HeroPanel({ H, S, k }) {
     {k === 'cd:hero' ? <>
       <span className="v3-cap">Banner yerleşimi</span>
       <Row label="Genişlik" hint="Sayfa genişliğinden ayrı. Kenardan kenara: ekranın iki ucuna kadar, köşesiz"><Seg v={H.heroW || ''} opts={HERO_W} on={(v) => S('heroW', v)} /></Row>
-      <Row label="Yükseklik" hint="Ekranı doldur: ekranın altına kadar (küçük pay). Tam kapla: boşluksuz; telefonda alt menünün üstünde biter"><Seg v={H.heroFill || ''} opts={HERO_FILL} on={(v) => S('heroFill', v)} /></Row>
+      <Row label="Yükseklik (bilgisayar)" hint="Ekranı doldur: ekranın altına kadar (küçük pay). Tam kapla: boşluksuz, ekranın altına kadar"><Seg v={H.heroFill || ''} opts={HERO_FILL} on={(v) => S('heroFill', v)} /></Row>
+      <Row label="Yükseklik (telefon)" hint="Tam kapla: alt menünün hemen üstünde biter. Seçilmezse bilgisayardakiyle aynı"><Seg v={H.heroFillM ?? H.heroFill ?? ''} opts={HERO_FILL} on={(v) => S('heroFillM', v)} /></Row>
     </> : <p className="fine">Genişlik ve yükseklik ayarı Claude düzenindeki banner bölümünde.</p>}
   </>;
 }
