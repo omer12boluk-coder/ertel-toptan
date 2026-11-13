@@ -19,9 +19,10 @@ MASA = ("Photorealistic wide empty electronics repair workbench, front view, cam
         "behind it a plain warm off-white wall with soft light falloff. The desk is COMPLETELY EMPTY: no tools, no devices, no objects. "
         "Soft daylight from the upper left. Clean, minimal, premium Apple-style backdrop. No text, no logos, no people.")
 
-def key(im):
+def key(im, trimit=True):
     """Mor (#FF00FF) zemini saydam yap: renk uzaklığına göre yumuşak kenar + kenardaki mor taşmayı temizle."""
-    W, H = im.size; im = im.crop((6, 6, W - 6, H - 6))
+    W, H = im.size
+    if trimit: im = im.crop((6, 6, W - 6, H - 6))
     a = np.asarray(im).astype(np.float32)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
     mag = np.minimum(r, b) - g            # morluk: kırmızı ve mavi yüksek, yeşil düşük
@@ -34,29 +35,33 @@ def key(im):
     spill = np.clip(np.minimum(r, b) - g - 20, 0, None) * (alpha < 0.98)
     a[..., 0] -= spill * 0.5; a[..., 2] -= spill * 0.5; a[..., 1] += spill * 0.25
     out = Image.fromarray(np.dstack([np.clip(a, 0, 255), alpha * 255]).astype(np.uint8), 'RGBA')
-    return trim(out)
+    return trim(out) if trimit else out
 
 def trim(im):
     bb = im.split()[3].point(lambda v: 255 if v > 10 else 0).getbbox()
     return im.crop(bb) if bb else im
 
-if not os.path.exists('out/masa-genis.webp') or 'masa' in YENI:
-    demo.log('masa-genis')
-    m = demo.api('images/generations', json={'prompt': MASA, 'size': '1536x1024', 'quality': 'high', 'n': 1})
-    if m: m.save('out/masa-genis.webp', quality=90)
+def main():
+  if not os.path.exists('out/masa-genis.webp') or 'masa' in YENI:
+      demo.log('masa-genis')
+      m = demo.api('images/generations', json={'prompt': MASA, 'size': '1536x1024', 'quality': 'high', 'n': 1})
+      if m: m.save('out/masa-genis.webp', quality=90)
 
-for s in json.load(open(os.path.join(os.path.dirname(__file__), 'tezgah.json'))):
-    for u in s['urunler']:
-        dst = f"{OUT}/{u['id']}.png"
-        if os.path.exists(dst) and str(u['id']) not in YENI: continue
-        demo.log(f"kes {u['id']} {u['ad'][:50]}")
-        r = requests.get('https://resim.ertelmarket.com/platin/' + urllib.parse.quote(u['pi']), timeout=60, headers={'User-Agent': 'Mozilla/5.0'})
-        if not r.ok: demo.log('  resim alınamadı', r.status_code); continue
-        b = io.BytesIO(); Image.open(io.BytesIO(r.content)).convert('RGB').save(b, 'PNG')
-        res = demo.api('images/edits', files={'image[]': (f"{u['id']}.png", b.getvalue(), 'image/png')},
-                       data={'prompt': KES, 'size': '1024x1024', 'quality': 'medium', 'output_format': 'png', 'n': '1'}, raw=True)
-        if res is None: continue
-        res.convert('RGB').save(f"{OUT}/{u['id']}-ham.png")
-        key(res.convert('RGB')).save(dst)
-        demo.log('  boyut', Image.open(dst).size)
-demo.log('kes bitti')
+  for s in json.load(open(os.path.join(os.path.dirname(__file__), 'tezgah.json'))):
+      for u in s['urunler']:
+          dst = f"{OUT}/{u['id']}.png"
+          if os.path.exists(dst) and str(u['id']) not in YENI: continue
+          demo.log(f"kes {u['id']} {u['ad'][:50]}")
+          r = requests.get('https://resim.ertelmarket.com/platin/' + urllib.parse.quote(u['pi']), timeout=60, headers={'User-Agent': 'Mozilla/5.0'})
+          if not r.ok: demo.log('  resim alınamadı', r.status_code); continue
+          b = io.BytesIO(); Image.open(io.BytesIO(r.content)).convert('RGB').save(b, 'PNG')
+          res = demo.api('images/edits', files={'image[]': (f"{u['id']}.png", b.getvalue(), 'image/png')},
+                         data={'prompt': KES, 'size': '1024x1024', 'quality': 'medium', 'output_format': 'png', 'n': '1'}, raw=True)
+          if res is None: continue
+          res.convert('RGB').save(f"{OUT}/{u['id']}-ham.png")
+          key(res.convert('RGB')).save(dst)
+          demo.log('  boyut', Image.open(dst).size)
+  demo.log('kes bitti')
+
+if __name__ == '__main__':
+    main()
