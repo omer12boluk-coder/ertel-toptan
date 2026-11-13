@@ -29,17 +29,55 @@ def shade(col, n, amb=.58, k=.48, spec=0):
     return '#%02x%02x%02x' % tuple(c)
 
 class Scene:
-    def __init__(s, cam): s.cam = cam; s.objs = []; s.base = []; s.pre = []; s.bg = []; s.shadows = []; s.top = []
+    def __init__(s, cam): s.cam = cam; s.objs = []; s.base = []; s.pre = []; s.bg = []; s.grads = []; s.shadows = []; s.top = []
     def obj(s, depth_pt=None, base=False):
         o = {'faces': [], 'extra': [], 'z': None, 'pt': depth_pt}; (s.base if base else s.objs).append(o); return o
     def P(s, pts): return ' '.join('%.1f,%.1f' % s.cam.pr(p)[:2] for p in pts)
-    def poly(s, o, pts, col, n, stroke=None, op=1, spec=0):
+    def poly(s, o, pts, col, n, stroke=None, op=1, spec=0, grad=True):
         cen = mul([sum(p[i] for p in pts) for i in range(3)], 1/len(pts))
         if dot(n, sub(s.cam.p, cen)) <= 0: return False
+        if min(s.cam.pr(p)[2] for p in pts) < .05: return False      # kameranın arkası
         z = s.cam.pr(cen)[2]
-        st = f' stroke="{stroke}" stroke-width="1"' if stroke else f' stroke="{shade(col, n)}" stroke-width=".6"'
-        o['faces'].append((z, f'<polygon points="{s.P(pts)}" fill="{shade(col, n, spec=spec)}"{st} opacity="{op}"/>'))
+        base = shade(col, n, spec=spec)
+        if grad and len(pts) >= 4:
+            gid = f'g{len(s.grads)}'; c = hexrgb(base)
+            hi = '#%02x%02x%02x' % tuple(min(255, int(v*1.10 + 6)) for v in c); lo = '#%02x%02x%02x' % tuple(int(v*.86) for v in c)
+            if n[1] > .7: hi, lo = '#%02x%02x%02x' % tuple(int(v*.94) for v in c), '#%02x%02x%02x' % tuple(min(255, int(v*1.06 + 4)) for v in c)
+            s.grads.append(f'<linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{hi}"/><stop offset="1" stop-color="{lo}"/></linearGradient>')
+            fill = f'url(#{gid})'
+        else: fill = base
+        if stroke: st = f' stroke="{stroke}" stroke-width="1"'
+        elif n[1] > .7: st = ' stroke="#ffffff" stroke-opacity=".28" stroke-width="1.2" stroke-linejoin="round"'
+        else: st = f' stroke="{base}" stroke-width=".7" stroke-linejoin="round"'
+        o['faces'].append((z, f'<polygon points="{s.P(pts)}" fill="{fill}"{st} opacity="{op}"/>'))
         return True
+    def tiles(s, o, axis, fixed, a0, a1, b0, b1, col, n, step=.25):
+        """Büyük düz yüzeyi karolara böl (yakın kamerada bozulmasın). axis: 'z' (duvar/ön yüz) ya da 'y' (masa üstü)."""
+        A = a0
+        while A < a1 - 1e-9:
+            A2 = min(A + step, a1); B = b0
+            while B < b1 - 1e-9:
+                B2 = min(B + step, b1)
+                if axis == 'z': pts = [[A, B, fixed], [A2, B, fixed], [A2, B2, fixed], [A, B2, fixed]]
+                else: pts = [[A, fixed, B], [A2, fixed, B], [A2, fixed, B2], [A, fixed, B2]]
+                s.poly(o, pts, col, n, grad=False, stroke=shade(col, n))
+                B = B2
+            A = A2
+    def extrude(s, o, prof, x0, x1, col, cap=None, decals=None, spec=0):
+        """prof: [(z,y)...] yan kesit (x yönünde uzatılır). decals: {kenar_no: (w,h,svg)} — kenar i: prof[i]→prof[i+1] (i üst, i+1 alt olmalı)."""
+        cz = sum(p[0] for p in prof)/len(prof); cy = sum(p[1] for p in prof)/len(prof); cen = [(x0+x1)/2, cy, cz]
+        vis = {}
+        for i in range(len(prof)):
+            a, b = prof[i], prof[(i+1) % len(prof)]
+            A, B, C, D = [x0, a[1], a[0]], [x1, a[1], a[0]], [x1, b[1], b[0]], [x0, b[1], b[0]]
+            n = norm(cross(sub(B, A), sub(D, A)))
+            mid = mul(add(A, C), .5)
+            if dot(n, sub(mid, cen)) < 0: n = mul(n, -1)
+            vis[i] = s.poly(o, [A, B, C, D], col, n, spec=spec)
+            if decals and i in decals and vis[i]: s.decal(o, A, B, D, *decals[i])
+        s.poly(o, [[x1, p[1], p[0]] for p in prof], cap or col, [1, 0, 0], spec=spec)
+        s.poly(o, [[x0, p[1], p[0]] for p in prof][::-1], cap or col, [-1, 0, 0], spec=spec)
+        if o['pt'] is None: o['pt'] = cen
     def box(s, o, x0, x1, y0, y1, z0, z1, col, top=None, side=None, decal=None, decal_top=None, spec=0):
         c = [[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]]
         F = [([4,5,6,7],[0,0,1],col), ([1,0,3,2],[0,0,-1],side or col), ([0,4,7,3],[-1,0,0],side or col),
@@ -101,7 +139,7 @@ class Scene:
         out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" font-family="Inter,-apple-system,Segoe UI,Roboto,sans-serif">',
                '<defs>' + ''.join(f'<filter id="b{k}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="{k}"/></filter>' for k in (3, 6, 9, 14, 22)) +
                '<filter id="glow" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
-               '<radialGradient id="vig" cx=".5" cy=".45" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></radialGradient>' + defs + '</defs>']
+               ''.join(s.grads) + '<radialGradient id="vig" cx=".5" cy=".45" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></radialGradient>' + defs + '</defs>']
         out += s.pre
         for o in s.base: out += [e for _, e in sorted(o['faces'], key=lambda t: -t[0])] + o['extra']
         out += s.bg + s.shadows

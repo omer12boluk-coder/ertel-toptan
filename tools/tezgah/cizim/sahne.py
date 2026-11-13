@@ -34,6 +34,19 @@ def micro_front():  # mikroskop gövde ön yüz (130x140)
         '<text x="120" y="22" text-anchor="end" fill="#eceef0" font-size="15" font-weight="800" font-style="italic">MY-7S</text>'
         '<text x="12" y="128" fill="#9aa0a6" font-size="9" font-weight="700" letter-spacing="1">MYSCOPE 0.7X–5X</text>')
 
+
+def rr(z0, z1, y0, y1, r, k=4):
+    """Yuvarlatılmış dikdörtgen yan kesit (z,y)."""
+    P = []
+    for cz, cy, a0 in ((z1-r, y1-r, 0), (z0+r, y1-r, 90), (z0+r, y0+r, 180), (z1-r, y0+r, 270)):
+        for i in range(k+1):
+            a = math.radians(a0 + 90*i/k); P.append((cz + r*math.cos(a), cy + r*math.sin(a)))
+    return P
+
+def feet(S, o, x0, x1, z0, z1, y):
+    for x in (x0+.02, x1-.02):
+        for z in (z0+.02, z1-.02): S.cyl(o, [x, y, z], [x, y+.006, z], .008, '#111214', n=10)
+
 def build(eksik=(), cam=None, theme='gun', labels=False):
     cam = cam or Cam([.98, 1.56, 1.5], [-.04, 1.02, -.16], F=1450)
     S = Scene(cam)
@@ -41,7 +54,8 @@ def build(eksik=(), cam=None, theme='gun', labels=False):
     # --- duvar + delikli pano ---
     S.pre.append(f'<rect width="1600" height="1000" fill="{WALL}"/>')
     o = S.obj(base=True)
-    S.box(o, -2.2, 2.2, Y0 - .02, 2.6, -.56, -.52, WALL)
+    S.tiles(o, 'z', -.52, -2.2, 2.2, Y0 - .02, 2.6, WALL, [0, 0, 1], step=.4)
+    o = S.obj(base=True)
     S.box(o, -.92, .92, 1.22, 1.86, -.52, -.505, '#d9d2c6' if theme == 'gun' else '#3a3e45')
     for i in range(36):
         for j in range(13):
@@ -49,7 +63,8 @@ def build(eksik=(), cam=None, theme='gun', labels=False):
             px, py, _ = cam.pr([x, y, -.504]); S.bg.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="1.6" fill="#8a8275" opacity=".7"/>')
     # --- masa ---
     o = S.obj(base=True)
-    S.box(o, -1.6, 1.6, Y0 - .045, Y0, -.52, .5, '#c99c6c', top='#d7ad7d', side='#a87c4f')
+    S.tiles(o, 'y', Y0, -1.6, 1.6, -.52, .5, '#d7ad7d', [0, 1, 0], step=.2)
+    S.tiles(o, 'z', .5, -1.6, 1.6, Y0 - .045, Y0, '#a87c4f', [0, 0, 1], step=.2)
     # arka raf (yükseltici): yan ayaklar + tabla
     o = S.obj(base=True)
     for x0 in (-1.02, .99):
@@ -73,7 +88,10 @@ def build(eksik=(), cam=None, theme='gun', labels=False):
     if 'guc' in eksik: S.ghost(-.86, -.56, 1.07, 1.22, -.46, -.24, '+ Güç kaynağı')
     else:
         S.shadow(-.86, -.56, -.46, -.24, 1.0701, op=.35)
-        o = S.obj(); S.box(o, -.86, -.56, 1.07, 1.22, -.46, -.24, '#8a8f96', top='#a7acb3', side='#6f747b', decal=ps_front(theme), spec=.15)
+        o = S.obj([-.71, 1.15, -.35])
+        feet(S, o, -.86, -.56, -.46, -.24, 1.07)
+        S.extrude(o, rr(-.46, -.245, 1.076, 1.22, .012), -.86, -.56, '#8a8f96', cap='#7a7f86', spec=.15)
+        S.box(o, -.85, -.57, 1.082, 1.212, -.245, -.241, '#2a2d32', decal=ps_front(theme))
         # kırmızı/siyah uçlar raftan aşağı, anakart tutucuya
         o2 = S.obj([-.6, .95, -.1])
         S.curve(o2, [[-.66, 1.10, -.235], [-.62, 1.0, -.15], [-.45, .80, -.05], [-.2, .77, -.02], [-.06, .80, -.01]], '#c8261f', 3.2)
@@ -86,18 +104,20 @@ def build(eksik=(), cam=None, theme='gun', labels=False):
     else:
         S.shadow(-.17, .17, -.18, .10, Y0 + .0068, op=.42)
         o = S.obj([0, .8, -.04])
-        S.box(o, -.17, .17, Y0 + .006, Y0 + .036, -.18, .10, '#151619', top='#26282d', side='#0f1012',
-              decal=(340, 30, '<text x="170" y="22" text-anchor="middle" fill="#cfd2d6" font-size="15" font-weight="800" letter-spacing="5">MYSCOPE</text>'))
+        S.extrude(o, rr(-.18, .10, Y0 + .006, Y0 + .034, .01), -.17, .17, '#17181b', spec=.2)
+        S.decal(o, [-.17, Y0 + .028, .1005], [.17, Y0 + .028, .1005], [-.17, Y0 + .012, .1005], 340, 16, '<text x="170" y="13" text-anchor="middle" fill="#cfd2d6" font-size="11" font-weight="800" letter-spacing="5">MYSCOPE</text>')
         S.box(o, -.075, .075, Y0 + .036, Y0 + .052, -.06, .045, '#2c2f35', top='#3a3e45')  # anakart tutucu
         S.box(o, -.055, .055, Y0 + .052, Y0 + .056, -.045, .03, '#1f6b43', top='#2a8a57')  # anakart
         o = S.obj([.1, 1.0, -.14]); S.cyl(o, [.1, Y0 + .036, -.14], [.1, 1.30, -.14], .017, '#c9ced4', cap='#e9ecef', spec=.5)
         o = S.obj([.02, 1.05, -.11])
         S.box(o, -.01, .14, 1.02, 1.095, -.16, -.07, '#1c1d21', top='#2c2e33')                     # kol bloğu
         S.cyl(o, [.14, 1.057, -.115], [.18, 1.057, -.115], .032, '#202226', cap='#34373c')           # odak düğmesi
-        S.box(o, -.07, .07, .935, 1.085, -.085, .02, '#1a1b1e', top='#2a2c31', side='#141518', decal=micro_front())
+        S.extrude(o, rr(-.085, .016, .935, 1.085, .022), -.07, .07, '#1a1b1e', spec=.25)
+        S.box(o, -.058, .058, .945, 1.075, .016, .018, '#1a1b1e', decal=micro_front())
         S.cyl(o, [0, .935, -.03], [0, .915, -.03], .047, '#1d1e22')
         S.cyl(o, [0, .915, -.03], [0, .893, -.03], .046, '#d42c25', spec=.4)
         S.cyl(o, [0, .893, -.03], [0, .872, -.03], .042, '#141518')
+        S.cyl(o, [0, .872, -.03], [0, .862, -.03], .055, '#e9ecef', cap='#fbfcfd', spec=.6)     # LED halka ışık
         S.cyl(o, [-.083, 1.0, -.03], [-.07, 1.0, -.03], .016, '#d42c25')                              # yan kırmızı düğme
         S.cyl(o, [.01, 1.085, -.06], [.01, 1.15, -.06], .02, '#16171a'); S.cyl(o, [.01, 1.15, -.06], [.01, 1.165, -.06], .024, '#d42c25')
         for sx in (-.032, .032):
@@ -110,29 +130,40 @@ def build(eksik=(), cam=None, theme='gun', labels=False):
     if 'havya' in eksik: S.ghost(.27, .62, Y0, .9, -.14, .1, '+ Havya')
     else:
         S.shadow(.29, .45, -.14, .05, Y0 + .0068)
-        o = S.obj(); S.box(o, .29, .45, Y0 + .006, Y0 + .125, -.14, .05, '#1d1e22', top='#2d3035', side='#16171a', decal=havya_front())
-        S.shadow(.49, .58, .0, .09, Y0 + .0068, op=.3, blur=6)
-        o = S.obj([.53, .8, .05])
-        S.box(o, .49, .58, Y0 + .006, Y0 + .02, .0, .09, '#2a2c31', top='#3a3d43')
-        S.cyl(o, [.535, Y0 + .02, .05], [.528, .83, .035], .016, '#b9bec4', spec=.6)        # krom yuva
-        S.cyl(o, [.528, .82, .035], [.52, .855, .02], .0075, '#d5d9dd', spec=.6)            # metal kovan
-        S.cyl(o, [.52, .855, .02], [.505, .915, -.005], .011, '#19a37a')                     # yeşil tutamak
-        S.cyl(o, [.505, .915, -.005], [.49, .985, -.035], .0095, '#1b1c1f')                  # gövde
-        S.curve(o, [[.49, .985, -.035], [.47, 1.0, -.07], [.44, .95, -.12], [.42, .84, -.145]], '#141518', 3)
-        o = S.obj(); S.cyl(o, [.6, Y0 + .006, .1], [.6, Y0 + .045, .1], .032, '#c9a24a', cap='#7a6a52', spec=.5)  # pirinç uç temizleyici
-        S.shadow(.57, .63, .07, .13, Y0 + .0068, op=.25, blur=6)
+        o = S.obj([.37, .8, -.04])
+        feet(S, o, .29, .45, -.13, .05, Y0 + .006)
+        S.extrude(o, [(.012, Y0 + .118), (.05, Y0 + .012), (.042, Y0 + .006), (-.13, Y0 + .006), (-.13, Y0 + .122), (-.12, Y0 + .128), (.0, Y0 + .128)], .29, .45, '#1d1e22',
+                  decals={0: havya_front()}, spec=.2)
+        for i, x in enumerate((.31, .325)):  # yedek uç tutucular
+            S.cyl(o, [x, Y0 + .128, -.08], [x, Y0 + .16, -.08], .005, '#c9ced4', n=8, spec=.6)
+        # sağdaki tutucu modülü (kol yuvası + pirinç temizleyici)
+        S.shadow(.455, .56, -.1, .08, Y0 + .0068, op=.3, blur=6)
+        o = S.obj([.51, .8, -.01])
+        S.extrude(o, rr(-.1, .08, Y0 + .006, Y0 + .05, .01), .455, .56, '#25272c', spec=.2)
+        S.cyl(o, [.51, Y0 + .05, .045], [.51, Y0 + .06, .045], .03, '#c9a24a', cap='#6d5c45', spec=.5)
+        S.cyl(o, [.507, Y0 + .05, -.04], [.5, Y0 + .1, -.06], .017, '#bfc4ca', spec=.7)               # krom yuva (eğik)
+        S.cyl(o, [.5, Y0 + .1, -.06], [.496, Y0 + .115, -.066], .0075, '#d5d9dd', spec=.6)
+        S.cyl(o, [.496, Y0 + .115, -.066], [.488, Y0 + .17, -.085], .011, '#19a37a')
+        S.cyl(o, [.488, Y0 + .17, -.085], [.48, Y0 + .23, -.105], .0095, '#1b1c1f')
+        S.curve(o, [[.48, Y0 + .23, -.105], [.47, Y0 + .25, -.13], [.44, Y0 + .2, -.15], [.42, Y0 + .1, -.14]], '#141518', 3)
         if labels: S.label([.37, .93, .0], 'Havya · JBC CD-2')
 
     # --- SOL EL: sıcak hava ---
     if 'sicak' in eksik: S.ghost(-.78, -.46, Y0, .92, -.16, .08, '+ Sıcak hava')
     else:
         S.shadow(-.69, -.47, -.16, .06, Y0 + .0068, op=.38)
-        o = S.obj(); S.box(o, -.69, -.47, Y0 + .006, Y0 + .16, -.16, .06, '#7b8087', top='#969ba2', side='#62676e', decal=quick_front(), spec=.12)
-        S.shadow(-.78, -.715, -.02, .06, Y0 + .0068, op=.3, blur=6)
-        o = S.obj([-.75, .85, .02])
-        S.box(o, -.785, -.715, Y0 + .006, Y0 + .06, -.02, .06, '#5a5f66', top='#6f747b')
-        S.cyl(o, [-.75, Y0 + .045, .02], [-.75, Y0 + .06, .02], .009, '#c9a24a')             # nozul
-        S.cyl(o, [-.75, Y0 + .06, .02], [-.75, Y0 + .25, .02], .019, '#1b1c1f', spec=.3)     # kol
+        o = S.obj([-.58, .83, -.05])
+        feet(S, o, -.69, -.47, -.16, .06, Y0 + .006)
+        S.extrude(o, rr(-.16, .056, Y0 + .012, Y0 + .165, .02), -.69, -.47, '#6f747b', spec=.2)
+        S.box(o, -.68, -.48, Y0 + .02, Y0 + .157, .056, .058, '#6c7178', decal=quick_front())
+        for x in (-.695, -.465):  # yan tutamaklar
+            S.box(o, x - .006, x + .006, Y0 + .05, Y0 + .13, .0, .05, '#2a2c30')
+        S.shadow(-.78, -.71, -.04, .06, Y0 + .0068, op=.3, blur=6)
+        o = S.obj([-.75, .85, .01])
+        S.extrude(o, rr(-.04, .06, Y0 + .006, Y0 + .075, .01), -.785, -.715, '#55595f', spec=.2)
+        S.cyl(o, [-.75, Y0 + .06, .02], [-.75, Y0 + .075, .02], .022, '#3a3d42')
+        S.cyl(o, [-.75, Y0 + .045, .02], [-.75, Y0 + .07, .02], .009, '#c9a24a')             # nozul
+        S.cyl(o, [-.75, Y0 + .075, .02], [-.75, Y0 + .25, .02], .019, '#1b1c1f', spec=.3)     # kol
         S.cyl(o, [-.75, Y0 + .15, .02], [-.75, Y0 + .162, .02], .0195, '#2b8f8f')
         S.curve(o, [[-.75, Y0 + .25, .02], [-.76, 1.08, -.0], [-.71, 1.08, -.08], [-.64, .96, -.15]], '#141517', 6)
 
