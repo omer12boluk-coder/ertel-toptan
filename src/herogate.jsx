@@ -6,7 +6,8 @@
 //   localStorage 'hero-gate'den okunur (kapalıyken bir an görünmesin).
 // - Sınıf öneki 'eh-' (dikkat: '.sh-' önekli kurallar telefonda touchHoverToActive tarafından silinir).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useStore } from './store.js';
+import { useStore, store } from './store.js';
+import { ls } from './utils.js';
 import { ROUTE, lpath } from './route.js';
 import { LiquidEngine } from './liquid.js';
 
@@ -24,15 +25,18 @@ export const HERO_WANTED = (() => {
   } catch { return false; }
 })();
 
-const isDark = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
-
 export function HeroGate({ onOpen, onDone }) {
   const on = useStore((s) => s.settings.brand?.heroGate !== false);
   const boot = useStore((s) => s.boot);
   const rootRef = useRef(null), stageRef = useRef(null), imgRef = useRef(null), navRef = useRef(null), contentRef = useRef(null), hintRef = useRef(null), bdRef = useRef(null);
   const engRef = useRef(null);
   const [leaving, setLeaving] = useState(false);
-  const [dark] = useState(isDark);
+  const [reveal, setReveal] = useState(false);
+  // 13.11.2026 (C düzeni): hep AYDINLIK açılır; karanlık sadece cihazda seçilmişse (mağazanın tema düğmesiyle aynı ayar: device-theme)
+  const dark = useStore((s) => s.deviceTheme === 'dark');
+  const darkRef = useRef(dark); darkRef.current = dark;
+  const flip = () => { const n = dark ? 'light' : 'dark'; ls.set('device-theme', n); document.documentElement.setAttribute('data-theme', n); store.set({ deviceTheme: n }); };
+  useEffect(() => { engRef.current?.setOptions({ bg: dark ? BG.dark : BG.light }); }, [dark]);
   const coarse = typeof matchMedia === 'function' && matchMedia('(hover: none), (pointer: coarse)').matches;
 
   // ayar kapalı gelirse hemen kapan (ve bir sonraki açılış için hatırla)
@@ -41,11 +45,12 @@ export function HeroGate({ onOpen, onDone }) {
   // index.html başındaki düz renkli örtü (pre-intro) kalksın
   useLayoutEffect(() => { const h = document.documentElement; [...h.classList].filter((c) => c.startsWith('pre-')).forEach((c) => h.classList.remove(c)); }, []);
 
-  useEffect(() => {
+  // useLayoutEffect: ilk çizimden ÖNCE yerleşim (yoksa arkadaki 'ertel' yazısı bir an küçük ve yanlış yerde görünüyordu)
+  useLayoutEffect(() => {
     const root = rootRef.current, stage = stageRef.current; if (!root || !stage) return;
     const mq = matchMedia('(prefers-reduced-motion: reduce)');
     const opts = () => ({ interactive: true, strength: 1.1, radius: 200, density: 1, dotSize: 1, spread: 1, turbulence: 1, liquid: 1, streaks: true, restStyle: 'image',
-      returnSpeed: 1, ambient: true, ambientIntensity: 0.35, speed: 1, intro: true, reducedMotion: mq.matches, bg: dark ? BG.dark : BG.light });
+      returnSpeed: 1, ambient: true, ambientIntensity: 0.35, speed: 1, intro: true, reducedMotion: mq.matches, bg: darkRef.current ? BG.dark : BG.light });
     const canvas = document.createElement('canvas'); canvas.className = 'eh-canvas'; stage.appendChild(canvas);
     let engine = null; const fail = () => { root.dataset.gl = 'off'; };
     try { engine = new LiquidEngine(canvas, opts(), fail); engRef.current = engine; } catch { fail(); }
@@ -63,7 +68,7 @@ export function HeroGate({ onOpen, onDone }) {
       engine?.resize(w, h, rect);
     };
     const load = () => {
-      const m = root.clientWidth < 640; if (m === mob) return relayout(); mob = m;
+      const m = root.clientWidth < 640; relayout(); if (m === mob) return; mob = m;
       const src = m ? MOBILE_SRC : SRC; const im = new Image(); im.decoding = 'async';
       im.onload = () => {
         if (dead) return; aspect = im.naturalWidth / im.naturalHeight || aspect; if (imgRef.current) imgRef.current.src = src; relayout();
@@ -91,20 +96,27 @@ export function HeroGate({ onOpen, onDone }) {
     };
   }, []);
 
+  // Çıkış: önce logo dağılıp söner (düz zemin kalır) → mağaza düz zeminin ARKASINDA çizilir (takılma görünmez) → zemin solar.
+  // Eskiden mağaza animasyonun ortasında çiziliyordu, dağılma efekti 1 sn takılıyordu.
   const go = () => {
     if (leaving) return;
-    engRef.current?.explode();
-    setTimeout(() => { setLeaving(true); onOpen(); }, 180); // mağaza arkada çizilmeye başlar
-    setTimeout(onDone, 1100);
+    engRef.current?.explode(); setLeaving(true);
+    setTimeout(() => {
+      engRef.current?.stop(); onOpen();
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => { setReveal(true); setTimeout(onDone, 420); }, 80)));
+    }, 560);
   };
 
   return (
-    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '')} aria-label="Giriş">
+    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
       <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
       <div ref={stageRef} className="eh-stage" aria-hidden="true"><img ref={imgRef} className="eh-fallback" alt="" draggable="false" /></div>
       <nav ref={navRef} className="eh-nav eh-a" aria-label="Üst">
         <span className="eh-brand"><img src="/bn/hero-logo-mark.webp" alt="" />ERTEL GSM</span>
-        <span className="eh-tag">Telefon tamiri ekipmanları</span>
+        <button type="button" className="eh-theme" role="switch" aria-checked={dark} aria-label="Karanlık görünüm" onClick={flip}>
+          <span className={dark ? '' : 'on'}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg></span>
+          <span className={dark ? 'on' : ''}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg></span>
+        </button>
       </nav>
       <div ref={hintRef} className="eh-hint" aria-hidden="true">{coarse ? 'Logoya dokun' : 'Logonun üzerinde gezdir'}</div>
       <div className="eh-spacer" />
@@ -114,7 +126,7 @@ export function HeroGate({ onOpen, onDone }) {
           <h1 className="eh-h1"><span className="eh-line eh-a eh-a2">Tamir tezgâhının</span><span className="eh-line eh-a eh-a3"><span className="eh-accent">her şeyi burada.</span></span></h1>
         </div>
         <div className="eh-aside">
-          <p className="eh-body eh-a eh-a4">Mikroskop, lehim istasyonu, sıcak hava, güç kaynağı ve binlerce yedek parça — tek yerde.</p>
+          <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
           <div className="eh-a eh-a5">
             <button type="button" className="eh-btn" onClick={go}>Alışverişe başla
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
