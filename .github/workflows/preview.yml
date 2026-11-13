@@ -2,7 +2,7 @@
 name: Önizleme (canlıya dokunmaz)
 on:
   push:
-    branches: [resim-adresi, ayarlar-duzen, tasarim-2, tasarim-3, kdv-odeme, ekip, kullanim, yasal-iade, ikiz-fiyat, bekleyen]
+    branches: [resim-adresi, ayarlar-duzen, tasarim-2, tasarim-3, kdv-odeme, ekip, kullanim, yasal-iade, ikiz-fiyat, bekleyen, elastik-kategori]
   workflow_dispatch:
 jobs:
   preview:

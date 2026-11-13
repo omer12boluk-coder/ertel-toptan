@@ -9870,3 +9870,58 @@ body.eh-lock{overflow:hidden}
   .eh-canvas,.eh-fallback,.eh-btn,.eh-btn svg{transition:none}
 }
 
+
+/* ---- 13.11.2026 Elastik kategori galerisi (.elx; catalog.jsx ElasticHub) — 21st.dev elastic-gallery uyarlaması ---- */
+.elx { --elx-e: cubic-bezier(.25, 1, .5, 1); display: flex; gap: 12px; height: clamp(440px, 62vh, 600px); margin: 4px 0 10px; }
+.elx-p { position: relative; flex: 1 1 0; min-width: 0; overflow: hidden; border-radius: var(--st-rcard, 24px); cursor: pointer; isolation: isolate;
+  background: radial-gradient(120% 90% at 50% 30%, #2a2d33 0%, #141518 62%, #0b0b0d 100%); color: #fff; outline: none;
+  transition: flex-grow .7s var(--elx-e); animation: elx-in .6s var(--elx-e) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.elx-p.on { flex-grow: 5; }
+.elx-p.elx-acc { background: radial-gradient(120% 90% at 30% 20%, color-mix(in srgb, var(--accent) 78%, #fff), var(--accent) 55%, color-mix(in srgb, var(--accent) 70%, #000)); }
+.elx-p.elx-ink { background: radial-gradient(120% 90% at 50% 20%, #3a3a3f, #18181b 70%); }
+.elx-p:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent); }
+.elx-im { position: absolute; inset: 8% 8% 30%; width: 84%; height: 62%; object-fit: contain; z-index: 0; transform: scale(.82); transition: transform 1s var(--elx-e); filter: drop-shadow(0 24px 30px rgb(0 0 0 / .45)); pointer-events: none; user-select: none; }
+.elx-p.on .elx-im { transform: scale(1); }
+.elx-noim { display: grid; place-items: center; color: rgb(255 255 255 / .35); filter: none; }
+.elx-sh { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to top, rgb(0 0 0 / .78), rgb(0 0 0 / .18) 45%, transparent 70%); opacity: 0; transition: opacity .5s; pointer-events: none; }
+.elx-dim { position: absolute; inset: 0; z-index: 1; background: rgb(0 0 0 / .45); transition: opacity .6s; pointer-events: none; }
+.elx-p.on .elx-sh { opacity: 1; } .elx-p.on .elx-dim { opacity: 0; }
+@media (hover: hover) { .elx-p:not(.on):hover .elx-dim { opacity: .6; } }
+.elx-c { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: clamp(18px, 2.4vw, 34px);
+  min-width: 340px; opacity: 0; transform: translateY(40px); transition: opacity .45s, transform .5s var(--elx-e); pointer-events: none; }
+.elx-p.on .elx-c { opacity: 1; transform: none; transition-delay: .2s; pointer-events: auto; }
+.elx-tag { padding: 5px 12px; border: 1px solid rgb(255 255 255 / .3); border-radius: 999px; background: rgb(255 255 255 / .1); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.elx-t { margin: 0; font: 800 clamp(28px, 3.4vw, 50px)/.98 var(--f-display); letter-spacing: -.025em; text-transform: uppercase; text-wrap: balance; }
+.elx-subs { display: flex; flex-wrap: wrap; gap: 6px; }
+.elx-subs button { padding: 6px 12px; border: 0; border-radius: 999px; background: rgb(255 255 255 / .14); color: #fff; font: 500 13px/1.2 inherit; cursor: pointer; transition: background .2s; }
+@media (hover: hover) { .elx-subs button:hover { background: rgb(255 255 255 / .3); } }
+.elx-go { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgb(255 255 255 / .85); }
+.elx-v { position: absolute; z-index: 2; left: 50%; bottom: 26px; display: flex; flex-direction: column; align-items: center; gap: 10px; transform: translateX(-50%); transition: opacity .45s .35s, transform .45s .35s; pointer-events: none; }
+.elx-v b { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font: 700 17px/1 var(--f-display); letter-spacing: .1em; text-transform: uppercase; }
+.elx-v small { font-size: 12px; opacity: .65; }
+.elx-p.on .elx-v { opacity: 0; transform: translateX(-50%) scale(.6); transition-delay: 0s; }
+@keyframes elx-in { from { opacity: 0; transform: translateY(18px); } }
+/* telefon / dar ekran: alt alta şeritler (ilk dokunuş açar, ikinci dokunuş kategoriye gider) */
+@media (max-width: 760px) {
+  .elx { flex-direction: column; height: auto; gap: 8px; }
+  .elx-p { flex: 0 0 64px; border-radius: 20px; transition: flex-basis .65s var(--elx-e); }
+  .elx-p.on { flex: 0 0 340px; }
+  .elx-im { inset: 6% 10% 38%; width: 80%; height: 56%; }
+  .elx-c { min-width: 0; gap: 8px; padding: 18px; }
+  .elx-t { font-size: 28px; }
+  .elx-v { left: 20px; right: 20px; bottom: auto; top: 50%; flex-direction: row; justify-content: space-between; transform: translateY(-50%); }
+  .elx-v b { writing-mode: horizontal-tb; transform: none; font-size: 15px; letter-spacing: .06em; }
+  .elx-p.on .elx-v { transform: translateY(-50%) scale(.9); }
+  .elx-im { transition: transform 1s var(--elx-e), opacity .4s; } .elx-p:not(.on) .elx-im { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .elx-p, .elx-im, .elx-c, .elx-v, .elx-sh, .elx-dim { transition: none !important; animation: none !important; } }
+.elx-im.cov { inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); filter: none; }
+.elx-p.on .elx-im.cov { transform: scale(1); }
+.elx-p .elx-im.cov ~ .elx-sh { background: linear-gradient(to top, rgb(0 0 0 / .88), rgb(0 0 0 / .4) 50%, rgb(0 0 0 / .3)); }
+.elx-p:has(.elx-im.cov) .elx-dim { background: rgb(0 0 0 / .62); }
+@media (max-width: 760px) {
+  .elx-v { justify-content: flex-start; gap: 10px; right: 96px; }
+  .elx-v b { overflow: hidden; text-overflow: ellipsis; }
+  .elx-p:not(.on) .elx-im { opacity: 1; inset: 8px 14px 8px auto; width: 72px; height: 48px; transform: none; filter: drop-shadow(0 6px 10px rgb(0 0 0 / .4)); }
+  .elx-p:not(.on) .elx-im.cov { inset: 0 0 0 auto; width: 40%; height: 100%; opacity: .55; -webkit-mask-image: linear-gradient(to left, #000 40%, transparent); mask-image: linear-gradient(to left, #000 40%, transparent); }
+}

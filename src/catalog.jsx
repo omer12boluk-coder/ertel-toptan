@@ -827,6 +827,8 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
   const S0 = useStore((st) => st.settings); const sets = useMemo(() => liveSets(S0), [S0]); // Tasarım › Ürünler açılış sayfası: bg (resimler), hide2 (gizli kategoriler), img2 (kategori resmi)
   const hid = new Set((HC.hide2 || []).map(String));
   const mode = HC.imgMode || 'thumb'; // Tasarım › Görünüm 'Kutularda ürün resmi'
+  // 13.11.2026 'Elastik' kategori dizilişi (21st.dev elastic-gallery uyarlaması). Önizleme adresinde (…--dal.web.app) DEMO için hep açık; canlıda sadece Tasarım › 'Kategori dizilişi' = Elastik
+  const elastic = HC.lay === 'elastic' || PV_HOST;
   const roots = tree.roots.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden && !hid.has(String(n.id)));
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
@@ -837,6 +839,8 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
     </div>
     <div className="phub-lbl">Kategoriler</div>
+    {elastic ? <ElasticHub roots={roots} counts={counts} subsOf={subsOf} total={total} nf={nf} sets={sets} onCat={onCat} onAll={onAll} onSets={onSets}
+      img={(n) => (HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]} /> :
     <div className={'phub-grid phub-m-' + mode + ' phub-hv-' + (HC.subHover || 'ink') + (HC.lay ? ' phub-lay-' + HC.lay : '')}>
       <div role="button" tabIndex={0} className={'phub-c phub-all phub-t-' + (HC.allTone || 'acc')} onClick={onAll} onKeyDown={key(onAll)}>
         <div className="phub-h"><b>Tüm ürünler</b><span>{nf(total)}<Icon n="chev" s={14} /></span></div>
@@ -849,12 +853,46 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
       </div>}
       {roots.map((n) => <HubCat key={n.id} n={n} cnt={nf(counts.get(n.id))} subs={subsOf(n)} onCat={onCat} kd={key} mode={mode}
         img={(HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]} />)}
-    </div>
+    </div>}
     <div className="phub-lbl">Markalar</div>
     <div className="phub-brs">
       {brands.slice(0, 18).map((b) => <button key={b.n} type="button" className={'phub-br' + (b.logo ? ' lg' : '')} onClick={() => openBrand(b.n)} title={b.n}>{b.logo ? <><ShopImg v={b.logo} className="phub-bl" alt={b.n} />{LG_TXT[b.n.toLowerCase()] && <b className="phub-bt">{LG_TXT[b.n.toLowerCase()].t}</b>}</> : <span>{b.n}</span>}<small>{b.c}</small></button>)}
       <button type="button" className="phub-br more" onClick={() => go('markalar')}>Tüm markalar<Icon n="chev" s={13} /></button>
     </div>
+  </div>;
+}
+// ---- 13.11.2026 Elastik kategori galerisi (21st.dev 'elastic-gallery' uyarlaması; Tailwind/Next yok → düz CSS .elx-*) ----
+// Bilgisayar: yan yana koyu paneller, fare üstüne gelen panel ~5 kat genişler (diğerleri dikey yazılı ince şerit), tıklayınca kategori açılır.
+// Telefon: alt alta şeritler; ilk dokunuş paneli açar, açık panele dokunuş kategoriye gider. Alt kategoriler açık panelde hap olarak tıklanır.
+// Performans: filter/brightness YOK (karartma ayrı katmanın opaklığı), animasyon sadece flex-basis + transform/opacity.
+function ElxPanel({ k, on, setOn, onGo, title, eye, cnt, img, subs, onSub, tone, idx }) {
+  const src = useShopImg(img || '');
+  // şeffaf zeminli kesimler (bn/jbc.webp gibi) koyu panelde ortada durur; açık zeminli kapaklar (bn/cat-*.webp) ve ürün fotoğrafları paneli tam kaplar
+  const cut = /\/bn\/(?!cat-)[^/]+\.(webp|png)/.test(img || '');
+  const ptr = useRef(''); // son basışın türü (mouse | touch | pen); klavye = ''
+  const click = () => { const pt = ptr.current; ptr.current = ''; if (on || pt === 'mouse' || (!pt && matchMedia('(hover: hover)').matches)) onGo(); else setOn(k); };
+  return <div role="button" tabIndex={0} className={'elx-p' + (on ? ' on' : '') + (tone ? ' elx-' + tone : '')} style={{ '--i': idx }}
+    onPointerDown={(e) => { ptr.current = e.pointerType; }} onPointerEnter={(e) => { if (e.pointerType === 'mouse') setOn(k); }} onFocus={(e) => { if (e.target === e.currentTarget && e.target.matches(':focus-visible')) setOn(k); }} onClick={click}
+    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(); } }} aria-expanded={on}>
+    {src && <img className={'elx-im' + (cut ? '' : ' cov')} src={src} alt="" loading="lazy" draggable={false} />}
+    <span className="elx-sh" /><span className="elx-dim" />
+    <div className="elx-c">
+      <span className="elx-tag">{eye}</span>
+      <h3 className="elx-t">{title}</h3>
+      {subs?.length > 0 && <div className="elx-subs">{subs.map((c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onSub(c.id); }}>{c.name}</button>)}</div>}
+      <span className="elx-go">{k === 'all' ? 'Tümünü gör' : k === 'sets' ? 'Setleri gör' : 'Kategoriyi gör'}<Icon n="back" s={14} className="flip" /></span>
+    </div>
+    <div className="elx-v"><b>{title}</b><small>{cnt}</small></div>
+  </div>;
+}
+function ElasticHub({ roots, counts, subsOf, total, nf, sets, onCat, onAll, onSets, img }) {
+  const [on, setOn] = useState(() => (roots[0] ? roots[0].id : 'all'));
+  return <div className="elx">
+    <ElxPanel k="all" idx={0} on={on === 'all'} setOn={setOn} onGo={onAll} title="Tüm ürünler" eye={nf(total) + ' ürün'} cnt={nf(total)} tone="acc" />
+    {sets.length > 0 && <ElxPanel k="sets" idx={1} on={on === 'sets'} setOn={setOn} onGo={onSets} title="Setler" eye="Hazır paketler" cnt={sets.length}
+      subs={sets.slice(0, 4).map((x) => ({ id: x.id, name: x.name }))} onSub={(id) => openSet(id)} tone="ink" />}
+    {roots.map((n, i) => <ElxPanel key={n.id} k={n.id} idx={i + 2} on={on === n.id} setOn={setOn} onGo={() => onCat(n.id)} title={n.name}
+      eye={nf(counts.get(n.id)) + ' ürün'} cnt={nf(counts.get(n.id))} img={img(n)} subs={subsOf(n).slice(0, 4)} onSub={onCat} />)}
   </div>;
 }
 // 7.11.2026 (akşam) Ürünler v2: çok aşağı inince 'en üste çık' düğmesi
