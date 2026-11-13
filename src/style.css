@@ -10078,3 +10078,36 @@ html.hcs-open .hdr-c .hc-r .hcs-btn { visibility: hidden; }
 @keyframes pbBlur { from { opacity: 0; filter: blur(16px); translate: 0 18px; } }
 @keyframes pbSide { from { opacity: 0; translate: 140px 0; } 40% { opacity: 1; } }
 @keyframes pbZoom { from { opacity: 0; scale: .72; } 45% { opacity: 1; } }
+
+/* 14.11.2026 yapışık banner: kalan aralık kadar yukarı (cdhome --hst-pull) */
+.cd-hero.hst { margin-top: calc(-1 * var(--hst-pull, 0px)); }
+.cd-hero.hst .sh-hero, .cd-hero.hst .sh-hero .sh-slide { border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; }
+/* ekranı dolduran bannerın altındaki 16px şerit kaldırıldı (bilgisayar) */
+.cd-hero.hh-screen .sh-slide { min-height: max(420px, calc(100svh - var(--fs-top, 120px))) !important; }
+.cd-hero.hh-screen .hx-wrap .sh-slide { min-height: max(380px, calc(100svh - var(--fs-top, 120px) - var(--hxu))) !important; }
+@media (max-width: 700px) {
+  .cd-hero.hh-screen .sh-slide { min-height: max(420px, calc(100svh - var(--fs-top, 90px) - 110px)) !important; }
+  .cd-hero.hh-screen .hx-wrap .sh-slide { min-height: max(380px, calc(100svh - var(--fs-top, 90px) - 110px - var(--hxu))) !important; }
+}
+.hx-dl button { margin: 0 3px; } .hx-dl button.on { width: 34px; }
+@media (max-width: 700px) { .hx-dl button { width: 7px; margin: 0 2.5px; } .hx-dl button > span { height: 7px; } .hx-dl button.on { width: 26px; } }
+/* 14.11.2026 sayfa seçici bannerın içinde (.hx-in; açık bannerda koyu, koyu bannerda beyaz) */
+.hx-in { position: absolute; z-index: 6; left: 0; right: 0; bottom: 18px; display: flex; justify-content: center; pointer-events: none; padding: 0 clamp(16px, 4vw, 56px);
+  --fg: #1d1d1f; --muted: #6e6e73; --surface: #fff; --line: rgb(0 0 0 / .1); color: var(--fg); }
+.hx-in.dk { --fg: #fff; --muted: rgb(255 255 255 / .72); --surface: rgb(255 255 255 / .14); --line: rgb(255 255 255 / .28); }
+.hx-in > * { pointer-events: auto; }
+.hx-in .hx-story-b { width: 100%; max-width: 1320px; }
+.hx-in .hx-btn { box-shadow: 0 6px 18px -12px rgb(0 0 0 / .4), 0 0 0 1px var(--line); }
+.hx-in.dk .hx-btn { background: rgb(255 255 255 / .14); backdrop-filter: blur(8px); }
+.hx-in.dk .hx-pill { background: rgb(0 0 0 / .35); backdrop-filter: blur(10px); }
+.hx-in .hx-thumbs button { background: rgb(255 255 255 / .7); } .hx-in.dk .hx-thumbs button { background: rgb(255 255 255 / .12); }
+@media (max-width: 700px) { .hx-in { bottom: 12px; } .hx-in .hx-ring { gap: 8px; } .hx-in .hx-names { gap: 12px; font-size: 13px; } }
+.hx-on.hx-story .sh-dots, .hx-on .sh-dots { display: none; }
+/* artık altta parça yok → banner kısalmaz */
+.cd-hero.hh-screen .hx-w-story, .cd-hero.hh-screen .hx-w-glow, .cd-hero.hh-screen .hx-w-none { --hxu: 0px !important; }
+/* 14.11.2026 telefonda da ekranı doldur = ekranın en altına kadar (alt menü bannerın üstünde yüzer); seçiciler alt menünün üstünde */
+@media (max-width: 700px) {
+  .cd-hero.hh-screen .sh-slide, .cd-hero.hh-screen .hx-wrap .sh-slide { min-height: max(420px, calc(100svh - var(--fs-top, 90px) - var(--hxu, 0px))) !important; }
+  .cd-hero.hh-screen .hx-in { bottom: 76px; }
+  .cd-hero.hh-screen .sh-dots { bottom: 80px; }
+}

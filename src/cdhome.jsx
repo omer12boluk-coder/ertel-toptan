@@ -87,7 +87,9 @@ export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   const LK0 = useStore((s) => s.settings?.look);
   const phoneH = useMQ(PHONE_MQ);
   const frame = H.heroFrame || '';
-  const stick = H.heroStick !== 'off' && lookFor(LK0, phoneH).header === 'center' && !['deck', 'glow', 'side'].includes(frame);
+  // heroStick: '' = sadece 'Ortada logo' menüsünde | 'all' = her menüde | 'off' = kapalı (boşluklu, eski)
+  const hdr = lookFor(LK0, phoneH).header || 'search';
+  const stick = !['deck', 'glow', 'side'].includes(frame) && (H.heroStick === 'all' || (H.heroStick !== 'off' && hdr === 'center'));
   const w = stick ? 'full' : H.heroW || ''; const fill = H.heroFill === 'screen';
   const slides = useMemo(() => heroList(H), [H.slides, H.photoBn]); // eslint-disable-line react-hooks/exhaustive-deps
   const out = !!w; // sayfanın kenarından taşabilir → sayfa kırpması açılır
@@ -106,8 +108,22 @@ export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   useLayoutEffect(() => {
     const el = ref.current; const c = document.documentElement.classList;
     const first = !!el && el.parentElement?.firstElementChild === el && !!el.closest('.shell.public');
-    c.toggle('hst-on', stick && first); return () => c.remove('hst-on');
-  }, [stick, slides.length]);
+    c.toggle('hst-on', stick && first);
+    // 14.11.2026 her menü türünde sıfır boşluk: kalan aralık (menü yüzen camsa vb.) ölçülüp banner o kadar yukarı çekilir
+    let pull = 0; let raf = 0;
+    const fix = () => {
+      if (!el || !stick || !first || (el.ownerDocument.defaultView || window).scrollY > 4) return;
+      const top = el.ownerDocument.querySelector('.shell.public .topbar'); if (!top) return;
+      const T = top.getBoundingClientRect(); if (T.height < 10 || T.bottom <= 0) return;
+      const g = Math.round(el.getBoundingClientRect().top - T.bottom + pull);
+      const np = Math.max(0, Math.min(80, g));
+      if (np !== pull) { pull = np; el.style.setProperty('--hst-pull', np + 'px'); requestAnimationFrame(() => window.dispatchEvent(new Event('resize'))); }
+    };
+    if (stick && first) { fix(); raf = requestAnimationFrame(() => { fix(); requestAnimationFrame(fix); }); }
+    const t = setTimeout(fix, 500);
+    addEventListener('resize', fix);
+    return () => { c.remove('hst-on'); cancelAnimationFrame(raf); clearTimeout(t); removeEventListener('resize', fix); el?.style.removeProperty('--hst-pull'); };
+  }, [stick, slides.length, hdr]);
   if (!slides.length) return null;
   // 7.11.2026 (7) üst menü ile banner arası ek boşluk (look.heroGap px, Tasarım › Görünüm)
   return <div ref={ref} className={'cd-hero' + (w ? ' hw-' + w : '') + (fill ? ' hh-screen' : '') + (stick ? ' hst' : '')} style={Number(gap) && !stick ? { marginTop: Number(gap) + 'px' } : undefined}>

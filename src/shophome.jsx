@@ -982,7 +982,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   useEffect(() => { if (!E?.heroGo) return; const f = (k) => k !== i && goTo(k); E.heroGo.add(f); return () => E.heroGo.delete(f); });
   const onScroll = (e) => {
     const el = e.currentTarget; const s = step(el);
-    if (target.current != null) { const tk = target.current; if (Math.abs(el.scrollLeft - tk * s) < 2) { target.current = null; clearTimeout(targetT.current); setPlay(tk); } return; }
+    if (target.current != null) { const tk = target.current; if (Math.abs(el.scrollLeft - tk * s) < s * 0.35) { if (playRef.current !== tk) setPlay(tk); } if (Math.abs(el.scrollLeft - tk * s) < 2) { target.current = null; clearTimeout(targetT.current); } return; }
     const k = Math.round(el.scrollLeft / s); if (k !== i) setI(k);
     // parmak kalktıysa ve reklam yerine %70 yaklaştıysa hemen dök (iPhone'un oturma kayması bitene kadar BEKLEME — 1-2 sn boş kalıyordu)
     if (!touching.current && Math.abs(el.scrollLeft - k * s) < s * 0.3) { clearTimeout(settleT.current); if (k !== playRef.current) setPlay(k); return; }
@@ -1000,6 +1000,8 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const pagerK = frame === '' ? pagerSet : frame === 'glow' ? pagerSet || 'smart' : '';
   const legacyDots = frame === '' && !pagerSet;
   const ownArrows = frame === 'story' || frame === 'deck';
+  const pagerOn = !!pagerK && pagerK !== 'off';
+  const inner = frame === 'story' ? (hxPhone ? '' : 'story') : frame === 'glow' ? (pagerOn ? 'glow' : '') : frame === '' && pagerOn ? 'p' : '';
   const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? ' ta-go' : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
   // deste: parmakla sağa/sola çekince önceki/sonraki (tıklamayla karışmasın diye çekilmişse tık yutulur)
   const sw = useRef(null);
@@ -1023,10 +1025,16 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
         {!ownArrows && <><button className={'sh-hero-nav prev' + LT} onClick={() => goTo((i - 1 + n) % n)} aria-label="Önceki"><Icon n="back" s={20} /></button>
         <button className={'sh-hero-nav next' + LT} onClick={() => goTo((i + 1) % n)} aria-label="Sonraki"><Icon n="back" s={20} className="flip" /></button></>}
         {frame === 'story' && hxPhone && <div className={'hx-st-top' + (metas[i]?.dark ? ' dk' : '')}><HeroPager kind="seg" metas={metas} i={i} goTo={goTo} /></div>}
+        {/* 14.11.2026 sayfa seçiciler bannerın İÇİNDE (altta yer kaplamaz, bannerı kısaltmaz) */}
+        {inner && <div className={'hx-in hx-in-' + inner + (metas[i]?.dark ? ' dk' : '')}>
+          {inner === 'story' ? <StoryBar metas={metas} i={i} goTo={goTo} hold={hold} toggle={toggle} />
+            : inner === 'glow' ? <div className="hx-pill"><HeroPager kind={pagerK} metas={metas} i={i} goTo={goTo} hold={hold} toggle={toggle} /><i className="hx-sep" aria-hidden="true" /><span className="hx-pn"><b>{metas[i]?.brand}</b> {metas[i]?.name}</span><HoldBtn hold={hold} toggle={toggle} className="hx-btn sm" /></div>
+            : <HeroPager kind={pagerK} metas={metas} i={i} goTo={goTo} hold={hold} toggle={toggle} />}
+        </div>}
       </>}
     </section>
   );
-  if (!frame && (!pagerK || pagerK === 'off' || n < 2)) return section;
+  if (!frame) return section;
   const P = { metas, i, goTo, hold, toggle };
   const cls = 'hx-wrap hx-w-' + (frame || 'none') + (pz ? ' hx-pz' : '');
   if (frame === 'side') return <div className={cls}>{section}{n > 1 && <SideList {...P} />}</div>;
@@ -1034,12 +1042,8 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
     {frame === 'glow' && <GlowBg metas={metas} i={i} />}
     {section}
     {n > 1 && <>
-      {frame === 'story' && <StoryBar {...P} phone={hxPhone} />}
       {frame === 'rail' && <RailBar {...P} phone={hxPhone} vis={vis} />}
       {frame === 'deck' && <DeckBar {...P} />}
-      {pagerK && pagerK !== 'off' && (frame === 'glow'
-        ? <div className="hx-pill"><HeroPager kind={pagerK} {...P} /><i className="hx-sep" aria-hidden="true" /><span className="hx-pn"><b>{metas[i]?.brand}</b> {metas[i]?.name}</span><HoldBtn hold={hold} toggle={toggle} className="hx-btn sm" /></div>
-        : <div className="hx-under"><HeroPager kind={pagerK} {...P} /></div>)}
     </>}
   </div>;
 }

@@ -8,8 +8,8 @@ import { useEffect, useState } from 'react';
 import { ShopImg } from './shophome.jsx';
 
 export const HERO_FRAMES = [['', 'Bugünkü'], ['story', 'Hikâye çizgileri'], ['rail', 'Ürün rafı'], ['deck', 'Kart destesi'], ['glow', 'Ortam ışığı'], ['side', 'Yanında sıradakiler']];
-export const HERO_PAGERS = [['', 'Bugünkü'], ['seg', 'Çizgiler'], ['smart', 'Akıllı noktalar'], ['ring', 'Sayaç + halka'], ['thumbs', 'Ürün resimleri'], ['names', 'Marka adları'], ['off', 'Kapalı']];
-export const HERO_STICK = [['', 'Yapışık'], ['off', 'Boşluklu (eski)']];
+export const HERO_PAGERS = [['', 'Bugünkü'], ['seg', 'Çizgiler'], ['dotline', 'Nokta + çizgi'], ['smart', 'Akıllı noktalar'], ['ring', 'Sayaç + halka'], ['thumbs', 'Ürün resimleri'], ['names', 'Marka adları'], ['off', 'Kapalı']];
+export const HERO_STICK = [['', 'Ortada logo menüsünde'], ['all', 'Her menüde'], ['off', 'Kapalı (boşluklu)']];
 
 // eski fotoğraflı bannerların (bannerlar.json'da "img" alanı olmayan) küçük resmi
 const PB_IMG = { quick861: 'q861-pc.webp', zm6745: 'zm-front.webp', hands: 'hands.webp', ht316: 'ht316.webp', da07: 'da07.webp', 'mech-pp2': 'mech-prod.webp', sm4ntp: 'sm4.webp' };
@@ -51,6 +51,8 @@ export function HeroPager({ kind, metas, i, goTo, hold, toggle }) {
   const n = metas.length; if (n < 2 || !kind || kind === 'off') return null;
   const go = (k) => () => goTo(((k % n) + n) % n);
   if (kind === 'seg') return <div className="hx-seg">{metas.map((m, k) => <button key={k} type="button" aria-label={metaLabel(m)} onClick={go(k)}><span>{k === i ? <Fill i={i} /> : <i className={k < i ? 'hx-done' : ''} />}</span></button>)}</div>;
+  // 14.11.2026 nokta + çizgi: oynamayanlar nokta, oynayan uzun çizgi (süre dolar); hepsi görünür
+  if (kind === 'dotline') return <div className="hx-smart hx-dl">{metas.map((m, k) => <button key={k} type="button" aria-label={metaLabel(m)} className={k === i ? 'on' : ''} onClick={go(k)}><span>{k === i && <Fill i={i} />}</span></button>)}</div>;
   if (kind === 'smart') {
     const c = Math.max(3, Math.min(n - 4, i));
     return <div className="hx-smart">{metas.map((m, k) => {
