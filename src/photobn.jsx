@@ -13,6 +13,7 @@ import BANNERS from './icerik/bannerlar.json';
 
 const ACC = '#2f62d6';
 const IMG = (f) => '/bn/' + f;
+export const IMG_ANIM = [['', 'Yükselerek'], ['strong', 'Güçlü yükseliş'], ['blur', 'Yazı gibi netleşme'], ['side', 'Yandan kayarak'], ['zoom', 'Büyüyerek'], ['off', 'Kapalı']];
 export const photoBnOn = (H) => H?.photoBn !== false;
 
 // Her banner: ad (panelde), zemin, logo, yazılar, iki bağlantı (a1 = dolu düğme, a2 = yazı bağlantısı).
@@ -210,6 +211,8 @@ export function PhotoBanner({ b, open, onProduct, edit }) {
   // 7.11.2026 (7) kendi ayarı: shopHome.chipR (boş = eski davranış, banner köşesine bağlı)
   const cr = useStore((s) => s.settings?.shopHome?.chipR);
   const sigM = useStore((s) => s.settings?.shopHome?.sigM) || '';
+  // 14.11.2026 ürün resmi animasyonu (shopHome.imgAnim; IMG_ANIM): '' yükselerek (ilk hâl) | strong | blur | side | zoom | off
+  const ia = useStore((s) => s.settings?.shopHome?.imgAnim) || '';
   const br = cr != null && cr !== '' ? Number(cr) : rh == null || rh === '' || Number(rh) >= 16 ? 999 : Math.round(Number(rh) * 0.5);
   useEffect(() => { ensureFonts(win.document, ['inter', 'intert']); }, [win]);
   useLayoutEffect(() => {
@@ -240,7 +243,7 @@ export function PhotoBanner({ b, open, onProduct, edit }) {
     </div>;
     if (phone && b.bgM) bg = b.bgM; else if (!phone && b.bgW) bg = b.bgW;
   }
-  return <div ref={ref} className={'pb-box' + (b.dark ? ' pb-dark' : ' pb-light')} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: bg }}>{cv}</div>;
+  return <div ref={ref} className={'pb-box' + (b.dark ? ' pb-dark' : ' pb-light') + (ia ? ' pia-' + ia : '')} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: bg }}>{cv}</div>;
 }
 
 // ---- 7.11.2026 (2): fotoğraflı bannerlar artık kullanıcının reklam listesinde (shopHome.slides) normal satır: { pb: '<şablon id>', … }

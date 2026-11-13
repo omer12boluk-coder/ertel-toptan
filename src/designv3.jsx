@@ -14,7 +14,7 @@ import { ShopHome, DesignCtx, blockLabel, moveItem, withProdFallback, RailFields
 import { prepare, Stage, ShopDesigner } from './designer.jsx';
 import { queueSave } from './saveq.js';
 import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
-import { PB_BY, PB_TEXT, PHOTO_BANNERS, withNew2 } from './photobn.jsx';
+import { PB_BY, PB_TEXT, PHOTO_BANNERS, withNew2, IMG_ANIM } from './photobn.jsx';
 import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList, useNewList } from './cdhome.jsx';
 import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
@@ -286,6 +286,7 @@ function HeroPanel({ H, S, k }) {
   return <>
     {!pbIn && <div className="v3-cta"><b>Fotoğraflı bannerlar listede değil</b><p>Şu an koddan ekleniyorlar. Listeye alırsanız her birinin yazısını, sırasını ve görünürlüğünü buradan yönetirsiniz.</p><button type="button" className="btn sm primary" onClick={() => S('slides', [...PHOTO_BANNERS.map((b) => ({ pb: b.id })), ...sl])}>Listeye al</button></div>}
     <Row label="Banner yazı animasyonu" hint="Banner her geldiğinde yazılar sırayla belirir"><Seg v={H.txtAnim || ''} opts={TA_OPTS} on={(v) => S('txtAnim', v || undefined)} /></Row>
+    <Row label="Ürün resmi animasyonu" hint="Banner her geldiğinde ürün resmi nasıl girsin. Kapalı = resim hep yerinde"><Seg v={H.imgAnim || ''} opts={IMG_ANIM} on={(v) => S('imgAnim', v || undefined)} /></Row>
     <Row label="Banner çerçevesi" hint="Bannerın etrafı: alttaki çizgiler, ürün rafı, kart destesi… İçindeki tasarım aynı kalır. Bugünkü = eski hâl"><Seg v={H.heroFrame || ''} opts={HERO_FRAMES} on={(v) => S('heroFrame', v || undefined)} /></Row>
     <Row label="Sayfa seçici" hint="Bugünkü ve Ortam ışığı çerçevesinde geçerli. Kapalı = hiç gösterme"><Seg v={H.heroPager || ''} opts={HERO_PAGERS} on={(v) => S('heroPager', v || undefined)} /></Row>
     <Row label="Ortada logo menüsünde" hint="Üst menü 'Ortada logo' iken banner menüye yapışık, kenardan kenara"><Seg v={H.heroStick || ''} opts={HERO_STICK} on={(v) => S('heroStick', v || undefined)} /></Row>
