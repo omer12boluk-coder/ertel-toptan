@@ -11,13 +11,30 @@ from cut import cutout
 OUT = 'out/kes'; os.makedirs(OUT, exist_ok=True)
 YENI = set(x for x in os.environ.get('YENI', '').split(',') if x)
 KES = ("Recreate the product from the input image EXACTLY: same model, shape, proportions, colors, logos, screen, buttons, cables and accessories that are part of the product. "
-       "Show ONLY the product, isolated on a fully transparent background (no floor, no shadow, no reflection, no text, no packaging, no hands). "
+       "Show ONLY the product, isolated on a perfectly flat, uniform, solid pure magenta (#FF00FF) background: no gradient, no floor, no shadow, no reflection, no text, no packaging, no hands. "
        "Viewpoint: front three-quarter view from slightly above (about 20 degrees), as the product would stand on a workbench in front of the viewer. "
        "Soft even studio light from the upper left. The whole product fits in the frame with about 6% empty margin on every side.")
 MASA = ("Photorealistic wide empty electronics repair workbench, front view, camera at seated eye level slightly above the desk. "
         "A long light grey anti-static ESD mat covers the desk; the desk surface fills the lower 50% of the frame and runs edge to edge; "
         "behind it a plain warm off-white wall with soft light falloff. The desk is COMPLETELY EMPTY: no tools, no devices, no objects. "
         "Soft daylight from the upper left. Clean, minimal, premium Apple-style backdrop. No text, no logos, no people.")
+
+def key(im):
+    """Mor (#FF00FF) zemini saydam yap: renk uzaklığına göre yumuşak kenar + kenardaki mor taşmayı temizle."""
+    W, H = im.size; im = im.crop((6, 6, W - 6, H - 6))
+    a = np.asarray(im).astype(np.float32)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    mag = np.minimum(r, b) - g            # morluk: kırmızı ve mavi yüksek, yeşil düşük
+    alpha = np.clip(1 - (mag - 60) / 90, 0, 1)   # mag>150 tam zemin, <60 tam ürün
+    from scipy import ndimage
+    fg = alpha > 0.5; lab, n = ndimage.label(fg)
+    if n > 1:
+        sz = ndimage.sum(fg, lab, range(1, n + 1)); alpha *= np.isin(lab, [i + 1 for i, v in enumerate(sz) if v > sz.max() * 0.002])
+    # taşma: yarı saydam kenarlarda morluğu düşür
+    spill = np.clip(np.minimum(r, b) - g - 20, 0, None) * (alpha < 0.98)
+    a[..., 0] -= spill * 0.5; a[..., 2] -= spill * 0.5; a[..., 1] += spill * 0.25
+    out = Image.fromarray(np.dstack([np.clip(a, 0, 255), alpha * 255]).astype(np.uint8), 'RGBA')
+    return trim(out)
 
 def trim(im):
     bb = im.split()[3].point(lambda v: 255 if v > 10 else 0).getbbox()
@@ -37,13 +54,9 @@ for s in json.load(open(os.path.join(os.path.dirname(__file__), 'tezgah.json')))
         if not r.ok: demo.log('  resim alınamadı', r.status_code); continue
         b = io.BytesIO(); Image.open(io.BytesIO(r.content)).convert('RGB').save(b, 'PNG')
         res = demo.api('images/edits', files={'image[]': (f"{u['id']}.png", b.getvalue(), 'image/png')},
-                       data={'prompt': KES, 'size': '1024x1024', 'quality': 'medium', 'background': 'transparent', 'output_format': 'png', 'n': '1'}, raw=True)
+                       data={'prompt': KES, 'size': '1024x1024', 'quality': 'medium', 'output_format': 'png', 'n': '1'}, raw=True)
         if res is None: continue
-        im = res.convert('RGBA')
-        a = np.asarray(im.split()[3])
-        if a.min() > 250:  # saydam gelmedi → beyaz zemini biz keselim
-            demo.log('  saydam gelmedi, beyaz zemin kesiliyor'); im.convert('RGB').save('/tmp/k.png'); cutout('/tmp/k.png', dst, hole=0.002)
-        else:
-            trim(im).save(dst)
+        res.convert('RGB').save(f"{OUT}/{u['id']}-ham.png")
+        key(res.convert('RGB')).save(dst)
         demo.log('  boyut', Image.open(dst).size)
 demo.log('kes bitti')
