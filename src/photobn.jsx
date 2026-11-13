@@ -64,8 +64,8 @@ function Txt({ b, m, hs = 64, act, center, w, br = 999 }) {
       {b.tag && <p style={{ margin: 0, font: `500 ${m ? 19 : b.center ? 26 : 28}px/1.2 Inter, sans-serif`, letterSpacing: '-.015em', color: ink }}>{ta === 'off' ? b.tag : <TA text={b.tag} d={d1} />}</p>}
       {s && <p style={{ margin: 0, font: `400 ${m ? 15 : 20}px/1.4 Inter, sans-serif`, color: sub, maxWidth: m ? '100%' : 440 }}>{ta === 'off' ? s : <TA text={s} d={d2} by="word" />}</p>}
       <div className="ta-btns" style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 8 }}>
-        <button type="button" className="pb-b1" onClick={act(b.a1[1])} style={{ height: m ? 42 : 48, padding: '0 24px', borderRadius: br, background: b.btn, color: '#fff', font: `500 ${fs}px/1 Inter, sans-serif`, border: 0, cursor: 'pointer' }}>{b.a1[0]}</button>
-        <button type="button" className="pb-b2" onClick={act(b.a2[1])} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 0, padding: 0, color: b.lnk, font: `500 ${fs}px/1 Inter, sans-serif`, cursor: 'pointer' }}>{(m && b.a2M) || b.a2[0]} <Chev /></button>
+        <button type="button" className="pb-b1 ta-bt" onClick={act(b.a1[1])} style={{ height: m ? 42 : 48, padding: '0 24px', borderRadius: br, background: b.btn, color: '#fff', font: `500 ${fs}px/1 Inter, sans-serif`, border: 0, cursor: 'pointer' }}>{b.a1[0]}</button>
+        <button type="button" className="pb-b2 ta-bt" onClick={act(b.a2[1])} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 0, padding: 0, color: b.lnk, font: `500 ${fs}px/1 Inter, sans-serif`, cursor: 'pointer' }}>{(m && b.a2M) || b.a2[0]} <Chev /></button>
       </div>
     </div>
   );
@@ -81,7 +81,7 @@ function Wide({ b, W, H, act, br }) {
   if (b.id === 'quick861') {
     const iw = Math.min((H + 80) * 1.4, W - 380), ih = iw / 1.4;
     return <>
-      <img src={IMG('q861-pc.webp')} alt="Quick 861 Pro Max" style={abs({ right: -40, top: (H - ih) / 2, width: iw, height: ih })} />
+      <img className="pb-im" src={IMG('q861-pc.webp')} alt="Quick 861 Pro Max" style={abs({ right: -40, top: (H - ih) / 2, width: iw, height: ih })} />
       <div style={abs({ left: 0, top: 0, bottom: 0, width: 560, background: 'linear-gradient(90deg, #000 62%, rgba(0,0,0,0))' })} />
       <div style={abs({ left: 88, ...vmid })}>{T({ w: 470 })}</div>
     </>;
@@ -94,16 +94,16 @@ function Wide({ b, W, H, act, br }) {
     return <>
       <div style={abs({ left: 0, right: 0, top: tt, display: 'flex', justifyContent: 'center' })}>{T({ center: true, hs: 60 })}</div>
       <div style={abs({ left: 0, right: 0, bottom: -96 * k - push, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap })}>
-        <img src={IMG('zm-left.webp')} alt="" style={{ height: h1, width: 'auto' }} />
-        <img src={IMG('zm-front.webp')} alt="AmScope ZM6745T" style={{ height: h2, width: 'auto' }} />
-        <img src={IMG('zm-right.webp')} alt="" style={{ height: h1, width: 'auto' }} />
+        <img className="pb-im" src={IMG('zm-left.webp')} alt="" style={{ '--pi': 1, height: h1, width: 'auto' }} />
+        <img className="pb-im" src={IMG('zm-front.webp')} alt="AmScope ZM6745T" style={{ height: h2, width: 'auto' }} />
+        <img className="pb-im" src={IMG('zm-right.webp')} alt="" style={{ '--pi': 2, height: h1, width: 'auto' }} />
       </div>
     </>;
   }
   if (b.id === 'hands') {
     const iw = Math.min(760, W * 0.52); const tw = W - iw - 88 - 40;
     return <>
-      <img src={IMG('hands.webp')} alt="Mikroskop kafasını ayarlayan eller" style={abs({ right: 0, top: 0, width: iw, height: H, objectFit: 'cover', objectPosition: '50% 30%' })} />
+      <img className="pb-im pb-ph" src={IMG('hands.webp')} alt="Mikroskop kafasını ayarlayan eller" style={abs({ right: 0, top: 0, width: iw, height: H, objectFit: 'cover', objectPosition: '50% 30%' })} />
       <div style={abs({ left: 88, ...vmid })}>{T({ w: Math.min(520, tw), hs: tw < 420 ? 56 : 64 })}</div>
     </>;
   }
@@ -111,8 +111,8 @@ function Wide({ b, W, H, act, br }) {
     const iw = Math.min(640, W * 0.46), il = W * 0.05; const tl = Math.max(il + iw + 60, W * 0.56); const tw = Math.min(520, W - tl - 50);
     const bot = 70 + (H - 560) * 0.4;
     return <>
-      <div style={abs({ left: il + 20, bottom: bot - 10, width: iw * 0.94, height: 30, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.18), rgba(0,0,0,0))' })} />
-      <img src={IMG('ht316.webp')} alt="Aixun HT316" style={abs({ left: il, bottom: bot, width: iw, height: 'auto' })} />
+      <div className="pb-shd" style={abs({ left: il + 20, bottom: bot - 10, width: iw * 0.94, height: 30, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.18), rgba(0,0,0,0))' })} />
+      <img className="pb-im" src={IMG('ht316.webp')} alt="Aixun HT316" style={abs({ left: il, bottom: bot, width: iw, height: 'auto' })} />
       <div style={abs({ left: tl, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
     </>;
   }
@@ -120,35 +120,35 @@ function Wide({ b, W, H, act, br }) {
     // bilgisayarda kablolu ürün kesimi (elli fotoğrafta kol havada bitiyordu); telefonda elli fotoğraf kenardan girer
     const ih = Math.min(500, H * 0.86), iw = ih * 0.761; const ir = Math.max(60, W * 0.14 - 20); const tw = W - iw - ir - 88 - 40;
     return <>
-      <div style={abs({ right: ir - 20, bottom: 30, width: iw + 40, height: 40, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.16), rgba(0,0,0,0))' })} />
-      <img src={IMG('mech-prod.webp')} alt="Mechanic Power Pro Max 2.0" style={abs({ right: ir, bottom: 44, width: iw, height: ih })} />
+      <div className="pb-shd" style={abs({ right: ir - 20, bottom: 30, width: iw + 40, height: 40, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.16), rgba(0,0,0,0))' })} />
+      <img className="pb-im" src={IMG('mech-prod.webp')} alt="Mechanic Power Pro Max 2.0" style={abs({ right: ir, bottom: 44, width: iw, height: ih })} />
       <div style={abs({ left: 88, ...vmid })}>{T({ w: Math.min(520, tw), hs: tw < 420 ? 56 : 64 })}</div>
     </>;
   }
   if (b.id === 'sm4ntp') {
     const iw = Math.min(720, W * 0.5), ih = iw * 0.765; const ir = Math.min(90, W * 0.05); const tw = Math.min(520, W - ir - iw - 88 - 20);
     return <>
-      <div style={abs({ right: ir + iw * 0.06, bottom: 40, width: iw * 0.84, height: 44, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.2), rgba(0,0,0,0))' })} />
-      <img src={IMG('sm4.webp')} alt="AmScope SM-4NTP" style={abs({ right: ir, bottom: 56, width: iw, height: ih })} />
+      <div className="pb-shd" style={abs({ right: ir + iw * 0.06, bottom: 40, width: iw * 0.84, height: 44, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.2), rgba(0,0,0,0))' })} />
+      <img className="pb-im" src={IMG('sm4.webp')} alt="AmScope SM-4NTP" style={abs({ right: ir, bottom: 56, width: iw, height: ih })} />
       <div style={abs({ left: 88, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
     </>;
   }
   // da07
   const ih = Math.min(460, H * 0.82), iw = ih * 0.885; const ir = Math.min(170, W * 0.1); const tw = Math.min(520, W - ir - iw - 88 - 30);
   return <>
-    <div style={abs({ right: ir - 16, bottom: 36, width: iw + 32, height: 40, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(10,60,40,.22), rgba(0,0,0,0))' })} />
-    <img src={IMG('da07.webp')} alt="2UUL DA07" style={abs({ right: ir, bottom: 52, height: ih, width: 'auto' })} />
+    <div className="pb-shd" style={abs({ right: ir - 16, bottom: 36, width: iw + 32, height: 40, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(10,60,40,.22), rgba(0,0,0,0))' })} />
+    <img className="pb-im" src={IMG('da07.webp')} alt="2UUL DA07" style={abs({ right: ir, bottom: 52, height: ih, width: 'auto' })} />
     <div style={abs({ left: 88, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
   </>;
 }
 
 // 7.11.2026 (9) genel yerleşimler (yeni bannerlar)
-const Shadow = ({ l, r, bot, w }) => <div style={abs({ left: l, right: r, bottom: bot, width: w, height: 40, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.17), rgba(0,0,0,0))' })} />;
+const Shadow = ({ l, r, bot, w }) => <div className="pb-shd" style={abs({ left: l, right: r, bottom: bot, width: w, height: 40, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.17), rgba(0,0,0,0))' })} />;
 function WideGen({ b, W, H, T }) {
   if (b.lay === 'photo') {
     const iw = Math.min(760, W * 0.52); const tw = W - iw - 88 - 40;
     return <>
-      <img src={IMG(b.img)} alt={b.name} style={abs({ right: 0, top: 0, width: iw, height: H, objectFit: 'cover', objectPosition: b.pos || '50% 50%' })} />
+      <img className="pb-im pb-ph" src={IMG(b.img)} alt={b.name} style={abs({ right: 0, top: 0, width: iw, height: H, objectFit: 'cover', objectPosition: b.pos || '50% 50%' })} />
       <div style={abs({ left: 88, ...vmid })}>{T({ w: Math.min(520, tw), hs: tw < 420 ? 56 : 64 })}</div>
     </>;
   }
@@ -157,7 +157,7 @@ function WideGen({ b, W, H, T }) {
     return <>
       <div style={abs({ left: 0, right: 0, top: tt, display: 'flex', justifyContent: 'center' })}>{T({ center: true, hs: 60 })}</div>
       <Shadow l={(W - iw * 0.9) / 2} bot={18} w={iw * 0.9} />
-      <img src={IMG(b.img)} alt={b.name} style={abs({ left: (W - iw) / 2, bottom: 30, width: iw, height: iw / b.ar })} />
+      <img className="pb-im" src={IMG(b.img)} alt={b.name} style={abs({ left: (W - iw) / 2, bottom: 30, width: iw, height: iw / b.ar })} />
     </>;
   }
   let ih = Math.min(470, H * (b.lay === 'left' ? 0.7 : 0.82)), iw = ih * b.ar; if (iw > W * 0.44) { iw = W * 0.44; ih = iw / b.ar; }
@@ -166,22 +166,22 @@ function WideGen({ b, W, H, T }) {
     const il = Math.max(60, W * 0.07); const tl = Math.max(il + iw + 70, W * 0.52); const tw = Math.min(520, W - tl - 50);
     return <>
       <Shadow l={il + iw * 0.05} bot={bot - 16} w={iw * 0.9} />
-      <img src={IMG(b.img)} alt={b.name} style={abs({ left: il, bottom: bot, width: iw, height: ih })} />
+      <img className="pb-im" src={IMG(b.img)} alt={b.name} style={abs({ left: il, bottom: bot, width: iw, height: ih })} />
       <div style={abs({ left: tl, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
     </>;
   }
   const ir = Math.max(70, W * 0.09); const tw = Math.min(520, W - ir - iw - 88 - 30);
   return <>
     <Shadow r={ir + iw * 0.05} bot={bot - 16} w={iw * 0.9} />
-    <img src={IMG(b.img)} alt={b.name} style={abs({ right: ir, bottom: bot, width: iw, height: ih })} />
+    <img className="pb-im" src={IMG(b.img)} alt={b.name} style={abs({ right: ir, bottom: bot, width: iw, height: ih })} />
     <div style={abs({ left: 88, ...vmid })}>{T({ w: tw, hs: tw < 440 ? 56 : 64 })}</div>
   </>;
 }
 function PhoneGen({ b, H, top }) {
   const free = H - 225;
-  if (b.lay === 'photo') { const h = Math.min(300, free - 10); return <><img src={IMG(b.img)} alt={b.name} style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: b.posM || b.pos || '50% 50%' })} />{top}</>; }
+  if (b.lay === 'photo') { const h = Math.min(300, free - 10); return <><img className="pb-im pb-ph" src={IMG(b.img)} alt={b.name} style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: b.posM || b.pos || '50% 50%' })} />{top}</>; }
   let h = Math.max(120, Math.min(300, free - 30)), w = h * b.ar; if (w > 310) { w = 310; h = w / b.ar; }
-  return <>{top}<Shadow l={(358 - w * 0.9) / 2} bot={14} w={w * 0.9} /><img src={IMG(b.img)} alt={b.name} style={abs({ left: (358 - w) / 2, bottom: 26, width: w, height: h })} /></>;
+  return <>{top}<Shadow l={(358 - w * 0.9) / 2} bot={14} w={w * 0.9} /><img className="pb-im" src={IMG(b.img)} alt={b.name} style={abs({ left: (358 - w) / 2, bottom: 26, width: w, height: h })} /></>;
 }
 
 // telefon yerleşimi (W = 358 tuval birimi; H kutuya göre ~450–600)
@@ -191,14 +191,14 @@ function Phone({ b, H, act, br }) {
   const free = H - 225; // yazı bloğunun altında kalan yükseklik
   // 7.11.2026 (4): resim kutunun altından TAŞMAZ (eskiden eksi 'bottom' ile taşıyordu → iPhone'da yuvarlak köşeli kırpma kayarken titriyordu);
   // alttaki parça object-fit ile resmin kendisinden kırpılır, görünüm aynı.
-  if (b.id === 'quick861') { const s = Math.min(358, free + 64); const v = s * (1 - 64 / 358); return <><img src={IMG('q861-m.webp')} alt="Quick 861 Pro Max" style={abs({ left: (358 - s) / 2, bottom: 0, width: s, height: v, objectFit: 'cover', objectPosition: '50% 0' })} />{top}</>; }
-  if (b.id === 'zm6745') { const h = Math.min(340, free + 70); const w = h * 760 / 1300; const v = h * (1 - 70 / 340); return <>{top}<img src={IMG('zm-front.webp')} alt="AmScope ZM6745T" style={abs({ left: (358 - w) / 2, bottom: 0, height: v, width: w, objectFit: 'cover', objectPosition: '50% 0' })} /></>; }
-  if (b.id === 'hands') { const h = Math.min(300, free - 10); return <><img src={IMG('hands.webp')} alt="Mikroskop kafasını ayarlayan eller" style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: '50% 35%' })} />{top}</>; }
-  if (b.id === 'ht316') { const w = Math.min(330, (free - 34) * 1.425); return <>{top}<img src={IMG('ht316.webp')} alt="Aixun HT316" style={abs({ left: (358 - w) / 2, bottom: 34, width: w, height: 'auto' })} /></>; }
-  if (b.id === 'mech-pp2') { const h = Math.min(300, free - 10); return <><img src={IMG('mech-hand.webp')} alt="Mechanic Power Pro Max 2.0" style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: '62% 26%' })} />{top}</>; }
-  if (b.id === 'sm4ntp') { const w = Math.min(330, (free - 30) / 0.765); return <>{top}<img src={IMG('sm4.webp')} alt="AmScope SM-4NTP" style={abs({ left: (358 - w) / 2, bottom: 30, width: w, height: w * 0.765 })} /></>; }
+  if (b.id === 'quick861') { const s = Math.min(358, free + 64); const v = s * (1 - 64 / 358); return <><img className="pb-im" src={IMG('q861-m.webp')} alt="Quick 861 Pro Max" style={abs({ left: (358 - s) / 2, bottom: 0, width: s, height: v, objectFit: 'cover', objectPosition: '50% 0' })} />{top}</>; }
+  if (b.id === 'zm6745') { const h = Math.min(340, free + 70); const w = h * 760 / 1300; const v = h * (1 - 70 / 340); return <>{top}<img className="pb-im" src={IMG('zm-front.webp')} alt="AmScope ZM6745T" style={abs({ left: (358 - w) / 2, bottom: 0, height: v, width: w, objectFit: 'cover', objectPosition: '50% 0' })} /></>; }
+  if (b.id === 'hands') { const h = Math.min(300, free - 10); return <><img className="pb-im pb-ph" src={IMG('hands.webp')} alt="Mikroskop kafasını ayarlayan eller" style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: '50% 35%' })} />{top}</>; }
+  if (b.id === 'ht316') { const w = Math.min(330, (free - 34) * 1.425); return <>{top}<img className="pb-im" src={IMG('ht316.webp')} alt="Aixun HT316" style={abs({ left: (358 - w) / 2, bottom: 34, width: w, height: 'auto' })} /></>; }
+  if (b.id === 'mech-pp2') { const h = Math.min(300, free - 10); return <><img className="pb-im pb-ph" src={IMG('mech-hand.webp')} alt="Mechanic Power Pro Max 2.0" style={abs({ left: 0, right: 0, bottom: 0, width: 358, height: h, objectFit: 'cover', objectPosition: '62% 26%' })} />{top}</>; }
+  if (b.id === 'sm4ntp') { const w = Math.min(330, (free - 30) / 0.765); return <>{top}<img className="pb-im" src={IMG('sm4.webp')} alt="AmScope SM-4NTP" style={abs({ left: (358 - w) / 2, bottom: 30, width: w, height: w * 0.765 })} /></>; }
   const h = Math.min(260, free - 22);
-  return <>{top}<img src={IMG('da07.webp')} alt="2UUL DA07" style={abs({ left: '50%', bottom: 22, height: h, width: 'auto', transform: 'translateX(-50%)' })} /></>;
+  return <>{top}<img className="pb-im" src={IMG('da07.webp')} alt="2UUL DA07" style={abs({ left: '50%', bottom: 22, height: h, width: 'auto', transform: 'translateX(-50%)' })} /></>;
 }
 
 // Kutuyu tamamen dolduran banner (konumlu bir ebeveynin içine konur)

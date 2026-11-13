@@ -934,6 +934,11 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }
   // görünür hâlde gelir → yarı yolda kaybolup yeniden belirmesin diye animasyon oynamaz.
   // target: kodla kaydırma sürerken ara scroll olayları etkin reklamı geri çevirmesin (1→0→1 gidip gelme, animasyon iki kez başlıyordu)
   const [play, setPlay] = useState(0);
+  // 14.11.2026 fotoğraflı banner yazı/resim animasyonu: oynayan = ta-go (animasyon), bir önceki = ta-stay (kayıp çıkarken yazısı görünür kalır),
+  // diğerleri gizli (parmakla kaydırırken gelen bannerın yazısı önce görünüp sonra silinmesin; oturunca bir kez dökülür)
+  const playPrev = useRef({ cur: 0, prev: -1 });
+  if (play !== playPrev.current.cur) playPrev.current = { cur: play, prev: playPrev.current.cur >= 0 ? playPrev.current.cur : playPrev.current.prev };
+  const prevPlay = playPrev.current.prev;
   // 5.11.2026 iPhone: uygulama arka plana atılıp dönünce reklam yazıları görünmüyordu (giriş animasyonu 'başlamadan' durumda donup
   // kalıyordu). (1) yazı animasyonu bitince .done = animasyon yok, tam görünür; (2) sayfa yeniden görünür olunca animasyon baştan oynar.
   const [done, setDone] = useState(-1); const lastPlay = useRef(0);
@@ -976,7 +981,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv = {}, onProduct }
   return (
     <section ref={fsRef} className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '') + (slides.some((x) => x?.pb) ? ' pb-sh' : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={() => { grab(); clearTimeout(resumeT.current); setPaused(true); }} onTouchEnd={() => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); }} onTouchCancel={() => { release(); setPaused(false); }}>
-        {slides.map((s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />)}
+        {slides.map((s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? ' ta-go' : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />)}
       </div>
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>

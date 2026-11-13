@@ -1,6 +1,6 @@
 // 13.11.2026 Banner yazı animasyonu — Magic UI 'text-animate' uyarlaması (motion/framer kütüphanesi YOK → düz CSS, .ta-*).
 // Yazı kelime / harf parçalarına bölünür, her parça sırayla (--d gecikmesiyle) gelir. Animasyon SADECE etkin bannerda
-// (.sh-slide.on) oynar; etkin olmayanda yazı normal görünür (çıkan banner yazısı kaybolmaz, giren banner her seferinde baştan oynar).
+// Hero'nun 'play' durumunda (.pb-slide.ta-go) oynar; bir önceki (.ta-stay) görünür kalır, diğerleri gizli (14.11.2026).
 // Ayar: shopHome.txtAnim  '' = blurInUp (varsayılan) | 'blurIn' | 'slideUp' | 'char' (harf harf) | 'scaleUp' | 'off' (eski, animasyonsuz)
 export const TA_OPTS = [['', 'Bulanıktan'], ['slideUp', 'Yukarı kayma'], ['char', 'Harf harf'], ['scaleUp', 'Büyüme'], ['blurIn', 'Yerinde netleşme'], ['off', 'Kapalı']];
 const STEP = { word: 0.06, char: 0.022 };

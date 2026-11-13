@@ -9871,17 +9871,31 @@ body.eh-lock{overflow:hidden}
 }
 
 
-/* ---- 13.11.2026 Banner yazı animasyonu (.ta; textanim.jsx — Magic UI text-animate uyarlaması). Sadece etkin bannerda oynar. ---- */
+/* ---- 13.11.2026 Banner yazı animasyonu (.ta; textanim.jsx — Magic UI text-animate uyarlaması). ----
+   14.11.2026: tetik artık .on değil, Hero'nun 'play' durumu: .ta-go = oynayan (animasyon), .ta-stay = bir önceki (kayıp çıkarken görünür),
+   diğerleri GİZLİ (elle kaydırırken gelen bannerın yazısı önce görünüp sonra silinmesin). Düğmeler ve resimler de animasyona dahil. */
 .ta .ta-p { display: inline-block; white-space: pre; }
 .ta .ta-wd { display: inline-block; white-space: nowrap; }
-.sh-slide.on .ta .ta-p { animation: var(--ta-k, taBlurUp) .55s cubic-bezier(.2, .7, .2, 1) var(--d, 0s) both; }
 .ta-blurIn { --ta-k: taBlur; } .ta-slideUp { --ta-k: taUp; } .ta-scaleUp { --ta-k: taScale; } .ta-char { --ta-k: taBlurUp; }
-.sh-slide.on .ta-char .ta-p { animation-duration: .45s; }
-.sh-slide.on .ta .pb-eye { animation: taFade .6s ease .05s both; }
-.sh-slide.on .ta .ta-btns { animation: taUp .6s cubic-bezier(.2, .7, .2, 1) var(--d3, .6s) both; }
+@media (prefers-reduced-motion: no-preference) {
+  .pb-slide:not(.ta-go):not(.ta-stay) .ta .ta-p, .pb-slide:not(.ta-go):not(.ta-stay) .ta .pb-eye, .pb-slide:not(.ta-go):not(.ta-stay) .ta .ta-bt,
+  .pb-slide:not(.ta-go):not(.ta-stay) .pb-im, .pb-slide:not(.ta-go):not(.ta-stay) .pb-shd { opacity: 0; }
+  .pb-slide.ta-go .ta .ta-p { animation: var(--ta-k, taBlurUp) .55s cubic-bezier(.2, .7, .2, 1) var(--d, 0s) both; }
+  .pb-slide.ta-go .ta-char .ta-p { animation-duration: .45s; }
+  .pb-slide.ta-go .ta .pb-eye { animation: taFade .6s ease .05s both; }
+  .pb-slide.ta-go .ta .ta-bt { animation: var(--ta-k, taBlurUp) .6s cubic-bezier(.2, .7, .2, 1) var(--d3, .6s) both; }
+  .pb-slide.ta-go .ta .ta-bt + .ta-bt { animation-delay: calc(var(--d3, .6s) + .12s); }
+  /* resimler: ürün kesimi aşağıdan netleşerek yükselir, gölgesi altında açılır; tam fotoğraf yavaşça yakınlaşmadan oturur */
+  .pb-slide.ta-go .pb-im { animation: pbRise .95s cubic-bezier(.16, .8, .24, 1) calc(.08s + var(--pi, 0) * .1s) both; }
+  .pb-slide.ta-go .pb-im.pb-ph { animation: pbKen 1.6s cubic-bezier(.2, .7, .2, 1) both; }
+  .pb-slide.ta-go .pb-shd { animation: pbShd .95s cubic-bezier(.16, .8, .24, 1) .14s both; }
+}
 @keyframes taBlurUp { from { opacity: 0; filter: blur(10px); transform: translateY(18px); } }
 @keyframes taBlur { from { opacity: 0; filter: blur(10px); } }
 @keyframes taUp { from { opacity: 0; transform: translateY(20px); } }
 @keyframes taScale { from { opacity: 0; transform: scale(.5); } }
 @keyframes taFade { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .sh-slide.on .ta .ta-p, .sh-slide.on .ta .pb-eye, .sh-slide.on .ta .ta-btns { animation: none; } }
+/* translate/scale ayrı özellikler: resimdeki satır içi transform (ör. translateX(-50%)) ezilmez */
+@keyframes pbRise { from { opacity: 0; translate: 0 34px; scale: .96; filter: blur(8px); } 60% { filter: blur(0); } }
+@keyframes pbKen { from { opacity: 0; scale: 1.09; } 35% { opacity: 1; } }
+@keyframes pbShd { from { opacity: 0; scale: .55 1; } }
