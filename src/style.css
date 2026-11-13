@@ -9870,3 +9870,107 @@ body.eh-lock{overflow:hidden}
   .eh-canvas,.eh-fallback,.eh-btn,.eh-btn svg{transition:none}
 }
 
+
+/* ==== 13.11.2026 CANLI GÖRÜNÜM (look.canli, html.cn-on; kapalı = eski). Banner: yazılar sırayla dökülür + fotoğraf yaklaşır +
+   sayılı gösterge; Ürünler açılışı: büyük resimli kutular. Kurallar: sadece opacity/translate/scale (inline transform'a dokunma),
+   yazı animasyonu 1.1 sn'de biter (Hero 'done'), telefonda bulanıklık ve sürekli hareket YOK. ==== */
+.phub-art { display: none; }
+html.cn-on .pb-slide.play .pb-t > * { animation: cnUp .7s cubic-bezier(.2, .7, .2, 1) both; }
+html.cn-on .pb-slide.play .pb-t > :nth-child(1) { animation-delay: .05s; }
+html.cn-on .pb-slide.play .pb-t > :nth-child(2) { animation-delay: .13s; }
+html.cn-on .pb-slide.play .pb-t > :nth-child(3) { animation-delay: .21s; }
+html.cn-on .pb-slide.play .pb-t > :nth-child(4) { animation-delay: .29s; }
+html.cn-on .pb-slide.play .pb-t > :nth-child(5) { animation-delay: .37s; }
+@keyframes cnUp { from { opacity: 0; translate: 0 28px; filter: blur(7px); } }
+@keyframes cnUpM { from { opacity: 0; translate: 0 20px; } }
+html.cn-on .pb-slide.play .pb-cv img { animation: cnPhoto 1s cubic-bezier(.2, .7, .2, 1) both; }
+html.cn-on .pb-slide.play .pb-t img { animation: none; }
+@keyframes cnPhoto { from { opacity: 0; scale: 1.09; translate: 34px 0; } }
+@keyframes cnDrift { to { scale: 1.035; } }
+@media (min-width: 701px) {
+  html.cn-on .pb-slide.on:not(.play) .pb-cv img { animation: cnDrift 9s ease-out both; }
+  html.cn-on .pb-slide.on:not(.play) .pb-t img { animation: none; }
+}
+@media (max-width: 700px) {
+  html.cn-on .pb-slide.play .pb-t > * { animation-name: cnUpM; }
+  @keyframes cnPhoto { from { opacity: 0; scale: 1.06; } }
+}
+/* bannerlar arası derinlik: giren/çıkan banner hafif küçülüp solar (kaydırmaya bağlı, sadece bilgisayar + destekleyen tarayıcı) */
+@media (min-width: 701px) and (hover: hover) and (pointer: fine) {
+  @supports (animation-timeline: view()) {
+    html.cn-on .sh-hero-track .pb-slide .pb-box { animation: cnPar linear both; animation-timeline: view(inline); }
+    @keyframes cnPar { 0% { scale: .93; opacity: .3; translate: -7% 0; } 50% { scale: 1; opacity: 1; translate: 0 0; } 100% { scale: .93; opacity: .3; translate: 7% 0; } }
+  }
+}
+/* sayılı gösterge: 01 ●●━━●● 17 — etkin olan uzar ve dolar, uzaktakiler küçülüp kaybolur */
+html.cn-on .sh-hero .sh-dots.cn-nav { gap: 10px; align-items: center; max-width: none; padding: 6px 13px; border-radius: 999px; background: rgb(12 12 14 / .5); color: #fff;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16), 0 6px 20px -8px rgb(0 0 0 / .5); font: 600 12px/1 Inter, var(--f-body); letter-spacing: .05em; font-variant-numeric: tabular-nums; }
+html.cn-on .sh-hero .sh-dots.cn-nav.lt { background: rgb(255 255 255 / .78); color: #1d1d1f; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .08), 0 6px 20px -10px rgb(0 0 0 / .25); }
+.cn-nav .cn-no { font-weight: 700; min-width: 2ch; }
+.cn-nav .cn-of { opacity: .5; }
+.cn-nav .cn-dots { display: flex; align-items: center; }
+.cn-nav .cn-dot { flex: none; width: 6px; height: 18px; margin: 0 2.5px; padding: 0; border: 0; background: none; color: inherit; display: grid; align-items: center; cursor: pointer;
+  transition: width .5s cubic-bezier(.3, 1.3, .5, 1), margin .4s ease, opacity .3s ease; -webkit-tap-highlight-color: transparent; }
+.cn-nav .cn-dot i { display: block; height: 6px; border-radius: 3px; background: currentColor; opacity: .38; position: relative; overflow: hidden; transition: opacity .3s, height .3s; }
+.cn-nav .cn-dot.on { width: 38px; }
+.cn-nav .cn-dot.on i { opacity: 1; background: color-mix(in srgb, currentColor 28%, transparent); }
+.cn-nav .cn-dot.on i::after { content: ""; position: absolute; inset: 0; border-radius: 3px; background: currentColor; transform-origin: left; animation: fill 6.5s linear forwards; }
+.cn-nav .cn-dot.on.paused i::after { animation-play-state: paused; }
+.cn-nav .cn-dot.sm { width: 4px; } .cn-nav .cn-dot.sm i { height: 4px; opacity: .28; }
+.cn-nav .cn-dot.off { width: 0; margin: 0; opacity: 0; pointer-events: none; }
+@media (hover: hover) and (pointer: fine) { .cn-nav .cn-dot:not(.on):hover i { opacity: .8; } }
+@media (max-width: 899px) { html.cn-on .sh-hero .sh-dots.cn-nav { left: 50% !important; right: auto !important; translate: -50% 0 !important; bottom: 12px; padding: 5px 11px; font-size: 11px; } }
+
+/* Ürünler açılış sayfası: büyük resimli kutular (kutu dizilişinde; 'liste' dizilişlerine dokunmaz) */
+html.cn-on .phub-grid.phub-m-cn .phub-th { display: none; }
+html.cn-on .phub-grid.phub-m-cn .phub-cat::after { display: none; }
+html.cn-on .phub-grid.phub-m-cn .phub-c { animation: cnHub .55s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes cnHub { from { opacity: 0; translate: 0 18px; } }
+html.cn-on .phub-grid.phub-m-cn .phub-cat { background: linear-gradient(165deg, var(--surface) 35%, color-mix(in oklab, var(--accent) 7%, var(--surface))); }
+html.cn-on .phub-grid.phub-m-cn .phub-art { display: block; position: absolute; z-index: -1; pointer-events: none; transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+html.cn-on .phub-grid.phub-m-cn .phub-art img { width: 100%; height: 100%; display: block; object-fit: contain; mix-blend-mode: multiply;
+  animation: cnArt .8s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i, 0) * 45ms + 120ms); }
+@keyframes cnArt { from { opacity: 0; scale: .82; translate: 16px 16px; } }
+/* zeminli fotoğraf (kesilmemiş): kenarları kutuya doğru erir, kutu gibi durmaz */
+html.cn-on .phub-art.ph img { -webkit-mask-image: radial-gradient(farthest-side, #000 55%, transparent 100%); mask-image: radial-gradient(farthest-side, #000 55%, transparent 100%); }
+html[data-theme="dark"].cn-on .phub-art img { mix-blend-mode: normal; }
+html[data-theme="dark"].cn-on .phub-art.ph img { border-radius: 14px; -webkit-mask-image: none; mask-image: none; }
+html.cn-on .phub-grid.phub-m-cn .phub-c::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s;
+  background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0px), color-mix(in oklab, var(--accent) 18%, transparent), transparent 70%); }
+html.cn-on .phub-grid.phub-m-cn .phub-all.phub-t-acc { background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 88%, #fff), var(--accent) 45%, color-mix(in oklab, var(--accent) 68%, #000)); }
+html.cn-on .phub-grid.phub-m-cn .phub-all.phub-t-acc::before { opacity: 1; inset: -40%; background: radial-gradient(closest-side, rgb(255 255 255 / .3), transparent); animation: cnGlow 7s ease-in-out infinite alternate; }
+@keyframes cnGlow { from { translate: -30% -20%; } to { translate: 35% 30%; } }
+@media (min-width: 900px) {
+  html.cn-on .phub-grid.phub-m-cn { gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  html.cn-on .phub-grid.phub-m-cn > .phub-c { grid-column: span 3; }
+  html.cn-on .phub-grid.phub-m-cn > .phub-c:is(.phub-all, .phub-set) { grid-column: span 6; min-height: 128px; }
+  html.cn-on .phub-grid.phub-m-cn > .phub-set .phub-s { flex-direction: row; flex-wrap: wrap; gap: 2px 18px; }
+  html.cn-on .phub-grid.phub-m-cn > .phub-sp3 { grid-column: span 4; } html.cn-on .phub-grid.phub-m-cn > .phub-sp2 { grid-column: span 6; } html.cn-on .phub-grid.phub-m-cn > .phub-sp1 { grid-column: span 12; }
+  html.cn-on .phub-grid.phub-m-cn > :is(.phub-sp1, .phub-sp2) .phub-art { width: 34%; }
+  html.cn-on .phub-grid.phub-m-cn .phub-c { min-height: 232px; padding: 22px 22px 18px; border-radius: 24px; }
+  html.cn-on .phub-grid.phub-m-cn .phub-art { right: 4px; bottom: 4px; width: 50%; height: 70%; }
+  html.cn-on .phub-grid.phub-m-cn .phub-art img { object-position: right bottom; }
+  html.cn-on .phub-grid.phub-m-cn .phub-h b { font-size: 20px; letter-spacing: -.02em; }
+  html.cn-on .phub-grid.phub-m-cn .phub-all .phub-h b { font-size: 24px; }
+  html.cn-on .phub-grid.phub-m-cn .phub-cat .phub-h > span { padding: 5px 7px 5px 10px; border-radius: 999px; background: color-mix(in oklab, var(--fg) 6%, transparent); font-weight: 600; font-size: 12.5px; color: var(--fg); }
+  html.cn-on .phub-grid.phub-m-cn .phub-cat .phub-s { max-width: 54%; margin-top: 14px; }
+}
+@media (hover: hover) and (pointer: fine) {
+  html.cn-on .phub-grid.phub-m-cn .phub-c:hover::before { opacity: 1; }
+  html.cn-on .phub-grid.phub-m-cn .phub-c:hover .phub-art { transform: translate(-6px, -8px) scale(1.08) rotate(-2deg); }
+}
+@media (min-width: 900px) and (max-width: 1100px) { html.cn-on .phub-grid.phub-m-cn > .phub-cat { grid-column: span 4; } html.cn-on .phub-grid.phub-m-cn > :is(.phub-sp1, .phub-sp2) { grid-column: span 6; } }
+@media (max-width: 899px) {
+  html.cn-on .phub-grid.phub-m-cn .phub-cat { height: 116px; }
+  html.cn-on .phub-grid.phub-m-cn .phub-art { right: 8px; top: 8px; bottom: 8px; width: 28%; }
+  html.cn-on .phub-grid.phub-m-cn .phub-cat .phub-h { padding-right: 31%; }
+  html.cn-on .phub-grid.phub-m-cn .phub-cat .phub-s { padding-right: 33%; }
+  html.cn-on .phub-grid.phub-m-cn .phub-all.phub-t-acc::before { animation: none; inset: 0; background: radial-gradient(120% 140% at 100% 0, rgb(255 255 255 / .22), transparent 60%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.cn-on .pb-slide .pb-t > *, html.cn-on .pb-slide .pb-cv img, html.cn-on .sh-hero-track .pb-slide .pb-box, html.cn-on .phub-c, html.cn-on .phub-art img, html.cn-on .phub-all::before { animation: none !important; }
+}
+@media (min-width: 900px) {
+  html.cn-on .sh-hero .sh-dots.cn-nav { padding: 9px 16px; gap: 12px; font-size: 13.5px; bottom: 26px; }
+  .cn-nav .cn-dot { width: 7px; margin: 0 3px; } .cn-nav .cn-dot i { height: 7px; border-radius: 4px; } .cn-nav .cn-dot.on { width: 52px; }
+}

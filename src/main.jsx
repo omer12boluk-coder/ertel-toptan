@@ -366,6 +366,7 @@ function useTheme() {
     r.classList.remove('fr-1', 'fr-2');
     r.classList.toggle('pill-dark', !!pub && L.pillTone === 'dark');
     { const ph = pub ? L.pillHov : ''; if (ph === 'ink') r.style.setProperty('--pill-hov', 'var(--fg)'); else if (ph === 'none') r.style.setProperty('--pill-hov', 'currentColor'); else if (/^#/.test(ph || '')) r.style.setProperty('--pill-hov', ph); else r.style.removeProperty('--pill-hov'); } // üstüne gelince simge rengi
+    r.classList.toggle('cn-on', !!pub && L.canli !== false); // 13.11.2026 Canlı görünüm (banner yazı/fotoğraf animasyonu, yeni gösterge, Ürünler açılış kutuları); false = eski
     r.classList.toggle('cd-on', !!pub && L.cd === true); // 7.11.2026 Claude düzeni (cdhome.jsx)
     r.classList.toggle('hv-cd', !!pub && L.hoverFx !== 'old'); // 7.11.2026 (4) yeni üstüne gelme efekti (banner dili); 'old' = eski
     r.classList.toggle('porc', !!pub && L.porc === true); // 6.11.2026 Paket 0 porselen kutular (bulanıklıksız parlak beyaz) // 6.11.2026 siyah hap (Tasarım › Cam ve hareket) // 6.11.2026 buzlu cam kaldırıldı (kullanıcının kastettiği bu değildi)
@@ -389,7 +390,7 @@ function useTheme() {
     r.classList.toggle('nt-gr', dash && L.night !== 'copper');
     r.classList.toggle('th-apple', !!pub && (L.site || 'apple') === 'apple' && !effDark); // varsayılan Apple açık (5.11.2026, kullanıcı onayı)
     document.title = seoTitle() || S.brand.appName;
-  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.night, L.width, L.edge, L.boxPat, L.bgFx, L.sound, L.lite, liteTick, isAdm, L.admin, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
+  }, [S.brand, dev, pub, L.shopAccent, L.shopPrice, L.bg, L.cardR, L.logoTone, L.logoColor, L.botnav, L.site, L.night, L.width, L.edge, L.boxPat, L.bgFx, L.sound, L.lite, L.canli, liteTick, isAdm, L.admin, JSON.stringify(L.style || null), JSON.stringify(L.keep || null), JSON.stringify(pk)]);
   // Telefonda yazı seçme / basılı tutma davranışı (Ayarlar > Online mağaza > Mobil dokunma seçenekleri)
   const T = S.shop?.touch || {};
   useEffect(() => {

@@ -799,10 +799,11 @@ const LG_TXT = { luban: { t: 'Luban' }, xzz: { t: 'XZZ' }, 'mega-idea': { t: 'Me
 // her ana kategori kutusunun arkasında silik kapak resmi (src/icerik/kapaklar.json), alt kategoriler tıklanır, markalar logolu haplar.
 // Tasarım modunda seçilen resim ürün resmi ('prod:…') ya da yüklenen resim olabilir → useShopImg gerçek adrese çevirir (7.11.2026: düz url() ile seçilen resim görünmüyordu)
 // mode: 'thumb' başlığın solunda küçük net resim (varsayılan) · 'bg' kutunun arkasında silik resim · 'none' resimsiz
-function HubCat({ n, cnt, subs, onCat, kd, img, mode }) {
+function HubCat({ n, cnt, subs, onCat, kd, img, mode, idx, span }) {
   const src = useShopImg(mode !== 'none' && img ? img : ''); const go1 = () => onCat(n.id);
   const sub = (c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); onCat(c.id); }}>{c.name}</button>;
-  return <div role="button" tabIndex={0} className="phub-c" style={mode === 'bg' && src ? { '--im': `url("${src}")` } : undefined} onClick={go1} onKeyDown={kd(go1)}>
+  return <div role="button" tabIndex={0} className={'phub-c phub-cat' + (span ? ' phub-sp' + span : '')} style={{ '--i': idx, ...(mode === 'bg' && src ? { '--im': `url("${src}")` } : null) }} onClick={go1} onKeyDown={kd(go1)}>
+    {src && <span className={'phub-art' + (/\/bn\/(?!cat-)[^/]+\.webp$/.test(src) ? '' : ' ph')} aria-hidden="true"><img src={src} alt="" loading="lazy" /></span>}
     <div className="phub-h">{mode === 'thumb' && <span className="phub-th">{src && <img src={src} alt="" loading="lazy" />}</span>}<b>{n.name}</b><span>{cnt}<Icon n="chev" s={14} /></span></div>
     <div className="phub-s">{subs.map(sub)}{subs.length > 2 && <em className="phub-more">+{subs.length - 2}</em>}</div>
   </div>;
@@ -820,6 +821,8 @@ export function useHubRoots() {
 // liste gelince aynı yandan kayma). Ayrı View Transition / CSS kayması KALDIRILDI (kullanıcı: pürüzsüz geçişi bozuyordu, ürünler
 // 'F5 gibi' oturuyordu). 'l' = açılış sayfasına dönüş → normal geçiş 'geri' yönünde (soldan) oynar.
 export function hubSwap(fn, dir) { if (dir === 'l') window.__navBackNext?.(); fn(); }
+// 13.11.2026 Canlı görünüm: imleci izleyen ışık (sadece fare; kutunun --mx/--my değişkenleri)
+const hubSpot = (e) => { if (e.pointerType !== 'mouse') return; const c = e.target.closest?.('.phub-c'); if (!c) return; const r = c.getBoundingClientRect(); c.style.setProperty('--mx', e.clientX - r.left + 'px'); c.style.setProperty('--my', e.clientY - r.top + 'px'); };
 export const HUB_IMG = { 3: '/bn/jbc.webp', 5: '/bn/ht316.webp', 6: '/bn/cat-6.webp', 14: '/bn/zm-front.webp', 24: '/bn/cat-24.webp', 31: '/bn/v1s.webp', 42: '/bn/da07.webp' };
 function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets }) {
   const brands = useBrandList();
@@ -827,6 +830,8 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
   const S0 = useStore((st) => st.settings); const sets = useMemo(() => liveSets(S0), [S0]); // Tasarım › Ürünler açılış sayfası: bg (resimler), hide2 (gizli kategoriler), img2 (kategori resmi)
   const hid = new Set((HC.hide2 || []).map(String));
   const mode = HC.imgMode || 'thumb'; // Tasarım › Görünüm 'Kutularda ürün resmi'
+  // 13.11.2026 Canlı görünüm (look.canli): kendi kutu düzeni (büyük renkli resim); 'Kategori dizilişi' ve resim modu ayarları o kapalıyken geçerli
+  const CN = useStore((st) => st.settings.look?.canli !== false); const lay = CN ? '' : HC.lay;
   const roots = tree.roots.filter((n) => (counts.get(n.id) || 0) > 0 && !n.hidden && !hid.has(String(n.id)));
   const subsOf = (n) => n.children.filter((c) => (counts.get(c.id) || 0) > 0 && !c.hidden).sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0)).slice(0, 6);
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
@@ -837,17 +842,17 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
     </div>
     <div className="phub-lbl">Kategoriler</div>
-    <div className={'phub-grid phub-m-' + mode + ' phub-hv-' + (HC.subHover || 'ink') + (HC.lay ? ' phub-lay-' + HC.lay : '')}>
+    <div onPointerMove={hubSpot} className={'phub-grid phub-m-' + (CN ? 'cn' : mode) + ' phub-hv-' + (HC.subHover || 'ink') + (lay ? ' phub-lay-' + lay : '')}>
       <div role="button" tabIndex={0} className={'phub-c phub-all phub-t-' + (HC.allTone || 'acc')} onClick={onAll} onKeyDown={key(onAll)}>
         <div className="phub-h"><b>Tüm ürünler</b><span>{nf(total)}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s"><span>{roots.length} kategori</span><span>{brands.length} marka</span></div>
       </div>
       {sets.length > 0 && <div role="button" tabIndex={0} className={'phub-c phub-set phub-t-' + (HC.setTone || 'ring')} onClick={onSets} onKeyDown={key(onSets)}>
-        {!HC.lay && <span className="phub-badge">{HC.setBadge ?? 'Hazır paketler'}</span>}
-        <div className="phub-h"><b>Setler{HC.lay && (HC.setBadge ?? 'Hazır paketler') && <span className="phub-badge">{HC.setBadge ?? 'Hazır paketler'}</span>}</b><span>{sets.length}<Icon n="chev" s={14} /></span></div>
+        {!lay && <span className="phub-badge">{HC.setBadge ?? 'Hazır paketler'}</span>}
+        <div className="phub-h"><b>Setler{lay && (HC.setBadge ?? 'Hazır paketler') && <span className="phub-badge">{HC.setBadge ?? 'Hazır paketler'}</span>}</b><span>{sets.length}<Icon n="chev" s={14} /></span></div>
         <div className="phub-s">{sets.slice(0, 6).map((x) => <button key={x.id} type="button" onClick={(e) => { e.stopPropagation(); openSet(x.id); }}>{x.name}</button>)}</div>
       </div>}
-      {roots.map((n) => <HubCat key={n.id} n={n} cnt={nf(counts.get(n.id))} subs={subsOf(n)} onCat={onCat} kd={key} mode={mode}
+      {roots.map((n, idx) => <HubCat key={n.id} idx={idx + 1} n={n} span={CN && roots.length % 4 && idx >= roots.length - (roots.length % 4) ? roots.length % 4 : 0} cnt={nf(counts.get(n.id))} subs={subsOf(n)} onCat={onCat} kd={key} mode={mode}
         img={(HC.img2 || {})[n.id] || HUB_IMG[n.id] || CAT_COVERS[n.id]} />)}
     </div>
     <div className="phub-lbl">Markalar</div>
