@@ -10103,13 +10103,6 @@ html.hcs-open .hdr-c .hc-r .hcs-btn { visibility: hidden; }
 /* 14.11.2026 yapışık banner: kalan aralık kadar yukarı (cdhome --hst-pull) */
 .cd-hero.hst { margin-top: calc(-1 * var(--hst-pull, 0px)); }
 .cd-hero.hst .sh-hero, .cd-hero.hst .sh-hero .sh-slide { border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; }
-/* ekranı dolduran bannerın altındaki 16px şerit kaldırıldı (bilgisayar) */
-.cd-hero.hh-screen .sh-slide { min-height: max(420px, calc(100svh - var(--fs-top, 120px))) !important; }
-.cd-hero.hh-screen .hx-wrap .sh-slide { min-height: max(380px, calc(100svh - var(--fs-top, 120px) - var(--hxu))) !important; }
-@media (max-width: 700px) {
-  .cd-hero.hh-screen .sh-slide { min-height: max(420px, calc(100svh - var(--fs-top, 90px) - 110px)) !important; }
-  .cd-hero.hh-screen .hx-wrap .sh-slide { min-height: max(380px, calc(100svh - var(--fs-top, 90px) - 110px - var(--hxu))) !important; }
-}
 .hx-dl button { margin: 0 3px; } .hx-dl button.on { width: 34px; }
 @media (max-width: 700px) { .hx-dl button { width: 7px; margin: 0 2.5px; } .hx-dl button > span { height: 7px; } .hx-dl button.on { width: 26px; } }
 /* 14.11.2026 sayfa seçici bannerın içinde (.hx-in; açık bannerda koyu, koyu bannerda beyaz) */
@@ -10126,15 +10119,9 @@ html.hcs-open .hdr-c .hc-r .hcs-btn { visibility: hidden; }
 .hx-on.hx-story .sh-dots, .hx-on .sh-dots { display: none; }
 /* artık altta parça yok → banner kısalmaz */
 .cd-hero.hh-screen .hx-w-story, .cd-hero.hh-screen .hx-w-glow, .cd-hero.hh-screen .hx-w-none { --hxu: 0px !important; }
-/* 14.11.2026 telefonda da ekranı doldur = ekranın en altına kadar (alt menü bannerın üstünde yüzer); seçiciler alt menünün üstünde */
-@media (max-width: 700px) {
-  .cd-hero.hh-screen .sh-slide, .cd-hero.hh-screen .hx-wrap .sh-slide { min-height: max(420px, calc(100svh - var(--fs-top, 90px) - var(--hxu, 0px))) !important; }
-  .cd-hero.hh-screen .hx-in { bottom: 76px; }
-  .cd-hero.hh-screen .sh-dots { bottom: 80px; }
-}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '47b0953e2b';</script>
+<script>window.__BUILD = '7bcbe01041';</script>
 </head>
 <body>
 <div id="root"></div>
