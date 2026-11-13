@@ -29,6 +29,11 @@ def quick_front():  # Quick 861 ön yüz (200x150)
         '<text x="100" y="106" text-anchor="middle" fill="#bfe6ff" font-size="10" font-weight="900" letter-spacing="2">QUICK</text>'
         '<text x="14" y="138" fill="#e2e4e8" font-size="9" font-weight="800" letter-spacing="1.2">861 PRO MAX</text><circle cx="180" cy="134" r="8" fill="#1a1b1e"/>')
 
+def yang_front():
+    return 130, 140, ('<rect width="130" height="140" rx="16" fill="#18191c"/><circle cx="66" cy="62" r="26" fill="#2c2e33"/><circle cx="66" cy="62" r="16" fill="#0d0e10"/><circle cx="66" cy="62" r="6" fill="#55585e"/>'
+        '<text x="120" y="22" text-anchor="end" fill="#e8e9eb" font-size="13" font-weight="800">MR.YANG 85</text>'
+        '<text x="12" y="128" fill="#9aa0a6" font-size="9" font-weight="700" letter-spacing="1">ULTRA  0.7X–4.5X</text>')
+
 def micro_front():  # mikroskop gövde ön yüz (130x140)
     return 130, 140, ('<rect width="130" height="140" rx="16" fill="#1a1b1e"/><circle cx="66" cy="62" r="26" fill="#d42c25"/><circle cx="66" cy="62" r="16" fill="#1c0808"/><circle cx="66" cy="62" r="7" fill="#e5352d"/>'
         '<text x="120" y="22" text-anchor="end" fill="#eceef0" font-size="15" font-weight="800" font-style="italic">MY-7S</text>'
@@ -47,8 +52,31 @@ def feet(S, o, x0, x1, z0, z1, y):
     for x in (x0+.02, x1-.02):
         for z in (z0+.02, z1-.02): S.cyl(o, [x, y, z], [x, y+.006, z], .008, '#111214', n=10)
 
-def build(eksik=(), cam=None, theme='gun', labels=False):
-    cam = cam or Cam([.98, 1.56, 1.5], [-.04, 1.02, -.16], F=1450)
+def aixun_ps_front():
+    return 260, 150, ('<rect width="260" height="150" rx="8" fill="#f2f3f5"/><rect x="10" y="10" width="150" height="96" rx="6" fill="#0d1a2e"/>'
+        '<circle cx="42" cy="58" r="24" fill="none" stroke="#ff6a3d" stroke-width="5"/><text x="42" y="64" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">5.0V</text>'
+        '<circle cx="85" cy="58" r="24" fill="none" stroke="#3db0ff" stroke-width="5"/><text x="85" y="64" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">8.0A</text>'
+        '<circle cx="128" cy="58" r="24" fill="none" stroke="#ffc23d" stroke-width="5"/><text x="128" y="64" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">40W</text>'
+        '<circle cx="205" cy="45" r="22" fill="#d9dbdf" stroke="#b5b8bd"/><circle cx="205" cy="45" r="12" fill="#c4c7cc"/>'
+        '<rect x="12" y="116" width="16" height="10" rx="2" fill="#3a6fd6"/><rect x="34" y="116" width="16" height="10" rx="2" fill="#3a6fd6"/><rect x="56" y="116" width="16" height="10" rx="2" fill="#3a6fd6"/>'
+        '<circle cx="190" cy="122" r="9" fill="#d32a22"/><circle cx="220" cy="122" r="9" fill="#151515"/><text x="12" y="144" fill="#555" font-size="9" font-weight="800" letter-spacing="1.5">AIXUN P3208</text>')
+
+def t420_front():
+    return 120, 110, ('<rect width="120" height="110" rx="10" fill="#c3c8ce"/><rect x="12" y="10" width="96" height="46" rx="5" fill="#1d2633"/>'
+        '<rect x="15" y="13" width="90" height="40" rx="3" fill="#dfe9f5"/><text x="36" y="41" text-anchor="middle" fill="#1d4f9a" font-size="17" font-weight="800">280</text>'
+        '<text x="84" y="41" text-anchor="middle" fill="#1d4f9a" font-size="17" font-weight="800">280</text><line x1="60" y1="16" x2="60" y2="50" stroke="#9fb4cc"/>'
+        '<circle cx="60" cy="80" r="16" fill="#aeb3b9"/><circle cx="60" cy="80" r="7" fill="#e7eaee"/><text x="10" y="104" fill="#4b5058" font-size="8" font-weight="800" letter-spacing="1">AIXUN T420D</text>')
+
+def sugon_front():
+    return 220, 150, ('<rect width="220" height="150" rx="8" fill="#b9bdc3"/><rect x="10" y="10" width="200" height="56" rx="5" fill="#0a0c10"/>'
+        '<text x="40" y="50" fill="#7fe3ff" font-size="28" font-weight="700" filter="url(#glow)">345</text><text x="150" y="50" fill="#ffffff" font-size="24" font-weight="700">30</text>'
+        '<rect x="14" y="80" width="40" height="12" rx="3" fill="#36c2c2"/><rect x="62" y="80" width="40" height="12" rx="3" fill="#36c2c2"/><rect x="110" y="80" width="40" height="12" rx="3" fill="#36c2c2"/><rect x="158" y="80" width="40" height="12" rx="3" fill="#36c2c2"/>'
+        '<rect x="14" y="102" width="30" height="34" rx="4" fill="#5b6067"/><rect x="176" y="102" width="30" height="34" rx="4" fill="#5b6067"/>'
+        '<text x="110" y="128" text-anchor="middle" fill="#2a2d33" font-size="10" font-weight="900" letter-spacing="2">SUGON 8650 PRO</text>')
+
+def build(eksik=(), cam=None, theme='gun', labels=False, ghosts=True, sel=None):
+    sel = {'guc': 1996, 'havya': 835, 'mikro': 2913, 'sicak': 3066, **(sel or {})}
+    cam = cam or Cam([.98, 1.56, 1.5], [-.04, 1.02, -.16], F=1400)
     S = Scene(cam)
     WALL = '#ece6dc' if theme == 'gun' else '#2a2d33'
     # --- duvar + delikli pano ---
@@ -85,27 +113,34 @@ def build(eksik=(), cam=None, theme='gun', labels=False):
         S.bg.append(f'<polygon points="{S.P([[x0,Y0+.007,.2],[x0+.045,Y0+.007,.2],[x0+.045,Y0+.007,.29],[x0,Y0+.007,.29]])}" fill="#2f585d" stroke="#7fb0b4" stroke-width=".8"/>')
 
     # --- RAFTA: güç kaynağı ---
+    S.tag = 'guc'
     if 'guc' in eksik: S.ghost(-.86, -.56, 1.07, 1.22, -.46, -.24, '+ Güç kaynağı')
     else:
         S.shadow(-.86, -.56, -.46, -.24, 1.0701, op=.35)
         o = S.obj([-.71, 1.15, -.35])
         feet(S, o, -.86, -.56, -.46, -.24, 1.07)
-        S.extrude(o, rr(-.46, -.245, 1.076, 1.22, .012), -.86, -.56, '#8a8f96', cap='#7a7f86', spec=.15)
-        S.box(o, -.85, -.57, 1.082, 1.212, -.245, -.241, '#2a2d32', decal=ps_front(theme))
+        if sel['guc'] == 1916:
+            S.extrude(o, rr(-.46, -.245, 1.076, 1.235, .02), -.86, -.56, '#c9ccd1', cap='#b8bbc0', spec=.25)
+            S.box(o, -.85, -.57, 1.084, 1.227, -.245, -.241, '#f2f3f5', decal=aixun_ps_front())
+        else:
+            S.extrude(o, rr(-.46, -.245, 1.076, 1.22, .012), -.86, -.56, '#8a8f96', cap='#7a7f86', spec=.15)
+            S.box(o, -.85, -.57, 1.082, 1.212, -.245, -.241, '#2a2d32', decal=ps_front(theme))
         # kırmızı/siyah uçlar raftan aşağı, anakart tutucuya
         o2 = S.obj([-.6, .95, -.1])
         S.curve(o2, [[-.66, 1.10, -.235], [-.62, 1.0, -.15], [-.45, .80, -.05], [-.2, .77, -.02], [-.06, .80, -.01]], '#c8261f', 3.2)
         S.curve(o2, [[-.64, 1.10, -.235], [-.6, .99, -.16], [-.44, .79, -.07], [-.2, .765, -.04], [-.06, .80, -.03]], '#1a1a1a', 3.2)
     # rafta sağ: ön ısıtıcı yuvası (boş = genişleme örneği)
-    S.ghost(.55, .85, 1.07, 1.16, -.46, -.26, '+ Ön ısıtıcı', big=False)
+    if ghosts: S.ghost(.55, .85, 1.07, 1.16, -.46, -.26, '+ Ön ısıtıcı', big=False)
 
     # --- ORTA: mikroskop ---
+    S.tag = 'mikro'
     if 'mikro' in eksik: S.ghost(-.17, .17, Y0, 1.22, -.18, .1, '+ Mikroskop')
     else:
+        RED = '#d42c25' if sel['mikro'] != 3030 else '#2b2d32'
         S.shadow(-.17, .17, -.18, .10, Y0 + .0068, op=.42)
         o = S.obj([0, .8, -.04])
         S.extrude(o, rr(-.18, .10, Y0 + .006, Y0 + .034, .01), -.17, .17, '#17181b', spec=.2)
-        S.decal(o, [-.17, Y0 + .028, .1005], [.17, Y0 + .028, .1005], [-.17, Y0 + .012, .1005], 340, 16, '<text x="170" y="13" text-anchor="middle" fill="#cfd2d6" font-size="11" font-weight="800" letter-spacing="5">MYSCOPE</text>')
+        S.decal(o, [-.17, Y0 + .028, .1005], [.17, Y0 + .028, .1005], [-.17, Y0 + .012, .1005], 340, 16, ('<text x="170" y="13" text-anchor="middle" fill="#cfd2d6" font-size="11" font-weight="800" letter-spacing="5">' + ('MYSCOPE' if sel['mikro'] != 3030 else 'MR.YANG') + '</text>'))
         S.box(o, -.075, .075, Y0 + .036, Y0 + .052, -.06, .045, '#2c2f35', top='#3a3e45')  # anakart tutucu
         S.box(o, -.055, .055, Y0 + .052, Y0 + .056, -.045, .03, '#1f6b43', top='#2a8a57')  # anakart
         o = S.obj([.1, 1.0, -.14]); S.cyl(o, [.1, Y0 + .036, -.14], [.1, 1.30, -.14], .017, '#c9ced4', cap='#e9ecef', spec=.5)
@@ -113,51 +148,71 @@ def build(eksik=(), cam=None, theme='gun', labels=False):
         S.box(o, -.01, .14, 1.02, 1.095, -.16, -.07, '#1c1d21', top='#2c2e33')                     # kol bloğu
         S.cyl(o, [.14, 1.057, -.115], [.18, 1.057, -.115], .032, '#202226', cap='#34373c')           # odak düğmesi
         S.extrude(o, rr(-.085, .016, .935, 1.085, .022), -.07, .07, '#1a1b1e', spec=.25)
-        S.box(o, -.058, .058, .945, 1.075, .016, .018, '#1a1b1e', decal=micro_front())
+        S.box(o, -.058, .058, .945, 1.075, .016, .018, '#1a1b1e', decal=micro_front() if sel['mikro'] != 3030 else yang_front())
         S.cyl(o, [0, .935, -.03], [0, .915, -.03], .047, '#1d1e22')
-        S.cyl(o, [0, .915, -.03], [0, .893, -.03], .046, '#d42c25', spec=.4)
+        S.cyl(o, [0, .915, -.03], [0, .893, -.03], .046, RED, spec=.4)
         S.cyl(o, [0, .893, -.03], [0, .872, -.03], .042, '#141518')
         S.cyl(o, [0, .872, -.03], [0, .862, -.03], .055, '#e9ecef', cap='#fbfcfd', spec=.6)     # LED halka ışık
-        S.cyl(o, [-.083, 1.0, -.03], [-.07, 1.0, -.03], .016, '#d42c25')                              # yan kırmızı düğme
-        S.cyl(o, [.01, 1.085, -.06], [.01, 1.15, -.06], .02, '#16171a'); S.cyl(o, [.01, 1.15, -.06], [.01, 1.165, -.06], .024, '#d42c25')
+        S.cyl(o, [-.083, 1.0, -.03], [-.07, 1.0, -.03], .016, RED)                              # yan kırmızı düğme
+        S.cyl(o, [.01, 1.085, -.06], [.01, 1.15, -.06], .02, '#16171a'); S.cyl(o, [.01, 1.15, -.06], [.01, 1.165, -.06], .024, RED)
         for sx in (-.032, .032):
             a, b = [sx, 1.075, -.0], [sx*1.3, 1.16, .075]
             m = add(a, mul(sub(b, a), .28))
-            S.cyl(o, a, m, .019, '#1b1c20'); S.cyl(o, m, add(m, mul(norm(sub(b, a)), .03)), .021, '#d42c25', spec=.4)
+            S.cyl(o, a, m, .019, '#1b1c20'); S.cyl(o, m, add(m, mul(norm(sub(b, a)), .03)), .021, RED, spec=.4)
             S.cyl(o, add(m, mul(norm(sub(b, a)), .03)), b, .018, '#1b1c20'); S.cyl(o, b, add(b, mul(norm(sub(b, a)), .02)), .021, '#0c0c0e')
 
     # --- SAĞ EL: havya + tutucu + uç temizleyici ---
+    S.tag = 'havya'
     if 'havya' in eksik: S.ghost(.27, .62, Y0, .9, -.14, .1, '+ Havya')
     else:
-        S.shadow(.29, .45, -.14, .05, Y0 + .0068)
-        o = S.obj([.37, .8, -.04])
-        feet(S, o, .29, .45, -.13, .05, Y0 + .006)
-        S.extrude(o, [(.012, Y0 + .118), (.05, Y0 + .012), (.042, Y0 + .006), (-.13, Y0 + .006), (-.13, Y0 + .122), (-.12, Y0 + .128), (.0, Y0 + .128)], .29, .45, '#1d1e22',
-                  decals={0: havya_front()}, spec=.2)
-        for i, x in enumerate((.31, .325)):  # yedek uç tutucular
-            S.cyl(o, [x, Y0 + .128, -.08], [x, Y0 + .16, -.08], .005, '#c9ced4', n=8, spec=.6)
-        # sağdaki tutucu modülü (kol yuvası + pirinç temizleyici)
-        S.shadow(.455, .56, -.1, .08, Y0 + .0068, op=.3, blur=6)
-        o = S.obj([.51, .8, -.01])
-        S.extrude(o, rr(-.1, .08, Y0 + .006, Y0 + .05, .01), .455, .56, '#25272c', spec=.2)
-        S.cyl(o, [.51, Y0 + .05, .045], [.51, Y0 + .06, .045], .03, '#c9a24a', cap='#6d5c45', spec=.5)
-        S.cyl(o, [.507, Y0 + .05, -.04], [.5, Y0 + .1, -.06], .017, '#bfc4ca', spec=.7)               # krom yuva (eğik)
-        S.cyl(o, [.5, Y0 + .1, -.06], [.496, Y0 + .115, -.066], .0075, '#d5d9dd', spec=.6)
-        S.cyl(o, [.496, Y0 + .115, -.066], [.488, Y0 + .17, -.085], .011, '#19a37a')
-        S.cyl(o, [.488, Y0 + .17, -.085], [.48, Y0 + .23, -.105], .0095, '#1b1c1f')
-        S.curve(o, [[.48, Y0 + .23, -.105], [.47, Y0 + .25, -.13], [.44, Y0 + .2, -.15], [.42, Y0 + .1, -.14]], '#141518', 3)
-        if labels: S.label([.37, .93, .0], 'Havya · JBC CD-2')
+      if sel['havya'] == 2745:
+        S.shadow(.33, .45, -.12, .05, Y0 + .0068)
+        o = S.obj([.39, .8, -.04])
+        feet(S, o, .33, .45, -.12, .05, Y0 + .006)
+        S.extrude(o, [(.02, Y0 + .11), (.05, Y0 + .012), (.042, Y0 + .006), (-.12, Y0 + .006), (-.12, Y0 + .115), (.0, Y0 + .118)], .33, .45, '#b4b9bf', decals={0: t420_front()}, spec=.35)
+        for hx, lean in ((.29, -1), (.49, 1)):   # iki yanda kol yuvası + kol
+            S.shadow(hx - .03, hx + .03, -.06, .02, Y0 + .0068, op=.3, blur=6)
+            o = S.obj([hx, .8, -.02])
+            S.cyl(o, [hx, Y0 + .006, -.02], [hx, Y0 + .05, -.02], .03, '#aab0b6', cap='#c7ccd2', spec=.4)
+            S.cyl(o, [hx, Y0 + .05, -.02], [hx, Y0 + .08, -.025], .014, '#d7dbdf', spec=.7)
+            S.cyl(o, [hx, Y0 + .08, -.025], [hx + .004*lean, Y0 + .14, -.035], .010, '#2f5fd0')
+            S.cyl(o, [hx + .004*lean, Y0 + .14, -.035], [hx + .008*lean, Y0 + .22, -.05], .009, '#1b1c1f')
+            S.curve(o, [[hx + .008*lean, Y0 + .22, -.05], [hx + .02*lean, Y0 + .25, -.08], [.39 + .03*lean, Y0 + .16, -.12], [.39 + .02*lean, Y0 + .07, -.12]], '#141518', 2.6)
+      else:
+          S.shadow(.29, .45, -.14, .05, Y0 + .0068)
+          o = S.obj([.37, .8, -.04])
+          feet(S, o, .29, .45, -.13, .05, Y0 + .006)
+          S.extrude(o, [(.012, Y0 + .118), (.05, Y0 + .012), (.042, Y0 + .006), (-.13, Y0 + .006), (-.13, Y0 + .122), (-.12, Y0 + .128), (.0, Y0 + .128)], .29, .45, '#1d1e22',
+                    decals={0: havya_front()}, spec=.2)
+          for i, x in enumerate((.31, .325)):  # yedek uç tutucular
+              S.cyl(o, [x, Y0 + .128, -.08], [x, Y0 + .16, -.08], .005, '#c9ced4', n=8, spec=.6)
+          # sağdaki tutucu modülü (kol yuvası + pirinç temizleyici)
+          S.shadow(.455, .56, -.1, .08, Y0 + .0068, op=.3, blur=6)
+          o = S.obj([.51, .8, -.01])
+          S.extrude(o, rr(-.1, .08, Y0 + .006, Y0 + .05, .01), .455, .56, '#25272c', spec=.2)
+          S.cyl(o, [.51, Y0 + .05, .045], [.51, Y0 + .06, .045], .03, '#c9a24a', cap='#6d5c45', spec=.5)
+          S.cyl(o, [.507, Y0 + .05, -.04], [.5, Y0 + .1, -.06], .017, '#bfc4ca', spec=.7)               # krom yuva (eğik)
+          S.cyl(o, [.5, Y0 + .1, -.06], [.496, Y0 + .115, -.066], .0075, '#d5d9dd', spec=.6)
+          S.cyl(o, [.496, Y0 + .115, -.066], [.488, Y0 + .17, -.085], .011, '#19a37a')
+          S.cyl(o, [.488, Y0 + .17, -.085], [.48, Y0 + .23, -.105], .0095, '#1b1c1f')
+          S.curve(o, [[.48, Y0 + .23, -.105], [.47, Y0 + .25, -.13], [.44, Y0 + .2, -.15], [.42, Y0 + .1, -.14]], '#141518', 3)
+      if labels: S.label([.37, .93, .0], 'Havya')
 
     # --- SOL EL: sıcak hava ---
+    S.tag = 'sicak'
     if 'sicak' in eksik: S.ghost(-.78, -.46, Y0, .92, -.16, .08, '+ Sıcak hava')
     else:
         S.shadow(-.69, -.47, -.16, .06, Y0 + .0068, op=.38)
         o = S.obj([-.58, .83, -.05])
         feet(S, o, -.69, -.47, -.16, .06, Y0 + .006)
-        S.extrude(o, rr(-.16, .056, Y0 + .012, Y0 + .165, .02), -.69, -.47, '#6f747b', spec=.2)
-        S.box(o, -.68, -.48, Y0 + .02, Y0 + .157, .056, .058, '#6c7178', decal=quick_front())
-        for x in (-.695, -.465):  # yan tutamaklar
-            S.box(o, x - .006, x + .006, Y0 + .05, Y0 + .13, .0, .05, '#2a2c30')
+        if sel['sicak'] == 2671:
+            S.extrude(o, rr(-.16, .056, Y0 + .012, Y0 + .15, .012), -.7, -.46, '#2a2d32', spec=.25)
+            S.box(o, -.695, -.465, Y0 + .018, Y0 + .145, .056, .058, '#b9bdc3', decal=sugon_front())
+        else:
+            S.extrude(o, rr(-.16, .056, Y0 + .012, Y0 + .165, .02), -.69, -.47, '#6f747b', spec=.2)
+            S.box(o, -.68, -.48, Y0 + .02, Y0 + .157, .056, .058, '#6c7178', decal=quick_front())
+            for x in (-.695, -.465):  # yan tutamaklar
+                S.box(o, x - .006, x + .006, Y0 + .05, Y0 + .13, .0, .05, '#2a2c30')
         S.shadow(-.78, -.71, -.04, .06, Y0 + .0068, op=.3, blur=6)
         o = S.obj([-.75, .85, .01])
         S.extrude(o, rr(-.04, .06, Y0 + .006, Y0 + .075, .01), -.785, -.715, '#55595f', spec=.2)
@@ -168,6 +223,7 @@ def build(eksik=(), cam=None, theme='gun', labels=False):
         S.curve(o, [[-.75, Y0 + .25, .02], [-.76, 1.08, -.0], [-.71, 1.08, -.08], [-.64, .96, -.15]], '#141517', 6)
 
     # --- ÖN: cımbız standı ---
+    S.tag = 'decor'
     if 'cimbiz' in eksik: S.ghost(-.46, -.3, Y0, .9, .2, .28, '+ Cımbız seti', big=False)
     else:
         S.shadow(-.46, -.3, .2, .28, Y0 + .0068, op=.3, blur=6)
@@ -208,6 +264,18 @@ def ui(pct, eksik_n, theme='gun'):
             f'<text x="68" y="71" fill="#1c1e22" font-size="21" font-weight="700">Tezgâhın %{pct} hazır</text>'
             f'<text x="388" y="71" text-anchor="end" fill="#2f62d6" font-size="18" font-weight="700">{eksik_n} eksik</text>'
             f'<rect x="68" y="81" width="320" height="4" rx="2" fill="#e3e3e8"/><rect x="68" y="81" width="{320*pct/100:.0f}" height="4" rx="2" fill="#2f62d6"/></g>')
+
+def poz(slot, pick=None):
+    S = build(ghosts=False)
+    S.base = []; S.bg = []; S.shadows = []; S.top = []
+    S.pre = ['<rect width="1536" height="1024" fill="#ff00ff"/>']
+    S.objs = [o for o in S.objs if o['tag'] == slot]
+    return S.render().replace('<rect width="1536" height="1024" fill="url(#vig)"/>', '')
+
+def bos():
+    S = build(eksik=('guc', 'havya', 'mikro', 'sicak'), ghosts=False)
+    S.top = []
+    return S.render()
 
 if __name__ == '__main__':
     os.makedirs('out', exist_ok=True)

@@ -3,7 +3,7 @@
 # ayrıntılar cihazın ön yüzüne "çıkartma" olarak yapıştırılır (afin dönüşüm).
 import math, os
 
-W, H = 1600, 1000
+W, H = 1536, 1024
 def v(*a): return list(a)
 def add(a, b): return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]
 def sub(a, b): return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]
@@ -31,7 +31,7 @@ def shade(col, n, amb=.58, k=.48, spec=0):
 class Scene:
     def __init__(s, cam): s.cam = cam; s.objs = []; s.base = []; s.pre = []; s.bg = []; s.grads = []; s.shadows = []; s.top = []
     def obj(s, depth_pt=None, base=False):
-        o = {'faces': [], 'extra': [], 'z': None, 'pt': depth_pt}; (s.base if base else s.objs).append(o); return o
+        o = {'faces': [], 'extra': [], 'z': None, 'pt': depth_pt, 'tag': getattr(s, 'tag', 'decor')}; (s.base if base else s.objs).append(o); return o
     def P(s, pts): return ' '.join('%.1f,%.1f' % s.cam.pr(p)[:2] for p in pts)
     def poly(s, o, pts, col, n, stroke=None, op=1, spec=0, grad=True):
         cen = mul([sum(p[i] for p in pts) for i in range(3)], 1/len(pts))
@@ -117,7 +117,7 @@ class Scene:
         else: s.bg.append(el)
     def shadow(s, x0, x1, z0, z1, y, op=.30, blur=9):
         pad = .012
-        s.shadows.append(f'<polygon points="{s.P([[x0-pad,y,z0-pad],[x1+pad,y,z0-pad],[x1+pad,y,z1+pad*2],[x0-pad,y,z1+pad*2]])}" fill="#000" opacity="{op}" filter="url(#b{blur})"/>')
+        s.shadows.append((getattr(s, 'tag', 'decor'), f'<polygon points="{s.P([[x0-pad,y,z0-pad],[x1+pad,y,z0-pad],[x1+pad,y,z1+pad*2],[x0-pad,y,z1+pad*2]])}" fill="#000" opacity="{op}" filter="url(#b{blur})"/>'))
     def ghost(s, x0, x1, y0, y1, z0, z1, label, col='#2f62d6', big=True):
         c = [[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]]
         E = [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]
@@ -142,7 +142,7 @@ class Scene:
                ''.join(s.grads) + '<radialGradient id="vig" cx=".5" cy=".45" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></radialGradient>' + defs + '</defs>']
         out += s.pre
         for o in s.base: out += [e for _, e in sorted(o['faces'], key=lambda t: -t[0])] + o['extra']
-        out += s.bg + s.shadows
+        out += s.bg + [e for _, e in s.shadows]
         objs = sorted(s.objs, key=lambda o: -s.cam.pr(o['pt'])[2])
         for o in objs:
             out += [e for _, e in sorted(o['faces'], key=lambda t: -t[0])] + o['extra']
