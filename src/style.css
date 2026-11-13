@@ -9885,3 +9885,17 @@ body.eh-lock{overflow:hidden}
 @keyframes taScale { from { opacity: 0; transform: scale(.5); } }
 @keyframes taFade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sh-slide.on .ta .ta-p, .sh-slide.on .ta .pb-eye, .sh-slide.on .ta .ta-btns { animation: none; } }
+
+/* ---- 14.11.2026 Banner resim hareketleri (.pb-box.ia-*; photobn.jsx PImg) — sadece etkin bannerda ---- */
+.pb-imw { display: block; }
+.pb-shine { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / .28) 47%, rgb(255 255 255 / .6) 50%, rgb(255 255 255 / .28) 53%, transparent 60%) no-repeat; background-size: 250% 100%; background-position: 130% 0; }
+.pb-dark .pb-shine { background-image: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / .16) 47%, rgb(255 255 255 / .4) 50%, rgb(255 255 255 / .16) 53%, transparent 60%); }
+.sh-slide.on .ia-in .pb-imw > img { animation: iaIn 1s cubic-bezier(.2, .7, .2, 1) .1s both; }
+.sh-slide.on .ia-shine .pb-shine { animation: iaShine 1.6s cubic-bezier(.4, 0, .2, 1) 1s both; }
+.sh-slide.on .ia-float .pb-imw:not(.pb-ph) { animation: iaFloat 6s ease-in-out 1.2s infinite; }
+.ia-depth .pb-imw:not(.pb-ph) { transform: perspective(1200px) rotateY(calc(var(--mx, 0) * 7deg)) rotateX(calc(var(--my, 0) * -5deg)) translate3d(calc(var(--mx, 0) * 10px), calc(var(--my, 0) * 6px), 0); transition: transform .5s cubic-bezier(.2, .8, .2, 1); will-change: transform; }
+@keyframes iaIn { from { opacity: 0; filter: blur(14px); translate: 0 26px; } }
+@keyframes iaShine { 0% { opacity: 1; background-position: 130% 0; } 100% { opacity: 1; background-position: -30% 0; } }
+@keyframes iaFloat { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
+@media (prefers-reduced-motion: reduce) { .sh-slide.on .pb-box .pb-imw, .sh-slide.on .pb-box .pb-imw > img, .sh-slide.on .pb-box .pb-shine { animation: none; } .ia-depth .pb-imw { transform: none; } }
+.pb-shine.pb-op, .pb-dark .pb-shine.pb-op { mix-blend-mode: overlay; background-image: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / .35) 47%, rgb(255 255 255 / .75) 50%, rgb(255 255 255 / .35) 53%, transparent 60%); }

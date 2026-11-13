@@ -13,7 +13,7 @@ import { ShopHome, DesignCtx, blockLabel, moveItem, withProdFallback, RailFields
 import { prepare, Stage, ShopDesigner } from './designer.jsx';
 import { queueSave } from './saveq.js';
 import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
-import { PB_BY, PB_TEXT, PHOTO_BANNERS, withNew2 } from './photobn.jsx';
+import { PB_BY, PB_TEXT, PHOTO_BANNERS, withNew2, IA_OPTS, iaOf } from './photobn.jsx';
 import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList, useNewList } from './cdhome.jsx';
 import { useBrandList } from './brandsets.jsx';
 import { CD_KEYS } from './p0keys.js';
@@ -284,6 +284,7 @@ function HeroPanel({ H, S, k }) {
   return <>
     {!pbIn && <div className="v3-cta"><b>Fotoğraflı bannerlar listede değil</b><p>Şu an koddan ekleniyorlar. Listeye alırsanız her birinin yazısını, sırasını ve görünürlüğünü buradan yönetirsiniz.</p><button type="button" className="btn sm primary" onClick={() => S('slides', [...PHOTO_BANNERS.map((b) => ({ pb: b.id })), ...sl])}>Listeye al</button></div>}
     <Row label="Banner yazı animasyonu" hint="Banner her geldiğinde yazılar sırayla belirir"><Seg v={H.txtAnim || ''} opts={TA_OPTS} on={(v) => S('txtAnim', v || undefined)} /></Row>
+    <Row label="Banner resim hareketi" hint="Birden fazla seçilebilir. Hiçbiri seçili değilse resim hareketsiz (eski hâli). Fareyle derinlik sadece bilgisayarda"><span className="v3-seg wrap">{IA_OPTS.map(([k, l]) => { const cur = iaOf(H.imgAnim); const on = cur.includes(k); return <button key={k} type="button" className={on ? 'on' : ''} onClick={() => S('imgAnim', on ? cur.filter((x) => x !== k) : [...cur, k])}>{l}</button>; })}</span></Row>
     <Row label="Banner imzası (telefon)" hint="Logomuzun telefondaki yeri. Bilgisayarda hep marka satırında"><Seg v={H.sigM || ''} opts={[['', 'Marka satırında'], ['corner', 'Sağ alt köşe']]} on={(v) => S('sigM', v || undefined)} /></Row>
     <Row label="Banner içi düğme köşesi" hint="Banner köşesinden bağımsız"><Seg v={String(H.chipR ?? '')} opts={[['', 'Banner gibi'], ['999', 'Yuvarlak'], ['12', 'Yumuşak'], ['6', 'Az'], ['0', 'Düz']]} on={(v) => S('chipR', v === '' ? undefined : Number(v))} /></Row>
     <span className="v3-cap">Bannerlar · {sl.filter((s) => !s.off).length} açık</span>
