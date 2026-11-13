@@ -314,8 +314,8 @@ def build(eksik=(), sel=None, ghosts=True, tutucu_alt=None, twz=(1790, 2978, 0, 
         S.box(o, px - .03, px + .03, ry - .035, ry + .03, pz - .03, pz + .03, BK, top=BK2, spec=.3)            # direk bloğu
         S.cyl(o, [px, ry - .045, pz + .03], [px, ry - .045, pz + .05], .009, BK2)                            # sıkma düğmesi
         o = S.obj([.0, ry, pz])
-        for dz in (-.013, .013):                                                                               # yatay çift krom kol
-            S.cyl(o, [.27, ry, pz + dz], [-.1, ry, pz + dz], .0075, CH, spec=.8)
+        for dy in (-.016, .016):                                                                               # yatay çift krom kol: alt alta
+            S.cyl(o, [.27, ry + dy, pz], [-.1, ry + dy, pz], .0075, CH, spec=.8)
         S.box(o, .23, .29, ry - .03, ry + .03, pz - .035, pz + .035, BK, top=BK2, spec=.3)                   # karşı ağırlık
         S.box(o, -.11, -.05, ry - .03, ry + .03, pz - .035, pz + .035, BK, top=BK2, spec=.3)                 # kafa ucu bloğu
         S.cyl(o, [-.08, ry + .03, pz + .01], [-.07, ry + .07, pz + .01], .004, CH, spec=.8)                   # kilit kolu

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Tezgâhını kur</title>
+<title>Tezgâhını kur · ERTEL GSM</title><meta name="description" content="Tamir tezgâhını sıfırdan kur: havya, sıcak hava, mikroskop, güç kaynağı ve daha fazlası. Eksiklerini gör, hepsini tek seferde sepete ekle."><link rel="icon" href="/favicon-96.png">
 <style>
 :root{--ink:#1d1d1f;--mut:#6e6e73;--line:#e5e5ea;--bg:#f5f5f7;--acc:#2f62d6;--accl:#eaf0fc}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -8,6 +8,7 @@ html,body{overflow-x:hidden}
 body{margin:0;font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
 button,input{font:inherit;color:inherit}
 main{max-width:1280px;margin:0 auto;padding:12px 12px 110px}
+.back{display:inline-block;margin:0 2px 6px;color:var(--acc);font-weight:600;font-size:14px;text-decoration:none}
 .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:2px 2px 10px}
 h1{font-size:22px;letter-spacing:-.02em;margin:0}.lead{margin:2px 0 0;color:var(--mut);font-size:13px}
 .seg{display:inline-flex;background:#e8e8ed;border-radius:11px;padding:3px;flex:none}
@@ -130,6 +131,7 @@ body.full .tag small{font-size:7.5px}body.full .tag b{font-size:10px}
 }
 @media(max-width:959px){.side{display:none}}
 </style></head><body><main>
+<a class="back" href="/">‹ Mağaza</a>
 <div class="top"><div><h1>Tezgâhını kur.</h1><p class="lead">Cihaza dokun, modelini seç. Eksikleri hemen gör.</p></div>
  <div class="seg" id="seg"><button data-v="tez" class="on">Tezgâh</button><button data-v="urun">Ürünler</button></div></div>
 <div id="vTez" class="view">
@@ -216,7 +218,7 @@ function render(){
   const th=l=>l[1].length?`<img src="img/p-${l[1][0].id}.webp" alt="">`:'<div class="ph">+</div>';
   const cn=l=>l[0].tip==='adet'?kcount():l[1].length;
   $('strip').innerHTML=L.map(l=>`<button class="it ${l[1].length?'':'miss'}" data-k="${l[0].k}">${th(l)}<div><b>${l[0].ad}</b><span>${l[1].length?(l[0].tip==='tek'?l[2]:cn(l)+' adet'):'Eksik · ekle'}</span></div></button>`).join('');
-  $('side').innerHTML=`<h3>Tezgâhın <span style="color:var(--mut);font-weight:600;font-size:13px">· ${have.length}/${L.length}${miss?` · <span style="color:var(--acc)">${miss} eksik</span>`:''}</span></h3>${L.map(l=>`<div class="row" data-k="${l[0].k}">${th(l)}<div class="t"><small>${l[0].ad}${l[0].tip!=='tek'&&l[1].length?' · '+cn(l)+' adet':''}</small>${l[1].length?`<div class="n">${l[2]}</div>`:'<div class="miss">Eksik · ekle</div>'}</div>${l[1].length?`<div class="p">${usd(l[3])}</div>`:''}</div>`).join('')}<div class="tot"><span>Toplam</span><span>${usd(tot)}</span></div><div class="note">Demo: liste fiyatı (USD). Mağazada TL ve KDV dahil gösterilir.</div>`;
+  $('side').innerHTML=`<h3>Tezgâhın <span style="color:var(--mut);font-weight:600;font-size:13px">· ${have.length}/${L.length}${miss?` · <span style="color:var(--acc)">${miss} eksik</span>`:''}</span></h3>${L.map(l=>`<div class="row" data-k="${l[0].k}">${th(l)}<div class="t"><small>${l[0].ad}${l[0].tip!=='tek'&&l[1].length?' · '+cn(l)+' adet':''}</small>${l[1].length?`<div class="n">${l[2]}</div>`:'<div class="miss">Eksik · ekle</div>'}</div>${l[1].length?`<div class="p">${usd(l[3])}</div>`:''}</div>`).join('')}<div class="tot"><span>Toplam</span><span>${usd(tot)}</span></div><div class="note">Liste fiyatı (USD). Sepette TL ve KDV dahil hesaplanır.</div>`;
   $('grid').innerHTML=L.map((l,i)=>l[1].length?`<div class="card" data-k="${l[0].k}" style="animation-delay:${i*30}ms"><div class="im"><img src="img/p-${l[1][0].id}.webp" alt=""><span class="lab">${l[0].ad}</span>${l[0].tip!=='tek'?`<span class="cnt">${cn(l)} adet</span>`:''}</div><div class="b"><div class="n">${l[2]}</div><div class="f"><span class="p">${usd(l[3])}</span><span class="ch">Değiştir</span></div></div></div>`
      :`<div class="card miss" data-k="${l[0].k}" style="animation-delay:${i*30}ms"><div class="im"><div class="ph">+</div><span class="lab">${l[0].ad}</span></div><div class="b"><div class="n">${l[0].ad} eksik</div><div class="f"><span class="ch">Seç ve ekle</span></div></div></div>`).join('');
   document.querySelectorAll('#strip [data-k],#side [data-k],#grid [data-k]').forEach(b=>b.onclick=()=>openSheet(b.dataset.k));
@@ -256,7 +258,11 @@ function setFull(on){document.body.classList.toggle('full',on);$('iFull').innerH
 $('bFull').onclick=()=>setFull(!FULL());$('bReset').onclick=()=>E&&E.reset();
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&FULL())setFull(false)});
 addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();if(FULL())setFull(false)}});
-$('badd').onclick=()=>{const t=$('toast');t.textContent='Demo: tezgâhtaki ürünler sepete eklenecek';t.classList.add('on');setTimeout(()=>t.classList.remove('on'),1700)};
+$('badd').onclick=()=>{const add={};SLOTS.forEach(s=>{const v=pick[s.k];
+    if(s.tip==='tek'){if(v!==null)add[v]=(add[v]||0)+1}else if(s.tip==='coklu')v.forEach(id=>add[id]=(add[id]||0)+1);else Object.entries(v).forEach(([id,q])=>add[id]=(add[id]||0)+q)});
+  if(!Object.keys(add).length){const t=$('toast');t.textContent='Tezgâhta ürün yok';t.classList.add('on');setTimeout(()=>t.classList.remove('on'),1500);return}
+  try{sessionStorage.setItem('tezgah-ekle',JSON.stringify(add))}catch(e){}
+  location.href='/sepet'};
 render();
 fetch('scene.json').then(r=>r.json()).then(d=>{SCN=d;
   E=Tezgah.init(cv,SCN,{view:matchMedia('(min-width:960px)').matches?{dist:1.8,ty:.97}:{dist:1.55,ty:.98,tx:-.03},onTap,onFrame:mv=>{place();if(mv!==moving){moving=mv;stage.classList.toggle('moving',mv);if(!mv)declutter()}}});
