@@ -114,7 +114,16 @@ const cs = {
   get: (k) => { try { if (guestCart()) return JSON.parse(sessionStorage.getItem(k) || '{}'); } catch { return {}; } return ls.get(k, {}); },
   set: (k, v) => { try { if (guestCart()) return sessionStorage.setItem(k, JSON.stringify(v)); } catch { return; } ls.set(k, v); },
 };
-export function loadCart() { if (guestCart()) ls.del(cartKey()); store.set({ cart: cs.get(cartKey()) }); }
+export function loadCart() {
+  if (guestCart()) ls.del(cartKey());
+  const cart = cs.get(cartKey());
+  // /tezgah sayfası "Hepsini sepete ekle" → ürünleri bu sekmenin sessionStorage'ına bırakır, burada sepete eklenir (13.11.2026)
+  try {
+    const add = JSON.parse(sessionStorage.getItem('tezgah-ekle') || 'null');
+    if (add) { sessionStorage.removeItem('tezgah-ekle'); for (const [id, q] of Object.entries(add)) if (q > 0) cart[id] = Math.min(9999, (cart[id] || 0) + Math.floor(q)); cs.set(cartKey(), cart); }
+  } catch {}
+  store.set({ cart });
+}
 export function setQty(id, qty) {
   const cart = { ...store.s.cart };
   const was = cart[id] || 0;

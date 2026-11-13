@@ -10,6 +10,7 @@ self.addEventListener('fetch', (e) => {
   const u = new URL(e.request.url);
   if (OLD && e.request.mode === 'navigate' && u.origin === location.origin && !u.pathname.startsWith('/__/')) { e.respondWith(Response.redirect('https://ertelmarket.com' + u.pathname + u.search + u.hash, 301)); return; }
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
+  if (u.pathname.startsWith('/tezgah')) return; // /tezgah ayrı sayfa: uygulama kabuğuna (index.html) karışmasın
   const key = e.request.mode === 'navigate' ? '/index.html' : e.request;
   const keep = e.request.mode === 'navigate' || /\.(js|png|webmanifest)$/.test(u.pathname);
   const net = fetch(e.request, { cache: 'no-cache' }).then((r) => {
