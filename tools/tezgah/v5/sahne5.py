@@ -108,8 +108,7 @@ def tweezer_one(tid, w=48, h=204):
 def stencil_svg():
     """Gerçek kalıp: fırçalanmış çelik, nokta ızgaralı çip desenleri, turuncu marka şeridi."""
     el = ['<defs><linearGradient id="stl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef0f3"/><stop offset=".5" stop-color="#cfd4da"/><stop offset="1" stop-color="#e4e7eb"/></linearGradient></defs>',
-          '<rect width="120" height="80" rx="2" fill="url(#stl)"/>', '<rect width="120" height="11" fill="#e8742a"/>',
-          '<text x="5" y="8.4" fill="#fff" font-size="7" font-weight="900">AMAOE</text><text x="115" y="8.4" text-anchor="end" fill="#fff" font-size="6.5" font-weight="800">A13</text>']
+          '<rect width="120" height="80" rx="2" fill="url(#stl)"/>', '<text x="6" y="9" fill="#6d737a" font-size="5.5" font-weight="800">A13</text>']
     def bga(x, y, n, step):
         for i in range(n):
             for j in range(n):
@@ -148,7 +147,6 @@ def build(eksik=(), sel=None, ghosts=True, tutucu_alt=None, twz=(1790, 2978, 0, 
     WALL, SIDE, FLOOR = '#ebe5db', '#e2dbcf', '#b8aa98'
     # --- oda: zemin, arka/yan duvarlar, pencere ---
     o = S.obj(base=True); S.tiles(o, 'y', 0, -2.4, 2.4, -.52, 2.6, FLOOR, [0, 1, 0], step=.4)
-    for k in range(13): S.wline([-2.4, .001, -.52 + k*.24], [2.4, .001, -.52 + k*.24], '#8f8270', 1, .35)
     o = S.obj(base=True); S.tiles(o, 'z', -.52, -2.4, 2.4, 0, 2.7, WALL, [0, 0, 1], step=.4)
     o = S.obj(base=True); o['pt'] = [-2.4, 1.3, 1]
     S.tiles(o, 'x', -2.4, -.52, 2.6, 0, 2.7, SIDE, [1, 0, 0], step=.4)
@@ -301,6 +299,42 @@ def build(eksik=(), sel=None, ghosts=True, tutucu_alt=None, twz=(1790, 2978, 0, 
     S.tag = 'mikro'
     if 'mikro' in eksik:
         if ghosts: S.ghost(-.17, .17, Y0, 1.22, -.18, .1, '+ Mikroskop')
+    elif sel['mikro'] == 30:   # AmScope SM-4NTP: ince geniş taban, krom direk, yatay çift krom kol + karşı ağırlık, kafa odak bloğunda
+        BK, BK2, CH = '#1b1c1f', '#2a2c31', '#c9ced4'
+        bx0, bx1, bz0, bz1 = -.17, .19, -.2, .1
+        S.shadow(bx0, bx1, bz0, bz1, Y0 + .0068, op=.45, h=.02)
+        o = S.obj([0, Y0 + .015, -.05])
+        S.extrude(o, rr(bz0, bz1, Y0 + .006, Y0 + .022, .006), bx0, bx1, BK, spec=.3)
+        S.decal(o, [bx0 + .02, Y0 + .019, bz1 + .0005], [bx0 + .2, Y0 + .019, bz1 + .0005], [bx0 + .02, Y0 + .009, bz1 + .0005], 200, 10,
+                '<text x="4" y="8" fill="#cfd2d6" font-size="8" font-weight="800" letter-spacing="4">AMSCOPE</text>')
+        px, pz, ry = .1, -.13, 1.13
+        S.shadow(px - .02, px + .02, pz - .02, pz + .02, Y0 + .0222, op=.25, h=.45, round_=True)
+        o = S.obj([px, 1.0, pz])
+        S.cyl(o, [px, Y0 + .022, pz], [px, 1.27, pz], .016, CH, cap='#e9ecef', spec=.7)
+        S.box(o, px - .03, px + .03, ry - .035, ry + .03, pz - .03, pz + .03, BK, top=BK2, spec=.3)            # direk bloğu
+        S.cyl(o, [px, ry - .045, pz + .03], [px, ry - .045, pz + .05], .009, BK2)                            # sıkma düğmesi
+        o = S.obj([.0, ry, pz])
+        for dz in (-.013, .013):                                                                               # yatay çift krom kol
+            S.cyl(o, [.27, ry, pz + dz], [-.1, ry, pz + dz], .0075, CH, spec=.8)
+        S.box(o, .23, .29, ry - .03, ry + .03, pz - .035, pz + .035, BK, top=BK2, spec=.3)                   # karşı ağırlık
+        S.box(o, -.11, -.05, ry - .03, ry + .03, pz - .035, pz + .035, BK, top=BK2, spec=.3)                 # kafa ucu bloğu
+        S.cyl(o, [-.08, ry + .03, pz + .01], [-.07, ry + .07, pz + .01], .004, CH, spec=.8)                   # kilit kolu
+        S.cyl(o, [-.08, ry - .03, pz], [-.08, 1.03, pz], .012, CH, spec=.7)                                   # aşağı inen kısa direk
+        hx, hz = -.08, pz + .06
+        o = S.obj([hx, .98, hz])
+        S.box(o, hx - .035, hx + .035, .95, 1.04, pz + .02, pz + .07, BK, top=BK2, spec=.3)                   # odak bloğu
+        for sx in (-1, 1): S.cyl(o, [hx + sx*.035, 1.0, pz + .045], [hx + sx*.06, 1.0, pz + .045], .024, '#202226', cap='#34373c')
+        cx, cz = hx, pz + .12
+        S.extrude(o, rr(cz - .05, cz + .045, .95, 1.06, .02), cx - .06, cx + .06, BK, spec=.3)                 # kafa
+        S.box(o, cx - .045, cx + .045, .955, 1.055, cz + .045, cz + .047, BK, decal=(90, 100,
+              '<rect width="90" height="100" rx="12" fill="#1b1c1f"/><text x="45" y="30" text-anchor="middle" fill="#e8e9eb" font-size="11" font-weight="800" font-style="italic">AmScope</text>'
+              '<text x="45" y="88" text-anchor="middle" fill="#9aa0a6" font-size="7" font-weight="700">SM-4NTP</text>'))
+        S.cyl(o, [cx, .95, cz], [cx, .9, cz], .04, BK, spec=.3)                                                # objektif
+        S.cyl(o, [cx, .9, cz], [cx, .89, cz], .048, '#e9ecef', cap='#fbfcfd', spec=.6)
+        S.cyl(o, [cx + .02, 1.06, cz - .02], [cx + .02, 1.12, cz - .02], .016, '#16171a'); S.cyl(o, [cx + .02, 1.12, cz - .02], [cx + .02, 1.13, cz - .02], .02, '#2a2c31')
+        for sx in (-.03, .03):
+            a_, b_ = [cx + sx, 1.04, cz + .01], [cx + sx*1.3, 1.11, cz + .08]
+            S.cyl(o, a_, b_, .018, BK, spec=.35); S.cyl(o, b_, add(b_, mul(norm(sub(b_, a_)), .02)), .021, '#0c0c0e')
     else:
         yang = sel['mikro'] == 3030
         RED = '#d42c25' if not yang else '#3a3d43'
@@ -557,7 +591,7 @@ def build(eksik=(), sel=None, ghosts=True, tutucu_alt=None, twz=(1790, 2978, 0, 
 
 SLOTS = ['keski', 'tornavida', 'guc', 'sicak', 'duman', 'termal', 'mikro', 'tutucu', 'havya', 'isitici', 'dramel', 'olcu']
 OPTS = {'keski': [2998, 402], 'tornavida': [2702, 3053], 'guc': [1996, 1916], 'dramel': [2464, 2303], 'isitici': [2035, 2455, 1953], 'termal': [2183, 1160], 'sicak': [3066, 2671], 'duman': [2242, 3020],
-        'mikro': [2913, 3030], 'tutucu': [3032, 2767], 'havya': [835, 2745], 'olcu': [3025, 1514]}
+        'mikro': [2913, 3030, 30], 'tutucu': [3032, 2767], 'havya': [835, 2745], 'olcu': [3025, 1514]}
 
 if __name__ == '__main__':
     os.makedirs('out', exist_ok=True)

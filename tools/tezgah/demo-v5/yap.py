@@ -3,7 +3,7 @@ P = {p['id']: p for p in json.load(open('/tmp/prod.json'))}
 KAL = json.load(open('/home/claude/kaliplar.json'))
 Y0 = .75
 SL = [
- ('mikro','Mikroskop','Tezgâhın ortası.','tek',[(2913,'MY-7S'),(3030,'Mr. Yang 85 Ultra')],{}),
+ ('mikro','Mikroskop','Tezgâhın ortası.','tek',[(2913,'MY-7S'),(3030,'Mr. Yang 85 Ultra'),(30,'AmScope SM-4NTP')],{}),
  ('havya','Havya','Sağ elde, ince lehim işleri için.','tek',[(835,'JBC CD-2'),(2745,'Aixun T420D')],{}),
  ('sicak','Sıcak hava','Sol elde, entegre sökme-takma için.','tek',[(3066,'Quick 861 Pro Max'),(2671,'SUGON 8650 PRO')],{}),
  ('guc','Güç kaynağı','Rafta durur, anakarta güç verir.','tek',[(1996,'SUGON 3005PM'),(1916,'Aixun P3208')],{}),
@@ -24,7 +24,7 @@ TP = {
  'guc': {1996: (-.755, 1.245, -.235), 1916: (-.77, 1.2, -.245)}, 'kalip': ('b', (.5, Y0, .28)),
  'cimbiz': ('b', (-.32, 1.265, -.48)), 'tornavida': ('b', (.41, 1.27, -.49)), 'keski': (.64, 1.465, -.49),
  'sicak': (-.58, Y0 + .175, -.06), 'duman': (-.3, Y0 + .17, -.1), 'termal': (.645, Y0 + .255, -.13),
- 'mikro': (0, 1.18, -.06), 'tutucu': ('b', (-.12, Y0, .275)), 'havya': {835: (.37, Y0 + .135, -.04), 2745: (.42, Y0 + .14, -.04)},
+ 'mikro': {2913: (0, 1.18, -.06), 3030: (0, 1.18, -.06), 30: (-.08, 1.16, .0)}, 'tutucu': ('b', (-.12, Y0, .275)), 'havya': {835: (.37, Y0 + .135, -.04), 2745: (.42, Y0 + .14, -.04)},
  'isitici': ('b', (-.54, Y0, .21)), 'sivi': ('b', (-.3, Y0, .2)), 'flux': ('b', (.64, Y0, .3)), 'dramel': ('b', (.41, Y0, .18)), 'olcu': ('b', (.21, Y0, .255)),
 }
 TAGS = {}

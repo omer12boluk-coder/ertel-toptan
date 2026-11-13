@@ -33,17 +33,12 @@ class Scene:
         if ex: f.append(ex)
         o['f'].append(f); return True
     def tiles(s, o, axis, fixed, a0, a1, b0, b1, col, n, step=.25, tmat=None):
-        A = a0
-        while A < a1 - 1e-9:
-            A2 = min(A + step, a1); B = b0
-            while B < b1 - 1e-9:
-                B2 = min(B + step, b1)
-                if axis == 'z': pts = [[A, B, fixed], [A2, B, fixed], [A2, B2, fixed], [A, B2, fixed]]
-                elif axis == 'x': pts = [[fixed, B, A], [fixed, B, A2], [fixed, B2, A2], [fixed, B2, A]]
-                else: pts = [[A, fixed, B], [A2, fixed, B], [A2, fixed, B2], [A, fixed, B2]]
-                s.poly(o, pts, col, n, grad=False)
-                B = B2
-            A = A2
+        """Büyük düz yüzey: tek çokgen (tarayıcı yakın düzlemde kırpar, karo çizgisi olmaz)."""
+        A, A2, B, B2 = a0, a1, b0, b1
+        if axis == 'z': pts = [[A, B, fixed], [A2, B, fixed], [A2, B2, fixed], [A, B2, fixed]]
+        elif axis == 'x': pts = [[fixed, B, A], [fixed, B, A2], [fixed, B2, A2], [fixed, B2, A]]
+        else: pts = [[A, fixed, B], [A2, fixed, B], [A2, fixed, B2], [A, fixed, B2]]
+        s.poly(o, pts, col, n, grad=False)
         if o['pt'] is None: o['pt'] = s.T([(a0+a1)/2, fixed, (b0+b1)/2])
     def extrude(s, o, prof, x0, x1, col, cap=None, decals=None, spec=0):
         cz = sum(p[0] for p in prof)/len(prof); cy = sum(p[1] for p in prof)/len(prof); cen = [(x0+x1)/2, cy, cz]

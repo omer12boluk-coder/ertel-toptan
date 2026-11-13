@@ -49,6 +49,15 @@ T.init = function (canvas, scene, opts) {
     const cx = x * R[0] + y * R[1] + z * R[2], cy = x * U[0] + y * U[1] + z * U[2], cz = x * Fw[0] + y * Fw[1] + z * Fw[2];
     return [W / 2 + F * cx / cz, H / 2 - F * cy / cz, cz];
   }
+  const NEAR = .05;
+  function prPoly(pts, dy) {   // kamera uzayında yakın düzleme göre kırp, sonra izdüşür
+    const cs = pts.map(p => { const x = p[0] - P[0], y = p[1] + (dy || 0) - P[1], z = p[2] - P[2]; return [x * R[0] + y * R[1] + z * R[2], x * U[0] + y * U[1] + z * U[2], x * Fw[0] + y * Fw[1] + z * Fw[2]] });
+    let behind = 0; for (const c of cs) if (c[2] < NEAR) behind++;
+    if (behind === cs.length) return null;
+    let poly = cs;
+    if (behind) { poly = []; for (let i = 0; i < cs.length; i++) { const a = cs[i], b = cs[(i + 1) % cs.length], ai = a[2] >= NEAR, bi = b[2] >= NEAR; if (ai) poly.push(a); if (ai !== bi) { const t = (NEAR - a[2]) / (b[2] - a[2]); poly.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, NEAR]) } } if (poly.length < 2) return null }
+    return poly.map(c => [W / 2 + F * c[0] / c[2], H / 2 - F * c[1] / c[2], c[2]]);
+  }
   T.project = p => { const q = pr(p); return [q[0] / DPR, q[1] / DPR, q[2]] };
   function resize() {
     const r = canvas.getBoundingClientRect(); DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -88,8 +97,7 @@ T.init = function (canvas, scene, opts) {
       const pts = f[0], n = f[2];
       let cx = 0, cy = 0, cz = 0; for (const p of pts) { cx += p[0]; cy += p[1]; cz += p[2] } cx /= pts.length; cy = cy / pts.length + dy; cz /= pts.length;
       if (n[0] * (P[0] - cx) + n[1] * (P[1] - cy) + n[2] * (P[2] - cz) <= 0) continue;
-      const q = pts.map(p => pr(p, dy)); let mz = 1e9; for (const p of q) if (p[2] < mz) mz = p[2];
-      if (mz < .05) continue;
+      const q = prPoly(pts, dy); if (!q || q.length < 3) continue;
       list.push({ k: 0, z: pr([cx, cy - dy, cz], dy)[2], q, f, alpha, id });
     }
     for (const c of o.c) { const q = c[0].map(p => pr(p, dy)); if (q.some(p => p[2] < .05)) continue; list.push({ k: 1, z: q[q.length >> 1][2] - .05, q, c, alpha, id }) }
@@ -97,7 +105,7 @@ T.init = function (canvas, scene, opts) {
   function paintFace(c, it) {
     const f = it.f, base = shade(f[1], f[2], f[3] && f[3].s), q = it.q;
     drawPoly(c, q);
-    const grad = !fast && !(f[3] && f[3].g === 0) && q.length >= 4;
+    const grad = !(f[3] && f[3].g === 0) && q.length >= 4;
     if (grad) {
       let y0 = 1e9, y1 = -1e9; for (const p of q) { if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1] }
       const g = c.createLinearGradient(0, y0, 0, y1 + .01), top = f[2][1] > .7;
@@ -125,20 +133,20 @@ T.init = function (canvas, scene, opts) {
   }
   function paintBg(item) {   // düz çizimler
     const t = item[1];
-    if (t === 'l') { const a = pr(item[2]), b = pr(item[3]); if (a[2] < .05 || b[2] < .05) return; ctx.globalAlpha = item[6]; ctx.strokeStyle = item[4]; ctx.lineWidth = item[5] * DPR * F / 1400 * 2 / Math.max(.4, (a[2] + b[2]) / 2) ; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke() }
+    if (t === 'l') { const ln = prPoly([item[2], item[3]]); if (!ln || ln.length < 2) return; const a = ln[0], b = ln[1]; ctx.globalAlpha = item[6]; ctx.strokeStyle = item[4]; ctx.lineWidth = item[5] * DPR * F / 1400 * 2 / Math.max(.4, (a[2] + b[2]) / 2) ; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke() }
     else if (t === 'd') { const a = pr(item[2]); if (a[2] < .05) return; ctx.globalAlpha = item[5]; ctx.fillStyle = item[4]; ctx.beginPath(); ctx.arc(a[0], a[1], Math.max(.5, item[3] * F / a[2]), 0, 7); ctx.fill() }
-    else { const q = item[2].map(p => pr(p)); if (q.some(p => p[2] < .05)) return; ctx.globalAlpha = item[6]; drawPoly(ctx, q); ctx.fillStyle = item[3]; ctx.fill(); if (item[4]) { ctx.strokeStyle = item[4]; ctx.lineWidth = item[5] * DPR; ctx.stroke() } }
+    else { const q = prPoly(item[2]); if (!q || q.length < 3) return; ctx.globalAlpha = item[6]; drawPoly(ctx, q); ctx.fillStyle = item[3]; ctx.fill(); if (item[4]) { ctx.strokeStyle = item[4]; ctx.lineWidth = item[5] * DPR; ctx.stroke() } }
     ctx.globalAlpha = 1;
   }
   let need = true, raf = 0, interacting = false, fast = false;
   T.dirty = () => { need = true; if (!raf) raf = requestAnimationFrame(frame) };
   function frame(now) {
     raf = 0; if (!need) return; need = false;
-    fast = interacting; setupCam(); render(now);
+    const following = follow(); setupCam(); render(now);
     let animating = false; active.forEach(v => { const s = animState(v, now); if (!s[3] && (v.out || now - v.t0 < 600)) animating = true; if (v.out && s[3]) active.delete(v.key) });
     active.forEach((v, k) => { if (v.out && now - v.out > 230) active.delete(k) });
-    if (animating) T.dirty();
-    opts.onFrame && opts.onFrame(interacting || animating);
+    if (animating || following) T.dirty();
+    opts.onFrame && opts.onFrame(interacting || following);
   }
   function render(now) {
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#d9d2c6'; ctx.fillRect(0, 0, W, H);
@@ -159,14 +167,14 @@ T.init = function (canvas, scene, opts) {
     for (const [s, a] of shadowSet) {
       if (a <= 0) continue;
       const lvl = s[2] <= 3 ? 0 : s[2] <= 9 ? 1 : 2, k = [2, 4, 8][lvl], x = sc[lvl];
-      const q = s[0].map(p => pr(p)); if (q.some(p => p[2] < .05)) continue;
+      const q = prPoly(s[0]); if (!q || q.length < 3) continue;
       x.globalAlpha = Math.min(1, s[1] * a); x.fillStyle = '#100c08'; x.beginPath(); x.moveTo(q[0][0] / k, q[0][1] / k); for (let i = 1; i < q.length; i++) x.lineTo(q[i][0] / k, q[i][1] / k); x.closePath(); x.fill();
     }
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     sh.forEach(c => ctx.drawImage(c, 0, 0, W, H));
     // 3) boş yuva izleri
     for (const g of ghosts) {
-      const q = g[0].map(p => pr(p)); if (q.some(p => p[2] < .05)) continue;
+      const q = prPoly(g[0]); if (!q || q.length < 3) continue;
       drawPoly(ctx, q); ctx.fillStyle = 'rgba(47,98,214,.12)'; ctx.fill();
       ctx.setLineDash([9 * DPR, 7 * DPR]); ctx.lineWidth = 2.2 * DPR; ctx.strokeStyle = g[1] ? '#2f62d6' : 'rgba(255,255,255,.95)'; ctx.stroke(); ctx.setLineDash([]);
     }
@@ -188,7 +196,7 @@ T.init = function (canvas, scene, opts) {
     pctx.fillStyle = '#000'; pctx.fillRect(0, 0, W, H);
     const ids = [];
     const col = i => `rgb(${(i + 1) & 255},${((i + 1) >> 8) & 255},7)`;
-    regions.forEach(r => { ids.push(r.id); const q = r.pts.map(p => pr(p)); if (q.some(p => p[2] < .05)) return; drawPoly(pctx, q); pctx.fillStyle = col(ids.length - 1); pctx.fill(); pctx.lineWidth = 14; pctx.strokeStyle = col(ids.length - 1); pctx.stroke() });
+    regions.forEach(r => { ids.push(r.id); const q = prPoly(r.pts); if (!q || q.length < 3) return; drawPoly(pctx, q); pctx.fillStyle = col(ids.length - 1); pctx.fill(); pctx.lineWidth = 14; pctx.strokeStyle = col(ids.length - 1); pctx.stroke() });
     const objs = [];
     active.forEach((v, key) => { if (v.out) return; v.d.o.forEach(o => objs.push([o, key, pr(o.pt)[2]])) });
     objs.sort((a, b) => b[2] - a[2]);
@@ -209,55 +217,71 @@ T.init = function (canvas, scene, opts) {
     return best;
   };
   // kamera kontrolleri
-  T.cam = cam;
-  T.reset = function (dur = 450) {
-    const s = Object.assign({}, cam), t0 = performance.now();
-    (function step() { const t = Math.min(1, (performance.now() - t0) / dur), e = 1 - (1 - t) ** 3; for (const k in DEF) cam[k] = s[k] + (DEF[k] - s[k]) * e; T.dirty(); if (t < 1) requestAnimationFrame(step) })();
-  };
-  T.setDefault = v => { Object.assign(DEF, v); };
   const clamp = () => {
     cam.yaw = Math.max(-1.15, Math.min(1.15, cam.yaw)); cam.pitch = Math.max(.08, Math.min(1.0, cam.pitch));
     cam.dist = Math.max(.55, Math.min(3.4, cam.dist));
     cam.tx = Math.max(-1.0, Math.min(1.0, cam.tx)); cam.ty = Math.max(.75, Math.min(1.45, cam.ty)); cam.tz = Math.max(-.45, Math.min(.35, cam.tz));
   };
-  const pts = new Map(); let start = null, lastTap = 0, moved = false;
+  // Modern yörünge kontrolü (model-viewer / Sketchfab gibi): parmak "hedefi" değiştirir, kamera yumuşakça takip eder,
+  // bırakınca savrulma ile yavaşlayarak durur; yakınlaştırma parmağın/imlecin olduğu yere doğru olur.
+  const goal = Object.assign({}, cam); let vel = { yaw: 0, pitch: 0 };
+  const lim = g => { g.yaw = Math.max(-1.2, Math.min(1.2, g.yaw)); g.pitch = Math.max(.06, Math.min(1.05, g.pitch)); g.dist = Math.max(.5, Math.min(3.4, g.dist));
+    g.tx = Math.max(-1.1, Math.min(1.1, g.tx)); g.ty = Math.max(.75, Math.min(1.5, g.ty)); g.tz = Math.max(-.45, Math.min(.4, g.tz)) };
+  function follow() {   // her karede: kamera hedefe yaklaşır; savrulma sürer
+    let busy = false;
+    if (!dragging && (Math.abs(vel.yaw) > 1e-4 || Math.abs(vel.pitch) > 1e-4)) { goal.yaw += vel.yaw; goal.pitch += vel.pitch; vel.yaw *= .92; vel.pitch *= .92; lim(goal); busy = true }
+    for (const k of ['yaw', 'pitch', 'dist', 'tx', 'ty', 'tz']) { const d = goal[k] - cam[k]; if (Math.abs(d) > 1e-5) { cam[k] += d * .22; busy = true } else cam[k] = goal[k] }
+    return busy;
+  }
+  T._follow = follow;
+  T.reset = function () { Object.assign(goal, DEF); vel = { yaw: 0, pitch: 0 }; T.dirty() };
+  T.setDefault = v => { Object.assign(DEF, v) };
+  T.cam = goal;
+  function panBy(dx, dy) { const k = goal.dist / (F / DPR) * 1.0; goal.tx -= (R[0] * dx - U[0] * dy) * k; goal.ty -= (R[1] * dx - U[1] * dy) * k * .6; goal.tz -= (R[2] * dx - U[2] * dy) * k }
+  function zoomAt(f, sx, sy) {   // f<1 yaklaş; (sx,sy) ekran noktasına doğru
+    const r = canvas.getBoundingClientRect(), ox = sx - r.width / 2, oy = sy - r.height / 2, d0 = goal.dist;
+    goal.dist *= f; lim(goal); const g = 1 - goal.dist / d0; panBy(-ox * g, -oy * g); lim(goal); T.dirty();
+  }
+  const pts = new Map(); let start = null, lastTap = 0, moved = false, dragging = false, pinch0 = null, lastMove = [0, 0, 0];
   canvas.addEventListener('pointerdown', e => {
     canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pts.size === 1) { start = { x: e.clientX, y: e.clientY, t: performance.now(), pan: e.button === 2 || e.shiftKey }; moved = false }
-    interacting = true;
+    if (pts.size === 1) { start = { x: e.clientX, y: e.clientY, t: performance.now(), pan: e.button === 2 || e.button === 1 || e.shiftKey }; moved = false; vel = { yaw: 0, pitch: 0 } }
+    dragging = true; interacting = true;
   });
-  let pinch0 = null;
   canvas.addEventListener('pointermove', e => {
     if (!pts.has(e.pointerId)) return;
     const prev = pts.get(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pts.size === 1) {
       const dx = e.clientX - prev[0], dy = e.clientY - prev[1];
-      if (Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) > 6) moved = true;
+      if (!moved && Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) > 7) moved = true;
       if (!moved) return;
-      if (start.pan) panBy(dx, dy); else { cam.yaw -= dx * .006; cam.pitch += dy * .005 }
-      clamp(); T.dirty();
+      if (start.pan) panBy(dx, dy); else { const sens = 3.2 / Math.max(300, canvas.clientWidth); goal.yaw -= dx * sens; goal.pitch += dy * sens * .8; vel = { yaw: -dx * sens, pitch: dy * sens * .8 } }
+      lastMove = [performance.now()]; lim(goal); T.dirty();
     } else if (pts.size === 2) {
       const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-      if (pinch0) { cam.dist *= pinch0.d / d; panBy(m[0] - pinch0.m[0], m[1] - pinch0.m[1]); clamp(); T.dirty() }
-      pinch0 = { d, m }; moved = true;
+      const r = canvas.getBoundingClientRect();
+      if (pinch0) { zoomAt(pinch0.d / d, m[0] - r.left, m[1] - r.top); panBy(m[0] - pinch0.m[0], m[1] - pinch0.m[1]); lim(goal) }
+      pinch0 = { d, m }; moved = true; vel = { yaw: 0, pitch: 0 };
     }
   });
-  function panBy(dx, dy) { const k = cam.dist / (F / DPR); cam.tx -= (R[0] * dx - U[0] * dy) * k; cam.ty -= (R[1] * dx - U[1] * dy) * k * .6; cam.tz -= (R[2] * dx - U[2] * dy) * k }
   const up = e => {
     if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId); if (pts.size < 2) pinch0 = null;
     if (pts.size === 0) {
-      interacting = false; T.dirty();
+      dragging = false; interacting = false;
+      if (performance.now() - (lastMove[0] || 0) > 80) vel = { yaw: 0, pitch: 0 };   // durup bıraktıysa savrulma yok
+      T.dirty();
       const now = performance.now();
       if (!moved && start && now - start.t < 450) {
         const r = canvas.getBoundingClientRect();
         if (now - lastTap < 300) { T.reset(); lastTap = 0; return }
-        lastTap = now; opts.onTap && opts.onTap(e.clientX - r.left, e.clientY - r.top);
+        lastTap = now; const x = e.clientX - r.left, y = e.clientY - r.top;
+        setTimeout(() => { if (lastTap === now) opts.onTap && opts.onTap(x, y) }, 260);
       }
     }
   };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   canvas.addEventListener('contextmenu', e => e.preventDefault());
-  canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist *= Math.exp(e.deltaY * .0012); clamp(); interacting = true; T.dirty(); clearTimeout(T._w); T._w = setTimeout(() => { interacting = false; T.dirty() }, 200) }, { passive: false });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); const r = canvas.getBoundingClientRect(); zoomAt(Math.exp(e.deltaY * .0013), e.clientX - r.left, e.clientY - r.top) }, { passive: false });
   T.resize = resize;
   new ResizeObserver(resize).observe(canvas);
   resize(); setupCam();
