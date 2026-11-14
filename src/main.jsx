@@ -692,7 +692,7 @@ function ShellFull() {
   useEffect(() => { if (hcSt !== 'clear') return; const c = document.documentElement.classList; const f = () => c.toggle('hc-scr', scrollY > 4); f(); addEventListener('scroll', f, { passive: true }); return () => { removeEventListener('scroll', f); c.remove('hc-scr'); }; }, [hcSt]);
   const navTab = tab === 'sepetler' || tab === 'gecmis' ? 'siparisler' : tab === 'sepetlink' || tab === 'odemelink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' || tab === 'gelen' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
-  const v3 = useNavV3(); // 14.11.2026 v3 açılırlar: Kalıp bulucu ▾ ve Setler ▾ da açılır (look.navMenu '')
+  const v3 = useNavV3(); // 14.11.2026 v3 açılırlar: Kalıp bulucu ▾ ve Setler ▾ da açılır (look.navDrop '')
   const hcNav = hc ? [
     ...nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l]) => {
       const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><span className="topnav-l">{l}</span>{(k === 'katalog' || (v3 && k === 'kalip')) && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;

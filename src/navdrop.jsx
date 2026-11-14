@@ -180,14 +180,14 @@ export function ProductsDrop({ children }) {
   const vis = useVisibleProducts(false);
   const S = useStore((s) => s.settings);
   const hasSets = useStore((s) => liveSets(s.settings).length > 0);
-  const mode = useStore((s) => s.settings.look?.navMenu || '');
-  const wide = mode !== 'old';
+  const v3 = useNavV3();
+  const wide = useStore((s) => (s.settings.look?.navMenu || 'wide') !== 'old');
   const [cats, cnt] = useMemo(() => {
     const cnt = new Map();
     for (const p of vis) for (const c of new Set([p.c, p.c2].filter((x) => x != null).flatMap((x) => tree.ancestors(x)))) cnt.set(c, (cnt.get(c) || 0) + 1);
     return [tree.roots.filter((n) => !n.hidden && cnt.get(n.id)).map((n) => ({ n, subs: n.children.filter((x) => !x.hidden && cnt.get(x.id)) })), cnt];
   }, [vis, tree]);
-  if (!mode) return <HoverDrop cls="hd-v3 hd-wide" panel={(c) => <V3Products cats={cats} cnt={cnt} vis={vis} S={S} close={c} />}>{children}</HoverDrop>;
+  if (v3) return <HoverDrop cls="hd-v3 hd-wide" panel={(c) => <V3Products cats={cats} cnt={cnt} vis={vis} S={S} close={c} />}>{children}</HoverDrop>;
   if (wide) return <HoverDrop cls="hd-wide" panel={(c) => <WideProducts cats={cats} cnt={cnt} vis={vis} S={S} hasSets={hasSets} close={c} />}>{children}</HoverDrop>;
   return <HoverDrop cls="hd-mega" panel={(c) => (
     <div className="hd-mega-in">
@@ -204,9 +204,9 @@ export function ProductsDrop({ children }) {
 // 5.11.2026 üst menü 'Markalar ▾': ürünü olan markalar (çoktan aza), logo varsa logo; tıklayınca o markanın ürünleri
 export function BrandsDrop({ children }) {
   const all = useBrandList();
-  const mode = useStore((s) => s.settings.look?.navMenu || '');
-  const wide = mode !== 'old';
-  if (!mode) return <HoverDrop cls="hd-v3 hd-wide" panel={(c) => <V3Brands all={all} close={c} />}>{children}</HoverDrop>;
+  const v3 = useNavV3();
+  const wide = useStore((s) => (s.settings.look?.navMenu || 'wide') !== 'old');
+  if (v3) return <HoverDrop cls="hd-v3 hd-wide" panel={(c) => <V3Brands all={all} close={c} />}>{children}</HoverDrop>;
   if (wide) return <HoverDrop cls="hd-wide" panel={(c) => <WideBrands all={all} close={c} />}>{children}</HoverDrop>;
   const list = all.filter((b) => b.logo).slice(0, 15);
   const rest = all.filter((b) => !list.includes(b)).slice(0, 8);
@@ -402,11 +402,11 @@ function WideBrands({ all, close }) {
   </div>;
 }
 
-// ==== 14.11.2026 v3 açılır menüler (look.navMenu '' = bu; 'wide' = 7.11 geniş menüler; 'old' = en eski küçük menüler) ====
+// ==== 14.11.2026 v3 açılır menüler (look.navDrop '' = bu; 'prev' = önceki: look.navMenu '' geniş / 'old' eski küçük menüler) ====
 // Sunum: https://claude.ai/artifact/YU8zBrBdaXKFhYMuJJfmAT — üst menünün kendisi DEĞİŞMEDİ, sadece açılırlar.
 // Ürünler: Bento kutularıyla aynı kesim resimler (renk yok, altta gri gölge) + en kalabalık 3 alt kategori; Markalar: logo duvarı +
 // arama + A–Z; Kalıp bulucu ve Setler için küçük paneller. Menüden menüye geçişte panel kayar (HoverDrop swapFrom). Zıplama YOK.
-export const useNavV3 = () => useStore((s) => !s.settings.look?.navMenu);
+export const useNavV3 = () => useStore((s) => !s.settings.look?.navDrop); // look.navDrop '' = v3 | 'prev' = önceki (look.navMenu: '' geniş / 'old' eski)
 const V3Img = ({ v }) => (v ? <ShopImg v={v} className="v3-im" alt="" /> : <span className="v3-im v3-im0"><Icon n="grid" s={26} /></span>);
 function V3Products({ cats, cnt, vis, S, close }) {
   const favN = useStore((s) => s.favs.length);
