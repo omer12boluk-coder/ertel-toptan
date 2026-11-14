@@ -86,15 +86,18 @@ function WordRoll() {
   }, [list]);
   return <span ref={ref} className="eh-word" />; // içerik SADECE buradan yazılır (React de yazınca kelime atlanıyor / kayboluyordu)
 }
-function Count({ n }) {
+function Count({ n, delay = 0 }) {
   const [v, setV] = useState(0);
-  useEffect(() => { if (!n) return undefined; let raf = 0; const t0 = performance.now(); const f = (t) => { const k = Math.min(1, (t - t0) / 1100); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(f); }; raf = requestAnimationFrame(f); return () => cancelAnimationFrame(raf); }, [n]);
+  // satırın kendi belirişi (.eh-a4) 1,7 sn gecikmeli → sayma o ana denk gelsin (önce bitiyordu, sayı hazır görünüyordu)
+  useEffect(() => { if (!n) return undefined; let raf = 0; const t0 = performance.now() + delay; const f = (t) => { const k = Math.max(0, Math.min(1, (t - t0) / 1300)); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(f); }; raf = requestAnimationFrame(f); return () => cancelAnimationFrame(raf); }, [n]);
   return <b className="num">{v.toLocaleString('tr-TR')}</b>;
 }
+let gateT0 = 0; // giriş sayfasının açıldığı an (HeroGate ilk çizimde yazar)
 function GateNums() {
   const n = useVisibleProducts(false).length; const b = useBrandList().length;
+  const [d] = useState(() => Math.max(0, 1850 - (performance.now() - gateT0))); // satır belirdiği anda başla (veri geç gelirse hemen)
   if (!n) return null;
-  return <p className="eh-nums"><span><Count n={n} /> ürün</span><span><Count n={b} /> marka</span><span><b>aynı gün</b> kargo</span></p>;
+  return <p className="eh-nums"><span><Count n={n} delay={d} /> ürün</span><span><Count n={b} delay={d + 120} /> marka</span><span><b>aynı gün</b> kargo</span></p>;
 }
 
 const SRC = '/bn/hero-logo-wide.webp', MOBILE_SRC = '/bn/hero-logo-mark.webp';
@@ -126,6 +129,7 @@ export function HeroGate({ onOpen, onDone }) {
   const coarse = typeof matchMedia === 'function' && matchMedia('(hover: none), (pointer: coarse)').matches;
   const look = useStore((s) => s.settings?.look); const logoSrc = useStore((s) => s.settings?.brand?.logo) || LOGO_MARK;
   const fx = gateFx(look);
+  useState(() => { gateT0 = performance.now(); });
 
   // ayar kapalı gelirse hemen kapan (ve bir sonraki açılış için hatırla)
   useEffect(() => { if (boot === 'ready' || boot === 'login') { try { localStorage.setItem('hero-gate', on ? '1' : '0'); } catch {} if (!on) { onOpen(); onDone(); } } }, [on, boot]);

@@ -10379,9 +10379,9 @@ html.pf-film .flm-box { visibility: hidden !important; }
 .eh-accent.roll { white-space: nowrap; }
 /* sayılar: tek satır, yazıyla aynı hiza ve boy; düğmeyle arasında boşluk (14.11 akşam: hizasız + düğmeye değiyordu) */
 .eh-numw { margin: -12px 0 22px; }
-.eh-nums { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font: 400 14px/1.4 var(--eh-font); color: var(--eh-sub); letter-spacing: -.01em; }
+.eh-nums { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; margin: 0; font: 500 14.5px/1.4 var(--eh-font); color: color-mix(in oklab, var(--eh-fg) 62%, var(--eh-sub)); letter-spacing: -.01em; }
 .eh-nums span { white-space: nowrap; }
-.eh-nums b { font-weight: 650; color: var(--eh-fg); font-variant-numeric: tabular-nums; }
+.eh-nums b { font-size: 17px; font-weight: 700; color: var(--eh-fg); font-variant-numeric: tabular-nums; letter-spacing: -.015em; margin-right: 1px; }
 @media (max-width: 639px) { .eh-numw { margin: -8px 0 18px; } }
 .eh-btn.eh-shine { position: relative; overflow: hidden; }
 .eh-btn.eh-shine::after { content: ""; position: absolute; top: 0; bottom: 0; width: 60px; left: -80px; background: linear-gradient(100deg, transparent, rgb(255 255 255 / .45), transparent); animation: ehShine 3.6s ease-in-out infinite 1.5s; pointer-events: none; }
