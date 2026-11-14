@@ -667,7 +667,7 @@ function ShellFull() {
   const phoneUI = usePhoneMQ();
   const LK = lookFor(S0.look, phoneUI);
   const hc = pub && LK.header === 'center';
-  const hs = pub && (LK.header || 'search') === 'search';
+  const hs = pub && ['search', 'search2'].includes(LK.header || 'search'); // 15.11.2026 'search2' = Arama + cam 2 (aynı menü, buz mavisi gerçek cam)
   // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
   const lgOn = pub && LK.glass !== false;
   useEffect(() => { const c = document.documentElement.classList; c.toggle('hdr-gs-on', hs); c.toggle('hdr-c-on', hc); c.toggle('lg-on', lgOn); return () => c.remove('hdr-gs-on', 'hdr-c-on', 'lg-on'); }, [hs, hc, lgOn]);
@@ -680,7 +680,16 @@ function ShellFull() {
     f(); const ro = new ResizeObserver(f); ro.observe(a); ro.observe(b); return () => ro.disconnect();
   }, [hs]);
   const hasSets = pub && Array.isArray(S0.sets) && S0.sets.some((x) => x.on && (x.items || []).length); // 5.11.2026 'Cam + arama' (B+C karışımı): yüzen cam, ortada hep açık arama kutusu, altta kategori kısayolları
-  useHideTop(pub && LK.hideTop !== false, LK.hideTop === 'up', tab, urunLayer);
+  // 15.11.2026 'Arama + cam 2' (look.header 'search2'): Cam + arama ile aynı menü, buz mavisi gerçek cam (html gs-ice).
+  // look.hdrScroll 'island' = Ada (bilgisayarda kaydırınca daralır; isteğe bağlı, varsayılan kapalı)
+  const gsIce = hs && LK.header === 'search2';
+  const gsIsl = hs && !phoneUI && LK.hdrScroll === 'island';
+  useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-ice', gsIce); c.toggle('gs-isl', gsIsl); return () => c.remove('gs-ice', 'gs-isl'); }, [gsIce, gsIsl]);
+  // 15.11.2026 menü logosunun arkasındaki beyaz yuvarlak + gri halka kalktı (her renkte menüye uyar); look.logoBg 'disc' = eski
+  const lgDisc = LK.logoBg === 'disc';
+  useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
+  useIsland(gsIsl, tab);
+  useHideTop(pub && LK.hideTop !== false && !gsIsl, LK.hideTop === 'up', tab, urunLayer);
   // 14.11.2026 ortada logo menüsünün görünümü (look.hcStyle): '' bugünkü | 'glass2' cam iki satır | 'glass1' cam tek satır (menü logonun iki yanında) | 'clear' üstte şeffaf, kayınca cam.
   // Banner her durumda menünün BİTTİĞİ yerden başlar (menü bannerın üstüne binmez).
   const hcSt = hc ? (LK.hcStyle || '') : '';
@@ -1053,6 +1062,29 @@ function usePhoneMQ() {
   const [v, setV] = useState(() => matchMedia(PHONE_MQ).matches);
   useEffect(() => { const m = matchMedia(PHONE_MQ); const f = () => setV(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f); }, []);
   return v;
+}
+// 15.11.2026 'Ada' üst menü: aşağı kaydırınca html.isl → cam daralır, menü satırı kaybolur (CSS). Titreme olmasın diye
+// 90px'te daralır, 40px'in altında ya da 70px+ yukarı kaydırınca açılır. Sayfa yüksekliği değişmez (topbar dış kutusu sabit).
+function useIsland(on, tab) {
+  useEffect(() => {
+    const r = document.documentElement; r.classList.remove('isl');
+    if (!on) return;
+    let last = 0, up = 0, raf = 0;
+    const r0 = requestAnimationFrame(() => { last = scrollY; });
+    const busy = () => document.querySelector('.hd-p, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
+    const f = () => {
+      raf = 0; const y = scrollY; const d = y - last; last = y;
+      const isl = r.classList.contains('isl');
+      if (y < 40) { up = 0; if (isl) r.classList.remove('isl'); return; }
+      if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
+      if (d < 0) up += d; else if (d > 0) up = 0;
+      if (!isl && y > 90 && d > 0) r.classList.add('isl');
+      else if (isl && up < -70) { r.classList.remove('isl'); up = 0; }
+    };
+    const q = () => { if (!raf) raf = requestAnimationFrame(f); };
+    addEventListener('scroll', q, { passive: true });
+    return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); cancelAnimationFrame(r0); r.classList.remove('isl'); };
+  }, [on, tab]);
 }
 function useHideTop(on, upShow, tab, layer) {
   useEffect(() => {
