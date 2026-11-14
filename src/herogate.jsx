@@ -203,32 +203,33 @@ export function HeroGate({ onOpen, onDone }) {
   // Çıkış: önce logo dağılıp söner (düz zemin kalır) → mağaza düz zeminin ARKASINDA çizilir (takılma görünmez) → zemin solar.
   // Eskiden mağaza animasyonun ortasında çiziliyordu, dağılma efekti 1 sn takılıyordu.
   const goneRef = useRef(false);
-  // 14.11.2026 (kullanıcı: 'kumlar tekrar birleşip menüdeki logoya oturmuyor, tek parça uçuyor'): GL açıksa logo dağılmaz;
-  // yazılar söner, mağaza arkada çizilir, sonra kum taneleri büyük logonun yerinden akıp menüdeki logonun yerinde 'e' olarak
-  // yeniden birleşir (liquid.js gather). Zemin bu sırada solar (kanvas kalır). Biter bitmez gerçek menü logosu yerini alır.
+  // 14.11.2026 (2) Açılış geçişi: kum büyük logodan menüye AKMAZ (kullanıcı: 'abartı ve sahte'). Büyük logo eskisi gibi yerinde
+  // dağılıp söner; mağaza arkada çizilir; zemin solarken menüdeki 'e' kendi yerinde, hemen çevresinden toplanan ince kumla
+  // belirir (liquid.js gather local=40 px, 0,75 sn) → gerçek menü logosu yerini alır. Bağ zamanlamayla kurulur, yol yok.
   // GL yoksa / hedef bulunamazsa eski yol (dağılma + tek parça uçuş).
   const markRef = useRef(null);
   useEffect(() => { const im = new Image(); im.decoding = 'async'; im.src = MOBILE_SRC; markRef.current = im; }, []);
   const [gather, setGather] = useState(false);
   const goGather = () => {
     const eng = engRef.current, root = rootRef.current;
-    setGather(true); setLeaving(true);
+    eng.explode(); setLeaving(true);
     setTimeout(() => {
       eng.stop(); onOpen();
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
         const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
         const t = tg?.getBoundingClientRect(), b = root.getBoundingClientRect();
-        const ok = t && t.top < innerHeight && eng.gather(markRef.current, { x: t.left - b.left, y: t.top - b.top, w: t.width, h: t.height }, 1500);
-        if (!ok) { if (fx.scn) sceneIn(false); root.classList.add('eh-gone'); setReveal(true); setTimeout(onDone, 420); return; }
+        const ok = t && t.top < innerHeight && eng.gather(markRef.current, { x: t.left - b.left, y: t.top - b.top, w: t.width, h: t.height }, 750, Math.max(28, t.width * 1.2));
+        if (!ok) { if (fx.scn) sceneIn(false); setReveal(true); setTimeout(onDone, 420); return; }
         tg.style.opacity = '0';
+        setGather(true); // sahne (kanvas) yeniden görünür: artık sadece menü logosundaki taneler var
         if (fx.scn) sceneIn(true);
         setReveal(true);
         setTimeout(() => {
-          tg.style.transition = 'opacity .28s ease'; tg.style.opacity = ''; root.classList.add('eh-gone');
-          setTimeout(() => { tg.style.transition = ''; onDone(); }, 300);
-        }, 1580);
+          tg.style.transition = 'opacity .22s ease'; tg.style.opacity = ''; root.classList.add('eh-gone');
+          setTimeout(() => { tg.style.transition = ''; onDone(); }, 240);
+        }, 800);
       }, 80)));
-    }, 320);
+    }, 560);
   };
   const go = () => {
     if (leaving || goneRef.current) return; goneRef.current = true;
