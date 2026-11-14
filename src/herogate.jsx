@@ -218,7 +218,7 @@ export function HeroGate({ onOpen, onDone }) {
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
         const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
         const t = tg?.getBoundingClientRect(), b = root.getBoundingClientRect();
-        const ok = t && t.top < innerHeight && eng.gather(markRef.current, { x: t.left - b.left, y: t.top - b.top, w: t.width, h: t.height }, 1300);
+        const ok = t && t.top < innerHeight && eng.gather(markRef.current, { x: t.left - b.left, y: t.top - b.top, w: t.width, h: t.height }, 1500);
         if (!ok) { if (fx.scn) sceneIn(false); root.classList.add('eh-gone'); setReveal(true); setTimeout(onDone, 420); return; }
         tg.style.opacity = '0';
         if (fx.scn) sceneIn(true);
@@ -226,7 +226,7 @@ export function HeroGate({ onOpen, onDone }) {
         setTimeout(() => {
           tg.style.transition = 'opacity .28s ease'; tg.style.opacity = ''; root.classList.add('eh-gone');
           setTimeout(() => { tg.style.transition = ''; onDone(); }, 300);
-        }, 1380);
+        }, 1580);
       }, 80)));
     }, 320);
   };

@@ -293,7 +293,7 @@ export class LiquidEngine{
     for(const t of this.stateTex){gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,this.stateFormat.internal,TEX_W,this.texH,0,gl.RGBA,gl.FLOAT,st)}
     this.presence=this.presenceTarget=this.burst=this.flowing=0;this.mouse.x=this.target.x=-9999;
     this.opts={...this.opts,interactive:false,ambient:false,intro:true,returnSpeed:1.6};
-    this.dotFrom=dot0;this.introDur=dur;this.introT=0;this.stateDirty=true;this.settle=0;
+    this.dotFrom=dot0;this.streakMul=.35;this.introDur=dur;this.introT=0;this.stateDirty=true;this.settle=0;
     this.wake();return true;
   }
   setOptions(o){this.opts={...this.opts,...o};this.wake()}
@@ -416,7 +416,7 @@ export class LiquidEngine{
     gl.uniform1i(P.u.uTexW,TEX_W);gl.uniform4f(P.u.uRect,r.x,r.y,r.w,r.h);gl.uniform2f(P.u.uRes,this.cssW,this.cssH);
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
     const dotN=(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3);gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
-    gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
+    gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
     gl.uniform3f(P.u.uTint,1,1,1);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
   }
