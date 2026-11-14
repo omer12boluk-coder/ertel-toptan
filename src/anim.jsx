@@ -33,8 +33,10 @@ function readTry() { const v = ls.get('anim-try7', null); return v && typeof v =
 
 export function AnimLayer() {
   const A = useStore((s) => s.settings?.look?.anim) || null;
+  const perfMode = useStore((s) => s.settings?.look?.perf) || '';
+  const lite = useLite(perfMode);
   const [tryV, setTry] = useState(() => (TRY_HOST ? readTry() : null));
-  const on = KEYS.filter((k) => (tryV ? tryV[k] : A?.[k] === 'on'));
+  const on = lite ? [] : KEYS.filter((k) => (tryV ? tryV[k] : A?.[k] === 'on'));
   const key = on.join(' ');
   useEffect(() => {
     if (RM()) return undefined;
@@ -69,7 +71,47 @@ export function AnimLayer() {
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!TRY_HOST) return null;
   const set = (v) => { ls.set('anim-try7', v); setTry(v); };
-  return <AnimPanel v={tryV} set={set} />;
+  return <AnimPanel v={tryV} set={set} lite={lite} />;
+}
+
+// ---- 14.11.2026 Zayıf cihazda hafif mod (look.perf: '' otomatik | 'off' hiç | 'on' hep açık) ----
+// Kullanıcının 60 Hz Intel MacBook'u: 10 sn'de 34–37 takılma + 1 sn'lik donmalar; 'Akıcılık' panelinde efektler kapanınca düzeldi.
+// Otomatik: sayfa açıldıktan 2 sn sonra, SADECE kaydırılırken kare süreleri toplanır; 4 sn kaydırma birikince karar verilir:
+// saniyede 0,6'dan fazla 50 ms+ duraklama ya da 2+ donma (>150 ms) → hafif mod (1,7× ölçüsü hızlı makineyi de yakaladı). Karar cihazda 14 gün saklanır
+// (ls 'perf-lite'), her açılışta yeniden ölçülmez. Hafif mod = html.pf-lite → buzlu cam, gölgeler, banner animasyonları,
+// kayan şerit kapalı, hareket dili (an-*) yok, tanıtım videosu kendiliğinden başlamaz (film.js opts.auto bunu okur).
+export const isLite = () => typeof document !== 'undefined' && document.documentElement.classList.contains('pf-lite');
+const LITE_DAYS = 14;
+function useLite(mode) {
+  const [auto, setAuto] = useState(() => { const v = ls.get('perf-lite', null); return !!(v && Date.now() - v.at < LITE_DAYS * 864e5 && v.lite); });
+  const lite = mode === 'on' ? true : mode === 'off' ? false : auto;
+  useEffect(() => { const c = document.documentElement.classList; c.toggle('pf-lite', lite); return () => c.remove('pf-lite'); }, [lite]);
+  useEffect(() => {
+    if (mode) return undefined;
+    const v = ls.get('perf-lite', null); if (v && Date.now() - v.at < LITE_DAYS * 864e5) return undefined; // bu cihaz için karar var
+    const t0 = performance.now(); let lastS = 0, raf = 0, last = 0, active = 0, long = 0; const ds = []; let done = false;
+    const decide = () => {
+      done = true; removeEventListener('scroll', onS);
+      const so = [...ds].sort((a, b) => a - b); const med = so[Math.floor(so.length / 2)] || 16.7;
+      // göze batan duraklama = 50 ms'den uzun kare (60 Hz'de 3+ kare atlandı); 1,7× ölçüsü hızlı makineyi de 'zayıf' saydı → kullanılmaz
+      const j50 = ds.filter((d) => d > 50).length; const rate = j50 / (active / 1000);
+      const res = { lite: rate > 0.6 || long >= 2, at: Date.now(), hz: Math.round(1000 / med), rate: Math.round(rate * 10) / 10, long };
+      ls.set('perf-lite', res); if (res.lite) setAuto(true);
+    };
+    const f = (t) => {
+      raf = 0; const d = t - last; last = t;
+      if (t - lastS < 250 && d < 1500) { active += d; ds.push(d); if (d > 150) long++; }
+      if (active >= 4000) return decide();
+      if (t - lastS < 250) raf = requestAnimationFrame(f);
+    };
+    const onS = () => {
+      if (done) return; const n = performance.now(); if (n - t0 < 2000) return; if (n - t0 > 90000) { done = true; removeEventListener('scroll', onS); return; }
+      lastS = n; if (!raf) { last = n; raf = requestAnimationFrame(f); }
+    };
+    addEventListener('scroll', onS, { passive: true });
+    return () => { removeEventListener('scroll', onS); cancelAnimationFrame(raf); };
+  }, [mode]);
+  return lite;
 }
 
 // Markalar sayfası: dalga sırası = satır + sütun (ızgaranın sütun sayısı ekrana göre değişir → konumdan hesaplanır)
@@ -110,7 +152,7 @@ function useMeter() {
 }
 const BROWSER = typeof navigator === 'undefined' ? '' : /Edg\//.test(navigator.userAgent) ? 'Edge' : /Chrome\//.test(navigator.userAgent) ? 'Chrome' : /Safari\//.test(navigator.userAgent) ? 'Safari' : /Firefox\//.test(navigator.userAgent) ? 'Firefox' : '';
 
-function AnimPanel({ v, set }) {
+function AnimPanel({ v, set, lite }) {
   const [open, setOpen] = useState(false);
   const [pf, setPf] = usePerf(); const m = useMeter();
   const all = (b) => set(Object.fromEntries(KEYS.map((k) => [k, b])));
@@ -131,6 +173,8 @@ function AnimPanel({ v, set }) {
         <div className="an-ph an-ph2"><b>Akıcılık</b><small>Kaydırırken bakın: kare hızı ekranın Hz'ine yakın, takılma az olmalı</small></div>
         <div className="an-meter"><span><b className="num">{m.fps}</b> fps</span><span>Ekran <b className="num">{m.hz}</b> Hz</span><span>Takılma <b className="num">{m.jank}</b> <small>/10 sn</small></span></div>
         <small className="an-dev">{innerWidth}×{innerHeight} · piksel oranı {devicePixelRatio} · {BROWSER}</small>
+        <div className="an-lite"><span>Hafif mod: <b>{lite ? 'AÇIK' : 'kapalı'}</b>{(() => { const v = ls.get('perf-lite', null); return v ? <small> · ölçüm: {v.hz} Hz, sn'de {v.rate} duraklama, {v.long} donma</small> : <small> · henüz ölçülmedi (birkaç saniye kaydırın)</small>; })()}</span>
+          <button type="button" onClick={() => { ls.del('perf-lite'); location.reload(); }}>Yeniden ölç</button></div>
         {PERF.map(([k, t]) => (
           <label key={k} className="an-row"><input type="checkbox" checked={!!pf[k]} onChange={(e) => setPf({ ...pf, [k]: e.target.checked })} /><span className="an-l">⨯</span><span>{t}</span></label>
         ))}

@@ -1,6 +1,7 @@
 // Ana sayfa bölümü 'cd:film' — Tanıtım videosu (8.11.2026). Motor src/film.js, veri src/icerik/videolar.json.
 // Ayar shopHome.cd.film { eye, title, ids: [sıra], off: [id], auto: false = kendiliğinden başlamasın, music: false = ses düğmesi yok, sound: 'on' = ses açık başlasın (ziyaretçinin ilk dokunuşunda girer; varsayılan kapalı) }.
 // Birden çok açık video varsa sırayla oynar (biri bitince 4 sn sonra sıradaki). Tarif: claude/is/video-ekle.md
+import { isLite } from './anim.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { store, setQty, toast } from './store.js';
 import { makeFilm } from './film.js';
@@ -29,7 +30,8 @@ export function CdFilm({ H, open, onProduct, edit }) {
     if (!F || !box.current) return;
     let tm = 0;
     const fm = makeFilm(box.current, F, {
-      auto: !edit && C.auto !== false, music: C.music !== false, sound: !edit && C.music !== false && C.sound === 'on',
+      get auto() { return !edit && C.auto !== false && !isLite(); }, // 14.11.2026 hafif modda kendiliğinden başlamaz (düğmeyle oynar)
+      music: C.music !== false, sound: !edit && C.music !== false && C.sound === 'on',
       open: edit ? null : (a) => {
         const p = store.s.byId?.get(Number(F.p));
         if (a === 'c') { if (p && p.s > 0 && p.a !== 0 && !p.so) { setQty(p.id, (store.s.cart?.[p.id] || 0) + 1); toast?.('Sepete eklendi'); } else if (p) onProduct?.(p); return; }

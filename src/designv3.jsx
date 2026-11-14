@@ -229,6 +229,7 @@ function LookPanel({ d, set, setAll, A }) {
     <Row label="Ürünler sayfası" hint="Yeni: üstte yazılı kategoriler, Filtrele paneli, sade kart. Eski: sol kategori menüsü"><Seg v={Lk.prodV2 === false ? 'old' : ''} opts={[['', 'Yeni'], ['old', 'Eski']]} on={(k) => set('look.prodV2', k === 'old' ? false : undefined)} /></Row>
     {Lk.prodV2 !== false && <HubRows d={d} set={set} />}
     <Row label="Üstüne gelince" hint="Bilgisayarda kartların üstüne gelince"><Seg v={Lk.hoverFx || ''} opts={[['', 'Yeni'], ['old', 'Eski (kalkar)']]} on={(k) => set('look.hoverFx', k)} /></Row>
+    <Row label="Zayıf cihazda hafif mod" hint="Otomatik: site ilk kaydırmada cihazı ölçer; sık takılan cihazda (ör. eski MacBook) buzlu cam, gölgeler, banner ve sayfa hareketleri kapanır, video kendiliğinden başlamaz. Güçlü cihazlarda hiçbir şey değişmez"><Seg v={Lk.perf || ''} opts={[['', 'Otomatik'], ['off', 'Hiç'], ['on', 'Hep açık']]} on={(k) => set('look.perf', k || undefined)} /></Row>
     <Row label="Gece modu" hint="Otomatik: ziyaretçinin telefonu gece modundaysa mağaza da koyu"><Seg v={d.brand?.theme === 'auto' ? 'auto' : 'light'} opts={[['auto', 'Otomatik'], ['light', 'Hep gündüz']]} on={(k) => set('brand.theme', k)} /></Row>
     {/* 7.11.2026 (11) telefonda da kullanılabilen basit ayarlar: hazır stiller, temalar, köşe pikselleri, gölge/çerçeve, boşluklar */}
     <span className="v3-cap">Hazır stiller</span>

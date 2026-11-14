@@ -10337,10 +10337,13 @@ html.ux-wa .cd-cta-wa { background: #128540; }
 .an-ph2 { margin-top: 12px; padding-top: 12px; border-top: 1px solid #ececf0; }
 .an-meter { display: flex; gap: 8px; padding: 2px 4px 6px; } .an-meter span { flex: 1; background: #f3f3f6; border-radius: 10px; padding: 7px 8px; font-size: 12px; color: #6e6e73; }
 .an-meter b { display: block; font: 700 18px/1.1 Inter, var(--f-body); color: #1d1d1f; font-variant-numeric: tabular-nums; }
+.an-lite { display: flex; align-items: center; gap: 8px; padding: 2px 4px 8px; font-size: 12.5px; } .an-lite span { flex: 1; } .an-lite button { border: 1px solid #e3e3e8; background: #fff; border-radius: 99px; height: 30px; padding: 0 10px; font: 600 12px/1 Inter, var(--f-body); cursor: pointer; }
 .an-dev { display: block; padding: 0 4px 6px; font-size: 11.5px; color: #6e6e73; }
-/* Akıcılık denemesi (önizleme): ağır olabilecek efektleri kapat */
-html.pf-glass *, html.pf-glass *::before, html.pf-glass *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-html.pf-shadow *, html.pf-shadow *::before, html.pf-shadow *::after { box-shadow: none !important; text-shadow: none !important; }
-html.pf-bnanim :is(.cd-hero, .sh-hero) *, html.pf-bnanim :is(.cd-hero, .sh-hero) *::before, html.pf-bnanim :is(.cd-hero, .sh-hero) *::after { animation: none !important; transition: none !important; }
+/* Akıcılık denemesi (önizleme) + HAFİF MOD (html.pf-lite, anim.jsx useLite): ağır efektleri kapat. Video hafif modda gizlenmez, sadece kendiliğinden başlamaz. */
+:is(html.pf-glass, html.pf-lite) *, :is(html.pf-glass, html.pf-lite) *::before, :is(html.pf-glass, html.pf-lite) *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+/* cam kalkınca menü/şeritler saydam kalıp arkadaki yazı görünüyordu → düz zemin */
+:is(html.pf-glass, html.pf-lite) :is(.topbar-in, .botnav, .toolbar, .hdr-c, .hd-p, .sheet:not(.ctx-sheet)) { background-color: color-mix(in oklab, var(--surface, #fff) 97%, transparent) !important; }
+:is(html.pf-shadow, html.pf-lite) *, :is(html.pf-shadow, html.pf-lite) *::before, :is(html.pf-shadow, html.pf-lite) *::after { box-shadow: none !important; text-shadow: none !important; }
+:is(html.pf-bnanim, html.pf-lite) :is(.cd-hero, .sh-hero) *, :is(html.pf-bnanim, html.pf-lite) :is(.cd-hero, .sh-hero) *::before, :is(html.pf-bnanim, html.pf-lite) :is(.cd-hero, .sh-hero) *::after { animation: none !important; transition: none !important; }
 html.pf-film .flm-box { visibility: hidden !important; }
-html.pf-mq :is(.cd-mq-tr, .sh-marquee-in) { animation-play-state: paused !important; }
+:is(html.pf-mq, html.pf-lite) :is(.cd-mq-tr, .sh-marquee-in) { animation-play-state: paused !important; }
