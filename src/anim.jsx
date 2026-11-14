@@ -33,12 +33,12 @@ export const ANIMS = [
 const KEYS = ANIMS.map((a) => a[0]);
 // 14.11.2026 YAYIN: kullanıcının beğendikleri canlıda varsayılan AÇIK (D4 düğme ışığı kapalı). Geri: look.anim.all = 'off'
 // (Tasarım v3 › Görünüm 'Sayfa hareketleri') ya da tek tek look.anim.<k> = 'off'.
-const DEF_ON = KEYS.filter((k) => k !== 'gshn');
+const DEF_ON = KEYS; // 14.11.2026 gece: D4 düğme ışığı da canlıda AÇIK (kullanıcı)
 const liveOn = (A, k) => { if (A?.all === 'off') return false; const x = A?.[k]; return x === 'on' || (x !== 'off' && DEF_ON.includes(k)); };
 const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function readTry() { const v = ls.get('anim-try8', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, k !== 'gshn'])); }
+function readTry() { const v = ls.get('anim-try8', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, true])); }
 
 export function AnimLayer() {
   const A = useStore((s) => s.settings?.look?.anim) || null;

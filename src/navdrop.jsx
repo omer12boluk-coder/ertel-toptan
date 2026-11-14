@@ -488,25 +488,37 @@ function V3Logo({ v, alt }) {
     {dk && <img className="logo v3-dk" src={dk} alt="" aria-hidden="true" />}
   </>;
 }
+const AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const first = (n) => { const c = String(n || '').trim().charAt(0).toLocaleUpperCase('tr'); return c === 'İ' ? 'I' : /[0-9]/.test(c) ? '#' : c; };
 function V3Brands({ all, close }) {
   const [q, setQ] = useState('');
+  const [ltr, enter, now, stop] = useIntent(null);
+  const has = useMemo(() => new Set(all.map((b) => first(b.n))), [all]);
+  const letters = has.has('#') ? ['#', ...AZ] : AZ;
   const nq = q.trim().toLocaleLowerCase('tr');
-  const shown = nq ? all.filter((b) => b.n.toLocaleLowerCase('tr').includes(nq)).slice(0, 16) : all.slice(0, 16);
-  const pick = (n) => { close(); openBrand(n); };
-  const head = nq ? `“${q.trim()}” · ${shown.length} marka` : 'En çok ürünü olan markalar';
-  // 14.11.2026 kullanıcı: harf şeridi ve 'Esc kapatır' açıklaması kaldırıldı
+  const shown = nq ? all.filter((b) => b.n.toLocaleLowerCase('tr').includes(nq)).slice(0, 16)
+    : ltr ? all.filter((b) => first(b.n) === ltr).sort((a, b) => a.n.localeCompare(b.n, 'tr')).slice(0, 16)
+      : all.slice(0, 16);
+  const pick = (n) => { stop(); close(); openBrand(n); };
+  const head = nq ? `“${q.trim()}” · ${shown.length} marka` : ltr ? `${ltr} ile başlayanlar` : 'En çok ürünü olan markalar';
+  // 14.11.2026 kullanıcı: 'Esc kapatır' açıklaması kaldırıldı, harf şeridi KALIYOR
   return <div className="hdw v3b">
     <div className="v3b-in">
       <div className="v3b-hd"><span className="hdw-lbl">{head}</span>
-        <label className="v3b-s"><Icon n="search" s={16} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Marka ara..." onKeyDown={(e) => { if (e.key === 'Enter' && shown[0]) pick(shown[0].n); if (e.key === 'Escape' && q) { e.stopPropagation(); setQ(''); } }} />{q && <button type="button" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={14} /></button>}</label>
+        <label className="v3b-s"><Icon n="search" s={16} /><input value={q} onChange={(e) => { setQ(e.target.value); now(null); }} placeholder="Marka ara..." onKeyDown={(e) => { if (e.key === 'Enter' && shown[0]) pick(shown[0].n); if (e.key === 'Escape' && q) { e.stopPropagation(); setQ(''); } }} />{q && <button type="button" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={14} /></button>}</label>
       </div>
-      {shown.length ? <div className="v3-logos" key={nq}>{shown.map((b, i) => (
+      {shown.length ? <div className="v3-logos" key={nq + '|' + ltr}>{shown.map((b, i) => (
         <button key={b.n} type="button" className="v3-lg" title={b.n} style={{ '--i': i, ...(b.color ? { '--bc': b.color } : null) }} onClick={() => pick(b.n)}>
           {b.logo ? <span className="v3-lgi"><V3Logo v={b.logo} alt={b.n} /></span> : <b>{b.n}</b>}<small>{b.c} ürün</small>
         </button>))}</div>
         : <p className="hdw-none">Bu adla marka yok.</p>}
+      <div className="v3b-ft">
+        <div className="v3-az" onMouseLeave={stop}>
+          {letters.map((l) => <button key={l} type="button" disabled={!has.has(l)} className={ltr === l && !nq ? 'on' : ''} onMouseEnter={() => { if (has.has(l) && !nq) enter(l); }} onClick={() => { setQ(''); now(ltr === l ? null : l); }}>{l}</button>)}
+        </div>
+        <button type="button" className="hdw-more" onClick={() => { close(); go('markalar'); }}>{'Tüm markalar (' + all.length + ')'}<Chev /></button>
+      </div>
     </div>
-    <div className="v3b-ft"><button type="button" className="hdw-more" onClick={() => { close(); go('markalar'); }}>{'Tüm markalar (' + all.length + ')'}<Chev /></button></div>
   </div>;
 }
 
