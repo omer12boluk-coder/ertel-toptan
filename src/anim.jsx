@@ -6,14 +6,13 @@
 // bitince açılır ('ok') — yoksa kartlar hareket sonunda bir daha 'gidip yerine oturuyordu'. Bu kutulara will-change VERME (titretti). bn: tek rAF kaydırma dinleyicisi, sadece banner'a satır içi transform/opacity yazar
 // (layout okumaz → takılmaz). 'Hareketi azalt' açıksa hiçbiri yok. Reddedilenler style.css başlığında.
 // DİKKAT: html sınıfları an-<anahtar>; başka öğeye bu adları (an-bn, an-raf…) VERME (an-fly/an-hd çakışıp sayfayı kilitlemişti).
-// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try6').
+// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try7').
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
 import { ls } from './utils.js';
 
 export const ANIMS = [
   ['rv', '0', 'Deneme: bölümler solarak gelmesin'],
-  ['lay', 'Z', 'Deneme: hareket bitince katmanı bırakma'],
   ['bn', 'G', 'Banner geri çekilsin'],
   ['raf', 'B', 'Ürün rafları kayarak gelsin (Yeni gelenler + raflar)'],
   ['pk', 'P', 'Bu hafta masamızdan: kartlar yükselsin'],
@@ -30,7 +29,7 @@ const KEYS = ANIMS.map((a) => a[0]);
 const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function readTry() { const v = ls.get('anim-try6', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, k !== 'lay'])); }
+function readTry() { const v = ls.get('anim-try7', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, true])); }
 
 export function AnimLayer() {
   const A = useStore((s) => s.settings?.look?.anim) || null;
@@ -54,10 +53,10 @@ export function AnimLayer() {
     let raf = 0; let heroH = 0; let lastHp = -1; let hero = null;
     const tick = () => {
       raf = 0; if (!hero || !hero.isConnected) { hero = document.querySelector('.shell.public .cd-hero'); heroH = 0; } if (!hero) return;
-      if (hero.closest('.kp-off')) return; // ana sayfa gizliyken (başka sayfadayken) DOKUNMA: o sayfanın kaydırması banner'ı bozuyordu, dönünce yanlış çizilip oturuyordu
+      if (hero.closest('.kp-off')) { if (hero.style.willChange) hero.style.willChange = ''; lastHp = -1; return; } // ana sayfa gizliyken (başka sayfadayken) DOKUNMA: o sayfanın kaydırması banner'ı bozuyordu, dönünce yanlış çizilip oturuyordu
       if (!heroH) heroH = hero.offsetHeight || 1;
       const hp = Math.round(Math.max(0, Math.min(1, scrollY / heroH)) * 200) / 200; if (hp === lastHp) return; lastHp = hp;
-      hero.style.transform = hp ? `scale(${(1 - hp * 0.08).toFixed(3)})` : ''; hero.style.opacity = hp ? (1 - hp * 0.55).toFixed(3) : '';
+      hero.style.transform = hp ? `scale(${(1 - hp * 0.08).toFixed(3)})` : ''; hero.style.opacity = hp ? (1 - hp * 0.55).toFixed(3) : ''; hero.style.willChange = hp ? 'transform, opacity' : ''; // katman SADECE kaydırılmışken (kalıcı katman ana sayfa dönüşünü bozuyordu)
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick); };
     const onResize = () => { heroH = 0; onScroll(); };
@@ -65,11 +64,11 @@ export function AnimLayer() {
     return () => {
       on.forEach((k) => c.remove('an-' + k));
       io?.disconnect(); mo?.disconnect(); cancelAnimationFrame(wr); clearInterval(iv); document.querySelectorAll('[data-an]').forEach((x) => x.removeAttribute('data-an'));
-      if (has('bn')) { removeEventListener('scroll', onScroll); removeEventListener('resize', onResize); cancelAnimationFrame(raf); if (hero) { hero.style.transform = ''; hero.style.opacity = ''; } }
+      if (has('bn')) { removeEventListener('scroll', onScroll); removeEventListener('resize', onResize); cancelAnimationFrame(raf); if (hero) { hero.style.transform = ''; hero.style.opacity = ''; hero.style.willChange = ''; } }
     };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!TRY_HOST) return null;
-  const set = (v) => { ls.set('anim-try6', v); setTry(v); };
+  const set = (v) => { ls.set('anim-try7', v); setTry(v); };
   return <AnimPanel v={tryV} set={set} />;
 }
 
