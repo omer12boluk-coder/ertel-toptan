@@ -36,7 +36,7 @@ function flyLand(st) {
   const f = document.createElement('img'); f.src = st.src; f.alt = ''; f.className = 'eh-fly';
   Object.assign(f.style, { left: st.x + 'px', top: st.y + 'px', width: st.z + 'px', height: st.z + 'px' });
   document.body.appendChild(f); tg.style.opacity = '0';
-  f.animate([{ transform: 'translate(0,0) scale(1)', opacity: 0 }, { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0.1 },
+  f.animate([{ transform: 'translate(0,0) scale(1)', opacity: st.hold ? 1 : 0 }, { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0.1 },
     { transform: `translate(${t.left - st.x}px,${t.top - st.y}px) scale(${t.width / st.z})`, opacity: 1 }], { duration: 650, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' })
     .onfinish = () => { tg.style.opacity = ''; requestAnimationFrame(() => f.remove()); };
 }
@@ -203,38 +203,38 @@ export function HeroGate({ onOpen, onDone }) {
   // Çıkış: önce logo dağılıp söner (düz zemin kalır) → mağaza düz zeminin ARKASINDA çizilir (takılma görünmez) → zemin solar.
   // Eskiden mağaza animasyonun ortasında çiziliyordu, dağılma efekti 1 sn takılıyordu.
   const goneRef = useRef(false);
-  // 14.11.2026 (2) Açılış geçişi: kum büyük logodan menüye AKMAZ (kullanıcı: 'abartı ve sahte'). Büyük logo eskisi gibi yerinde
-  // dağılıp söner; mağaza arkada çizilir; zemin solarken menüdeki 'e' kendi yerinde, hemen çevresinden toplanan ince kumla
-  // belirir (liquid.js gather local=40 px, 0,75 sn) → gerçek menü logosu yerini alır. Bağ zamanlamayla kurulur, yol yok.
-  // GL yoksa / hedef bulunamazsa eski yol (dağılma + tek parça uçuş).
+  // 14.11.2026 (3) Açılış geçişi (kullanıcı: menüde kum toplanması da 'kökten kaldır'): büyük logo kuma dönüşür ve AYNI YERDE
+  // küçük 'e' olarak yeniden oluşur (liquid.js gather, 1 sn) → mağaza arkada çizilir → o küçük logo (düz resim) zemin solarken
+  // menüdeki yerine kayar (flyLand). Kum menüye akmaz / menüde toplanmaz (ikisi de reddedildi).
+  // GL yoksa eski yol (dağılma + büyük logodan tek parça uçuş).
   const markRef = useRef(null);
   useEffect(() => { const im = new Image(); im.decoding = 'async'; im.src = MOBILE_SRC; markRef.current = im; }, []);
   const [gather, setGather] = useState(false);
   const goGather = () => {
-    const eng = engRef.current, root = rootRef.current;
-    eng.explode(); setLeaving(true);
-    setTimeout(() => {
+    const eng = engRef.current, root = rootRef.current, R = eng.rect;
+    const z = Math.round(Math.min(root.clientWidth < 640 ? 64 : 84, R.h * 0.9));
+    const small = { x: R.x + R.w / 2 - z / 2, y: R.y + R.h / 2 - z / 2, w: z, h: z };
+    if (!eng.gather(markRef.current, small, 1000, 0, 26)) { goneRef.current = false; return false; }
+    setGather(true); setLeaving(true);
+    // küçük logo tam oluşmadan sayfa açılmasın (yavaş cihazda kareler geç gelir): birleşme bitince + 150 ms, en geç 2,2 sn
+    const t0 = performance.now();
+    const next = (fn) => { const w = () => ((eng.introT >= 1 && performance.now() - t0 > 1000) || performance.now() - t0 > 2200 ? setTimeout(fn, 150) : setTimeout(w, 50)); w(); };
+    next(() => {
       eng.stop(); onOpen();
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
-        const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
-        const t = tg?.getBoundingClientRect(), b = root.getBoundingClientRect();
-        const ok = t && t.top < innerHeight && eng.gather(markRef.current, { x: t.left - b.left, y: t.top - b.top, w: t.width, h: t.height }, 750, Math.max(28, t.width * 1.2));
-        if (!ok) { if (fx.scn) sceneIn(false); setReveal(true); setTimeout(onDone, 420); return; }
-        tg.style.opacity = '0';
-        setGather(true); // sahne (kanvas) yeniden görünür: artık sadece menü logosundaki taneler var
+        const b = root.getBoundingClientRect();
+        flyLand({ x: b.left + small.x, y: b.top + small.y, z, src: MOBILE_SRC, hold: true });
+        root.classList.add('eh-flown'); // kanvastaki küçük logo gizlenir, aynı yerde düz resmi kayar
         if (fx.scn) sceneIn(true);
-        setReveal(true);
-        setTimeout(() => {
-          tg.style.transition = 'opacity .22s ease'; tg.style.opacity = ''; root.classList.add('eh-gone');
-          setTimeout(() => { tg.style.transition = ''; onDone(); }, 240);
-        }, 800);
+        setReveal(true); setTimeout(onDone, 420);
       }, 80)));
-    }, 560);
+    });
+    return true;
   };
   const go = () => {
     if (leaving || goneRef.current) return; goneRef.current = true;
     const mk = markRef.current;
-    if (fx.fly && engRef.current && rootRef.current?.dataset.gl === 'on' && mk?.complete && mk.naturalWidth) { goGather(); return; }
+    if (fx.fly && engRef.current && rootRef.current?.dataset.gl === 'on' && mk?.complete && mk.naturalWidth && goGather()) return;
     const fl = fx.fly ? flyStart(imgRef.current, rootRef.current, logoSrc) : null;
     engRef.current?.explode(); setLeaving(true);
     setTimeout(() => {

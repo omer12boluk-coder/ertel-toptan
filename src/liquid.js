@@ -281,7 +281,7 @@ export class LiquidEngine{
   // girdap (intro) onu evine çeker. Tane boyu yolda eski boyundan yeni boyuna küçülür. dur = birleşme süresi (ms).
   // 14.11.2026 (2) kullanıcı: 'kumların logoya kayması çok abartı ve sahte' → uzun yol KALDIRILDI. local = yayılım (px):
   // taneler hedefin hemen çevresinden (local px içinde) toplanır; ekranı geçmez. local yoksa eski uzun yol (büyük logodan).
-  gather(img,rect,dur=1400,local=0){
+  gather(img,rect,dur=1400,local=0,jit=0){
     if(!this.ready||this.lost||this.destroyed||!this.homeData)return false;
     const R1=this.rect,old=this.homeData,oldN=this.n,dot0=local?1.15:(R1.w/this.gridW)*1.45*clamp(this.opts.dotSize,.2,3);
     this.setImage(img,local?(this.lowPower?120:150):(this.lowPower?360:460));this.rect=rect;
@@ -289,13 +289,14 @@ export class LiquidEngine{
     for(let i=0;i<this.n;i++){
       if(local){const an=Math.random()*6.2832,d=local*(.35+Math.random()*.65);st[i*4]=Math.cos(an)*d;st[i*4+1]=Math.sin(an)*d*.8;st[i*4+2]=st[i*4+3]=0;continue}
       const j=(Math.random()*oldN)|0;
-      st[i*4]=R1.x+old[j*4]*R1.w-(rect.x+H[i*4]*rect.w);
-      st[i*4+1]=R1.y+old[j*4+1]*R1.h-(rect.y+H[i*4+1]*rect.h);
+      const ja=Math.random()*6.2832,jd=jit*Math.random(); // jit: taneler önce biraz saçılmış başlar (dağılma hissi)
+      st[i*4]=R1.x+old[j*4]*R1.w-(rect.x+H[i*4]*rect.w)+Math.cos(ja)*jd;
+      st[i*4+1]=R1.y+old[j*4+1]*R1.h-(rect.y+H[i*4+1]*rect.h)+Math.sin(ja)*jd;
       st[i*4+2]=(Math.random()-.5)*3;st[i*4+3]=(Math.random()-.5)*3;
     }
     for(const t of this.stateTex){gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,this.stateFormat.internal,TEX_W,this.texH,0,gl.RGBA,gl.FLOAT,st)}
     this.presence=this.presenceTarget=this.burst=this.flowing=0;this.mouse.x=this.target.x=-9999;
-    this.opts={...this.opts,interactive:false,ambient:false,intro:true,returnSpeed:local?2:1.6,turbulence:local?.45:this.opts.turbulence};
+    this.opts={...this.opts,interactive:false,ambient:false,intro:true,returnSpeed:2,turbulence:local?.45:this.opts.turbulence};
     this.dotFrom=dot0;this.streakMul=local?.12:.35;this.introDur=dur;this.introT=0;this.stateDirty=true;this.settle=0;
     this.wake();return true;
   }

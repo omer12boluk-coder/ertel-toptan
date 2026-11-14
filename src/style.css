@@ -10508,7 +10508,8 @@ html.pf-lite .hd-p.hd-v3, html.pf-lite .v3-tile, html.pf-lite .v3-lg, html.pf-li
 @media (prefers-reduced-motion: reduce) { .hd-p.hd-v3, .v3-tile, .v3-lg, .v3s-c { animation: none !important; } }
 .v3b-s input, .v3b-s input:focus, .v3k-in input, .v3k-in input:focus { border: 0 !important; box-shadow: none !important; outline: 0 !important; background: none !important; border-radius: 0; }
 
-/* 14.11.2026 açılış: büyük logo dağılır, menüdeki 'e' kendi yerinde ince kumla belirir (herogate goGather) — zemin solar, kanvas kalır */
+/* 14.11.2026 açılış: büyük logo kumla aynı yerde küçük 'e' olur, sonra düz resim olarak menüye kayar (herogate goGather) */
 .eh-root.gather .eh-stage { transform: none; opacity: 1; transition: none; }
+.eh-root.eh-flown .eh-stage { opacity: 0 !important; transition: none !important; }
 .eh-root.gather.reveal { opacity: 1; background-color: transparent; transition: background-color .5s ease; }
 .eh-root.gather.reveal.eh-gone, .eh-root.eh-gone { opacity: 0; transition: opacity .28s ease; }
