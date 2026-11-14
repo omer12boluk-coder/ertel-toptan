@@ -31,6 +31,10 @@ export const ANIMS = [
   ['bpw', 'M', 'Markalar sayfası: logo dalgası'],
 ];
 const KEYS = ANIMS.map((a) => a[0]);
+// 14.11.2026 YAYIN: kullanıcının beğendikleri canlıda varsayılan AÇIK (D4 düğme ışığı kapalı). Geri: look.anim.all = 'off'
+// (Tasarım v3 › Görünüm 'Sayfa hareketleri') ya da tek tek look.anim.<k> = 'off'.
+const DEF_ON = KEYS.filter((k) => k !== 'gshn');
+const liveOn = (A, k) => { if (A?.all === 'off') return false; const x = A?.[k]; return x === 'on' || (x !== 'off' && DEF_ON.includes(k)); };
 const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -41,7 +45,7 @@ export function AnimLayer() {
   const perfMode = useStore((s) => s.settings?.look?.perf) || '';
   const lite = useLite(perfMode);
   const [tryV, setTry] = useState(() => (TRY_HOST ? readTry() : null));
-  const on = lite ? [] : KEYS.filter((k) => (tryV ? tryV[k] : A?.[k] === 'on'));
+  const on = lite ? [] : KEYS.filter((k) => (tryV ? tryV[k] : liveOn(A, k)));
   const key = on.join(' ');
   useEffect(() => {
     if (RM()) return undefined;
@@ -94,7 +98,7 @@ export function gateFx(look) {
   if (RM()) return {};
   const lv = ls.get('perf-lite', null); if (look?.perf === 'on' || (look?.perf !== 'off' && lv?.lite && Date.now() - lv.at < 14 * 864e5)) return {};
   const v = TRY_HOST ? readTry() : null; const A = look?.anim || {};
-  const on = (k) => (v ? !!v[k] : A[k] === 'on');
+  const on = (k) => (v ? !!v[k] : liveOn(A, k));
   return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn') };
 }
 export const TRY = TRY_HOST;
