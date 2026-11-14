@@ -95,10 +95,10 @@ function flyLand(st) {
   const tx = t.left - ex - st.off * k, ty = t.top - ey - st.off * k, D = innerWidth < 640 ? 600 : 650;
   f.style.transformOrigin = '0 0';
   f.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${tx}px,${ty}px) scale(${k})` }], { duration: D, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' });
-  setTimeout(() => {
-    tg.style.transition = 'opacity .16s ease'; tg.style.opacity = '';
-    f.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }).onfinish = () => { cancelAnimationFrame(st.raf); f.remove(); setTimeout(() => { tg.style.transition = ''; }, 40); };
-  }, D * 0.78);
+  // uçan logo SÖNMEZ (ikisi yarı saydamken logo bir an siliniyordu): menü logosu altında belirir (gündüz beyaz yuvarlağı yumuşak gelir),
+  // tam görününce uçan logo kaldırılır
+  setTimeout(() => { tg.style.transition = 'opacity .16s ease'; tg.style.opacity = ''; }, D * 0.78);
+  setTimeout(() => { cancelAnimationFrame(st.raf); f.remove(); setTimeout(() => { tg.style.transition = ''; }, 40); }, Math.max(D, D * 0.78 + 180));
 }
 // telefon mağazayı çizmeyi bitirip rahatlayınca (art arda 2 kare < 34 ms) devam et; en geç 1,4 sn
 function whenCalm(fn) {
@@ -158,7 +158,7 @@ function WordRoll() {
       if (dead) return; i = (i + 1) % list.length; const w = list[i];
       el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-.35em)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
         if (dead) return; const x0 = after ? after.getBoundingClientRect().left : 0; el.textContent = w; cur.current = w;
-        if (after) { const dx = x0 - after.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) after.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 420, easing: EZ }); }
+        if (after) { const dx = x0 - after.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) after.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 560, easing: 'cubic-bezier(.45,.05,.25,1)' }); // yumuşak başla-bitir (EZ ilk karelerde fırlatıyordu: 'sert') }
         el.animate([{ opacity: 0, transform: 'translateY(.35em)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: EZ, fill: 'forwards' }).onfinish = () => { if (!dead) t = setTimeout(step, i === list.length - 1 ? 2200 : 1100); };
       };
     };

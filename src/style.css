@@ -9855,6 +9855,8 @@ body.eh-lock{overflow:hidden}
 @keyframes eh-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-14px)}}
 .eh-root.leaving .eh-stage{transform:scale(1.25);opacity:0}
 .eh-spacer2{display:none}
+/* 15.11.2026 bilgisayar: yazılar + düğme en dibe yapışıktı (kullanıcı: 'çok aşağıda') → altta pay; logo kalan alanda ortalanır */
+@container (min-width:640px){ .eh-spacer2{display:block;flex:0 0 clamp(48px,11cqh,140px)} }
 @container (max-width:1023px){
   .eh-content{grid-template-columns:1fr;gap:24px}
   .eh-aside{justify-self:start;max-width:520px;padding-bottom:0}
