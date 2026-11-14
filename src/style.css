@@ -10252,16 +10252,21 @@ html.ux-wa .cd-cta-wa { background: #128540; }
 @keyframes anSide { from { opacity: 0; transform: translate3d(48px, 0, 0); } }
 @keyframes anUp { from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.94); } }
 @keyframes anStrikeBg { from { background-size: 0% 1.5px; } }
+@keyframes anRise { from { opacity: 0; transform: translate3d(0, 40px, 0) scale(.96); } }
+@keyframes anOpen { from { opacity: 0; transform: scale(.94); } }
+@keyframes anDrawL { from { stroke-dasharray: 80; stroke-dashoffset: 80; } to { stroke-dasharray: 80; stroke-dashoffset: 0; } }
+@keyframes anTxt { from { color: transparent; } }
 @keyframes anBg { from { background-color: transparent; } }
 @keyframes anDraw { from { stroke-dashoffset: 30; } }
 @keyframes anChip { from { color: transparent; background-color: transparent; } }
-.cd-nwsec .cd-rail > * { --ri: 4; }
-.cd-nwsec .cd-rail > :nth-child(1) { --ri: 0; } .cd-nwsec .cd-rail > :nth-child(2) { --ri: 1; }
-.cd-nwsec .cd-rail > :nth-child(3) { --ri: 2; } .cd-nwsec .cd-rail > :nth-child(4) { --ri: 3; }
+:is(.cd-rail, .cd-grid, .cd-ads, .p0-trust) > * { --ri: 5; }
+:is(.cd-rail, .cd-grid, .cd-ads, .p0-trust) > :nth-child(1) { --ri: 0; } :is(.cd-rail, .cd-grid, .cd-ads, .p0-trust) > :nth-child(2) { --ri: 1; }
+:is(.cd-rail, .cd-grid, .cd-ads, .p0-trust) > :nth-child(3) { --ri: 2; } :is(.cd-rail, .cd-grid, .cd-ads, .p0-trust) > :nth-child(4) { --ri: 3; }
+:is(.cd-rail, .cd-grid, .cd-ads, .p0-trust) > :nth-child(5) { --ri: 4; }
 @media (prefers-reduced-motion: no-preference) {
   /* B — Yeni gelenler: kartlar sağdan, birer birer (ekrandakiler) */
-  html.an-raf .cd-nwsec .cd-rail:not([data-an]) > .cd-tile { opacity: 0; }
-  html.an-raf .cd-nwsec .cd-rail[data-an="go"] > .cd-tile { animation: anSide .7s cubic-bezier(.16, 1, .3, 1) calc(var(--ri) * 70ms) backwards; }
+  html.an-raf .cd-sec .cd-rail:not([data-an]) > .cd-tile { opacity: 0; }
+  html.an-raf .cd-sec .cd-rail[data-an="go"] > .cd-tile { animation: anSide .7s cubic-bezier(.16, 1, .3, 1) calc(var(--ri) * 70ms) backwards; }
   /* E — set indirimi: eski fiyat çizilir, set fiyatı oturur, kazanç rozeti belirir */
   /* çizgi ve rozet SADECE boyama ile (katman açmaz): Safari'de katman açılınca kutunun içi yarım piksel oynuyordu ('kutular
      az yukarı kayıyor'); set fiyatı hiç kıpırdamaz (aşağıdan gelmesi 'sonradan oturma' gibiydi) */
@@ -10278,6 +10283,27 @@ html.ux-wa .cd-cta-wa { background: #128540; }
   /* iPhone Safari: yana kayan (mıknatıslı) sıralarda hareket sürerken mıknatıs kapalı; bitince ('ok') geri gelir.
      Bu kutulara will-change VERME: kalıcı katman Safari'de kartları hareket sonunda 'gidip yerine oturtuyor', logoları titretiyordu. */
   html.an-raf .cd-rail[data-an="go"], html.an-ind .cd-sets[data-an="go"], html.an-mrk .cd-bwall[data-an="go"] { scroll-snap-type: none; }
+  /* P — Bu hafta masamızdan: küçük kartlar sırayla yükselir; büyük kartta sadece ürün resmi yükselir (yazılar hep yerinde).
+     Büyük resim tek ve büyük parça → kalıcı katman (will-change) güvenli; kaydırmalı sırada değil. */
+  html.an-pk .cd-bento > .cd-grid:not([data-an]) > .cd-tile, html.an-pk .cd-bento > .cd-big:not([data-an]) .cd-big-im .thumb { opacity: 0; }
+  html.an-pk .cd-bento > .cd-grid[data-an="go"] > .cd-tile { animation: anUp .7s cubic-bezier(.16, 1, .3, 1) calc(var(--ri) * 80ms) backwards; }
+  html.an-pk .cd-bento > .cd-big .cd-big-im .thumb { will-change: transform, opacity; }
+  html.an-pk .cd-bento > .cd-big[data-an="go"] .cd-big-im .thumb { animation: anRise 1s cubic-bezier(.16, 1, .3, 1) .1s backwards; }
+  /* T — Tezgâhın için: kutular sağdan sırayla (kaydırmalı sıra → hareket sırasında mıknatıs kapalı, will-change YOK) */
+  html.an-tz .cd-ads:not([data-an]) > .cd-ad { opacity: 0; }
+  html.an-tz .cd-ads[data-an="go"] > .cd-ad { animation: anSide .8s cubic-bezier(.16, 1, .3, 1) calc(var(--ri) * 90ms) backwards; }
+  html.an-tz .cd-ads[data-an="go"] { scroll-snap-type: none; }
+  /* V — Yakından bak: video kutusu hafif büyüyerek açılır (tek büyük parça → kalıcı katman) */
+  html.an-flm .flm-box { will-change: transform, opacity; }
+  html.an-flm .flm-box:not([data-an]) { opacity: 0; }
+  html.an-flm .flm-box[data-an="go"] { animation: anOpen .9s cubic-bezier(.16, 1, .3, 1) backwards; }
+  /* D — güven satırları: ikon kalemle çizilir, daire ve yazılar rengiyle belirir (SADECE boyama, katman yok) */
+  html.an-ic .p0-trust:not([data-an]) .p0-tr > .ic { background-color: transparent; }
+  html.an-ic .p0-trust:not([data-an]) .p0-tr > .ic path { stroke-dasharray: 80; stroke-dashoffset: 80; }
+  html.an-ic .p0-trust:not([data-an]) .p0-tr :is(b, small) { color: transparent; }
+  html.an-ic .p0-trust[data-an="go"] .p0-tr > .ic { animation: anBg .5s ease calc(var(--ri) * 160ms) backwards; }
+  html.an-ic .p0-trust[data-an="go"] .p0-tr > .ic path { animation: anDrawL 1s cubic-bezier(.65, 0, .35, 1) calc(.1s + var(--ri) * 160ms) backwards; }
+  html.an-ic .p0-trust[data-an="go"] .p0-tr :is(b, small) { animation: anTxt .5s ease calc(.35s + var(--ri) * 160ms) backwards; }
   /* S — set sayfası: 'Ayrı ayrı' fiyatın ve satırlardaki eski fiyatların çizgisi çekilir, kazanç kutusu belirir (sadece boyama) */
   html.an-sind .set-page :is(.set-pl, .set-row-p) s { text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 55% / 100% 1.5px no-repeat; }
   html.an-sind .set-price[data-an="go"] .set-pl s { animation: anStrikeBg .55s cubic-bezier(.65, 0, .35, 1) .3s backwards; }

@@ -3,7 +3,6 @@
 //           ya da "WhatsApp'tan liste gönder" → sadece liste linki gider (hiçbir yere kaydedilmez)
 //   Bayi:   Sepet → "Sepeti onayla" → teslimat / ödeme → bayi siparişi (talepler koleksiyonu, type 'order'; sohbet Siparişlerim'de)
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { delRow } from './anim.jsx'; // 14.11.2026 hareket dili: sepette satır kapanması (kapalıyken doğrudan siler)
 import { useStore, store, setQty, clearCart, freshStart, api, openRequest, toast, go } from './store.js';
 import { Icon, Thumb, Stepper, Empty, VatLines, Confirm, copyText, openMenu } from './ui.jsx';
 import { waLink, links } from './route.js';
@@ -101,7 +100,7 @@ export function SwipeLine({ id, open, setOpen, onDelete, children, onContextMenu
     return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end); };
   }, [open, id]);
   return (
-    <li className={'gl-sw' + (gone ? ' gone' : '') + (className ? ' ' + className : '')} ref={row} onContextMenu={onContextMenu} data-cl={id}>
+    <li className={'gl-sw' + (gone ? ' gone' : '') + (className ? ' ' + className : '')} ref={row} onContextMenu={onContextMenu}>
       {COARSE && <button type="button" className="gl-del" style={{ opacity: dx < -4 ? 1 : 0 }} onClick={() => { setGone(true); setTimeout(onDelete, 200); }} aria-label={delLabel}><Icon n="trash" s={20} /><span>Sil</span></button>}
       <div className={inner + (drag ? ' dragging' : '')} style={dx ? { transform: `translate3d(${dx}px,0,0)` } : undefined}
         onClickCapture={(e) => { if (open === id) { e.stopPropagation(); e.preventDefault(); setOpen(null); } }}>{children}</div>
@@ -157,7 +156,7 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
   const menu = (e, it) => openMenu(e, [
     { label: '1 tane daha', icon: 'plus', onClick: () => setQty(it.id, it.qty + 1) },
     it.qty > 1 && { label: '1 tane azalt', icon: 'minus', onClick: () => setQty(it.id, it.qty - 1) },
-    { label: 'Sepetten çıkar', icon: 'trash', danger: true, onClick: () => delRow(it.id, () => setQty(it.id, 0)) },
+    { label: 'Sepetten çıkar', icon: 'trash', danger: true, onClick: () => setQty(it.id, 0) },
     '-',
     { label: 'Stok kodunu kopyala', icon: 'copy', hint: it.k, onClick: () => copyText(it.k) },
   ], it.n.slice(0, 40));
@@ -189,9 +188,9 @@ function CartStep({ items, pub, orders, coming, onConfirm }) {
               </div>
               <div className="gline-ctl">
                 <span className={'num gline-unit' + (k ? ' has-tl' : '')} data-l="Birim">{it.offer == null ? 'Sorulacak' : fmt(it.offer, it.cur)}{k && <LineTL v={it.offer} cur={it.cur} rate={k} />}</span>
-                <Stepper small min={1} value={it.qty} onChange={(v) => setQty(it.id, v)} onRemove={() => delRow(it.id, () => setQty(it.id, 0))} />
+                <Stepper small min={1} value={it.qty} onChange={(v) => setQty(it.id, v)} onRemove={() => setQty(it.id, 0)} />
                 <b className={'num gline-sum' + (k ? ' has-tl' : '')}>{it.offer == null ? '—' : fmt(it.offer * it.qty, it.cur)}{k && it.offer != null && <LineTL v={it.offer * it.qty} cur={it.cur} rate={k} />}</b>
-                <button className="icon-btn sm" onClick={() => delRow(it.id, () => setQty(it.id, 0))} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
+                <button className="icon-btn sm" onClick={() => setQty(it.id, 0)} aria-label="Sepetten çıkar"><Icon n="trash" s={16} /></button>
               </div>
             </SwipeLine>
           ))(g))}
