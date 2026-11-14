@@ -57,8 +57,14 @@ function useLogos() {
   return useMemo(() => { const m = new Map(); for (const b of list) if (b.logo) m.set(norm(b.n), b.logo); return m; }, [list]);
 }
 const Logo = ({ p, logos, cls = 'cd-lg' }) => { const l = p?.b && logos.get(norm(p.b)); return l ? <ShopImg v={l} className={cls} alt={p.b} /> : p?.b ? <b className={cls + ' tx'}>{p.b}</b> : null; };
+// 14.11.2026 Hareket dili A (html.an-hd): başlık kelime kelime yükselir. Kapalıyken kelimeler düz yazı gibi (display: inline).
+export function Wds({ t }) {
+  let n = 0;
+  return String(t ?? '').split('\n').flatMap((line, li) => [li ? <br key={'b' + li} /> : null,
+    ...line.split(' ').filter(Boolean).flatMap((w, i, arr) => [<span key={li + '-' + i} className="anw"><span style={{ '--wi': n++ }}>{w}</span></span>, i < arr.length - 1 ? ' ' : null])]);
+}
 function Head({ eye, title, more }) {
-  return <header className="cd-head"><div>{eye && <span className="cd-eye">{eye}</span>}<h2>{title}</h2></div>
+  return <header className="cd-head"><div>{eye && <span className="cd-eye">{eye}</span>}<h2><Wds t={title} /></h2></div>
     {more && <button type="button" className="cd-more" onClick={more[1]}>{more[0]}<Icon n="back" s={14} className="flip" /></button>}</header>;
 }
 
@@ -165,7 +171,7 @@ export function CdPick({ H, S, onProduct }) {
     <section className="cd-sec rv">
       <Head eye={C.eye ?? 'Tamircinin seçimi'} title={C.title || 'Bu hafta masamızdan.'} />
       <div className="cd-bento">
-        <div className="cd-big" role="button" tabIndex={0} onClick={() => onProduct(a)}>
+        <div className="cd-big" role="button" tabIndex={0} onClick={() => onProduct(a)}><div className="cd-big-in">
           <div className="cd-big-t">
             <Logo p={a} logos={logos} />
             {(C.badge ?? 'Haftanın ürünü') && <span className="cd-eye g">{C.badge ?? 'Haftanın ürünü'}</span>}
@@ -174,7 +180,7 @@ export function CdPick({ H, S, onProduct }) {
             <span className="cd-big-add"><CardAdd p={a} /><span className="cd-lnk">İncele<Icon n="back" s={13} className="flip" /></span></span>
           </div>
           <span className="cd-big-im"><Thumb p={a} size="lg" /></span>
-        </div>
+        </div></div>
         <div className="cd-grid">{rest.map((p) => <Tile key={p.id} p={p} X={nameOf(p, C.names)} pr={price(p)} logos={logos} onProduct={onProduct} />)}</div>
       </div>
     </section>
@@ -201,7 +207,7 @@ export function CdSets({ H, S }) {
                 <span className="cd-eye">Set · {v.active.length} ürün</span>
                 <b className="cd-set-n">{x.name}</b>
                 {brands.length > 0 && <span className="cd-set-lg">{brands.slice(0, 4).map((b) => (logos.get(norm(b)) ? <ShopImg key={b} v={logos.get(norm(b))} alt={b} /> : <small key={b}>{b}</small>))}</span>}
-                <span className="cd-set-p"><b className="num">{fmt(v.price, v.cur)}</b>{v.save > 0 && <s className="num">{fmt(v.list, v.cur)}</s>}{v.save > 0 && <small>ayrı ayrı</small>}</span>
+                <span className="cd-set-p"><b className="num">{fmt(v.price, v.cur)}</b>{v.save > 0 && <s className="num">{fmt(v.list, v.cur)}</s>}{v.save > 0 && <small>ayrı ayrı</small>}{v.save > 0 && <em className="cd-set-sv num">{fmt(v.save, v.cur)} kazanç</em>}</span>
                 <span className="cd-set-go"><span className="cd-pill">Seti incele</span></span>
               </span>
             </button>); })}
@@ -224,8 +230,8 @@ export function BrandWall({ max, logosOnly, rows, ids, only, scroll }) {
   if (sc) { if (max && !rows) list = list.slice(0, max); }
   else if (rows) list = list.slice(0, rows * cols); else if (max) list = list.slice(0, max);
   const nr = sc ? Math.min(2, rows || 2, Math.ceil(list.length / 3)) : 0;
-  return <div className={'cd-bwall' + (sc ? ' bw-scroll' : '')} style={{ '--bw-cols': cols, '--bw-rows': nr || undefined }}>{list.map((b) => (
-    <button key={b.n} type="button" className="cd-bw" style={b.color ? { '--bc': b.color } : undefined} onClick={() => openBrand(b.n)} title={b.n}>
+  return <div className={'cd-bwall' + (sc ? ' bw-scroll' : '')} style={{ '--bw-cols': cols, '--bw-rows': nr || undefined }}>{list.map((b, i) => (
+    <button key={b.n} type="button" className="cd-bw" style={{ ...(b.color ? { '--bc': b.color } : null), '--d': Math.min(12, sc ? (i % (nr || 1)) + Math.floor(i / (nr || 1)) : (i % cols) + Math.floor(i / cols)) }} onClick={() => openBrand(b.n)} title={b.n}>
       <span className="cd-bw-lg">{b.logo ? <ShopImg v={b.logo} alt={b.n} /> : <b>{b.n}</b>}</span>
       <small>{b.c} ürün</small>
     </button>))}</div>;
@@ -302,7 +308,7 @@ export function CdNew({ H, onProduct, edit }) {
       {!edge[0] && <button type="button" className="cd-arr cd-nw-nav prev" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={18} /></button>}
       {!edge[1] && <button type="button" className="cd-arr cd-nw-nav next" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={18} className="flip" /></button>}
       {/* 14.11.2026 telefonda (html.ux-nw) kapak kutusu yerine bu başlık görünür; bilgisayarda gizli */}
-      <header className="cd-head cd-nw-head"><div><span className="cd-eye">{C.eye ?? 'Yeni gelenler'}</span><h2>{title}</h2></div>
+      <header className="cd-head cd-nw-head"><div><span className="cd-eye">{C.eye ?? 'Yeni gelenler'}</span><h2><Wds t={title} /></h2></div>
         <button type="button" className="cd-more" onClick={all}>Hepsini gör<Icon n="back" s={14} className="flip" /></button></header>
       <div className="cd-rail" ref={railRef} onScroll={upd}>
         <div className="cd-tile cd-newcov">
@@ -335,7 +341,7 @@ export function CdRail({ sec, open, onProduct, edit }) {
   const by = (d) => { const el = railRef.current; if (el) el.scrollBy({ left: d * el.clientWidth * 0.8, behavior: 'smooth' }); };
   return (
     <section className="cd-sec rv">
-      <header className="cd-head"><div>{sec.sub && <span className="cd-eye">{sec.sub}</span>}<h2>{sec.title || 'Ürünler'}</h2></div>
+      <header className="cd-head"><div>{sec.sub && <span className="cd-eye">{sec.sub}</span>}<h2><Wds t={sec.title || 'Ürünler'} /></h2></div>
         <span className="cd-head-r">{!edit && <button type="button" className="cd-more" onClick={more}>Tümü<Icon n="back" s={14} className="flip" /></button>}
           <button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span></header>
       <div className="cd-rail" ref={railRef}>{list.map((p) => <Tile key={p.id} p={p} X={nameOf(p)} pr={price(p)} logos={logos} onProduct={onProduct} isNew={sec.mode === 'new' || p.nw} />)}</div>
@@ -383,7 +389,7 @@ export function CdAds({ H, open }) {
   const by = (d) => { const el = rail.current; if (el) el.scrollBy({ left: d * el.clientWidth * 0.8, behavior: 'smooth' }); };
   return (
     <section className="cd-sec rv">
-      <header className="cd-head"><div>{(C.eye ?? 'Keşfet') && <span className="cd-eye">{C.eye ?? 'Keşfet'}</span>}<h2>{C.title || 'Atölyen için.'}</h2></div>
+      <header className="cd-head"><div>{(C.eye ?? 'Keşfet') && <span className="cd-eye">{C.eye ?? 'Keşfet'}</span>}<h2><Wds t={C.title || 'Atölyen için.'} /></h2></div>
         <span className="cd-head-r"><button type="button" className="cd-arr" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={16} /></button><button type="button" className="cd-arr" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={16} className="flip" /></button></span></header>
       <div className="cd-ads" ref={rail}>{list.map((a) => (
         <button key={a.id} type="button" className="cd-ad" onClick={open(a.link)} style={{ backgroundImage: `url(/bn/ad-${a.id}.webp${a.v ? '?v=' + a.v : ''})` }}>
@@ -407,7 +413,7 @@ export function CdCta({ H, S, edit }) {
     <section className="cd-cta rv">
       <div className="cd-cta-t">
         <span className="cd-eye">Bize yazın</span>
-        <h2>{title}</h2>
+        <h2><Wds t={title} /></h2>
         <p>{C.text || 'Model kodunu ya da fotoğrafını WhatsApp’tan gönder; stokta yoksa senin için getirelim.'}</p>
         <div className="cd-cta-a">
           {wa && <a className="cd-cta-wa" href={edit ? undefined : waLink(wa, 'Merhaba, bir ürün soracaktım:')} target="_blank" rel="noopener"><Icon n="wa" s={18} />WhatsApp’tan yaz</a>}

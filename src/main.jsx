@@ -50,6 +50,7 @@ import { DesignEntry } from './designv3.jsx'; // 7.11.2026: tasarım modu v3 (es
 import { AdminHome, Reports } from './dashboard.jsx';
 import { Archive } from './archive.jsx';
 import { UsagePage } from './usagepage.jsx';
+import { AnimLayer } from './anim.jsx';
 import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
@@ -828,6 +829,7 @@ function ShellFull() {
         {tab === 'tasarim' && admin && (can('design') ? <DesignEntry /> : <NoPerm perm="design" />)}
       </main>
       {pub && !['katalog', 'sepet', 'hesap', 'kalip'].includes(tab) && <ShopFooter compact={tab !== 'anasayfa'} />}
+      {pub && <AnimLayer />}
       {!admin && tab !== 'lsepet' && tab !== 'odeme' && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
