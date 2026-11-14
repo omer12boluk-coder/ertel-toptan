@@ -6,7 +6,7 @@ import { useStore, go, store, openAcct, toast, openProduct } from './store.js';
 import { Icon, Thumb } from './ui.jsx';
 import { ls, priceFor, fmt } from './utils.js';
 import { feat } from './extras.jsx';
-import { ShopImg } from './shophome.jsx';
+import { ShopImg, useShopImg } from './shophome.jsx';
 import { useTree, useVisibleProducts, HUB_CUT, HUB_IMG } from './catalog.jsx';
 import { liveSets, setView, openSet, SetCover } from './sets.jsx';
 import { CAT_COVERS } from './cdhome.jsx';
@@ -455,6 +455,41 @@ function V3Products({ cats, cnt, vis, S, close }) {
 }
 const AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const first = (n) => { const c = String(n || '').trim().charAt(0).toLocaleUpperCase('tr'); return c === 'İ' ? 'I' : /[0-9]/.test(c) ? '#' : c; };
+// 14.11.2026 gece modu logoları (kullanıcı: koyu logolar siyah zeminde görünmüyordu): her logonun gece kopyası tarayıcıda BİR KEZ
+// çıkarılır (önbellek): koyu kısımlar (siyah/lacivert yazı) açığa döner — renk tonu korunur — açık/renkli kısımlar aynen kalır.
+// Düz beyaza çevirmek renkli zeminli logoları (AMAOE, YCS, Luban) beyaz kutuya çeviriyordu; tümünü tersine çevirmek açık
+// renkleri (2UUL yeşili) karartıyordu. Resim okunamazsa (CORS) eski hâli görünür. Gündüz: asıl logo.
+const dkCache = new Map();
+function darkLogo(img) {
+  const key = img.currentSrc || img.src; if (dkCache.has(key)) return dkCache.get(key);
+  let out = null;
+  try {
+    const w = Math.min(320, img.naturalWidth), h = Math.max(1, Math.round(w * img.naturalHeight / img.naturalWidth));
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0, w, h); const im = g.getImageData(0, 0, w, h), d = im.data; let changed = 0;
+    for (let k = 0; k < d.length; k += 4) {
+      if (d[k + 3] < 8) continue;
+      const r = d[k] / 255, gg = d[k + 1] / 255, b = d[k + 2] / 255, mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), l = (mx + mn) / 2;
+      if (l >= 0.42) continue;
+      // açıklık ters çevrilir (ton + doygunluk aynı): siyah → beyaz, lacivert → açık mavi
+      const L2 = Math.min(0.94, 1 - l * 0.9), dd = mx - mn, sat = dd === 0 ? 0 : dd / (1 - Math.abs(2 * l - 1));
+      let hh = 0; if (dd) { hh = mx === r ? ((gg - b) / dd) % 6 : mx === gg ? (b - r) / dd + 2 : (r - gg) / dd + 4; hh *= 60; if (hh < 0) hh += 360; }
+      const C = (1 - Math.abs(2 * L2 - 1)) * Math.min(1, sat), X = C * (1 - Math.abs((hh / 60) % 2 - 1)), m = L2 - C / 2;
+      const [r1, g1, b1] = hh < 60 ? [C, X, 0] : hh < 120 ? [X, C, 0] : hh < 180 ? [0, C, X] : hh < 240 ? [0, X, C] : hh < 300 ? [X, 0, C] : [C, 0, X];
+      d[k] = (r1 + m) * 255; d[k + 1] = (g1 + m) * 255; d[k + 2] = (b1 + m) * 255; changed++;
+    }
+    if (changed) { g.putImageData(im, 0, 0); out = c.toDataURL('image/png'); } else out = key;
+  } catch { out = null; }
+  dkCache.set(key, out); return out;
+}
+function V3Logo({ v, alt }) {
+  const src = useShopImg(v); const [dk, setDk] = useState(null);
+  if (!src) return null;
+  return <>
+    <img className="logo v3-lt" src={src} alt={alt} onLoad={(e) => { const x = darkLogo(e.currentTarget); if (x) setDk(x); }} />
+    {dk && <img className="logo v3-dk" src={dk} alt="" aria-hidden="true" />}
+  </>;
+}
 function V3Brands({ all, close }) {
   const [q, setQ] = useState('');
   const [ltr, enter, now, stop] = useIntent(null);
@@ -473,7 +508,7 @@ function V3Brands({ all, close }) {
       </div>
       {shown.length ? <div className="v3-logos" key={nq + '|' + ltr}>{shown.map((b, i) => (
         <button key={b.n} type="button" className="v3-lg" title={b.n} style={{ '--i': i, ...(b.color ? { '--bc': b.color } : null) }} onClick={() => pick(b.n)}>
-          {b.logo ? <ShopImg v={b.logo} className="logo" alt={b.n} /> : <b>{b.n}</b>}<small>{b.c} ürün</small>
+          {b.logo ? <span className="v3-lgi"><V3Logo v={b.logo} alt={b.n} /></span> : <b>{b.n}</b>}<small>{b.c} ürün</small>
         </button>))}</div>
         : <p className="hdw-none">Bu adla marka yok.</p>}
       <div className="v3-az" onMouseLeave={stop}>

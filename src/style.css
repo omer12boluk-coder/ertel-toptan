@@ -10474,7 +10474,12 @@ html[data-theme="dark"] .hd-p.hd-mini-p { background: #1e1f23 !important; }
 .v3-az button:disabled { background: none; color: color-mix(in oklab, var(--fg) 22%, transparent); cursor: default; }
 .v3-az button.on { background: var(--fg); color: var(--surface); }
 @media (hover: hover) { .v3-az button:not(:disabled):not(.on):hover { background: color-mix(in oklab, var(--accent) 12%, transparent); color: var(--accent); } }
-html[data-theme="dark"] .v3-lg .logo { filter: brightness(1.1); }
+.v3-lgi { display: grid; place-items: center; height: 32px; }
+.v3-lgi > img { grid-area: 1 / 1; }
+.v3-lgi .v3-dk { display: none; }
+html[data-theme="dark"] .v3-lgi:has(.v3-dk) .v3-lt { visibility: hidden; }
+html[data-theme="dark"] .v3-lgi .v3-dk { display: block; }
+html[data-theme="dark"] .v3-lg { background: #26272c; }
 /* küçük paneller: Kalıp bulucu + Setler */
 .v3k, .v3s { padding: 18px 20px; display: flex; flex-direction: column; }
 .v3k { width: 470px; } .v3s { width: 540px; }
@@ -10515,3 +10520,6 @@ html.pf-lite .hd-p.hd-v3, html.pf-lite .v3-tile, html.pf-lite .v3-lg, html.pf-li
 .eh-root.gather.reveal.eh-gone, .eh-root.eh-gone { opacity: 0; transition: opacity .28s ease; }
 
 .eh-sand { position: fixed; z-index: 2147483001; pointer-events: none; }
+
+/* 14.11.2026 gece modunda menüdeki ertel logosunun arkasındaki beyaz yuvarlak kalkar (logonun kendi halkası var) */
+html[data-theme="dark"] .brand-logo { background: transparent !important; box-shadow: none !important; }
