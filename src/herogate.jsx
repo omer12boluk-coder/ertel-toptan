@@ -53,19 +53,36 @@ function sceneIn() {
   }
 }
 const WORDS = ['havyası', 'mikroskobu', 'kalıbı', 'entegresi', 'her şeyi'];
+// Satıra SIĞMAYAN kelime döngüden çıkarılır (telefonda 'mikroskobu burada.' alt satıra taşıyıp bütün yazıyı itiyordu = 'sert oturma');
+// kelime değişirken genişlik 0,4 sn'de yumuşakça değişir, 'burada.' zıplamaz kayar. Satır nowrap (CSS .eh-accent.roll).
 function WordRoll() {
   const ref = useRef(null);
-  useEffect(() => {
-    let i = 0, iv = 0; const el = ref.current;
-    const t = setTimeout(() => { iv = setInterval(() => {
-      i++; if (i >= WORDS.length || !el) { clearInterval(iv); return; }
-      el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-.4em)' }], { duration: 220, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
-        el.textContent = WORDS[i]; el.animate([{ opacity: 0, transform: 'translateY(.4em)' }, { opacity: 1, transform: 'none' }], { duration: 380, easing: EZ, fill: 'forwards' });
-      };
-    }, 1300); }, 900);
-    return () => { clearTimeout(t); clearInterval(iv); };
+  const [list, setList] = useState(null);
+  useLayoutEffect(() => {
+    const el = ref.current; const line = el?.closest('.eh-accent'); const box = el?.closest('.eh-h1'); if (!el || !line || !box) return;
+    // ölçüm transform'dan ETKİLENMEZ (offsetWidth): yazılar açılış animasyonundayken getBoundingClientRect yanlış genişlik veriyordu
+    const blk = line.parentElement; const d0 = blk.style.display; blk.style.display = 'inline-block';
+    const max = (box.parentElement || box).clientWidth; // başlığın sığabileceği alan (başlık kendisi içeriğine göre daralıyor)
+    const ok = WORDS.filter((w) => { el.textContent = w; return blk.offsetWidth <= max + 1; });
+    blk.style.display = d0;
+    const L = ok.length > 1 ? ok : ['her şeyi']; el.textContent = L[0]; setList(L);
   }, []);
-  return <span ref={ref} className="eh-word">{WORDS[0]}</span>;
+  useEffect(() => {
+    if (!list || list.length < 2) return undefined;
+    // SIRAYLA: bir değişim bitmeden sonraki başlamaz (logo efekti işlemciyi yorunca setInterval üst üste biniyor, kelime atlıyor / boş kalıyordu)
+    let i = 0, t = 0, dead = false; const el = ref.current;
+    const step = () => {
+      if (dead || ++i >= list.length) return; const w = list[i];
+      el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-.35em)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
+        if (dead) return; const w0 = el.offsetWidth; el.textContent = w; const w1 = el.offsetWidth;
+        el.animate([{ width: w0 + 'px' }, { width: w1 + 'px' }], { duration: 420, easing: EZ });
+        el.animate([{ opacity: 0, transform: 'translateY(.35em)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: EZ, fill: 'forwards' }).onfinish = () => { if (!dead) t = setTimeout(step, 1000); };
+      };
+    };
+    t = setTimeout(step, 1900);
+    return () => { dead = true; clearTimeout(t); };
+  }, [list]);
+  return <span ref={ref} className="eh-word" />; // içerik SADECE buradan yazılır (React de yazınca kelime atlanıyor / kayboluyordu)
 }
 function Count({ n }) {
   const [v, setV] = useState(0);
@@ -75,7 +92,7 @@ function Count({ n }) {
 function GateNums() {
   const n = useVisibleProducts(false).length; const b = useBrandList().length;
   if (!n) return null;
-  return <div className="eh-nums"><span><Count n={n} />ürün</span><span><Count n={b} />marka</span><span><b>Aynı gün</b>kargo</span></div>;
+  return <p className="eh-nums"><span><Count n={n} /> ürün</span><span><Count n={b} /> marka</span><span><b>aynı gün</b> kargo</span></p>;
 }
 
 const SRC = '/bn/hero-logo-wide.webp', MOBILE_SRC = '/bn/hero-logo-mark.webp';
@@ -196,11 +213,11 @@ export function HeroGate({ onOpen, onDone }) {
       <div ref={contentRef} className="eh-content">
         <div>
           <p className="eh-eyebrow eh-a eh-a1">Ertel Telekomünikasyon</p>
-          <h1 className="eh-h1"><span className="eh-line eh-a eh-a2">Tamir tezgâhının</span><span className="eh-line eh-a eh-a3"><span className="eh-accent">{fx.word ? <><WordRoll /> burada.</> : 'her şeyi burada.'}</span></span></h1>
+          <h1 className="eh-h1"><span className="eh-line eh-a eh-a2">Tamir tezgâhının</span><span className="eh-line eh-a eh-a3"><span className={'eh-accent' + (fx.word ? ' roll' : '')}>{fx.word ? <><WordRoll /> burada.</> : 'her şeyi burada.'}</span></span></h1>
         </div>
         <div className="eh-aside">
           <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
-          {fx.num && <div className="eh-a eh-a4"><GateNums /></div>}
+          {fx.num && <div className="eh-a eh-a4 eh-numw"><GateNums /></div>}
           <div className="eh-a eh-a5">
             <button type="button" className={'eh-btn' + (fx.shine ? ' eh-shine' : '')} onClick={go}>Alışverişe başla
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>

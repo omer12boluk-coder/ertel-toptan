@@ -10375,9 +10375,14 @@ html.pf-film .flm-box { visibility: hidden !important; }
 
 /* 14.11.2026 Açılış sahnesi (herogate.jsx): uçan logo, dönen kelime, canlı sayılar, düğmede ışık */
 .eh-fly { position: fixed; z-index: 2147483001; pointer-events: none; transform-origin: 0 0; object-fit: contain; }
-.eh-word { display: inline-block; }
-.eh-nums { display: flex; gap: 18px; margin-top: 14px; font: 500 12.5px/1.2 var(--eh-font); color: var(--eh-sub); }
-.eh-nums b { display: block; font: 700 20px/1.1 var(--eh-font); color: var(--eh-fg); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.eh-word { display: inline-block; white-space: nowrap; overflow: visible; vertical-align: baseline; }
+.eh-accent.roll { white-space: nowrap; }
+/* sayılar: tek satır, yazıyla aynı hiza ve boy; düğmeyle arasında boşluk (14.11 akşam: hizasız + düğmeye değiyordu) */
+.eh-numw { margin: -12px 0 22px; }
+.eh-nums { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font: 400 14px/1.4 var(--eh-font); color: var(--eh-sub); letter-spacing: -.01em; }
+.eh-nums span { white-space: nowrap; }
+.eh-nums b { font-weight: 650; color: var(--eh-fg); font-variant-numeric: tabular-nums; }
+@media (max-width: 639px) { .eh-numw { margin: -8px 0 18px; } }
 .eh-btn.eh-shine { position: relative; overflow: hidden; }
 .eh-btn.eh-shine::after { content: ""; position: absolute; top: 0; bottom: 0; width: 60px; left: -80px; background: linear-gradient(100deg, transparent, rgb(255 255 255 / .45), transparent); animation: ehShine 3.6s ease-in-out infinite 1.5s; pointer-events: none; }
 @keyframes ehShine { 0% { left: -80px; } 35%, 100% { left: 110%; } }
