@@ -9866,25 +9866,37 @@ body.eh-lock{overflow:hidden}
   .eh-btn,.eh-aside .eh-btn{width:100%;justify-content:center;height:54px}
   .eh-content{padding-bottom:0}
   /* 14.11.2026: logo + yazılar yukarıda; altta boşluk (kaydırıcı başparmağa yakın) */
-  .eh-spacer2{display:block;flex:0 0 max(13cqh,calc(env(safe-area-inset-bottom) + 64px))}
+  .eh-spacer2{display:block;flex:0 0 max(9cqh,calc(env(safe-area-inset-bottom) + 48px))}
 }
-/* 14.11.2026 telefonda kaydırarak giriş (SlideToStart) */
-.eh-slide{--eh-p:0;position:relative;height:60px;border-radius:999px;padding:4px;touch-action:none;user-select:none;-webkit-user-select:none;
-  background:color-mix(in srgb,var(--eh-fg) 7%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--eh-fg) 6%,transparent);overflow:hidden}
-.eh-slide::before{content:"";position:absolute;inset:0;border-radius:inherit;background:color-mix(in srgb,var(--eh-acc) 14%,transparent);opacity:var(--eh-p)}
-.eh-slide-txt{position:absolute;inset:0;display:grid;place-items:center;padding-left:52px;font-size:16px;font-weight:600;letter-spacing:-.01em;pointer-events:none;
-  color:transparent;background:linear-gradient(100deg,var(--eh-sub) 40%,var(--eh-fg) 50%,var(--eh-sub) 60%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;
-  animation:eh-shine 2.6s linear infinite;opacity:calc(1 - var(--eh-p) * 1.6)}
-@keyframes eh-shine{from{background-position:100% 0}to{background-position:-150% 0}}
-.eh-knob{position:relative;z-index:1;display:grid;place-items:center;width:52px;height:52px;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none;
-  background:var(--eh-acc);color:#fff;box-shadow:0 6px 18px -6px color-mix(in srgb,var(--eh-acc) 80%,transparent);
-  transition:transform .45s cubic-bezier(.3,1.5,.5,1);-webkit-tap-highlight-color:transparent}
-.eh-slide.drag .eh-knob{transition:none;cursor:grabbing}
-.eh-slide.done .eh-knob{transition:transform .2s ease}
-.eh-root.leaving .eh-slide{opacity:0;transition:opacity .3s}
+/* 14.11.2026 telefonda yukarı kaydırarak giriş (SwipeUp): uzun dikey çerçeve, top altta */
+.eh-swipe{--eh-p:0;position:relative;width:76px;height:clamp(150px,24cqh,210px);margin:0 auto;border-radius:999px;padding:5px;touch-action:none;
+  user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
+  background:color-mix(in srgb,var(--eh-fg) 6%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--eh-fg) 7%,transparent)}
+.eh-swipe::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(to top,color-mix(in srgb,var(--eh-acc) 22%,transparent),transparent);opacity:var(--eh-p)}
+.eh-chev{position:absolute;top:22px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--eh-acc);
+  pointer-events:none;opacity:calc(1 - var(--eh-p) * 2)}
+.eh-chev svg{animation:eh-chev 1.6s ease-in-out infinite;opacity:.15}
+.eh-chev svg:nth-child(1){animation-delay:.4s}.eh-chev svg:nth-child(2){animation-delay:.2s}
+@keyframes eh-chev{0%,100%{opacity:.15}40%{opacity:1}}
+.eh-swipe-txt{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:12px;white-space:nowrap;font-size:11px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--eh-sub);pointer-events:none;opacity:calc(1 - var(--eh-p) * 2)}
+.eh-swipe .eh-knob{width:66px;height:66px}
+.eh-knob{position:relative;z-index:1;display:grid;place-items:center;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none;
+  background:var(--eh-acc);color:#fff;box-shadow:0 8px 22px -6px color-mix(in srgb,var(--eh-acc) 80%,transparent);
+  transition:transform .5s cubic-bezier(.3,1.5,.5,1);-webkit-tap-highlight-color:transparent}
+.eh-swipe.drag .eh-knob{transition:none;cursor:grabbing}
+.eh-swipe.done .eh-knob{transition:transform .2s ease}
+.eh-root{--eh-pull:0}
+@container (max-width:639px){
+  .eh-content{transform:translateY(calc(var(--eh-pull) * -24px))}
+  .eh-content > div:first-child{opacity:calc(1 - var(--eh-pull) * .5)}
+  .eh-body{text-align:center;margin-bottom:22px}
+  .eh-content > div:first-child{text-align:center}
+}
+.eh-root.leaving .eh-swipe{opacity:0;transition:opacity .3s}
 @media (prefers-reduced-motion:reduce){
   .eh-a,.eh-hint{animation:none;opacity:1;transform:none}
-  .eh-slide-txt{animation:none;color:var(--eh-sub)}
+  .eh-chev svg{animation:none;opacity:.6}
   .eh-canvas,.eh-fallback,.eh-btn,.eh-btn svg{transition:none}
 }
 

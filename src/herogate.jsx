@@ -80,8 +80,8 @@ export function HeroGate({ onOpen, onDone }) {
     const onVis = () => engine?.setVisible(!document.hidden); document.addEventListener('visibilitychange', onVis);
     const pos = (e) => { const b = root.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const mark = () => { root.dataset.touched = '1'; };
-    const mv = (e) => { if (e.target.closest?.('.eh-slide')) return; const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
-    const dn = (e) => { if (e.target.closest('button,a,.eh-slide')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
+    const mv = (e) => { if (e.target.closest?.('.eh-swipe')) return; const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
+    const dn = (e) => { if (e.target.closest('button,a,.eh-swipe')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
     const up = (e) => { const [x, y] = pos(e); engine?.pointer('up', x, y, e.pointerType === 'touch'); };
     const lv = (e) => { const [x, y] = pos(e); engine?.pointer('leave', x, y, e.pointerType === 'touch'); };
     root.addEventListener('pointermove', mv, { passive: true }); root.addEventListener('pointerdown', dn, { passive: true });
@@ -126,7 +126,7 @@ export function HeroGate({ onOpen, onDone }) {
         <div className="eh-aside">
           <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
           <div className="eh-a eh-a5">
-            {coarse ? <SlideToStart onDone={go} /> : (
+            {coarse ? <SwipeUp onDone={go} /> : (
               <button type="button" className="eh-btn" onClick={go}>Alışverişe başla
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
@@ -139,35 +139,44 @@ export function HeroGate({ onOpen, onDone }) {
   );
 }
 
-// 14.11.2026 Telefonda 'Alışverişe başla' düğmesi yerine kaydırarak giriş (slide to unlock tarzı).
-// Topu sağa sürükle: %82'yi geçince girer, bırakırsan geri yaylanır. Dokunup bırakmak (sürüklemeden) bir şey yapmaz.
-function SlideToStart({ onDone }) {
+// 14.11.2026 Telefonda 'Alışverişe başla' düğmesi yerine yukarı kaydırarak giriş: uzun dikey çerçeve, top altta.
+// Topu yukarı çek (ya da hızlıca yukarı fırlat) → mağaza açılır; yarıda bırakırsan geri yaylanır. Dokunup bırakmak bir şey yapmaz.
+function SwipeUp({ onDone }) {
   const trackRef = useRef(null), knobRef = useRef(null);
-  const st = useRef({ on: false, x0: 0, max: 0, x: 0, done: false });
+  const st = useRef({ on: false, y0: 0, max: 0, y: 0, done: false, t: 0, ly: 0, v: 0 });
   const [done, setDone] = useState(false);
-  const setX = (x) => {
-    const s = st.current; s.x = x; const k = knobRef.current, t = trackRef.current; if (!k || !t) return;
-    k.style.transform = `translateX(${x}px)`; t.style.setProperty('--eh-p', s.max ? x / s.max : 0);
+  const setY = (y) => {
+    const s = st.current; s.y = y; const k = knobRef.current, t = trackRef.current; if (!k || !t) return;
+    const p = s.max ? y / s.max : 0;
+    k.style.transform = `translateY(${-y}px)`; t.style.setProperty('--eh-p', p);
+    t.closest('.eh-root')?.style.setProperty('--eh-pull', p);
   };
+  const finish = () => { const s = st.current; s.done = true; setY(s.max); setDone(true); try { navigator.vibrate?.(8); } catch {} onDone(); };
   const down = (e) => {
-    if (st.current.done) return; const t = trackRef.current, k = knobRef.current; if (!t || !k) return;
-    const s = st.current; s.on = true; s.x0 = e.clientX - s.x; s.max = t.clientWidth - k.offsetWidth - 8;
+    const s = st.current; if (s.done) return; const t = trackRef.current, k = knobRef.current; if (!t || !k) return;
+    s.on = true; s.y0 = e.clientY + s.y; s.max = t.clientHeight - k.offsetHeight - 10; s.t = e.timeStamp; s.ly = e.clientY; s.v = 0;
     t.classList.add('drag'); try { k.setPointerCapture(e.pointerId); } catch {}
   };
-  const move = (e) => { const s = st.current; if (!s.on) return; setX(Math.max(0, Math.min(s.max, e.clientX - s.x0))); };
+  const move = (e) => {
+    const s = st.current; if (!s.on) return;
+    const dt = e.timeStamp - s.t; if (dt > 0) s.v = 0.6 * s.v + 0.4 * ((s.ly - e.clientY) / dt); s.t = e.timeStamp; s.ly = e.clientY;
+    setY(Math.max(0, Math.min(s.max, s.y0 - e.clientY)));
+  };
   const up = () => {
     const s = st.current; if (!s.on) return; s.on = false; trackRef.current?.classList.remove('drag');
-    if (s.max && s.x >= s.max * 0.82) { s.done = true; setX(s.max); setDone(true); try { navigator.vibrate?.(8); } catch {} onDone(); }
-    else setX(0);
+    if (s.max && (s.y >= s.max * 0.7 || (s.v > 0.45 && s.y > 20))) finish(); else setY(0);
   };
   return (
-    <div ref={trackRef} className={'eh-slide' + (done ? ' done' : '')}>
-      <span className="eh-slide-txt">Kaydırarak alışverişe başla</span>
+    <div ref={trackRef} className={'eh-swipe' + (done ? ' done' : '')}>
+      <span className="eh-chev" aria-hidden="true">
+        {[0, 1, 2].map((i) => <svg key={i} width="18" height="10" viewBox="0 0 18 10" fill="none"><path d="M2 8l7-6 7 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>)}
+      </span>
       <button ref={knobRef} type="button" className="eh-knob" aria-label="Alışverişe başla"
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); st.current.done = true; setDone(true); onDone(); } }}>
-        <svg width="20" height="20" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish(); } }}>
+        <svg width="20" height="20" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 12V2M3 6l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
+      <span className="eh-swipe-txt">Yukarı kaydır</span>
     </div>
   );
 }
