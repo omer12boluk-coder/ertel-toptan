@@ -10372,3 +10372,13 @@ html.ux-wa .cd-cta-wa { background: #128540; }
 :is(html.pf-bnanim, html.pf-lite) :is(.cd-hero, .sh-hero) *, :is(html.pf-bnanim, html.pf-lite) :is(.cd-hero, .sh-hero) *::before, :is(html.pf-bnanim, html.pf-lite) :is(.cd-hero, .sh-hero) *::after { animation: none !important; transition: none !important; }
 html.pf-film .flm-box { visibility: hidden !important; }
 :is(html.pf-mq, html.pf-lite) :is(.cd-mq-tr, .sh-marquee-in) { animation-play-state: paused !important; }
+
+/* 14.11.2026 Açılış sahnesi (herogate.jsx): uçan logo, dönen kelime, canlı sayılar, düğmede ışık */
+.eh-fly { position: fixed; z-index: 2147483001; pointer-events: none; transform-origin: 0 0; object-fit: contain; }
+.eh-word { display: inline-block; }
+.eh-nums { display: flex; gap: 18px; margin-top: 14px; font: 500 12.5px/1.2 var(--eh-font); color: var(--eh-sub); }
+.eh-nums b { display: block; font: 700 20px/1.1 var(--eh-font); color: var(--eh-fg); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.eh-btn.eh-shine { position: relative; overflow: hidden; }
+.eh-btn.eh-shine::after { content: ""; position: absolute; top: 0; bottom: 0; width: 60px; left: -80px; background: linear-gradient(100deg, transparent, rgb(255 255 255 / .45), transparent); animation: ehShine 3.6s ease-in-out infinite 1.5s; pointer-events: none; }
+@keyframes ehShine { 0% { left: -80px; } 35%, 100% { left: 110%; } }
+@media (prefers-reduced-motion: reduce) { .eh-btn.eh-shine::after { animation: none; display: none; } }

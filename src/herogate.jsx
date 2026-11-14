@@ -10,6 +10,73 @@ import { useStore, store } from './store.js';
 import { ls } from './utils.js';
 import { ROUTE, lpath } from './route.js';
 import { LiquidEngine } from './liquid.js';
+import { gateFx } from './anim.jsx';
+import { useVisibleProducts } from './catalog.jsx';
+import { useBrandList } from './brandsets.jsx';
+import { LOGO_MARK } from './config.js';
+
+// ---- 14.11.2026 Açılış sahnesi (look.anim gfly / gscn / gwrd / gnum / gshn; anim.jsx gateFx) ----
+// Kullanıcı: B (logo menüye uçar) + C (sahne kurulur) + D1 (dönen kelime) + D2 (canlı sayılar); D4 (düğmede ışık) denemede kapalı.
+// Kurallar: SADECE 'Alışverişe başla'dan sonra bir kez; kalıcı katman (will-change) YOK; Yeni gelenler kendi kayma hareketiyle
+// ÇAKIŞMASIN (rail data-an='ok' yapılır, sahne kendisi oynatır); kaydırmalı sırada hareket sürerken mıknatıs (scroll-snap) kapalı.
+const EZ = 'cubic-bezier(.16,1,.3,1)';
+function flyStart(img, root, src) {
+  const r = img?.getBoundingClientRect(); if (!r || !r.width) return null;
+  const mob = root.clientWidth < 640; const z = mob ? Math.min(r.width, r.height) : r.height;
+  const x = mob ? r.left + (r.width - z) / 2 : r.left, y = r.top + (r.height - z) / 2;
+  const f = document.createElement('img'); f.src = src; f.alt = ''; f.className = 'eh-fly';
+  Object.assign(f.style, { left: x + 'px', top: y + 'px', width: z + 'px', height: z + 'px' });
+  document.body.appendChild(f);
+  f.animate([{ opacity: 0, transform: 'scale(.82)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 420, delay: 140, easing: EZ, fill: 'both' });
+  return { f, x, y, z };
+}
+function flyLand(st) {
+  if (!st) return;
+  const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
+  if (!tg) { st.f.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).onfinish = () => st.f.remove(); return; }
+  const t = tg.getBoundingClientRect(); tg.style.opacity = '0';
+  st.f.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${t.left - st.x}px,${t.top - st.y}px) scale(${t.width / st.z})` }], { duration: 780, easing: 'cubic-bezier(.65,0,.25,1)', fill: 'forwards' })
+    .onfinish = () => { tg.style.opacity = ''; st.f.remove(); };
+}
+function sceneIn() {
+  const sh = document.querySelector('.shell.public'); if (!sh) return;
+  const A = (el, kf, o) => el?.animate(kf, { easing: EZ, fill: 'backwards', ...o });
+  A(sh.querySelector('.topbar'), [{ transform: 'translateY(-90px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, delay: 40 });
+  if (innerWidth < 900) A(sh.querySelector('.botnav'), [{ transform: 'translateY(100px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, delay: 90 });
+  const pg = sh.querySelector('.kp:not(.kp-off)') || sh;
+  A(pg.querySelector('.cd-hero .sh-hero') || pg.querySelector('.cd-hero'), [{ transform: 'scale(.92)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 850, delay: 120 });
+  const rail = pg.querySelector('.cd-nwsec .cd-rail');
+  if (rail && rail.getBoundingClientRect().top < innerHeight) {
+    rail.setAttribute('data-an', 'ok'); rail.style.scrollSnapType = 'none';
+    [...rail.children].slice(0, 5).forEach((t, i) => A(t, [{ transform: 'translateX(64px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 750, delay: 420 + i * 80 }));
+    setTimeout(() => { rail.style.scrollSnapType = ''; }, 1800);
+  }
+}
+const WORDS = ['havyası', 'mikroskobu', 'kalıbı', 'entegresi', 'her şeyi'];
+function WordRoll() {
+  const ref = useRef(null);
+  useEffect(() => {
+    let i = 0, iv = 0; const el = ref.current;
+    const t = setTimeout(() => { iv = setInterval(() => {
+      i++; if (i >= WORDS.length || !el) { clearInterval(iv); return; }
+      el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-.4em)' }], { duration: 220, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
+        el.textContent = WORDS[i]; el.animate([{ opacity: 0, transform: 'translateY(.4em)' }, { opacity: 1, transform: 'none' }], { duration: 380, easing: EZ, fill: 'forwards' });
+      };
+    }, 1300); }, 900);
+    return () => { clearTimeout(t); clearInterval(iv); };
+  }, []);
+  return <span ref={ref} className="eh-word">{WORDS[0]}</span>;
+}
+function Count({ n }) {
+  const [v, setV] = useState(0);
+  useEffect(() => { if (!n) return undefined; let raf = 0; const t0 = performance.now(); const f = (t) => { const k = Math.min(1, (t - t0) / 1100); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(f); }; raf = requestAnimationFrame(f); return () => cancelAnimationFrame(raf); }, [n]);
+  return <b className="num">{v.toLocaleString('tr-TR')}</b>;
+}
+function GateNums() {
+  const n = useVisibleProducts(false).length; const b = useBrandList().length;
+  if (!n) return null;
+  return <div className="eh-nums"><span><Count n={n} />ürün</span><span><Count n={b} />marka</span><span><b>Aynı gün</b>kargo</span></div>;
+}
 
 const SRC = '/bn/hero-logo-wide.webp', MOBILE_SRC = '/bn/hero-logo-mark.webp';
 const BG = { light: [245 / 255, 245 / 255, 247 / 255], dark: [10 / 255, 11 / 255, 15 / 255] };
@@ -38,6 +105,8 @@ export function HeroGate({ onOpen, onDone }) {
   const flip = () => { const n = dark ? 'light' : 'dark'; ls.set('device-theme', n); document.documentElement.setAttribute('data-theme', n); store.set({ deviceTheme: n }); };
   useEffect(() => { engRef.current?.setOptions({ bg: dark ? BG.dark : BG.light }); }, [dark]);
   const coarse = typeof matchMedia === 'function' && matchMedia('(hover: none), (pointer: coarse)').matches;
+  const look = useStore((s) => s.settings?.look); const logoSrc = useStore((s) => s.settings?.brand?.logo) || LOGO_MARK;
+  const fx = gateFx(look);
 
   // ayar kapalı gelirse hemen kapan (ve bir sonraki açılış için hatırla)
   useEffect(() => { if (boot === 'ready' || boot === 'login') { try { localStorage.setItem('hero-gate', on ? '1' : '0'); } catch {} if (!on) { onOpen(); onDone(); } } }, [on, boot]);
@@ -100,10 +169,15 @@ export function HeroGate({ onOpen, onDone }) {
   const goneRef = useRef(false);
   const go = () => {
     if (leaving || goneRef.current) return; goneRef.current = true;
+    const fl = fx.fly ? flyStart(imgRef.current, rootRef.current, logoSrc) : null;
     engRef.current?.explode(); setLeaving(true);
     setTimeout(() => {
       engRef.current?.stop(); onOpen();
-      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => { setReveal(true); setTimeout(onDone, 420); }, 80)));
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+        flyLand(fl); // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar
+        if (fx.scn) sceneIn();
+        setReveal(true); setTimeout(onDone, 420);
+      }, 80)));
     }, 560);
   };
 
@@ -122,12 +196,13 @@ export function HeroGate({ onOpen, onDone }) {
       <div ref={contentRef} className="eh-content">
         <div>
           <p className="eh-eyebrow eh-a eh-a1">Ertel Telekomünikasyon</p>
-          <h1 className="eh-h1"><span className="eh-line eh-a eh-a2">Tamir tezgâhının</span><span className="eh-line eh-a eh-a3"><span className="eh-accent">her şeyi burada.</span></span></h1>
+          <h1 className="eh-h1"><span className="eh-line eh-a eh-a2">Tamir tezgâhının</span><span className="eh-line eh-a eh-a3"><span className="eh-accent">{fx.word ? <><WordRoll /> burada.</> : 'her şeyi burada.'}</span></span></h1>
         </div>
         <div className="eh-aside">
           <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
+          {fx.num && <div className="eh-a eh-a4"><GateNums /></div>}
           <div className="eh-a eh-a5">
-            <button type="button" className="eh-btn" onClick={go}>Alışverişe başla
+            <button type="button" className={'eh-btn' + (fx.shine ? ' eh-shine' : '')} onClick={go}>Alışverişe başla
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>

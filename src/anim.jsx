@@ -6,12 +6,17 @@
 // bitince açılır ('ok') — yoksa kartlar hareket sonunda bir daha 'gidip yerine oturuyordu'. Bu kutulara will-change VERME (titretti). bn: tek rAF kaydırma dinleyicisi, sadece banner'a satır içi transform/opacity yazar
 // (layout okumaz → takılmaz). 'Hareketi azalt' açıksa hiçbiri yok. Reddedilenler style.css başlığında.
 // DİKKAT: html sınıfları an-<anahtar>; başka öğeye bu adları (an-bn, an-raf…) VERME (an-fly/an-hd çakışıp sayfayı kilitlemişti).
-// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try7').
+// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try8').
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
 import { ls } from './utils.js';
 
 export const ANIMS = [
+  ['gfly', 'B1', 'Açılış: logo menüye uçar'],
+  ['gscn', 'C1', 'Açılış: sahne kurulur (menüler, banner, Yeni gelenler)'],
+  ['gwrd', 'D1', 'Giriş: dönen kelime'],
+  ['gnum', 'D2', 'Giriş: canlı sayılar'],
+  ['gshn', 'D4', 'Giriş: düğmede ışık'],
   ['rv', '0', 'Deneme: bölümler solarak gelmesin'],
   ['bn', 'G', 'Banner geri çekilsin'],
   ['raf', 'B', 'Ürün rafları kayarak gelsin (Yeni gelenler + raflar)'],
@@ -29,7 +34,7 @@ const KEYS = ANIMS.map((a) => a[0]);
 const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function readTry() { const v = ls.get('anim-try7', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, true])); }
+function readTry() { const v = ls.get('anim-try8', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, k !== 'gshn'])); }
 
 export function AnimLayer() {
   const A = useStore((s) => s.settings?.look?.anim) || null;
@@ -70,7 +75,7 @@ export function AnimLayer() {
     };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!TRY_HOST) return null;
-  const set = (v) => { ls.set('anim-try7', v); setTry(v); };
+  const set = (v) => { ls.set('anim-try8', v); setTry(v); };
   return <AnimPanel v={tryV} set={set} lite={lite} />;
 }
 
@@ -80,6 +85,16 @@ export function AnimLayer() {
 // saniyede 0,6'dan fazla 50 ms+ duraklama ya da 2+ donma (>150 ms) → hafif mod (1,7× ölçüsü hızlı makineyi de yakaladı). Karar cihazda 14 gün saklanır
 // (ls 'perf-lite'), her açılışta yeniden ölçülmez. Hafif mod = html.pf-lite → buzlu cam, gölgeler, banner animasyonları,
 // kayan şerit kapalı, hareket dili (an-*) yok, tanıtım videosu kendiliğinden başlamaz (film.js opts.auto bunu okur).
+// 14.11.2026 açılış sahnesi (giriş sayfası → mağaza): herogate.jsx bunu okur. Önizlemede panel seçimi, canlıda look.anim.
+// 'Hareketi azalt' ya da bu cihazda hafif mod kararı varsa hepsi kapalı.
+export function gateFx(look) {
+  if (RM()) return {};
+  const lv = ls.get('perf-lite', null); if (look?.perf === 'on' || (look?.perf !== 'off' && lv?.lite && Date.now() - lv.at < 14 * 864e5)) return {};
+  const v = TRY_HOST ? readTry() : null; const A = look?.anim || {};
+  const on = (k) => (v ? !!v[k] : A[k] === 'on');
+  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn') };
+}
+export const TRY = TRY_HOST;
 export const isLite = () => typeof document !== 'undefined' && document.documentElement.classList.contains('pf-lite');
 const LITE_DAYS = 14;
 function useLite(mode) {
@@ -168,6 +183,7 @@ function AnimPanel({ v, set, lite }) {
           <button type="button" onClick={() => all(true)}>Hepsini aç</button>
           <button type="button" onClick={() => all(false)}>Hepsini kapat</button>
           <button type="button" className="pri" onClick={() => { scrollTo(0, 0); location.reload(); }}>Baştan oynat</button>
+          <button type="button" onClick={() => { try { sessionStorage.removeItem('hero-seen'); } catch {} location.href = '/'; }}>Girişi tekrar göster</button>
         </div>
         {RM() && <p className="an-rm">Cihazınızda "hareketi azalt" açık; hareketler gösterilmiyor.</p>}
         <div className="an-ph an-ph2"><b>Akıcılık</b><small>Kaydırırken bakın: kare hızı ekranın Hz'ine yakın, takılma az olmalı</small></div>
