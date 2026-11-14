@@ -53,10 +53,10 @@ export function AnimLayer() {
     let raf = 0; let heroH = 0; let lastHp = -1; let hero = null;
     const tick = () => {
       raf = 0; if (!hero || !hero.isConnected) { hero = document.querySelector('.shell.public .cd-hero'); heroH = 0; } if (!hero) return;
-      if (hero.closest('.kp-off')) { if (hero.style.willChange) hero.style.willChange = ''; lastHp = -1; return; } // ana sayfa gizliyken (başka sayfadayken) DOKUNMA: o sayfanın kaydırması banner'ı bozuyordu, dönünce yanlış çizilip oturuyordu
+      if (hero.closest('.kp-off')) return; // ana sayfa gizliyken (başka sayfadayken) DOKUNMA: o sayfanın kaydırması banner'ı bozuyordu, dönünce yanlış çizilip oturuyordu
       if (!heroH) heroH = hero.offsetHeight || 1;
       const hp = Math.round(Math.max(0, Math.min(1, scrollY / heroH)) * 200) / 200; if (hp === lastHp) return; lastHp = hp;
-      hero.style.transform = hp ? `scale(${(1 - hp * 0.08).toFixed(3)})` : ''; hero.style.opacity = hp ? (1 - hp * 0.55).toFixed(3) : ''; hero.style.willChange = hp ? 'transform, opacity' : ''; // katman SADECE kaydırılmışken (kalıcı katman ana sayfa dönüşünü bozuyordu)
+      hero.style.transform = hp ? `scale(${(1 - hp * 0.08).toFixed(3)})` : ''; hero.style.opacity = hp ? (1 - hp * 0.55).toFixed(3) : ''; // will-change YOK: kaydırılmış hâlde sayfadan çıkıp dönünce Safari katmanı yeniden kurup titretiyordu ('bazen oluyor')
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick); };
     const onResize = () => { heroH = 0; onScroll(); };
@@ -64,7 +64,7 @@ export function AnimLayer() {
     return () => {
       on.forEach((k) => c.remove('an-' + k));
       io?.disconnect(); mo?.disconnect(); cancelAnimationFrame(wr); clearInterval(iv); document.querySelectorAll('[data-an]').forEach((x) => x.removeAttribute('data-an'));
-      if (has('bn')) { removeEventListener('scroll', onScroll); removeEventListener('resize', onResize); cancelAnimationFrame(raf); if (hero) { hero.style.transform = ''; hero.style.opacity = ''; hero.style.willChange = ''; } }
+      if (has('bn')) { removeEventListener('scroll', onScroll); removeEventListener('resize', onResize); cancelAnimationFrame(raf); if (hero) { hero.style.transform = ''; hero.style.opacity = ''; } }
     };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!TRY_HOST) return null;
