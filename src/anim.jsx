@@ -20,7 +20,7 @@ export const ANIMS = [
   ['rv', '0', 'Deneme: bölümler solarak gelmesin'],
   ['bn', 'G', 'Banner geri çekilsin'],
   ['raf', 'B', 'Ürün rafları kayarak gelsin (Yeni gelenler + raflar)'],
-  ['pk', 'P', 'Bu hafta masamızdan: kartlar yükselsin'],
+  ['pk', 'P', 'Bu hafta masamızdan: büyük resim yükselsin'],
   ['tz', 'T', 'Tezgâhın için: kutular kayarak gelsin'],
   ['flm', 'V', 'Yakından bak: video açılarak gelsin'],
   ['ic', 'D', 'Güven satırları: ikonlar çizilsin'],
@@ -48,7 +48,7 @@ export function AnimLayer() {
     const c = document.documentElement.classList; on.forEach((k) => c.add('an-' + k));
     const has = (k) => on.includes(k);
     // ---- raf / ind / mrk: bölüm ekrana değdiği an bir kez ----
-    const sel = [has('raf') && '.cd-sec .cd-rail', has('pk') && '.cd-bento > .cd-big, .cd-bento > .cd-grid', has('tz') && '.cd-ads', has('flm') && '.flm-box', has('ic') && '.p0-trust', has('ind') && '.cd-sets', has('mrk') && '.cd-bwall', has('sind') && '.set-page .set-price, .set-page .set-list', has('ok') && '.done-card', has('bpw') && '.bp-grid'].filter(Boolean).join(', ');
+    const sel = [has('raf') && '.cd-sec .cd-rail', has('pk') && '.cd-bento > .cd-big', has('tz') && '.cd-ads', has('flm') && '.flm-box', has('ic') && '.p0-trust', has('ind') && '.cd-sets', has('mrk') && '.cd-bwall', has('sind') && '.set-page .set-price, .set-page .set-list', has('ok') && '.done-card', has('bpw') && '.bp-grid'].filter(Boolean).join(', ');
     const seen = new WeakSet();
     const io = sel ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { const t = e.target; if (t.classList.contains('bp-grid')) waveIdx(t); t.setAttribute('data-an', 'go'); io.unobserve(t); setTimeout(() => t.isConnected && t.setAttribute('data-an', 'ok'), 1900); } }), { threshold: 0.2 }) : null;
     const watch = () => { if (io) for (const x of document.querySelectorAll(sel)) if (!seen.has(x)) { seen.add(x); io.observe(x); } };

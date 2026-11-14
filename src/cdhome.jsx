@@ -99,10 +99,14 @@ export function CdHero({ H, open, onProduct, brands, pkHero, gap }) {
   useLayoutEffect(() => {
     const el = ref.current; if (!el || !fill) return;
     const W = el.ownerDocument.defaultView || window;
+    // 14.11.2026 (akşam): Safari'nin adres çubuğu açılıp kapanınca 'resize' gelir ve alt menü (adres çubuğuna yapışık) yer değiştirir →
+    // --bn-sp her seferinde değişip banner 'tık' diye büyüyüp küçülüyordu (kullanıcı ekran kaydı). Alt menü payı SADECE genişlik
+    // değişince (ilk açılış, döndürme) yeniden ölçülür; yükseklik değişimi (adres çubuğu) yok sayılır.
+    let lastW = -1; const t0 = performance.now(); // ilk 1,5 sn her ölçümde (ilk ölçüm birkaç px eksik çıkabiliyor), sonra sadece genişlik değişince
     const m = () => {
       const t = el.getBoundingClientRect().top + W.scrollY; el.style.setProperty('--fs-top', Math.max(0, Math.min(260, Math.round(t))) + 'px');
       // 14.11.2026 'Tam kapla': telefonda banner alt menünün (botnav) üst kenarında biter → alt menü bannerı kapatmaz
-      if (full) { const bn = el.ownerDocument.querySelector('.botnav'); const r = bn && getComputedStyle(bn).display !== 'none' ? bn.getBoundingClientRect() : null;
+      if (full && (lastW !== W.innerWidth || performance.now() - t0 < 1500)) { lastW = W.innerWidth; const bn = el.ownerDocument.querySelector('.botnav'); const r = bn && getComputedStyle(bn).display !== 'none' ? bn.getBoundingClientRect() : null;
         const sp = r && r.height > 10 && r.top < W.innerHeight ? Math.max(0, Math.min(160, Math.round(W.innerHeight - r.top + 8))) : 0; el.style.setProperty('--bn-sp', sp + 'px'); }
     };
     // 14.11.2026: ilk ölçüm (çizim bitmeden) birkaç px eksik çıkıyordu → giriş sayfasından sonra banner kısalıp sonra oturuyordu.
