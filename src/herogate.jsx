@@ -33,11 +33,15 @@ function flyStart(img, root, src) {
 // resim yerini alır. Resim yüklenmemişse buğudan netleşme (yedek).
 let markImg = null;
 const preloadMark = () => { if (!markImg) { markImg = new Image(); markImg.decoding = 'async'; markImg.src = MOBILE_SRC; } };
-function sandForm(f, x, y, z, root) {
-  const im = markImg; if (!im?.complete || !im.naturalWidth) return false;
-  const dpr = Math.min(2, devicePixelRatio || 1), S = Math.round(z * (root.clientWidth < 640 ? 1.8 : 2.3)), W = z + 2 * S;
-  const n = Math.max(48, Math.round(z * dpr * 0.8)), o = document.createElement('canvas'); o.width = o.height = n;
-  let d; try { const g = o.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, n, n); d = g.getImageData(0, 0, n, n).data; } catch { return false; }
+// 14.11.2026 (gece, mobil ölçümü): kum son karede NET logoyu aynı kanvasa çizer ve menüye bu kanvas uçar (eskiden sonda ayrı
+// <img> konuyordu → telefonda resim o an hazır olmadığından bir kare boş = 'yanıp sönme'). Mağaza kum BİTTİKTEN sonra çizilir
+// (çizim telefonda ~0,9 sn donduruyor; kumun son kareleri o donmaya denk gelince takılıyordu), uçuş da telefon rahatlayınca başlar.
+function sandForm(x, y, z, root) {
+  const im = markImg; if (!im?.complete || !im.naturalWidth) return null;
+  const mob = root.clientWidth < 640;
+  const dpr = Math.min(2, devicePixelRatio || 1), S = Math.round(z * (mob ? 1.8 : 2.3)), W = z + 2 * S;
+  const n = Math.max(40, Math.round(z * dpr * (mob ? 0.6 : 0.8))), o = document.createElement('canvas'); o.width = o.height = n;
+  let d; try { const g = o.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, n, n); d = g.getImageData(0, 0, n, n).data; } catch { return null; }
   const c = document.createElement('canvas'); c.className = 'eh-sand'; c.width = c.height = Math.round(W * dpr);
   Object.assign(c.style, { left: x - S + 'px', top: y - S + 'px', width: W + 'px', height: W + 'px' });
   const P = [], cx = W * dpr / 2, cy = cx, sz = (z * dpr / n) * 1.05;
@@ -48,44 +52,57 @@ function sandForm(f, x, y, z, root) {
     P.push([cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.62, tx, ty, Math.random() * 0.32, `rgba(${d[k]},${d[k + 1]},${d[k + 2]},${a / 255})`]);
   }
   document.body.appendChild(c);
-  const ctx = c.getContext('2d'), D = 520, t0 = performance.now() + 40;
+  const ctx = c.getContext('2d'), D = 520, t0 = performance.now() + 40; let res; const done = new Promise((r) => { res = r; });
+  const st = { x, y, z, el: c, off: S, done, raf: 0 };
   const step = (now) => {
     const T = Math.max(0, (now - t0) / D); ctx.clearRect(0, 0, c.width, c.height);
+    if (T >= 1) { ctx.globalAlpha = 1; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, S * dpr, S * dpr, z * dpr, z * dpr); res(); return; } // son kare: net logo, aynı kanvas
     for (const p of P) {
       const k = Math.min(1, Math.max(0, (T - p[4]) / (1 - 0.32))), e = 1 - Math.pow(1 - k, 3);
       ctx.globalAlpha = Math.min(1, T * 4); ctx.fillStyle = p[5];
       ctx.fillRect(p[0] + (p[2] - p[0]) * e - sz / 2, p[1] + (p[3] - p[1]) * e - sz / 2, sz, sz);
     }
-    if (T < 1) { f._raf = requestAnimationFrame(step); return; }
-    // son kare: net logo AYNI karede gelir, kum hemen kalkar (üst üste sönme 'buğulanma' gibi görünüyordu)
-    f.style.opacity = '1'; c.remove();
+    st.raf = requestAnimationFrame(step);
   };
-  f._raf = requestAnimationFrame(step); f._sand = c;
-  return true;
+  st.raf = requestAnimationFrame(step);
+  return st;
 }
 function flySmall(img, root) {
   const r = img?.getBoundingClientRect(); if (!r || !r.width) return null;
   const z = Math.round(Math.min(root.clientWidth < 640 ? 60 : 80, r.height * 0.9));
   const x = r.left + r.width / 2 - z / 2, y = r.top + r.height / 2 - z / 2;
+  const sd = sandForm(x, y, z, root); if (sd) return sd;
   const f = document.createElement('img'); f.src = MOBILE_SRC; f.alt = ''; f.className = 'eh-fly';
   Object.assign(f.style, { left: x + 'px', top: y + 'px', width: z + 'px', height: z + 'px', opacity: '0' });
   document.body.appendChild(f);
-  if (!sandForm(f, x, y, z, root)) f.animate([{ opacity: 0, filter: 'blur(10px)', transform: 'scale(1.5)' }, { opacity: 1, filter: 'blur(0px)', transform: 'scale(1)' }],
+  f.animate([{ opacity: 0, filter: 'blur(10px)', transform: 'scale(1.5)' }, { opacity: 1, filter: 'blur(0px)', transform: 'scale(1)' }],
     { duration: 380, delay: 140, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
-  return { x, y, z, src: MOBILE_SRC, el: f };
+  return { x, y, z, el: f, off: 0, done: new Promise((r) => setTimeout(r, 520)) };
 }
+// uçan logo (kum kanvası ya da yedek resim) menüdeki logonun içine kayar; son %22'de menü logosuyla yumuşakça yer değiştirir
+// (gündüz menü logosunun beyaz yuvarlağı birden belirip 'oturma' gibi görünüyordu)
 function flyLand(st) {
   if (!st) return;
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
-  if (!tg) { cancelAnimationFrame(st.el?._raf); st.el?._sand?.remove(); st.el?.remove(); return; }
+  const f = st.el;
+  if (!tg) { cancelAnimationFrame(st.raf); f?.remove(); return; }
   const t = tg.getBoundingClientRect();
-  let f = st.el;
-  if (f) { cancelAnimationFrame(f._raf); f._sand?.remove(); f.getAnimations().forEach((a) => { a.commitStyles?.(); a.cancel(); }); f.style.opacity = '1'; f.style.filter = ''; f.style.transform = ''; }
-  else { f = document.createElement('img'); f.src = st.src; f.alt = ''; f.className = 'eh-fly'; Object.assign(f.style, { left: st.x + 'px', top: st.y + 'px', width: st.z + 'px', height: st.z + 'px' }); document.body.appendChild(f); }
+  f.getAnimations().forEach((a) => { a.commitStyles?.(); a.cancel(); }); f.style.opacity = '1'; f.style.filter = ''; f.style.transform = '';
   tg.style.opacity = '0';
-  f.animate([{ transform: 'translate(0,0) scale(1)', opacity: st.el ? 1 : 0 }, { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0.1 },
-    { transform: `translate(${t.left - st.x}px,${t.top - st.y}px) scale(${t.width / st.z})`, opacity: 1 }], { duration: 650, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' })
-    .onfinish = () => { tg.style.opacity = ''; requestAnimationFrame(() => f.remove()); };
+  const k = t.width / st.z, ex = st.x - st.off, ey = st.y - st.off;
+  const tx = t.left - ex - st.off * k, ty = t.top - ey - st.off * k, D = innerWidth < 640 ? 600 : 650;
+  f.style.transformOrigin = '0 0';
+  f.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${tx}px,${ty}px) scale(${k})` }], { duration: D, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' });
+  setTimeout(() => {
+    tg.style.transition = 'opacity .16s ease'; tg.style.opacity = '';
+    f.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }).onfinish = () => { cancelAnimationFrame(st.raf); f.remove(); setTimeout(() => { tg.style.transition = ''; }, 40); };
+  }, D * 0.78);
+}
+// telefon mağazayı çizmeyi bitirip rahatlayınca (art arda 2 kare < 34 ms) devam et; en geç 1,4 sn
+function whenCalm(fn) {
+  const t0 = performance.now(); let last = t0, ok = 0;
+  const f = (now) => { const dt = now - last; last = now; ok = dt < 34 ? ok + 1 : 0; if (ok >= 2 || now - t0 > 1400) fn(); else requestAnimationFrame(f); };
+  requestAnimationFrame(f);
 }
 function sceneIn(fly) {
   const sh = document.querySelector('.shell.public'); if (!sh) return;
@@ -258,14 +275,19 @@ export function HeroGate({ onOpen, onDone }) {
     if (leaving || goneRef.current) return; goneRef.current = true;
     const fl = fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
     engRef.current?.explode(); setLeaving(true);
-    setTimeout(() => {
+    const t0 = performance.now();
+    const open = () => {
       engRef.current?.stop(); onOpen();
-      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+      whenCalm(() => {
         flyLand(fl); // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar
         if (fx.scn) sceneIn(!!fl);
-        setReveal(true); setTimeout(onDone, 420);
-      }, 80)));
-    }, 560);
+        // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
+        setReveal(true); setTimeout(onDone, fl ? 820 : 420);
+      });
+    };
+    // mağaza ancak dağılma (560 ms) VE kum bittikten sonra çizilir; kumun son karesi boyansın diye bir kare daha beklenir
+    const wait = Math.max(0, 560 - (performance.now() - t0));
+    Promise.all([fl?.done, new Promise((r) => setTimeout(r, wait))]).then(() => requestAnimationFrame(() => requestAnimationFrame(open)));
   };
 
   return (
