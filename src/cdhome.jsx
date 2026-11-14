@@ -171,7 +171,7 @@ export function CdPick({ H, S, onProduct }) {
     <section className="cd-sec rv">
       <Head eye={C.eye ?? 'Tamircinin seçimi'} title={C.title || 'Bu hafta masamızdan.'} />
       <div className="cd-bento">
-        <div className="cd-big" role="button" tabIndex={0} onClick={() => onProduct(a)}><div className="cd-big-in">
+        <div className="cd-big" role="button" tabIndex={0} onClick={() => onProduct(a)}>
           <div className="cd-big-t">
             <Logo p={a} logos={logos} />
             {(C.badge ?? 'Haftanın ürünü') && <span className="cd-eye g">{C.badge ?? 'Haftanın ürünü'}</span>}
@@ -180,7 +180,7 @@ export function CdPick({ H, S, onProduct }) {
             <span className="cd-big-add"><CardAdd p={a} /><span className="cd-lnk">İncele<Icon n="back" s={13} className="flip" /></span></span>
           </div>
           <span className="cd-big-im"><Thumb p={a} size="lg" /></span>
-        </div></div>
+        </div>
         <div className="cd-grid">{rest.map((p) => <Tile key={p.id} p={p} X={nameOf(p, C.names)} pr={price(p)} logos={logos} onProduct={onProduct} />)}</div>
       </div>
     </section>

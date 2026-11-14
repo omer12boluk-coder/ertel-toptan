@@ -1,29 +1,30 @@
-// 14.11.2026 Hareket dili (look.anim.<anahtar> = 'on' → açık; varsayılan kapalı = bugünkü site).
-// Her hareket html'e 'an-<anahtar>' sınıfı ekler; CSS style.css sonunda ('Hareket dili'). Bölüm ilk göründüğünde
-// bir kez oynar (useReveal'in koyduğu .rv[data-in]). Kaydırmaya bağlı olanlar (Keşfet, banner, haftanın ürünü)
-// tek bir rAF kaydırma dinleyicisiyle çalışır. 'Hareketi azalt' açık olan cihazda hiçbiri çalışmaz (CSS + burada).
+// 14.11.2026 Hareket dili v2 — PARMAĞA BAĞLI (look.anim.<anahtar> = 'on' → açık; varsayılan kapalı = bugünkü site).
+// Her hareket html'e 'an-<anahtar>' sınıfı ekler; CSS style.css sonunda ('Hareket dili v2'). İçerik hiç gizlenmez:
+// tek bir rAF kaydırma dinleyicisi her görünür bölüme (.rv) --p (0→1) yazar, CSS onunla kaydırdıkça hareket ettirir.
+// Önce HEPSİ okunur, sonra yazılır (okuma-yazma karışınca iPhone'da takılıyordu). 'Hareketi azalt' açıksa hiçbiri yok.
+// v1 (görününce oynayan giriş hareketleri + Haftanın ürünü sahnesi) kullanıcı denemesinde REDDEDİLDİ.
 // DİKKAT: html sınıfları an-<anahtar>; başka öğeye bu adları (an-hd, an-fly…) VERME (çakıştı, sayfa kilitlendi).
-// Önizleme hostunda (adında '--' olan) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try').
+// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try2').
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
 import { ls } from './utils.js';
 
 export const ANIMS = [
+  ['rv', '0', 'Bölümler hep yerinde (solarak gelme kapalı)'],
   ['hd', 'A', 'Başlık perdesi'],
   ['raf', 'B', 'Raf akışı'],
-  ['ksf', 'C', 'Keşfet derinliği'],
+  ['ksf', 'C', 'Keşfet derinliği (bilgisayar)'],
   ['ic', 'D', 'İkonlar kendini çizsin'],
   ['ind', 'E', 'İndirim çizilsin'],
   ['mrk', 'F', 'Marka dalgası'],
   ['bn', 'G', 'Banner geri çekilsin'],
-  ['wk', 'H', 'Haftanın ürünü sahnesi (telefon)'],
   ['fly', 'I', 'Ürün sepete uçsun'],
 ];
 const KEYS = ANIMS.map((a) => a[0]);
 const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function readTry() { const v = ls.get('anim-try', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, true])); }
+function readTry() { const v = ls.get('anim-try2', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, true])); }
 
 export function AnimLayer() {
   const A = useStore((s) => s.settings?.look?.anim) || null;
@@ -34,26 +35,68 @@ export function AnimLayer() {
     if (RM()) return undefined;
     const c = document.documentElement.classList; on.forEach((k) => c.add('an-' + k));
     const has = (k) => on.includes(k);
-    // ---- kaydırmaya bağlı hareketler ----
-    let raf = 0;
+    // ---- kaydırmaya bağlı hareketler: önce oku, sonra SADECE hareket eden öğelere yaz ----
+    const secP = has('hd') || has('raf') || has('ic') || has('ind') || has('mrk');
+    const last = new WeakMap(); const touched = new Set(); const tgt = new WeakMap(); let heroH = 0; let raf = 0;
+    const put = (el, k, v) => { let o = last.get(el); if (!o) { o = {}; last.set(el, o); } if (o[k] === v) return; o[k] = v; touched.add(el); if (k[0] === '-') el.style.setProperty(k, v); else el.style[k] = v; };
+    const cl = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+    // bölüm başına hedef listesi (2 sn önbellek)
+    const targets = (sec) => {
+      const t = tgt.get(sec); if (t && performance.now() - t.at < 2000) return t;
+      const n = {
+        at: performance.now(),
+        w: has('hd') ? [...sec.querySelectorAll('.anw > span')] : [],
+        tl: has('raf') ? [...sec.querySelectorAll(':scope .cd-rail > .cd-tile, :scope .cd-grid > .cd-tile')].slice(0, 8) : [],
+        ic: has('ic') ? [...sec.querySelectorAll('.p0-tr > .ic path')] : [],
+        s: has('ind') ? [...sec.querySelectorAll('.cd-set-p s')] : [],
+        sv: has('ind') ? [...sec.querySelectorAll('.cd-set-sv')] : [],
+        bw: has('mrk') ? [...sec.querySelectorAll('.cd-bw')].slice(0, 30).map((b) => [b, Number(b.style.getPropertyValue('--d')) || 0]) : [],
+      };
+      tgt.set(sec, n); return n;
+    };
+    // sadece ekrana yakın bölümler ölçülür (IntersectionObserver); ekrandan aşağı çıkan bölüm başa (p=0) döner
+    const act = new Set(); const seen = new WeakSet(); const fin = new Map();
+    const io = secP ? new IntersectionObserver((es) => { es.forEach((e) => { if (e.isIntersecting) act.add(e.target); else { act.delete(e.target); fin.set(e.target, e.boundingClientRect.top > 0 ? 0 : 1); } }); onScroll(); }, { rootMargin: '0px 0px 15% 0px' }) : null;
+    const watch = () => { if (io) for (const el of document.querySelectorAll('.shell.public .kp:not(.kp-off) .rv')) if (!seen.has(el)) { seen.add(el); io.observe(el); } };
     const tick = () => {
-      raf = 0; const H = innerHeight;
-      if (has('ksf')) document.querySelectorAll('.cd-ad').forEach((el) => {
-        const r = el.getBoundingClientRect(); if (r.bottom < -50 || r.top > H + 50) return;
-        const p = Math.max(-1, Math.min(1, (r.top + r.height / 2 - H / 2) / H));
-        el.style.setProperty('--py', (70 + p * 30).toFixed(1) + '%');
-      });
-      if (has('bn')) { const el = document.querySelector('.shell.public .cd-hero'); if (el) { const h = el.offsetHeight || 1; el.style.setProperty('--hp', Math.max(0, Math.min(1, scrollY / h)).toFixed(3)); } }
-      if (has('wk') && innerWidth <= 700) document.querySelectorAll('.cd-big').forEach((el) => {
-        const r = el.getBoundingClientRect(); if (r.bottom < 0 || r.top > H) return;
-        const span = Math.max(1, r.height - H * 0.7); const q = Math.max(0, Math.min(1, (80 - r.top) / span));
-        el.style.setProperty('--wq', q.toFixed(3)); const st = String(q < 0.3 ? 0 : q < 0.62 ? 1 : 2);
-        if (el.dataset.st !== st) el.dataset.st = st;
-      });
+      raf = 0; const H = innerHeight; const R = [];
+      // 1) OKU
+      for (const [el, p] of fin) if (last.get(el)?.p !== p) R.push([el, p]);
+      fin.clear();
+      if (secP) for (const el of act) {
+        const r = el.getBoundingClientRect(); if (!r.height) continue;
+        const p = r.top >= H ? 0 : r.top <= H * 0.65 ? 1 : Math.round(((H - r.top) / (H * 0.35)) * 100) / 100;
+        if (last.get(el)?.p === p) continue; R.push([el, p]);
+      }
+      const C = [];
+      if (has('ksf') && innerWidth >= 900) for (const el of document.querySelectorAll('.shell.public .kp:not(.kp-off) .cd-ads')) {
+        const r = el.getBoundingClientRect(); if (r.bottom < -40 || r.top > H + 40) continue;
+        const v = (Math.round(Math.max(-1, Math.min(1, (r.top + r.height / 2 - H / 2) / H)) * 25) / 25).toFixed(2);
+        for (const ad of el.children) { const x = ad.getBoundingClientRect(); if (x.right > -20 && x.left < innerWidth + 20) C.push([ad, v]); }
+      }
+      let hp = null; const hero = has('bn') ? document.querySelector('.shell.public .cd-hero') : null;
+      if (hero) { if (!heroH) heroH = hero.offsetHeight || 1; hp = Math.round(Math.max(0, Math.min(1, scrollY / heroH)) * 200) / 200; }
+      // 2) YAZ
+      for (const [sec, p] of R) {
+        let o = last.get(sec); if (!o) { o = {}; last.set(sec, o); } o.p = p;
+        const T = targets(sec);
+        T.w.forEach((w, i) => put(w, 'transform', p >= 1 ? '' : `translateY(${((1 - cl(p * 2.4 - i * 0.14)) * 105).toFixed(1)}%)`));
+        T.tl.forEach((x, i) => put(x, 'transform', p >= 1 ? '' : `translateX(${((1 - cl(p * 1.8 - Math.min(i, 5) * 0.16)) * 64).toFixed(1)}px)`));
+        T.ic.forEach((x, i) => put(x, 'strokeDashoffset', p >= 1 ? '' : ((1 - cl(p * 1.8 - Math.floor(i / 1) * 0.12)) * 200).toFixed(0)));
+        T.s.forEach((x) => put(x, '--q', cl(p * 2 - 0.3).toFixed(2)));
+        T.sv.forEach((x) => put(x, 'transform', p >= 1 ? '' : `scale(${(0.7 + 0.3 * cl(p * 2 - 0.8)).toFixed(2)})`));
+        T.bw.forEach(([x, d]) => put(x, 'transform', p >= 1 ? '' : `translateY(${((1 - cl(p * 2.2 - d * 0.12)) * 22).toFixed(1)}px)`));
+      }
+      for (const [ad, v] of C) put(ad, '--c', v);
+      if (hero && hp != null) { put(hero, 'transform', hp ? `scale(${(1 - hp * 0.08).toFixed(3)})` : ''); put(hero, 'opacity', hp ? (1 - hp * 0.55).toFixed(3) : ''); }
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick); };
-    const scrolly = has('ksf') || has('bn') || has('wk');
-    if (scrolly) { addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onScroll); tick(); }
+    const onResize = () => { heroH = 0; onScroll(); };
+    const scrolly = secP || has('ksf') || has('bn');
+    // sekme değişince / yeni bölüm gelince de bir kez hesapla
+    const iv = scrolly ? setInterval(() => { watch(); onScroll(); }, 700) : 0;
+    watch();
+    if (scrolly) { addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onResize); tick(); }
     // ---- I: ürün sepete uçsun (basma efekti değil: eklendikten sonra gelen onay) ----
     const onClick = (e) => {
       const b = e.target.closest?.('.abx > .btn.add'); if (!b) return;
@@ -73,12 +116,13 @@ export function AnimLayer() {
     if (has('fly')) document.addEventListener('click', onClick, true);
     return () => {
       on.forEach((k) => c.remove('an-' + k));
-      if (scrolly) { removeEventListener('scroll', onScroll); removeEventListener('resize', onScroll); cancelAnimationFrame(raf); }
+      touched.forEach((el) => { el.style.transform = ''; el.style.opacity = ''; el.style.strokeDashoffset = ''; el.style.removeProperty('--q'); el.style.removeProperty('--c'); });
+      if (scrolly) { removeEventListener('scroll', onScroll); removeEventListener('resize', onResize); cancelAnimationFrame(raf); clearInterval(iv); io?.disconnect(); }
       document.removeEventListener('click', onClick, true);
     };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!TRY_HOST) return null;
-  const set = (v) => { ls.set('anim-try', v); setTry(v); };
+  const set = (v) => { ls.set('anim-try2', v); setTry(v); };
   return <AnimPanel v={tryV} set={set} />;
 }
 
@@ -100,7 +144,7 @@ function AnimPanel({ v, set }) {
         </div>
         {RM() && <p className="an-rm">Cihazınızda "hareketi azalt" açık; hareketler gösterilmiyor.</p>}
       </div>}
-      <button type="button" className="an-fab" onClick={() => setOpen((o) => !o)} aria-expanded={open}>Hareket <span>{n}/9</span></button>
+      <button type="button" className="an-fab" onClick={() => setOpen((o) => !o)} aria-expanded={open}>Hareket <span>{n}/{KEYS.length}</span></button>
     </div>
   );
 }
