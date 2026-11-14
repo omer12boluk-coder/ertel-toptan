@@ -27,7 +27,11 @@ function flyStart(img, root, src) {
   const f = document.createElement('img'); f.src = src; f.alt = ''; f.className = 'eh-fly';
   Object.assign(f.style, { left: x + 'px', top: y + 'px', width: z + 'px', height: z + 'px' });
   document.body.appendChild(f);
-  f.animate([{ opacity: 0, transform: 'scale(.82)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 420, delay: 140, easing: EZ, fill: 'both' });
+  // 1. evre: belirir belirmez küçülerek sol üste (menü logosunun yaklaşık yerine) doğru yola çıkar — büyük logo ekranda BEKLEMEZ
+  // (kullanıcı: 'logo çok uzun görünüyor'); menü hazır olunca flyLand son yarım saniyede tam yerine oturtur.
+  const ex = 14 + 14 - x, ey = 14 + 14 - y, k1 = Math.min(1, 64 / z);
+  f.animate([{ opacity: 0, transform: 'translate(0,0) scale(.9)' }, { opacity: 1, transform: 'translate(0,0) scale(1)', offset: 0.18 },
+    { opacity: 1, transform: `translate(${ex * 0.75}px,${ey * 0.75}px) scale(${k1})` }], { duration: 650, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' });
   return { f, x, y, z };
 }
 function flyLand(st) {
@@ -35,7 +39,8 @@ function flyLand(st) {
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
   if (!tg) { st.f.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).onfinish = () => st.f.remove(); return; }
   const t = tg.getBoundingClientRect(); tg.style.opacity = '0';
-  st.f.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${t.left - st.x}px,${t.top - st.y}px) scale(${t.width / st.z})` }], { duration: 780, easing: 'cubic-bezier(.65,0,.25,1)', fill: 'forwards' })
+  const cur = getComputedStyle(st.f).transform; st.f.getAnimations().forEach((x) => x.cancel());
+  st.f.animate([{ transform: cur === 'none' ? 'none' : cur, opacity: 1 }, { transform: `translate(${t.left - st.x}px,${t.top - st.y}px) scale(${t.width / st.z})`, opacity: 1 }], { duration: 460, easing: 'cubic-bezier(.3,0,.2,1)', fill: 'forwards' })
     .onfinish = () => { tg.style.opacity = ''; st.f.remove(); };
 }
 function sceneIn() {
