@@ -861,9 +861,10 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
     const R0 = document.documentElement;
     const svh = () => { const p = document.createElement('div'); p.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none'; document.body.appendChild(p); const v = p.offsetHeight; p.remove(); return v > 200 ? Math.min(v, innerHeight) : innerHeight; };
     let lastW = -1, VH = 0;
-    const m = () => {
+    const touch = matchMedia('(hover: none)').matches; // dokunmatik: sadece yükseklik değişimi (Safari çubuğu) yok sayılır; bilgisayarda pencere boyu da ölçtürür
+    const m = (force) => {
       const R = el.getBoundingClientRect(); if (!R.width) return; const top = R.top + scrollY;
-      if (innerWidth !== lastW || !VH) { lastW = innerWidth; VH = svh(); }
+      if (force === true || innerWidth !== lastW || !VH) { lastW = innerWidth; VH = svh(); }
       const innerHeight = VH; // aşağıdaki hesap sabit yükseklikle yapılır (gölgeleme bilerek)
       const ph = innerWidth < 900; const n = list.length;
       const k = ph ? Math.ceil(Math.max(0, n - 1) / 2) : Math.ceil((n + 4) / 4);
@@ -872,7 +873,7 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
       let bot = ph ? 12 : 22;
       if (ph) { const bn = document.querySelector('.botnav'); const r = bn && bn.getBoundingClientRect(); if (r && r.height > 10 && r.top < window.innerHeight) bot += window.innerHeight - r.top; } // menü yüksekliği (gerçek pencereye göre)
       const h = Math.floor((innerHeight - top - bot - strip - gap * (rows - 1)) / units);
-      const min = ph ? 70 : 110; const v = Math.max(min, Math.min(ph ? 150 : 260, h)) + 'px'; if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
+      const min = ph ? 54 : 110; const v = Math.max(min, Math.min(ph ? 150 : 260, h)) + 'px'; el.classList.toggle('pmo-tight', ph && h < 80); /* Safari çubukları açıkken de sığsın: kutular kısalır, yazı sıkılaşır */ if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
       el.style.setProperty('--pmo-k', k);
       // büyük kutuda sığmayan alt kategori etiketi yarım görünmesin: alt kenarı taşanlar tamamen gizlenir
       const big = el.querySelector('.pmo-t.big'); if (big) { const bb = big.getBoundingClientRect().bottom - 4; big.querySelectorAll('.pbn-subs button').forEach((b) => { b.style.visibility = ''; if (b.offsetParent && b.getBoundingClientRect().bottom > bb) b.style.visibility = 'hidden'; }); }
@@ -880,9 +881,10 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
       const lock = ph && h >= min && getComputedStyle(el).display !== 'none';
       if (lock !== R0.classList.contains('hub-lock')) { R0.classList.toggle('hub-lock', lock); if (lock && scrollY) scrollTo(0, 0); }
     };
-    const onRs = () => { if (innerWidth !== lastW) m(); }; // Safari çubuğu (sadece yükseklik) → yok sayılır
+    const onRs = () => { if (innerWidth !== lastW) m(); else if (!touch) m(true); }; // Safari çubuğu (sadece yükseklik) → yok sayılır
     m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); addEventListener('resize', onRs);
-    const ro = new ResizeObserver(() => { if (innerWidth !== lastW) m(); }); ro.observe(el);
+    // sayfa arka planda gizliyken kurulur (kp-off) → görünür olunca kutunun GENİŞLİĞİ değişir → yeniden ölç (14.11.2026: 'yarıda kalıyor')
+    let elW = -1; const ro = new ResizeObserver((en) => { const w = Math.round(en[0].contentRect.width); if (w !== elW) { elW = w; m(true); } }); ro.observe(el);
     document.fonts?.ready?.then(() => { if (ref.current) m(); });
     return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', onRs); R0.classList.remove('hub-lock'); };
   }, [sets.length, list.length]);
