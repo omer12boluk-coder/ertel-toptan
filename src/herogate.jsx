@@ -81,21 +81,21 @@ export function HeroGate({ onOpen, onDone }) {
     const pos = (e) => { const b = root.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const mark = () => { root.dataset.touched = '1'; };
     const mv = (e) => { if (sw.on) { swMove(e); return; } const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
-    // 14.11.2026 telefonda giriş: logonun altındaki alanı (yazılar + alt kısım) yukarı kaydır → sayfa parmakla kalkar,
-    // yeterince çekince ya da hızlıca yukarı atınca mağaza açılır; az çekip bırakırsan yerine yaylanır.
-    const sw = { on: false, id: 0, y0: 0, dy: 0, t: 0, ly: 0, v: 0 };
+    // 14.11.2026 telefonda giriş: logonun altındaki alanı (yazılar + alt kısım) SAĞA kaydır → sayfa parmakla sağa kayar,
+    // yeterince çekince ya da hızlıca sağa atınca mağaza açılır; az çekip bırakırsan yerine yaylanır. (Yukarı kaydırma denendi, sağa istendi.)
+    const sw = { on: false, id: 0, x0: 0, dx: 0, t: 0, lx: 0, v: 0 };
     const inZone = (e) => { const c = contentRef.current; return coarse && c && e.clientY - root.getBoundingClientRect().top >= c.offsetTop - 24; };
-    const setDy = (d, anim) => { root.classList.toggle('eh-snap', !!anim); root.style.setProperty('--eh-dy', d + 'px'); root.style.setProperty('--eh-pull', Math.min(1, -d / (root.clientHeight * 0.22))); };
-    const swDown = (e) => { if (goneRef.current) return; sw.on = true; sw.id = e.pointerId; sw.y0 = e.clientY; sw.dy = 0; sw.t = e.timeStamp; sw.ly = e.clientY; sw.v = 0; };
+    const setDx = (d, anim) => { root.classList.toggle('eh-snap', !!anim); root.style.setProperty('--eh-dx', d + 'px'); root.style.setProperty('--eh-pull', Math.max(0, Math.min(1, d / (root.clientWidth * 0.3)))); };
+    const swDown = (e) => { if (goneRef.current) return; sw.on = true; sw.id = e.pointerId; sw.x0 = e.clientX; sw.dx = 0; sw.t = e.timeStamp; sw.lx = e.clientX; sw.v = 0; };
     const swMove = (e) => {
       if (!sw.on || e.pointerId !== sw.id) return;
-      const dt = e.timeStamp - sw.t; if (dt > 0) sw.v = 0.6 * sw.v + 0.4 * ((sw.ly - e.clientY) / dt); sw.t = e.timeStamp; sw.ly = e.clientY;
-      const raw = e.clientY - sw.y0; sw.dy = raw < 0 ? raw : raw * 0.15; setDy(sw.dy, false);
+      const dt = e.timeStamp - sw.t; if (dt > 0) sw.v = 0.6 * sw.v + 0.4 * ((e.clientX - sw.lx) / dt); sw.t = e.timeStamp; sw.lx = e.clientX;
+      const raw = e.clientX - sw.x0; sw.dx = raw > 0 ? raw : raw * 0.15; setDx(sw.dx, false);
     };
     const swUp = (e) => {
       if (!sw.on || e.pointerId !== sw.id) return; sw.on = false;
-      if (-sw.dy > root.clientHeight * 0.18 || (sw.v > 0.45 && -sw.dy > 20)) { setDy(-root.clientHeight * 0.3, true); try { navigator.vibrate?.(8); } catch {} goRef.current(); }
-      else setDy(0, true);
+      if (sw.dx > root.clientWidth * 0.3 || (sw.v > 0.45 && sw.dx > 24)) { setDx(root.clientWidth * 0.45, true); try { navigator.vibrate?.(8); } catch {} goRef.current(); }
+      else setDx(0, true);
     };
     const dn = (e) => { if (inZone(e)) { swDown(e); return; } if (e.target.closest('button,a')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
     const up = (e) => { if (sw.on) { swUp(e); return; } const [x, y] = pos(e); engine?.pointer('up', x, y, e.pointerType === 'touch'); };
@@ -156,8 +156,8 @@ export function HeroGate({ onOpen, onDone }) {
       <div className="eh-spacer2">
         {coarse && (
           <button type="button" className="eh-up" aria-label="Alışverişe başla" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
-            <svg width="22" height="12" viewBox="0 0 22 12" fill="none" aria-hidden="true"><path d="M2 10l9-8 9 8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <span>Yukarı kaydır</span>
+            <span>Sağa kaydır</span>
+            <svg width="26" height="14" viewBox="0 0 26 14" fill="none" aria-hidden="true"><path d="M2 7h20M17 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         )}
       </div>
