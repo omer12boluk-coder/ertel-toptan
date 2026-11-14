@@ -1,7 +1,9 @@
 // 14.11.2026 Hareket dili v3 (look.anim.<anahtar> = 'on' → açık; varsayılan kapalı = bugünkü site). Kullanıcı denemesinden
 // sonra 4 hareket kaldı: bn (banner kaydırdıkça geri çekilir), raf (Yeni gelenler kartları sağdan kayar), ind (set indirimi
 // çizilir), mrk (marka dalgası). CSS style.css sonunda 'Hareket dili v3'. raf/ind/mrk: kartların KENDİSİ %20 görününce data-an alır
-// (bölüm başlığına bağlanınca kartlar görünmeden bitiyordu) ve bir kez oynar. bn: tek rAF kaydırma dinleyicisi, sadece banner'a satır içi transform/opacity yazar
+// (bölüm başlığına bağlanınca kartlar görünmeden bitiyordu) ve bir kez oynar.
+// iPhone Safari: yana kayan sıralarda (mıknatıslı kaydırma, scroll-snap) hareket sürerken mıknatıs kapalı (data-an='go'),
+// bitince açılır ('ok') — yoksa kartlar hareket sonunda bir daha 'gidip yerine oturuyordu'. Bu kutulara will-change VERME (titretti). bn: tek rAF kaydırma dinleyicisi, sadece banner'a satır içi transform/opacity yazar
 // (layout okumaz → takılmaz). 'Hareketi azalt' açıksa hiçbiri yok. Reddedilenler style.css başlığında.
 // DİKKAT: html sınıfları an-<anahtar>; başka öğeye bu adları (an-bn, an-raf…) VERME (an-fly/an-hd çakışıp sayfayı kilitlemişti).
 // Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try3').
@@ -33,7 +35,7 @@ export function AnimLayer() {
     // ---- raf / ind / mrk: bölüm ekrana değdiği an bir kez ----
     const sel = [has('raf') && '.cd-nwsec .cd-rail', has('ind') && '.cd-sets', has('mrk') && '.cd-bwall'].filter(Boolean).join(', ');
     const seen = new WeakSet();
-    const io = sel ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.setAttribute('data-an', ''); io.unobserve(e.target); } }), { threshold: 0.2 }) : null;
+    const io = sel ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { const t = e.target; t.setAttribute('data-an', 'go'); io.unobserve(t); setTimeout(() => t.isConnected && t.setAttribute('data-an', 'ok'), 1900); } }), { threshold: 0.2 }) : null;
     const watch = () => { if (io) for (const x of document.querySelectorAll(sel)) if (!seen.has(x)) { seen.add(x); io.observe(x); } };
     watch(); const iv = io ? setInterval(watch, 800) : 0;
     // ---- bn: banner kaydırdıkça geri çekilir ----

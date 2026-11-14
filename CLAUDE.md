@@ -85,7 +85,7 @@ listesinde ara (yeni ad duyarsan listeye ekle); bulamazsan TEK soru sor ("Ana sa
 - **SİLME KAPALI:** PlatinMarket pasif ürün sayfasında da 404 veriyor → eşitlemede silinmiş/pasif ayrılamaz. `DELETE_OK` AÇMA. Dosyada olmayan = silinmiş ayrımı sadece Excel dışa aktarımıyla.
 - PlatinMarket sitesine (ertelgsm.com) toplu istek atma (IP engeli yemiştik). GSMArena'yı tarama (429 ile engelledi).
 - Gizli tutulan sayfalar (`.kp-off`) `content-visibility: hidden` ile; `ShopImg` `decoding=async` değil; `Thumb` resim adresini ilk çizimde hesaplar → geri dönüş flaşları buydu.
-- **iPhone Safari hareket sonu titremesi (14.11.2026):** CSS animasyonu bitince Safari katmanı söküp kutuyu yeniden çiziyor (resimler gidip gelir); Chrome taklidinde GÖRÜNMEZ. Hareket eden kutuya baştan `will-change: transform, opacity` ver, katman hep kalsın.
+- **iPhone Safari + hareket (14.11.2026):** Chrome taklidinde GÖRÜNMEZ, sadece gerçek iPhone'da çıkar. Yana kayan mıknatıslı sıralarda (`scroll-snap`) kart hareket ederse Safari hareket sonunda kartları bir daha 'gidip yerine oturtur' → hareket sürerken `scroll-snap-type: none`, bitince geri. Bu kartlara `will-change` VERME (logoları titretti); kaydırma dışı tek büyük öğede (banner) sorun yok.
 - `useStore()` seçicisiz kullanım çizimde okunan alanları izler (Proxy); yine de yeni bileşende seçici tercih et.
 - Elle toptan fiyatı (`w`) hiçbir otomatik işlem silmez/değiştirmez.
 - Stok SADECE panelden yönetilir; eşitleme var olan ürünün `s`'ine dokunmaz.
