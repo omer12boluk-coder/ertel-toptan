@@ -86,7 +86,9 @@ function flyLand(st) {
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
   const f = st.el;
   if (!tg) { cancelAnimationFrame(st.raf); f?.remove(); return; }
-  const t = tg.getBoundingClientRect();
+  // hedef = logonun ÇİZİLDİĞİ alan (iç boşluk hariç): 34 px kutuya iniyordu, gerçek logo 32 px → geçişte 2 px 'tık'
+  const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
+  const t = { left: r0.left + pl, top: r0.top + pt, width: r0.width - 2 * pl };
   f.getAnimations().forEach((a) => { a.commitStyles?.(); a.cancel(); }); f.style.opacity = '1'; f.style.filter = ''; f.style.transform = '';
   tg.style.opacity = '0';
   const k = t.width / st.z, ex = st.x - st.off, ey = st.y - st.off;
@@ -148,26 +150,30 @@ function WordRoll() {
   useEffect(() => {
     if (!list || list.length < 2) return undefined;
     // SIRAYLA: bir değişim bitmeden sonraki başlamaz (logo efekti işlemciyi yorunca setInterval üst üste biniyor, kelime atlıyor / boş kalıyordu)
-    let i = 0, t = 0, dead = false; const el = ref.current;
+    // 14.11.2026 gece (mobil): genişlik animasyonu her karede düzen hesaplatıyordu → telefonda kesik. Artık kelime yerini anında alır,
+    // 'burada.' eski yerinden yenisine TRANSFORM ile kayar (FLIP; ekran kartı yapar). Başlık tam göründükten sonra başlar (2,6 sn),
+    // 'her şeyi'de biraz bekleyip BAŞTAN döner (tek tur bitince 'mikroskobu' telefonda kaçırılıyordu).
+    let i = 0, t = 0, dead = false; const el = ref.current; const after = el.nextElementSibling;
     const step = () => {
-      if (dead || ++i >= list.length) return; const w = list[i];
+      if (dead) return; i = (i + 1) % list.length; const w = list[i];
       el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-.35em)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
-        if (dead) return; const w0 = el.offsetWidth; el.textContent = w; cur.current = w; const w1 = el.offsetWidth;
-        el.animate([{ width: w0 + 'px' }, { width: w1 + 'px' }], { duration: 420, easing: EZ });
-        el.animate([{ opacity: 0, transform: 'translateY(.35em)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: EZ, fill: 'forwards' }).onfinish = () => { if (!dead) t = setTimeout(step, 1000); };
+        if (dead) return; const x0 = after ? after.getBoundingClientRect().left : 0; el.textContent = w; cur.current = w;
+        if (after) { const dx = x0 - after.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) after.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 420, easing: EZ }); }
+        el.animate([{ opacity: 0, transform: 'translateY(.35em)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: EZ, fill: 'forwards' }).onfinish = () => { if (!dead) t = setTimeout(step, i === list.length - 1 ? 2200 : 1100); };
       };
     };
-    t = setTimeout(step, 1900);
+    t = setTimeout(step, 2600);
     return () => { dead = true; clearTimeout(t); };
   }, [list]);
   return <span ref={ref} className="eh-word" />; // içerik SADECE buradan yazılır (React de yazınca kelime atlanıyor / kayboluyordu)
 }
 function Count({ n, delay = 0 }) {
-  const [v, setV] = useState(0);
-  // satırın kendi belirişi (.eh-a4) 1,7 sn gecikmeli → sayma o ana denk gelsin (önce bitiyordu, sayı hazır görünüyordu)
-  useEffect(() => { if (!n) return undefined; let raf = 0; const t0 = performance.now() + delay; const f = (t) => { const k = Math.max(0, Math.min(1, (t - t0) / 1300)); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(f); }; raf = requestAnimationFrame(f); return () => cancelAnimationFrame(raf); }, [n]);
+  const vr = useRef(null);
+  // satırın kendi belirişi (.eh-a4) 1,7 sn gecikmeli → sayma o ana denk gelsin. 14.11 gece: her karede React çizimi yerine
+  // sayı doğrudan yazılır (telefonda logo efektiyle aynı anda ana işi yoruyordu); sadece değer değişince yazılır
+  useEffect(() => { if (!n) return undefined; let raf = 0, last = -1; const t0 = performance.now() + delay; const f = (t) => { const k = Math.max(0, Math.min(1, (t - t0) / 1300)); const v = Math.round(n * (1 - Math.pow(1 - k, 3))); if (v !== last && vr.current) { last = v; vr.current.textContent = v.toLocaleString('tr-TR'); } if (k < 1) raf = requestAnimationFrame(f); }; raf = requestAnimationFrame(f); return () => cancelAnimationFrame(raf); }, [n]);
   // 14.11.2026: yer baştan SON değerin genişliğinde ayrılır (görünmez kopya), sayı onun içinde sayar → 'marka' ve 'aynı gün kargo' itilmez
-  return <b className="num eh-cnt"><span className="eh-cnt-g" aria-hidden="true">{n.toLocaleString('tr-TR')}</span><span className="eh-cnt-v">{v.toLocaleString('tr-TR')}</span></b>;
+  return <b className="num eh-cnt"><span className="eh-cnt-g" aria-hidden="true">{n.toLocaleString('tr-TR')}</span><span className="eh-cnt-v" ref={vr}>0</span></b>;
 }
 let gateT0 = 0; // giriş sayfasının açıldığı an (HeroGate ilk çizimde yazar)
 function GateNums() {
@@ -305,7 +311,7 @@ export function HeroGate({ onOpen, onDone }) {
       <div ref={contentRef} className="eh-content">
         <div>
           <p className="eh-eyebrow eh-a eh-a1">Ertel Telekomünikasyon</p>
-          <h1 className="eh-h1"><span className="eh-line eh-a eh-a2">Tamir tezgâhının</span><span className="eh-line eh-a eh-a3"><span className={'eh-accent' + (fx.word ? ' roll' : '')}>{fx.word ? <><WordRoll /> burada.</> : 'her şeyi burada.'}</span></span></h1>
+          <h1 className="eh-h1"><span className="eh-line eh-a eh-a2">Tamir tezgâhının</span><span className="eh-line eh-a eh-a3"><span className={'eh-accent' + (fx.word ? ' roll' : '')}>{fx.word ? <><WordRoll /><span className="eh-after"> burada.</span></> : 'her şeyi burada.'}</span></span></h1>
         </div>
         <div className="eh-aside">
           <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
