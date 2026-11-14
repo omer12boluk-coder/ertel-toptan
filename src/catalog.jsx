@@ -822,46 +822,71 @@ export function useHubRoots() {
 export function hubSwap(fn, dir) { if (dir === 'l') window.__navBackNext?.(); fn(); }
 // 14.11.2026 Ürünler açılış sayfası MOZAİK (sadece bilgisayar ≥900px; shopHome.p0.hub.mos 'off' = eski kutular/liste aynen).
 // En kalabalık kategori 2×2 büyük kutu, diğerleri 1×1, 'Tüm ürünler' 2 sütun mavi kutu; markalar yok; Setler altta ince şerit.
-const MOS_IMG = { 3: '/bn/cat-3b.webp', 5: '/bn/cat-5b.webp', 24: '/bn/cat-24b.webp' };
-function MosImg({ v }) { const src = useShopImg(v || ''); return src ? <img className="pmo-im" src={src} alt="" loading="lazy" /> : null; }
-function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, kd }) {
+// 14.11.2026 (2) Ürünler açılış sayfası — BENTO (mozaiğin yerine; geri: shopHome.p0.hub.mos / mosM 'off' = eski kutular).
+// Kapaklar ürün fotoğrafı değil, arka planı temizlenmiş kesimler (bn/hub-<kategori>.webp); kesimi olmayan kategori eski kapağa düşer.
+// Kartlar sayfa geçişinden SONRA sırayla aşağıdan kayarak belirir (zıplama/büyüme YOK, kullanıcı istemedi); kategoriden geri dönünce oynamaz.
+const HUB_CUT = { 3: '/bn/hub-3.webp', 5: '/bn/hub-5.webp', 6: '/bn/hub-6.svg', 14: '/bn/hub-14.webp', 24: '/bn/hub-24.webp', 31: '/bn/hub-31.webp', 42: '/bn/hub-42.webp' };
+let hubBack = false; // kategoriye/listeye gidildi → dönüşte animasyon yok
+// Tüm ürünler sayısı 0'dan sayarak gelir (sadece giriş animasyonu oynarken; kart belirdikten sonra başlar)
+function CountUp({ n, on, delay = 0 }) {
+  const ref = useRef(null); const nf = (x) => (x || 0).toLocaleString('tr-TR');
+  useEffect(() => {
+    const el = ref.current; if (!el || !on || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let raf = 0; const t0 = performance.now() + delay, D = 1100;
+    const f = (t) => { const k = Math.min(1, Math.max(0, (t - t0) / D)); el.textContent = nf(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(f); };
+    el.textContent = nf(0); raf = requestAnimationFrame(f);
+    return () => { cancelAnimationFrame(raf); el.textContent = nf(n); };
+  }, [n, on]);
+  return <span ref={ref}>{nf(n)}</span>;
+}
+function MosImg({ v }) { const src = useShopImg(v || ''); return src ? <img className="pmo-im" src={src} alt="" loading="eager" decoding="async" /> : null; }
+function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, kd, subsOf }) {
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
   const list = [...roots].sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0));
-  const img = (n) => MOS_IMG[n.id] || CAT_COVERS[n.id] || HUB_IMG[n.id];
-  // 14.11.2026 sayfaya sığsın: satır boyu = (ekran yüksekliği − mozaiğin başladığı yer − Setler şeridi) / 3 (aşağı kaydırmadan hepsi görünür)
+  const img = (n) => HUB_CUT[n.id] || CAT_COVERS[n.id] || HUB_IMG[n.id];
+  const [anim] = useState(() => { const a = !hubBack; hubBack = false; return a; });
+  // bilgisayar 4 sütun: büyük kutu 4 hücre + diğerleri 1 + Tüm ürünler 1; son satır boş kalmasın diye 2. kutu genişler, gerekirse Tüm ürünler de
+  const N = list.length; const rem = (4 - ((N + 4) % 4)) % 4; const wide = N > 1 && rem >= 1; const allSpan = 1 + Math.max(0, rem - (wide ? 1 : 0));
+  const oddM = (N - 1) % 2 === 1; // telefonda tek kalan küçük kutu iki sütun olur
+  const leave = (fn) => (...x) => { hubBack = true; fn(...x); };
+  const goCat = leave(onCat), goAll = leave(onAll), goSets = leave(onSets);
+  // tek ekrana sığsın: kalan yükseklik ölçülür, satırlara paylaştırılır (telefonda büyük kutu 1,4 satır, Tüm ürünler 0,72 satır)
   const ref = useRef(null);
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
     const m = () => {
       const R = el.getBoundingClientRect(); if (!R.width) return; const top = R.top + scrollY;
       const ph = innerWidth < 900; const n = list.length;
-      // telefon: hepsi 2 sütun eşit kutu (+ Tüm ürünler); bilgisayar: büyük kutu 2×2 + diğerleri + Tüm ürünler 2 sütun, 4 sütunda
-      const rows = ph ? Math.ceil((n + 1) / 2) : Math.ceil((4 + Math.max(0, n - 1) + 2) / 4);
+      const k = ph ? Math.ceil(Math.max(0, n - 1) / 2) : Math.ceil((n + 4) / 4);
+      const units = ph ? 1.4 + k + .72 : k; const rows = ph ? k + 2 : k;
       const gap = ph ? 8 : 16; const strip = sets.length ? (ph ? 58 : 76) : 0;
       let bot = ph ? 12 : 22;
       if (ph) { const bn = document.querySelector('.botnav'); const r = bn && bn.getBoundingClientRect(); if (r && r.height > 10 && r.top < innerHeight) bot += innerHeight - r.top; }
-      const h = Math.floor((innerHeight - top - bot - strip - gap * (rows - 1)) / rows);
-      const v = Math.max(ph ? 72 : 110, Math.min(ph ? 150 : 250, h)) + 'px'; if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
+      const h = Math.floor((innerHeight - top - bot - strip - gap * (rows - 1)) / units);
+      const v = Math.max(ph ? 70 : 110, Math.min(ph ? 150 : 260, h)) + 'px'; if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
+      el.style.setProperty('--pmo-k', k);
     };
-    // sayfa gizliyken (geçiş) ilk ölçüm yanlış çıkıyor → görünür olunca / boyu değişince yeniden
     m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); addEventListener('resize', m);
     const ro = new ResizeObserver(m); ro.observe(el);
     return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', m); };
   }, [sets.length, list.length]);
-  return <div className="pmo" ref={ref}>
+  return <div className={'pmo pbn' + (anim ? ' pbn-in' : '')} ref={ref}>
     <div className="pmo-g">
-      {list.map((n, i) => { const f = () => onCat(n.id); return <div key={n.id} role="button" tabIndex={0} className={'pmo-t' + (i === 0 ? ' big' : '')} onClick={f} onKeyDown={kd(f)}>
-        <b className="pmo-n">{n.name}</b><span className="pmo-c">{nf(counts.get(n.id))} ürün</span><span className="pmo-iw"><MosImg v={img(n)} /></span>
-      </div>; })}
-      <div role="button" tabIndex={0} className="pmo-t pmo-all" onClick={onAll} onKeyDown={kd(onAll)}>
-        <div className="pmo-ah"><div><b className="pmo-n">Tüm ürünler</b><span className="pmo-c">{list.length} kategori · {brandsN} marka</span></div><span className="pmo-go">Hepsini gör<Icon n="back" s={13} className="flip" /></span></div>
-        <div className="pmo-af"><span className="pmo-big num">{nf(total)}</span><span className="pmo-dots">{list.map((n) => <span key={n.id}><MosImg v={img(n)} /></span>)}</span></div>
+      {list.map((n, i) => { const f = () => goCat(n.id); const subs = i === 0 && subsOf ? subsOf(n).slice(0, 4) : [];
+        return <div key={n.id} role="button" tabIndex={0} className={'pmo-t' + (i === 0 ? ' big' : '') + (i === 1 && wide ? ' wide' : '') + (i === N - 1 && i > 0 && oddM ? ' wm' : '')} style={{ '--d': (.05 + i * .06) + 's', '--fd': (-i * .9) + 's' }} onClick={f} onKeyDown={kd(f)}>
+          <b className="pmo-n">{n.name}</b><span className="pmo-c">{nf(counts.get(n.id))} ürün</span>
+          {subs.length > 0 && <span className="pbn-subs">{subs.map((c) => <button key={c.id} type="button" onClick={(e) => { e.stopPropagation(); goCat(c.id); }}>{c.name}</button>)}</span>}
+          <span className={'pmo-iw' + (HUB_CUT[n.id] ? ' cut' : '')}><i className="pbn-sh" /><MosImg v={img(n)} /></span>
+        </div>; })}
+      <div role="button" tabIndex={0} className={'pmo-t pmo-all as' + allSpan} style={{ '--d': (.05 + list.length * .06) + 's' }} onClick={goAll} onKeyDown={kd(goAll)}>
+        <div className="pbn-ax"><b className="pmo-n">Tüm ürünler</b><span className="pmo-c">{list.length} kategori · {brandsN} marka</span></div>
+        <span className="pmo-big num"><CountUp n={total} on={anim} delay={(250 + (.05 + list.length * .06) * 1000 + 250) | 0} /></span><span className="pbn-ar"><Icon n="back" s={16} className="flip" /></span>
       </div>
     </div>
-    {sets.length > 0 && <div className="pmo-set">
+    {sets.length > 0 && <div className="pmo-set" style={{ '--d': (.1 + list.length * .06) + 's' }}>
       <span className="pmo-si"><Icon n="box" s={20} /></span><b>Setler</b><span className="pmo-sd">Hazır paketler — birlikte al, tek seferde kur</span><span className="pmo-sp" />
-      {sets.slice(0, 4).map((x) => <button key={x.id} type="button" className="pmo-chip" onClick={() => openSet(x.id)}>{x.name}</button>)}
-      <button type="button" className="pmo-arr" aria-label="Setler" onClick={onSets}><Icon n="back" s={18} className="flip" /></button>
+      {sets.slice(0, 4).map((x) => <button key={x.id} type="button" className="pmo-chip" onClick={() => { hubBack = true; openSet(x.id); }}>{x.name}</button>)}
+      <button type="button" className="pmo-arr" aria-label="Setler" onClick={goSets}><Icon n="back" s={18} className="flip" /></button>
     </div>}
   </div>;
 }
@@ -882,7 +907,7 @@ function PV2Hub({ tree, counts, total, setN, onCat, onAll, onQ, onNew, onSets })
     <div className="pv2-trow">
       <div><h1 className="pv2-t">Ürünler.</h1><div className="phub-sub">{nf(total)} ürün · {brands.length} marka</div></div>
     </div>
-    {(mos || mosM) && <HubMosaic roots={roots} counts={counts} total={total} brandsN={brands.length} sets={sets} onCat={onCat} onAll={onAll} onSets={onSets} kd={key} />}
+    {(mos || mosM) && <HubMosaic roots={roots} counts={counts} total={total} brandsN={brands.length} sets={sets} onCat={onCat} onAll={onAll} onSets={onSets} kd={key} subsOf={subsOf} />}
     <div className="phub-lbl">Kategoriler</div>
     <div className={'phub-grid phub-m-' + mode + ' phub-hv-' + (HC.subHover || 'ink') + (HC.lay ? ' phub-lay-' + HC.lay : '')}>
       <div role="button" tabIndex={0} className={'phub-c phub-all phub-t-' + (HC.allTone || 'acc')} onClick={onAll} onKeyDown={key(onAll)}>
