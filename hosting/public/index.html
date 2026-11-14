@@ -10422,8 +10422,9 @@ html.pf-film .flm-box { visibility: hidden !important; }
 .eh-nums .eh-cnt-g { visibility: hidden; }
 @media (max-width: 639px) { .eh-numw { margin: -8px 0 18px; } }
 .eh-btn.eh-shine { position: relative; overflow: hidden; }
-.eh-btn.eh-shine::after { content: ""; position: absolute; top: 0; bottom: 0; width: 90px; left: -110px; background: linear-gradient(100deg, transparent, rgb(255 255 255 / .6), transparent); animation: ehShine 3s ease-in-out infinite .9s; pointer-events: none; }
-@keyframes ehShine { 0% { left: -110px; } 40%, 100% { left: 110%; } }
+/* 14.11.2026 gece: ışık transform ile kayar (left ile her karede yeniden çizim → telefonda açılış sayfası kare düşürüyordu) */
+.eh-btn.eh-shine::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 28%; background: linear-gradient(100deg, transparent, rgb(255 255 255 / .6), transparent); transform: translateX(-110%); animation: ehShine 3s ease-in-out infinite .9s; pointer-events: none; }
+@keyframes ehShine { 0% { transform: translateX(-110%); } 40%, 100% { transform: translateX(380%); } }
 @media (prefers-reduced-motion: reduce) { .eh-btn.eh-shine::after { animation: none; display: none; } }
 
 /* ==== 14.11.2026 v3 açılır menüler (navdrop.jsx V3*; look.navMenu '' ) — beyaz, sakin; zıplama/büyüme YOK ==== */
@@ -10549,7 +10550,7 @@ html[data-theme="dark"] .brand-logo { background: transparent !important; box-sh
 .v3b-ft .v3-az { margin-top: 0; }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'bd5407166a';</script>
+<script>window.__BUILD = '82a3434010';</script>
 </head>
 <body>
 <div id="root"></div>
