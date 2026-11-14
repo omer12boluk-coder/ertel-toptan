@@ -157,8 +157,9 @@ function WordRoll() {
     const step = () => {
       if (dead) return; i = (i + 1) % list.length; const w = list[i];
       el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-.35em)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
+        // 'burada.' kayması yumuşak başla-bitir 560 ms (EZ ilk karelerde fırlatıyordu: 'sert')
         if (dead) return; const x0 = after ? after.getBoundingClientRect().left : 0; el.textContent = w; cur.current = w;
-        if (after) { const dx = x0 - after.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) after.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 560, easing: 'cubic-bezier(.45,.05,.25,1)' }); // yumuşak başla-bitir (EZ ilk karelerde fırlatıyordu: 'sert') }
+        if (after) { const dx = x0 - after.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) after.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 560, easing: 'cubic-bezier(.45,.05,.25,1)' }); }
         el.animate([{ opacity: 0, transform: 'translateY(.35em)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: EZ, fill: 'forwards' }).onfinish = () => { if (!dead) t = setTimeout(step, i === list.length - 1 ? 2200 : 1100); };
       };
     };
