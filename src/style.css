@@ -10224,6 +10224,8 @@ html.hc-scr .hdr-c.hcs-clear { background: color-mix(in oklab, var(--surface) 64
   .phub-mos-m .pmo-set > b { font-size: 14px; } .phub-mos-m .pmo-sd { display: none; } .phub-mos-m .pmo-sp { display: none; }
   .phub-mos-m .pmo-chip { height: 32px; padding: 0 11px; font-size: 12px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .phub-mos-m .pmo-arr { width: 38px; height: 38px; margin-left: auto; }
+  /* 14.11.2026: mozaik ekrana sığınca sayfa kaymaz/esnemez (HubMosaic html.hub-lock) — açıldığı gibi durur */
+  html.hub-lock, html.hub-lock body { overflow: hidden; overscroll-behavior: none; }
 }
 
 /* 14.11.2026 UI/UX incelemesi (ana sayfa). Görünmez basma payları (görünüş aynı): banner ikinci bağlantısı,
@@ -10385,6 +10387,10 @@ html.pf-film .flm-box { visibility: hidden !important; }
 .eh-nums { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; margin: 0; font: 500 14.5px/1.4 var(--eh-font); color: color-mix(in oklab, var(--eh-fg) 62%, var(--eh-sub)); letter-spacing: -.01em; }
 .eh-nums span { white-space: nowrap; }
 .eh-nums b { font-size: 17px; font-weight: 700; color: var(--eh-fg); font-variant-numeric: tabular-nums; letter-spacing: -.015em; margin-right: 1px; }
+/* 14.11.2026 sayaç sabit genişlik: görünmez son değer yer tutar, sayan değer aynı hücrede sağa yaslı */
+.eh-nums .eh-cnt { display: inline-grid; }
+.eh-nums .eh-cnt > span { grid-area: 1 / 1; text-align: right; }
+.eh-nums .eh-cnt-g { visibility: hidden; }
 @media (max-width: 639px) { .eh-numw { margin: -8px 0 18px; } }
 .eh-btn.eh-shine { position: relative; overflow: hidden; }
 .eh-btn.eh-shine::after { content: ""; position: absolute; top: 0; bottom: 0; width: 60px; left: -80px; background: linear-gradient(100deg, transparent, rgb(255 255 255 / .45), transparent); animation: ehShine 3.6s ease-in-out infinite 1.5s; pointer-events: none; }

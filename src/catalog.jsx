@@ -852,23 +852,39 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
   const goCat = leave(onCat), goAll = leave(onAll), goSets = leave(onSets);
   // tek ekrana sığsın: kalan yükseklik ölçülür, satırlara paylaştırılır (telefonda büyük kutu 1,4 satır, Tüm ürünler 0,72 satır)
   const ref = useRef(null);
+  // 14.11.2026 (kullanıcı videosu): Safari'de alt çubuk kaydırırken açılıp kapanınca innerHeight değişiyor → her seferinde kutular
+  // yeniden boylanıyordu (takılma; çubuk açıkken ölçülünce kutular kısa + etiket kesik). Artık ekran yüksekliği 100svh (çubuk AÇIKKEN
+  // olan sabit en küçük yükseklik; ana ekran uygulamasında = tam ekran) ile alınır, sadece GENİŞLİK değişince (döndürme) yeniden ölçülür.
+  // Telefonda mozaik ekrana sığıyorsa sayfa KİLİTLENİR (html.hub-lock): sayfa ~30 px kayıp 'Ürünler.' başlığı menünün altına giriyordu.
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
+    const R0 = document.documentElement;
+    const svh = () => { const p = document.createElement('div'); p.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none'; document.body.appendChild(p); const v = p.offsetHeight; p.remove(); return v > 200 ? Math.min(v, innerHeight) : innerHeight; };
+    let lastW = -1, VH = 0;
     const m = () => {
       const R = el.getBoundingClientRect(); if (!R.width) return; const top = R.top + scrollY;
+      if (innerWidth !== lastW || !VH) { lastW = innerWidth; VH = svh(); }
+      const innerHeight = VH; // aşağıdaki hesap sabit yükseklikle yapılır (gölgeleme bilerek)
       const ph = innerWidth < 900; const n = list.length;
       const k = ph ? Math.ceil(Math.max(0, n - 1) / 2) : Math.ceil((n + 4) / 4);
       const units = ph ? 1.4 + k + .72 : k; const rows = ph ? k + 2 : k;
       const gap = ph ? 8 : 16; const strip = sets.length ? (ph ? 58 : 76) : 0;
       let bot = ph ? 12 : 22;
-      if (ph) { const bn = document.querySelector('.botnav'); const r = bn && bn.getBoundingClientRect(); if (r && r.height > 10 && r.top < innerHeight) bot += innerHeight - r.top; }
+      if (ph) { const bn = document.querySelector('.botnav'); const r = bn && bn.getBoundingClientRect(); if (r && r.height > 10 && r.top < window.innerHeight) bot += window.innerHeight - r.top; } // menü yüksekliği (gerçek pencereye göre)
       const h = Math.floor((innerHeight - top - bot - strip - gap * (rows - 1)) / units);
-      const v = Math.max(ph ? 70 : 110, Math.min(ph ? 150 : 260, h)) + 'px'; if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
+      const min = ph ? 70 : 110; const v = Math.max(min, Math.min(ph ? 150 : 260, h)) + 'px'; if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
       el.style.setProperty('--pmo-k', k);
+      // büyük kutuda sığmayan alt kategori etiketi yarım görünmesin: alt kenarı taşanlar tamamen gizlenir
+      const big = el.querySelector('.pmo-t.big'); if (big) { const bb = big.getBoundingClientRect().bottom - 4; big.querySelectorAll('.pbn-subs button').forEach((b) => { b.style.visibility = ''; if (b.offsetParent && b.getBoundingClientRect().bottom > bb) b.style.visibility = 'hidden'; }); }
+      // telefonda sığıyorsa kilit; sığmıyorsa (küçük ekran / çok kategori) normal kaydırma
+      const lock = ph && h >= min && getComputedStyle(el).display !== 'none';
+      if (lock !== R0.classList.contains('hub-lock')) { R0.classList.toggle('hub-lock', lock); if (lock && scrollY) scrollTo(0, 0); }
     };
-    m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); addEventListener('resize', m);
-    const ro = new ResizeObserver(m); ro.observe(el);
-    return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', m); };
+    const onRs = () => { if (innerWidth !== lastW) m(); }; // Safari çubuğu (sadece yükseklik) → yok sayılır
+    m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); addEventListener('resize', onRs);
+    const ro = new ResizeObserver(() => { if (innerWidth !== lastW) m(); }); ro.observe(el);
+    document.fonts?.ready?.then(() => { if (ref.current) m(); });
+    return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', onRs); R0.classList.remove('hub-lock'); };
   }, [sets.length, list.length]);
   return <div className={'pmo pbn' + (anim ? ' pbn-in' : '')} ref={ref}>
     <div className="pmo-g">

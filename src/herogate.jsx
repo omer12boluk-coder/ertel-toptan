@@ -57,19 +57,29 @@ function sceneIn(fly) {
   }
 }
 const WORDS = ['havyası', 'mikroskobu', 'kalıbı', 'entegresi', 'her şeyi'];
-// Satıra SIĞMAYAN kelime döngüden çıkarılır (telefonda 'mikroskobu burada.' alt satıra taşıyıp bütün yazıyı itiyordu = 'sert oturma');
+// 14.11.2026 (kullanıcı: 'mikroskobu çıkmıyor'): eskiden satıra SIĞMAYAN kelime döngüden atılıyordu. Artık hiçbiri atılmaz:
+// başlığın yazı boyu EN UZUN kelimeye ('mikroskobu burada.') göre bir kez ayarlanır → her kelime sığar, satır taşmaz, kelime
+// değişirken yazı boyu oynamaz. Ölçüm yazı tipi yüklendikten sonra ve sadece genişlik değişince tekrarlanır.
 // kelime değişirken genişlik 0,4 sn'de yumuşakça değişir, 'burada.' zıplamaz kayar. Satır nowrap (CSS .eh-accent.roll).
 function WordRoll() {
-  const ref = useRef(null);
+  const ref = useRef(null); const cur = useRef(WORDS[0]);
   const [list, setList] = useState(null);
   useLayoutEffect(() => {
-    const el = ref.current; const line = el?.closest('.eh-accent'); const box = el?.closest('.eh-h1'); if (!el || !line || !box) return;
-    // ölçüm transform'dan ETKİLENMEZ (offsetWidth): yazılar açılış animasyonundayken getBoundingClientRect yanlış genişlik veriyordu
-    const blk = line.parentElement; const d0 = blk.style.display; blk.style.display = 'inline-block';
-    const max = (box.parentElement || box).clientWidth; // başlığın sığabileceği alan (başlık kendisi içeriğine göre daralıyor)
-    const ok = WORDS.filter((w) => { el.textContent = w; return blk.offsetWidth <= max + 1; });
-    blk.style.display = d0;
-    const L = ok.length > 1 ? ok : ['her şeyi']; el.textContent = L[0]; setList(L);
+    const el = ref.current; const line = el?.closest('.eh-accent'); const box = el?.closest('.eh-h1'); if (!el || !line || !box) return undefined;
+    let lastW = -1;
+    const fit = () => {
+      // ölçüm transform'dan ETKİLENMEZ (offsetWidth): yazılar açılış animasyonundayken getBoundingClientRect yanlış genişlik veriyordu
+      const blk = line.parentElement; const d0 = blk.style.display; blk.style.display = 'inline-block';
+      box.style.fontSize = ''; lastW = innerWidth;
+      const max = (box.parentElement || box).clientWidth; // başlığın sığabileceği alan (başlık kendisi içeriğine göre daralıyor)
+      let wMax = 0; for (const w of WORDS) { el.textContent = w; wMax = Math.max(wMax, blk.offsetWidth); }
+      if (wMax > max + 1) { const fs = parseFloat(getComputedStyle(box).fontSize) || 0; if (fs) box.style.fontSize = Math.floor(fs * (max - 2) / wMax * 10) / 10 + 'px'; }
+      blk.style.display = d0; el.textContent = cur.current;
+    };
+    fit(); setList(WORDS);
+    const onRs = () => { if (innerWidth !== lastW) fit(); };
+    addEventListener('resize', onRs); document.fonts?.ready?.then(() => { if (ref.current) fit(); });
+    return () => removeEventListener('resize', onRs);
   }, []);
   useEffect(() => {
     if (!list || list.length < 2) return undefined;
@@ -78,7 +88,7 @@ function WordRoll() {
     const step = () => {
       if (dead || ++i >= list.length) return; const w = list[i];
       el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-.35em)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
-        if (dead) return; const w0 = el.offsetWidth; el.textContent = w; const w1 = el.offsetWidth;
+        if (dead) return; const w0 = el.offsetWidth; el.textContent = w; cur.current = w; const w1 = el.offsetWidth;
         el.animate([{ width: w0 + 'px' }, { width: w1 + 'px' }], { duration: 420, easing: EZ });
         el.animate([{ opacity: 0, transform: 'translateY(.35em)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: EZ, fill: 'forwards' }).onfinish = () => { if (!dead) t = setTimeout(step, 1000); };
       };
@@ -92,7 +102,8 @@ function Count({ n, delay = 0 }) {
   const [v, setV] = useState(0);
   // satırın kendi belirişi (.eh-a4) 1,7 sn gecikmeli → sayma o ana denk gelsin (önce bitiyordu, sayı hazır görünüyordu)
   useEffect(() => { if (!n) return undefined; let raf = 0; const t0 = performance.now() + delay; const f = (t) => { const k = Math.max(0, Math.min(1, (t - t0) / 1300)); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(f); }; raf = requestAnimationFrame(f); return () => cancelAnimationFrame(raf); }, [n]);
-  return <b className="num">{v.toLocaleString('tr-TR')}</b>;
+  // 14.11.2026: yer baştan SON değerin genişliğinde ayrılır (görünmez kopya), sayı onun içinde sayar → 'marka' ve 'aynı gün kargo' itilmez
+  return <b className="num eh-cnt"><span className="eh-cnt-g" aria-hidden="true">{n.toLocaleString('tr-TR')}</span><span className="eh-cnt-v">{v.toLocaleString('tr-TR')}</span></b>;
 }
 let gateT0 = 0; // giriş sayfasının açıldığı an (HeroGate ilk çizimde yazar)
 function GateNums() {
