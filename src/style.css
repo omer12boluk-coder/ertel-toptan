@@ -10523,3 +10523,5 @@ html.pf-lite .hd-p.hd-v3, html.pf-lite .v3-tile, html.pf-lite .v3-lg, html.pf-li
 
 /* 14.11.2026 gece modunda menüdeki ertel logosunun arkasındaki beyaz yuvarlak kalkar (logonun kendi halkası var) */
 html[data-theme="dark"] .brand-logo { background: transparent !important; box-shadow: none !important; }
+
+.v3b-ft { display: flex; justify-content: flex-end; padding: 0 22px 16px; }
