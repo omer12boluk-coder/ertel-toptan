@@ -6,12 +6,14 @@
 // bitince açılır ('ok') — yoksa kartlar hareket sonunda bir daha 'gidip yerine oturuyordu'. Bu kutulara will-change VERME (titretti). bn: tek rAF kaydırma dinleyicisi, sadece banner'a satır içi transform/opacity yazar
 // (layout okumaz → takılmaz). 'Hareketi azalt' açıksa hiçbiri yok. Reddedilenler style.css başlığında.
 // DİKKAT: html sınıfları an-<anahtar>; başka öğeye bu adları (an-bn, an-raf…) VERME (an-fly/an-hd çakışıp sayfayı kilitlemişti).
-// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try5').
+// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try6').
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
 import { ls } from './utils.js';
 
 export const ANIMS = [
+  ['rv', '0', 'Deneme: bölümler solarak gelmesin'],
+  ['lay', 'Z', 'Deneme: hareket bitince katmanı bırakma'],
   ['bn', 'G', 'Banner geri çekilsin'],
   ['raf', 'B', 'Ürün rafları kayarak gelsin (Yeni gelenler + raflar)'],
   ['pk', 'P', 'Bu hafta masamızdan: kartlar yükselsin'],
@@ -28,7 +30,7 @@ const KEYS = ANIMS.map((a) => a[0]);
 const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function readTry() { const v = ls.get('anim-try5', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, true])); }
+function readTry() { const v = ls.get('anim-try6', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, k !== 'lay'])); }
 
 export function AnimLayer() {
   const A = useStore((s) => s.settings?.look?.anim) || null;
@@ -66,7 +68,7 @@ export function AnimLayer() {
     };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!TRY_HOST) return null;
-  const set = (v) => { ls.set('anim-try5', v); setTry(v); };
+  const set = (v) => { ls.set('anim-try6', v); setTry(v); };
   return <AnimPanel v={tryV} set={set} />;
 }
 

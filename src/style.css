@@ -10283,6 +10283,10 @@ html.ux-wa .cd-cta-wa { background: #128540; }
   /* iPhone Safari: yana kayan (mıknatıslı) sıralarda hareket sürerken mıknatıs kapalı; bitince ('ok') geri gelir.
      Bu kutulara will-change VERME: kalıcı katman Safari'de kartları hareket sonunda 'gidip yerine oturtuyor', logoları titretiyordu. */
   html.an-raf .cd-rail[data-an="go"], html.an-ind .cd-sets[data-an="go"], html.an-mrk .cd-bwall[data-an="go"] { scroll-snap-type: none; }
+  /* 0 (deneme) — bölümler solarak gelmesin: telefondaki .rv solması Safari'de bölümü geçici katmana alıp bitince geri koyuyor
+     (yarım piksel zıplama şüphesi). Z (deneme) — hareket eden kartlar hep kendi katmanında kalsın (hareket sonu zıplama şüphesi). */
+  html.an-rv .rv, html.an-rv .rv[data-in] { opacity: 1 !important; transform: none !important; transition: none !important; }
+  html.an-lay :is(.cd-rail > .cd-tile, .cd-grid > .cd-tile, .cd-ads > .cd-ad, .cd-bw, .bp-tile) { will-change: transform, opacity; }
   /* P — Bu hafta masamızdan: küçük kartlar sırayla yükselir; büyük kartta sadece ürün resmi yükselir (yazılar hep yerinde).
      Büyük resim tek ve büyük parça → kalıcı katman (will-change) güvenli; kaydırmalı sırada değil. */
   html.an-pk .cd-bento > .cd-grid:not([data-an]) > .cd-tile, html.an-pk .cd-bento > .cd-big:not([data-an]) .cd-big-im .thumb { opacity: 0; }
