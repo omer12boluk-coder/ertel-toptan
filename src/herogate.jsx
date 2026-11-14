@@ -36,11 +36,11 @@ const preloadMark = () => { if (!markImg) { markImg = new Image(); markImg.decod
 function sandForm(f, x, y, z, root) {
   const im = markImg; if (!im?.complete || !im.naturalWidth) return false;
   const dpr = Math.min(2, devicePixelRatio || 1), S = Math.round(z * (root.clientWidth < 640 ? 1.8 : 2.3)), W = z + 2 * S;
-  const n = Math.max(40, Math.round(z * dpr * 0.6)), o = document.createElement('canvas'); o.width = o.height = n;
+  const n = Math.max(48, Math.round(z * dpr * 0.8)), o = document.createElement('canvas'); o.width = o.height = n;
   let d; try { const g = o.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, n, n); d = g.getImageData(0, 0, n, n).data; } catch { return false; }
   const c = document.createElement('canvas'); c.className = 'eh-sand'; c.width = c.height = Math.round(W * dpr);
   Object.assign(c.style, { left: x - S + 'px', top: y - S + 'px', width: W + 'px', height: W + 'px' });
-  const P = [], cx = W * dpr / 2, cy = cx, sz = (z * dpr / n) * 1.25;
+  const P = [], cx = W * dpr / 2, cy = cx, sz = (z * dpr / n) * 1.05;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const k = (j * n + i) * 4, a = d[k + 3]; if (a < 80) continue;
     const tx = (S + (i + 0.5) / n * z) * dpr, ty = (S + (j + 0.5) / n * z) * dpr;
@@ -57,7 +57,8 @@ function sandForm(f, x, y, z, root) {
       ctx.fillRect(p[0] + (p[2] - p[0]) * e - sz / 2, p[1] + (p[3] - p[1]) * e - sz / 2, sz, sz);
     }
     if (T < 1) { f._raf = requestAnimationFrame(step); return; }
-    f.style.opacity = '1'; c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }).onfinish = () => c.remove();
+    // son kare: net logo AYNI karede gelir, kum hemen kalkar (üst üste sönme 'buğulanma' gibi görünüyordu)
+    f.style.opacity = '1'; c.remove();
   };
   f._raf = requestAnimationFrame(step); f._sand = c;
   return true;
