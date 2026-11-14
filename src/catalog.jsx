@@ -833,15 +833,21 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
     const m = () => {
-      const R = el.getBoundingClientRect(); if (!R.width) return; const top = R.top + scrollY; const strip = sets.length ? 82 : 0;
-      const h = Math.floor((innerHeight - top - 36 - strip - 28) / 3);
-      const v = Math.max(110, Math.min(250, h)) + 'px'; if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
+      const R = el.getBoundingClientRect(); if (!R.width) return; const top = R.top + scrollY;
+      const ph = innerWidth < 900; const n = list.length;
+      // telefon: hepsi 2 sütun eşit kutu (+ Tüm ürünler); bilgisayar: büyük kutu 2×2 + diğerleri + Tüm ürünler 2 sütun, 4 sütunda
+      const rows = ph ? Math.ceil((n + 1) / 2) : Math.ceil((4 + Math.max(0, n - 1) + 2) / 4);
+      const gap = ph ? 8 : 16; const strip = sets.length ? (ph ? 58 : 76) : 0;
+      let bot = ph ? 12 : 22;
+      if (ph) { const bn = document.querySelector('.botnav'); const r = bn && bn.getBoundingClientRect(); if (r && r.height > 10 && r.top < innerHeight) bot += innerHeight - r.top; }
+      const h = Math.floor((innerHeight - top - bot - strip - gap * (rows - 1)) / rows);
+      const v = Math.max(ph ? 72 : 110, Math.min(ph ? 150 : 250, h)) + 'px'; if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
     };
     // sayfa gizliyken (geçiş) ilk ölçüm yanlış çıkıyor → görünür olunca / boyu değişince yeniden
     m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); addEventListener('resize', m);
     const ro = new ResizeObserver(m); ro.observe(el);
     return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', m); };
-  }, [sets.length]);
+  }, [sets.length, list.length]);
   return <div className="pmo" ref={ref}>
     <div className="pmo-g">
       {list.map((n, i) => { const f = () => onCat(n.id); return <div key={n.id} role="button" tabIndex={0} className={'pmo-t' + (i === 0 ? ' big' : '')} onClick={f} onKeyDown={kd(f)}>
