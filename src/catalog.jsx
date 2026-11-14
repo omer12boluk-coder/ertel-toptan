@@ -827,6 +827,18 @@ export function hubSwap(fn, dir) { if (dir === 'l') window.__navBackNext?.(); fn
 // Kartlar sayfa geçişinden SONRA sırayla aşağıdan kayarak belirir (zıplama/büyüme YOK, kullanıcı istemedi); kategoriden geri dönünce oynamaz.
 const HUB_CUT = { 3: '/bn/hub-3.webp', 5: '/bn/hub-5.webp', 6: '/bn/hub-6.svg', 14: '/bn/hub-14.webp', 24: '/bn/hub-24.webp', 31: '/bn/hub-31.webp', 42: '/bn/hub-42.webp' };
 let hubBack = false; // kategoriye/listeye gidildi → dönüşte animasyon yok
+// Tüm ürünler sayısı 0'dan sayarak gelir (sadece giriş animasyonu oynarken; kart belirdikten sonra başlar)
+function CountUp({ n, on, delay = 0 }) {
+  const ref = useRef(null); const nf = (x) => (x || 0).toLocaleString('tr-TR');
+  useEffect(() => {
+    const el = ref.current; if (!el || !on || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let raf = 0; const t0 = performance.now() + delay, D = 1100;
+    const f = (t) => { const k = Math.min(1, Math.max(0, (t - t0) / D)); el.textContent = nf(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(f); };
+    el.textContent = nf(0); raf = requestAnimationFrame(f);
+    return () => { cancelAnimationFrame(raf); el.textContent = nf(n); };
+  }, [n, on]);
+  return <span ref={ref}>{nf(n)}</span>;
+}
 function MosImg({ v }) { const src = useShopImg(v || ''); return src ? <img className="pmo-im" src={src} alt="" loading="eager" decoding="async" /> : null; }
 function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, kd, subsOf }) {
   const nf = (x) => (x || 0).toLocaleString('tr-TR');
@@ -868,7 +880,7 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
         </div>; })}
       <div role="button" tabIndex={0} className={'pmo-t pmo-all as' + allSpan} style={{ '--d': (.05 + list.length * .06) + 's' }} onClick={goAll} onKeyDown={kd(goAll)}>
         <div className="pbn-ax"><b className="pmo-n">Tüm ürünler</b><span className="pmo-c">{list.length} kategori · {brandsN} marka</span></div>
-        <span className="pmo-big num">{nf(total)}</span><span className="pbn-ar"><Icon n="back" s={16} className="flip" /></span>
+        <span className="pmo-big num"><CountUp n={total} on={anim} delay={(250 + (.05 + list.length * .06) * 1000 + 250) | 0} /></span><span className="pbn-ar"><Icon n="back" s={16} className="flip" /></span>
       </div>
     </div>
     {sets.length > 0 && <div className="pmo-set" style={{ '--d': (.1 + list.length * .06) + 's' }}>
