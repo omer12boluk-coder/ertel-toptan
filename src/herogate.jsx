@@ -53,7 +53,7 @@ function sandForm(x, y, z, root) {
   }
   document.body.appendChild(c);
   const ctx = c.getContext('2d'), D = 520, t0 = performance.now() + 40; let res; const done = new Promise((r) => { res = r; });
-  const st = { x, y, z, el: c, off: S, done, raf: 0 };
+  const st = { x, y, z, el: c, off: S, done, raf: 0, dpr };
   const step = (now) => {
     const T = Math.max(0, (now - t0) / D); ctx.clearRect(0, 0, c.width, c.height);
     if (T >= 1) { ctx.globalAlpha = 1; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, S * dpr, S * dpr, z * dpr, z * dpr); res(); return; } // son kare: net logo, aynı kanvas
@@ -90,6 +90,17 @@ function flyLand(st) {
   const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
   const t = { left: r0.left + pl, top: r0.top + pt, width: r0.width - 2 * pl };
   f.getAnimations().forEach((a) => { a.commitStyles?.(); a.cancel(); }); f.style.opacity = '1'; f.style.filter = ''; f.style.transform = '';
+  // 15.11 (kullanıcı: 'oturuken silikleşiyor, framegen gibi'): uçan kanvas menü logosunun BİREBİR kopyası olarak yeniden çizilir —
+  // aynı resim dosyası (giriş logosu farklı dosyaydı), aynı zemin yuvarlağı ve halka → varışta karıştırma yok, aynı karede değişir
+  if (f.getContext && tg.complete && tg.naturalWidth) {
+    cancelAnimationFrame(st.raf);
+    const g = f.getContext('2d'), d = st.dpr || 1, k0 = r0.width / t.width, cx = (st.off + st.z / 2) * d, R = (st.z / 2) * k0 * d;
+    g.clearRect(0, 0, f.width, f.height); g.globalAlpha = 1;
+    const bg = cs.backgroundColor; if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) { g.fillStyle = bg; g.beginPath(); g.arc(cx, cx, R, 0, 6.2832); g.fill(); }
+    const sh = /(rgba?\([^)]*\)) 0px 0px 0px 1px|0px 0px 0px 1px (rgba?\([^)]*\))/.exec(cs.boxShadow || ''); if (sh) { g.strokeStyle = sh[1] || sh[2]; g.lineWidth = d * k0; g.beginPath(); g.arc(cx, cx, R + (d * k0) / 2, 0, 6.2832); g.stroke(); }
+    g.save(); g.beginPath(); g.arc(cx, cx, R, 0, 6.2832); g.clip(); g.imageSmoothingQuality = 'high'; g.drawImage(tg, st.off * d, st.off * d, st.z * d, st.z * d); g.restore();
+    st.same = true;
+  }
   tg.style.opacity = '0';
   const k = t.width / st.z, ex = st.x - st.off, ey = st.y - st.off;
   const tx = t.left - ex - st.off * k, ty = t.top - ey - st.off * k, D = innerWidth < 640 ? 600 : 650;
@@ -97,8 +108,12 @@ function flyLand(st) {
   f.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${tx}px,${ty}px) scale(${k})` }], { duration: D, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' });
   // uçan logo SÖNMEZ (ikisi yarı saydamken logo bir an siliniyordu): menü logosu altında belirir (gündüz beyaz yuvarlağı yumuşak gelir),
   // tam görününce uçan logo kaldırılır
-  setTimeout(() => { tg.style.transition = 'opacity .16s ease'; tg.style.opacity = ''; }, D * 0.78);
-  setTimeout(() => { cancelAnimationFrame(st.raf); f.remove(); setTimeout(() => { tg.style.transition = ''; }, 40); }, Math.max(D, D * 0.78 + 180));
+  if (st.same) { // birebir kopya: varış karesinde tek hamlede değişir (karıştırma/sönme yok)
+    setTimeout(() => { tg.style.opacity = ''; f.remove(); }, D + 16);
+  } else {
+    setTimeout(() => { tg.style.transition = 'opacity .16s ease'; tg.style.opacity = ''; }, D * 0.78);
+    setTimeout(() => { cancelAnimationFrame(st.raf); f.remove(); setTimeout(() => { tg.style.transition = ''; }, 40); }, Math.max(D, D * 0.78 + 180));
+  }
 }
 // telefon mağazayı çizmeyi bitirip rahatlayınca (art arda 2 kare < 34 ms) devam et; en geç 1,4 sn
 function whenCalm(fn) {
