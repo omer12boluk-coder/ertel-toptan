@@ -57,17 +57,16 @@ export function AnimLayer() {
     mo?.observe(document.body, { childList: true, subtree: true });
     watch(); const iv = io ? setInterval(watch, 1500) : 0;
     // ---- bn: banner kaydırdıkça geri çekilir ----
-    let raf = 0; let heroH = 0; let lastHp = -1; let hero = null; let idleT = 0;
+    let raf = 0; let heroH = 0; let lastHp = -1; let hero = null; let fade = null;
     const tick = () => {
       raf = 0; if (!hero || !hero.isConnected) { hero = document.querySelector('.shell.public .cd-hero'); heroH = 0; } if (!hero) return;
-      if (hero.closest('.kp-off')) { if (hero.style.willChange) hero.style.willChange = ''; return; } // ana sayfa gizliyken (başka sayfadayken) DOKUNMA: o sayfanın kaydırması banner'ı bozuyordu, dönünce yanlış çizilip oturuyordu
+      if (hero.closest('.kp-off')) return; // ana sayfa gizliyken (başka sayfadayken) DOKUNMA: o sayfanın kaydırması banner'ı bozuyordu, dönünce yanlış çizilip oturuyordu
       if (!heroH) heroH = hero.offsetHeight || 1;
       const hp = Math.round(Math.max(0, Math.min(1, scrollY / heroH)) * 200) / 200; if (hp === lastHp) return; lastHp = hp;
-      hero.style.transform = hp ? `scale(${(1 - hp * 0.08).toFixed(3)})` : ''; hero.style.opacity = hp ? (1 - hp * 0.55).toFixed(3) : '';
-      // katman SADECE kaydırma sürerken ve banner yarı görünürken (kalıcı katman ana sayfa dönüşünü bozuyordu; hiç katman olmayınca
-      // her karede baştan çizilip ara ara takılıyordu). Kaydırma durunca / banner tam görünür ya da tam kaybolunca kalkar.
-      const mid = hp > 0 && hp < 1; if (mid && !hero.style.willChange) hero.style.willChange = 'transform, opacity'; else if (!mid && hero.style.willChange) hero.style.willChange = '';
-      clearTimeout(idleT); if (mid) idleT = setTimeout(() => { if (hero) hero.style.willChange = ''; }, 350);
+      // 14.11 akşam: banner'ın KENDİSİ küçültülmez/soldurulmaz — Safari resmi katmanda yeniden çizerken 3-4 px 'tık' yapıyordu
+      // (ekran kaydıyla ölçüldü), katmansızken de her karede yeniden çizilip takılıyordu. Üstüne sayfa renginde perde (.an-hfade) iner.
+      if (!fade || !fade.isConnected) { fade = document.createElement('div'); fade.className = 'an-hfade'; fade.setAttribute('aria-hidden', 'true'); hero.appendChild(fade); }
+      fade.style.opacity = (hp * 0.62).toFixed(3);
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick); };
     const onResize = () => { heroH = 0; onScroll(); };
@@ -75,7 +74,7 @@ export function AnimLayer() {
     return () => {
       on.forEach((k) => c.remove('an-' + k));
       io?.disconnect(); mo?.disconnect(); cancelAnimationFrame(wr); clearInterval(iv); document.querySelectorAll('[data-an]').forEach((x) => x.removeAttribute('data-an'));
-      if (has('bn')) { removeEventListener('scroll', onScroll); removeEventListener('resize', onResize); cancelAnimationFrame(raf); clearTimeout(idleT); if (hero) { hero.style.transform = ''; hero.style.opacity = ''; hero.style.willChange = ''; } }
+      if (has('bn')) { removeEventListener('scroll', onScroll); removeEventListener('resize', onResize); cancelAnimationFrame(raf); fade?.remove(); fade = null; }
     };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!TRY_HOST) return null;

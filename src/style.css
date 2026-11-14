@@ -10305,7 +10305,8 @@ html.ux-wa .cd-cta-wa { background: #128540; }
   html.an-mrk .cd-bwall:not([data-an]) .cd-bw { opacity: 0; }
   html.an-mrk .cd-bwall[data-an="go"] .cd-bw { animation: anUp .6s cubic-bezier(.16, 1, .3, 1) calc(var(--d, 0) * 55ms) backwards; }
   /* G — banner geri çekilir: transform/opacity satır içi (anim.jsx) */
-  html.an-bn .shell.public .cd-hero { transform-origin: 50% 0; }
+  html.an-bn .shell.public .cd-hero { position: relative; }
+  .an-hfade { position: absolute; inset: 0; z-index: 9; pointer-events: none; background: var(--bg); opacity: 0; }
   /* iPhone Safari: yana kayan (mıknatıslı) sıralarda hareket sürerken mıknatıs kapalı; bitince ('ok') geri gelir.
      Bu kutulara will-change VERME: kalıcı katman Safari'de kartları hareket sonunda 'gidip yerine oturtuyor', logoları titretiyordu. */
   html.an-raf .cd-rail[data-an="go"], html.an-ind .cd-sets[data-an="go"], html.an-mrk .cd-bwall[data-an="go"] { scroll-snap-type: none; }
