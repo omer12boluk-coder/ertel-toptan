@@ -28,15 +28,28 @@ function flyStart(img, root, src) {
   const mob = root.clientWidth < 640; const z = mob ? Math.min(r.width, r.height) : r.height;
   return { x: mob ? r.left + (r.width - z) / 2 : r.left, y: r.top + (r.height - z) / 2, z, src };
 }
+// küçük logo: büyük logonun ortasında, dağılma sürerken buğudan netleşerek belirir (body'ye eklenen düz resim; kanvas yeniden kurulmaz)
+function flySmall(img, root) {
+  const r = img?.getBoundingClientRect(); if (!r || !r.width) return null;
+  const z = Math.round(Math.min(root.clientWidth < 640 ? 60 : 80, r.height * 0.9));
+  const x = r.left + r.width / 2 - z / 2, y = r.top + r.height / 2 - z / 2;
+  const f = document.createElement('img'); f.src = MOBILE_SRC; f.alt = ''; f.className = 'eh-fly';
+  Object.assign(f.style, { left: x + 'px', top: y + 'px', width: z + 'px', height: z + 'px', opacity: '0' });
+  document.body.appendChild(f);
+  f.animate([{ opacity: 0, filter: 'blur(10px)', transform: 'scale(1.5)' }, { opacity: 1, filter: 'blur(0px)', transform: 'scale(1)' }],
+    { duration: 380, delay: 140, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
+  return { x, y, z, src: MOBILE_SRC, el: f };
+}
 function flyLand(st) {
   if (!st) return;
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
-  if (!tg) return;
+  if (!tg) { st.el?.remove(); return; }
   const t = tg.getBoundingClientRect();
-  const f = document.createElement('img'); f.src = st.src; f.alt = ''; f.className = 'eh-fly';
-  Object.assign(f.style, { left: st.x + 'px', top: st.y + 'px', width: st.z + 'px', height: st.z + 'px' });
-  document.body.appendChild(f); tg.style.opacity = '0';
-  f.animate([{ transform: 'translate(0,0) scale(1)', opacity: st.hold ? 1 : 0 }, { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0.1 },
+  let f = st.el;
+  if (f) { f.getAnimations().forEach((a) => { a.commitStyles?.(); a.cancel(); }); f.style.opacity = '1'; f.style.filter = ''; f.style.transform = ''; }
+  else { f = document.createElement('img'); f.src = st.src; f.alt = ''; f.className = 'eh-fly'; Object.assign(f.style, { left: st.x + 'px', top: st.y + 'px', width: st.z + 'px', height: st.z + 'px' }); document.body.appendChild(f); }
+  tg.style.opacity = '0';
+  f.animate([{ transform: 'translate(0,0) scale(1)', opacity: st.el ? 1 : 0 }, { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0.1 },
     { transform: `translate(${t.left - st.x}px,${t.top - st.y}px) scale(${t.width / st.z})`, opacity: 1 }], { duration: 650, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' })
     .onfinish = () => { tg.style.opacity = ''; requestAnimationFrame(() => f.remove()); };
 }
@@ -203,39 +216,12 @@ export function HeroGate({ onOpen, onDone }) {
   // Çıkış: önce logo dağılıp söner (düz zemin kalır) → mağaza düz zeminin ARKASINDA çizilir (takılma görünmez) → zemin solar.
   // Eskiden mağaza animasyonun ortasında çiziliyordu, dağılma efekti 1 sn takılıyordu.
   const goneRef = useRef(false);
-  // 14.11.2026 (3) Açılış geçişi (kullanıcı: menüde kum toplanması da 'kökten kaldır'): büyük logo kuma dönüşür ve AYNI YERDE
-  // küçük 'e' olarak yeniden oluşur (liquid.js gather, 1 sn) → mağaza arkada çizilir → o küçük logo (düz resim) zemin solarken
-  // menüdeki yerine kayar (flyLand). Kum menüye akmaz / menüde toplanmaz (ikisi de reddedildi).
-  // GL yoksa eski yol (dağılma + büyük logodan tek parça uçuş).
-  const markRef = useRef(null);
-  useEffect(() => { const im = new Image(); im.decoding = 'async'; im.src = MOBILE_SRC; markRef.current = im; }, []);
-  const [gather, setGather] = useState(false);
-  const goGather = () => {
-    const eng = engRef.current, root = rootRef.current, R = eng.rect;
-    const z = Math.round(Math.min(root.clientWidth < 640 ? 64 : 84, R.h * 0.9));
-    const small = { x: R.x + R.w / 2 - z / 2, y: R.y + R.h / 2 - z / 2, w: z, h: z };
-    if (!eng.gather(markRef.current, small, 1000, 0, 26)) { goneRef.current = false; return false; }
-    setGather(true); setLeaving(true);
-    // küçük logo tam oluşmadan sayfa açılmasın (yavaş cihazda kareler geç gelir): birleşme bitince + 150 ms, en geç 2,2 sn
-    const t0 = performance.now();
-    const next = (fn) => { const w = () => ((eng.introT >= 1 && performance.now() - t0 > 1000) || performance.now() - t0 > 2200 ? setTimeout(fn, 150) : setTimeout(w, 50)); w(); };
-    next(() => {
-      eng.stop(); onOpen();
-      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
-        const b = root.getBoundingClientRect();
-        flyLand({ x: b.left + small.x, y: b.top + small.y, z, src: MOBILE_SRC, hold: true });
-        root.classList.add('eh-flown'); // kanvastaki küçük logo gizlenir, aynı yerde düz resmi kayar
-        if (fx.scn) sceneIn(true);
-        setReveal(true); setTimeout(onDone, 420);
-      }, 80)));
-    });
-    return true;
-  };
+  // 14.11.2026 (4) Açılış geçişi: büyük logo eskisi gibi hızla dağılır; dağılırken ORTADA küçük 'e' buğudan netleşerek belirir
+  // (düz resim, CSS) → mağaza arkada çizilir → küçük logo menüdeki yerine kayar. Kumla yeniden kurma (liquid.js gather) DONDURUYOR
+  // ve yavaştı (kullanıcı) → kullanılmıyor; kumun menüye akması / menüde toplanması da reddedildi.
   const go = () => {
     if (leaving || goneRef.current) return; goneRef.current = true;
-    const mk = markRef.current;
-    if (fx.fly && engRef.current && rootRef.current?.dataset.gl === 'on' && mk?.complete && mk.naturalWidth && goGather()) return;
-    const fl = fx.fly ? flyStart(imgRef.current, rootRef.current, logoSrc) : null;
+    const fl = fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
     engRef.current?.explode(); setLeaving(true);
     setTimeout(() => {
       engRef.current?.stop(); onOpen();
@@ -248,7 +234,7 @@ export function HeroGate({ onOpen, onDone }) {
   };
 
   return (
-    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (gather ? ' gather' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
+    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
       <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
       <div ref={stageRef} className="eh-stage" aria-hidden="true"><img ref={imgRef} className="eh-fallback" alt="" draggable="false" /></div>
       <nav ref={navRef} className="eh-nav eh-a" aria-label="Üst">
