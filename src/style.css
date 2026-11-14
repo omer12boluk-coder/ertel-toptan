@@ -9791,7 +9791,7 @@ html.nav-mv .main :is(.cimg-sw, .sh-hero-track, .cd-rail, .cd-ads, .cd-sets, .cd
   --eh-font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;
   position:fixed;inset:0;z-index:2147483000;width:100%;height:100svh;overflow:hidden;isolation:isolate;container-type:size;
   background:var(--eh-bg);color:var(--eh-fg);font-family:var(--eh-font);-webkit-font-smoothing:antialiased;
-  touch-action:pan-y;display:flex;flex-direction:column;box-sizing:border-box;transition:background-color .6s ease,color .6s ease}
+  touch-action:none;display:flex;flex-direction:column;box-sizing:border-box;transition:background-color .6s ease,color .6s ease}
 .eh-root.eh-dark{--eh-bg:#0a0b0f;--eh-fg:#f5f5f7;--eh-acc:#4f8dff;--eh-sub:#a1a1a6}
 
 .eh-brand img{height:28px;width:auto}
@@ -9851,6 +9851,7 @@ body.eh-lock{overflow:hidden}
 .eh-root.leaving .eh-nav{animation:eh-out .5s ease forwards}
 @keyframes eh-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-14px)}}
 .eh-root.leaving .eh-stage{transform:scale(1.25);opacity:0}
+.eh-spacer2{display:none}
 @container (max-width:1023px){
   .eh-content{grid-template-columns:1fr;gap:24px}
   .eh-aside{justify-self:start;max-width:520px;padding-bottom:0}
@@ -9863,10 +9864,27 @@ body.eh-lock{overflow:hidden}
   .eh-body{font-size:15px;margin-bottom:18px}
   .eh-eyebrow{font-size:11px}
   .eh-btn,.eh-aside .eh-btn{width:100%;justify-content:center;height:54px}
-  .eh-content{padding-bottom:max(28px,env(safe-area-inset-bottom))}
+  .eh-content{padding-bottom:0}
+  /* 14.11.2026: logo + yazılar yukarıda; altta boşluk (kaydırıcı başparmağa yakın) */
+  .eh-spacer2{display:block;flex:0 0 max(13cqh,calc(env(safe-area-inset-bottom) + 64px))}
 }
+/* 14.11.2026 telefonda kaydırarak giriş (SlideToStart) */
+.eh-slide{--eh-p:0;position:relative;height:60px;border-radius:999px;padding:4px;touch-action:none;user-select:none;-webkit-user-select:none;
+  background:color-mix(in srgb,var(--eh-fg) 7%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--eh-fg) 6%,transparent);overflow:hidden}
+.eh-slide::before{content:"";position:absolute;inset:0;border-radius:inherit;background:color-mix(in srgb,var(--eh-acc) 14%,transparent);opacity:var(--eh-p)}
+.eh-slide-txt{position:absolute;inset:0;display:grid;place-items:center;padding-left:52px;font-size:16px;font-weight:600;letter-spacing:-.01em;pointer-events:none;
+  color:transparent;background:linear-gradient(100deg,var(--eh-sub) 40%,var(--eh-fg) 50%,var(--eh-sub) 60%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;
+  animation:eh-shine 2.6s linear infinite;opacity:calc(1 - var(--eh-p) * 1.6)}
+@keyframes eh-shine{from{background-position:100% 0}to{background-position:-150% 0}}
+.eh-knob{position:relative;z-index:1;display:grid;place-items:center;width:52px;height:52px;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none;
+  background:var(--eh-acc);color:#fff;box-shadow:0 6px 18px -6px color-mix(in srgb,var(--eh-acc) 80%,transparent);
+  transition:transform .45s cubic-bezier(.3,1.5,.5,1);-webkit-tap-highlight-color:transparent}
+.eh-slide.drag .eh-knob{transition:none;cursor:grabbing}
+.eh-slide.done .eh-knob{transition:transform .2s ease}
+.eh-root.leaving .eh-slide{opacity:0;transition:opacity .3s}
 @media (prefers-reduced-motion:reduce){
   .eh-a,.eh-hint{animation:none;opacity:1;transform:none}
+  .eh-slide-txt{animation:none;color:var(--eh-sub)}
   .eh-canvas,.eh-fallback,.eh-btn,.eh-btn svg{transition:none}
 }
 

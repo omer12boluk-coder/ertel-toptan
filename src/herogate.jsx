@@ -28,7 +28,7 @@ export const HERO_WANTED = (() => {
 export function HeroGate({ onOpen, onDone }) {
   const on = useStore((s) => s.settings.brand?.heroGate !== false);
   const boot = useStore((s) => s.boot);
-  const rootRef = useRef(null), stageRef = useRef(null), imgRef = useRef(null), navRef = useRef(null), contentRef = useRef(null), hintRef = useRef(null), bdRef = useRef(null);
+  const rootRef = useRef(null), stageRef = useRef(null), imgRef = useRef(null), navRef = useRef(null), contentRef = useRef(null), bdRef = useRef(null);
   const engRef = useRef(null);
   const [leaving, setLeaving] = useState(false);
   const [reveal, setReveal] = useState(false);
@@ -59,12 +59,11 @@ export function HeroGate({ onOpen, onDone }) {
       const w = root.clientWidth, h = root.clientHeight, nav = navRef.current, content = contentRef.current;
       const band = { top: nav ? nav.offsetTop + nav.offsetHeight + 8 : 16, bottom: content ? content.offsetTop - 8 : h };
       const bandH = Math.max(80, band.bottom - band.top);
-      let rw, maxH; if (w >= 1024) { rw = w * 0.62; maxH = bandH * 0.82; } else if (w >= 640) { rw = w * 0.8; maxH = bandH * 0.85; } else { rw = w * 0.82; maxH = bandH * 0.82; }
+      let rw, maxH; if (w >= 1024) { rw = w * 0.62; maxH = bandH * 0.82; } else if (w >= 640) { rw = w * 0.8; maxH = bandH * 0.85; } else { rw = w * 0.74; maxH = bandH * 0.8; }
       if (rw / aspect > maxH) rw = maxH * aspect; const rh = rw / aspect;
       const rect = { x: w / 2 - rw / 2, y: (band.top + band.bottom) / 2 - rh / 2, w: rw, h: rh };
       const bd = bdRef.current; if (bd) { bd.style.fontSize = Math.min(bandH * 0.95, (w * 0.92) / (5 * 0.56)) + 'px'; bd.style.top = (band.top + band.bottom) / 2 + 'px'; }
       const img = imgRef.current; if (img) Object.assign(img.style, { left: rect.x + 'px', top: rect.y + 'px', width: rect.w + 'px', height: rect.h + 'px' });
-      const hint = hintRef.current; if (hint) { hint.style.left = Math.min(Math.max(rect.x + rect.w / 2, 80), w - 80) + 'px'; hint.style.top = Math.min(rect.y + rect.h + 14, band.bottom - 20) + 'px'; }
       engine?.resize(w, h, rect);
     };
     const load = () => {
@@ -81,8 +80,8 @@ export function HeroGate({ onOpen, onDone }) {
     const onVis = () => engine?.setVisible(!document.hidden); document.addEventListener('visibilitychange', onVis);
     const pos = (e) => { const b = root.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const mark = () => { root.dataset.touched = '1'; };
-    const mv = (e) => { const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
-    const dn = (e) => { if (e.target.closest('button,a')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
+    const mv = (e) => { if (e.target.closest?.('.eh-slide')) return; const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
+    const dn = (e) => { if (e.target.closest('button,a,.eh-slide')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
     const up = (e) => { const [x, y] = pos(e); engine?.pointer('up', x, y, e.pointerType === 'touch'); };
     const lv = (e) => { const [x, y] = pos(e); engine?.pointer('leave', x, y, e.pointerType === 'touch'); };
     root.addEventListener('pointermove', mv, { passive: true }); root.addEventListener('pointerdown', dn, { passive: true });
@@ -112,13 +111,12 @@ export function HeroGate({ onOpen, onDone }) {
       <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
       <div ref={stageRef} className="eh-stage" aria-hidden="true"><img ref={imgRef} className="eh-fallback" alt="" draggable="false" /></div>
       <nav ref={navRef} className="eh-nav eh-a" aria-label="Üst">
-        <span className="eh-brand"><img src="/bn/hero-logo-mark.webp" alt="" />ERTEL GSM</span>
+        <span />
         <button type="button" className="eh-theme" role="switch" aria-checked={dark} aria-label="Karanlık görünüm" onClick={flip}>
           <span className={dark ? '' : 'on'}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg></span>
           <span className={dark ? 'on' : ''}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg></span>
         </button>
       </nav>
-      <div ref={hintRef} className="eh-hint" aria-hidden="true">{coarse ? 'Logoya dokun' : 'Logonun üzerinde gezdir'}</div>
       <div className="eh-spacer" />
       <div ref={contentRef} className="eh-content">
         <div>
@@ -128,12 +126,48 @@ export function HeroGate({ onOpen, onDone }) {
         <div className="eh-aside">
           <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
           <div className="eh-a eh-a5">
-            <button type="button" className="eh-btn" onClick={go}>Alışverişe başla
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </button>
+            {coarse ? <SlideToStart onDone={go} /> : (
+              <button type="button" className="eh-btn" onClick={go}>Alışverişe başla
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
+      <div className="eh-spacer2" />
     </section>
+  );
+}
+
+// 14.11.2026 Telefonda 'Alışverişe başla' düğmesi yerine kaydırarak giriş (slide to unlock tarzı).
+// Topu sağa sürükle: %82'yi geçince girer, bırakırsan geri yaylanır. Dokunup bırakmak (sürüklemeden) bir şey yapmaz.
+function SlideToStart({ onDone }) {
+  const trackRef = useRef(null), knobRef = useRef(null);
+  const st = useRef({ on: false, x0: 0, max: 0, x: 0, done: false });
+  const [done, setDone] = useState(false);
+  const setX = (x) => {
+    const s = st.current; s.x = x; const k = knobRef.current, t = trackRef.current; if (!k || !t) return;
+    k.style.transform = `translateX(${x}px)`; t.style.setProperty('--eh-p', s.max ? x / s.max : 0);
+  };
+  const down = (e) => {
+    if (st.current.done) return; const t = trackRef.current, k = knobRef.current; if (!t || !k) return;
+    const s = st.current; s.on = true; s.x0 = e.clientX - s.x; s.max = t.clientWidth - k.offsetWidth - 8;
+    t.classList.add('drag'); try { k.setPointerCapture(e.pointerId); } catch {}
+  };
+  const move = (e) => { const s = st.current; if (!s.on) return; setX(Math.max(0, Math.min(s.max, e.clientX - s.x0))); };
+  const up = () => {
+    const s = st.current; if (!s.on) return; s.on = false; trackRef.current?.classList.remove('drag');
+    if (s.max && s.x >= s.max * 0.82) { s.done = true; setX(s.max); setDone(true); try { navigator.vibrate?.(8); } catch {} onDone(); }
+    else setX(0);
+  };
+  return (
+    <div ref={trackRef} className={'eh-slide' + (done ? ' done' : '')}>
+      <span className="eh-slide-txt">Kaydırarak alışverişe başla</span>
+      <button ref={knobRef} type="button" className="eh-knob" aria-label="Alışverişe başla"
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); st.current.done = true; setDone(true); onDone(); } }}>
+        <svg width="20" height="20" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+    </div>
   );
 }
