@@ -28,7 +28,40 @@ function flyStart(img, root, src) {
   const mob = root.clientWidth < 640; const z = mob ? Math.min(r.width, r.height) : r.height;
   return { x: mob ? r.left + (r.width - z) / 2 : r.left, y: r.top + (r.height - z) / 2, z, src };
 }
-// küçük logo: büyük logonun ortasında, dağılma sürerken buğudan netleşerek belirir (body'ye eklenen düz resim; kanvas yeniden kurulmaz)
+// küçük logo: büyük logo dağılırken ORTADA kumdan oluşur (hafif 2B kanvas, ~2-3 bin tane; büyük WebGL motoru yeniden KURULMAZ —
+// o donduruyordu). Taneler merkez çevresinden (büyük logonun dağıldığı alan) akıp küçük 'e'nin piksellerine oturur, sonra düz
+// resim yerini alır. Resim yüklenmemişse buğudan netleşme (yedek).
+let markImg = null;
+const preloadMark = () => { if (!markImg) { markImg = new Image(); markImg.decoding = 'async'; markImg.src = MOBILE_SRC; } };
+function sandForm(f, x, y, z, root) {
+  const im = markImg; if (!im?.complete || !im.naturalWidth) return false;
+  const dpr = Math.min(2, devicePixelRatio || 1), S = Math.round(z * (root.clientWidth < 640 ? 1.8 : 2.3)), W = z + 2 * S;
+  const n = Math.max(40, Math.round(z * dpr * 0.6)), o = document.createElement('canvas'); o.width = o.height = n;
+  let d; try { const g = o.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, n, n); d = g.getImageData(0, 0, n, n).data; } catch { return false; }
+  const c = document.createElement('canvas'); c.className = 'eh-sand'; c.width = c.height = Math.round(W * dpr);
+  Object.assign(c.style, { left: x - S + 'px', top: y - S + 'px', width: W + 'px', height: W + 'px' });
+  const P = [], cx = W * dpr / 2, cy = cx, sz = (z * dpr / n) * 1.25;
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const k = (j * n + i) * 4, a = d[k + 3]; if (a < 80) continue;
+    const tx = (S + (i + 0.5) / n * z) * dpr, ty = (S + (j + 0.5) / n * z) * dpr;
+    const an = Math.random() * 6.2832, r = (0.25 + Math.random() * 0.75) * S * dpr;
+    P.push([cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.62, tx, ty, Math.random() * 0.32, `rgba(${d[k]},${d[k + 1]},${d[k + 2]},${a / 255})`]);
+  }
+  document.body.appendChild(c);
+  const ctx = c.getContext('2d'), D = 520, t0 = performance.now() + 40;
+  const step = (now) => {
+    const T = Math.max(0, (now - t0) / D); ctx.clearRect(0, 0, c.width, c.height);
+    for (const p of P) {
+      const k = Math.min(1, Math.max(0, (T - p[4]) / (1 - 0.32))), e = 1 - Math.pow(1 - k, 3);
+      ctx.globalAlpha = Math.min(1, T * 4); ctx.fillStyle = p[5];
+      ctx.fillRect(p[0] + (p[2] - p[0]) * e - sz / 2, p[1] + (p[3] - p[1]) * e - sz / 2, sz, sz);
+    }
+    if (T < 1) { f._raf = requestAnimationFrame(step); return; }
+    f.style.opacity = '1'; c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }).onfinish = () => c.remove();
+  };
+  f._raf = requestAnimationFrame(step); f._sand = c;
+  return true;
+}
 function flySmall(img, root) {
   const r = img?.getBoundingClientRect(); if (!r || !r.width) return null;
   const z = Math.round(Math.min(root.clientWidth < 640 ? 60 : 80, r.height * 0.9));
@@ -36,17 +69,17 @@ function flySmall(img, root) {
   const f = document.createElement('img'); f.src = MOBILE_SRC; f.alt = ''; f.className = 'eh-fly';
   Object.assign(f.style, { left: x + 'px', top: y + 'px', width: z + 'px', height: z + 'px', opacity: '0' });
   document.body.appendChild(f);
-  f.animate([{ opacity: 0, filter: 'blur(10px)', transform: 'scale(1.5)' }, { opacity: 1, filter: 'blur(0px)', transform: 'scale(1)' }],
+  if (!sandForm(f, x, y, z, root)) f.animate([{ opacity: 0, filter: 'blur(10px)', transform: 'scale(1.5)' }, { opacity: 1, filter: 'blur(0px)', transform: 'scale(1)' }],
     { duration: 380, delay: 140, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
   return { x, y, z, src: MOBILE_SRC, el: f };
 }
 function flyLand(st) {
   if (!st) return;
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
-  if (!tg) { st.el?.remove(); return; }
+  if (!tg) { cancelAnimationFrame(st.el?._raf); st.el?._sand?.remove(); st.el?.remove(); return; }
   const t = tg.getBoundingClientRect();
   let f = st.el;
-  if (f) { f.getAnimations().forEach((a) => { a.commitStyles?.(); a.cancel(); }); f.style.opacity = '1'; f.style.filter = ''; f.style.transform = ''; }
+  if (f) { cancelAnimationFrame(f._raf); f._sand?.remove(); f.getAnimations().forEach((a) => { a.commitStyles?.(); a.cancel(); }); f.style.opacity = '1'; f.style.filter = ''; f.style.transform = ''; }
   else { f = document.createElement('img'); f.src = st.src; f.alt = ''; f.className = 'eh-fly'; Object.assign(f.style, { left: st.x + 'px', top: st.y + 'px', width: st.z + 'px', height: st.z + 'px' }); document.body.appendChild(f); }
   tg.style.opacity = '0';
   f.animate([{ transform: 'translate(0,0) scale(1)', opacity: st.el ? 1 : 0 }, { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0.1 },
@@ -156,6 +189,7 @@ export function HeroGate({ onOpen, onDone }) {
   const look = useStore((s) => s.settings?.look); const logoSrc = useStore((s) => s.settings?.brand?.logo) || LOGO_MARK;
   const fx = gateFx(look);
   useState(() => { gateT0 = performance.now(); });
+  useEffect(() => { preloadMark(); }, []);
 
   // ayar kapalı gelirse hemen kapan (ve bir sonraki açılış için hatırla)
   useEffect(() => { if (boot === 'ready' || boot === 'login') { try { localStorage.setItem('hero-gate', on ? '1' : '0'); } catch {} if (!on) { onOpen(); onDone(); } } }, [on, boot]);

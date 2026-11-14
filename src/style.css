@@ -10513,3 +10513,5 @@ html.pf-lite .hd-p.hd-v3, html.pf-lite .v3-tile, html.pf-lite .v3-lg, html.pf-li
 .eh-root.eh-flown .eh-stage { opacity: 0 !important; transition: none !important; }
 .eh-root.gather.reveal { opacity: 1; background-color: transparent; transition: background-color .5s ease; }
 .eh-root.gather.reveal.eh-gone, .eh-root.eh-gone { opacity: 0; transition: opacity .28s ease; }
+
+.eh-sand { position: fixed; z-index: 2147483001; pointer-events: none; }
