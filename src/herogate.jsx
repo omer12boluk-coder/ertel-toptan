@@ -20,33 +20,30 @@ import { LOGO_MARK } from './config.js';
 // Kurallar: SADECE 'Alışverişe başla'dan sonra bir kez; kalıcı katman (will-change) YOK; Yeni gelenler kendi kayma hareketiyle
 // ÇAKIŞMASIN (rail data-an='ok' yapılır, sahne kendisi oynatır); kaydırmalı sırada hareket sürerken mıknatıs (scroll-snap) kapalı.
 const EZ = 'cubic-bezier(.16,1,.3,1)';
+// Uçan logo TEK PARÇA (14.11 akşam): iki evreli sürüm yolda duruyordu (mağaza arkada çizilirken bekliyordu) = 'takılma'.
+// Artık parçacıklar dağılırken görünmez; mağaza hazır olunca (reveal) ortadan durmadan menüdeki yerine uçar (0,65 sn).
+// Menü bu sırada KAYMAZ (sceneIn fly=true → sadece belirir): menü kayarken inince 'yerine tekrar oturma' görünüyordu.
 function flyStart(img, root, src) {
   const r = img?.getBoundingClientRect(); if (!r || !r.width) return null;
   const mob = root.clientWidth < 640; const z = mob ? Math.min(r.width, r.height) : r.height;
-  const x = mob ? r.left + (r.width - z) / 2 : r.left, y = r.top + (r.height - z) / 2;
-  const f = document.createElement('img'); f.src = src; f.alt = ''; f.className = 'eh-fly';
-  Object.assign(f.style, { left: x + 'px', top: y + 'px', width: z + 'px', height: z + 'px' });
-  document.body.appendChild(f);
-  // 1. evre: belirir belirmez küçülerek sol üste (menü logosunun yaklaşık yerine) doğru yola çıkar — büyük logo ekranda BEKLEMEZ
-  // (kullanıcı: 'logo çok uzun görünüyor'); menü hazır olunca flyLand son yarım saniyede tam yerine oturtur.
-  const ex = 14 + 14 - x, ey = 14 + 14 - y, k1 = Math.min(1, 64 / z);
-  f.animate([{ opacity: 0, transform: 'translate(0,0) scale(.9)' }, { opacity: 1, transform: 'translate(0,0) scale(1)', offset: 0.18 },
-    { opacity: 1, transform: `translate(${ex * 0.75}px,${ey * 0.75}px) scale(${k1})` }], { duration: 650, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' });
-  return { f, x, y, z };
+  return { x: mob ? r.left + (r.width - z) / 2 : r.left, y: r.top + (r.height - z) / 2, z, src };
 }
 function flyLand(st) {
   if (!st) return;
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
-  if (!tg) { st.f.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).onfinish = () => st.f.remove(); return; }
-  const t = tg.getBoundingClientRect(); tg.style.opacity = '0';
-  const cur = getComputedStyle(st.f).transform; st.f.getAnimations().forEach((x) => x.cancel());
-  st.f.animate([{ transform: cur === 'none' ? 'none' : cur, opacity: 1 }, { transform: `translate(${t.left - st.x}px,${t.top - st.y}px) scale(${t.width / st.z})`, opacity: 1 }], { duration: 460, easing: 'cubic-bezier(.3,0,.2,1)', fill: 'forwards' })
-    .onfinish = () => { tg.style.opacity = ''; st.f.remove(); };
+  if (!tg) return;
+  const t = tg.getBoundingClientRect();
+  const f = document.createElement('img'); f.src = st.src; f.alt = ''; f.className = 'eh-fly';
+  Object.assign(f.style, { left: st.x + 'px', top: st.y + 'px', width: st.z + 'px', height: st.z + 'px' });
+  document.body.appendChild(f); tg.style.opacity = '0';
+  f.animate([{ transform: 'translate(0,0) scale(1)', opacity: 0 }, { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0.1 },
+    { transform: `translate(${t.left - st.x}px,${t.top - st.y}px) scale(${t.width / st.z})`, opacity: 1 }], { duration: 650, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' })
+    .onfinish = () => { tg.style.opacity = ''; requestAnimationFrame(() => f.remove()); };
 }
-function sceneIn() {
+function sceneIn(fly) {
   const sh = document.querySelector('.shell.public'); if (!sh) return;
   const A = (el, kf, o) => el?.animate(kf, { easing: EZ, fill: 'backwards', ...o });
-  A(sh.querySelector('.topbar'), [{ transform: 'translateY(-90px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, delay: 40 });
+  A(sh.querySelector('.topbar'), fly ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: 'translateY(-90px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: fly ? 450 : 700, delay: 40 });
   if (innerWidth < 900) A(sh.querySelector('.botnav'), [{ transform: 'translateY(100px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, delay: 90 });
   const pg = sh.querySelector('.kp:not(.kp-off)') || sh;
   A(pg.querySelector('.cd-hero .sh-hero') || pg.querySelector('.cd-hero'), [{ transform: 'scale(.92)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 850, delay: 120 });
@@ -197,7 +194,7 @@ export function HeroGate({ onOpen, onDone }) {
       engRef.current?.stop(); onOpen();
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
         flyLand(fl); // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar
-        if (fx.scn) sceneIn();
+        if (fx.scn) sceneIn(!!fl);
         setReveal(true); setTimeout(onDone, 420);
       }, 80)));
     }, 560);
