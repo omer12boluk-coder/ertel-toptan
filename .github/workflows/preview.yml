@@ -24,7 +24,8 @@ jobs:
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           set +e
-          npx -y firebase-tools@13 hosting:channel:deploy ${{ github.ref_name }} --expires 7d --project erteltoptan --non-interactive > "$RUNNER_TEMP/out.txt" 2>&1
+          CH=$(printf '%s' "$GITHUB_REF_NAME" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | cut -c1-40)  # 'claude/…' gibi dal adları kanal adına uygun olsun
+          npx -y firebase-tools@13 hosting:channel:deploy "$CH" --expires 7d --project erteltoptan --non-interactive > "$RUNNER_TEMP/out.txt" 2>&1
           code=$?
           cat "$RUNNER_TEMP/out.txt"
           url=$(grep -oE 'https://erteltoptan--[a-z0-9-]+\.web\.app' "$RUNNER_TEMP/out.txt" | head -1)

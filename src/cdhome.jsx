@@ -301,6 +301,9 @@ export function CdNew({ H, onProduct, edit }) {
       {/* 7.11.2026: oklar kapak kartının içindeydi → kayınca kayboluyordu; artık rafın iki yanında sabit */}
       {!edge[0] && <button type="button" className="cd-arr cd-nw-nav prev" onClick={() => by(-1)} aria-label="Geri"><Icon n="back" s={18} /></button>}
       {!edge[1] && <button type="button" className="cd-arr cd-nw-nav next" onClick={() => by(1)} aria-label="İleri"><Icon n="back" s={18} className="flip" /></button>}
+      {/* 14.11.2026 telefonda (html.ux-nw) kapak kutusu yerine bu başlık görünür; bilgisayarda gizli */}
+      <header className="cd-head cd-nw-head"><div><span className="cd-eye">{C.eye ?? 'Yeni gelenler'}</span><h2>{title}</h2></div>
+        <button type="button" className="cd-more" onClick={all}>Hepsini gör<Icon n="back" s={14} className="flip" /></button></header>
       <div className="cd-rail" ref={railRef} onScroll={upd}>
         <div className="cd-tile cd-newcov">
           <span className="cd-eye">{C.eye ?? 'Yeni gelenler'}</span>

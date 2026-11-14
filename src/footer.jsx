@@ -19,6 +19,18 @@ const CardMarks = () => (
   </span>
 );
 
+// 14.11.2026 başlık + bağlantı listesi. Telefonda html.ux-foot açıkken başlığa dokununca açılır/kapanır (CSS);
+// bilgisayarda ve 'old' ayarında başlık düz yazı gibi görünür, liste hep açık.
+function Fold({ title, h2, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={'sfoot-fold' + (open ? ' open' : '')}>
+      <h4 className={h2 ? 'sfoot-h2' : ''}><button type="button" className="sfoot-tg" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{title}<Icon n="chev" s={16} /></button></h4>
+      {children}
+    </div>
+  );
+}
+
 // Ürün talebi / sorun bildir sayfaları (menüde yok; alt bilgiden açılır, adres /magaza/talep · /magaza/sorun)
 const goTab = (t) => (e) => { e.preventDefault(); go(t); };
 export function ShopFooter({ compact = false }) {
@@ -62,20 +74,21 @@ export function ShopFooter({ compact = false }) {
           </ul>
         </div>
         {/* Bilgi + Yardım aynı sütunda (Yardım, Bilgi'nin altında yeni başlık) — sütun sayısı artmasın */}
-        <div className="sfoot-col">
-          {pages.length > 0 && <>
-            <h4>Bilgi</h4>
+        <div className="sfoot-col sfoot-fc">
+          {pages.length > 0 && <Fold title="Bilgi">
             <ul className="sfoot-links">{pages.map((p, i) => <li key={i}><button onClick={() => (/[İi]ade/i.test(p.title) ? openLegal('iade') : setPage(p))}>{p.title}<Icon n="chev" s={15} /></button></li>)}</ul>
-          </>}
-          <h4 className={pages.length ? 'sfoot-h2' : ''}>Yardım</h4>
-          <ul className="sfoot-links">
-            <li><a href="/talep" onClick={goTab('talep')}>Ürün talebi<Icon n="chev" s={15} /></a></li>
-            <li><a href="/sorun" onClick={goTab('sorun')}>Sorun bildir<Icon n="chev" s={15} /></a></li>
-          </ul>
+          </Fold>}
+          <Fold title="Yardım" h2={pages.length > 0}>
+            <ul className="sfoot-links">
+              <li><a href="/talep" onClick={goTab('talep')}>Ürün talebi<Icon n="chev" s={15} /></a></li>
+              <li><a href="/sorun" onClick={goTab('sorun')}>Sorun bildir<Icon n="chev" s={15} /></a></li>
+            </ul>
+          </Fold>
         </div>
-        <div className="sfoot-col">
-          <h4>Yasal</h4>
-          <ul className="sfoot-links">{LEGAL_DOCS.map((d) => <li key={d.k}><button onClick={() => openLegal(d.k)}>{d.title}<Icon n="chev" s={15} /></button></li>)}</ul>
+        <div className="sfoot-col sfoot-fc">
+          <Fold title="Yasal">
+            <ul className="sfoot-links">{LEGAL_DOCS.map((d) => <li key={d.k}><button onClick={() => openLegal(d.k)}>{d.title}<Icon n="chev" s={15} /></button></li>)}</ul>
+          </Fold>
         </div>
       </div>
       <div className="sfoot-bot">

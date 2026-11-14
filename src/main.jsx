@@ -685,6 +685,9 @@ function ShellFull() {
   const hcSt = hc ? (LK.hcStyle || '') : '';
   const hcOne = hcSt === 'glass1' && !phoneUI;
   useEffect(() => { const c = document.documentElement.classList; c.toggle('hc-one', hcOne); return () => c.remove('hc-one'); }, [hcOne]);
+  // 14.11.2026 UI/UX incelemesi: ana sayfa düzeltmeleri look.ux.{wa,foot,nw,tr} — 'old' = eski hâl (html ux-* sınıfları)
+  const uxOn = ['wa', 'foot', 'nw', 'tr'].filter((k) => (LK.ux || {})[k] !== 'old').join(' ');
+  useEffect(() => { const c = document.documentElement.classList; const on = uxOn ? uxOn.split(' ') : []; on.forEach((k) => c.add('ux-' + k)); return () => on.forEach((k) => c.remove('ux-' + k)); }, [uxOn]);
   useEffect(() => { if (hcSt !== 'clear') return; const c = document.documentElement.classList; const f = () => c.toggle('hc-scr', scrollY > 4); f(); addEventListener('scroll', f, { passive: true }); return () => { removeEventListener('scroll', f); c.remove('hc-scr'); }; }, [hcSt]);
   const navTab = tab === 'sepetler' || tab === 'gecmis' ? 'siparisler' : tab === 'sepetlink' || tab === 'odemelink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' || tab === 'gelen' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 

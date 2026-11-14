@@ -10197,3 +10197,44 @@ html.hc-scr .hdr-c.hcs-clear { background: color-mix(in oklab, var(--surface) 64
   .phub-mos-m .pmo-chip { height: 32px; padding: 0 11px; font-size: 12px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .phub-mos-m .pmo-arr { width: 38px; height: 38px; margin-left: auto; }
 }
+
+/* 14.11.2026 UI/UX incelemesi (ana sayfa). Görünmez basma payları (görünüş aynı): banner ikinci bağlantısı,
+   alt bant 'Tüm ürünler' bağlantısı (15px → ~43px), banner sayfa çizgileri (18px → 42px yükseklik). */
+.pb-box .pb-b2, .cd-cta-a .cd-lnk { position: relative; }
+.pb-box .pb-b2::after, .cd-cta-a .cd-lnk::after { content: ""; position: absolute; inset: -14px -8px; }
+.sh-dot { position: relative; }
+.sh-dot::before { content: ""; position: absolute; inset: -12px 0; }
+/* look.ux.wa ('old' = eski): WhatsApp düğmesi koyu yeşil, beyaz yazı okunurluğu 3,1 → 4,7 */
+html.ux-wa .cd-cta-wa { background: #128540; }
+/* look.ux.nw ('old' = eski): telefonda 'Yeni gelenler' kapak kutusu yerine diğer raflar gibi üstte başlık */
+.cd-nw-head { display: none; }
+@media (max-width: 700px) {
+  html.ux-nw .cd-nw-head { display: flex; margin-bottom: 14px; }
+  html.ux-nw .cd-nw-head h2 { white-space: pre-line; }
+  html.ux-nw .cd-nwsec .cd-newcov { display: none; }
+}
+/* look.ux.foot ('old' = eski): telefonda Bilgi / Yardım / Yasal katlanır; bilgisayar aynı */
+.sfoot-tg { all: unset; display: inline-flex; align-items: center; gap: 6px; }
+.sfoot-tg .ic { display: none; }
+@media (max-width: 700px) {
+  html.ux-foot .sfoot-fc + .sfoot-fc { margin-top: -26px; }
+  html.ux-foot .sfoot-fold h4, html.ux-foot .sfoot-fold h4.sfoot-h2 { margin: 0; }
+  html.ux-foot .sfoot-fold + .sfoot-fold h4 { border-top: 0; }
+  html.ux-foot .sfoot-tg { box-sizing: border-box; width: 100%; justify-content: space-between; padding: 16px 2px; cursor: pointer; border-bottom: 1px solid var(--line-2); }
+  html.ux-foot .sfoot-tg .ic { display: block; color: var(--muted); transition: rotate .2s; }
+  html.ux-foot .sfoot-fold.open .sfoot-tg .ic { rotate: 180deg; }
+  html.ux-foot .sfoot-fold .sfoot-links, html.ux-foot .sfoot-fold .sfoot-links li:first-child { border-top: 0; }
+  html.ux-foot .sfoot-fold:not(.open) .sfoot-links { display: none; }
+  html.ux-foot .sfoot-fold.open .sfoot-links { padding-left: 4px; }
+}
+/* look.ux.tr ('old' = eski): telefonda güven kutuları tek kutuda dört satır, alt yazılar tek satır */
+@media (max-width: 700px) {
+  html.ux-tr .p0-trust { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 2px 14px; border-radius: 18px; background: var(--surface, #fff); box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 10px 24px -20px rgb(0 0 0 / .3); }
+  html.ux-tr .p0-tr { background: none; box-shadow: none; border-radius: 0; padding: 11px 0; gap: 12px; }
+  html.ux-tr .p0-tr + .p0-tr { border-top: 1px solid var(--line-2); }
+  html.ux-tr .p0-tr span { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 10px; flex: 1; }
+  html.ux-tr .p0-tr b { font-size: 14.5px; white-space: nowrap; }
+  html.ux-tr .p0-tr small { font-size: 13px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  html[data-theme="dark"].ux-tr .p0-trust { background: rgb(255 255 255 / .05); }
+  html[data-theme="dark"].ux-tr .p0-tr { background: none; }
+}
