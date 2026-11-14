@@ -79,8 +79,40 @@ function waveIdx(grid) {
   tiles.forEach((t) => { const c = Math.round((t.offsetLeft - x0) / w), r = Math.round((t.offsetTop - y0) / h); t.style.setProperty('--d', Math.min(12, c + r)); });
 }
 
+// 14.11.2026 Akıcılık (sadece önizleme): MacBook'ta (60 Hz) 'kasıyor' şikâyeti için. Kare hızı, ekranın Hz'i, takılma sayacı +
+// ağır olabilecek efektleri tek tek kapatma (html.pf-<k>; ls 'perf-try'). Kullanıcı sebebi bulunca kalıcı çözüm: cihaz zorlanırsa o efekt kendiliğinden hafifler.
+const PERF = [
+  ['glass', 'Buzlu cam efektlerini kapat'],
+  ['shadow', 'Gölgeleri kapat'],
+  ['bnanim', 'Banner animasyonlarını kapat'],
+  ['film', 'Tanıtım videosunu gizle'],
+  ['mq', 'Kayan marka şeridini durdur'],
+];
+function usePerf() {
+  const [pf, setPf] = useState(() => { const v = ls.get('perf-try', null); return v && typeof v === 'object' ? v : {}; });
+  useEffect(() => { const c = document.documentElement.classList; const on = PERF.map((x) => x[0]).filter((k) => pf[k]); on.forEach((k) => c.add('pf-' + k)); return () => on.forEach((k) => c.remove('pf-' + k)); }, [pf]);
+  return [pf, (v) => { ls.set('perf-try', v); setPf(v); }];
+}
+function useMeter() {
+  const [m, setM] = useState({ fps: 0, hz: 0, jank: 0 });
+  useEffect(() => {
+    let raf = 0, last = performance.now(), frames = [], jank = [], shown = 0;
+    const f = (t) => {
+      const d = t - last; last = t; frames.push([t, d]); while (frames.length && t - frames[0][0] > 1000) frames.shift();
+      const ds = frames.map((x) => x[1]).sort((a, b) => a - b); const med = ds[Math.floor(ds.length / 2)] || 16.7;
+      if (d > med * 1.7 && d < 1000) jank.push(t); while (jank.length && t - jank[0] > 10000) jank.shift();
+      if (t - shown > 500) { shown = t; const hz = [60, 90, 100, 120, 144, 165, 240].reduce((a, h) => (Math.abs(1000 / med - h) < Math.abs(1000 / med - a) ? h : a), 60); setM({ fps: frames.length, hz, jank: jank.length }); }
+      raf = requestAnimationFrame(f);
+    };
+    raf = requestAnimationFrame(f); return () => cancelAnimationFrame(raf);
+  }, []);
+  return m;
+}
+const BROWSER = typeof navigator === 'undefined' ? '' : /Edg\//.test(navigator.userAgent) ? 'Edge' : /Chrome\//.test(navigator.userAgent) ? 'Chrome' : /Safari\//.test(navigator.userAgent) ? 'Safari' : /Firefox\//.test(navigator.userAgent) ? 'Firefox' : '';
+
 function AnimPanel({ v, set }) {
   const [open, setOpen] = useState(false);
+  const [pf, setPf] = usePerf(); const m = useMeter();
   const all = (b) => set(Object.fromEntries(KEYS.map((k) => [k, b])));
   const n = KEYS.filter((k) => v[k]).length;
   return (
@@ -96,8 +128,14 @@ function AnimPanel({ v, set }) {
           <button type="button" className="pri" onClick={() => { scrollTo(0, 0); location.reload(); }}>Baştan oynat</button>
         </div>
         {RM() && <p className="an-rm">Cihazınızda "hareketi azalt" açık; hareketler gösterilmiyor.</p>}
+        <div className="an-ph an-ph2"><b>Akıcılık</b><small>Kaydırırken bakın: kare hızı ekranın Hz'ine yakın, takılma az olmalı</small></div>
+        <div className="an-meter"><span><b className="num">{m.fps}</b> fps</span><span>Ekran <b className="num">{m.hz}</b> Hz</span><span>Takılma <b className="num">{m.jank}</b> <small>/10 sn</small></span></div>
+        <small className="an-dev">{innerWidth}×{innerHeight} · piksel oranı {devicePixelRatio} · {BROWSER}</small>
+        {PERF.map(([k, t]) => (
+          <label key={k} className="an-row"><input type="checkbox" checked={!!pf[k]} onChange={(e) => setPf({ ...pf, [k]: e.target.checked })} /><span className="an-l">⨯</span><span>{t}</span></label>
+        ))}
       </div>}
-      <button type="button" className="an-fab" onClick={() => setOpen((o) => !o)} aria-expanded={open}>Hareket <span>{n}/{KEYS.length}</span></button>
+      <button type="button" className="an-fab" onClick={() => setOpen((o) => !o)} aria-expanded={open}>Hareket <span>{n}/{KEYS.length} · {m.fps} fps</span></button>
     </div>
   );
 }
