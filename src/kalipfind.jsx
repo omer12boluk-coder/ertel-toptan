@@ -1,7 +1,7 @@
 // Mağaza > Kalıp bulucu: telefon modeli yazılır → işlemcisi gösterilir → katalogdan uyan kalıplar önerilir.
 // Telefon → işlemci verisi /kalip/phones.json (tools/kalip/*.json → tools/kalip-build.mjs; güncelleme: CLAUDE.md > Kalıp telefon listesi).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, api } from './store.js';
+import { useStore, api, store } from './store.js';
 import { Icon, Toggle, Thumb, Stepper } from './ui.jsx';
 import { setQty, toast } from './store.js';
 import { fmt, priceFor } from './utils.js';
@@ -136,6 +136,9 @@ export function KalipFinder() {
   };
   const pick = (ph) => { setSel(ph); setQ(ph.n); setOpen(false); inp.current?.blur(); reveal(); try { history.replaceState(history.state, '', '/magaza/kalip?m=' + encodeURIComponent(ph.n)); } catch {} };
   const pickCode = () => { if (!qCodes.length) return; setSel({ n: null, c: q.trim().toUpperCase(), k: qCodes }); setOpen(false); inp.current?.blur(); reveal(); };
+  // 14.11.2026 üst menüdeki 'Kalıp bulucu ▾' panelinden seçilen model (navdrop openKalip → store.kalipPick); sayfa zaten açıksa da çalışır
+  const kPick = useStore((s) => s.kalipPick);
+  useEffect(() => { if (!phones || !kPick) return; const p = phones.find((x) => x.n === kPick); store.set({ kalipPick: null }); if (p) { setSel(p); setQ(p.n); setOpen(false); reveal(); } }, [phones, kPick]);
   // adresteki ?m= ile gelince seçili aç
   useEffect(() => { if (!phones) return; const m = new URLSearchParams(location.search).get('m'); if (m) { const p = phones.find((x) => x.n === m); if (p) { setSel(p); setQ(p.n); } } }, [phones]);
 

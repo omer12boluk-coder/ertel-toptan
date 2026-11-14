@@ -825,7 +825,7 @@ export function hubSwap(fn, dir) { if (dir === 'l') window.__navBackNext?.(); fn
 // 14.11.2026 (2) Ürünler açılış sayfası — BENTO (mozaiğin yerine; geri: shopHome.p0.hub.mos / mosM 'off' = eski kutular).
 // Kapaklar ürün fotoğrafı değil, arka planı temizlenmiş kesimler (bn/hub-<kategori>.webp); kesimi olmayan kategori eski kapağa düşer.
 // Kartlar sayfa geçişinden SONRA sırayla aşağıdan kayarak belirir (zıplama/büyüme YOK, kullanıcı istemedi); kategoriden geri dönünce oynamaz.
-const HUB_CUT = { 3: '/bn/hub-3.webp', 5: '/bn/hub-5.webp', 6: '/bn/hub-6.svg', 14: '/bn/hub-14.webp', 24: '/bn/hub-24.webp', 31: '/bn/hub-31.webp', 42: '/bn/hub-42.webp' };
+export const HUB_CUT = { 3: '/bn/hub-3.webp', 5: '/bn/hub-5.webp', 6: '/bn/hub-6.svg', 14: '/bn/hub-14.webp', 24: '/bn/hub-24.webp', 31: '/bn/hub-31.webp', 42: '/bn/hub-42.webp' };
 let hubBack = false; // kategoriye/listeye gidildi → dönüşte animasyon yok
 // Tüm ürünler sayısı 0'dan sayarak gelir (sadece giriş animasyonu oynarken; kart belirdikten sonra başlar)
 function CountUp({ n, on, delay = 0 }) {

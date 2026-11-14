@@ -7,8 +7,10 @@ import { Icon, Thumb } from './ui.jsx';
 import { ls, priceFor, fmt } from './utils.js';
 import { feat } from './extras.jsx';
 import { ShopImg } from './shophome.jsx';
-import { useTree, useVisibleProducts } from './catalog.jsx';
-import { liveSets } from './sets.jsx';
+import { useTree, useVisibleProducts, HUB_CUT, HUB_IMG } from './catalog.jsx';
+import { liveSets, setView, openSet, SetCover } from './sets.jsx';
+import { CAT_COVERS } from './cdhome.jsx';
+import { loadPhones, mergePhones, searchPhones } from './kalipfind.jsx';
 import { useBrandList, BrandTile, openBrand } from './brandsets.jsx';
 
 const MQ = '(hover: hover) and (pointer: fine) and (min-width: 900px)';
@@ -30,6 +32,8 @@ export const MENU = {
 const DUR = 110;  // niyet: fare bu kadar ms (neredeyse) kıpırdamazsa menü açılır
 const TITRE = 6;  // niyet: bu kadar px'ten az kıpırdama "durdu" sayılır
 let active = null; // açık olan menü { id, close } (bir menüden diğerine geçince beklemeden geçsin)
+// 14.11.2026 v3 'kayan panel': bir menüden yandakine geçerken eski panelin yeri/boyu saklanır, yeni panel oradan kendi yerine kayar
+let swapFrom = null; // { r: DOMRect, t: zaman }
 
 export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   const desk = useDesk();
@@ -61,6 +65,15 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
       el.style.left = x + 'px'; el.style.top = Math.round(b.bottom + 10) + 'px';
     };
     place(); addEventListener('resize', place); addEventListener('scroll', place, true);
+    // v3: yandaki menüden geçiş → panel kapanıp açılmaz, eski yerinden yeni yerine/boyuna kayar, içerik hafifçe belirir
+    const el0 = pane.current, sw = swapFrom; swapFrom = null;
+    if (el0 && sw && cls.includes('hd-v3') && performance.now() - sw.t < 260 && el0.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const n = el0.getBoundingClientRect(), o = sw.r;
+      el0.classList.add('hd-sw');
+      const E = 'cubic-bezier(.22,.7,.2,1)';
+      el0.animate([{ left: o.left + 'px', top: o.top + 'px', width: o.width + 'px', height: o.height + 'px' }, { left: n.left + 'px', top: n.top + 'px', width: n.width + 'px', height: n.height + 'px' }], { duration: 260, easing: E });
+      el0.firstElementChild?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, delay: 60, easing: 'ease-out', fill: 'backwards' });
+    }
     return () => { removeEventListener('resize', place); removeEventListener('scroll', place, true); };
   }, [open]);
   me.current = close;
@@ -78,11 +91,11 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   useEffect(() => () => clearTimeout(t.current), []);
   if (!desk) return children;
   const here = () => MENU.burada && !!wrap.current?.firstElementChild?.classList.contains('on'); // başlık düğmesi 'on' = bu sayfadayız
-  const show = () => { clearTimeout(t.current); if (active && active.id !== myId.current) active.close(); active = { id: myId.current, close: () => me.current() }; setOpen(true); };
+  const show = () => { clearTimeout(t.current); if (active && active.id !== myId.current) { const r = active.rect?.(); if (r && r.width) swapFrom = { r, t: performance.now() }; active.close(); } active = { id: myId.current, close: () => me.current(), rect: () => pane.current?.getBoundingClientRect() }; setOpen(true); };
   const enter = (e) => {
     clearTimeout(t.current);
     if (open || mute.current) return;
-    if (active && active.id !== myId.current) { show(); return; } // başka menü açıkken yandakine geçiş: beklemeden
+    if (active && active.id !== myId.current) { if (cls.includes('hd-v3')) t.current = setTimeout(show, 90); else show(); return; } // başka menü açıkken yandakine geçiş: beklemeden (v3: 90 ms — panele çapraz inerken yoldaki başlıklar menüyü değiştirmesin)
     if (here()) return;
     if (MENU.niyet && e) { anc.current = { x: e.clientX, y: e.clientY }; t.current = setTimeout(show, DUR); return; }
     t.current = setTimeout(show, DELAY);
@@ -96,7 +109,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   };
   // kapanmadan önce farenin GERÇEKTEN dışarıda olduğunu sor: tarayıcı bazen yanlış 'çıktı' bildirimi veriyor
   // (fare menüde, satırın üstünde durma izi var ama menü kapanıyordu). Hâlâ üstündeyse kapanmaz, fare çıkınca kapanır.
-  const inside = () => !!(wrap.current?.matches(':hover') || pane.current?.matches(':hover'));
+  const inside = () => !!(wrap.current?.matches(':hover') || pane.current?.matches(':hover') || (pane.current?.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT' && document.activeElement.value));
   const later = () => { t.current = setTimeout(() => (inside() ? later() : close()), 400); };
   const leave = () => { clearTimeout(t.current); mute.current = false; if (open) later(); };
   // ok: oka tıklamak sayfaya gitmez, menüyü açar/kapatır
@@ -167,12 +180,14 @@ export function ProductsDrop({ children }) {
   const vis = useVisibleProducts(false);
   const S = useStore((s) => s.settings);
   const hasSets = useStore((s) => liveSets(s.settings).length > 0);
-  const wide = useStore((s) => (s.settings.look?.navMenu || 'wide') !== 'old');
+  const mode = useStore((s) => s.settings.look?.navMenu || '');
+  const wide = mode !== 'old';
   const [cats, cnt] = useMemo(() => {
     const cnt = new Map();
     for (const p of vis) for (const c of new Set([p.c, p.c2].filter((x) => x != null).flatMap((x) => tree.ancestors(x)))) cnt.set(c, (cnt.get(c) || 0) + 1);
     return [tree.roots.filter((n) => !n.hidden && cnt.get(n.id)).map((n) => ({ n, subs: n.children.filter((x) => !x.hidden && cnt.get(x.id)) })), cnt];
   }, [vis, tree]);
+  if (!mode) return <HoverDrop cls="hd-v3 hd-wide" panel={(c) => <V3Products cats={cats} cnt={cnt} vis={vis} S={S} close={c} />}>{children}</HoverDrop>;
   if (wide) return <HoverDrop cls="hd-wide" panel={(c) => <WideProducts cats={cats} cnt={cnt} vis={vis} S={S} hasSets={hasSets} close={c} />}>{children}</HoverDrop>;
   return <HoverDrop cls="hd-mega" panel={(c) => (
     <div className="hd-mega-in">
@@ -189,7 +204,9 @@ export function ProductsDrop({ children }) {
 // 5.11.2026 üst menü 'Markalar ▾': ürünü olan markalar (çoktan aza), logo varsa logo; tıklayınca o markanın ürünleri
 export function BrandsDrop({ children }) {
   const all = useBrandList();
-  const wide = useStore((s) => (s.settings.look?.navMenu || 'wide') !== 'old');
+  const mode = useStore((s) => s.settings.look?.navMenu || '');
+  const wide = mode !== 'old';
+  if (!mode) return <HoverDrop cls="hd-v3 hd-wide" panel={(c) => <V3Brands all={all} close={c} />}>{children}</HoverDrop>;
   if (wide) return <HoverDrop cls="hd-wide" panel={(c) => <WideBrands all={all} close={c} />}>{children}</HoverDrop>;
   const list = all.filter((b) => b.logo).slice(0, 15);
   const rest = all.filter((b) => !list.includes(b)).slice(0, 8);
@@ -383,4 +400,149 @@ function WideBrands({ all, close }) {
     </div>
     <WideFoot hint="logoya tıklamak o markanın ürünlerini açar" more={'Tüm markalar (' + all.length + ')'} onMore={() => { close(); go('markalar'); }} />
   </div>;
+}
+
+// ==== 14.11.2026 v3 açılır menüler (look.navMenu '' = bu; 'wide' = 7.11 geniş menüler; 'old' = en eski küçük menüler) ====
+// Sunum: https://claude.ai/artifact/YU8zBrBdaXKFhYMuJJfmAT — üst menünün kendisi DEĞİŞMEDİ, sadece açılırlar.
+// Ürünler: Bento kutularıyla aynı kesim resimler (renk yok, altta gri gölge) + en kalabalık 3 alt kategori; Markalar: logo duvarı +
+// arama + A–Z; Kalıp bulucu ve Setler için küçük paneller. Menüden menüye geçişte panel kayar (HoverDrop swapFrom). Zıplama YOK.
+export const useNavV3 = () => useStore((s) => !s.settings.look?.navMenu);
+const V3Img = ({ v }) => (v ? <ShopImg v={v} className="v3-im" alt="" /> : <span className="v3-im v3-im0"><Icon n="grid" s={26} /></span>);
+function V3Products({ cats, cnt, vis, S, close }) {
+  const favN = useStore((s) => s.favs.length);
+  const user = useStore((s) => s.user); const up = useStore((s) => s.userPrices); const byId = useStore((s) => s.byId);
+  const goCat = (id) => { close(); store.set({ catalogGo: { cat: id } }); go('katalog'); };
+  const goAll = (x = { all: true }) => { close(); store.set({ catalogGo: x }); go('katalog'); };
+  const list = [...cats].sort((a, b) => (cnt.get(b.n.id) || 0) - (cnt.get(a.n.id) || 0));
+  const pick = useMemo(() => {
+    const ok = (p) => p && p.a !== 0 && !p.so && (p.pi || p.im);
+    const ids = [...(S.shopHome?.p0?.pick?.ids || []), ...feat(S).pins];
+    for (const id of ids) { const p = byId.get(Number(id)); if (ok(p)) return p; }
+    return vis.find((p) => p.nw && p.s > 0 && ok(p)) || vis.find((p) => p.s > 0 && ok(p)) || null;
+  }, [S, byId, vis]);
+  const pr = pick ? priceFor(pick, S, user, up) : null;
+  const badge = S.shopHome?.p0?.pick?.badge ?? 'Haftanın ürünü';
+  const cols = list.length + 1 <= 8 ? 4 : 5;
+  const kd = (fn) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } };
+  return <div className="hdw v3p">
+    <div className="v3p-g">
+      <div className="v3-tiles" style={{ '--cols': cols }}>
+        {list.map(({ n, subs }, i) => {
+          const top = [...subs].sort((a, b) => (cnt.get(b.id) || 0) - (cnt.get(a.id) || 0));
+          const more = top.length - 3;
+          return <div key={n.id} role="button" tabIndex={0} className="v3-tile" style={{ '--i': i }} onClick={() => goCat(n.id)} onKeyDown={kd(() => goCat(n.id))}>
+            <span className="v3-imw"><V3Img v={HUB_CUT[n.id] || CAT_COVERS[n.id] || HUB_IMG[n.id]} /></span>
+            <span className="v3-h"><b>{n.name}</b><small>{nf(cnt.get(n.id))}</small></span>
+            {top.length > 0 && <span className="v3-subs">
+              {top.slice(0, 3).map((x) => <button key={x.id} type="button" onClick={(e) => { e.stopPropagation(); goCat(x.id); }}><span>{x.name}</span><small>{nf(cnt.get(x.id))}</small></button>)}
+              {more > 0 && <em>+ {more} alt kategori</em>}
+            </span>}
+          </div>;
+        })}
+        <button type="button" className="v3-tile v3-all" style={{ '--i': list.length }} onClick={() => goAll()}><Icon n="grid" s={26} /><b>Tüm ürünler</b><small>{nf(vis.length)} ürün</small></button>
+      </div>
+      <div className="v3-side">
+        <span className="hdw-lbl">Hızlı erişim</span>
+        <button type="button" className="v3-qa" onClick={() => goAll({ nw: true })}><span className="v3-qi"><Icon n="star" s={17} /></span><span><b>Yeni gelenler</b><small>Son eklenenler</small></span></button>
+        <button type="button" className="v3-qa" onClick={() => goAll({ fav: true })}><span className="v3-qi"><Icon n="heart" s={17} /></span><span><b>Favorilerim</b><small>{favN ? favN + ' ürün' : 'Henüz yok'}</small></span></button>
+        {pick && <button type="button" className="v3-pick" onClick={() => { close(); openProduct(pick.id); }}>
+          <span className="v3-pim"><Thumb p={pick} size="md" /></span>
+          <span className="v3-pt"><small>{badge || 'Bu hafta'}</small><b>{pick.n}</b><span className="v3-pp"><b className="num">{pr?.mine == null ? 'Fiyat sorun' : fmt(pr.mine, pick.cur)}</b><span>İncele<Chev s={12} /></span></span></span>
+        </button>}
+      </div>
+    </div>
+  </div>;
+}
+const AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const first = (n) => { const c = String(n || '').trim().charAt(0).toLocaleUpperCase('tr'); return c === 'İ' ? 'I' : /[0-9]/.test(c) ? '#' : c; };
+function V3Brands({ all, close }) {
+  const [q, setQ] = useState('');
+  const [ltr, enter, now, stop] = useIntent(null);
+  const has = useMemo(() => new Set(all.map((b) => first(b.n))), [all]);
+  const letters = has.has('#') ? ['#', ...AZ] : AZ;
+  const nq = q.trim().toLocaleLowerCase('tr');
+  const shown = nq ? all.filter((b) => b.n.toLocaleLowerCase('tr').includes(nq)).slice(0, 16)
+    : ltr ? all.filter((b) => first(b.n) === ltr).sort((a, b) => a.n.localeCompare(b.n, 'tr')).slice(0, 16)
+      : all.slice(0, 16);
+  const pick = (n) => { stop(); close(); openBrand(n); };
+  const head = nq ? `“${q.trim()}” · ${shown.length} marka` : ltr ? `${ltr} ile başlayanlar` : 'En çok ürünü olan markalar';
+  return <div className="hdw v3b">
+    <div className="v3b-in">
+      <div className="v3b-hd"><span className="hdw-lbl">{head}</span>
+        <label className="v3b-s"><Icon n="search" s={16} /><input value={q} onChange={(e) => { setQ(e.target.value); now(null); }} placeholder="Marka ara..." onKeyDown={(e) => { if (e.key === 'Enter' && shown[0]) pick(shown[0].n); if (e.key === 'Escape') { if (q) { e.stopPropagation(); setQ(''); } } }} />{q && <button type="button" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={14} /></button>}</label>
+      </div>
+      {shown.length ? <div className="v3-logos" key={nq + '|' + ltr}>{shown.map((b, i) => (
+        <button key={b.n} type="button" className="v3-lg" title={b.n} style={{ '--i': i, ...(b.color ? { '--bc': b.color } : null) }} onClick={() => pick(b.n)}>
+          {b.logo ? <ShopImg v={b.logo} className="logo" alt={b.n} /> : <b>{b.n}</b>}<small>{b.c} ürün</small>
+        </button>))}</div>
+        : <p className="hdw-none">Bu adla marka yok.</p>}
+      <div className="v3-az" onMouseLeave={stop}>
+        {letters.map((l) => <button key={l} type="button" disabled={!has.has(l)} className={ltr === l && !nq ? 'on' : ''} onMouseEnter={() => { if (has.has(l) && !nq) enter(l); }} onClick={() => { setQ(''); now(ltr === l ? null : l); }}>{l}</button>)}
+      </div>
+    </div>
+    <WideFoot hint="harfin üstüne gelince o harfle başlayan markalar" more={'Tüm markalar (' + all.length + ')'} onMore={() => { close(); go('markalar'); }} />
+  </div>;
+}
+
+// ---- Kalıp bulucu ▾ : menünün içinden model arama ----
+const KALIP_PICKS = ['Apple iPhone 15 Pro', 'Apple iPhone 13', 'Samsung Galaxy A54', 'Xiaomi Redmi Note 13', 'Samsung Galaxy S23 Ultra'];
+const KALIP_BRANDS = ['Apple', 'Samsung', 'Xiaomi', 'Huawei', 'Oppo'];
+export const openKalip = (name) => { store.set({ kalipPick: name || null }); go('kalip'); try { history.replaceState(history.state, '', '/magaza/kalip' + (name ? '?m=' + encodeURIComponent(name) : '')); } catch {} };
+function V3Kalip({ close }) {
+  const over = useStore((s) => s.settings.kalip?.phones);
+  const [base, setBase] = useState(null);
+  const [q, setQ] = useState(''); const [hi, setHi] = useState(0);
+  const inp = useRef(null);
+  useEffect(() => { loadPhones().then(setBase).catch(() => {}); }, []);
+  const phones = useMemo(() => base && mergePhones(base, over), [base, over]);
+  const sugg = useMemo(() => (phones && q ? searchPhones(phones, q, 6) : []), [phones, q]);
+  const picks = useMemo(() => (phones ? KALIP_PICKS.filter((n) => phones.some((p) => p.n === n)) : KALIP_PICKS), [phones]);
+  const pick = (n) => { close(); openKalip(n); };
+  const short1 = (n) => n.replace(/^(Apple|Samsung|Xiaomi)\s+/, '');
+  return <div className="v3k">
+    <b className="v3m-t">Telefonun kalıbını bul</b>
+    <small className="v3m-s">Modeli yaz, uyumlu kalıplar açılsın</small>
+    <label className="v3k-in"><Icon n="search" s={17} /><input ref={inp} value={q} onChange={(e) => { setQ(e.target.value); setHi(0); }} placeholder="Örn. iPhone 13 Pro, Galaxy A54..."
+      onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, sugg.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); } else if (e.key === 'Enter') { if (sugg[hi]) pick(sugg[hi].n); else if (q.trim()) { close(); openKalip(null); } } }} /></label>
+    {q.trim().length >= 2 ? <div className="v3k-res">
+      {sugg.length ? sugg.map((p, i) => <button key={p.n} type="button" className={i === hi ? 'on' : ''} onMouseEnter={() => setHi(i)} onClick={() => pick(p.n)}><span>{p.n}</span><small>{p.c}</small></button>)
+        : <p className="hdw-none">{phones ? 'Bu adla telefon bulunamadı.' : 'Liste yükleniyor…'}</p>}
+    </div> : <>
+      <span className="hdw-lbl v3m-l">Sık bakılanlar</span>
+      <div className="v3-chips">{picks.map((n) => <button key={n} type="button" onClick={() => pick(n)}>{short1(n)}</button>)}</div>
+      <span className="hdw-lbl v3m-l">Markaya göre</span>
+      <div className="v3-chips">{KALIP_BRANDS.map((n) => <button key={n} type="button" onClick={() => { setQ(n + ' '); inp.current?.focus(); }}>{n}</button>)}</div>
+    </>}
+    <div className="v3m-f"><button type="button" className="v3-btn" onClick={() => { close(); openKalip(null); }}>Kalıp bulucuyu aç<Chev s={12} /></button></div>
+  </div>;
+}
+export function KalipDrop({ children }) {
+  const on = useNavV3();
+  if (!on) return children;
+  return <HoverDrop cls="hd-v3 hd-mini" panel={(c) => <V3Kalip close={c} />}>{children}</HoverDrop>;
+}
+
+// ---- Setler ▾ : ilk 3 set ----
+function V3Sets({ close }) {
+  const S = useStore((s) => s.settings); const byId = useStore((s) => s.byId);
+  const live = liveSets(S);
+  const ids = S.shopHome?.p0?.sets?.ids || [];
+  const sets = (ids.length ? [...ids.map((id) => live.find((x) => x.id === id)).filter(Boolean), ...live.filter((x) => !ids.includes(x.id))] : live).slice(0, 3);
+  return <div className="v3s">
+    <b className="v3m-t">Setler</b>
+    <small className="v3m-s">Birlikte al, daha az öde</small>
+    <div className={'v3s-g n' + sets.length}>{sets.map((x, i) => { const v = setView(x, byId); return (
+      <button key={x.id} type="button" className="v3s-c" style={{ '--i': i }} onClick={() => { close(); openSet(x.id); }}>
+        <span className="v3s-im"><SetCover v={v} bare /></span>
+        <span className="v3s-n">{x.name}</span>
+        <span className="v3s-p"><b className="num">{fmt(v.price, v.cur)}</b>{v.save > 0 && <small>{fmt(v.save, v.cur)} kazanç</small>}</span>
+      </button>); })}</div>
+    <div className="v3m-f"><button type="button" className="v3-btn" onClick={() => { close(); go('setlist'); }}>Tüm setler ({live.length})<Chev s={12} /></button></div>
+  </div>;
+}
+export function SetsDrop({ children }) {
+  const on = useNavV3();
+  const has = useStore((s) => liveSets(s.settings).length > 0);
+  if (!on || !has) return children;
+  return <HoverDrop cls="hd-v3 hd-mini" panel={(c) => <V3Sets close={c} />}>{children}</HoverDrop>;
 }

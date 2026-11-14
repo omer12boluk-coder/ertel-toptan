@@ -14,7 +14,7 @@ import { RatePrompt } from './reviews.jsx';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import { ProductsDrop, AdminDrop, ProfileDrop, BrandsDrop } from './navdrop.jsx';
+import { ProductsDrop, AdminDrop, ProfileDrop, BrandsDrop, KalipDrop, SetsDrop, useNavV3 } from './navdrop.jsx';
 import { SetPage, SetsAdmin, setIdFromPath } from './sets.jsx';
 import { BrandsPage, SetsPage } from './brandsets.jsx';
 import { startAdminWatchers, stopAdminWatchers } from './datawin.js';
@@ -692,13 +692,14 @@ function ShellFull() {
   useEffect(() => { if (hcSt !== 'clear') return; const c = document.documentElement.classList; const f = () => c.toggle('hc-scr', scrollY > 4); f(); addEventListener('scroll', f, { passive: true }); return () => { removeEventListener('scroll', f); c.remove('hc-scr'); }; }, [hcSt]);
   const navTab = tab === 'sepetler' || tab === 'gecmis' ? 'siparisler' : tab === 'sepetlink' || tab === 'odemelink' ? 'siparis' : tab === 'setler' || tab === 'aiekle' || tab === 'gelen' ? 'katalog' : tab; // alt sayfalar menüde ana sekmesini yakar (Setler = Ürünler'in alt sayfası)
 
+  const v3 = useNavV3(); // 14.11.2026 v3 açılırlar: Kalıp bulucu ▾ ve Setler ▾ da açılır (look.navMenu '')
   const hcNav = hc ? [
     ...nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l]) => {
-      const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
-      return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
+      const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><span className="topnav-l">{l}</span>{(k === 'katalog' || (v3 && k === 'kalip')) && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+      return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : k === 'kalip' ? <KalipDrop key={k}>{b}</KalipDrop> : b;
     }),
     <BrandsDrop key="markalar"><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>,
-    hasSets && <button key="setlist" className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><span className="topnav-l">Setler</span></button>,
+    hasSets && <SetsDrop key="setlist"><button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><span className="topnav-l">Setler</span>{v3 && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button></SetsDrop>,
   ].filter(Boolean) : null;
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' + (S0.look?.adminNav !== 'old' ? ' adm-bn' + (S0.look?.adminNavTone === 'accent' ? '' : ' bn-ink') : '') : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
@@ -719,11 +720,11 @@ function ShellFull() {
           </div>
           <nav className="topnav gs-nav" aria-label="Ana menü">
             {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
-              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{k === 'katalog' && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
-              return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : b;
+              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{(k === 'katalog' || (v3 && k === 'kalip')) && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+              return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : k === 'kalip' ? <KalipDrop key={k}>{b}</KalipDrop> : b;
             })}
             <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
-            {hasSets && <button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><Icon n="box" s={16} /><span className="topnav-l">Setler</span></button>}
+            {hasSets && <SetsDrop><button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><Icon n="box" s={16} /><span className="topnav-l">Setler</span>{v3 && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button></SetsDrop>}
           </nav>
         </div>
       </header> : hc ? <header className={'topbar hdr-c' + (hcSt ? ' hcs-' + hcSt : '')}>
@@ -753,13 +754,13 @@ function ShellFull() {
           {pub && <span className="pub-id"><b className="pub-name" style={S0.brand.nameColor ? { color: S0.brand.nameColor } : undefined}>{S0.brand.appName}</b></span>}
           <nav className="topnav" aria-label="Ana menü">
             {nav.filter(([k]) => !(pub && k === 'hesap') && (admin || k !== 'sepet') && k !== 'tasarim').map(([k, l, i]) => {
-              const drop = (pub && k === 'katalog') || (admin && ['siparisler', 'siparis', 'katalog', 'musteriler'].includes(k));
+              const drop = (pub && (k === 'katalog' || (v3 && k === 'kalip'))) || (admin && ['siparisler', 'siparis', 'katalog', 'musteriler'].includes(k));
               const b = (
                 <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)} title={l}>
                   <Icon n={i} s={18} /><span className="topnav-l">{l}</span>{badge(k) > 0 && <span key={badge(k)} className="badge">{badge(k)}</span>}{drop && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}
                 </button>
               );
-              return !drop ? b : pub ? <ProductsDrop key={k}>{b}</ProductsDrop> : <AdminDrop key={k} k={k}>{b}</AdminDrop>;
+              return !drop ? b : pub ? (k === 'kalip' ? <KalipDrop key={k}>{b}</KalipDrop> : <ProductsDrop key={k}>{b}</ProductsDrop>) : <AdminDrop key={k} k={k}>{b}</AdminDrop>;
             })}
           </nav>
           <span className="top-sp" />
