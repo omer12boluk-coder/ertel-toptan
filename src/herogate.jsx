@@ -236,7 +236,7 @@ export function HeroGate({ onOpen, onDone }) {
       const w = root.clientWidth, h = root.clientHeight, nav = navRef.current, content = contentRef.current;
       const band = { top: nav ? nav.offsetTop + nav.offsetHeight + 8 : 16, bottom: content ? content.offsetTop - 8 : h };
       const bandH = Math.max(80, band.bottom - band.top);
-      let rw, maxH; if (w >= 1024) { rw = w * 0.62; maxH = bandH * 0.82; } else if (w >= 640) { rw = w * 0.8; maxH = bandH * 0.85; } else { rw = w * 0.74; maxH = bandH * 0.8; }
+      let rw, maxH; if (w >= 1024) { rw = w * 0.62; maxH = bandH * 0.96; } // 15.11: altta pay eklenince basık ekranlarda logo küçülmesin (0,82 → 0,96) else if (w >= 640) { rw = w * 0.8; maxH = bandH * 0.85; } else { rw = w * 0.74; maxH = bandH * 0.8; }
       if (rw / aspect > maxH) rw = maxH * aspect; const rh = rw / aspect;
       const rect = { x: w / 2 - rw / 2, y: (band.top + band.bottom) / 2 - rh / 2, w: rw, h: rh };
       const bd = bdRef.current; if (bd) { bd.style.fontSize = Math.min(bandH * 0.95, (w * 0.92) / (5 * 0.56)) + 'px'; bd.style.top = (band.top + band.bottom) / 2 + 'px'; }
