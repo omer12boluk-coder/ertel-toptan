@@ -203,8 +203,37 @@ export function HeroGate({ onOpen, onDone }) {
   // Çıkış: önce logo dağılıp söner (düz zemin kalır) → mağaza düz zeminin ARKASINDA çizilir (takılma görünmez) → zemin solar.
   // Eskiden mağaza animasyonun ortasında çiziliyordu, dağılma efekti 1 sn takılıyordu.
   const goneRef = useRef(false);
+  // 14.11.2026 (kullanıcı: 'kumlar tekrar birleşip menüdeki logoya oturmuyor, tek parça uçuyor'): GL açıksa logo dağılmaz;
+  // yazılar söner, mağaza arkada çizilir, sonra kum taneleri büyük logonun yerinden akıp menüdeki logonun yerinde 'e' olarak
+  // yeniden birleşir (liquid.js gather). Zemin bu sırada solar (kanvas kalır). Biter bitmez gerçek menü logosu yerini alır.
+  // GL yoksa / hedef bulunamazsa eski yol (dağılma + tek parça uçuş).
+  const markRef = useRef(null);
+  useEffect(() => { const im = new Image(); im.decoding = 'async'; im.src = MOBILE_SRC; markRef.current = im; }, []);
+  const [gather, setGather] = useState(false);
+  const goGather = () => {
+    const eng = engRef.current, root = rootRef.current;
+    setGather(true); setLeaving(true);
+    setTimeout(() => {
+      eng.stop(); onOpen();
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+        const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
+        const t = tg?.getBoundingClientRect(), b = root.getBoundingClientRect();
+        const ok = t && t.top < innerHeight && eng.gather(markRef.current, { x: t.left - b.left, y: t.top - b.top, w: t.width, h: t.height }, 1300);
+        if (!ok) { if (fx.scn) sceneIn(false); root.classList.add('eh-gone'); setReveal(true); setTimeout(onDone, 420); return; }
+        tg.style.opacity = '0';
+        if (fx.scn) sceneIn(true);
+        setReveal(true);
+        setTimeout(() => {
+          tg.style.transition = 'opacity .28s ease'; tg.style.opacity = ''; root.classList.add('eh-gone');
+          setTimeout(() => { tg.style.transition = ''; onDone(); }, 300);
+        }, 1380);
+      }, 80)));
+    }, 320);
+  };
   const go = () => {
     if (leaving || goneRef.current) return; goneRef.current = true;
+    const mk = markRef.current;
+    if (fx.fly && engRef.current && rootRef.current?.dataset.gl === 'on' && mk?.complete && mk.naturalWidth) { goGather(); return; }
     const fl = fx.fly ? flyStart(imgRef.current, rootRef.current, logoSrc) : null;
     engRef.current?.explode(); setLeaving(true);
     setTimeout(() => {
@@ -218,7 +247,7 @@ export function HeroGate({ onOpen, onDone }) {
   };
 
   return (
-    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
+    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (gather ? ' gather' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
       <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
       <div ref={stageRef} className="eh-stage" aria-hidden="true"><img ref={imgRef} className="eh-fallback" alt="" draggable="false" /></div>
       <nav ref={navRef} className="eh-nav eh-a" aria-label="Üst">

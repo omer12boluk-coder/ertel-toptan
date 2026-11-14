@@ -10406,9 +10406,9 @@ html.pf-film .flm-box { visibility: hidden !important; }
 @media (prefers-reduced-motion: reduce) { .eh-btn.eh-shine::after { animation: none; display: none; } }
 
 /* ==== 14.11.2026 v3 açılır menüler (navdrop.jsx V3*; look.navMenu '' ) — beyaz, sakin; zıplama/büyüme YOK ==== */
-.hd-p.hd-v3 { animation: v3In .18s cubic-bezier(.2, .8, .2, 1) both; }
+.hd-p.hd-v3 { animation: v3In .14s ease-out both; }
 .hd-p.hd-sw { animation: none !important; overflow: hidden; }
-@keyframes v3In { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes v3In { from { opacity: 0; } } /* kayma YOK (kullanıcı: 'açıldıktan sonra aşağı kayıyor, yeniden çiziliyor gibi') */
 .hd-p.hd-mini-p { min-width: 0; padding: 0; border-radius: 22px; overflow: hidden; background: #fff !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border: 0; box-shadow: 0 0 0 1px rgb(15 23 42 / .06), 0 30px 70px -34px rgb(10 14 30 / .42) !important; }
 .hd-p.hd-mini-p::before { top: -22px; height: 22px; }
 html[data-theme="dark"] .hd-p.hd-mini-p { background: #1e1f23 !important; }
@@ -10416,7 +10416,7 @@ html[data-theme="dark"] .hd-p.hd-mini-p { background: #1e1f23 !important; }
 /* Ürünler */
 .v3p-g { display: grid; grid-template-columns: minmax(0, 1fr) 256px; min-height: 0; overflow: auto; }
 .v3-tiles { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 12px; padding: 20px; align-content: start; }
-.v3-tile { position: relative; display: flex; flex-direction: column; align-items: stretch; text-align: left; padding: 14px 14px 12px; border: 0; border-radius: 18px; background: var(--v3-soft); color: var(--fg); cursor: pointer; font: inherit; transition: background .18s, box-shadow .18s; animation: v3T .32s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 28ms); }
+.v3-tile { position: relative; display: flex; flex-direction: column; align-items: stretch; text-align: left; padding: 14px 14px 12px; border: 0; border-radius: 18px; background: var(--v3-soft); color: var(--fg); cursor: pointer; font: inherit; transition: background .18s, box-shadow .18s; }
 @keyframes v3T { from { opacity: 0; transform: translateY(5px); } }
 .hd-sw .v3-tile, .hd-sw .v3-lg, .hd-sw .v3s-c { animation: none; }
 @media (hover: hover) { .v3-tile:hover { background: var(--surface); box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--accent) 22%, transparent), 0 10px 26px -12px rgb(15 23 42 / .22); } }
@@ -10464,7 +10464,7 @@ html[data-theme="dark"] .hd-p.hd-mini-p { background: #1e1f23 !important; }
 .v3b-s button { border: 0; background: none; color: var(--v3-mute); padding: 4px; cursor: pointer; display: grid; }
 .v3-logos { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-auto-rows: 80px; align-content: start; gap: 10px; min-height: 170px; }
 .v3b-in > .hdw-none { min-height: 170px; margin: 0; }
-.v3-lg { height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 0 8px; border: 0; border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--v3-line); color: var(--fg); cursor: pointer; font: inherit; transition: box-shadow .18s; animation: v3T .28s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 16ms); }
+.v3-lg { height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 0 8px; border: 0; border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--v3-line); color: var(--fg); cursor: pointer; font: inherit; transition: box-shadow .18s; }
 .v3-lg .logo { height: 32px; width: auto; max-width: 92px; object-fit: contain; }
 .v3-lg > b { font: 700 14px/1.1 var(--f-body); color: var(--bc, var(--fg)); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v3-lg small { font: 500 11.5px/1 var(--f-body); color: var(--v3-mute); }
@@ -10496,7 +10496,7 @@ html[data-theme="dark"] .v3-lg .logo { filter: brightness(1.1); }
 .v3k-res button.on { background: color-mix(in oklab, var(--accent) 10%, transparent); color: var(--accent); }
 .v3s-g { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .v3s-g.n1 { grid-template-columns: minmax(0, 1fr); } .v3s-g.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.v3s-c { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 10px; border: 0; border-radius: 14px; background: var(--v3-soft); color: var(--fg); text-align: left; cursor: pointer; font: inherit; transition: background .18s, box-shadow .18s; animation: v3T .3s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 30ms); }
+.v3s-c { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 10px; border: 0; border-radius: 14px; background: var(--v3-soft); color: var(--fg); text-align: left; cursor: pointer; font: inherit; transition: background .18s, box-shadow .18s; }
 @media (hover: hover) { .v3s-c:hover { background: var(--surface); box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--accent) 22%, transparent); } }
 .v3s-im { display: block; height: 96px; border-radius: 10px; overflow: hidden; background: var(--surface); }
 .v3s-im .set-cov { height: 100%; width: 100%; }
@@ -10507,3 +10507,8 @@ html[data-theme="dark"] .v3-lg .logo { filter: brightness(1.1); }
 html.pf-lite .hd-p.hd-v3, html.pf-lite .v3-tile, html.pf-lite .v3-lg, html.pf-lite .v3s-c { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .hd-p.hd-v3, .v3-tile, .v3-lg, .v3s-c { animation: none !important; } }
 .v3b-s input, .v3b-s input:focus, .v3k-in input, .v3k-in input:focus { border: 0 !important; box-shadow: none !important; outline: 0 !important; background: none !important; border-radius: 0; }
+
+/* 14.11.2026 açılış: kum taneleri menüdeki logoda yeniden birleşir (herogate goGather) — logo sahnesi kalır, sadece zemin solar */
+.eh-root.gather .eh-stage { transform: none; opacity: 1; }
+.eh-root.gather.reveal { opacity: 1; background-color: transparent; transition: background-color .5s ease; }
+.eh-root.gather.reveal.eh-gone, .eh-root.eh-gone { opacity: 0; transition: opacity .28s ease; }

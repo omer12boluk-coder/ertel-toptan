@@ -215,7 +215,7 @@ export class LiquidEngine{
   }
   clearFlow(){const gl=this.gl;for(const fb of this.flowFb){gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.viewport(0,0,this.flowW,this.flowH);gl.clearColor(128/255,128/255,0,1);gl.clear(gl.COLOR_BUFFER_BIT)}gl.bindFramebuffer(gl.FRAMEBUFFER,null);this.flowDirty=false}
   clearState(){const gl=this.gl;for(const fb of this.stateFb){gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.viewport(0,0,TEX_W,this.texH);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT)}gl.bindFramebuffer(gl.FRAMEBUFFER,null);this.stateDirty=false}
-  setImage(img){
+  setImage(img,grid){
     if(this.destroyed||this.lost)return;
     const gl=this.gl;this.lastImage=img;this.aspect=img.naturalWidth/img.naturalHeight||2.5;
     this.flowH=Math.max(32,Math.round(this.flowW/this.aspect));
@@ -226,12 +226,13 @@ export class LiquidEngine{
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    this.buildParticles(img);this.ready=true;
+    this.buildParticles(img,grid);this.ready=true;
+    if(grid)return;
     if(this.opts.intro&&!this.opts.reducedMotion)this.startIntro();
     this.wake();
   }
-  buildParticles(img){
-    const gl=this.gl,baseGrid=this.lowPower?640:1000;
+  buildParticles(img,grid){
+    const gl=this.gl,baseGrid=grid||(this.lowPower?640:1000);
     const gw=Math.round(baseGrid*Math.sqrt(clamp(this.opts.density,0.15,2))),gh=Math.max(1,Math.round(gw/this.aspect));
     this.gridW=gw;
     const c=document.createElement('canvas');c.width=gw;c.height=gh;
@@ -275,6 +276,26 @@ export class LiquidEngine{
     this.introT=0;this.stateDirty=true;
   }
   replay(){ if(!this.ready)return; this.startIntro(); this.wake(); }
+  // 14.11.2026 'Alışverişe başla': kum taneleri dağılıp kaybolmaz; büyük logonun durduğu yerden akıp menüdeki logonun yerinde
+  // (rect) yeni resim (img) olarak yeniden birleşir. Her yeni tane eski logodaki rastgele bir tanenin yerinden başlar; yayı ve
+  // girdap (intro) onu evine çeker. Tane boyu yolda eski boyundan yeni boyuna küçülür. dur = birleşme süresi (ms).
+  gather(img,rect,dur=1400){
+    if(!this.ready||this.lost||this.destroyed||!this.homeData)return false;
+    const R1=this.rect,old=this.homeData,oldN=this.n,dot0=(R1.w/this.gridW)*1.45*clamp(this.opts.dotSize,.2,3);
+    this.setImage(img,this.lowPower?360:460);this.rect=rect;
+    const gl=this.gl,H=this.homeData,total=TEX_W*this.texH,st=new Float32Array(total*4);
+    for(let i=0;i<this.n;i++){
+      const j=(Math.random()*oldN)|0;
+      st[i*4]=R1.x+old[j*4]*R1.w-(rect.x+H[i*4]*rect.w);
+      st[i*4+1]=R1.y+old[j*4+1]*R1.h-(rect.y+H[i*4+1]*rect.h);
+      st[i*4+2]=(Math.random()-.5)*3;st[i*4+3]=(Math.random()-.5)*3;
+    }
+    for(const t of this.stateTex){gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,this.stateFormat.internal,TEX_W,this.texH,0,gl.RGBA,gl.FLOAT,st)}
+    this.presence=this.presenceTarget=this.burst=this.flowing=0;this.mouse.x=this.target.x=-9999;
+    this.opts={...this.opts,interactive:false,ambient:false,intro:true,returnSpeed:1.6};
+    this.dotFrom=dot0;this.introDur=dur;this.introT=0;this.stateDirty=true;this.settle=0;
+    this.wake();return true;
+  }
   setOptions(o){this.opts={...this.opts,...o};this.wake()}
   resize(cssW,cssH,rect){
     this.cssW=Math.max(1,cssW);this.cssH=Math.max(1,cssH);this.rect=rect;
@@ -321,7 +342,7 @@ export class LiquidEngine{
     const fk=this.presenceTarget>this.flowing?.05:.018;
     this.flowing+=(this.presenceTarget-this.flowing)*(1-Math.pow(1-fk,dt));
     if(this.flowing<.002&&this.presenceTarget===0)this.flowing=0;
-    if(this.introT<1)this.introT=Math.min(1,this.introT+Math.min(rawMs,100)/3200);
+    if(this.introT<1)this.introT=Math.min(1,this.introT+Math.min(rawMs,100)/(this.introDur||3200));
     const interacting=this.presence>.001||this.burst>0;
     this.settle=interacting?0:this.settle+dt;
     const active=interacting||this.settle<SETTLE_FRAMES||this.introT<1;
@@ -394,7 +415,7 @@ export class LiquidEngine{
     gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,this.flowTex[this.flowIdx]);gl.uniform1i(P.u.uFlow,3);
     gl.uniform1i(P.u.uTexW,TEX_W);gl.uniform4f(P.u.uRect,r.x,r.y,r.w,r.h);gl.uniform2f(P.u.uRes,this.cssW,this.cssH);
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
-    gl.uniform1f(P.u.uDot,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
+    const dotN=(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3);gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
     gl.uniform3f(P.u.uTint,1,1,1);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);

@@ -427,10 +427,11 @@ function V3Products({ cats, cnt, vis, S, close }) {
   return <div className="hdw v3p">
     <div className="v3p-g">
       <div className="v3-tiles" style={{ '--cols': cols }}>
+        <button type="button" className="v3-tile v3-all" style={{ '--i': 0 }} onClick={() => goAll()}><Icon n="grid" s={26} /><b>Tüm ürünler</b><small>{nf(vis.length)} ürün</small></button>
         {list.map(({ n, subs }, i) => {
           const top = [...subs].sort((a, b) => (cnt.get(b.id) || 0) - (cnt.get(a.id) || 0));
           const more = top.length - 3;
-          return <div key={n.id} role="button" tabIndex={0} className="v3-tile" style={{ '--i': i }} onClick={() => goCat(n.id)} onKeyDown={kd(() => goCat(n.id))}>
+          return <div key={n.id} role="button" tabIndex={0} className="v3-tile" style={{ '--i': i + 1 }} onClick={() => goCat(n.id)} onKeyDown={kd(() => goCat(n.id))}>
             <span className="v3-imw"><V3Img v={HUB_CUT[n.id] || CAT_COVERS[n.id] || HUB_IMG[n.id]} /></span>
             <span className="v3-h"><b>{n.name}</b><small>{nf(cnt.get(n.id))}</small></span>
             {top.length > 0 && <span className="v3-subs">
@@ -439,7 +440,6 @@ function V3Products({ cats, cnt, vis, S, close }) {
             </span>}
           </div>;
         })}
-        <button type="button" className="v3-tile v3-all" style={{ '--i': list.length }} onClick={() => goAll()}><Icon n="grid" s={26} /><b>Tüm ürünler</b><small>{nf(vis.length)} ürün</small></button>
       </div>
       <div className="v3-side">
         <span className="hdw-lbl">Hızlı erişim</span>
