@@ -10252,6 +10252,8 @@ html.ux-wa .cd-cta-wa { background: #128540; }
 @keyframes anSide { from { opacity: 0; transform: translate3d(48px, 0, 0); } }
 @keyframes anUp { from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.94); } }
 @keyframes anStrikeBg { from { background-size: 0% 1.5px; } }
+@keyframes anBg { from { background-color: transparent; } }
+@keyframes anDraw { from { stroke-dashoffset: 30; } }
 @keyframes anChip { from { color: transparent; background-color: transparent; } }
 .cd-nwsec .cd-rail > * { --ri: 4; }
 .cd-nwsec .cd-rail > :nth-child(1) { --ri: 0; } .cd-nwsec .cd-rail > :nth-child(2) { --ri: 1; }
@@ -10276,6 +10278,18 @@ html.ux-wa .cd-cta-wa { background: #128540; }
   /* iPhone Safari: yana kayan (mıknatıslı) sıralarda hareket sürerken mıknatıs kapalı; bitince ('ok') geri gelir.
      Bu kutulara will-change VERME: kalıcı katman Safari'de kartları hareket sonunda 'gidip yerine oturtuyor', logoları titretiyordu. */
   html.an-raf .cd-rail[data-an="go"], html.an-ind .cd-sets[data-an="go"], html.an-mrk .cd-bwall[data-an="go"] { scroll-snap-type: none; }
+  /* S — set sayfası: 'Ayrı ayrı' fiyatın ve satırlardaki eski fiyatların çizgisi çekilir, kazanç kutusu belirir (sadece boyama) */
+  html.an-sind .set-page :is(.set-pl, .set-row-p) s { text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 55% / 100% 1.5px no-repeat; }
+  html.an-sind .set-price[data-an="go"] .set-pl s { animation: anStrikeBg .55s cubic-bezier(.65, 0, .35, 1) .3s backwards; }
+  html.an-sind .set-price[data-an="go"] .set-save { animation: anChip .5s ease .85s backwards; }
+  html.an-sind .set-list[data-an="go"] .set-row-p s { animation: anStrikeBg .5s cubic-bezier(.65, 0, .35, 1) .25s backwards; }
+  /* O — sipariş alındı: onay işareti kalemle çizilir, daire rengi dolar (sadece boyama) */
+  html.an-ok .done-card .sent-ic .ic path { stroke-dasharray: 30; }
+  html.an-ok .done-card[data-an="go"] .sent-ic { animation: anBg .45s ease backwards; }
+  html.an-ok .done-card[data-an="go"] .sent-ic .ic path { animation: anDraw .6s cubic-bezier(.65, 0, .35, 1) .2s backwards; }
+  /* M — markalar sayfası: kutular sol üstten sağ alta dalga (--d JS'de konumdan) */
+  html.an-bpw .bp-grid:not([data-an]) .bp-tile { opacity: 0; }
+  html.an-bpw .bp-grid[data-an="go"] .bp-tile { animation: anUp .6s cubic-bezier(.16, 1, .3, 1) calc(var(--d, 0) * 55ms) backwards; }
   html.an-bn .shell.public .cd-hero { will-change: transform, opacity; }
 }
 /* Önizleme 'Hareket' paneli */
