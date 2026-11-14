@@ -86,6 +86,7 @@ listesinde ara (yeni ad duyarsan listeye ekle); bulamazsan TEK soru sor ("Ana sa
 - PlatinMarket sitesine (ertelgsm.com) toplu istek atma (IP engeli yemiştik). GSMArena'yı tarama (429 ile engelledi).
 - Gizli tutulan sayfalar (`.kp-off`) `content-visibility: hidden` ile; `ShopImg` `decoding=async` değil; `Thumb` resim adresini ilk çizimde hesaplar → geri dönüş flaşları buydu.
 - **iPhone Safari + hareket (14.11.2026):** Chrome taklidinde GÖRÜNMEZ, sadece gerçek iPhone'da çıkar. Yana kayan mıknatıslı sıralarda (`scroll-snap`) kart hareket ederse Safari hareket sonunda kartları bir daha 'gidip yerine oturtur' → hareket sürerken `scroll-snap-type: none`, bitince geri. Bu kartlara `will-change` VERME (logoları titretti); kaydırma dışı tek büyük öğede (banner) sorun yok.
+- **'Sonradan oturma' önce ÖLÇ (14.11.2026):** kullanıcının 'kutu kayıyor' dediği şey hareket değil, geç yüklenen logonun satırı ikiye taşırmasıydı (set kutusu +25px). Playwright'ta bölümü kaydırıp 0,9 sn önce/sonra yükseklikleri karşılaştır (`.cd-set-lg.lg4` telefonda 2 satır yeri ayırır).
 - `useStore()` seçicisiz kullanım çizimde okunan alanları izler (Proxy); yine de yeni bileşende seçici tercih et.
 - Elle toptan fiyatı (`w`) hiçbir otomatik işlem silmez/değiştirmez.
 - Stok SADECE panelden yönetilir; eşitleme var olan ürünün `s`'ine dokunmaz.

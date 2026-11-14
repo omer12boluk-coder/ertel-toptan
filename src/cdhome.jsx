@@ -200,7 +200,7 @@ export function CdSets({ H, S }) {
               <span className="cd-set-t">
                 <span className="cd-eye">Set · {v.active.length} ürün</span>
                 <b className="cd-set-n">{x.name}</b>
-                {brands.length > 0 && <span className="cd-set-lg">{brands.slice(0, 4).map((b) => (logos.get(norm(b)) ? <ShopImg key={b} v={logos.get(norm(b))} alt={b} /> : <small key={b}>{b}</small>))}</span>}
+                {brands.length > 0 && <span className={'cd-set-lg' + (brands.length > 3 ? ' lg4' : '')}>{brands.slice(0, 4).map((b) => (logos.get(norm(b)) ? <ShopImg key={b} v={logos.get(norm(b))} alt={b} /> : <small key={b}>{b}</small>))}</span>}
                 <span className="cd-set-p"><b className="num">{fmt(v.price, v.cur)}</b>{v.save > 0 && <s className="num">{fmt(v.list, v.cur)}</s>}{v.save > 0 && <small>ayrı ayrı</small>}{v.save > 0 && <em className="cd-set-sv num">{fmt(v.save, v.cur)} kazanç</em>}</span>
                 <span className="cd-set-go"><span className="cd-pill">Seti incele</span></span>
               </span>
