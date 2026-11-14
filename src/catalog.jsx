@@ -855,7 +855,7 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
   // 14.11.2026 (kullanıcı videosu): Safari'de alt çubuk kaydırırken açılıp kapanınca innerHeight değişiyor → her seferinde kutular
   // yeniden boylanıyordu (takılma; çubuk açıkken ölçülünce kutular kısa + etiket kesik). Artık ekran yüksekliği 100svh (çubuk AÇIKKEN
   // olan sabit en küçük yükseklik; ana ekran uygulamasında = tam ekran) ile alınır, sadece GENİŞLİK değişince (döndürme) yeniden ölçülür.
-  // Telefonda mozaik ekrana sığıyorsa sayfa KİLİTLENİR (html.hub-lock): sayfa ~30 px kayıp 'Ürünler.' başlığı menünün altına giriyordu.
+  // Telefonda mozaik ekrana sığıyorsa sayfanın alt boşlukları kalkar (html.hub-fit, CSS sadece Ürünler sekmesinde): sayfa ~30 px kayıp 'Ürünler.' başlığı menünün altına giriyordu.
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
     const R0 = document.documentElement;
@@ -877,16 +877,17 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
       el.style.setProperty('--pmo-k', k);
       // büyük kutuda sığmayan alt kategori etiketi yarım görünmesin: alt kenarı taşanlar tamamen gizlenir
       const big = el.querySelector('.pmo-t.big'); if (big) { const bb = big.getBoundingClientRect().bottom - 4; big.querySelectorAll('.pbn-subs button').forEach((b) => { b.style.visibility = ''; if (b.offsetParent && b.getBoundingClientRect().bottom > bb) b.style.visibility = 'hidden'; }); }
-      // telefonda sığıyorsa kilit; sığmıyorsa (küçük ekran / çok kategori) normal kaydırma
-      const lock = ph && h >= min && getComputedStyle(el).display !== 'none';
-      if (lock !== R0.classList.contains('hub-lock')) { R0.classList.toggle('hub-lock', lock); if (lock && scrollY) scrollTo(0, 0); }
+      // telefonda sığıyorsa sayfanın alt boşlukları kalkar → sayfa ekran boyunda, KİLİT YOK: telefonun kendi esnemesi (bounce) çalışır,
+      // bırakınca açıldığı yere döner; fazladan ~30 px kayıp başlık menünün altına girmez (kullanıcı: kilit istenmedi, her sayfadaki gibi esnesin)
+      const fit = ph && h >= min && getComputedStyle(el).display !== 'none';
+      if (fit !== R0.classList.contains('hub-fit')) R0.classList.toggle('hub-fit', fit);
     };
     const onRs = () => { if (innerWidth !== lastW) m(); else if (!touch) m(true); }; // Safari çubuğu (sadece yükseklik) → yok sayılır
     m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); addEventListener('resize', onRs);
     // sayfa arka planda gizliyken kurulur (kp-off) → görünür olunca kutunun GENİŞLİĞİ değişir → yeniden ölç (14.11.2026: 'yarıda kalıyor')
     let elW = -1; const ro = new ResizeObserver((en) => { const w = Math.round(en[0].contentRect.width); if (w !== elW) { elW = w; m(true); } }); ro.observe(el);
     document.fonts?.ready?.then(() => { if (ref.current) m(); });
-    return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', onRs); R0.classList.remove('hub-lock'); };
+    return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', onRs); R0.classList.remove('hub-fit'); };
   }, [sets.length, list.length]);
   return <div className={'pmo pbn' + (anim ? ' pbn-in' : '')} ref={ref}>
     <div className="pmo-g">

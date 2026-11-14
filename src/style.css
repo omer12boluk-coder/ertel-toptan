@@ -10230,8 +10230,10 @@ html.hc-scr .hdr-c.hcs-clear { background: color-mix(in oklab, var(--surface) 64
   .phub-mos-m .pmo-tight .pmo-t.big .pmo-n { font-size: 18px; }
   .phub-mos-m .pmo-tight .pmo-c { font-size: 10.5px; margin-top: 1px; }
   .phub-mos-m .pmo-tight .pmo-t:not(.big) .pmo-iw { height: 70%; }
-  /* 14.11.2026: mozaik ekrana sığınca sayfa kaymaz/esnemez (HubMosaic html.hub-lock) — açıldığı gibi durur */
-  html.hub-lock, html.hub-lock body { overflow: hidden; overscroll-behavior: none; }
+  /* 14.11.2026: mozaik ekrana sığınca (HubMosaic html.hub-fit) alt boşluklar kalkar → sayfa ekrandan uzun olmaz, kaymaz ama
+     telefonun kendi esnemesi serbest (kilit YOK — kullanıcı reddetti) */
+  /* SADECE Ürünler sekmesinde (sayfa arka planda açık kalır; html sınıfı diğer sekmelere sızmasın) */
+  html.hub-fit .shell.tab-katalog, html.hub-fit .shell.tab-katalog .main, html.hub-fit .shell.tab-katalog .phub { padding-bottom: 0 !important; }
 }
 
 /* 14.11.2026 UI/UX incelemesi (ana sayfa). Görünmez basma payları (görünüş aynı): banner ikinci bağlantısı,
