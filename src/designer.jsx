@@ -521,7 +521,7 @@ function HeaderPreview({ S, kind }) {
   const links = [['home', 'Ana sayfa', true], ['grid', 'Ürünler'], ['chip', 'Kalıp bulucu'], ['tag', 'Markalar'], ['box', 'Setler']];
   const nav = (ic) => links.map(([i, l, on]) => <button key={l} className={'topnav-b' + (on ? ' on' : '')} tabIndex={-1}>{ic && <Icon n={i} s={16} />}<span className="topnav-l">{l}</span></button>);
   const st = { pointerEvents: 'none' };
-  if (kind === 'search') return (
+  if (kind === 'search' || kind === 'search2') return (
     <header className="topbar hdr-g hdr-gs dz-hprev" style={st}><div className="topbar-in">
       <div className="gs-r1"><span className="gs-brand">{logo}{name}</span><span className="gs-srch">{srch}</span><span className="gs-icons">{icons}</span></div>
       <nav className="topnav gs-nav">{nav(true)}</nav>
@@ -565,7 +565,7 @@ export function Stage({ dev, pw = 430, view, E, d, pack, onFrame }) {
   // telefon çerçevesi 'Telefonda farklı' değerleriyle çizilir
   const LX = (kind) => lookFor(L, kind === 'phone');
   const hdrOf = (kind) => LX(kind).header || 'search';
-  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, hdr === 'search' && 'hdr-gs-on', hdr === 'center' && 'hdr-c-on', X.porc === true && 'porc', X.cd === true && 'cd-on', X.pillTone === 'dark' && 'pill-dark', 'addc-' + (/^#/.test(X.addColor || '') ? 'hex' : (X.addColor || 'gray'))], fonts: so.fonts }; };
+  const rootClass = (kind) => { const X = LX(kind), hdr = hdrOf(kind); return { cls: [...(so.cls || []), ...lo.cls, site === 'apple' && th !== 'dark' && 'th-apple', dash && 'th-dash', X.glass !== false && 'lg-on', bn !== 'classic' && 'bn-' + bn, (hdr === 'search' || hdr === 'search2') && 'hdr-gs-on', hdr === 'search2' && 'gs-ice', hdr === 'center' && 'hdr-c-on', X.porc === true && 'porc', X.cd === true && 'cd-on', X.pillTone === 'dark' && 'pill-dark', 'addc-' + (/^#/.test(X.addColor || '') ? 'hex' : (X.addColor || 'gray'))], fonts: so.fonts }; };
   const inner = (kind) => (
     <div className={'shell public tab-anasayfa dz-fshell' + (pack?.badge?.text ? ' pk-on' : '')}>
       <HeaderPreview S={view} kind={hdrOf(kind)} />
@@ -1117,8 +1117,8 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <Toggle id="dz-home-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => set('shopHome.enabled', v)} />
     </LayoutFields>
     <Disclose label="Menüler" value={<small>{({ center: 'logo ortada', classic: 'klasik', glass: 'yüzen cam' })[L.header] || 'cam + arama'}</small>}>
-      <DevPick L={L} set={set} k="header" def="search" label="Üst menü düzeni" hint="Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Ortada logo: logo ortada, menü altta."
-        opts={[['search', 'Cam + arama'], ['glass', 'Yüzen cam'], ['center', 'Ortada logo'], ['classic', 'Klasik']]} />
+      <DevPick L={L} set={set} k="header" def="search" label="Üst menü düzeni" hint="Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Arama + cam 2: aynısı, buz mavisi gerçek cam. Eski açıklama: Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Ortada logo: logo ortada, menü altta."
+        opts={[['search', 'Cam + arama'], ['search2', 'Arama + cam 2'], ['glass', 'Yüzen cam'], ['center', 'Ortada logo'], ['classic', 'Klasik']]} />
       {(L.header === 'center' || L.headerM === 'center') && <Field label="Ortada logo menüsünün görünümü" hint="Banner her durumda menünün bittiği yerden başlar."><span className="seg sw">{[['', 'Bugünkü (düz)'], ['glass2', 'Cam, iki satır'], ['glass1', 'Cam, tek satır'], ['clear', 'Üstte şeffaf, kayınca cam']].map(([k, l]) => <button key={k} type="button" className={(L.hcStyle || '') === k ? 'on' : ''} onClick={() => set('look.hcStyle', k || undefined)}>{l}</button>)}</span></Field>}
       {(L.header === 'center' || L.headerM === 'center') && <Field label="Ortada logo menüsünde arama (bilgisayar)" hint="Tam genişlik: arama satırı logonun yanından sağa açılır, altında son aramalar ve size özel ürünler, sayfa kararır. Küçük kutu = eski."><span className="seg sw">{[['', 'Tam genişlik panel'], ['old', 'Küçük kutu (eski)']].map(([k, l]) => <button key={k} type="button" className={(L.hcSearch || '') === k ? 'on' : ''} onClick={() => set('look.hcSearch', k || undefined)}>{l}</button>)}</span></Field>}
       <DevPick L={L} set={set} k="hideTop" def="top" label="Aşağı kaydırınca üst menü" hint="Sepet, ödeme ve Hesabım sayfalarında menü hep görünür."

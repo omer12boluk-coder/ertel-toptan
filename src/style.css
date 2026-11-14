@@ -10526,3 +10526,53 @@ html[data-theme="dark"] .brand-logo { background: transparent !important; box-sh
 
 .v3b-ft { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; }
 .v3b-ft .v3-az { margin-top: 0; }
+
+/* ===== 15.11.2026 cam + arama üst menü: BUZ MAVİSİ gerçek cam (html.gs-ice) + kaydırınca ADA (html.gs-isl / .isl) =====
+   Buz mavisi cam = Üst menü düzeni 'Arama + cam 2' (look.header 'search2'; telefon + bilgisayar). Ada = look.hdrScroll 'island' (sadece bilgisayar, varsayılan kapalı). Hap değişmedi. */
+html.gs-ice .topbar.hdr-gs .topbar-in { position: relative;
+    background: linear-gradient(180deg, rgb(234 242 255 / .72), rgb(214 228 255 / .48)) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(1.9); backdrop-filter: blur(22px) saturate(1.9);
+    border: 1px solid rgb(255 255 255 / .78) !important;
+    box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 rgb(47 85 176 / .06), 0 0 0 .5px rgb(47 85 176 / .2), 0 14px 34px -16px rgb(47 85 176 / .45) !important; }
+  /* cam kenarı parlaması */
+  html.gs-ice .topbar.hdr-gs .topbar-in::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; padding: 1px;
+    background: linear-gradient(135deg, rgb(255 255 255 / .95), rgb(255 255 255 / 0) 35%, rgb(255 255 255 / 0) 65%, rgb(255 255 255 / .65));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  html.gs-ice .hdr-gs .gs-srch .hsearch-box { background: rgb(255 255 255 / .62) !important; border-color: rgb(47 85 176 / .12) !important; box-shadow: inset 0 1px 2px rgb(15 23 42 / .07) !important; }
+  html.gs-ice .hdr-gs .gs-srch .hsearch-box:focus-within { background: #fff !important; }
+  html.gs-ice .topbar.hdr-gs .gs-nav { border-top-color: rgb(47 85 176 / .1); }
+  html.gs-ice[data-theme="dark"] .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, rgb(30 40 64 / .72), rgb(22 30 50 / .55)) !important; border-color: rgb(140 170 255 / .16) !important; box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 14px 34px -16px rgb(0 0 0 / .7) !important; }
+  html.gs-ice[data-theme="dark"] .topbar.hdr-gs .topbar-in::before { opacity: .18; }
+  html.gs-ice[data-theme="dark"] .hdr-gs .gs-srch .hsearch-box { background: rgb(255 255 255 / .08) !important; border-color: rgb(255 255 255 / .12) !important; }
+  html.gs-ice.pf-lite .topbar.hdr-gs .topbar-in { -webkit-backdrop-filter: none; backdrop-filter: none; background: #eef3ff !important; }
+  html.gs-ice.pf-lite[data-theme="dark"] .topbar.hdr-gs .topbar-in { background: #1c2438 !important; }
+@media (min-width: 900px) {
+
+  /* ADA: dış kutu yüksekliği sabit (sayfa zıplamaz); boş kalan şerit tıklamayı engellemez */
+  html.gs-isl .shell.public .topbar.hdr-gs { height: calc(var(--top-h) + env(safe-area-inset-top, 0px)); pointer-events: none; transform: none !important; opacity: 1 !important; }
+  html.gs-isl .topbar.hdr-gs .topbar-in { pointer-events: auto; margin-inline: auto; max-width: calc(100vw - 20px);
+    transition: max-width .55s cubic-bezier(.32, .72, 0, 1), border-radius .55s cubic-bezier(.32, .72, 0, 1), transform .55s cubic-bezier(.32, .72, 0, 1), box-shadow .4s; }
+  html.gs-isl .topbar.hdr-gs .gs-nav { max-height: 44px; transition: max-height .5s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .12s, transform .5s cubic-bezier(.32, .72, 0, 1), border-color .3s; }
+  html.gs-isl .hdr-gs .gs-brand b { display: inline-block; overflow: hidden; max-width: 260px; transition: max-width .5s cubic-bezier(.32, .72, 0, 1), opacity .3s; }
+  html.gs-isl .hdr-gs .gs-icons > * { transition: max-width .45s cubic-bezier(.32, .72, 0, 1), opacity .25s, margin .45s; }
+
+  html.gs-isl.isl .topbar.hdr-gs .topbar-in { max-width: min(720px, calc(100vw - 20px)); border-radius: 30px; transform: translateY(2px);
+    box-shadow: inset 0 1px 0 #fff, 0 0 0 .5px rgb(47 85 176 / .22), 0 18px 40px -16px rgb(47 85 176 / .5) !important; }
+  html.gs-isl.isl[data-theme="dark"] .topbar.hdr-gs .topbar-in { box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 18px 40px -16px rgb(0 0 0 / .8) !important; }
+  html.gs-isl.isl .topbar.hdr-gs .gs-nav { max-height: 0; opacity: 0; transform: translateY(-8px); border-top-color: transparent; pointer-events: none; transition: max-height .45s cubic-bezier(.32, .72, 0, 1), opacity .18s ease, transform .45s cubic-bezier(.32, .72, 0, 1), border-color .2s; }
+  html.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; }
+  html.gs-isl.isl .hdr-gs .gs-brand { gap: 0; }
+  /* adada sadece bildirim + sepet + hesap kalır: ses ve gece düğmesi söner */
+  html.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, .icon-btn[aria-label*="temaya"]) { max-width: 0 !important; opacity: 0; overflow: hidden; pointer-events: none; padding-inline: 0 !important; border-width: 0 !important; }
+  html.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, .icon-btn[aria-label*="temaya"]) { max-width: 60px; }
+}
+@media (min-width: 900px) {
+  /* adada sepet ve hesap yazısız (simge + sayı) → ada derli toplu, arama ortada */
+  html.gs-isl .hdr-gs .gs-icons :is(.hcart-t, .me-t, .me-login-l) { overflow: hidden; white-space: nowrap; max-width: 140px; transition: max-width .5s cubic-bezier(.32, .72, 0, 1), opacity .25s; }
+  html.gs-isl.isl .hdr-gs .gs-icons :is(.hcart-t, .me-t, .me-login-l) { max-width: 0; min-width: 0 !important; opacity: 0; }
+  html.gs-isl .hdr-gs .gs-icons .hcart-t { transition: max-width .5s cubic-bezier(.32, .72, 0, 1), min-width .5s cubic-bezier(.32, .72, 0, 1), opacity .25s; }
+  html.gs-isl.isl .hdr-gs .gs-icons .hcart { gap: 0; padding-inline: 11px; }
+  html.gs-isl.isl .hdr-gs .gs-icons .me-login { gap: 0; padding-inline: 10px; }
+  html.gs-isl .hdr-gs .gs-icons :is(.hcart, .me-login) { transition: padding .5s cubic-bezier(.32, .72, 0, 1), gap .5s; }
+}
+@media (min-width: 900px) and (prefers-reduced-motion: reduce) { html.gs-isl .topbar.hdr-gs :is(.topbar-in, .gs-nav, .gs-brand b, .gs-icons > *) { transition: none !important; } }

@@ -356,3 +356,4 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 | Blaze hazırlığı, fatura bekçisi | `docs/ozellik-ekim-sonu.md` | `Fatura bekçisi`, `billStop` |
 | Alan adı, DNS kayıtları, e-posta kayıtları, Cloudflare'e taşıma | `docs/gunluk.md` | `DEVİR NOTU`, `SPF`, `ertelmarket.com` |
 | Eski tam klasör listesi, adres ve veri modeli ayrıntıları, `gelistirme` dalı | `docs/eski-cekirdek.md` | `## 2.`, `## 4.`, `## 5.`, `gelistirme` |
+- **15.11.2026 'Arama + cam 2'** (YAYINDA, `look.header` **'search2'**, Tasarım › Üst menü düzeni; telefon + bilgisayar): 'Cam + arama' ile aynı menü/işlev, sadece buz mavisi gerçek cam (html `gs-ice`). Varsayılan hâlâ 'search'. Ada (kaydırınca daralan cam) kodda duruyor ama KAPALI: `look.hdrScroll` 'island' (Tasarım v3 › Görünüm 'Aşağı kaydırınca', sadece bilgisayar, `useIsland`). Sunum: https://claude.ai/artifact/5g59REVJ3wxsdF5VQpRrb3
