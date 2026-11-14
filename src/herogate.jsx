@@ -80,25 +80,9 @@ export function HeroGate({ onOpen, onDone }) {
     const onVis = () => engine?.setVisible(!document.hidden); document.addEventListener('visibilitychange', onVis);
     const pos = (e) => { const b = root.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const mark = () => { root.dataset.touched = '1'; };
-    const mv = (e) => { if (sw.on) { swMove(e); return; } const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
-    // 14.11.2026 telefonda giriş: logonun altındaki alanı (yazılar + alt kısım) SAĞA kaydır → sayfa parmakla sağa kayar,
-    // yeterince çekince ya da hızlıca sağa atınca mağaza açılır; az çekip bırakırsan yerine yaylanır. (Yukarı kaydırma denendi, sağa istendi.)
-    const sw = { on: false, id: 0, x0: 0, dx: 0, t: 0, lx: 0, v: 0 };
-    const inZone = (e) => { const c = contentRef.current; return coarse && c && e.clientY - root.getBoundingClientRect().top >= c.offsetTop - 24; };
-    const setDx = (d, anim) => { root.classList.toggle('eh-snap', !!anim); root.style.setProperty('--eh-dx', d + 'px'); root.style.setProperty('--eh-pull', Math.max(0, Math.min(1, d / (root.clientWidth * 0.3)))); };
-    const swDown = (e) => { if (goneRef.current) return; sw.on = true; sw.id = e.pointerId; sw.x0 = e.clientX; sw.dx = 0; sw.t = e.timeStamp; sw.lx = e.clientX; sw.v = 0; };
-    const swMove = (e) => {
-      if (!sw.on || e.pointerId !== sw.id) return;
-      const dt = e.timeStamp - sw.t; if (dt > 0) sw.v = 0.6 * sw.v + 0.4 * ((e.clientX - sw.lx) / dt); sw.t = e.timeStamp; sw.lx = e.clientX;
-      const raw = e.clientX - sw.x0; sw.dx = raw > 0 ? raw : raw * 0.15; setDx(sw.dx, false);
-    };
-    const swUp = (e) => {
-      if (!sw.on || e.pointerId !== sw.id) return; sw.on = false;
-      if (sw.dx > root.clientWidth * 0.3 || (sw.v > 0.45 && sw.dx > 24)) { setDx(root.clientWidth * 0.45, true); try { navigator.vibrate?.(8); } catch {} goRef.current(); }
-      else setDx(0, true);
-    };
-    const dn = (e) => { if (inZone(e)) { swDown(e); return; } if (e.target.closest('button,a')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
-    const up = (e) => { if (sw.on) { swUp(e); return; } const [x, y] = pos(e); engine?.pointer('up', x, y, e.pointerType === 'touch'); };
+    const mv = (e) => { const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
+    const dn = (e) => { if (e.target.closest('button,a')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
+    const up = (e) => { const [x, y] = pos(e); engine?.pointer('up', x, y, e.pointerType === 'touch'); };
     const lv = (e) => { const [x, y] = pos(e); engine?.pointer('leave', x, y, e.pointerType === 'touch'); };
     root.addEventListener('pointermove', mv, { passive: true }); root.addEventListener('pointerdown', dn, { passive: true });
     root.addEventListener('pointerup', up, { passive: true }); root.addEventListener('pointercancel', up, { passive: true }); root.addEventListener('pointerleave', lv, { passive: true });
@@ -123,8 +107,6 @@ export function HeroGate({ onOpen, onDone }) {
     }, 560);
   };
 
-  const goRef = useRef(go); goRef.current = go;
-
   return (
     <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
       <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
@@ -145,22 +127,13 @@ export function HeroGate({ onOpen, onDone }) {
         <div className="eh-aside">
           <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
           <div className="eh-a eh-a5">
-            {coarse ? null : (
-              <button type="button" className="eh-btn" onClick={go}>Alışverişe başla
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-            )}
+            <button type="button" className="eh-btn" onClick={go}>Alışverişe başla
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
           </div>
         </div>
       </div>
-      <div className="eh-spacer2">
-        {coarse && (
-          <button type="button" className="eh-up" aria-label="Alışverişe başla" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
-            <span>Sağa kaydır</span>
-            <svg width="26" height="14" viewBox="0 0 26 14" fill="none" aria-hidden="true"><path d="M2 7h20M17 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-        )}
-      </div>
+      <div className="eh-spacer2" />
     </section>
   );
 }
