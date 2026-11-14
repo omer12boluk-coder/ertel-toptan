@@ -10278,6 +10278,7 @@ html.ux-wa .cd-cta-wa { background: #128540; }
 @keyframes anUp { from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.94); } }
 @keyframes anStrikeBg { from { background-size: 0% 1.5px; } }
 @keyframes anRise { from { opacity: 0; transform: translate3d(0, 40px, 0) scale(.96); } }
+@keyframes anRiseT { from { opacity: 0; transform: translate3d(0, 24px, 0); } }
 @keyframes anOpen { from { opacity: 0; transform: scale(.94); } }
 @keyframes anDrawL { from { stroke-dasharray: 80; stroke-dashoffset: 80; } to { stroke-dasharray: 80; stroke-dashoffset: 0; } }
 @keyframes anTxt { from { color: transparent; } }
@@ -10314,8 +10315,9 @@ html.ux-wa .cd-cta-wa { background: #128540; }
   /* P — Bu hafta masamızdan: küçük kartlar sırayla yükselir; büyük kartta sadece ürün resmi yükselir (yazılar hep yerinde).
      KALICI KATMAN (will-change) YOK: iPhone videosunda ana sayfaya dönüşte boş ekran + kayma sonrası yeniden çizim yapıyordu. */
   html.an-pk .cd-bento > .cd-grid:not([data-an]) > .cd-tile, html.an-pk .cd-bento > .cd-big:not([data-an]) .cd-big-im .thumb { opacity: 0; }
-  html.an-pk .cd-bento > .cd-grid[data-an="go"] > .cd-tile { animation: anUp .7s cubic-bezier(.16, 1, .3, 1) calc(var(--ri) * 80ms) backwards; }
-  html.an-pk .cd-bento > .cd-big[data-an="go"] .cd-big-im .thumb { animation: anRise 1s cubic-bezier(.16, 1, .3, 1) .1s backwards; }
+  /* ölçek (scale) YOK: büyürken Safari 'Sepete ekle' düğmesini her karede yeniden çiziyor, bitince bir daha → düğmeler 'oynuyordu' */
+  html.an-pk .cd-bento > .cd-grid[data-an="go"] > .cd-tile { animation: anRiseT .7s cubic-bezier(.16, 1, .3, 1) calc(var(--ri) * 80ms) backwards; }
+  html.an-pk .cd-bento > .cd-big[data-an="go"] .cd-big-im .thumb { animation: anRiseT 1s cubic-bezier(.16, 1, .3, 1) .1s backwards; }
   /* T — Tezgâhın için: kutular sağdan sırayla (kaydırmalı sıra → hareket sırasında mıknatıs kapalı, will-change YOK) */
   html.an-tz .cd-ads:not([data-an]) > .cd-ad { opacity: 0; }
   html.an-tz .cd-ads[data-an="go"] > .cd-ad { animation: anSide .8s cubic-bezier(.16, 1, .3, 1) calc(var(--ri) * 90ms) backwards; }
