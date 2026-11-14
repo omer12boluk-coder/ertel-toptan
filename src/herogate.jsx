@@ -44,7 +44,9 @@ function sceneIn(fly) {
   const sh = document.querySelector('.shell.public'); if (!sh) return;
   const A = (el, kf, o) => el?.animate(kf, { easing: EZ, fill: 'backwards', ...o });
   A(sh.querySelector('.topbar'), fly ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: 'translateY(-90px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: fly ? 450 : 700, delay: 40 });
-  if (innerWidth < 900) A(sh.querySelector('.botnav'), [{ transform: 'translateY(100px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, delay: 90 });
+  // logo uçarken SAYFA SABİT (kullanıcı: 'banner ve alt menü de kayınca bütün sayfa kayıyor gibi, logoyu görmüyorum'): menüler sadece belirir, banner kıpırdamaz
+  if (innerWidth < 900) A(sh.querySelector('.botnav'), fly ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: 'translateY(100px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: fly ? 450 : 700, delay: fly ? 40 : 90 });
+  if (fly) return;
   const pg = sh.querySelector('.kp:not(.kp-off)') || sh;
   A(pg.querySelector('.cd-hero .sh-hero') || pg.querySelector('.cd-hero'), [{ transform: 'scale(.92)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 850, delay: 120 });
   const rail = pg.querySelector('.cd-nwsec .cd-rail');
