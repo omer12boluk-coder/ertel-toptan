@@ -80,9 +80,25 @@ export function HeroGate({ onOpen, onDone }) {
     const onVis = () => engine?.setVisible(!document.hidden); document.addEventListener('visibilitychange', onVis);
     const pos = (e) => { const b = root.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const mark = () => { root.dataset.touched = '1'; };
-    const mv = (e) => { if (e.target.closest?.('.eh-swipe')) return; const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
-    const dn = (e) => { if (e.target.closest('button,a,.eh-swipe')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
-    const up = (e) => { const [x, y] = pos(e); engine?.pointer('up', x, y, e.pointerType === 'touch'); };
+    const mv = (e) => { if (sw.on) { swMove(e); return; } const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
+    // 14.11.2026 telefonda giriş: logonun altındaki alanı (yazılar + alt kısım) yukarı kaydır → sayfa parmakla kalkar,
+    // yeterince çekince ya da hızlıca yukarı atınca mağaza açılır; az çekip bırakırsan yerine yaylanır.
+    const sw = { on: false, id: 0, y0: 0, dy: 0, t: 0, ly: 0, v: 0 };
+    const inZone = (e) => { const c = contentRef.current; return coarse && c && e.clientY - root.getBoundingClientRect().top >= c.offsetTop - 24; };
+    const setDy = (d, anim) => { root.classList.toggle('eh-snap', !!anim); root.style.setProperty('--eh-dy', d + 'px'); root.style.setProperty('--eh-pull', Math.min(1, -d / (root.clientHeight * 0.22))); };
+    const swDown = (e) => { if (goneRef.current) return; sw.on = true; sw.id = e.pointerId; sw.y0 = e.clientY; sw.dy = 0; sw.t = e.timeStamp; sw.ly = e.clientY; sw.v = 0; };
+    const swMove = (e) => {
+      if (!sw.on || e.pointerId !== sw.id) return;
+      const dt = e.timeStamp - sw.t; if (dt > 0) sw.v = 0.6 * sw.v + 0.4 * ((sw.ly - e.clientY) / dt); sw.t = e.timeStamp; sw.ly = e.clientY;
+      const raw = e.clientY - sw.y0; sw.dy = raw < 0 ? raw : raw * 0.15; setDy(sw.dy, false);
+    };
+    const swUp = (e) => {
+      if (!sw.on || e.pointerId !== sw.id) return; sw.on = false;
+      if (-sw.dy > root.clientHeight * 0.18 || (sw.v > 0.45 && -sw.dy > 20)) { setDy(-root.clientHeight * 0.3, true); try { navigator.vibrate?.(8); } catch {} goRef.current(); }
+      else setDy(0, true);
+    };
+    const dn = (e) => { if (inZone(e)) { swDown(e); return; } if (e.target.closest('button,a')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
+    const up = (e) => { if (sw.on) { swUp(e); return; } const [x, y] = pos(e); engine?.pointer('up', x, y, e.pointerType === 'touch'); };
     const lv = (e) => { const [x, y] = pos(e); engine?.pointer('leave', x, y, e.pointerType === 'touch'); };
     root.addEventListener('pointermove', mv, { passive: true }); root.addEventListener('pointerdown', dn, { passive: true });
     root.addEventListener('pointerup', up, { passive: true }); root.addEventListener('pointercancel', up, { passive: true }); root.addEventListener('pointerleave', lv, { passive: true });
@@ -97,14 +113,17 @@ export function HeroGate({ onOpen, onDone }) {
 
   // Çıkış: önce logo dağılıp söner (düz zemin kalır) → mağaza düz zeminin ARKASINDA çizilir (takılma görünmez) → zemin solar.
   // Eskiden mağaza animasyonun ortasında çiziliyordu, dağılma efekti 1 sn takılıyordu.
+  const goneRef = useRef(false);
   const go = () => {
-    if (leaving) return;
+    if (leaving || goneRef.current) return; goneRef.current = true;
     engRef.current?.explode(); setLeaving(true);
     setTimeout(() => {
       engRef.current?.stop(); onOpen();
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => { setReveal(true); setTimeout(onDone, 420); }, 80)));
     }, 560);
   };
+
+  const goRef = useRef(go); goRef.current = go;
 
   return (
     <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
@@ -126,7 +145,7 @@ export function HeroGate({ onOpen, onDone }) {
         <div className="eh-aside">
           <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
           <div className="eh-a eh-a5">
-            {coarse ? <SwipeUp onDone={go} /> : (
+            {coarse ? null : (
               <button type="button" className="eh-btn" onClick={go}>Alışverişe başla
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
@@ -134,49 +153,14 @@ export function HeroGate({ onOpen, onDone }) {
           </div>
         </div>
       </div>
-      <div className="eh-spacer2" />
+      <div className="eh-spacer2">
+        {coarse && (
+          <button type="button" className="eh-up" aria-label="Alışverişe başla" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
+            <svg width="22" height="12" viewBox="0 0 22 12" fill="none" aria-hidden="true"><path d="M2 10l9-8 9 8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <span>Yukarı kaydır</span>
+          </button>
+        )}
+      </div>
     </section>
-  );
-}
-
-// 14.11.2026 Telefonda 'Alışverişe başla' düğmesi yerine yukarı kaydırarak giriş: uzun dikey çerçeve, top altta.
-// Topu yukarı çek (ya da hızlıca yukarı fırlat) → mağaza açılır; yarıda bırakırsan geri yaylanır. Dokunup bırakmak bir şey yapmaz.
-function SwipeUp({ onDone }) {
-  const trackRef = useRef(null), knobRef = useRef(null);
-  const st = useRef({ on: false, y0: 0, max: 0, y: 0, done: false, t: 0, ly: 0, v: 0 });
-  const [done, setDone] = useState(false);
-  const setY = (y) => {
-    const s = st.current; s.y = y; const k = knobRef.current, t = trackRef.current; if (!k || !t) return;
-    const p = s.max ? y / s.max : 0;
-    k.style.transform = `translateY(${-y}px)`; t.style.setProperty('--eh-p', p);
-    t.closest('.eh-root')?.style.setProperty('--eh-pull', p);
-  };
-  const finish = () => { const s = st.current; s.done = true; setY(s.max); setDone(true); try { navigator.vibrate?.(8); } catch {} onDone(); };
-  const down = (e) => {
-    const s = st.current; if (s.done) return; const t = trackRef.current, k = knobRef.current; if (!t || !k) return;
-    s.on = true; s.y0 = e.clientY + s.y; s.max = t.clientHeight - k.offsetHeight - 10; s.t = e.timeStamp; s.ly = e.clientY; s.v = 0;
-    t.classList.add('drag'); try { k.setPointerCapture(e.pointerId); } catch {}
-  };
-  const move = (e) => {
-    const s = st.current; if (!s.on) return;
-    const dt = e.timeStamp - s.t; if (dt > 0) s.v = 0.6 * s.v + 0.4 * ((s.ly - e.clientY) / dt); s.t = e.timeStamp; s.ly = e.clientY;
-    setY(Math.max(0, Math.min(s.max, s.y0 - e.clientY)));
-  };
-  const up = () => {
-    const s = st.current; if (!s.on) return; s.on = false; trackRef.current?.classList.remove('drag');
-    if (s.max && (s.y >= s.max * 0.7 || (s.v > 0.45 && s.y > 20))) finish(); else setY(0);
-  };
-  return (
-    <div ref={trackRef} className={'eh-swipe' + (done ? ' done' : '')}>
-      <span className="eh-chev" aria-hidden="true">
-        {[0, 1, 2].map((i) => <svg key={i} width="18" height="10" viewBox="0 0 18 10" fill="none"><path d="M2 8l7-6 7 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>)}
-      </span>
-      <button ref={knobRef} type="button" className="eh-knob" aria-label="Alışverişe başla"
-        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish(); } }}>
-        <svg width="20" height="20" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 12V2M3 6l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      </button>
-      <span className="eh-swipe-txt">Yukarı kaydır</span>
-    </div>
   );
 }
