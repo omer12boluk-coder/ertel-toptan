@@ -863,7 +863,10 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
     let lastW = -1, VH = 0;
     const touch = matchMedia('(hover: none)').matches; // dokunmatik: sadece yükseklik değişimi (Safari çubuğu) yok sayılır; bilgisayarda pencere boyu da ölçtürür
     const m = (force) => {
-      const R = el.getBoundingClientRect(); if (!R.width) return; const top = R.top + scrollY;
+      const R = el.getBoundingClientRect(); if (!R.width) return;
+      // giriş animasyonu (sayfa aşağıdan kayarak gelir) getBoundingClientRect'i büyütür → kutular küçük kalıyordu; offsetTop dönüşümden etkilenmez, küçük olan alınır
+      let oy = 0; for (let e = el; e; e = e.offsetParent) oy += e.offsetTop;
+      const top = Math.min(R.top + scrollY, oy > 0 ? oy : Infinity);
       if (force === true || innerWidth !== lastW || !VH) { lastW = innerWidth; VH = svh(); }
       const innerHeight = VH; // aşağıdaki hesap sabit yükseklikle yapılır (gölgeleme bilerek)
       const ph = innerWidth < 900; const n = list.length;
