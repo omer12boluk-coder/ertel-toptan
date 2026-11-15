@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
 import { ls } from './utils.js';
+import { applyLayout, bgTry } from './dzpresets.js';
 
 export const ANIMS = [
   ['gfly', 'B1', 'Açılış: logo menüye uçar'],
@@ -174,6 +175,20 @@ function useMeter() {
 }
 const BROWSER = typeof navigator === 'undefined' ? '' : /Edg\//.test(navigator.userAgent) ? 'Edge' : /Chrome\//.test(navigator.userAgent) ? 'Chrome' : /Safari\//.test(navigator.userAgent) ? 'Safari' : /Firefox\//.test(navigator.userAgent) ? 'Firefox' : '';
 
+// 15.11.2026 sayfa zemini denemesi (sadece önizleme, bu cihazda; ls 'bg-try', seçilmemişse aura). 'live' = canlıdaki ayar.
+const BG_TRY = [['live', 'Canlıdaki (düz)'], ['deep', 'A · Derin zemin + gölge'], ['aura', 'A + D · Aura (yavaş renk bulutları)'], ['band', 'A + C · Bölüm ritmi'], ['glow', 'B · Yumuşak ışık'], ['warm', 'F · Sıcak kâğıt']];
+function BgTryRows() {
+  const look = useStore((s) => s.settings?.look) || null;
+  const [v, setV] = useState(() => bgTry() ?? 'live');
+  const pick = (k) => { try { localStorage.setItem('bg-try', JSON.stringify(k)); } catch {} setV(k); applyLayout(document.documentElement, look || {}); };
+  return <>
+    <div className="an-ph"><b>Sayfa zemini</b><small>Sadece bu önizlemede, bu cihazda</small></div>
+    {BG_TRY.map(([k, t]) => (
+      <label key={k} className="an-row"><input type="radio" name="bg-try" checked={v === k} onChange={() => pick(k)} /><span className="an-l">{k === 'live' ? '—' : t.split(' · ')[0]}</span><span>{t.includes(' · ') ? t.split(' · ')[1] : t}</span></label>
+    ))}
+  </>;
+}
+
 function AnimPanel({ v, set, lite }) {
   const [open, setOpen] = useState(false);
   const [pf, setPf] = usePerf(); const m = useMeter();
@@ -182,6 +197,7 @@ function AnimPanel({ v, set, lite }) {
   return (
     <div className={'an-panel' + (open ? ' open' : '')}>
       {open && <div className="an-box" role="dialog" aria-label="Hareket denemesi">
+        <BgTryRows />
         <div className="an-ph"><b>Hareket denemesi</b><small>Sadece bu önizlemede, bu cihazda</small></div>
         {ANIMS.map(([k, L, t]) => (
           <label key={k} className="an-row"><input type="checkbox" checked={!!v[k]} onChange={(e) => set({ ...v, [k]: e.target.checked })} /><span className="an-l">{L}</span><span>{t}</span></label>

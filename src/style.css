@@ -10671,3 +10671,26 @@ html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { ba
   html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b:not(.on):hover::after { opacity: .35; transform: none; }
 }
 @media (min-width: 900px) { html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .flow-ghost { display: none !important; } }
+
+/* ===== 15.11.2026 Sayfa zemini (look.bgFx: deep | aura | band | warm; sunum https://claude.ai/artifact/CPhBKrnKLdC2ZwB6seeAGQ) =====
+   Sadece gündüz (gece hâli aynen). Kutular zeminde eriyordu → zemin bir ton koyu + kutulara yumuşak gölge (bgfx-sh).
+   iPhone Safari: zemin katmanı lvh/vw ile sabit boy (adres çubuğu açılıp kapanınca boyu DEĞİŞMEZ → bulutlar 'tık' yapmaz); will-change YOK. */
+html.bgfx-deep:not([data-theme="dark"]) { background: #eceef2; } html.bgfx-band:not([data-theme="dark"]) { background: #f4f5f7; }
+html.bgfx-aura:not([data-theme="dark"]) { background: #eef0f4; }
+html.bgfx-warm:not([data-theme="dark"]) { background: #f2efea; }
+html.bgfx-sh:not([data-theme="dark"]) body { background: transparent; }
+html.bgfx-sh:not([data-theme="dark"]) body::before { display: none; }
+html.bgfx-aura:not([data-theme="dark"]) body::before { content: ""; display: block; position: fixed; top: -12lvh; left: -12vw; width: 124vw; height: 124lvh; right: auto; bottom: auto; z-index: -1; pointer-events: none;
+  background: radial-gradient(30% 26% at 15% 12%, rgb(47 98 214 / .16), transparent 70%), radial-gradient(28% 24% at 88% 30%, rgb(56 160 180 / .13), transparent 70%),
+    radial-gradient(34% 28% at 30% 85%, rgb(236 160 110 / .13), transparent 70%), radial-gradient(30% 26% at 85% 88%, rgb(47 98 214 / .10), transparent 70%), #eef0f4;
+  animation: bgfxAura 40s ease-in-out infinite alternate; }
+@keyframes bgfxAura { 0% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(5vw, 3lvh, 0); } 100% { transform: translate3d(-4vw, 6lvh, 0); } }
+@media (prefers-reduced-motion: reduce) { html.bgfx-aura body::before { animation: none; } }
+html.pf-lite.bgfx-aura body::before { animation: none; }
+html.bgfx-warm:not([data-theme="dark"]) body::before { content: ""; display: block; position: fixed; top: 0; left: 0; width: 100vw; height: 100lvh; right: auto; bottom: auto; z-index: -1; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(70% 45% at 50% 0%, rgb(255 255 255 / .85), transparent 70%), linear-gradient(180deg, #f1ede6 0%, #f3f1ed 50%, #f1f0ee 100%); }
+/* bölüm ritmi: ana sayfada çift sıradaki bölümler kenardan kenara açık mavi-gri şeritte */
+html.bgfx-band:not([data-theme="dark"]) .tab-anasayfa .sh > section.cd-sec:nth-of-type(even) { background: #e2e8f0; box-shadow: 0 0 0 100vmax #e2e8f0; clip-path: inset(-32px -100vmax); }
+/* kutular zeminden ayrılsın (gölge) */
+html.bgfx-sh:not([data-theme="dark"]) :is(.cd-tile, .cd-big, .cd-set, .cd-bw, .p0-trust, .pmo-t, .pb-box.pb-light, .flm-card) { box-shadow: 0 1px 2px rgb(16 24 40 / .05), 0 8px 22px rgb(16 24 40 / .07); }

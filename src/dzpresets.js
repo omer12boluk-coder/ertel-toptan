@@ -190,18 +190,25 @@ export const CORNERS = [
 ];
 export const WIDTHS = [['narrow', 'Dar', 1280], ['mid', 'Orta', 1440], ['', 'Geniş', 1640], ['full', 'Tam ekran', 0]];
 export const BOX_PATS = [['', 'Halka'], ['glow', 'Yumuşak ışık'], ['grid', 'İnce ızgara'], ['wave', 'Dalga'], ['none', 'Düz']];
-export const BG_FX = [['', 'Temanın'], ['glow', 'Yumuşak ışık'], ['plain', 'Düz']];
+// 15.11.2026 sayfa zemini: deep = derin zemin + kutu gölgesi (A), aura = A + çok yavaş renk bulutları (D), band = A + bölüm şeritleri (C), warm = sıcak kâğıt (F)
+export const BG_FX = [['', 'Temanın'], ['plain', 'Düz'], ['glow', 'Yumuşak ışık'], ['deep', 'Derin + gölge'], ['aura', 'Aura'], ['band', 'Bölüm ritmi'], ['warm', 'Sıcak kâğıt']];
+const BG_NEW = ['deep', 'aura', 'band', 'warm'];
+// önizleme hostunda (adında '--') 'Hareket' panelinden zemin denemesi (bu cihazda, ls 'bg-try'); seçilmemişse aura
+const BG_TRY_HOST = typeof location !== 'undefined' && location.hostname.includes('--');
+export function bgTry() { if (!BG_TRY_HOST) return null; try { const v = JSON.parse(localStorage.getItem('bg-try') || 'null'); return v == null ? 'aura' : v === 'live' ? null : v; } catch { return 'aura'; } }
 export const BOX_COLORS = [['#24324f', 'Gece mavisi'], ['#3f5a4b', 'Adaçayı'], ['#7a4a32', 'Bakır'], ['#3a3a42', 'Grafit'], ['#2c3f63', 'Mürekkep'], ['#5c4a6b', 'Erik'], ['#e9e4da', 'Kum'], ['#dfe7f5', 'Sis']];
 
 // sayfa genişliği / kenar boşluğu / kutu deseni / zemin ışığı → html sınıfları + CSS değişkenleri (mağaza useTheme + tasarım çerçevesi)
-export const LAYOUT_CLS = ['pw-narrow', 'pw-mid', 'pw-full', 'pg-edge', 'bp-glow', 'bp-grid', 'bp-wave', 'bp-none', 'bgfx-glow', 'bgfx-plain'];
+export const LAYOUT_CLS = ['pw-narrow', 'pw-mid', 'pw-full', 'pg-edge', 'bp-glow', 'bp-grid', 'bp-wave', 'bp-none', 'bgfx-glow', 'bgfx-plain', 'bgfx-deep', 'bgfx-aura', 'bgfx-band', 'bgfx-warm', 'bgfx-sh'];
 export function layoutOut(L = {}) {
   const cls = []; const vars = { '--pw-max': '', '--pg-edge': '' };
   const w = WIDTHS.find((x) => x[0] === L.width);
   if (w && w[0]) { cls.push('pw-' + w[0]); vars['--pw-max'] = w[2] ? w[2] + 'px' : 'none'; }
   if (L.edge != null && L.edge !== '') { cls.push('pg-edge'); vars['--pg-edge'] = Number(L.edge) + 'px'; }
   if (['glow', 'grid', 'wave', 'none'].includes(L.boxPat)) cls.push('bp-' + L.boxPat);
-  if (['glow', 'plain'].includes(L.bgFx)) cls.push('bgfx-' + L.bgFx);
+  const fx = bgTry() ?? L.bgFx;
+  if (['glow', 'plain', ...BG_NEW].includes(fx)) cls.push('bgfx-' + fx);
+  if (BG_NEW.includes(fx)) cls.push('bgfx-sh');
   return { cls, vars };
 }
 export function applyLayout(r, L) {

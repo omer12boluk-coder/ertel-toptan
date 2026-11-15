@@ -13,7 +13,7 @@ import { withDefaults, norm, ls } from './utils.js';
 import { ShopHome, DesignCtx, blockLabel, moveItem, withProdFallback, RailFields } from './shophome.jsx';
 import { prepare, Stage, ShopDesigner, GS3_PC } from './designer.jsx';
 import { queueSave } from './saveq.js';
-import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
+import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS, BG_FX } from './dzpresets.js';
 import { PB_BY, PB_TEXT, PHOTO_BANNERS, withNew2, IMG_ANIM } from './photobn.jsx';
 import { HERO_W, HERO_FILL, cdOf, shortOf, CD_ADS, usePickList, useNewList } from './cdhome.jsx';
 import { useBrandList } from './brandsets.jsx';
@@ -238,6 +238,7 @@ function LookPanel({ d, set, setAll, A }) {
     <Row label="Menü logosu zemini" hint="Temiz: logonun arkasında beyaz yuvarlak yok, menü hangi renkteyse ona uyar. Beyaz yuvarlak: eski hâl"><Seg v={Lk.logoBg === 'disc' ? 'disc' : ''} opts={[['', 'Temiz'], ['disc', 'Beyaz yuvarlak']]} on={(k) => set('look.logoBg', k)} /></Row>
     <Row label="Üst menü açılır menüleri" hint="Bilgisayarda Ürünler ▾, Markalar ▾, Kalıp bulucu ▾, Setler ▾. Yeni: resimli kutular, logo duvarı, kayan panel. Geniş / Eski: önceki menüler"><Seg v={!Lk.navDrop ? 'new' : (Lk.navMenu || '')} opts={[['new', 'Yeni'], ['', 'Geniş'], ['old', 'Eski']]} on={(k) => { if (k === 'new') set('look.navDrop', ''); else { set('look.navDrop', 'prev'); set('look.navMenu', k); } }} /></Row>
     <Row label="Üstüne gelince" hint="Bilgisayarda kartların üstüne gelince"><Seg v={Lk.hoverFx || ''} opts={[['', 'Yeni'], ['old', 'Eski (kalkar)']]} on={(k) => set('look.hoverFx', k)} /></Row>
+    <Row label="Sayfa zemini" hint="Düz: bugünkü. Derin + gölge: zemin bir ton koyu, kutular hafif gölgeli. Aura: üstüne çok yavaş kayan soluk renk bulutları. Bölüm ritmi: ana sayfada bölümler sırayla açık şeritte. Sadece gündüz"><Seg v={Lk.bgFx || ''} opts={BG_FX} on={(k) => set('look.bgFx', k)} /></Row>
     <Row label="Sayfa hareketleri" hint="Açılış sahnesi, banner geri çekilmesi, rafların kayması, indirim çizgisi, marka dalgası… Kapalı = eski sade site"><Seg v={Lk.anim?.all === 'off' ? 'off' : ''} opts={[['', 'Açık'], ['off', 'Kapalı']]} on={(k) => set('look.anim.all', k || undefined)} /></Row>
     <Row label="Zayıf cihazda hafif mod" hint="Otomatik: site ilk kaydırmada cihazı ölçer; sık takılan cihazda (ör. eski MacBook) buzlu cam, gölgeler, banner ve sayfa hareketleri kapanır, video kendiliğinden başlamaz. Güçlü cihazlarda hiçbir şey değişmez"><Seg v={Lk.perf || ''} opts={[['', 'Otomatik'], ['off', 'Hiç'], ['on', 'Hep açık']]} on={(k) => set('look.perf', k || undefined)} /></Row>
     <Row label="Gece modu" hint="Otomatik: ziyaretçinin telefonu gece modundaysa mağaza da koyu"><Seg v={d.brand?.theme === 'auto' ? 'auto' : 'light'} opts={[['auto', 'Otomatik'], ['light', 'Hep gündüz']]} on={(k) => set('brand.theme', k)} /></Row>
