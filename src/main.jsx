@@ -691,6 +691,10 @@ function ShellFull() {
   // 15.11.2026 menü logosunun arkasındaki beyaz yuvarlak + gri halka kalktı (her renkte menüye uyar); look.logoBg 'disc' = eski
   // 15.11.2026 'Arama + cam 3' (look.header 'search3'): aynı menü/işlev, daha uzun + kristal cam (html gs-x3); look.gs3Tone 'ice' = buz mavisi tonu (html gs-x3i). Kalıp bulucu simgesi 'stencil'.
   const gsX3 = hs && LK.header === 'search3';
+  // 15.11.2026 Yüzen cam bilgisayar görünümleri (look.glassSty; sunum https://claude.ai/artifact/CPTqEHjEcLgZVfAK6HQSPd): '' bugünkü | 'strip' A şerit | 'quiet' B sade ada | 'search' C arama odaklı.
+  // Hepsinde menü sadece yazı (simge/ok/hap yok) + Markalar ve Setler menüde. html gst-<ad>, CSS sadece ≥900px. Telefon aynı.
+  const gst = pub && !phoneUI && LK.header === 'glass' && ['strip', 'quiet', 'search'].includes(LK.glassSty) ? LK.glassSty : '';
+  useEffect(() => { const c = document.documentElement.classList; ['strip', 'quiet', 'search'].forEach((k) => c.toggle('gst-' + k, gst === k)); c.toggle('gst-on', !!gst); return () => c.remove('gst-strip', 'gst-quiet', 'gst-search', 'gst-on'); }, [gst]);
   const gsX3i = gsX3 && LK.gs3Tone === 'ice';
   useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-x3', gsX3); c.toggle('gs-x3i', gsX3i); return () => c.remove('gs-x3', 'gs-x3i'); }, [gsX3, gsX3i]);
   // 15.11.2026 Kristal cam bilgisayar görünümü (sadece ≥900px CSS'te): look.gs3Pc '' = 'web' şerit + en üstte şeffaf (kaydırınca cam) | 'strip' şerit | 'ada2' sade yüzen ada | 'ada' eski kapsül
@@ -791,6 +795,10 @@ function ShellFull() {
               );
               return !drop ? b : pub ? (k === 'kalip' ? <KalipDrop key={k}>{b}</KalipDrop> : <ProductsDrop key={k}>{b}</ProductsDrop>) : <AdminDrop key={k} k={k}>{b}</AdminDrop>;
             })}
+            {gst && <>
+              <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
+              {hasSets && <SetsDrop><button className={'topnav-b' + (tab === 'setlist' ? ' on' : '')} onClick={() => go('setlist')}><Icon n="box" s={16} /><span className="topnav-l">Setler</span>{v3 && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button></SetsDrop>}
+            </>}
           </nav>
           <span className="top-sp" />
           {pub && <HeaderSearch />}

@@ -10693,3 +10693,67 @@ html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { ba
   html.isl-any.isl .shell.public .topbar.hdr-c .hc-mid .brand-logo { width: 34px !important; height: 34px !important; }
 }
 @media (min-width: 900px) and (prefers-reduced-motion: reduce) { html.isl-any .shell.public .topbar .topbar-in { transition: none !important; } }
+
+/* ===== 15.11.2026 Yüzen cam bilgisayar görünümleri (look.glassSty → html.gst-strip | gst-quiet | gst-search; ortak gst-on). Sadece ≥900px, telefon aynı.
+   Ortak: menü sadece yazı (simge, ok, hap yok), Sepet kutusuz, Giriş çerçevesiz. A şerit: kenardan kenara ince şerit, menü ortada, sağda sade simgeler.
+   B sade ada: yüzen kutu, menü ortada, seçilinin altında nokta. C arama odaklı: menü solda, ortada hep açık geniş arama. */
+@media (min-width: 900px) {
+  html.gst-on .topbar.hdr-g .topnav-b > svg:first-child, html.gst-on .topbar.hdr-g .topnav-chev { display: none !important; }
+  html.gst-on .topbar.hdr-g .topnav-b { background: none !important; box-shadow: none !important; gap: 0; font: 500 14px/1 var(--f-body); color: var(--muted); letter-spacing: .005em; position: relative; }
+  html.gst-on .topbar.hdr-g .topnav-b.on, html.gst-on .topbar.hdr-g .topnav-b:hover, html.gst-on .topbar.hdr-g .hd.open .topnav-b { color: var(--fg); }
+  html.gst-on .topbar.hdr-g .flow-ghost { display: none !important; }
+  html.gst-on .topbar.hdr-g :is(.hcart, .hcart.full) { border: 0 !important; background: none !important; box-shadow: none !important; color: var(--fg) !important; }
+  html.gst-on .topbar.hdr-g .hcart-t small { display: none; }
+  html.gst-on .topbar.hdr-g .hcart-t b { font: 500 14px/1 var(--f-body); }
+  html.gst-on .topbar.hdr-g :is(.me-login, .me) { border: 0 !important; background: none !important; box-shadow: none !important; }
+  html.gst-on .topbar.hdr-g .me-login { font: 600 14px/1 var(--f-body); color: var(--accent); }
+
+  /* A · şerit */
+  html.gst-strip { --top-h: 57px; }
+  html.gst-strip .topbar.hdr-g { padding: 0 !important; background: rgb(255 255 255 / .82); -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8); border-bottom: 1px solid rgb(15 23 42 / .08); }
+  html.gst-strip[data-theme="dark"] .topbar.hdr-g { background: rgb(22 24 30 / .82); border-bottom-color: rgb(255 255 255 / .08); }
+  html.gst-strip .topbar.hdr-g .topbar-in { position: relative; height: 56px !important; padding: 0 28px !important; background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html.gst-strip .topbar.hdr-g .brand-logo { width: 28px !important; height: 28px !important; }
+  html.gst-strip .topbar.hdr-g .brand-t b { font-size: 16px; letter-spacing: .05em; }
+  html.gst-strip .topbar.hdr-g .topnav { position: absolute; left: 50%; translate: -50% 0; gap: 34px; }
+  html.gst-strip .topbar.hdr-g .topnav-b { padding: 0 !important; height: 56px; font-size: 13.5px; }
+  html.gst-strip .topbar.hdr-g .hcart-t, html.gst-strip .topbar.hdr-g .me-login-l, html.gst-strip .topbar.hdr-g .me .me-t { display: none !important; }
+  html.gst-strip .topbar.hdr-g .hcart { padding: 0 8px !important; width: 40px; justify-content: center; }
+  html.gst-strip .topbar.hdr-g .me-login { width: 40px; padding: 0 !important; color: var(--fg); justify-content: center; }
+
+  /* B · sade ada */
+  html.gst-quiet .topbar.hdr-g .topbar-in { position: relative; height: 56px !important; border-radius: 20px !important; padding: 0 10px 0 16px !important; background: rgb(255 255 255 / .78) !important; border: 1px solid rgb(255 255 255 / .8) !important;
+    box-shadow: 0 0 0 .5px rgb(15 23 42 / .08), 0 1px 2px rgb(15 23 42 / .04), 0 12px 32px -18px rgb(15 23 42 / .28) !important; }
+  html.gst-quiet[data-theme="dark"] .topbar.hdr-g .topbar-in { background: rgb(28 32 44 / .72) !important; border-color: rgb(255 255 255 / .08) !important; }
+  html.gst-quiet .topbar.hdr-g .topnav { position: absolute; left: 50%; translate: -50% 0; gap: 6px; }
+  html.gst-quiet .topbar.hdr-g .topnav-b { padding: 0 14px !important; height: 56px; }
+  html.gst-quiet .topbar.hdr-g .topnav-b.on::after { content: ""; position: absolute; left: 50%; bottom: 10px; width: 4px; height: 4px; border-radius: 2px; background: var(--accent); translate: -50% 0; }
+  html.gst-quiet .topbar.hdr-g .me-login > svg { display: none; }
+  html.gst-quiet .topbar.hdr-g .hcart { padding: 0 10px !important; gap: 6px; }
+
+  /* C · arama odaklı */
+  html.gst-search .topbar.hdr-g .topbar-in { height: 60px !important; border-radius: 22px !important; padding: 0 10px 0 16px !important; gap: 6px; background: rgb(255 255 255 / .8) !important; border: 1px solid rgb(255 255 255 / .8) !important;
+    box-shadow: 0 0 0 .5px rgb(15 23 42 / .08), 0 14px 34px -18px rgb(15 23 42 / .3) !important; }
+  html.gst-search[data-theme="dark"] .topbar.hdr-g .topbar-in { background: rgb(28 32 44 / .72) !important; border-color: rgb(255 255 255 / .08) !important; }
+  html.gst-search { --top-h: 68px; }
+  html.gst-search .topbar.hdr-g .topnav { margin-left: 18px; gap: 2px; }
+  html.gst-search .topbar.hdr-g .topnav-b { padding: 0 12px !important; height: 36px; border-radius: 18px; }
+  html.gst-search .topbar.hdr-g .topnav-b.on { background: rgb(118 118 128 / .1) !important; }
+  html.gst-search .topbar.hdr-g .top-sp { display: none; }
+  html.gst-search .topbar.hdr-g .hsearch { flex: 1; display: flex; justify-content: center; margin: 0 18px; position: relative; min-width: 0; }
+  html.gst-search .topbar.hdr-g .hsearch-btn { display: none !important; }
+  html.gst-search .topbar.hdr-g .hsearch-box { display: flex !important; position: static !important; width: 100% !important; max-width: 520px; height: 40px; margin: 0 !important; border-radius: 20px; background: rgb(118 118 128 / .1) !important; border: 0 !important; box-shadow: none !important; padding: 0 14px; animation: none !important; }
+  html.gst-search .topbar.hdr-g .hsearch-box:focus-within { background: var(--surface) !important; box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent) !important; }
+  html.gst-search .topbar.hdr-g .hsearch-res { left: 50% !important; right: auto !important; translate: -50% 0; width: min(520px, 100%) !important; }
+  html.gst-search .topbar.hdr-g .hcart { padding: 0 10px !important; gap: 6px; }
+}
+/* gst: dar bilgisayarda (900–1023) menü simgeli kalır (yazı sığmaz); 1024+ hep yazı */
+@media (min-width: 1024px) { html.gst-on .topbar.hdr-g .topnav-b .topnav-l { display: inline !important; } }
+@media (min-width: 900px) and (max-width: 1023px) { html.gst-on .topbar.hdr-g .topnav-b > svg:first-child { display: inline-block !important; } }
+@media (min-width: 900px) and (max-width: 1279px) {
+  html.gst-quiet .topbar.hdr-g .topnav { position: static; translate: none; margin-left: 28px; gap: 0; }
+  html.gst-quiet .topbar.hdr-g .topnav-b { padding: 0 11px !important; }
+  html.gst-search .topbar.hdr-g .brand-t, html.gst-search .topbar.hdr-g .hcart-t, html.gst-search .topbar.hdr-g .me-login-l { display: none !important; }
+  html.gst-search .topbar.hdr-g .topnav { margin-left: 8px; }
+  html.gst-search .topbar.hdr-g .hsearch { min-width: 200px; margin: 0 10px; }
+}
