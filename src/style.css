@@ -10682,7 +10682,7 @@ html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { ba
   html.gs-one .topbar.hdr-gs .topbar-in { flex-direction: row; align-items: center; gap: 14px; min-height: 56px; padding: 0 8px 0 12px !important; }
   html.gs-one .topbar.hdr-gs .gs-r1 { display: contents; }
   html.gs-one .topbar.hdr-gs .gs-brand { order: 1; }
-  html.gs-one .topbar.hdr-gs .gs-nav { order: 2; flex: 1 1 auto; min-width: 0; height: 56px; padding: 0; border-top: 0; justify-content: center; }
+  html.gs-one .topbar.hdr-gs .gs-nav { order: 2; flex: 1 0 auto; height: 56px; padding: 0; border-top: 0; justify-content: center; }
   html.gs-one .topbar.hdr-gs .gs-srch { order: 3; flex: 0 1 300px; min-width: 0; justify-content: flex-end; }
   html.gs-one .topbar.hdr-gs .gs-icons { order: 4; }
 }
