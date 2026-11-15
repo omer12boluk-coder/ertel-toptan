@@ -10849,3 +10849,24 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
   html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within):hover .hsearch-box { background: rgb(15 23 42 / .05) !important; }
 }
+/* 15.11.2026 Tek satır + ADA (look.hdrScroll 'island'): kayınca sadece logo · arama · sepet · hesap kalır, hepsi ortada kısa bir kapsülde.
+   Her parça kendi genişliğinden süzülerek kapanır/açılır (ERTEL yazısı, menü, ses/gece/bildirim) — anında kaybolma yok. */
+@media (min-width: 900px) {
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { max-width: none !important; justify-content: center;
+    transition: width .6s cubic-bezier(.32, .72, 0, 1), padding .6s cubic-bezier(.32, .72, 0, 1), gap .6s cubic-bezier(.32, .72, 0, 1), box-shadow .4s, background-color .35s, border-color .35s; }
+  /* şekil değişmez: köşe yuvarlaklığı aynı, kaydırma/ölçek (transform) YOK — kenarlar geçişte yumuşayıp bulanıklaşıyordu (kullanıcı) */
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(600px, 100vw - 40px); gap: 8px; padding: 0 8px 0 10px !important; border-radius: 26px; transform: none !important; }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { transform: none !important; border-radius: 26px; }
+  html.gs-one.gs-isl .hdr-gs .gs-nav { max-height: none; max-width: 1200px; transform: none !important; transition: max-width .6s cubic-bezier(.32, .72, 0, 1), opacity .35s ease .15s, flex-grow .6s cubic-bezier(.32, .72, 0, 1); }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; flex-grow: 0; opacity: 0; overflow: hidden; max-height: none; pointer-events: none; transition: max-width .55s cubic-bezier(.32, .72, 0, 1), opacity .16s ease, flex-grow .55s cubic-bezier(.32, .72, 0, 1); }
+  html.gs-one.gs-isl .hdr-gs .gs-brand { margin-right: 6px; transition: margin .6s cubic-bezier(.32, .72, 0, 1); }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-brand { margin-right: 0; }
+  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .6s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .12s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .55s cubic-bezier(.32, .72, 0, 1), opacity .18s ease; }
+  html.gs-one.gs-isl .hdr-gs .gs-srch { transition: width .6s cubic-bezier(.32, .72, 0, 1), flex-grow .6s cubic-bezier(.32, .72, 0, 1); }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-srch { flex: 1 1 auto; width: auto !important; min-width: 120px; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .08) !important; padding: 0 10px 0 14px !important; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-srch input { position: static !important; opacity: 1 !important; }
+  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .55s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .12s, margin .55s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; padding-inline: 0 !important; border-width: 0 !important; transition: max-width .5s cubic-bezier(.32, .72, 0, 1), opacity .15s ease, margin .5s; }
+}

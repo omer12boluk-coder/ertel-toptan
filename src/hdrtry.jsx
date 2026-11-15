@@ -38,6 +38,10 @@ export function HdrPanel() {
             {o.map(([x, t]) => <label key={k + x} className="an-row"><input type="radio" name={'hdr-' + k} checked={(v[k] || '') === x} onChange={() => set(k, x)} /><span>{t}</span></label>)}
           </div>
         ))}
+        {one && <div>
+          <small className="an-dev">Aşağı kaydırınca</small>
+          {[['', 'Canlıdaki gibi'], ['island', 'Ada (logo · arama · sepet · hesap)'], ['hide', 'Gizlensin'], ['open', 'Hep açık']].map(([x, t]) => <label key={'s' + x} className="an-row"><input type="radio" name="hdr-scr" checked={(v.scr || '') === x} onChange={() => { const n = { ...v }; delete n.hdrScroll; delete n.hideTop; delete n.scr; if (x) { n.scr = x; if (x === 'island') n.hdrScroll = 'island'; else { n.hdrScroll = ''; n.hideTop = x === 'open' ? false : 'top'; } } put(n); }} /><span>{t}</span></label>)}
+        </div>}
         <div className="an-ft">
           <button type="button" onClick={() => put(DEF)}>Varsayılana dön</button>
           <button type="button" className="pri" onClick={() => tog(false)}>Kapat</button>
