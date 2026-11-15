@@ -11169,13 +11169,16 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
   html.gs-one.gs1-sicon:not(.isl) .hdr-gs .gs-srch { width: var(--gs1-sw, 236px); }
   html.gs-one.gs1-sicon:not(.isl).gs1-lb-toggle .hdr-gs .gs-srch { width: var(--gs1-sw, 222px); }
   html.gs-one.gs1-sicon .hdr-gs .gs-srch .hsearch { margin-left: auto; transition: width .42s cubic-bezier(.22, .8, .24, 1); }
-  /* kapanış 'piston': önce kutu yuvayla birlikte kısalır (menü kutunun kenarına yapışık geri çekilir, yerinde durur), sonra kutu simgeye döner (data-cl) */
-  html.gs-one.gs1-sicon:not(.isl) .hdr-gs .gs-srch:not([data-open]):not([data-cl]) .hsearch:not(:focus-within) { width: 42px; transition: width .28s cubic-bezier(.22, .8, .24, 1); }
+  /* kapanış: kutu TEK hareketle simgeye küçülür, yuva + menü aynı anda aynı eğriyle döner; kutu görünümü (zemin) küçülme bitene kadar kalır (data-cl), sonra simge görünümüne yumuşakça geçer */
+  html.gs-one.gs1-sicon:not(.isl) .hdr-gs .gs-srch:not([data-open]) .hsearch:not(:focus-within) { width: 42px; }
 }
 /* 16.11.2026 'Sadece seçilinin adı': simgeler biraz sola (sağ pay); ortalı kaldığı için arama açılınca simgeleri yine iter */
 @media (min-width: 900px) {
   html.gs-one.gs1-lb-pick .hdr-gs .gs-nav { padding-right: clamp(40px, 16%, 220px); transition: padding .42s cubic-bezier(.22, .8, .24, 1), opacity .25s ease; }
   html.gs-one.gs1-lb-pick.gs1-so .hdr-gs .gs-nav { padding-right: 0; }
+}
+@media (min-width: 1366px) {
+  html.gs-one.gs1-sicon:not(.isl) .hdr-gs .gs-srch .hsearch-box { transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease, padding .42s cubic-bezier(.22, .8, .24, 1) !important; }
 }
 </style>
 <div id="root"></div>
