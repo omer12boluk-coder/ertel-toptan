@@ -35,6 +35,8 @@ let active = null; // açık olan menü { id, close } (bir menüden diğerine ge
 // 14.11.2026 v3 'kayan panel': bir menüden yandakine geçerken eski panelin yeri/boyu saklanır, yeni panel oradan kendi yerine kayar
 let swapFrom = null; // { r: DOMRect, t: zaman }
 
+// 15.11.2026 Tek satır 'sadece simge': simgenin adı altında etikette durur → açılır menü etiketin altından başlar
+const icoGap = (btn) => (typeof document !== 'undefined' && document.documentElement.classList.contains('gs1-ico') && innerWidth >= 900 ? (btn ? 34 : 22) : 0);
 export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   const desk = useDesk();
   const [open, setOpen] = useState(false);
@@ -54,7 +56,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
       if (cls.includes('hd-wide')) {
         const card = wrap.current?.closest('.topbar')?.querySelector('.topbar-in') || wrap.current?.closest('.topbar');
         const c = card?.getBoundingClientRect();
-        if (c) { el.style.left = Math.round(c.left) + 'px'; el.style.width = Math.round(c.width) + 'px'; el.style.top = Math.round(c.bottom + 8) + 'px'; return; }
+        if (c) { el.style.left = Math.round(c.left) + 'px'; el.style.width = Math.round(c.width) + 'px'; el.style.top = Math.round(c.bottom + 8 + icoGap()) + 'px'; return; }
       }
       let x = align === 'right' ? b.right - w : b.left - (cls.includes('hd-mega') ? 40 : 6);
       x = Math.max(16, Math.min(x, vw - w - 16));
@@ -62,7 +64,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
       if (document.documentElement.classList.contains('adm-apple') && innerWidth >= 1100 && wrap.current?.closest('.shell.admin')) {
         el.style.left = Math.round(b.right + 12) + 'px'; el.style.top = Math.max(12, Math.min(Math.round(b.top - 8), innerHeight - el.offsetHeight - 12)) + 'px'; return;
       }
-      el.style.left = x + 'px'; el.style.top = Math.round(b.bottom + 10) + 'px';
+      el.style.left = x + 'px'; el.style.top = Math.round(b.bottom + 10 + icoGap(true)) + 'px';
     };
     place(); addEventListener('resize', place); addEventListener('scroll', place, true);
     // v3: yandaki menüden geçiş → panel kapanıp açılmaz, eski yerinden yeni yerine/boyuna kayar, içerik hafifçe belirir
@@ -100,7 +102,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     if (clickMode()) { if (active && active.id !== myId.current) show(); return; }
     if (active && active.id !== myId.current) { if (cls.includes('hd-v3')) t.current = setTimeout(show, 90); else show(); return; } // başka menü açıkken yandakine geçiş: beklemeden (v3: 90 ms — panele çapraz inerken yoldaki başlıklar menüyü değiştirmesin)
     if (here()) return;
-    if (MENU.niyet && e) { anc.current = { x: e.clientX, y: e.clientY }; t.current = setTimeout(show, DUR); return; }
+    if (MENU.niyet && e) { anc.current = { x: e.clientX, y: e.clientY }; t.current = setTimeout(show, icoGap() ? 380 : DUR); return; }
     t.current = setTimeout(show, DELAY);
   };
   // niyet: fare belirgin kıpırdadıkça sayaç baştan başlar → sadece durunca açılır
@@ -108,7 +110,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     if (open || !MENU.niyet || mute.current || here() || clickMode()) return;
     const a = anc.current;
     if (a && Math.hypot(e.clientX - a.x, e.clientY - a.y) < TITRE) return;
-    anc.current = { x: e.clientX, y: e.clientY }; clearTimeout(t.current); t.current = setTimeout(show, DUR);
+    anc.current = { x: e.clientX, y: e.clientY }; clearTimeout(t.current); t.current = setTimeout(show, icoGap() ? 380 : DUR);
   };
   // kapanmadan önce farenin GERÇEKTEN dışarıda olduğunu sor: tarayıcı bazen yanlış 'çıktı' bildirimi veriyor
   // (fare menüde, satırın üstünde durma izi var ama menü kapanıyordu). Hâlâ üstündeyse kapanmaz, fare çıkınca kapanır.

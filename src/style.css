@@ -10786,18 +10786,21 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs-one.gs1-under.gs1-t-smoke .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, rgb(244 245 248 / .8), rgb(222 224 230 / .45)) !important; }
   html.gs-one.gs1-under.gs1-t-tint .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 6%, rgb(255 255 255 / .8)), color-mix(in oklab, var(--accent) 14%, rgb(255 255 255 / .38))) !important; }
   html.gs-one.gs1-under[data-theme="dark"] .topbar.hdr-gs .topbar-in::before { opacity: .2; }
-  /* 'Sadece simge' (15.11 2. tur): simgeler büyük, logonun yanından SOLA yaslı (ortalı değil); ad yalnızca fare bir simgede DURUNCA
-     (main.jsx useGs1Ico → .xo) yumuşakça sağa açılır, solundakiler hiç kıpırdamaz; geçişte bir önceki aynı anda kapanır. */
-  html.gs-one.gs1-ico .hdr-gs .gs-nav { justify-content: flex-start; gap: 6px; padding-left: 14px; margin-left: 4px; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav::after { content: ""; position: absolute; left: 0; top: 50%; height: 24px; width: 1px; transform: translateY(-50%); background: rgb(15 23 42 / .1); }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b { gap: 0; height: 42px; min-width: 42px; padding: 0 11px; border-radius: 21px; justify-content: flex-start; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 20px !important; height: 20px !important; flex: none; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { display: inline-flex; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; margin-left: 0;
-    transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .34s ease; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-l { font-size: 14px; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) :is(.topnav-l, .topnav-chev) { max-width: 150px; opacity: 1; margin-left: 8px; transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .26s ease .08s; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) .topnav-chev { margin-left: 4px; }
-  html[data-theme="dark"].gs-one.gs1-ico .hdr-gs .gs-nav::after, html.gs-one.gs1-ico.gs1-t-ink .hdr-gs .gs-nav::after { background: rgb(255 255 255 / .14); }
+  /* 'Sadece simge' (15.11 3. tur, floating dock gibi): ortalı küçük yuvarlak simgeler; fareye yakın olanlar yumuşakça büyür
+     (main.jsx useGs1Ico → --k 0..1, yaylanma yok), adı simgenin ALTINDA küçük etikette belirir — yazı satırı açılmaz, hiçbir şey kaymaz. */
+  html.gs-one.gs1-ico .hdr-gs .gs-nav { overflow: visible; gap: 8px; align-items: center; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b { --k: 0; position: relative; gap: 0; padding: 0; justify-content: center; border-radius: 50%;
+    width: calc(36px + 14px * var(--k)); height: calc(36px + 14px * var(--k)); min-width: 0; background: rgb(15 23 42 / .045); transition: background-color .2s, color .2s; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b.on { background: var(--lg-pill); }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b > svg:first-child { width: calc(17px + 6px * var(--k)) !important; height: calc(17px + 6px * var(--k)) !important; flex: none; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-chev { display: none !important; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-l { position: absolute; left: 50%; top: calc(100% + 9px); transform: translate(-50%, 4px); padding: 5px 10px; border-radius: 8px;
+    background: rgb(255 255 255 / .96); border: 1px solid rgb(15 23 42 / .1); box-shadow: 0 6px 16px -8px rgb(15 23 42 / .35); color: #1d1d1f;
+    font: 600 12.5px/1.25 var(--f-body); white-space: nowrap; opacity: 0; pointer-events: none; z-index: 30; transition: opacity .16s ease, transform .2s cubic-bezier(.22, .8, .24, 1); }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b.xo .topnav-l { opacity: 1; transform: translate(-50%, 0); }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .hd.open > .topnav-b .topnav-l { opacity: 1; transform: translate(-50%, 0); }
+  html[data-theme="dark"].gs-one.gs1-ico .hdr-gs .gs-nav .topnav-l, html.gs-one.gs1-ico.gs1-t-ink .hdr-gs .gs-nav .topnav-l { background: #1f2430; border-color: rgb(255 255 255 / .12); color: #fff; }
+  html[data-theme="dark"].gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b:not(.on), html.gs-one.gs1-ico.gs1-t-ink .hdr-gs .gs-nav .topnav-b:not(.on) { background: rgb(255 255 255 / .07); }
   @media (max-width: 1199px) { html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b > svg:first-child { display: block; } }
 }
 }

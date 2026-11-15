@@ -1138,18 +1138,27 @@ function useGs1Search(on) {
     return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
   }, [on]);
 }
-// 15.11.2026 'Sadece simge': ad, fare bir simgede kısa süre DURUNCA açılır (üstünden geçerken açılmaz → titreme yok);
-// başka simgeye geçince eskisi kapanır, menüden çıkınca biraz bekleyip kapanır
+// 15.11.2026 'Sadece simge' (floating dock gibi): fareye yakın simgeler yumuşakça büyür (--k, yaylanma yok), üstünde durulan simgenin adı altında etikette (.xo)
 function useGs1Ico(on) {
   useEffect(() => {
     if (!on) return undefined;
     const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return undefined;
-    let t = 0, out = 0, cur = null;
+    const bs = () => [...nav.querySelectorAll('.topnav-b')];
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let mx = null, raf = 0, t = 0, cur = null; const k = new Map(); let cx = null;
+    const tick = () => { raf = 0; let more = false;
+      if (mx != null && !cx) cx = bs().map((b) => { const r = b.getBoundingClientRect(); return r.left + r.width / 2; });
+      bs().forEach((b, i) => { const c = cx ? cx[i] : 0; const want = mx == null || still ? 0 : Math.max(0, 1 - Math.abs(mx - c) / 120) ** 1.6;
+        const v = k.get(b) ?? 0; const nv = Math.abs(want - v) < 0.004 ? want : v + (want - v) * 0.2; if (nv !== want) more = true; k.set(b, nv); b.style.setProperty('--k', nv.toFixed(3)); });
+      if (more) raf = requestAnimationFrame(tick); };
+    const go = () => { if (!raf) raf = requestAnimationFrame(tick); };
     const set = (b) => { if (cur === b) return; cur?.classList.remove('xo'); cur = b; b?.classList.add('xo'); };
-    const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); clearTimeout(t); if (b === cur) return; t = setTimeout(() => set(b), cur ? 90 : 140); };
-    const leave = () => { clearTimeout(t); out = setTimeout(() => set(null), 320); };
-    nav.addEventListener('pointerover', over); nav.addEventListener('pointerleave', leave);
-    return () => { nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); clearTimeout(t); clearTimeout(out); set(null); };
+    const move = (e) => { mx = e.clientX; go(); };
+    const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(t); t = setTimeout(() => set(b), 70); };
+    const leave = () => { mx = null; cx = null; clearTimeout(t); set(null); go(); };
+    nav.addEventListener('pointerenter', () => { cx = null; });
+    nav.addEventListener('pointermove', move); nav.addEventListener('pointerover', over); nav.addEventListener('pointerleave', leave);
+    return () => { nav.removeEventListener('pointermove', move); nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); cancelAnimationFrame(raf); clearTimeout(t); set(null); bs().forEach((b) => b.style.removeProperty('--k')); };
   }, [on]);
 }
 // 15.11.2026 Tek satır üst menü fare efektleri: 'slide' = menü yazılarının arkasında fareyi izleyen yumuşak kutu; 'dock' = fareye yakın hap hafifçe büyür
