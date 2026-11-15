@@ -14,6 +14,7 @@ import { ls } from './utils.js';
 export const ANIMS = [
   ['gfly', 'B1', 'Açılış: logo menüye uçar'],
   ['gscn', 'C1', 'Açılış: sahne kurulur (menüler, banner, Yeni gelenler)'],
+  ['gkum', 'K', 'Açılış: kum menüye akar, mağaza sırayla kurulur (yeni)'],
   ['gwrd', 'D1', 'Giriş: dönen kelime'],
   ['gnum', 'D2', 'Giriş: canlı sayılar'],
   ['gshn', 'D4', 'Giriş: düğmede ışık'],
@@ -33,7 +34,8 @@ export const ANIMS = [
 const KEYS = ANIMS.map((a) => a[0]);
 // 14.11.2026 YAYIN: kullanıcının beğendikleri canlıda varsayılan AÇIK (D4 düğme ışığı kapalı). Geri: look.anim.all = 'off'
 // (Tasarım v3 › Görünüm 'Sayfa hareketleri') ya da tek tek look.anim.<k> = 'off'.
-const DEF_ON = KEYS; // 14.11.2026 gece: D4 düğme ışığı da canlıda AÇIK (kullanıcı)
+// 15.11.2026 gkum (kum akışı) önizlemede; canlıda varsayılan KAPALI (look.anim.gkum 'on' ile açılır)
+const DEF_ON = KEYS.filter((k) => k !== 'gkum'); // 14.11.2026 gece: D4 düğme ışığı da canlıda AÇIK (kullanıcı)
 const liveOn = (A, k) => { if (A?.all === 'off') return false; const x = A?.[k]; return x === 'on' || (x !== 'off' && DEF_ON.includes(k)); };
 const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -99,7 +101,7 @@ export function gateFx(look) {
   const lv = ls.get('perf-lite', null); if (look?.perf === 'on' || (look?.perf !== 'off' && lv?.lite && Date.now() - lv.at < 14 * 864e5)) return {};
   const v = TRY_HOST ? readTry() : null; const A = look?.anim || {};
   const on = (k) => (v ? !!v[k] : liveOn(A, k));
-  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn') };
+  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum') };
 }
 export const TRY = TRY_HOST;
 export const isLite = () => typeof document !== 'undefined' && document.documentElement.classList.contains('pf-lite');

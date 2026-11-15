@@ -115,6 +115,43 @@ function flyLand(st) {
     setTimeout(() => { cancelAnimationFrame(st.raf); f.remove(); setTimeout(() => { tg.style.transition = ''; }, 40); }, Math.max(D, D * 0.78 + 180));
   }
 }
+// ---- 15.11.2026 Kum akışı + sırayla kurulum (look.anim gkum; ÖNİZLEME, canlıda varsayılan kapalı) ----
+// Kullanıcı: C'nin (mağaza sırayla kurulur) tatlılığı + kumun akışı; 'giriş sayfasındaki kumlarla AYNI fizikte olmalı' (ilk
+// deneme ayrı 2B kanvastı: taneler kalın, akış kasıyordu → kaldırıldı). Artık giriş sayfasının kendi kum motoru (liquid.js
+// puff + flowTo) akar: logo yerinde kuma gevşer → mağaza çizilir → telefon rahatlayınca kum menüdeki logonun yerine akar →
+// varışta gerçek menü logosuyla aynı karede değişir. Giriş sayfasının zemini bu sırada saydamlaşır (kanvas üstte kalır).
+// CSS'e dokunmaz (stiller satır içi) — başka dallarla çakışmasın.
+function kumTarget(eng, wide) {
+  const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
+  if (!tg) return null;
+  const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
+  const z = r0.width - 2 * pl, asp = eng.rect.w / eng.rect.h;
+  // telefonda büyük logo = aynı 'e' işareti; bilgisayarda geniş logo ('e' + yazı): 'e' kısmı menü logosunun üstüne gelir
+  return { tg, cx: r0.left + r0.width / 2, cy: r0.top + r0.height / 2, R: r0.width / 2, rect: { x: r0.left + pl, y: r0.top + pt, w: wide ? z * asp : z, h: z } };
+}
+// mağaza sırayla kurulur: menü belirir, banner perdesi soldan sağa açılır, banner kendi giriş animasyonunu (resim + yazılar
+// satır satır) baştan oynar, telefonda alt menü düğmeleri sırayla gelir. Banner'ın KENDİSİ kıpırdamaz (üstünde sayfa renginde perde).
+function sceneKur() {
+  const sh = document.querySelector('.shell.public'); if (!sh) return;
+  const A = (el, kf, o) => el?.animate(kf, { easing: EZ, fill: 'backwards', ...o });
+  A(sh.querySelector('.topbar'), [{ opacity: 0 }, { opacity: 1 }], { duration: 450, delay: 40 });
+  if (innerWidth < 900) {
+    const bot = sh.querySelector('.botnav');
+    A(bot, [{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 40 });
+    [...(bot?.querySelectorAll('.botnav-b') || [])].forEach((b, i) => A(b, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 480, delay: 780 + i * 80 }));
+  }
+  const pg = sh.querySelector('.kp:not(.kp-off)') || sh;
+  const hero = pg.querySelector('.cd-hero .sh-hero') || pg.querySelector('.cd-hero') || pg.querySelector('.sh-hero');
+  if (!hero || hero.getBoundingClientRect().top > innerHeight) return;
+  const cv = document.createElement('div'); cv.setAttribute('aria-hidden', 'true');
+  Object.assign(cv.style, { position: 'absolute', inset: '0', zIndex: '12', pointerEvents: 'none', background: 'var(--bg)' });
+  if (getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
+  hero.appendChild(cv);
+  cv.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(101%)' }], { duration: 850, delay: 200, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' });
+  setTimeout(() => cv.remove(), 1150);
+  const sl = hero.querySelector('.pb-slide.ta-go');
+  if (sl) { sl.classList.remove('ta-go'); setTimeout(() => { if (sl.isConnected) { sl.classList.add('ta-go'); } }, 520); }
+}
 // telefon mağazayı çizmeyi bitirip rahatlayınca (art arda 2 kare < 34 ms) devam et; en geç 1,4 sn
 function whenCalm(fn) {
   const t0 = performance.now(); let last = t0, ok = 0;
@@ -300,12 +337,29 @@ export function HeroGate({ onOpen, onDone }) {
   // ve yavaştı (kullanıcı) → kullanılmıyor; kumun menüye akması / menüde toplanması da reddedildi.
   const go = () => {
     if (leaving || goneRef.current) return; goneRef.current = true;
-    const fl = fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
-    engRef.current?.explode(); setLeaving(true);
+    const eng = engRef.current, root = rootRef.current;
+    const kf = !!(fx.flow && eng?.ready && !eng.lost && root?.dataset.gl === 'on');
+    const fl = !kf && fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
+    if (kf) { const sg = stageRef.current; if (sg) Object.assign(sg.style, { transition: 'none', transform: 'none', opacity: '1' }); eng.puff(); }
+    else engRef.current?.explode();
+    setLeaving(true);
     const t0 = performance.now();
     const open = () => {
-      engRef.current?.stop(); onOpen();
+      if (!kf) engRef.current?.stop();
+      onOpen();
       whenCalm(() => {
+        if (kf) {
+          const wide = root.clientWidth >= 640, k = kumTarget(eng, wide), cvs = stageRef.current?.querySelector('canvas');
+          if (!k) { setReveal(true); setTimeout(onDone, 420); return; }
+          k.tg.style.opacity = '0';
+          root.style.transition = 'background-color .3s ease'; root.style.backgroundColor = 'transparent';
+          let fin = false;
+          const end = () => { if (fin) return; fin = true; k.tg.style.opacity = ''; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
+          eng.flowTo(k.rect, wide ? 860 : 800, end, wide ? 30 : 22); setTimeout(end, 2600);
+          // geniş logonun yazı kısmı menüye taşmasın: akışın sonuna doğru kanvas menü logosunun yuvarlağına kırpılır
+          if (wide && cvs) { cvs.style.clipPath = `circle(${Math.hypot(innerWidth, innerHeight)}px at ${k.cx}px ${k.cy}px)`; setTimeout(() => { cvs.style.transition = 'clip-path .4s cubic-bezier(.5,0,.6,1)'; cvs.style.clipPath = `circle(${k.R + 1}px at ${k.cx}px ${k.cy}px)`; }, 520); }
+          sceneKur(); return;
+        }
         flyLand(fl); // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar
         if (fx.scn) sceneIn(!!fl);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
@@ -313,7 +367,7 @@ export function HeroGate({ onOpen, onDone }) {
       });
     };
     // mağaza ancak dağılma (560 ms) VE kum bittikten sonra çizilir; kumun son karesi boyansın diye bir kare daha beklenir
-    const wait = Math.max(0, 560 - (performance.now() - t0));
+    const wait = Math.max(0, (kf ? 380 : 560) - (performance.now() - t0));
     Promise.all([fl?.done, new Promise((r) => setTimeout(r, wait))]).then(() => requestAnimationFrame(() => requestAnimationFrame(open)));
   };
 

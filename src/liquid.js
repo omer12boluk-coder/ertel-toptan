@@ -52,6 +52,7 @@ out vec4 o;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uFlow;
 uniform vec2 uSize; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence; uniform float uStrength;
 uniform float uSpread; uniform float uTurb; uniform float uReturn; uniform float uTime; uniform float uDt; uniform float uIntro;
+uniform vec4 uFlowD; uniform vec3 uFlowP;
 ${NOISE}
 vec2 curl(vec2 p){ const float e = 0.35;
   float a = vnoise(p+vec2(0.0,e)) - vnoise(p-vec2(0.0,e));
@@ -64,6 +65,16 @@ void main(){
   vec4 st = texelFetch(uState, ij, 0);
   vec2 off = st.xy; vec2 vel = st.zw;
   float sd = hm.z; float light = 0.45 + sd*1.1;
+  if(uFlowP.x >= 0.0){
+    float g = 0.42; float ti = clamp((uFlowP.x - sd*g)/(1.0-g), 0.0, 1.0);
+    float ei = ti < 0.5 ? 4.0*ti*ti*ti : 1.0 - pow(-2.0*ti+2.0, 3.0)/2.0;
+    vec2 dl = uFlowD.xy + hm.xy*uFlowD.zw;
+    float r2 = clamp((hm.w-0.85)/0.3, 0.0, 1.0); float arc = sin(3.14159*ti);
+    vec2 fq = hm.xy*6.0 + vec2(uTime*0.6, sd*9.0);
+    vec2 tgt = (ei - uFlowP.y)*dl + vec2(-dl.y, dl.x)*arc*0.16*(0.35+r2) + curl(fq)*uFlowP.z*arc;
+    vec2 no = mix(off, tgt, 1.0 - pow(0.72, uDt));
+    o = vec4(no, (no-off)/max(uDt, 0.25)); return;
+  }
   vec2 p = hm.xy*uSize + off;
   vec4 fl = texture(uFlow, clamp(p/uSize, 0.0, 1.0));
   vec2 wake = (fl.rg*255.0-128.0)/127.0; float pr = fl.b;
@@ -302,7 +313,7 @@ export class LiquidEngine{
   }
   setOptions(o){this.opts={...this.opts,...o};this.wake()}
   resize(cssW,cssH,rect){
-    this.cssW=Math.max(1,cssW);this.cssH=Math.max(1,cssH);this.rect=rect;
+    this.cssW=Math.max(1,cssW);this.cssH=Math.max(1,cssH);if(!this.lockRect)this.rect=rect;
     let dpr=Math.min(devicePixelRatio||1,this.lowPower?1.5:2);
     if(this.cssW*this.cssH*dpr*dpr>4.5e6)dpr=Math.max(1,Math.sqrt(4.5e6/(this.cssW*this.cssH)));
     const w=Math.round(this.cssW*dpr),h=Math.round(this.cssH*dpr);
@@ -318,6 +329,33 @@ export class LiquidEngine{
     this.target.x=x;this.target.y=y;this.presenceTarget=1;this.lastInput=now;this.settle=0;
     if(type==='down'){this.burst=1;this.touchRelease=0}
     this.wake();
+  }
+  // 15.11.2026 Kum akışı (herogate 'gkum'): giriş sayfasındaki kumun KENDİSİ (aynı taneler, aynı çizim). Parçacıklar yeniden
+  // KURULMAZ (gather donduruyordu). puff: logo yerinde hafifçe kuma gevşer. flowTo: logonun 'evi' (rect) büyük yerinden menüdeki
+  // yerine kayar; her tane kendi gecikmesiyle (sd) yay çizerek + girdapla savrularak evine akar (SIM_FS uFlowP dalı: yay fiziği
+  // yerine yönlendirilmiş akış → varışta yaylanma / geri sekme YOK). Bitince done çağrılır.
+  puff(){
+    if(!this.ready||this.lost)return;const r=this.rect;
+    this.opts={...this.opts,restStyle:'particles',radius:Math.min(r.w,r.h)*1.1,strength:.45,spread:1};
+    this.pointer('down',r.x+r.w/2,r.y+r.h/2,true);this.pointer('up',r.x+r.w/2,r.y+r.h/2,true);
+  }
+  flowTo(rect,dur=800,done,amp=22){
+    if(!this.ready||this.lost||this.destroyed)return false;
+    this.fl={a:{...this.rect},b:rect,t:0,e:0,dur,hold:0,done,amp};this.lockRect=true;this.dotMin=1;this.streakMul=.4;
+    this.presence=this.presenceTarget=this.burst=this.flowing=0;this.touchRelease=0;
+    this.opts={...this.opts,interactive:false,ambient:false,restStyle:'particles'};
+    this.settle=0;this.stateDirty=true;this.wake();return true;
+  }
+  stepFlowTo(rawMs,dt){
+    const F=this.fl;if(!F)return;
+    if(F.t<1){
+      F.t=Math.min(1,F.t+Math.min(rawMs,50)/F.dur);
+      const x=F.t,e=x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,a=F.a,b=F.b;F.e=e;
+      this.rect={x:a.x+(b.x-a.x)*e,y:a.y+(b.y-a.y)*e,w:a.w+(b.w-a.w)*e,h:a.h+(b.h-a.h)*e};
+      return;
+    }
+    F.hold+=dt;
+    if(F.hold>12&&!F.fin){F.fin=true;const cb=F.done;if(cb)requestAnimationFrame(cb)}
   }
   explode(){ // Alışverişe başla: logo dağılır
     const r=this.rect;this.opts.radius=Math.max(r.w,r.h);this.opts.strength=2;this.opts.spread=2;
@@ -349,7 +387,8 @@ export class LiquidEngine{
     if(this.introT<1)this.introT=Math.min(1,this.introT+Math.min(rawMs,100)/(this.introDur||3200));
     const interacting=this.presence>.001||this.burst>0;
     this.settle=interacting?0:this.settle+dt;
-    const active=interacting||this.settle<SETTLE_FRAMES||this.introT<1;
+    this.stepFlowTo(rawMs,dt);
+    const active=interacting||this.settle<SETTLE_FRAMES||this.introT<1||!!this.fl;
     if(!active){
       if(this.flowDirty)this.clearFlow();if(this.stateDirty)this.clearState();
       if(!ambientOn){this.draw();this.firstFrame();this.stop();return}
@@ -389,6 +428,7 @@ export class LiquidEngine{
     gl.uniform1f(P.u.uStrength,this.strength()*(1+this.burst*1.5));gl.uniform1f(P.u.uSpread,clamp(o.spread,0,2));
     gl.uniform1f(P.u.uTurb,clamp(o.turbulence,0,2)*(o.reducedMotion?.3:1));gl.uniform1f(P.u.uReturn,clamp(o.returnSpeed,0,2));
     gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uDt,dt);gl.uniform1f(P.u.uIntro,intro);
+    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform3f(P.u.uFlowP,F.t,F.e,F.amp)}else gl.uniform3f(P.u.uFlowP,-1,0,0);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);this.stateIdx=dst;this.stateDirty=true;
   }
   draw(){
@@ -419,7 +459,7 @@ export class LiquidEngine{
     gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,this.flowTex[this.flowIdx]);gl.uniform1i(P.u.uFlow,3);
     gl.uniform1i(P.u.uTexW,TEX_W);gl.uniform4f(P.u.uRect,r.x,r.y,r.w,r.h);gl.uniform2f(P.u.uRes,this.cssW,this.cssH);
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
-    const dotN=(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3);gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
+    const dotN=Math.max(this.dotMin||0,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
     gl.uniform3f(P.u.uTint,1,1,1);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
