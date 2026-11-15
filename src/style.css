@@ -10635,3 +10635,39 @@ html.gs-x3[data-theme="dark"] .topbar.hdr-gs .gs-nav .topnav-b.on { background: 
 html.gs-x3:is(.lite, .pf-lite) .topbar.hdr-gs .topbar-in { -webkit-backdrop-filter: none; backdrop-filter: none; background: linear-gradient(180deg, #fff, #f4f5f8) !important; }
 html.gs-x3.gs-x3i:is(.lite, .pf-lite) .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, #f1f6ff, #e3edff) !important; }
 html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { background: #1e2330 !important; }
+
+/* ===== 15.11.2026 Kristal cam — bilgisayar görünümü (look.gs3Pc; SADECE ≥900px, telefon aynı).
+   html.gs-x3-strip = kenardan kenara şerit ('web' + 'strip'), gs-x3-web + gs-x3-at0 = en üstte şeffaf (kaydırınca cam),
+   gs-x3-ada2 = sade yüzen ada. Hepsinde menü yazıları düz + seçilinin altında çizgi, arama/sepet az yuvarlak. 'ada' = eski kapsül. */
+@media (min-width: 900px) {
+  html.gs-x3.gs-x3-strip .topbar.hdr-gs { padding: 0 !important; }
+  html.gs-x3.gs-x3-strip .topbar.hdr-gs .topbar-in { border-radius: 0 !important; border: 0 !important; border-bottom: 1px solid rgb(15 23 42 / .09) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .9), 0 10px 30px -22px rgb(15 23 42 / .35) !important;
+    transition: background .28s ease, box-shadow .28s ease, border-color .28s ease, -webkit-backdrop-filter .28s ease, backdrop-filter .28s ease; }
+  html.gs-x3.gs-x3-strip .topbar.hdr-gs .topbar-in::before { display: none; }
+  html.gs-x3.gs-x3-strip .hdr-gs .gs-r1, html.gs-x3.gs-x3-strip .topbar.hdr-gs .gs-nav { max-width: 1640px; margin: 0 auto; width: 100%; padding-left: 28px !important; padding-right: 28px !important; }
+  html.gs-x3.gs-x3-strip[data-theme="dark"] .topbar.hdr-gs .topbar-in { border-bottom-color: rgb(255 255 255 / .1) !important; box-shadow: 0 12px 30px -22px rgb(0 0 0 / .8) !important; }
+  /* en üstte: zemin, gölge, çizgi yok — sayfayla bütün */
+  html.gs-x3.gs-x3-web.gs-x3-at0 .topbar.hdr-gs .topbar-in { background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: none !important; border-bottom-color: transparent !important; }
+  html.gs-x3.gs-x3-web.gs-x3-at0 .topbar.hdr-gs .gs-nav::before { opacity: 0; }
+  /* sade ada */
+  html.gs-x3.gs-x3-ada2 .topbar.hdr-gs { padding: 10px 14px 0 !important; }
+  html.gs-x3.gs-x3-ada2 .topbar.hdr-gs .topbar-in { border-radius: 18px !important; }
+  /* düz menü yazıları + alt çizgi (şerit + sade ada) */
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav { gap: 4px !important; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav > .hd { height: 100%; display: flex; align-items: stretch; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b, html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b.on {
+    background: none !important; box-shadow: none !important; border-radius: 0 !important; position: relative; padding: 0 16px !important; height: 100% !important; color: var(--fg) !important; opacity: .72; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b.on { opacity: 1; font-weight: 600; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: 0; height: 2.5px; border-radius: 2px 2px 0 0; background: var(--accent); opacity: 0; transform: scaleX(.4); transition: opacity .2s ease, transform .25s ease; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b.on::after { opacity: 1; transform: none; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b.on .ic { color: var(--accent); }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .hdr-gs .gs-srch .hsearch-box { border-radius: 12px !important; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .hdr-gs .gs-icons .hcart { border-radius: 12px !important; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .hdr-gs .gs-icons .btn.me-login { border-radius: 10px !important; }
+}
+@media (min-width: 900px) and (hover: hover) {
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b:hover { opacity: 1; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b:not(.on):hover::after { opacity: .35; transform: none; }
+}
+@media (min-width: 900px) { html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .flow-ghost { display: none !important; } }

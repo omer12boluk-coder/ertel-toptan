@@ -22,6 +22,8 @@ import { P0HeroPanel, P0CatsPanel, P0PickPanel, P0SetsPanel, P0FindPanel, P0Bran
 import { ProductSearch } from './shophome.jsx';
 import { snapshot, applyPreset, sameAs, APPLE, CLAUDE_CHANGES, P0, P0_CHANGES, CD, CD_CHANGES, upgradePresets, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
 import { PackDecor, DECOR } from './decor.jsx';
+// 15.11.2026 Kristal cam bilgisayar görünümü (look.gs3Pc) — designv3 de kullanır
+export const GS3_PC = [['', 'Şerit, üstte şeffaf'], ['strip', 'Şerit'], ['ada2', 'Sade ada'], ['ada', 'Yüzen kapsül']];
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
 
 // raflara kalıcı kimlik ver, eski sıra kayıtlarını (rail:0) kimliğe çevir.
@@ -1120,6 +1122,7 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <DevPick L={L} set={set} k="header" def="search" label="Üst menü düzeni" hint="Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Arama + cam 2: aynısı, buz mavisi gerçek cam. Kristal cam: aynısı, daha uzun ve kristal cam. Eski açıklama: Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Ortada logo: logo ortada, menü altta."
         opts={[['search', 'Cam + arama'], ['search2', 'Arama + cam 2'], ['search3', 'Kristal cam'], ['glass', 'Yüzen cam'], ['center', 'Ortada logo'], ['classic', 'Klasik']]} />
       {(L.header === 'search3' || L.headerM === 'search3') && <Field label="Kristal cam tonu"><span className="seg sw">{[['', 'Beyaz'], ['ice', 'Buz mavisi']].map(([k, l]) => <button key={k} type="button" className={(L.gs3Tone || '') === k ? 'on' : ''} onClick={() => set('look.gs3Tone', k || undefined)}>{l}</button>)}</span></Field>}
+      {(L.header === 'search3' || L.headerM === 'search3') && <Field label="Kristal cam: bilgisayarda görünüm"><span className="seg sw">{GS3_PC.map(([k, l]) => <button key={k} type="button" className={(L.gs3Pc || '') === k ? 'on' : ''} onClick={() => set('look.gs3Pc', k || undefined)}>{l}</button>)}</span></Field>}
       {(L.header === 'center' || L.headerM === 'center') && <Field label="Ortada logo menüsünün görünümü" hint="Banner her durumda menünün bittiği yerden başlar."><span className="seg sw">{[['', 'Bugünkü (düz)'], ['glass2', 'Cam, iki satır'], ['glass1', 'Cam, tek satır'], ['clear', 'Üstte şeffaf, kayınca cam']].map(([k, l]) => <button key={k} type="button" className={(L.hcStyle || '') === k ? 'on' : ''} onClick={() => set('look.hcStyle', k || undefined)}>{l}</button>)}</span></Field>}
       {(L.header === 'center' || L.headerM === 'center') && <Field label="Ortada logo menüsünde arama (bilgisayar)" hint="Tam genişlik: arama satırı logonun yanından sağa açılır, altında son aramalar ve size özel ürünler, sayfa kararır. Küçük kutu = eski."><span className="seg sw">{[['', 'Tam genişlik panel'], ['old', 'Küçük kutu (eski)']].map(([k, l]) => <button key={k} type="button" className={(L.hcSearch || '') === k ? 'on' : ''} onClick={() => set('look.hcSearch', k || undefined)}>{l}</button>)}</span></Field>}
       <DevPick L={L} set={set} k="hideTop" def="top" label="Aşağı kaydırınca üst menü" hint="Sepet, ödeme ve Hesabım sayfalarında menü hep görünür."

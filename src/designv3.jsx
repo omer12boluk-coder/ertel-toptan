@@ -11,7 +11,7 @@ import { PACKS } from './presets.js';
 import { Icon, Confirm } from './ui.jsx';
 import { withDefaults, norm, ls } from './utils.js';
 import { ShopHome, DesignCtx, blockLabel, moveItem, withProdFallback, RailFields } from './shophome.jsx';
-import { prepare, Stage, ShopDesigner } from './designer.jsx';
+import { prepare, Stage, ShopDesigner, GS3_PC } from './designer.jsx';
 import { queueSave } from './saveq.js';
 import { applyPreset, sameAs, CD, P0, APPLE, CORNERS, WIDTHS } from './dzpresets.js';
 import { PB_BY, PB_TEXT, PHOTO_BANNERS, withNew2, IMG_ANIM } from './photobn.jsx';
@@ -227,6 +227,7 @@ function LookPanel({ d, set, setAll, A }) {
     <Row label="Yazı tipi"><Seg v={font} opts={[['apple', 'Apple sade'], ['classic', 'Klasik']]} on={(k) => set('look.style', k === 'apple' ? { ...st, head: 'intert', body: 'inter', price: 'intert' } : { ...st, head: '', body: '', price: '' })} /></Row>
     <Row label={Lk.headerM ? 'Üst menü (bilgisayar)' : 'Üst menü'} hint="Telefon ve bilgisayarda birlikte değişir"><Seg v={Lk.header || 'search'} opts={HDR_OPTS} on={(k) => set('look.header', k)} /></Row>
     {Lk.headerM && <Row label="Üst menü (telefon)"><Seg v={Lk.headerM} opts={HDR_OPTS} on={(k) => set('look.headerM', k)} /></Row>}
+    {(Lk.header === 'search3' || Lk.headerM === 'search3') && <Row label="Kristal cam: bilgisayarda görünüm" hint="Sadece bilgisayar; telefon aynı kalır"><Seg v={Lk.gs3Pc || ''} opts={GS3_PC} on={(k) => set('look.gs3Pc', k || undefined)} /></Row>}
     {(Lk.header === 'search3' || Lk.headerM === 'search3') && <Row label="Kristal cam tonu"><Seg v={Lk.gs3Tone || ''} opts={[['', 'Beyaz'], ['ice', 'Buz mavisi']]} on={(k) => set('look.gs3Tone', k || undefined)} /></Row>}
     {Lk.header === 'center' && <Row label="Ortada logo menüsünün görünümü" hint="Banner her durumda menünün bittiği yerden başlar. Cam: aşağı kaydırınca altından geçen sayfa buzlu görünür"><Seg v={Lk.hcStyle || ''} opts={[['', 'Bugünkü (düz)'], ['glass2', 'Cam, iki satır'], ['glass1', 'Cam, tek satır'], ['clear', 'Üstte şeffaf, kayınca cam']]} on={(k) => set('look.hcStyle', k || undefined)} /></Row>}
     {Lk.header === 'center' && <Row label="Ortada logo menüsünde arama" hint="Bilgisayarda. Tam genişlik: logonun yanından açılan arama + son aramalar + size özel ürünler"><Seg v={Lk.hcSearch || ''} opts={[['', 'Tam genişlik'], ['old', 'Küçük kutu (eski)']]} on={(k) => set('look.hcSearch', k || undefined)} /></Row>}

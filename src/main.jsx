@@ -690,6 +690,19 @@ function ShellFull() {
   const gsX3 = hs && LK.header === 'search3';
   const gsX3i = gsX3 && LK.gs3Tone === 'ice';
   useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-x3', gsX3); c.toggle('gs-x3i', gsX3i); return () => c.remove('gs-x3', 'gs-x3i'); }, [gsX3, gsX3i]);
+  // 15.11.2026 Kristal cam bilgisayar görünümü (sadece ≥900px CSS'te): look.gs3Pc '' = 'web' şerit + en üstte şeffaf (kaydırınca cam) | 'strip' şerit | 'ada2' sade yüzen ada | 'ada' eski kapsül
+  const gs3Pc = gsX3 ? (LK.gs3Pc || 'web') : '';
+  useEffect(() => {
+    const c = document.documentElement.classList;
+    c.toggle('gs-x3-strip', gs3Pc === 'web' || gs3Pc === 'strip'); c.toggle('gs-x3-web', gs3Pc === 'web'); c.toggle('gs-x3-ada2', gs3Pc === 'ada2');
+    if (gs3Pc !== 'web') { c.remove('gs-x3-at0'); return () => c.remove('gs-x3-strip', 'gs-x3-web', 'gs-x3-ada2'); }
+    let raf = 0, was = null;
+    const f = () => { raf = 0; const t = scrollY < 6; if (t !== was) { was = t; c.toggle('gs-x3-at0', t); } };
+    const on = () => { if (!raf) raf = requestAnimationFrame(f); };
+    raf = requestAnimationFrame(f);
+    addEventListener('scroll', on, { passive: true });
+    return () => { removeEventListener('scroll', on); cancelAnimationFrame(raf); c.remove('gs-x3-strip', 'gs-x3-web', 'gs-x3-ada2', 'gs-x3-at0'); };
+  }, [gs3Pc]);
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
   useIsland(gsIsl, tab);
