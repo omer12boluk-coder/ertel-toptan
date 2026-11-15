@@ -1392,7 +1392,7 @@ function useIsland(on, tab, topOnly) {
   useEffect(() => {
     const r = document.documentElement; r.classList.remove('isl');
     if (!on) return;
-    let last = 0, up = 0, dn = 0, raf = 0, mvT = 0;
+    let last = 0, up = 0, dn = 0, raf = 0, mvT = 0; const vs = [];
     // ada geçişi sırasında html.isl-mv: arama kutusu SADECE bu sırada adanın hızıyla (0,7 sn) değişir; odakta büyümesi kendi hızında (0,42 sn)
     const mv = () => { gs1IslFit(!r.classList.contains('isl')); r.classList.add('isl-mv'); void r.offsetWidth; clearTimeout(mvT); mvT = setTimeout(() => r.classList.remove('isl-mv'), 650); };
     const r0 = requestAnimationFrame(() => { last = scrollY; });
@@ -1403,10 +1403,12 @@ function useIsland(on, tab, topOnly) {
       if (y < 40) { up = 0; if (isl) { mv(); r.classList.remove('isl'); } return; }
       if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
       if (d < 0) { up += d; dn = 0; } else if (d > 0) { up = 0; dn += d; }
-      // 16.11.2026: tek satırda Ada anında olmaz: bir tam ekran kaydırılmış olmalı (en az 700 px) VE aşağı doğru en az 320 px aralıksız
-      // kaydırılmalı (sayfanın ortasında menü açıkken ufak bir aşağı kaydırmada hemen adaya dönüyordu)
+      // 16.11.2026: tek satırda Ada SADECE HIZLI aşağı kaydırınca (son ~120 ms'de 1,8 px/ms üstü ≈ saniyede 1.800 px) ve 300 px'ten aşağıda;
+      // normal/yavaş kaydırmada menü olduğu gibi kalır (mesafe eşikleri 'hâlâ çok kolay' bulundu)
       const one = r.classList.contains('gs-one');
-      if (!isl && y > (one ? Math.max(700, innerHeight) : 90) && d > 0 && (!one || dn > 320)) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
+      const now = performance.now(); vs.push([now, y]); while (vs.length > 2 && now - vs[0][0] > 120) vs.shift();
+      const fast = vs.length > 1 && now - vs[0][0] > 30 && (y - vs[0][1]) / (now - vs[0][0]) > 1.8;
+      if (!isl && y > (one ? 300 : 90) && d > 0 && (!one || fast)) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
       else if (isl && !topOnly && up < -70) { mv(); r.classList.remove('isl'); up = 0; }
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
