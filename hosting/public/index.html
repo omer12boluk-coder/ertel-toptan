@@ -11186,7 +11186,8 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
    simge yuvanın sağ ucunda durur; tıklayınca kutu yuvayı doldurup oradan büyür. (≤1365 px'te her iki ayarda da arama zaten simge.) */
 @media (min-width: 1366px) {
   html.gs-one.gs1-sicon:not(.isl) .hdr-gs .gs-srch { width: var(--gs1-sw, 236px); }
-  html.gs-one.gs1-sicon:not(.isl).gs1-lb-toggle .hdr-gs .gs-srch { width: var(--gs1-sw, 222px); }
+  /* Uzat/kısalt'ta yuva ayrılmaz (uzun menüye yer kalsın; yoksa kendiliğinden kısalıyordu) */
+  html.gs-one.gs1-sicon:not(.isl).gs1-lb-toggle .hdr-gs .gs-srch { width: var(--gs1-sw, 42px); }
   html.gs-one.gs1-sicon .hdr-gs .gs-srch .hsearch { margin-left: auto; transition: width .42s cubic-bezier(.22, .8, .24, 1); }
   /* kapanış: kutu TEK hareketle simgeye küçülür, yuva + menü aynı anda aynı eğriyle döner; kutu zemini kapanış başında simge görünümüne yumuşakça söner (gri kutu rengine dönmez) */
   html.gs-one.gs1-sicon:not(.isl) .hdr-gs .gs-srch:not([data-open]) .hsearch:not(:focus-within) { width: 42px; }
@@ -11206,7 +11207,7 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
 }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '7d4e1088e0';</script>
+<script>window.__BUILD = 'a1fbb3ed31';</script>
 </head>
 <body>
 <div id="root"></div>
