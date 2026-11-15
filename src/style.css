@@ -11064,11 +11064,11 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
 
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(calc(482px + var(--gs1-icw, 0px)), 100vw - 40px); }
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-srch { width: 280px !important; }
-  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs1-islic { order: 2; flex: none; display: inline-flex; align-items: center; gap: 2px; height: 32px; max-width: 0; margin-left: -10px; opacity: 0;
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs1-islic { order: 2; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 40px; max-width: 0; margin-left: -10px; opacity: 0;
     overflow-x: clip; overflow-y: visible; pointer-events: none; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs1-islic { max-width: var(--gs1-icw, 170px); opacity: 1; pointer-events: auto; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
-  html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic { flex: none; width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; transition: background-color .2s, color .2s; }
-  html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic svg { width: 17px !important; height: 17px !important; }
+  html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic { flex: none; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; transition: background-color .2s, color .2s; }
+  html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic svg { width: 21px !important; height: 21px !important; stroke-width: 1.9; }
   html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic.on { color: var(--lg-blue, var(--accent)); background: rgb(118 118 128 / .1); }
   html[data-theme="dark"].gs-one .topbar.hdr-gs .topbar-in .gs1-ic.on, html.gs-one.gs1-t-ink .topbar.hdr-gs .topbar-in .gs1-ic.on { color: #fff; background: rgb(255 255 255 / .14); }
 }
@@ -11080,4 +11080,17 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
 /* 16.11.2026 'Uzat / kısalt': yazı kutusu overflow:hidden'dı → Ü/Ş/Ğ'nin noktası/kuyruğu dikeyde kesiliyordu. Sadece YATAYDA kırpılır. */
 @media (min-width: 900px) {
   html.gs1-lb-toggle .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { overflow: visible; overflow-x: clip; }
+}
+
+/* 16.11.2026 (2) uzayan menü yanlış tık koruması: açılırken tutulan düğme (.xo-k) üstündeymiş gibi görünür, fare 4 px oynayana kadar düğmeler fareyi görmez */
+@media (min-width: 900px) {
+  html.gs1-lb-expand .hdr-gs .gs-nav.gs1-keep > *, html.gs1-lb-expand .hdr-gs .gs-nav.gs1-keep .topnav-b { pointer-events: none; }
+  html.gs1-lb-expand .hdr-gs .gs-nav.gs1-keep { cursor: pointer; }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.xo-k:not(.on) { color: var(--fg); background: rgb(118 118 128 / .12); }
+  html[data-theme="dark"].gs1-lb-expand .hdr-gs .gs-nav .topnav-b.xo-k:not(.on), html.gs1-lb-expand.gs1-t-ink .hdr-gs .gs-nav .topnav-b.xo-k:not(.on) { background: rgb(255 255 255 / .12); }
+  /* 'Uzat / kısalt' kısa hâl: simgeler büyük (17 → 21 px, düğme 42 px) */
+  html.gs1-lb-toggle .hdr-gs .gs-nav .topnav-b > svg:first-child { transition: width .45s cubic-bezier(.32, .72, 0, 1), height .45s cubic-bezier(.32, .72, 0, 1); }
+  html.gs1-lb-toggle.gs1-tg-s .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 21px !important; height: 21px !important; }
+  html.gs1-lb-toggle.gs1-tg-s .hdr-gs .gs-nav .topnav-b { height: 40px; padding: 0 10px !important; }
+  html.gs1-lb-toggle.gs1-tg-s .hdr-gs .gs-nav { gap: 4px; }
 }

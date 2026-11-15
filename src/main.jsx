@@ -1129,7 +1129,9 @@ function useGs1Top(on, tab) {
 // menü de ancak sığarsa uzar → ikisi asla üst üste binmez, kimse kimseyi itmez
 function gs1NavNeed(nav) {
   const bs = [...nav.querySelectorAll('.topnav-b')]; if (!bs.length) return 0;
-  const used = bs[bs.length - 1].getBoundingClientRect().right - bs[0].getBoundingClientRect().left;
+  // 16.11.2026: menünün TÜM görünür parçaları sayılır ('Uzat / kısalt' düğmesi sayılmıyordu → arama büyüyünce menü logonun altına giriyordu)
+  const ks = [...nav.children].filter((k) => k.offsetWidth && getComputedStyle(k).position !== 'absolute');
+  const used = ks[ks.length - 1].getBoundingClientRect().right - ks[0].getBoundingClientRect().left;
   const H = document.documentElement.classList; const all = H.contains('gs1-lb-expand'), side = H.contains('gs1-lb-side');
   if (!all && !side) return used;
   let now = 0, sum = 0, mx = 0;
@@ -1170,11 +1172,18 @@ function useGs1Toggle(on) {
     const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'gs1-tgb';
     const ico = (s) => s ? '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7l5 5-5 5M6 7l5 5-5 5"/></svg>'
       : '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 7l-5 5 5 5M18 7l-5 5 5 5"/></svg>';
-    const paint = () => { H.toggle('gs1-tg-s', short); bt.innerHTML = ico(short); bt.title = short ? 'Menüyü uzat' : 'Menüyü kısalt'; bt.setAttribute('aria-label', bt.title); };
+    // 16.11.2026: uzun hâl menüye SIĞMIYORSA (dar ekran) kendiliğinden kısa olur ve uzat düğmesi gizlenir (menü logonun altına giriyordu);
+    // yer açılınca kullanıcının seçimine döner. Uzun hâlin genişliği sadece uzunken ölçülür (need).
+    let auto = false, need = 0, rT = 0;
+    const paint = () => { H.toggle('gs1-tg-s', short || auto); bt.style.display = auto ? 'none' : ''; bt.innerHTML = ico(short); bt.title = short ? 'Menüyü uzat' : 'Menüyü kısalt'; bt.setAttribute('aria-label', bt.title); };
     paint(); nav.append(bt);
-    const click = (e) => { e.preventDefault(); e.stopPropagation(); measure(); short = !short; try { localStorage.setItem('gs1-tg', short ? 's' : ''); } catch { /* yok */ } paint(); };
+    const fit = () => { if (!H.contains('gs1-tg-s') && !nav.querySelector('.gs-srch:focus-within')) need = gs1NavNeed(nav);
+      const a = !short && need > nav.clientWidth - 2; if (a !== auto) { auto = a; paint(); } };
+    const ro = new ResizeObserver(() => { clearTimeout(rT); rT = setTimeout(fit, 60); }); ro.observe(nav);
+    fit(); setTimeout(fit, 80); document.fonts?.ready?.then(() => setTimeout(fit, 80));
+    const click = (e) => { e.preventDefault(); e.stopPropagation(); measure(); short = !short; try { localStorage.setItem('gs1-tg', short ? 's' : ''); } catch { /* yok */ } paint(); if (!short) setTimeout(fit, 520); };
     bt.addEventListener('click', click);
-    return () => { bt.removeEventListener('click', click); bt.remove(); H.remove('gs1-tg-s'); };
+    return () => { ro.disconnect(); clearTimeout(rT); bt.removeEventListener('click', click); bt.remove(); H.remove('gs1-tg-s'); };
   }, [on]);
 }
 // 16.11.2026 Ada'da sayfa simgeleri: menü satırından BAĞIMSIZ küçük simge sırası (.gs1-islic) — menü yazısı biçimlerine hiç dokunmaz
@@ -1196,7 +1205,7 @@ function useGs1IslIc(on) {
           const g = b.querySelector('svg'); if (g) x.append(g.cloneNode(true));
           x.addEventListener('click', () => b.click()); return x;
         }));
-        const n = bs.length; document.documentElement.style.setProperty('--gs1-icw', n ? n * 32 + (n - 1) * 2 + 'px' : '0px');
+        const n = bs.length; document.documentElement.style.setProperty('--gs1-icw', n ? n * 40 + (n - 1) * 4 + 'px' : '0px');
       }
       bs.forEach((b, i) => box.children[i]?.classList.toggle('on', b.classList.contains('on')));
     };
@@ -1225,27 +1234,21 @@ function useGs1Lbl(mode) {
       const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) { b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); } });
       measure(); document.fonts?.ready?.then(measure);
       let hold = false;
-      // 16.11.2026 uzayan menü: adlar açılırken farenin altındaki düğme YERİNDE kalır (menü ortalı olduğu için düğmeler kayıyor,
-      // fare yanındakine — ör. Kalıp bulucu — düşüyordu; video). Menü 'translate' ile kaydırılır (sınır: menünün kendi alanı),
-      // kapanınca yumuşakça ortaya döner. transform'a dokunulmaz (Ada kuralları transform:none !important).
-      let off = 0, aB = null, aX = 0, araf = 0, aEnd = 0;
-      const setOff = (v) => { off = v; nav.style.translate = Math.abs(v) < 0.05 ? '' : v.toFixed(2) + 'px 0'; };
-      const lim = () => { const n = nav.getBoundingClientRect(); const ks = [...nav.children].filter((k) => k.offsetWidth); if (!ks.length) return [0, 0];
-        const lo = n.left - ks[0].getBoundingClientRect().left, hi = n.right - ks[ks.length - 1].getBoundingClientRect().right; return lo > hi ? [0, 0] : [lo, hi]; };
-      const follow = () => { araf = 0; if (!aB) return; const r = (aB.querySelector('svg') || aB).getBoundingClientRect(); const [lo, hi] = lim();
-        setOff(Math.min(hi, Math.max(lo, off + aX - (r.left + r.width / 2)))); if (performance.now() < aEnd) araf = requestAnimationFrame(follow); };
+      // 16.11.2026 (2) uzayan menü HEP ortadan, iki yana eşit açılır (fare altını sabitleyen kaydırma 'hangi düğmeye göre açıldığına göre
+      // taraf değişiyor' diye REDDEDİLDİ). Yanlış tık koruması: açılırken farenin altındaki düğme 'tutulur' (.xo-k, üstündeymiş gibi görünür,
+      // düğmeler fareyi görmez .gs1-keep); fare 4 px oynayana kadar tık O düğmeye gider → altına kayan Kalıp bulucu'ya yanlışlıkla basılmaz.
+      let kB = null, kx = 0, ky = 0;
+      const keepOff = () => { if (!kB) return; kB.classList.remove('xo-k'); kB = null; nav.classList.remove('gs1-keep'); };
+      const kMove = (e) => { if (kB && Math.hypot(e.clientX - kx, e.clientY - ky) > 4) keepOff(); };
+      const kClick = (e) => { if (!kB) return; e.preventDefault(); e.stopPropagation(); const b = kB; keepOff(); b.click(); };
+      nav.addEventListener('pointermove', kMove, { passive: true }); nav.addEventListener('click', kClick, true);
       const openAll = () => {
         if (mode !== 'expand') { nav.classList.add('xo-all'); guardArm(); return; }
-        cancelAnimationFrame(araf); const el = gx < 0 ? null : document.elementFromPoint(gx, gy); aB = el?.closest?.('.topnav-b') || null; if (aB && !nav.contains(aB)) aB = null;
-        if (aB) { const r = (aB.querySelector('svg') || aB).getBoundingClientRect(); aX = r.left + r.width / 2; }
-        nav.classList.add('xo-all'); aEnd = performance.now() + 700; if (aB) follow();
+        const el = gx < 0 ? null : document.elementFromPoint(gx, gy); const b = el?.closest?.('.topnav-b');
+        if (b && nav.contains(b)) { kB = b; kx = gx; ky = gy; b.classList.add('xo-k'); nav.classList.add('gs1-keep'); }
+        nav.classList.add('xo-all');
       };
-      const closeAll = () => {
-        nav.classList.remove('xo-all'); aB = null; cancelAnimationFrame(araf); if (mode !== 'expand' || !off) return;
-        const o0 = off, t0 = performance.now();
-        const back = () => { const k = Math.min(1, (performance.now() - t0) / 520); setOff(o0 * Math.pow(1 - k, 3)); araf = k < 1 ? requestAnimationFrame(back) : 0; };
-        araf = requestAnimationFrame(back);
-      };
+      const closeAll = () => { keepOff(); nav.classList.remove('xo-all'); };
       const arm = () => { clearTimeout(t); if (hold) return; t = setTimeout(() => { if (!fits()) return; openAll(); }, mode === 'expand' ? 240 : 60); };
       // sığmıyorsa adlar açılmaz (dar ekranda soldaki 'Ana sayfa' logonun altına kayıyordu): gereken = şimdiki + kapalı adların genişliği
       const fits = () => gs1NavNeed(nav) <= nav.clientWidth - 2;
@@ -1261,7 +1264,7 @@ function useGs1Lbl(mode) {
       // uzayan menü fare çıkınca hemen kapanmaz: ~1 sn açık kalır (geri gelirse hiç kapanmaz)
       const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { closeAll(); } else out = setTimeout(lv, 300); }, mode === 'expand' ? 1000 : 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
-      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); nav.removeEventListener('pointerleave', pl); guardOff(); clearTimeout(t); clearTimeout(out); cancelAnimationFrame(araf); nav.classList.remove('xo-all'); nav.style.translate = ''; };
+      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); nav.removeEventListener('pointerleave', pl); guardOff(); clearTimeout(t); clearTimeout(out); keepOff(); nav.removeEventListener('pointermove', kMove); nav.removeEventListener('click', kClick, true); nav.classList.remove('xo-all'); };
     }
     if (mode === 'line' || mode === 'spot') {
       // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir
@@ -1297,8 +1300,15 @@ function useGs1Lbl(mode) {
     // değiştiği için hap her karede hedefin o anki yerine yumuşakça yaklaşır (rAF) → atlama yok, düzgün süzülür
     let sb = null, sraf = 0, sx = null, sw = 0, calm = 0, mo2 = null;
     const sTarget = () => cur || nav.querySelector('.topnav-b.on');
+    // 16.11.2026: hedef değişince hap başlangıç yerinden hedefin O ANKİ yerine zamanla (0,46 sn, yumuşak) gider — sabit oranlı yaklaşım
+    // ad açılırken önce simgeye küçük hapla yapışıp sonra büyüyordu (seçilmemiş simgeye basınca 'glitch')
+    let sT = null, s0x = 0, s0w = 0, st0 = 0;
     const sTick = () => { sraf = 0; const b = sTarget(); if (!b || !sb) return; const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
-      const tx = r.left - n.left, tw = r.width; if (sx == null) { sx = tx; sw = tw; } else { sx += (tx - sx) * 0.24; sw += (tw - sw) * 0.24; }
+      const tx = r.left - n.left, tw = r.width;
+      if (sx == null) { sx = tx; sw = tw; sT = b; }
+      else { if (b !== sT) { sT = b; s0x = sx; s0w = sw; st0 = performance.now(); }
+        const k = Math.min(1, (performance.now() - st0) / 460); const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+        sx = s0x + (tx - s0x) * e; sw = s0w + (tw - s0w) * e; if (k < 1) calm = 0; }
       sb.style.transform = `translate(${sx.toFixed(2)}px, ${(r.top - n.top).toFixed(1)}px)`; sb.style.width = sw.toFixed(2) + 'px'; sb.style.height = r.height + 'px';
       if (Math.abs(tx - sx) < 0.3 && Math.abs(tw - sw) < 0.3) { if (++calm > 40) { calm = 0; return; } } else calm = 0;
       sraf = requestAnimationFrame(sTick); };
@@ -1458,6 +1468,21 @@ function setupFlowPills() {
       const gh = document.createElement('span'); gh.className = 'flow-ghost'; gh.setAttribute('aria-hidden', 'true');
       gh.style.cssText = `left:0;top:0;width:${B.w}px;height:${B.h}px;border-radius:${cs.borderRadius};background:${cs.backgroundImage !== 'none' ? cs.backgroundImage + ',' : ''}${cs.backgroundColor};box-shadow:${cs.boxShadow}`;
       g.insertBefore(gh, g.firstChild); g.classList.add('flow-g'); btn.classList.add('flow-on');
+      // 16.11.2026 tek satır menü: seçilen düğmenin adı geçiş sırasında açılıyor → hap SABİT bir hedefe değil, düğmenin o anki yerine/boyuna
+      // zamanla yaklaşır (eskiden simge boyunda küçük hapla gidip sonra 'yerine oturuyordu'). Tek hareket, sonunda düğmenin tam üstünde.
+      if (g.classList.contains('gs-nav') && document.documentElement.classList.contains('gs-one')) {
+        const done2 = () => { gh.remove(); g.classList.remove('flow-g'); btn.classList.remove('flow-on'); };
+        const t0 = performance.now(), D = 520;
+        const step = () => {
+          if (!gh.isConnected) return; const k = Math.min(1, (performance.now() - t0) / D); const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+          const q = g.getBoundingClientRect(), r = btn.getBoundingClientRect();
+          const X = r.left - q.left + g.scrollLeft, Y = r.top - q.top + g.scrollTop;
+          gh.style.transform = `translate(${(A.x + (X - A.x) * e).toFixed(2)}px, ${(A.y + (Y - A.y) * e).toFixed(2)}px)`;
+          gh.style.width = (A.w + (r.width - A.w) * e).toFixed(2) + 'px'; gh.style.height = (A.h + (r.height - A.h) * e).toFixed(2) + 'px';
+          if (k < 1) requestAnimationFrame(step); else done2();
+        };
+        step(); return;
+      }
       const dx = Math.abs(B.x - A.x); const mx = Math.min(A.x, B.x) + dx * 0.25; const mw = (A.w + B.w) / 2 + dx * 0.5;
       // 6.11.2026 dikey grup (yönetim yan menüsü): hap yukarı/aşağı uzayarak gider, kısa sürede (yavaş ve takılır gibiydi)
       const dy = Math.abs(B.y - A.y); const vert = dy > dx;
