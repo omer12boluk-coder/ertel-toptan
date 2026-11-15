@@ -182,17 +182,18 @@ function glLand(st) {
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
   if (!e?.ready || e.lost || !tg || !st) return 0;
   const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
-  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1650 : 1550;
+  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1150 : 1080;
   if (!st.gl) { const [W, H] = markSize(e, st.y + st.z); e.resize(W, H, { x: st.x, y: st.y, w: st.z, h: st.z }); }
   let fin = false;
   const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
   // 15.11 (kullanıcı: 'çok kalın ve dümdüz akıyor'): yolda tanelerin sadece %12'si görünür (varışta %20), girdap genliği 2,5 katı
   // (giriş kumundaki gibi kıvrılıp dalgalanır), izler kısa, taneler giriş kumu kadar ince
-  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 80 : 60, null, 0.13)) return 0;
+  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 52 : 40, null, 0.28)) return 0;
   // bow: bütün akış birlikte yukarı doğru yumuşak bir kavis çizer (düz şerit değil)
   // 15.11 (kullanıcı: '1-2 farklı yerden, daha ince, rüzgârla uçuyor gibi'): iki kol (streams), tane gecikmeleri geniş (jit) →
-  // uzun, savrulan tozlar; taneler giriş kumu kadar ince
-  e.fl.kEnd = 0.2; e.fl.bow = 0.17; e.fl.streams = 1; e.fl.jit = 0.24; e.dotMin = 0.42; e.streakMul = 0.28;
+  // uzun, savrulan tozlar; taneler giriş kumu kadar ince. 15.11 akşam ('ipeksi değil, çok parçacıklı; biraz hızlansın'): silk = taneler
+  // uzun, uca doğru incelen silik iplikler, gecikmeler dar (birlikte akan şerit), görünen tane %34, süre 1,15/1,08 sn
+  e.fl.kEnd = 0.3; e.fl.bow = 0.15; e.fl.streams = 1; e.fl.jit = 0.13; e.fl.silk = 1; e.dotMin = 0.42; e.streakMul = 1;
   // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
   tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
   // aynı görev içinde: WebGL net logoyu çizer, 2B kanvas kalkar → aynı karede değişir
@@ -267,7 +268,7 @@ function bannerIn(kind, st, dur) {
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
   const tr = tg?.getBoundingClientRect(); const mx = tr ? tr.left + tr.width / 2 - hr.left : 0, my = tr ? tr.top + tr.height / 2 - hr.top : -60;
   const ang = Math.atan2(lx - mx, -(ly - my)) * 180 / Math.PI;
-  const D = Math.max(900, (dur || 1300) * 0.85), R0 = Math.hypot(Math.max(lx, W - lx), Math.max(ly, H - ly)) + 80;
+  const D = Math.max(700, (dur || 1100) * 0.8), R0 = Math.hypot(Math.max(lx, W - lx), Math.max(ly, H - ly)) + 80;
   const strips = [];
   if (kind === 'blinds') for (let i = 0; i < 5; i++) { const d = document.createElement('div'); Object.assign(d.style, { position: 'absolute', top: '0', bottom: '0', left: (i * 20) + '%', width: '20.4%', background: 'var(--bg)', transformOrigin: '50% 0' }); cv.appendChild(d); strips.push(d); }
   const dim = kind === 'light' ? document.createElement('div') : null;

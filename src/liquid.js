@@ -81,7 +81,7 @@ void main(){
     vec2 fq = (hm.xy*uSize + off)*0.0095 + vec2(uTime*0.35, -uTime*0.2);
     // uFlowS > 0 (küçük logo uçuşu): iki kol — taneler iki ayrı kavisten gider, rüzgâr gibi geniş girdap + tane başı savrulma
     float bw = uFlowBow; float fsc = 1.0;
-    if(uFlowS > 0.0){ float k2 = step(0.42, fract(sd*7.31)); bw = mix(uFlowBow, -uFlowBow*0.45, k2); fsc = 0.55; fq = fq*fsc + vec2(k2*3.7, 0.0); }
+    if(uFlowS > 0.0){ float k2 = step(0.42, fract(sd*7.31)); bw = mix(uFlowBow, -uFlowBow*0.3, k2); fsc = 0.55; fq = fq*fsc + vec2(k2*3.7, 0.0); }
     vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*(0.17*(0.15+r2*0.85)*(1.0-uFlowS) + bw) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
     vec2 no = mix(off, tgt, 1.0 - pow(0.78, uDt));
     o = vec4(no, (no-off)/max(uDt, 0.25)); return;
@@ -113,7 +113,7 @@ precision highp float;
 layout(location=0) in vec2 aCorner;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uCol; uniform sampler2D uFlow;
 uniform int uTexW; uniform vec4 uRect; uniform vec2 uRes; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence;
-uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint;
+uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint; uniform float uSilk;
 uniform vec4 uFlowV; uniform float uFlowK;
 out vec2 vLocal; out float vHalfLen; out float vR; out vec3 vCol; out float vA;
 ${NOISE}
@@ -141,7 +141,9 @@ void main(){
   vec2 v = st.zw; float sp = length(v);
   vec2 dir = sp > 0.001 ? v/sp : vec2(1.0,0.0);
   float r = uDot*hm.w*0.5*fsz;
-  float len = min(sp*1.25, 18.0)*uStreak;
+  // uSilk (küçük logo uçuşu): taneler hareket yönünde uzun, ince, uca doğru incelen iplikler; tek tek daha silik → üst üste binince
+  // nokta nokta değil ipeksi şerit gibi görünür
+  float len = mix(min(sp*1.25, 18.0), min(sp*2.6, 46.0), uSilk)*uStreak;
   vec2 lc = aCorner*vec2(r + len*0.5 + 1.0, r + 1.0);
   vec2 center = base - dir*len*0.5;
   vec2 world = center + dir*lc.x + vec2(-dir.y, dir.x)*lc.y;
@@ -151,7 +153,7 @@ void main(){
   vec3 col = cl.rgb*uTint;
   float glint = smoothstep(2.0, 16.0, sp);
   col = mix(col, min(col*1.18 + vec3(0.07,0.075,0.085), vec3(1.0)), glint*0.75);
-  vCol = col; vA = a;
+  vCol = col; vA = a*mix(1.0, 0.52, uSilk);
 }`;
 const PART_FS=`#version 300 es
 precision highp float;
@@ -162,7 +164,7 @@ void main(){
   float d = length(q) - vR;
   float a = clamp(0.5 - d*uDpr, 0.0, 1.0);
   float tail = vHalfLen > 0.0 ? clamp(0.5 - vLocal.x/(2.0*(vHalfLen+vR)), 0.0, 1.0) : 0.0;
-  a *= 1.0 - tail*0.55; a *= vA;
+  a *= 1.0 - tail*0.8; a *= vA;
   if(a < 0.004) discard;
   o = vec4(vCol*a, a);
 }`;
@@ -475,7 +477,7 @@ export class LiquidEngine{
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
     const dotN=Math.max(this.dotMin||0,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
-    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);gl.uniform1f(P.u.uFlowK,FL?.kEnd??.42);gl.uniform1f(P.u.uFlowJ,FL?.jit??.1);
+    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);gl.uniform1f(P.u.uFlowK,FL?.kEnd??.42);gl.uniform1f(P.u.uSilk,FL?.silk||0);gl.uniform1f(P.u.uFlowJ,FL?.jit??.1);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
   }
 }
