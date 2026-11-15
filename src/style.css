@@ -10998,9 +10998,11 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-lb-expand .hdr-gs .gs-nav .topnav-chev svg { width: 14px; height: 14px; }
 }
 @media (min-width: 900px) {
-  /* 'Uzayan menü': adlar gri değil siyah, seçili sayfa mavi (kullanıcı 15.11) */
-  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b { color: var(--fg); }
-  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on { color: var(--lg-blue) !important; }
+  /* 'Uzayan menü' renkleri = 'Simge + yazı'nın BİREBİR aynısı: seçili ad siyah + simge mavi, diğerleri (simge + ad) silik gri, ok %60 */
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b { color: var(--muted); }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on { color: var(--fg) !important; }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on > svg:first-child { color: var(--lg-blue); }
+  html.gs1-lb-expand .hdr-gs .gs-nav.xo-all .topnav-chev, html.gs1-lb-expand .hdr-gs .gs-nav .hd.open > .topnav-b .topnav-chev { opacity: .6; }
 }
 @media (min-width: 900px) and (max-width: 1199px) {
   /* simge + açılan ad biçimlerinde dar ekranda simgeler GİZLENMEZ (yoksa kapalı adlarla düğmeler boş kalıyordu) */
@@ -11008,6 +11010,11 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
 }
 @media (min-width: 900px) {
   /* arama açıkken uzayan menüde sadece seçili sayfanın adı görünür (açılan menünün adı da açılmaz → taşma yok) */
-  html.gs1-lb-expand .hdr-gs .gs-nav.gs1-sf .hd.open > .topnav-b:not(.on) :is(.topnav-l, .topnav-chev) { max-width: 0; opacity: 0; margin-left: 0; }
-  html.gs1-lb-expand .hdr-gs .gs-nav.gs1-sf .hd.open > .topnav-b:not(.on) { padding: 0 10px; }
+  /* kapalı adın oku tıklanmaz (ad açılmadan simgenin hemen sağına basınca menü açılıyordu) — tık düğmeye gider */
+  html.gs1-lb-expand .hdr-gs .gs-nav:not(.xo-all) .topnav-b:not(.on):not(.xo) .topnav-chev,
+  html.gs1-lb-side .hdr-gs .gs-nav .topnav-b:not(.on):not(.xo) .topnav-chev { pointer-events: none; }
+  .hd.open > .topnav-b .topnav-chev { pointer-events: auto !important; }
+  /* seçili sayfa: ad siyah, simge mavi (kullanıcı 15.11) */
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on { color: var(--fg) !important; }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on > svg:first-child { color: var(--lg-blue); }
 }

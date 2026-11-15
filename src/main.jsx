@@ -1123,6 +1123,19 @@ function useGs1Top(on, tab) {
   }, [on, tab]);
 }
 // 15.11.2026 (2) Tek satır arama: tıklayınca kutu sadece menü ile arasındaki BOŞ yere kadar büyür (hiçbir şeyin üstüne binmez; menü ortada kalmak için yana kayar)
+// tek satır menünün adlar TAM açıkken kaplayacağı genişlik (uzayan menü: hepsi; yanında ad: en uzun tek ad). Arama bu payı bırakarak büyür,
+// menü de ancak sığarsa uzar → ikisi asla üst üste binmez, kimse kimseyi itmez
+function gs1NavNeed(nav) {
+  const bs = [...nav.querySelectorAll('.topnav-b')]; if (!bs.length) return 0;
+  const used = bs[bs.length - 1].getBoundingClientRect().right - bs[0].getBoundingClientRect().left;
+  const H = document.documentElement.classList; const all = H.contains('gs1-lb-expand'), side = H.contains('gs1-lb-side');
+  if (!all && !side) return used;
+  let now = 0, sum = 0, mx = 0;
+  bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (!l) return; const c = b.querySelector('.topnav-chev');
+    now += l.getBoundingClientRect().width + (c ? c.getBoundingClientRect().width : 0);
+    const full = l.scrollWidth + 8 + (c ? 22 : 0) + 4; sum += full; mx = Math.max(mx, full); });
+  return used - now + (all ? sum : mx);
+}
 function useGs1Search(on) {
   useEffect(() => {
     if (!on) return undefined;
@@ -1132,20 +1145,12 @@ function useGs1Search(on) {
       const sr = e.target.closest?.('.gs-srch'); if (!sr) return; clearTimeout(t);
       const nav = h.querySelector('.gs-nav'); const bs = nav ? [...nav.querySelectorAll('.topnav-b')] : [];
       if (!bs.length) return;
-      if (nav.classList.contains('xo-all')) { nav.classList.remove('xo-all'); clearTimeout(t); t = setTimeout(() => open({ target: sr }), 520); return; } // önce adlar kapanır, sonra arama büyür (üst üste binmez)
-      const used = bs[bs.length - 1].getBoundingClientRect().right - bs[0].getBoundingClientRect().left;
-      const room = nav.clientWidth - used - 24; const w = sr.getBoundingClientRect().width;
+      const room = nav.clientWidth - gs1NavNeed(nav) - 24; const w = sr.getBoundingClientRect().width;
       sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(440, w + room))) + 'px');
     };
     const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) sr.style.removeProperty('--gs1-sw'); }, 200); };
-    // uzayan menü / ada adları açılıp kapanınca: arama odaktaysa yeri yeniden ölç (adlar açılırken arama geri küçülür, kapanınca tekrar büyür)
-    const refit = () => { const sr = h.querySelector('.gs-srch'); if (sr && sr.contains(document.activeElement)) open({ target: sr }); };
-    const nv = () => h.querySelector('.gs-nav');
-    const fi = (e) => { if (e.target.closest?.('.gs-srch')) nv()?.classList.add('gs1-sf'); };
-    const fo = (e) => { const sr = e.target.closest?.('.gs-srch'); if (sr) setTimeout(() => { if (!sr.contains(document.activeElement)) nv()?.classList.remove('gs1-sf'); }, 200); };
-    h.addEventListener('focusin', fi); h.addEventListener('focusout', fo);
-    h.addEventListener('focusin', open); h.addEventListener('focusout', close); h.addEventListener('gs1-refit', refit);
-    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); h.removeEventListener('gs1-refit', refit); h.removeEventListener('focusin', fi); h.removeEventListener('focusout', fo); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
+    h.addEventListener('focusin', open); h.addEventListener('focusout', close);
+    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
   }, [on]);
 }
 // 15.11.2026 (4) Tek satır 'Menü yazıları' hareketleri: fare bir başlıkta kısa durunca .xo (dönen yazı / cıva); cıva = sıvı damla
@@ -1169,22 +1174,17 @@ function useGs1Lbl(mode) {
     if (mode === 'island' || mode === 'expand') {
       const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) { b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); } });
       measure(); document.fonts?.ready?.then(measure);
-      const hd = nav.closest('.topbar'); let rf = 0;
-      const refit = (ms) => { clearTimeout(rf); rf = setTimeout(() => hd?.dispatchEvent(new Event('gs1-refit')), ms); };
-      const sOpen = () => { const sr = hd?.querySelector('.gs-srch'); return !!(sr && sr.contains(document.activeElement)); };
-      // arama açıkken adlar AÇILMAZ (arama yer kaplıyor; ikisi birden sığmıyordu)
-      const arm = () => { clearTimeout(t); if (sOpen()) return; t = setTimeout(() => { if (sOpen() || !fits()) return; nav.classList.add('xo-all'); guardArm(); }, mode === 'expand' ? 240 : 60); };
+      const arm = () => { clearTimeout(t); t = setTimeout(() => { if (!fits()) return; nav.classList.add('xo-all'); guardArm(); }, mode === 'expand' ? 240 : 60); };
       // sığmıyorsa adlar açılmaz (dar ekranda soldaki 'Ana sayfa' logonun altına kayıyordu): gereken = şimdiki + kapalı adların genişliği
-      const fits = () => { const bs = nav.querySelectorAll('.topnav-b'); if (!bs.length) return true; let need = bs[bs.length - 1].getBoundingClientRect().right - bs[0].getBoundingClientRect().left; bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (!l || l.getBoundingClientRect().width > 2) return;
-        need += l.scrollWidth + 12 + (b.querySelector('.topnav-chev') ? 20 : 0); }); return need <= nav.clientWidth - 4; };
+      const fits = () => gs1NavNeed(nav) <= nav.clientWidth - 2;
       const en = () => { clearTimeout(out); arm(); };
       // fare durmadan uzamaz (simgeye giderken yolda açılıp yerinden kaydırmasın); basınca bekleyen uzama iptal
       const mv = () => { if (!nav.classList.contains('xo-all')) arm(); };
       const pd = () => clearTimeout(t);
       nav.addEventListener('pointermove', mv); nav.addEventListener('pointerdown', pd);
-      const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { nav.classList.remove('xo-all'); refit(540); } else out = setTimeout(lv, 300); }, 260); };
+      const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { nav.classList.remove('xo-all'); } else out = setTimeout(lv, 300); }, 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
-      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); guardOff(); clearTimeout(t); clearTimeout(out); clearTimeout(rf); nav.classList.remove('xo-all'); };
+      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); guardOff(); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
     }
     if (mode === 'line' || mode === 'spot') {
       // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir
