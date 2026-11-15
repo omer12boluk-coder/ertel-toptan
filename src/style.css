@@ -10984,11 +10984,16 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
 @media (min-width: 900px) {
   /* 'Yanında ad': ok SADECE ad tamamen açılınca belirir (simge hâlinde ok yok); kapanırken hemen söner */
   html.gs1-lb-side .hdr-gs .gs-nav .topnav-chev { transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .12s ease !important; }
-  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-chev { transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .2s ease .4s !important; }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-chev { transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .18s ease .16s !important; }
 }
 @media (min-width: 900px) {
   /* 'Yanında ad' 3. tur: ok hapın İÇİNDE (eski ok kutusunun negatif payı/zemini sağ kenardan taşırıyordu), yatayda kırpılmaz */
   html.gs1-lb-side .hdr-gs .gs-nav .topnav-chev { padding: 0 !important; margin-right: 0 !important; background: none !important; border-radius: 0; clip-path: none; overflow: visible; width: auto; }
   html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-chev { max-width: 16px; margin-left: 6px !important; }
   html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) { padding-right: 12px; }
+}
+@media (min-width: 900px) {
+  /* 'Uzayan menü': ok da hapın içinde, altı/sağı kesilmez (yanında addaki düzeltmenin aynısı) */
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-chev { padding: 0 !important; margin-right: 0 !important; background: none !important; border-radius: 0; clip-path: none; overflow: visible; width: auto; }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-chev svg { width: 14px; height: 14px; }
 }

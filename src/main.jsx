@@ -1153,15 +1153,29 @@ function useGs1Lbl(mode) {
     const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return undefined;
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let t = 0, out = 0, cur = null;
+    // tık koruması: adlar açılırken düğmeler yer değiştirir → açılmadan hemen önce farenin altındaki düğme hatırlanır;
+    // açılmadan sonraki 700 ms içinde başka düğmeye tıklanırsa tık o hatırlanan düğmeye gider (yanındakine atlamasın)
+    let gx = -1, gy = -1, gB = null, gT = 0, gSkip = false;
+    const pm = (e) => { gx = e.clientX; gy = e.clientY; };
+    const guardArm = () => { const el = gx < 0 ? null : document.elementFromPoint(gx, gy); gB = el?.closest?.('.topnav-b') || null; if (gB && !nav.contains(gB)) gB = null; gT = performance.now(); };
+    const gClick = (e) => { if (gSkip || !gB || performance.now() - gT > 700) return; const b = e.target.closest?.('.topnav-b'); if (!b || b === gB || !nav.contains(b)) return;
+      e.preventDefault(); e.stopPropagation(); const a = gB; gB = null; gSkip = true; try { a.click(); } finally { gSkip = false; } };
+    nav.addEventListener('pointermove', pm, { passive: true }); nav.addEventListener('click', gClick, true);
+    const guardOff = () => { nav.removeEventListener('pointermove', pm); nav.removeEventListener('click', gClick, true); };
     if (mode === 'island' || mode === 'expand') {
       const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) { b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); } });
       measure(); document.fonts?.ready?.then(measure);
       const hd = nav.closest('.topbar'); let rf = 0;
       const refit = (ms) => { clearTimeout(rf); rf = setTimeout(() => hd?.dispatchEvent(new Event('gs1-refit')), ms); };
-      const en = () => { clearTimeout(out); clearTimeout(t); t = setTimeout(() => { nav.classList.add('xo-all'); refit(0); }, mode === 'expand' ? 90 : 60); };
+      const arm = () => { clearTimeout(t); t = setTimeout(() => { nav.classList.add('xo-all'); guardArm(); refit(0); }, mode === 'expand' ? 240 : 60); };
+      const en = () => { clearTimeout(out); arm(); };
+      // fare durmadan uzamaz (simgeye giderken yolda açılıp yerinden kaydırmasın); basınca bekleyen uzama iptal
+      const mv = () => { if (!nav.classList.contains('xo-all')) arm(); };
+      const pd = () => clearTimeout(t);
+      nav.addEventListener('pointermove', mv); nav.addEventListener('pointerdown', pd);
       const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { nav.classList.remove('xo-all'); refit(540); } else out = setTimeout(lv, 300); }, 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
-      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); clearTimeout(t); clearTimeout(out); clearTimeout(rf); nav.classList.remove('xo-all'); };
+      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); guardOff(); clearTimeout(t); clearTimeout(out); clearTimeout(rf); nav.classList.remove('xo-all'); };
     }
     if (mode === 'line' || mode === 'spot') {
       // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir
@@ -1176,7 +1190,7 @@ function useGs1Lbl(mode) {
       const lv = () => { clearTimeout(out); out = setTimeout(() => { if (document.querySelector('.hd-p')) { out = setTimeout(lv, 300); return; } nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); home(); }, 160); };
       const mo = new MutationObserver(() => { if (!nav.classList.contains('xo-any')) home(); }); mo.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] });
       nav.addEventListener('pointerover', ov); nav.addEventListener('pointerleave', lv);
-      return () => { clearTimeout(t0); clearTimeout(out); ro.disconnect(); mo.disconnect(); nav.removeEventListener('pointerover', ov); nav.removeEventListener('pointerleave', lv); ln?.remove(); nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); };
+      return () => { clearTimeout(t0); clearTimeout(out); ro.disconnect(); mo.disconnect(); nav.removeEventListener('pointerover', ov); nav.removeEventListener('pointerleave', lv); ln?.remove(); guardOff(); nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); };
     }
     let blob = null, at = null;
     const rectOf = (b) => { const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect(); return { x: r.left - n.left, y: r.top - n.top, w: r.width, h: r.height }; };
@@ -1217,10 +1231,16 @@ function useGs1Lbl(mode) {
     if (pill) { const h0 = () => { if (!cur) place(homeB(), false); }; setTimeout(h0, 120); ro = new ResizeObserver(h0); ro.observe(nav);
       // NOT: classList.add aynı sınıf olsa da özelliği yeniden yazar → gözlemci kendi değişikliğini görüp sonsuz döngüye giriyordu; damlanın kendi değişiklikleri yok sayılır
       mo2 = new MutationObserver((ms) => { if (!cur && ms.some((m) => m.target !== blob)) place(homeB(), true); }); mo2.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] }); }
-    const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); clearTimeout(t); if (b === cur) return; t = setTimeout(() => set(b), mode === 'side' ? (cur ? 70 : 120) : cur ? 40 : 90); };
-    const leave = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) set(null); else out = setTimeout(leave, 300); }, 220); };
+    let pend = null;
+    const fire = (b) => { pend = null; guardArm(); set(b); };
+    const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); clearTimeout(t); if (b === cur) { pend = null; return; } pend = b; t = setTimeout(() => fire(b), mode === 'side' ? (cur ? 90 : 240) : cur ? 40 : 90); };
+    // yanında ad: ilk açılış fare durunca (simgeye giderken yolda büyümesin); basınca bekleyen açılış iptal
+    const smv = () => { if (mode !== 'side' || cur || !pend) return; const b = pend; clearTimeout(t); t = setTimeout(() => fire(b), 240); };
+    const spd = () => { if (pend) { clearTimeout(t); pend = null; } };
+    nav.addEventListener('pointermove', smv); nav.addEventListener('pointerdown', spd);
+    const leave = () => { clearTimeout(t); pend = null; out = setTimeout(() => { if (!document.querySelector('.hd-p')) set(null); else out = setTimeout(leave, 300); }, 220); };
     nav.addEventListener('pointerover', over); nav.addEventListener('pointerleave', leave);
-    return () => { nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); clearTimeout(t); clearTimeout(out); ro?.disconnect(); mo2?.disconnect(); roS?.disconnect(); cancelAnimationFrame(sraf); nav.removeEventListener('transitionrun', sGo); nav.removeEventListener('transitionend', sGo); sb?.remove(); cur?.classList.remove('xo'); cur = null; nav.classList.remove('xo-any'); blob?.remove(); };
+    return () => { nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); nav.removeEventListener('pointermove', smv); nav.removeEventListener('pointerdown', spd); guardOff(); clearTimeout(t); clearTimeout(out); ro?.disconnect(); mo2?.disconnect(); roS?.disconnect(); cancelAnimationFrame(sraf); nav.removeEventListener('transitionrun', sGo); nav.removeEventListener('transitionend', sGo); sb?.remove(); cur?.classList.remove('xo'); cur = null; nav.classList.remove('xo-any'); blob?.remove(); };
   }, [mode]);
 }
 // 15.11.2026 Tek satır üst menü fare efektleri: 'slide' = menü yazılarının arkasında fareyi izleyen yumuşak kutu; 'dock' = fareye yakın hap hafifçe büyür
