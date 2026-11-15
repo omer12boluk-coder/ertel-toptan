@@ -11094,3 +11094,7 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
   html.gs1-lb-toggle.gs1-tg-s .hdr-gs .gs-nav .topnav-b { height: 40px; padding: 0 10px !important; }
   html.gs1-lb-toggle.gs1-tg-s .hdr-gs .gs-nav { gap: 4px; }
 }
+/* 16.11.2026 (3) Uzayan menü: üstüne gelinen düğmenin simgesi HEP mavi (açılmadan önce mavi, uzayınca siyaha dönüyordu) */
+@media (min-width: 900px) {
+  html.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.xo-k, .hd.open > .topnav-b) > svg:first-child { color: var(--lg-blue, var(--accent)) !important; }
+}

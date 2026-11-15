@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick'].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   // useLayoutEffect + son genişlik cihazda saklı (ls gs1-x): menü ilk karede doğru ölçüde çizilir → giriş sayfasından uçan logo
   // menü logosunun GERÇEK yerine iner (ayarlar geç gelince menü 100 px kayıyordu, logo boşluğa iniyordu)
@@ -728,6 +728,16 @@ function ShellFull() {
   useGs1Search(gs1 && !phoneUI);
   useGs1Toggle(gs1 && !phoneUI && LK.gs1Lbl === 'toggle');
   useGs1IslIc(gs1 && gsIsl && !phoneUI);
+  // 16.11.2026 'Sadece seçilinin adı' (gs1Lbl 'pick'): Uzayan menünün aynısı ama fareyle uzamaz; adı kapalı simgelerin üstünde ipucu (title)
+  const gs1Pick = gs1 && !phoneUI && LK.gs1Lbl === 'pick';
+  useEffect(() => {
+    if (!gs1Pick) return undefined;
+    const bs = [...document.querySelectorAll('.topbar.hdr-gs .gs-nav .topnav-b')];
+    bs.forEach((b) => { if (!b.title) { b.title = b.querySelector('.topnav-l')?.textContent || ''; b.dataset.gs1t = '1'; } });
+    const ms = () => bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); });
+    ms(); document.fonts?.ready?.then(ms);
+    return () => bs.forEach((b) => { if (b.dataset.gs1t) { b.removeAttribute('title'); delete b.dataset.gs1t; } });
+  }, [gs1Pick]);
   useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island', 'line', 'spot', 'pill', 'side', 'expand'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
@@ -1132,7 +1142,7 @@ function gs1NavNeed(nav) {
   // 16.11.2026: menünün TÜM görünür parçaları sayılır ('Uzat / kısalt' düğmesi sayılmıyordu → arama büyüyünce menü logonun altına giriyordu)
   const ks = [...nav.children].filter((k) => k.offsetWidth && getComputedStyle(k).position !== 'absolute');
   const used = ks[ks.length - 1].getBoundingClientRect().right - ks[0].getBoundingClientRect().left;
-  const H = document.documentElement.classList; const all = H.contains('gs1-lb-expand'), side = H.contains('gs1-lb-side');
+  const H = document.documentElement.classList; const all = H.contains('gs1-lb-expand') && !H.contains('gs1-lb-pick'), side = H.contains('gs1-lb-side');
   if (!all && !side) return used;
   let now = 0, sum = 0, mx = 0;
   bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (!l) return; const c = b.querySelector('.topnav-chev');
@@ -1225,8 +1235,10 @@ function useGs1Lbl(mode) {
     // açılmadan sonraki 700 ms içinde başka düğmeye tıklanırsa tık o hatırlanan düğmeye gider (yanındakine atlamasın)
     let gx = -1, gy = -1, gB = null, gT = 0, gSkip = false;
     const pm = (e) => { gx = e.clientX; gy = e.clientY; };
-    const guardArm = () => { const el = gx < 0 ? null : document.elementFromPoint(gx, gy); gB = el?.closest?.('.topnav-b') || null; if (gB && !nav.contains(gB)) gB = null; gT = performance.now(); };
-    const gClick = (e) => { if (gSkip || !gB || performance.now() - gT > 700) return; const b = e.target.closest?.('.topnav-b'); if (!b || b === gB || !nav.contains(b)) return;
+    let gAx = -1, gAy = -1;
+    // 16.11.2026: tık yönlendirme SADECE fare kıpırdamadıysa (Yanında ad: Setler açılırken vazgeçip Markalar'a basınca Setler'e gidiyordu)
+    const guardArm = () => { gAx = gx; gAy = gy; const el = gx < 0 ? null : document.elementFromPoint(gx, gy); gB = el?.closest?.('.topnav-b') || null; if (gB && !nav.contains(gB)) gB = null; gT = performance.now(); };
+    const gClick = (e) => { if (gSkip || !gB || performance.now() - gT > 700 || Math.hypot(e.clientX - gAx, e.clientY - gAy) > 4) return; const b = e.target.closest?.('.topnav-b'); if (!b || b === gB || !nav.contains(b)) return;
       e.preventDefault(); e.stopPropagation(); const a = gB; gB = null; gSkip = true; try { a.click(); } finally { gSkip = false; } };
     nav.addEventListener('pointermove', pm, { passive: true }); nav.addEventListener('click', gClick, true);
     const guardOff = () => { nav.removeEventListener('pointermove', pm); nav.removeEventListener('click', gClick, true); };
@@ -1300,15 +1312,8 @@ function useGs1Lbl(mode) {
     // değiştiği için hap her karede hedefin o anki yerine yumuşakça yaklaşır (rAF) → atlama yok, düzgün süzülür
     let sb = null, sraf = 0, sx = null, sw = 0, calm = 0, mo2 = null;
     const sTarget = () => cur || nav.querySelector('.topnav-b.on');
-    // 16.11.2026: hedef değişince hap başlangıç yerinden hedefin O ANKİ yerine zamanla (0,46 sn, yumuşak) gider — sabit oranlı yaklaşım
-    // ad açılırken önce simgeye küçük hapla yapışıp sonra büyüyordu (seçilmemiş simgeye basınca 'glitch')
-    let sT = null, s0x = 0, s0w = 0, st0 = 0;
     const sTick = () => { sraf = 0; const b = sTarget(); if (!b || !sb) return; const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
-      const tx = r.left - n.left, tw = r.width;
-      if (sx == null) { sx = tx; sw = tw; sT = b; }
-      else { if (b !== sT) { sT = b; s0x = sx; s0w = sw; st0 = performance.now(); }
-        const k = Math.min(1, (performance.now() - st0) / 460); const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-        sx = s0x + (tx - s0x) * e; sw = s0w + (tw - s0w) * e; if (k < 1) calm = 0; }
+      const tx = r.left - n.left, tw = r.width; if (sx == null) { sx = tx; sw = tw; } else { sx += (tx - sx) * 0.24; sw += (tw - sw) * 0.24; }
       sb.style.transform = `translate(${sx.toFixed(2)}px, ${(r.top - n.top).toFixed(1)}px)`; sb.style.width = sw.toFixed(2) + 'px'; sb.style.height = r.height + 'px';
       if (Math.abs(tx - sx) < 0.3 && Math.abs(tw - sw) < 0.3) { if (++calm > 40) { calm = 0; return; } } else calm = 0;
       sraf = requestAnimationFrame(sTick); };
@@ -1440,6 +1445,11 @@ function useHideTop(on, upShow, tab, layer) {
 // Hap grubun İÇİNE (yazıların altına) konur. Sadece transform/opacity değil ama tek küçük kutu → telefonda da hafif.
 // hap hareketi (look.pill / pillM telefonda): 'flow' akan (varsayılan) · 'mercury' cıva · 'none' yok
 const pillMode = () => { const L = store.s.settings?.look || {}; return lookFor(L, matchMedia('(max-width: 899px)').matches).pill || 'flow'; };
+// CSS cubic-bezier eğrisi (JS ile canlı izlenen hap için, WAAPI'deki eğrinin aynısı)
+function cubicBz(x1, y1, x2, y2) {
+  const f = (t, a, b) => 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t;
+  return (x) => { if (x <= 0) return 0; if (x >= 1) return 1; let lo = 0, hi = 1, t = x; for (let i = 0; i < 24; i++) { t = (lo + hi) / 2; if (f(t, x1, x2) < x) lo = t; else hi = t; } return f(t, y1, y2); };
+}
 function setupFlowPills() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('animate' in Element.prototype)) return;
   const SEL = '.topnav .topnav-b, .seg > button, .mo-tabs > button, .view-sw > button, .of-seg > button';
@@ -1470,11 +1480,12 @@ function setupFlowPills() {
       g.insertBefore(gh, g.firstChild); g.classList.add('flow-g'); btn.classList.add('flow-on');
       // 16.11.2026 tek satır menü: seçilen düğmenin adı geçiş sırasında açılıyor → hap SABİT bir hedefe değil, düğmenin o anki yerine/boyuna
       // zamanla yaklaşır (eskiden simge boyunda küçük hapla gidip sonra 'yerine oturuyordu'). Tek hareket, sonunda düğmenin tam üstünde.
-      if (g.classList.contains('gs-nav') && document.documentElement.classList.contains('gs-one')) {
+      // Sadece 'Uzayan menü' / 'Sadece seçilinin adı'nda; süre ve eğri diğer menülerdeki hapın AYNISI (440 ms, cubic-bezier(.3,.7,.25,1)).
+      if (g.classList.contains('gs-nav') && document.documentElement.classList.contains('gs1-lb-expand')) {
         const done2 = () => { gh.remove(); g.classList.remove('flow-g'); btn.classList.remove('flow-on'); };
-        const t0 = performance.now(), D = 520;
+        const t0 = performance.now(), D = 440; const bz = cubicBz(0.3, 0.7, 0.25, 1);
         const step = () => {
-          if (!gh.isConnected) return; const k = Math.min(1, (performance.now() - t0) / D); const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+          if (!gh.isConnected) return; const k = Math.min(1, (performance.now() - t0) / D); const e = bz(k);
           const q = g.getBoundingClientRect(), r = btn.getBoundingClientRect();
           const X = r.left - q.left + g.scrollLeft, Y = r.top - q.top + g.scrollTop;
           gh.style.transform = `translate(${(A.x + (X - A.x) * e).toFixed(2)}px, ${(A.y + (Y - A.y) * e).toFixed(2)}px)`;
