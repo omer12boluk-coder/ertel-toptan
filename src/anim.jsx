@@ -106,9 +106,36 @@ export function gateFx(look) {
   // bnIn: banner giriş animasyonu (kum menüye giderken) '' bugünkü | iris | wipe | light | curtain | blinds — önizlemede ls 'bn-in-try' ile denenir
   // önizlemede varsayılan B (iris; kullanıcı 15.11 'B'yi deneyelim'), canlıda ayar yoksa bugünkü
   const bt = TRY_HOST ? ls.get('bn-in-try', 'iris') : null;
-  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum'), sand: on('gsnd'), bnIn: (bt ?? A.bnIn) || '', shed: (TRY_HOST && ls.get('shed-try', '')) || '' };
+  // önizleme seçicisi 'Açılış denemesi' (ls 'fly-try'): kum uçuşu biçimi — one/three/silk (logo kuma döner), drop/comet/light (net logo
+  // kum dökerek kayar), plain (kumsuz tek parça uçuş). Seçilmişse 'gsnd' kutusunu ezer.
+  const ft = TRY_HOST ? ls.get('fly-try', null) : null;
+  const shed = ft ? (['drop', 'comet', 'light'].includes(ft) ? ft : '') : (TRY_HOST && ls.get('shed-try', '')) || '';
+  const sand = ft ? ['one', 'three', 'silk'].includes(ft) : on('gsnd');
+  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum'), sand, flowSty: ft || 'one', bnIn: (bt ?? A.bnIn) || '', shed };
 }
 export const TRY = TRY_HOST;
+// 15.11.2026 'şimdiye kadar yaptıklarımızı demodaki seçiciye koy': açılış (kum uçuşu + banner girişi) seçenekleri, bu cihazda
+const FLY_OPTS = [['one', 'Kum · tek ince kol'], ['three', 'Kum · üç kol (sağ/sol/orta)'], ['silk', 'Kum · geniş ipeksi şerit'], ['light', 'Net logo · hafif serpinti'], ['drop', 'Net logo · kum dökerek'], ['comet', 'Net logo · kuyruklu yıldız'], ['plain', 'Net logo · kumsuz']];
+const BN_OPTS = [['iris', 'B · Logodan doğan'], ['', 'A · Bugünkü'], ['wipe', 'C · Kumun izinden'], ['light', 'D · Karanlıktan ışığa'], ['curtain', 'E · Perde'], ['blinds', 'F · Panjur']];
+function GateTry() {
+  const [f, setF] = useState(() => ls.get('fly-try', null) || 'one');
+  const [b, setB] = useState(() => ls.get('bn-in-try', 'iris'));
+  const replay = () => { try { sessionStorage.removeItem('hero-seen'); } catch {} location.href = '/'; };
+  return (
+    <>
+      <div className="an-ph"><b>Açılış denemesi</b><small>Seç, sonra 'Girişi tekrar göster'</small></div>
+      <small className="an-dev">Logo menüye nasıl gitsin</small>
+      {FLY_OPTS.map(([k, t]) => (
+        <label key={'f' + k} className="an-row"><input type="radio" name="fly-try" checked={f === k} onChange={() => { ls.set('fly-try', k); setF(k); }} /><span>{t}</span></label>
+      ))}
+      <small className="an-dev">Banner nasıl açılsın</small>
+      {BN_OPTS.map(([k, t]) => (
+        <label key={'b' + k} className="an-row"><input type="radio" name="bn-try" checked={b === k} onChange={() => { ls.set('bn-in-try', k); setB(k); }} /><span>{t}</span></label>
+      ))}
+      <div className="an-ft"><button type="button" className="pri" onClick={replay}>Girişi tekrar göster</button></div>
+    </>
+  );
+}
 export const isLite = () => typeof document !== 'undefined' && document.documentElement.classList.contains('pf-lite');
 const LITE_DAYS = 14;
 function useLite(mode) {
@@ -190,6 +217,7 @@ function AnimPanel({ v, set, lite }) {
     <div className={'an-panel' + (open ? ' open' : '')}>
       {open && <div className="an-box" role="dialog" aria-label="Hareket denemesi">
         <div className="an-ph"><b>Hareket denemesi</b><small>Sadece bu önizlemede, bu cihazda</small></div>
+        <GateTry />
         {ANIMS.map(([k, L, t]) => (
           <label key={k} className="an-row"><input type="checkbox" checked={!!v[k]} onChange={(e) => set({ ...v, [k]: e.target.checked })} /><span className="an-l">{L}</span><span>{t}</span></label>
         ))}

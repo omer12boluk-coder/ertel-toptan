@@ -206,7 +206,10 @@ function shedLand(st, kind) {
   setTimeout(end, tot + 1500);
   return D;
 }
-function glLand(st) {
+// kum uçuşu biçimleri (demodaki 'Açılış denemesi' seçicisi): one = tek ince kol (varsayılan), three = 3 kol, silk = geniş ipeksi şerit
+const FLOW_STY = { one: { streams: 2, bow: 0.24, amp: [13, 10] }, three: { streams: 1, bow: 0.24, amp: [30, 24] }, silk: { streams: 2, bow: 0.15, amp: [52, 40] } };
+function glLand(st, sty) {
+  const fs = FLOW_STY[sty] || FLOW_STY.one;
   const e = markEng;
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
   if (!e?.ready || e.lost || !tg || !st) return 0;
@@ -217,13 +220,13 @@ function glLand(st) {
   const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
   // 15.11 (kullanıcı: 'çok kalın ve dümdüz akıyor'): yolda tanelerin sadece %12'si görünür (varışta %20), girdap genliği 2,5 katı
   // (giriş kumundaki gibi kıvrılıp dalgalanır), izler kısa, taneler giriş kumu kadar ince
-  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 13 : 10, null, 0.28)) return 0;
+  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, fs.amp[wide ? 0 : 1], null, 0.28)) return 0;
   // bow: bütün akış birlikte yukarı doğru yumuşak bir kavis çizer (düz şerit değil)
   // 15.11 (kullanıcı: '1-2 farklı yerden, daha ince, rüzgârla uçuyor gibi'): iki kol (streams), tane gecikmeleri geniş (jit) →
   // uzun, savrulan tozlar; taneler giriş kumu kadar ince. 15.11 akşam ('ipeksi değil, çok parçacıklı; biraz hızlansın'): silk = taneler
   // uzun, uca doğru incelen silik iplikler, gecikmeler dar (birlikte akan şerit), görünen tane %28, süre 1,55/1,45 sn ('kum biraz daha yavaş aksın').
   // 'kumların hizasını incelt' + 'kanalı daha dar': yana savrulma (girdap genliği) 13/10 px, tek kol, iki kol birbirine yakın, iplikler daha ince
-  e.fl.kEnd = 0.3; e.fl.bow = 0.24; e.fl.streams = 2; e.fl.jit = 0.13; e.fl.silk = 1; e.dotMin = 0.34; e.streakMul = 1;
+  e.fl.kEnd = 0.3; e.fl.bow = fs.bow; e.fl.streams = fs.streams; e.fl.jit = 0.13; e.fl.silk = 1; e.dotMin = 0.34; e.streakMul = 1;
   // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
   tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
   // aynı görev içinde: WebGL net logoyu çizer, 2B kanvas kalkar → aynı karede değişir
@@ -543,7 +546,7 @@ export function HeroGate({ onOpen, onDone }) {
         // kum: mağaza ÖNCE çizilir (logo o sırada kıpırdamaz → çizim donması görünmez), telefon rahatlayınca çözülme başlar
         if (kf) { kumGo(); return; }
         // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar; kum uçuşu açıksa net logo giriş kum motoruyla akar
-        const sd = fx.shed && fl ? shedLand(fl, fx.shed) : fx.sand && fl ? glLand(fl) : 0;
+        const sd = fx.shed && fl ? shedLand(fl, fx.shed) : fx.sand && fl ? glLand(fl, fx.flowSty) : 0;
         if (!sd) { if (fl?.gl) fl.el.style.visibility = ''; killMark(); flyLand(fl); }
         if (fx.scn) sceneIn(!!fl);
         // banner giriş animasyonu: kumla aynı anda (sadece kum ya da tek parça uçuşta)
