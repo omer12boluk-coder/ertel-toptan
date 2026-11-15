@@ -129,28 +129,34 @@ function kumTarget(eng, wide) {
   // telefonda büyük logo = aynı 'e' işareti; bilgisayarda geniş logo ('e' + yazı): 'e' kısmı menü logosunun üstüne gelir
   return { tg, cx: r0.left + r0.width / 2, cy: r0.top + r0.height / 2, R: r0.width / 2, rect: { x: r0.left + pl, y: r0.top + pt, w: wide ? z * asp : z, h: z } };
 }
-// mağaza sırayla kurulur: menü belirir, banner perdesi soldan sağa açılır, banner kendi giriş animasyonunu (resim + yazılar
-// satır satır) baştan oynar, telefonda alt menü düğmeleri sırayla gelir. Banner'ın KENDİSİ kıpırdamaz (üstünde sayfa renginde perde).
+// mağaza sırayla kurulur. İKİ ADIM (15.11: kum akarken banner da oynayınca akış 'yolda takılıyordu'): önce sadece menüler belirir,
+// banner sayfa renginde perdenin arkasında bekler; kum yerine VARINCA (dönen işlev) perde soldan sağa açılır, banner kendi giriş
+// animasyonunu (resim + yazılar satır satır) baştan oynar, telefonda alt menü düğmeleri sırayla gelir. Banner'ın KENDİSİ kıpırdamaz.
 function sceneKur() {
-  const sh = document.querySelector('.shell.public'); if (!sh) return;
+  const sh = document.querySelector('.shell.public'); if (!sh) return () => {};
   const A = (el, kf, o) => el?.animate(kf, { easing: EZ, fill: 'backwards', ...o });
-  A(sh.querySelector('.topbar'), [{ opacity: 0 }, { opacity: 1 }], { duration: 450, delay: 40 });
-  if (innerWidth < 900) {
-    const bot = sh.querySelector('.botnav');
-    A(bot, [{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 40 });
-    [...(bot?.querySelectorAll('.botnav-b') || [])].forEach((b, i) => A(b, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 480, delay: 780 + i * 80 }));
-  }
+  A(sh.querySelector('.topbar'), [{ opacity: 0 }, { opacity: 1 }], { duration: 320 });
+  const bot = innerWidth < 900 ? sh.querySelector('.botnav') : null, btns = [...(bot?.querySelectorAll('.botnav-b') || [])];
+  A(bot, [{ opacity: 0 }, { opacity: 1 }], { duration: 320 });
+  btns.forEach((b) => { b.style.opacity = '0'; });
   const pg = sh.querySelector('.kp:not(.kp-off)') || sh;
-  const hero = pg.querySelector('.cd-hero .sh-hero') || pg.querySelector('.cd-hero') || pg.querySelector('.sh-hero');
-  if (!hero || hero.getBoundingClientRect().top > innerHeight) return;
-  const cv = document.createElement('div'); cv.setAttribute('aria-hidden', 'true');
-  Object.assign(cv.style, { position: 'absolute', inset: '0', zIndex: '12', pointerEvents: 'none', background: 'var(--bg)' });
-  if (getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
-  hero.appendChild(cv);
-  cv.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(101%)' }], { duration: 850, delay: 200, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' });
-  setTimeout(() => cv.remove(), 1150);
-  const sl = hero.querySelector('.pb-slide.ta-go');
-  if (sl) { sl.classList.remove('ta-go'); setTimeout(() => { if (sl.isConnected) { sl.classList.add('ta-go'); } }, 520); }
+  let hero = pg.querySelector('.cd-hero .sh-hero') || pg.querySelector('.cd-hero') || pg.querySelector('.sh-hero');
+  if (hero && hero.getBoundingClientRect().top > innerHeight) hero = null;
+  let cv = null, sl = null;
+  if (hero) {
+    cv = document.createElement('div'); cv.setAttribute('aria-hidden', 'true');
+    Object.assign(cv.style, { position: 'absolute', inset: '0', zIndex: '12', pointerEvents: 'none', background: 'var(--bg)' });
+    if (getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
+    hero.appendChild(cv);
+    sl = hero.querySelector('.pb-slide.ta-go'); sl?.classList.remove('ta-go');
+  }
+  let opened = false;
+  return () => {
+    if (opened) return; opened = true;
+    btns.forEach((b, i) => { b.style.opacity = ''; A(b, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 480, delay: 380 + i * 80 }); });
+    if (cv) { cv.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(101%)' }], { duration: 800, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' }); setTimeout(() => cv.remove(), 900); }
+    if (sl) setTimeout(() => { if (sl.isConnected) sl.classList.add('ta-go'); }, 260);
+  };
 }
 // telefon mağazayı çizmeyi bitirip rahatlayınca (art arda 2 kare < 34 ms) devam et; en geç 1,4 sn
 function whenCalm(fn) {
@@ -352,13 +358,14 @@ export function HeroGate({ onOpen, onDone }) {
           const wide = root.clientWidth >= 640, k = kumTarget(eng, wide), cvs = stageRef.current?.querySelector('canvas');
           if (!k) { setReveal(true); setTimeout(onDone, 420); return; }
           k.tg.style.opacity = '0';
-          root.style.transition = 'background-color .3s ease'; root.style.backgroundColor = 'transparent';
+          root.style.transition = 'none'; root.style.backgroundColor = 'transparent';
+          const openScene = sceneKur();
           let fin = false;
           const end = () => { if (fin) return; fin = true; k.tg.style.opacity = ''; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
-          eng.flowTo(k.rect, wide ? 860 : 800, end, wide ? 30 : 22); setTimeout(end, 2600);
+          eng.flowTo(k.rect, wide ? 860 : 800, end, wide ? 30 : 22, openScene); setTimeout(() => { openScene(); end(); }, 2600);
           // geniş logonun yazı kısmı menüye taşmasın: akışın sonuna doğru kanvas menü logosunun yuvarlağına kırpılır
           if (wide && cvs) { cvs.style.clipPath = `circle(${Math.hypot(innerWidth, innerHeight)}px at ${k.cx}px ${k.cy}px)`; setTimeout(() => { cvs.style.transition = 'clip-path .4s cubic-bezier(.5,0,.6,1)'; cvs.style.clipPath = `circle(${k.R + 1}px at ${k.cx}px ${k.cy}px)`; }, 520); }
-          sceneKur(); return;
+          return;
         }
         flyLand(fl); // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar
         if (fx.scn) sceneIn(!!fl);

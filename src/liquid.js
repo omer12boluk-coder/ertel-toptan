@@ -102,7 +102,7 @@ precision highp float;
 layout(location=0) in vec2 aCorner;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uCol; uniform sampler2D uFlow;
 uniform int uTexW; uniform vec4 uRect; uniform vec2 uRes; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence;
-uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint;
+uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint; uniform float uThin;
 out vec2 vLocal; out float vHalfLen; out float vR; out vec3 vCol; out float vA;
 ${NOISE}
 ${ENERGY}
@@ -114,6 +114,7 @@ void main(){
   float E = energyAt(hm.xy*uRect.zw, uMouse, uRadius, uPresence, wakeE);
   float lift = smoothstep(0.35, 2.5, length(st.xy));
   float a = max(max(E, lift), max(uRest, 1.0-uIntroVis));
+  a *= smoothstep(uThin+0.06, uThin-0.06, clamp((hm.w-0.85)/0.3, 0.0, 1.0));
   if(a < 0.01 || hm.w <= 0.0){ gl_Position = vec4(2.0,2.0,2.0,1.0); return; }
   vec2 base = uRect.xy + hm.xy*uRect.zw + st.xy;
   base -= ambientField(hm.xy, uTime)*10.0*uAmbient;
@@ -339,9 +340,9 @@ export class LiquidEngine{
     this.opts={...this.opts,restStyle:'particles',radius:Math.min(r.w,r.h)*1.1,strength:.45,spread:1};
     this.pointer('down',r.x+r.w/2,r.y+r.h/2,true);this.pointer('up',r.x+r.w/2,r.y+r.h/2,true);
   }
-  flowTo(rect,dur=800,done,amp=22){
+  flowTo(rect,dur=800,done,amp=22,arrive){
     if(!this.ready||this.lost||this.destroyed)return false;
-    this.fl={a:{...this.rect},b:rect,t:0,e:0,dur,hold:0,done,amp};this.lockRect=true;this.dotMin=1;this.streakMul=.4;
+    this.fl={a:{...this.rect},b:rect,t:0,e:0,dur,hold:0,done,amp,arrive};this.lockRect=true;this.dotMin=1;this.streakMul=.4;
     this.presence=this.presenceTarget=this.burst=this.flowing=0;this.touchRelease=0;
     this.opts={...this.opts,interactive:false,ambient:false,restStyle:'particles'};
     this.settle=0;this.stateDirty=true;this.wake();return true;
@@ -349,12 +350,15 @@ export class LiquidEngine{
   stepFlowTo(rawMs,dt){
     const F=this.fl;if(!F)return;
     if(F.t<1){
-      F.t=Math.min(1,F.t+Math.min(rawMs,50)/F.dur);
+      F.t=Math.min(1,F.t+Math.min(rawMs,100)/F.dur);
       const x=F.t,e=x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,a=F.a,b=F.b;F.e=e;
       this.rect={x:a.x+(b.x-a.x)*e,y:a.y+(b.y-a.y)*e,w:a.w+(b.w-a.w)*e,h:a.h+(b.h-a.h)*e};
+      // yolda taneler seyrelir (kullanıcı: 'çok yoğun'), varışta hepsi geri gelir
+      this.thin=x<.22?1.1-(x/.22)*.78:x>.7?.32+((x-.7)/.3)*.85:.32;
+      if(F.t>=1&&F.arrive){const ar=F.arrive;F.arrive=null;requestAnimationFrame(ar)}
       return;
     }
-    F.hold+=dt;
+    this.thin=2;F.hold+=dt;
     if(F.hold>12&&!F.fin){F.fin=true;const cb=F.done;if(cb)requestAnimationFrame(cb)}
   }
   explode(){ // Alışverişe başla: logo dağılır
@@ -442,6 +446,8 @@ export class LiquidEngine{
     const dpr=this.canvas.width/this.cssW,pres=Math.max(this.presence,this.burst),mx=this.mouse.x-r.x,my=this.mouse.y-r.y;
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.bindVertexArray(this.vao);gl.disable(gl.BLEND);
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+    // akış sırasında düz resim katmanı çizilmez (tam ekran boyama; taneler zaten görünür)
+    if(!this.fl){
     const I=this.pImg;gl.useProgram(I.p);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.imgTex);gl.uniform1i(I.u.uImg,0);
     gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.flowTex[this.flowIdx]);gl.uniform1i(I.u.uFlow,1);
@@ -451,6 +457,7 @@ export class LiquidEngine{
     gl.uniform1f(I.u.uTime,this.time);gl.uniform1f(I.u.uAmbient,amb);gl.uniform1f(I.u.uIntroVis,introVis);
     gl.uniform1f(I.u.uRest,rest);gl.uniform1f(I.u.uAlphaMode,this.alphaMode?1:0);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    }
     if(!this.n||(!this.stateDirty&&rest===0&&introVis>=1))return;
     const P=this.pPart;gl.useProgram(P.p);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.stateTex[this.stateIdx]);gl.uniform1i(P.u.uState,0);
@@ -461,7 +468,7 @@ export class LiquidEngine{
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
     const dotN=Math.max(this.dotMin||0,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
-    gl.uniform3f(P.u.uTint,1,1,1);
+    gl.uniform3f(P.u.uTint,1,1,1);gl.uniform1f(P.u.uThin,this.thin??2);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
   }
 }
