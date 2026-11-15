@@ -106,7 +106,7 @@ export function gateFx(look) {
   // bnIn: banner giriş animasyonu (kum menüye giderken) '' bugünkü | iris | wipe | light | curtain | blinds — önizlemede ls 'bn-in-try' ile denenir
   // önizlemede varsayılan B (iris; kullanıcı 15.11 'B'yi deneyelim'), canlıda ayar yoksa bugünkü
   const bt = TRY_HOST ? ls.get('bn-in-try', 'iris') : null;
-  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum'), sand: on('gsnd'), bnIn: (bt ?? A.bnIn) || '' };
+  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum'), sand: on('gsnd'), bnIn: (bt ?? A.bnIn) || '', shed: (TRY_HOST && ls.get('shed-try', 'light')) || '' };
 }
 export const TRY = TRY_HOST;
 export const isLite = () => typeof document !== 'undefined' && document.documentElement.classList.contains('pf-lite');

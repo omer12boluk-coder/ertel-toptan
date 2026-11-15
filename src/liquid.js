@@ -59,7 +59,7 @@ out vec4 o;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uFlow;
 uniform vec2 uSize; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence; uniform float uStrength;
 uniform float uSpread; uniform float uTurb; uniform float uReturn; uniform float uTime; uniform float uDt; uniform float uIntro;
-uniform vec4 uFlowD; uniform vec4 uFlowP; uniform float uFlowBow; uniform float uFlowS;
+uniform vec4 uFlowD; uniform vec4 uFlowP; uniform float uFlowBow; uniform float uFlowS; uniform vec4 uShed; uniform vec4 uShed2;
 ${FLOWG}
 ${NOISE}
 vec2 curl(vec2 p){ const float e = 0.35;
@@ -73,6 +73,24 @@ void main(){
   vec4 st = texelFetch(uState, ij, 0);
   vec2 off = st.xy; vec2 vel = st.zw;
   float sd = hm.z; float light = 0.45 + sd*1.1;
+  // 15.11 akşam 'kum döken logo' (uShed.x > 0): NET logo (ayrı 2B kanvas) menüye kayar; taneler logonun üstünde onunla
+  // birlikte taşınır (görünmez), her biri kendi anında kopar: düşer (yerçekimi) / geride kalır (kuyruk), girdapla savrulur, söner.
+  // uShed = (oran, saniye, yerçekimi px/sn², geri savrulma px/sn) · uShed2.x = logonun uçuşunun toplam süreye oranı
+  if(uShed.x > 0.0){
+    float T = uFlowP.x, lf = max(uShed2.x, 0.05);
+    float h1 = fract(sd*13.71), h2 = fract(sd*91.37);
+    float td = mix(0.04, 0.92, h1)*lf;
+    vec2 dl = uFlowD.xy + hm.xy*uFlowD.zw;
+    float u0 = clamp(min(T, td)/lf, 0.0, 1.0); float e0 = u0 < 0.5 ? 4.0*u0*u0*u0 : 1.0 - pow(-2.0*u0 + 2.0, 3.0)*0.5;
+    vec2 tgt = e0*dl;
+    if(T > td){
+      float sec = (T - td)*uShed.y; vec2 dir = normalize(uFlowD.xy + vec2(0.0001));
+      vec2 fq = (hm.xy*uSize + off)*0.006 + vec2(uTime*0.35, -uTime*0.2);
+      tgt += vec2(0.0, 0.5*uShed.z*sec*sec) - dir*uShed.w*sec*(0.5 + h2) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*min(sec, 0.5);
+    }
+    vec2 no = mix(off, tgt, 1.0 - pow(T > td ? 0.55 : 0.2, uDt));
+    o = vec4(no, (no-off)/max(uDt, 0.25)); return;
+  }
   if(uFlowP.x >= 0.0){
     float ti = flowTi(flowFront(hm.xy, uFlowP.zw), sd, uFlowP.x);
     float ei = 1.0 - pow(1.0 - ti, 4.0); ei = mix(ti*ti*(3.0-2.0*ti), ei, smoothstep(0.0, 0.12, ti));
@@ -115,7 +133,7 @@ precision highp float;
 layout(location=0) in vec2 aCorner;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uCol; uniform sampler2D uFlow;
 uniform int uTexW; uniform vec4 uRect; uniform vec2 uRes; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence;
-uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint; uniform float uSilk;
+uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint; uniform float uSilk; uniform vec4 uShed; uniform vec4 uShed2;
 uniform vec4 uFlowV; uniform float uFlowK;
 out vec2 vLocal; out float vHalfLen; out float vR; out vec3 vCol; out float vA;
 ${NOISE}
@@ -129,7 +147,14 @@ void main(){
   float E = energyAt(hm.xy*uRect.zw, uMouse, uRadius, uPresence, wakeE);
   float lift = smoothstep(0.35, 2.5, length(st.xy));
   float a = max(max(E, lift), max(uRest, 1.0-uIntroVis)); float fsz = 1.0;
-  if(uFlowV.x >= 0.0){
+  if(uShed.x > 0.0){
+    // kum döken logo: sadece kopan taneler görünür; koptuğu an belirir, uShed.y saniyelik ömrün sonunda söner
+    float T = uFlowV.x, lf = max(uShed2.x, 0.05);
+    float h1 = fract(hm.z*13.71), h3 = fract(hm.z*37.93);
+    float td = mix(0.04, 0.92, h1)*lf, sec = (T - td)*uShed.y;
+    a = step(h3, uShed.x)*smoothstep(td, td + 0.015, T)*(1.0 - smoothstep(0.0, uShed2.y, sec));
+    fsz = 0.8;
+  } else if(uFlowV.x >= 0.0){
     // cephe gelince tane görünür olur (o an düz resim aynı yerde söner), yola çıkınca seyrelir, menüye varırken söner
     float fr = flowFront(hm.xy, uFlowV.zw); float fti = flowTi(fr, hm.z, uFlowV.x);
     float kth = mix(uFlowV.y, uFlowK, smoothstep(0.3, 0.6, fti));
@@ -445,7 +470,7 @@ export class LiquidEngine{
     gl.uniform1f(P.u.uStrength,this.strength()*(1+this.burst*1.5));gl.uniform1f(P.u.uSpread,clamp(o.spread,0,2));
     gl.uniform1f(P.u.uTurb,clamp(o.turbulence,0,2)*(o.reducedMotion?.3:1));gl.uniform1f(P.u.uReturn,clamp(o.returnSpeed,0,2));
     gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uDt,dt);gl.uniform1f(P.u.uIntro,intro);
-    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform4f(P.u.uFlowP,F.t,F.amp,F.dx,F.dy)}else gl.uniform4f(P.u.uFlowP,-1,0,0,0);gl.uniform1f(P.u.uFlowBow,F?.bow||0);gl.uniform1f(P.u.uFlowS,F?.streams||0);gl.uniform1f(P.u.uFlowJ,F?.jit??.1);
+    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform4f(P.u.uFlowP,F.t,F.amp,F.dx,F.dy)}else gl.uniform4f(P.u.uFlowP,-1,0,0,0);gl.uniform1f(P.u.uFlowBow,F?.bow||0);const SH=F?.shed;gl.uniform4f(P.u.uShed,SH?SH.amt:0,SH?SH.sec:1,SH?SH.g:0,SH?SH.back:0);gl.uniform4f(P.u.uShed2,SH?SH.lf:1,0,0,0);gl.uniform1f(P.u.uFlowS,F?.streams||0);gl.uniform1f(P.u.uFlowJ,F?.jit??.1);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);this.stateIdx=dst;this.stateDirty=true;
   }
   draw(){
@@ -468,7 +493,7 @@ export class LiquidEngine{
     gl.uniform1f(I.u.uTime,this.time);gl.uniform1f(I.u.uAmbient,amb);gl.uniform1f(I.u.uIntroVis,introVis);
     gl.uniform1f(I.u.uRest,rest);gl.uniform1f(I.u.uAlphaMode,this.alphaMode?1:0);
     const FL=this.fl;if(FL)gl.uniform4f(I.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(I.u.uFlowV,-1,0,0,0);gl.uniform1f(I.u.uFlowJ,FL?.jit??.1);
-    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    if(!FL?.shed)gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     if(!this.n||(!this.stateDirty&&rest===0&&introVis>=1&&!FL))return;
     const P=this.pPart;gl.useProgram(P.p);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.stateTex[this.stateIdx]);gl.uniform1i(P.u.uState,0);
@@ -479,7 +504,7 @@ export class LiquidEngine{
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
     const dotN=Math.max(this.dotMin||0,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
-    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);gl.uniform1f(P.u.uFlowK,FL?.kEnd??.42);gl.uniform1f(P.u.uSilk,FL?.silk||0);gl.uniform1f(P.u.uFlowJ,FL?.jit??.1);
+    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);gl.uniform1f(P.u.uFlowK,FL?.kEnd??.42);gl.uniform1f(P.u.uSilk,FL?.silk||0);const SH2=FL?.shed;gl.uniform4f(P.u.uShed,SH2?SH2.amt:0,SH2?SH2.sec:1,0,0);gl.uniform4f(P.u.uShed2,SH2?SH2.lf:1,SH2?SH2.life:.5,0,0);gl.uniform1f(P.u.uFlowJ,FL?.jit??.1);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
   }
 }

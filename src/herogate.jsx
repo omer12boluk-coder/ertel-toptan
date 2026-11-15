@@ -86,7 +86,7 @@ function flySmall(img, root) {
 }
 // uçan logo (kum kanvası ya da yedek resim) menüdeki logonun içine kayar; son %22'de menü logosuyla yumuşakça yer değiştirir
 // (gündüz menü logosunun beyaz yuvarlağı birden belirip 'oturma' gibi görünüyordu)
-function flyLand(st) {
+function flyLand(st, ez) {
   if (!st) return;
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
   const f = st.el;
@@ -110,7 +110,9 @@ function flyLand(st) {
   const k = t.width / st.z, ex = st.x - st.off, ey = st.y - st.off;
   const tx = t.left - ex - st.off * k, ty = t.top - ey - st.off * k, D = innerWidth < 640 ? 600 : 650;
   f.style.transformOrigin = '0 0';
-  f.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${tx}px,${ty}px) scale(${k})` }], { duration: D, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' });
+  // ez verilirse (kum döken logo) logo, dökülen tanelerle AYNI eğriyle kayar (kum motorundaki eğrinin aynısı, 24 ara kare)
+  if (ez) f.animate(Array.from({ length: 25 }, (_, i) => { const e = ez(i / 24); return { offset: i / 24, transform: `translate(${tx * e}px,${ty * e}px) scale(${1 + (k - 1) * e})` }; }), { duration: D, easing: 'linear', fill: 'forwards' });
+  else f.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${tx}px,${ty}px) scale(${k})` }], { duration: D, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'forwards' });
   // uçan logo SÖNMEZ (ikisi yarı saydamken logo bir an siliniyordu): menü logosu altında belirir (gündüz beyaz yuvarlağı yumuşak gelir),
   // tam görününce uçan logo kaldırılır
   if (st.same) { // birebir kopya: varış karesinde tek hamlede değişir (karıştırma/sönme yok)
@@ -176,6 +178,33 @@ function markShow(st) {
   const [W, H] = markSize(e, st.y + st.z); e.resize(W, H, { x: st.x, y: st.y, w: st.z, h: st.z });
   e.canvas.style.visibility = 'visible'; st.el.style.visibility = 'hidden'; st.gl = true;
   return true;
+}
+// ---- 15.11.2026 akşam: kum döken logo (ls 'shed-try' drop | comet | light; SUNUM AŞAMASI, demoya konmadı) ----
+// Kullanıcı: 'kumlar yerine logo kaysa ama logo biraz kum dökerek oraya gitse'. NET logo (menü logosunun birebir kopyası, flyLand)
+// menüye kayar; kum motoru sadece dökülen taneleri çizer (resim katmanı çizilmez): taneler logoyla taşınır, her biri kendi anında
+// kopar, düşer / geride kalır, söner. Logo ve taneler aynı eğriyi kullanır (eio).
+const SHED = {
+  drop: { amt: 0.32, g: 260, back: 30, life: 0.55, amp: 10 },
+  comet: { amt: 0.45, g: 40, back: 130, life: 0.45, amp: 14 },
+  light: { amt: 0.13, g: 240, back: 24, life: 0.5, amp: 8 },
+};
+const eio = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+function shedLand(st, kind) {
+  const e = markEng, cf = SHED[kind];
+  const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
+  if (!cf || !e?.ready || e.lost || !tg || !st) return 0;
+  const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
+  const tw = r0.width - 2 * pl, D = innerWidth < 640 ? 600 : 650, tot = D + cf.life * 1000 + 120;
+  const [W, H] = markSize(e, st.y + st.z); e.resize(W, H, { x: st.x, y: st.y, w: st.z, h: st.z });
+  let fin = false;
+  const end = () => { if (fin) return; fin = true; killMark(); };
+  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, tot, end, cf.amp, null, 1)) return 0;
+  e.fl.shed = { amt: cf.amt, sec: tot / 1000, g: cf.g, back: cf.back, lf: D / tot, life: cf.life };
+  e.fl.silk = 0.5; e.dotMin = 0.34; e.streakMul = 0.7;
+  e.canvas.style.visibility = 'visible';
+  flyLand(st, eio);
+  setTimeout(end, tot + 1500);
+  return D;
 }
 function glLand(st) {
   const e = markEng;
@@ -411,7 +440,7 @@ export function HeroGate({ onOpen, onDone }) {
   useState(() => { gateT0 = performance.now(); });
   useEffect(() => { preloadMark(); }, []);
   // kum uçuşu açıksa küçük logonun kum motoru giriş sayfası açıkken, boşta önceden kurulur (basınca kurmak donduruyordu)
-  const sandOn = !!(fx.fly && fx.sand);
+  const sandOn = !!(fx.fly && (fx.sand || fx.shed));
   const stepRef = useRef(null);
   useEffect(() => {
     if (!sandOn) return undefined;
@@ -502,7 +531,7 @@ export function HeroGate({ onOpen, onDone }) {
     const kf = !!(fx.flow && eng?.ready && !eng.lost && root?.dataset.gl === 'on');
     const fl = !kf && fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
     // kum motoru henüz hazır değilse (çok erken basıldı) kalan adımlar şimdi tamamlanır — logo dağılırken, görünmez
-    if (fl && fx.sand) { stepRef.current?.(); fl.wantGl = true; }
+    if (fl && (fx.sand || fx.shed)) { stepRef.current?.(); fl.wantGl = !fx.shed; }
     if (kf) { const sg = stageRef.current; if (sg) Object.assign(sg.style, { transition: 'none', transform: 'none', opacity: '1' }); }
     else engRef.current?.explode();
     setLeaving(true);
@@ -514,7 +543,7 @@ export function HeroGate({ onOpen, onDone }) {
         // kum: mağaza ÖNCE çizilir (logo o sırada kıpırdamaz → çizim donması görünmez), telefon rahatlayınca çözülme başlar
         if (kf) { kumGo(); return; }
         // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar; kum uçuşu açıksa net logo giriş kum motoruyla akar
-        const sd = fx.sand && fl ? glLand(fl) : 0;
+        const sd = fx.shed && fl ? shedLand(fl, fx.shed) : fx.sand && fl ? glLand(fl) : 0;
         if (!sd) { if (fl?.gl) fl.el.style.visibility = ''; killMark(); flyLand(fl); }
         if (fx.scn) sceneIn(!!fl);
         // banner giriş animasyonu: kumla aynı anda (sadece kum ya da tek parça uçuşta)
