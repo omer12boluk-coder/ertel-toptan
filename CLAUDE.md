@@ -73,7 +73,7 @@ listesinde ara (yeni ad duyarsan listeye ekle); bulamazsan TEK soru sor ("Ana sa
 - Ana ekran uygulaması her açılışta bölümün ana sayfasından başlar ("kaldığı yerden" istenmedi); derin linkler ve bildirimden açılış (`?n=1`) hariç.
 
 **Teknik dersler (hata yaşandı)**
-- **Giriş sayfasında (kum kanvası) yazı/düğmelere telefonda `will-change` VERME** — 15.11 telefonda kareler aşırı düştü (bilgisayarda `(hover:hover) and (pointer:fine)` içinde duruyor).
+- **Giriş sayfasında (kum kanvası) yazı/düğmelere `will-change` VERME** — 15.11 telefonda kareler aşırı düştü; telefon + bilgisayardan kaldırıldı.
 - **Tek satırlık kodun ortasına `//` açıklama YAZMA** — satırın gerisini (else dalları, kapanış parantezi) yutuyor; 15.11 telefonda giriş logosu kayboldu. Açıklama ayrı satıra.
 - **Kendi adını çağıran kısa yardımcı yazma** (`const save = x => (lc ? updateLcart : save(x))` → sonsuz döngü, DHL aktarımı dondu).
 - `replace` ile metin eklerken o metin dosyada birden fazla yerde olabilir → ekledikten sonra ilgili ekranı aç, test et.
