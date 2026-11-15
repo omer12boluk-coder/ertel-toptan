@@ -26,9 +26,10 @@ import { PackDecor, DECOR } from './decor.jsx';
 // 15.11.2026 'Tek satır' üst menü ayarları (look.gs1*) — Tasarım v3 + Gelişmiş ortak
 export const GS1_ROWS = [
   ['gs1Tone', 'Tek satır: renk', '', [['', 'Beyaz cam'], ['ice', 'Buz mavisi'], ['smoke', 'Duman'], ['tint', 'Tema tonu'], ['ink', 'Gece mavisi']]],
-  ['gs1Top', 'Tek satır: en üstte', 'Cam: banner menünün arkasından başlar, cam her zaman görünür. Şeffaf: en üstte zemin yok, kaydırınca cam', [['', 'Düz (bugünkü)'], ['glass', 'Cam'], ['clear', 'Şeffaf']]],
-  ['gs1Drop', 'Tek satır: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; başlığa basınca açılır, ikinci basışta sayfaya gider', [['', 'Üstüne gelince'], ['click', 'Tıklayınca']]],
-  ['gs1Srch', 'Tek satır: arama', 'İkisinde de basınca kutu menünün üstüne doğru genişler', [['', 'Kutu'], ['icon', 'Simge']]],
+  ['gs1Top', 'Tek satır: cam', 'Cam: düz zeminde de belli olan kristal cam (bannerın üstüne binmez). Şeffaf: en üstte zemin yok, kaydırınca cam', [['', 'Düz (bugünkü)'], ['glass', 'Cam'], ['clear', 'Şeffaf']]],
+  ['gs1Lbl', 'Tek satır: menü yazıları', 'Sadece simge: menüde simgeler, üstüne gelince adı yana açılır', [['', 'Simge + yazı'], ['icon', 'Sadece simge']]],
+  ['gs1Drop', 'Tek satır: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; başlığa basınca açılır, tekrar basınca kapanır', [['', 'Üstüne gelince'], ['click', 'Tıklayınca']]],
+  ['gs1Srch', 'Tek satır: arama', 'Basınca kutu, menüyle arasındaki boş yere kadar genişler', [['', 'Kutu'], ['icon', 'Simge']]],
   ['gs1Hov', 'Tek satır: menüde fare', 'Kayan kutu: fareyi izleyen yumuşak zemin. Büyüme: fareye yakın yazı hafifçe büyür', [['', 'Bugünkü'], ['slide', 'Kayan kutu'], ['dock', 'Büyüme']]],
 ];
 export const GS3_PC = [['', 'Şerit, üstte şeffaf'], ['strip', 'Şerit'], ['ada2', 'Sade ada'], ['ada', 'Yüzen kapsül']];

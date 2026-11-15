@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear'].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', LK.gs1Lbl === 'icon' && 'gs1-ico'].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   useEffect(() => {
     const c = document.documentElement.classList; const on = gs1Cls ? gs1Cls.split(' ') : [];
@@ -721,7 +721,8 @@ function ShellFull() {
     document.documentElement.style.setProperty('--gs1-x', { narrow: '1280px', mid: '1440px', wide: '1640px', full: '100vw' }[heroW] || '1440px');
     return () => { on.forEach((k) => c.remove(k)); document.documentElement.style.removeProperty('--gs1-x'); };
   }, [gs1Cls, heroW]);
-  useGs1Top(gs1 && !phoneUI && (LK.gs1Top === 'glass' || LK.gs1Top === 'clear'), tab);
+  useGs1Top(gs1 && !phoneUI && LK.gs1Top === 'clear', tab);
+  useGs1Search(gs1 && !phoneUI);
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
@@ -1104,25 +1105,37 @@ function usePhoneMQ() {
 // 15.11.2026 'Ada' üst menü: aşağı kaydırınca html.isl → cam daralır, menü satırı kaybolur (CSS). Titreme olmasın diye
 // 90px'te daralır, 40px'in altında ya da 70px+ yukarı kaydırınca açılır. Sayfa yüksekliği değişmez (topbar dış kutusu sabit).
 // 15.11.2026: topOnly (look.islOpen 'top') = yukarı kaydırınca AÇILMAZ, sadece sayfanın en başında. Ortak Ada'da (isl-any) dış kutu boyu --isl-h ile sabitlenir.
-// 15.11.2026 Tek satır üst menü: en üstteyken html gs1-at0 (şeffaf/cam ayarı için) + 'cam' ayarında banner menünün arkasından başlar (--gs1-pull)
+// 15.11.2026 Tek satır üst menü: 'Şeffaf' ayarında en üstteyken html gs1-at0
 function useGs1Top(on, tab) {
   useEffect(() => {
-    const c = document.documentElement.classList, d = document.documentElement.style;
+    const c = document.documentElement.classList;
     if (!on) { c.remove('gs1-at0'); return; }
     let raf = 0, was = null;
     const f = () => { raf = 0; const t = scrollY < 6; if (t !== was) { was = t; c.toggle('gs1-at0', t); } };
     const on2 = () => { if (!raf) raf = requestAnimationFrame(f); };
-    const pull = () => { if (!c.contains('gs1-under')) return d.removeProperty('--gs1-pull');
-      const h = document.querySelector('section[data-kp=anasayfa]:not(.kp-off) .cd-hero'), t = document.querySelector('.topbar.hdr-gs .topbar-in');
-      if (!h || !t || scrollY > 4) return; const cur = parseFloat(d.getPropertyValue('--gs1-pull')) || 0;
-      const np = Math.max(0, Math.round(h.getBoundingClientRect().top + cur - t.getBoundingClientRect().top)); if (np !== cur) d.setProperty('--gs1-pull', np + 'px'); };
-    // 'Cam': en üstte altındaki banner koyuysa (pb-dark) yazılar açık renge döner (html gs1-dk)
-    let mo = null; const dk = () => { const u = c.contains('gs1-under'); const b = u && document.querySelector('section[data-kp=anasayfa]:not(.kp-off) .cd-hero .sh-slide.on .pb-box'); c.toggle('gs1-dk', !!(b && b.classList.contains('pb-dark'))); };
-    const hook = () => { const tr = document.querySelector('section[data-kp=anasayfa] .cd-hero'); if (!tr || mo) return; mo = new MutationObserver(dk); mo.observe(tr, { subtree: true, attributes: true, attributeFilter: ['class'] }); dk(); };
-    raf = requestAnimationFrame(f); const t1 = setTimeout(() => { pull(); hook(); }, 60), t2 = setTimeout(() => { pull(); hook(); }, 600);
-    addEventListener('scroll', on2, { passive: true }); addEventListener('resize', pull);
-    return () => { removeEventListener('scroll', on2); removeEventListener('resize', pull); cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); mo?.disconnect(); c.remove('gs1-at0', 'gs1-dk'); d.removeProperty('--gs1-pull'); };
+    raf = requestAnimationFrame(f);
+    addEventListener('scroll', on2, { passive: true });
+    return () => { removeEventListener('scroll', on2); cancelAnimationFrame(raf); c.remove('gs1-at0'); };
   }, [on, tab]);
+}
+// 15.11.2026 (2) Tek satır arama: tıklayınca kutu sadece menü ile arasındaki BOŞ yere kadar büyür (hiçbir şeyin üstüne binmez; menü ortada kalmak için yana kayar)
+function useGs1Search(on) {
+  useEffect(() => {
+    if (!on) return undefined;
+    const h = document.querySelector('.topbar.hdr-gs'); if (!h) return undefined;
+    let t = 0;
+    const open = (e) => {
+      const sr = e.target.closest?.('.gs-srch'); if (!sr) return; clearTimeout(t);
+      const nav = h.querySelector('.gs-nav'); const bs = nav ? [...nav.querySelectorAll('.topnav-b')] : [];
+      if (!bs.length) return;
+      const used = bs[bs.length - 1].getBoundingClientRect().right - bs[0].getBoundingClientRect().left;
+      const room = nav.clientWidth - used - 24; const w = sr.getBoundingClientRect().width;
+      sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(440, w + room))) + 'px');
+    };
+    const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) sr.style.removeProperty('--gs1-sw'); }, 200); };
+    h.addEventListener('focusin', open); h.addEventListener('focusout', close);
+    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
+  }, [on]);
 }
 // 15.11.2026 Tek satır üst menü fare efektleri: 'slide' = menü yazılarının arkasında fareyi izleyen yumuşak kutu; 'dock' = fareye yakın hap hafifçe büyür
 function useGs1Hover(mode) {

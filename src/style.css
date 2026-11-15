@@ -10706,21 +10706,20 @@ html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { ba
   html.gs-one .hdr-gs .gs-brand { order: 1; margin-right: 6px; }
   html.gs-one .hdr-gs .gs-nav { order: 2; flex: 1; min-width: 0; justify-content: center; height: 64px; padding: 0; border-top: 0 !important; position: relative; transition: opacity .25s ease; }
   html.gs-one .hdr-gs .gs-nav::before { display: none !important; }
-  html.gs-one .hdr-gs .gs-srch { order: 3; flex: none; position: relative; width: 236px; height: 42px; display: block; }
+  html.gs-one .hdr-gs .gs-srch { order: 3; flex: none; position: relative; width: var(--gs1-sw, 236px); height: 42px; display: block; transition: width .42s cubic-bezier(.22, .8, .24, 1); }
   html.gs-one .hdr-gs .gs-icons { order: 4; }
   /* arama kutusu: sağa yaslı, tıklayınca menünün üstüne doğru (sola) genişler — menü yerinden oynamaz, altında silikleşir */
-  html.gs-one .hdr-gs .gs-srch .hsearch { position: absolute; right: 0; top: 0; width: 100%; max-width: none; z-index: 4; transition: width .42s cubic-bezier(.22, .8, .24, 1); }
-  html.gs-one .hdr-gs .gs-srch .hsearch:focus-within { width: 440px; }
-  html.gs-one .hdr-gs .topbar-in:has(.gs-srch .hsearch:focus-within) .gs-nav { opacity: .18; }
+  html.gs-one .hdr-gs .gs-srch .hsearch { width: 100%; max-width: none; }
+  html.gs-one .hdr-gs .gs-nav .topnav-b { transition: background-color .2s, color .2s; }
   html.gs-one .hdr-gs .gs-srch .hsearch-box { transition: background-color .25s, border-color .25s, box-shadow .25s; }
   /* simge hâli: yuvarlak büyüteç; basınca aynı kutu açılır */
-  html.gs-one.gs1-sicon .hdr-gs .gs-srch { width: 42px; }
+  html.gs-one.gs1-sicon .hdr-gs .gs-srch { width: var(--gs1-sw, 42px); }
   html.gs-one.gs1-sicon .hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { padding: 0 0 0 11px; cursor: pointer; }
   html.gs-one.gs1-sicon .hdr-gs .gs-srch .hsearch:not(:focus-within) input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   /* aralık dar ekranlar: önce arama simgeye döner, sonra menü simgeleri, en son sepet yazısı */
 }
 @media (min-width: 900px) and (max-width: 1365px) {
-  html.gs-one .hdr-gs .gs-srch { width: 42px; }
+  html.gs-one .hdr-gs .gs-srch { width: var(--gs1-sw, 42px); }
   html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { padding: 0 0 0 11px; cursor: pointer; }
   html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within) input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 }
@@ -10760,8 +10759,6 @@ html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { ba
   html.gs-one.gs1-clear.gs1-at0.gs1-t-ink .topbar.hdr-gs .gs-icons .icon-btn { color: var(--muted); }
   html.gs-one.gs1-clear.gs1-at0.gs1-t-ink .topbar.hdr-gs :is(.hcart:not(.full), .btn.me-login) { background: var(--surface); border-color: var(--line); color: var(--fg); }
   html.gs-one.gs1-clear.gs1-at0.gs1-t-ink .topbar.hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .1) !important; color: var(--muted); }
-  html.gs-one.gs1-under .shell.public section[data-kp="anasayfa"] .cd-hero { margin-top: calc(-1 * var(--gs1-pull, 0px)) !important; }
-  html.gs-one.gs1-under.gs1-at0:not(.gs1-t-ink, .gs1-dk) .topbar.hdr-gs .topbar-in { background-color: rgb(255 255 255 / .42) !important; -webkit-backdrop-filter: blur(22px) saturate(1.9); backdrop-filter: blur(22px) saturate(1.9); }
 }
 
 /* fare efektleri: 'slide' kayan kutu · 'dock' hafif büyüme (main.jsx useGs1Hover) */
@@ -10772,8 +10769,27 @@ html.gs-one.gs1-t-ink .hdr-gs .gs1-hbox, html[data-theme="dark"].gs-one .hdr-gs 
 html.gs-one.gs1-slide .hdr-gs .gs-nav > .hd, html.gs-one.gs1-slide .hdr-gs .gs-nav > .topnav-b { position: relative; z-index: 1; }
 html.gs-one.gs1-slide .hdr-gs .gs-nav .topnav-b:not(.on):hover { background: transparent !important; }
 html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will-change: auto; }
-@media (min-width: 900px) { html.gs-one.gs1-under .shell.public section[data-kp="anasayfa"] .cd-hero .pb-box { padding-top: var(--gs1-pull, 0px); box-sizing: border-box; } }
 /* 15.11.2026 önizleme 'Üst menü' paneli (hdrtry.jsx): sol altta */
 .an-panel.an-left { right: auto; left: 14px; justify-items: start; }
 .an-panel.an-left .an-dev { display: block; padding: 10px 4px 2px; color: #6e6e73; font-size: 12px; font-weight: 600; }
 @media (min-width: 900px) { html.gs-one:is(.gs1-t-ink, .gs1-dk.gs1-at0) .topbar.hdr-gs .gs-nav .hd.open > .topnav-b:not(.on) { color: #fff !important; background: rgb(255 255 255 / .1) !important; } }
+
+/* 15.11.2026 (2) Tek satır: 'Cam' = banner'a binmeden her yerde görünen cam (kristal kenar + üst ışık); arama yanındaki boşluğa kadar büyür (main.jsx useGs1Search) */
+@media (min-width: 900px) {
+  html.gs-one.gs1-under:not(.gs1-t-ink) .topbar.hdr-gs .topbar-in { position: relative; background: linear-gradient(180deg, rgb(255 255 255 / .74), rgb(255 255 255 / .34)) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.9); backdrop-filter: blur(24px) saturate(1.9); border: 1px solid rgb(255 255 255 / .95) !important;
+    box-shadow: inset 0 1px 0 #fff, inset 0 -14px 22px -20px rgb(255 255 255 / .9), 0 0 0 .5px rgb(15 23 42 / .12), 0 18px 36px -22px rgb(15 23 42 / .42) !important; }
+  html.gs-one.gs1-under:not(.gs1-t-ink) .topbar.hdr-gs .topbar-in::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; padding: 1.5px;
+    background: linear-gradient(115deg, rgb(255 255 255 / .95), rgb(160 190 255 / .35) 30%, rgb(255 255 255 / 0) 52%, rgb(200 215 255 / .45) 78%, rgb(255 255 255 / .9));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  html.gs-one.gs1-under.gs1-t-ice .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, rgb(236 243 255 / .8), rgb(214 228 255 / .4)) !important; }
+  html.gs-one.gs1-under.gs1-t-smoke .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, rgb(244 245 248 / .8), rgb(222 224 230 / .45)) !important; }
+  html.gs-one.gs1-under.gs1-t-tint .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 6%, rgb(255 255 255 / .8)), color-mix(in oklab, var(--accent) 14%, rgb(255 255 255 / .38))) !important; }
+  html.gs-one.gs1-under[data-theme="dark"] .topbar.hdr-gs .topbar-in::before { opacity: .2; }
+  /* 'Sadece simge': menüde yazılar gizli, üstüne gelince (ya da açılır menüsü açıkken) yazı yana açılır */
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b { gap: 0; padding: 0 10px; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { display: inline-flex; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; margin-left: 0;
+    transition: max-width .34s cubic-bezier(.22, .8, .24, 1), opacity .22s ease, margin-left .34s cubic-bezier(.22, .8, .24, 1); }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-b:hover, .hd.open > .topnav-b, .topnav-b:focus-visible) :is(.topnav-l, .topnav-chev) { max-width: 140px; opacity: 1; margin-left: 6px; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-b:hover, .hd.open > .topnav-b) .topnav-chev { margin-left: 4px; }
+}

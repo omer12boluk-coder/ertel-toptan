@@ -118,7 +118,8 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   // ok: oka tıklamak sayfaya gitmez, menüyü açar/kapatır
   const click = (e) => {
     clearTimeout(t.current);
-    if (clickMode() && !open && !e.target.closest?.('.hd-p')) { e.preventDefault(); e.stopPropagation(); mute.current = false; show(); return; } // ilk tık menüyü açar, açıkken başlığa tık sayfaya gider
+    // tıklama ayarı: başlığa her basış menüyü açar/kapatır, sayfaya GİTMEZ (sayfaya menünün içinden gidilir)
+    if (clickMode() && !e.target.closest?.('.hd-p')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } return; }
     if (MENU.ok && e.target.closest?.('.topnav-chev')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } }
   };
   return (
