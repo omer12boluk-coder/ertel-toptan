@@ -116,18 +116,19 @@ function flyLand(st) {
   }
 }
 // ---- 15.11.2026 Kum akışı + sırayla kurulum (look.anim gkum; ÖNİZLEME, canlıda varsayılan kapalı) ----
-// Kullanıcı: C'nin (mağaza sırayla kurulur) tatlılığı + kumun akışı; 'giriş sayfasındaki kumlarla AYNI fizikte olmalı' (ilk
-// deneme ayrı 2B kanvastı: taneler kalın, akış kasıyordu → kaldırıldı). Artık giriş sayfasının kendi kum motoru (liquid.js
-// puff + flowTo) akar: logo yerinde kuma gevşer → mağaza çizilir → telefon rahatlayınca kum menüdeki logonun yerine akar →
-// varışta gerçek menü logosuyla aynı karede değişir. Giriş sayfasının zemini bu sırada saydamlaşır (kanvas üstte kalır).
+// Kullanıcı: C'nin (mağaza sırayla kurulur) tatlılığı + kumun akışı, giriş sayfasındaki kumun ipeksiliğiyle. Son tasarım (6. tur,
+// 'beni dinleme, kendin güzel bir şey yap'): mağaza önce çizilir (logo sabit) → telefon rahatlayınca logo, menüye en yakın
+// kenarından başlayarak ufalanıp kuma çözülür (çözülmemiş kısım net resim olarak durur; birden 'tanelerden logo'ya dönmesi
+// 'sahte' bulundu) → taneler tel tel menüdeki logonun yerine akar, varırken söner, altında gerçek menü logosu belirir →
+// kum varınca banner perdesi açılır. Hepsi giriş sayfasının kendi motorunda (liquid.js flowTo). Giriş zemini akışta saydamdır.
 // CSS'e dokunmaz (stiller satır içi) — başka dallarla çakışmasın.
 function kumTarget(eng, wide) {
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
   if (!tg) return null;
   const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
-  const z = r0.width - 2 * pl, asp = eng.rect.w / eng.rect.h;
-  // telefonda büyük logo = aynı 'e' işareti; bilgisayarda geniş logo ('e' + yazı): 'e' kısmı menü logosunun üstüne gelir
-  return { tg, cx: r0.left + r0.width / 2, cy: r0.top + r0.height / 2, R: r0.width / 2, rect: { x: r0.left + pl, y: r0.top + pt, w: wide ? z * asp : z, h: z } };
+  const z = r0.width - 2 * pl;
+  // taneler varırken söndüğü için hepsi (bilgisayardaki geniş logonun yazısı dahil) menü logosunun karesine toplanır
+  return { tg, rect: { x: r0.left + pl, y: r0.top + pt, w: z, h: z } };
 }
 // mağaza sırayla kurulur. İKİ ADIM (15.11: kum akarken banner da oynayınca akış 'yolda takılıyordu'): önce sadece menüler belirir,
 // banner sayfa renginde perdenin arkasında bekler; kum yerine VARINCA (dönen işlev) perde soldan sağa açılır, banner kendi giriş
@@ -354,9 +355,8 @@ export function HeroGate({ onOpen, onDone }) {
       if (!kf) engRef.current?.stop();
       onOpen();
       whenCalm(() => {
-        // kum: mağaza ÖNCE çizilir (logo o sırada kıpırdamaz → çizim donması görünmez; 15.11: kum gevşerken çizilince 'logo ilk
-        // dağıldığı anda takılıyordu'), telefon rahatlayınca logo gevşer (puff) ve durmadan menüye akar
-        if (kf) { eng.puff(); setTimeout(kumGo, 230); return; }
+        // kum: mağaza ÖNCE çizilir (logo o sırada kıpırdamaz → çizim donması görünmez), telefon rahatlayınca çözülme başlar
+        if (kf) { kumGo(); return; }
         flyLand(fl); // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar
         if (fx.scn) sceneIn(!!fl);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
@@ -364,18 +364,17 @@ export function HeroGate({ onOpen, onDone }) {
       });
     };
     const kumGo = () => {
-    const wide = root.clientWidth >= 640, k = kumTarget(eng, wide), cvs = stageRef.current?.querySelector('canvas');
-    if (!k) { setReveal(true); setTimeout(onDone, 420); return; }
-    // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
-    const dur = wide ? 900 : 840;
-    k.tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.42, delay: dur * 0.6, easing: 'ease-out', fill: 'backwards' });
-    root.style.transition = 'none'; root.style.backgroundColor = 'transparent';
-    const openScene = sceneKur();
-    let fin = false;
-    const end = () => { if (fin) return; fin = true; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
-    eng.flowTo(k.rect, dur, end, wide ? 60 : 44, openScene); setTimeout(() => { openScene(); end(); }, 2600);
-    // geniş logonun yazı kısmı menüye taşmasın: akışın sonuna doğru kanvas menü logosunun yuvarlağına kırpılır
-    if (wide && cvs) { cvs.style.clipPath = `circle(${Math.hypot(innerWidth, innerHeight)}px at ${k.cx}px ${k.cy}px)`; setTimeout(() => { cvs.style.transition = 'clip-path .4s cubic-bezier(.5,0,.6,1)'; cvs.style.clipPath = `circle(${k.R + 1}px at ${k.cx}px ${k.cy}px)`; }, 520); }
+      const wide = root.clientWidth >= 640, k = kumTarget(eng, wide), cvs = stageRef.current?.querySelector('canvas');
+      if (!k) { setReveal(true); setTimeout(onDone, 420); return; }
+      // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
+      const dur = wide ? 1250 : 1150;
+      k.tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.4, delay: dur * 0.5, easing: 'ease-out', fill: 'backwards' });
+      root.style.transition = 'none'; root.style.backgroundColor = 'transparent';
+      const openScene = sceneKur();
+      let fin = false;
+      const end = () => { if (fin) return; fin = true; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
+      if (!eng.flowTo(k.rect, dur, end, wide ? 34 : 26, openScene)) { openScene(); end(); return; }
+      setTimeout(() => { openScene(); end(); }, dur + 1800);
     };
     // mağaza ancak dağılma (560 ms) VE kum bittikten sonra çizilir; kumun son karesi boyansın diye bir kare daha beklenir
     const wait = Math.max(0, (kf ? 120 : 560) - (performance.now() - t0));

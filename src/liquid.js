@@ -19,6 +19,12 @@ float energyAt(vec2 rectPx, vec2 mouse, float radius, float presence, float wake
   float f = exp(-dot(d,d)/(radius*radius))*presence;
   return smoothstep(0.06, 0.5, f*1.15 + wakeEnergy*1.7);
 }`;
+// 15.11.2026 kum akışı (flowTo): fp = tanenin/pikselin logodaki yeri (0 = menüye en yakın kenar, 1 = en uzak). Çözülme cephesi
+// yakın kenardan başlayıp logoyu boydan boya geçer (FG), her tane cephe gelince küçük bir gecikmeyle (FJ) yola çıkar.
+const FLOWG=`
+const float FG = 0.46; const float FJ = 0.11;
+float flowFront(vec2 uv, vec2 dir){ return clamp(dot(uv-0.5, dir)+0.5, 0.0, 1.0)*FG; }
+float flowTi(float front, float sd, float T){ return clamp((T - front - sd*FJ)/(1.0-FG-FJ), 0.0, 1.0); }`;
 const QUAD_VS=`#version 300 es
 layout(location=0) in vec2 aPos;
 out vec2 vUv;
@@ -52,7 +58,8 @@ out vec4 o;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uFlow;
 uniform vec2 uSize; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence; uniform float uStrength;
 uniform float uSpread; uniform float uTurb; uniform float uReturn; uniform float uTime; uniform float uDt; uniform float uIntro;
-uniform vec4 uFlowD; uniform vec3 uFlowP;
+uniform vec4 uFlowD; uniform vec4 uFlowP;
+${FLOWG}
 ${NOISE}
 vec2 curl(vec2 p){ const float e = 0.35;
   float a = vnoise(p+vec2(0.0,e)) - vnoise(p-vec2(0.0,e));
@@ -66,13 +73,13 @@ void main(){
   vec2 off = st.xy; vec2 vel = st.zw;
   float sd = hm.z; float light = 0.45 + sd*1.1;
   if(uFlowP.x >= 0.0){
-    float g = 0.5; float ti = clamp((uFlowP.x - sd*g)/(1.0-g), 0.0, 1.0);
-    float ei = ti < 0.5 ? 4.0*ti*ti*ti : 1.0 - pow(-2.0*ti+2.0, 3.0)/2.0;
+    float ti = flowTi(flowFront(hm.xy, uFlowP.zw), sd, uFlowP.x);
+    float ei = ti*ti*(3.0-2.0*ti); ei = ei*ei*(3.0-2.0*ei)*0.35 + ei*0.65;
     vec2 dl = uFlowD.xy + hm.xy*uFlowD.zw;
     float r2 = clamp((hm.w-0.85)/0.3, 0.0, 1.0); float arc = sin(3.14159*ti);
     vec2 fq = (hm.xy*uSize + off)*0.0095 + vec2(uTime*0.35, -uTime*0.2);
-    vec2 tgt = (ei - uFlowP.y)*dl + vec2(-dl.y, dl.x)*arc*0.2*(0.1+sd*0.9) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.z*arc;
-    vec2 no = mix(off, tgt, 1.0 - pow(0.8, uDt));
+    vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*0.17*(0.15+r2*0.85) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
+    vec2 no = mix(off, tgt, 1.0 - pow(0.78, uDt));
     o = vec4(no, (no-off)/max(uDt, 0.25)); return;
   }
   vec2 p = hm.xy*uSize + off;
@@ -102,10 +109,12 @@ precision highp float;
 layout(location=0) in vec2 aCorner;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uCol; uniform sampler2D uFlow;
 uniform int uTexW; uniform vec4 uRect; uniform vec2 uRes; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence;
-uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint; uniform float uThin; uniform float uFlowT;
+uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint;
+uniform vec4 uFlowV;
 out vec2 vLocal; out float vHalfLen; out float vR; out vec3 vCol; out float vA;
 ${NOISE}
 ${ENERGY}
+${FLOWG}
 void main(){
   int id = gl_InstanceID;
   ivec2 ij = ivec2(id % uTexW, id / uTexW);
@@ -114,8 +123,12 @@ void main(){
   float E = energyAt(hm.xy*uRect.zw, uMouse, uRadius, uPresence, wakeE);
   float lift = smoothstep(0.35, 2.5, length(st.xy));
   float a = max(max(E, lift), max(uRest, 1.0-uIntroVis));
-  a *= smoothstep(uThin+0.06, uThin-0.06, clamp((hm.w-0.85)/0.3, 0.0, 1.0));
-  if(uFlowT >= 0.0){ float fti = clamp((uFlowT - hm.z*0.5)/0.5, 0.0, 1.0); a *= 1.0 - smoothstep(0.84, 0.99, fti); }
+  if(uFlowV.x >= 0.0){
+    // cephe gelince tane görünür olur (o an düz resim aynı yerde söner), yola çıkınca seyrelir, menüye varırken söner
+    float fr = flowFront(hm.xy, uFlowV.zw); float fti = flowTi(fr, hm.z, uFlowV.x);
+    float keep = smoothstep(uFlowV.y+0.05, uFlowV.y-0.05, clamp((hm.w-0.85)/0.3, 0.0, 1.0));
+    a = max(a, smoothstep(fr-0.02, fr, uFlowV.x))*mix(1.0, keep, smoothstep(0.0, 0.14, fti))*(1.0 - smoothstep(0.82, 0.99, fti));
+  }
   if(a < 0.01 || hm.w <= 0.0){ gl_Position = vec4(2.0,2.0,2.0,1.0); return; }
   vec2 base = uRect.xy + hm.xy*uRect.zw + st.xy;
   base -= ambientField(hm.xy, uTime)*10.0*uAmbient;
@@ -152,9 +165,10 @@ precision highp float;
 out vec4 o;
 uniform sampler2D uImg; uniform sampler2D uFlow; uniform vec2 uRes; uniform float uDpr; uniform vec4 uRect;
 uniform vec3 uBg; uniform vec3 uImgBg; uniform vec2 uMouse; uniform float uPresence; uniform float uRadius; uniform float uStrength;
-uniform float uTime; uniform float uAmbient; uniform float uIntroVis; uniform float uRest; uniform float uAlphaMode;
+uniform float uTime; uniform float uAmbient; uniform float uIntroVis; uniform float uRest; uniform float uAlphaMode; uniform vec4 uFlowV;
 ${NOISE}
 ${ENERGY}
+${FLOWG}
 void main(){
   vec2 px = vec2(gl_FragCoord.x, uRes.y*uDpr - gl_FragCoord.y)/uDpr;
   vec2 size = uRect.zw;
@@ -173,6 +187,7 @@ void main(){
   float k = key*e.x*e.y;
   float E = energyAt(rp, uMouse, uRadius, uPresence, fl.b);
   float show = (1.0 - max(E, uRest))*uIntroVis;
+  if(uFlowV.x >= 0.0){ float fr = flowFront(clamp(uv,0.0,1.0), uFlowV.zw); show *= 1.0 - smoothstep(fr-0.02, fr, uFlowV.x); }
   vec3 mat = uAlphaMode > 0.5 ? col : col*(uBg/max(uImgBg, vec3(0.001)));
   float A = k*show;
   o = vec4(mat*A, A);
@@ -332,34 +347,20 @@ export class LiquidEngine{
     if(type==='down'){this.burst=1;this.touchRelease=0}
     this.wake();
   }
-  // 15.11.2026 Kum akışı (herogate 'gkum'): giriş sayfasındaki kumun KENDİSİ (aynı taneler, aynı çizim). Parçacıklar yeniden
-  // KURULMAZ (gather donduruyordu). puff: logo yerinde hafifçe kuma gevşer. flowTo: logonun 'evi' (rect) büyük yerinden menüdeki
-  // yerine kayar; her tane kendi gecikmesiyle (sd) yay çizerek + girdapla savrularak evine akar (SIM_FS uFlowP dalı: yay fiziği
-  // yerine yönlendirilmiş akış → varışta yaylanma / geri sekme YOK). Bitince done çağrılır.
-  puff(){
-    if(!this.ready||this.lost)return;const r=this.rect;
-    this.opts={...this.opts,restStyle:'particles',radius:Math.min(r.w,r.h)*1.1,strength:.45,spread:1};
-    this.pointer('down',r.x+r.w/2,r.y+r.h/2,true);this.pointer('up',r.x+r.w/2,r.y+r.h/2,true);
-  }
-  flowTo(rect,dur=800,done,amp=22,arrive){
+  // 15.11.2026 Kum akışı (herogate 'gkum'): logo, menüye en yakın kenarından başlayarak ufalanıp kuma çözülür; çözülen taneler
+  // (giriş sayfasının kendi taneleri, yeniden KURULMAZ) yay çizip girdap alanıyla tel tel menüdeki logonun yerine akar ve varırken
+  // söner. Çözülmemiş kısım düz resim olarak yerinde durur (birden 'tanelerden logo'ya dönmez — kullanıcı 'sahte' buldu).
+  // rect = menü logosunun yeri; thin = yolda görünen tane oranı. SIM_FS / PART_VS / IMAGE_FS'te uFlow* dalları.
+  flowTo(rect,dur=1150,done,amp=26,arrive,thin=.15){
     if(!this.ready||this.lost||this.destroyed)return false;
-    this.fl={a:{...this.rect},b:rect,t:0,e:0,dur,hold:0,done,amp,arrive};this.lockRect=true;this.dotMin=1;this.streakMul=.55;
-    this.presence=this.presenceTarget=this.burst=this.flowing=0;this.touchRelease=0;
-    this.opts={...this.opts,interactive:false,ambient:false,restStyle:'particles'};
+    const a=this.rect,ax=a.x+a.w/2-(rect.x+rect.w/2),ay=a.y+a.h/2-(rect.y+rect.h/2),L=Math.hypot(ax,ay)||1,ux=ax/L,uy=ay/L,ext=Math.abs(ux)*a.w+Math.abs(uy)*a.h||1;
+    this.fl={a:{...a},b:rect,t:0,dur,hold:0,done,amp,arrive,thin,dx:ux*a.w/ext,dy:uy*a.h/ext};this.lockRect=true;this.dotMin=1;this.streakMul=.5;
+    this.presenceTarget=0;this.touchRelease=0;this.opts={...this.opts,interactive:false};
     this.settle=0;this.stateDirty=true;this.wake();return true;
   }
   stepFlowTo(rawMs,dt){
     const F=this.fl;if(!F)return;
-    if(F.t<1){
-      F.t=Math.min(1,F.t+Math.min(rawMs,100)/F.dur);
-      const x=F.t,e=x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,a=F.a,b=F.b;F.e=e;
-      this.rect={x:a.x+(b.x-a.x)*e,y:a.y+(b.y-a.y)*e,w:a.w+(b.w-a.w)*e,h:a.h+(b.h-a.h)*e};
-      // yolda tanelerin ~%20'si görünür (%32 'kalın', %9 'aşırı sade' bulundu) (kullanıcı: 'çok yoğun / çok kalın bir şey gidiyor'); taneler varırken SÖNER (PART_VS uFlowT),
-      // altında gerçek menü logosu belirir → kalın tane-logo ve son karede değişim ('oturma') yok
-      this.thin=x<.26?1.1-(x/.26)*.9:.2;
-      if(F.t>=1&&F.arrive){const ar=F.arrive;F.arrive=null;requestAnimationFrame(ar)}
-      return;
-    }
+    if(F.t<1){F.t=Math.min(1,F.t+Math.min(rawMs,100)/F.dur);if(F.t>=1&&F.arrive){const ar=F.arrive;F.arrive=null;requestAnimationFrame(ar)}return}
     F.hold+=dt;
     if(F.hold>4&&!F.fin){F.fin=true;const cb=F.done;if(cb)requestAnimationFrame(cb)}
   }
@@ -434,7 +435,7 @@ export class LiquidEngine{
     gl.uniform1f(P.u.uStrength,this.strength()*(1+this.burst*1.5));gl.uniform1f(P.u.uSpread,clamp(o.spread,0,2));
     gl.uniform1f(P.u.uTurb,clamp(o.turbulence,0,2)*(o.reducedMotion?.3:1));gl.uniform1f(P.u.uReturn,clamp(o.returnSpeed,0,2));
     gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uDt,dt);gl.uniform1f(P.u.uIntro,intro);
-    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform3f(P.u.uFlowP,F.t,F.e,F.amp)}else gl.uniform3f(P.u.uFlowP,-1,0,0);
+    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform4f(P.u.uFlowP,F.t,F.amp,F.dx,F.dy)}else gl.uniform4f(P.u.uFlowP,-1,0,0,0);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);this.stateIdx=dst;this.stateDirty=true;
   }
   draw(){
@@ -448,8 +449,6 @@ export class LiquidEngine{
     const dpr=this.canvas.width/this.cssW,pres=Math.max(this.presence,this.burst),mx=this.mouse.x-r.x,my=this.mouse.y-r.y;
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.bindVertexArray(this.vao);gl.disable(gl.BLEND);
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
-    // akış sırasında düz resim katmanı çizilmez (tam ekran boyama; taneler zaten görünür)
-    if(!this.fl){
     const I=this.pImg;gl.useProgram(I.p);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.imgTex);gl.uniform1i(I.u.uImg,0);
     gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.flowTex[this.flowIdx]);gl.uniform1i(I.u.uFlow,1);
@@ -458,9 +457,9 @@ export class LiquidEngine{
     gl.uniform1f(I.u.uPresence,pres);gl.uniform1f(I.u.uRadius,this.radiusPx());gl.uniform1f(I.u.uStrength,this.strength());
     gl.uniform1f(I.u.uTime,this.time);gl.uniform1f(I.u.uAmbient,amb);gl.uniform1f(I.u.uIntroVis,introVis);
     gl.uniform1f(I.u.uRest,rest);gl.uniform1f(I.u.uAlphaMode,this.alphaMode?1:0);
+    const FL=this.fl;if(FL)gl.uniform4f(I.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(I.u.uFlowV,-1,0,0,0);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
-    }
-    if(!this.n||(!this.stateDirty&&rest===0&&introVis>=1))return;
+    if(!this.n||(!this.stateDirty&&rest===0&&introVis>=1&&!FL))return;
     const P=this.pPart;gl.useProgram(P.p);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.stateTex[this.stateIdx]);gl.uniform1i(P.u.uState,0);
     gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.homeTex);gl.uniform1i(P.u.uHome,1);
@@ -470,7 +469,7 @@ export class LiquidEngine{
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
     const dotN=Math.max(this.dotMin||0,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
-    gl.uniform3f(P.u.uTint,1,1,1);gl.uniform1f(P.u.uThin,this.thin??2);gl.uniform1f(P.u.uFlowT,this.fl?this.fl.t:-1);
+    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
   }
 }
