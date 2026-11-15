@@ -1154,7 +1154,7 @@ function useGs1Search(on) {
   useEffect(() => {
     if (!on) return undefined;
     const h = document.querySelector('.topbar.hdr-gs'); if (!h) return undefined;
-    let t = 0;
+    let t = 0, nT = 0;
     const open = (e) => {
       const sr = e.target.closest?.('.gs-srch'); if (!sr) return; clearTimeout(t);
       const nav = h.querySelector('.gs-nav'); const bs = nav ? [...nav.querySelectorAll('.topnav-b')] : [];
@@ -1163,17 +1163,25 @@ function useGs1Search(on) {
       // (html gs1-ss) → aramaya daha çok yer; kapanınca yazılar geri gelir. Kısa hâlin genişliği bir anlığına geçişsiz ölçülür.
       const H = document.documentElement.classList; const lb = [...H].find((c) => c.startsWith('gs1-lb-'));
       const ss = !lb || (lb === 'gs1-lb-toggle' && !H.contains('gs1-tg-s'));
-      let need;
+      let need, off = 0;
+      // 16.11.2026: menü öğeleri YERİNDE kalır — arama büyürken ortalı menü sola kayıyordu ('ufak tık'). Menünün o anki sol payı sabitlenir
+      // (sola yaslı + aynı pay), arama sadece sağdaki boşluğa büyür; yazılar kapanırken simgeler soldan yerinde durur. Kapanınca ortalamaya döner.
+      if (ss) {
+        clearTimeout(nT); const ks = [...nav.children].filter((k) => k.offsetWidth && getComputedStyle(k).position !== 'absolute');
+        if (ks.length && !nav.style.paddingLeft) { const nr = nav.getBoundingClientRect(); off = ks[0].getBoundingClientRect().left - nr.left; nav.style.justifyContent = 'flex-start'; nav.style.paddingLeft = off.toFixed(2) + 'px'; }
+        else off = parseFloat(nav.style.paddingLeft) || 0;
+      }
       if (ss && !H.contains('gs1-ss')) {
         bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (l && !b.style.getPropertyValue('--lw')) b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); });
         H.add('gs1-meas2', 'gs1-ss'); need = gs1NavNeed(nav); H.remove('gs1-ss'); void nav.offsetWidth; H.remove('gs1-meas2'); void nav.offsetWidth; H.add('gs1-ss');
       } else need = gs1NavNeed(nav);
-      const room = nav.clientWidth - need - 12; const w = sr.getBoundingClientRect().width;
+      const room = nav.clientWidth - off - need - 12; const w = sr.getBoundingClientRect().width;
       sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(ss ? 660 : 560, w + room))) + 'px');
     };
-    const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) { sr.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss'); } }, 200); };
+    const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) { sr.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss');
+      const nav = h.querySelector('.gs-nav'); clearTimeout(nT); nT = setTimeout(() => { if (nav && !sr.contains(document.activeElement)) { nav.style.justifyContent = ''; nav.style.paddingLeft = ''; } }, 480); } }, 200); };
     h.addEventListener('focusin', open); h.addEventListener('focusout', close);
-    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss'); };
+    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss'); clearTimeout(nT); const nv = h.querySelector('.gs-nav'); if (nv) { nv.style.justifyContent = ''; nv.style.paddingLeft = ''; } };
   }, [on]);
 }
 // 15.11.2026 (4) Tek satır 'Menü yazıları' hareketleri: fare bir başlıkta kısa durunca .xo (dönen yazı / cıva); cıva = sıvı damla
@@ -1488,8 +1496,8 @@ function setupFlowPills() {
       g.insertBefore(gh, g.firstChild); g.classList.add('flow-g'); btn.classList.add('flow-on');
       // 16.11.2026 tek satır menü: seçilen düğmenin adı geçiş sırasında açılıyor → hap SABİT bir hedefe değil, düğmenin o anki yerine/boyuna
       // zamanla yaklaşır (eskiden simge boyunda küçük hapla gidip sonra 'yerine oturuyordu'). Tek hareket, sonunda düğmenin tam üstünde.
-      // Sadece 'Uzayan menü' / 'Sadece seçilinin adı'nda; süre ve eğri diğer menülerdeki hapın AYNISI (440 ms, cubic-bezier(.3,.7,.25,1)).
-      if (g.classList.contains('gs-nav') && document.documentElement.classList.contains('gs1-lb-expand')) {
+      // Sadece 'Uzayan menü' / 'Sadece seçilinin adı'nda ve arama açıkken (gs1-ss: simgeye basınca yazılar geri açılıyor); süre ve eğri diğer menülerdeki hapın AYNISI (440 ms, cubic-bezier(.3,.7,.25,1)).
+      if (g.classList.contains('gs-nav') && (document.documentElement.classList.contains('gs1-lb-expand') || document.documentElement.classList.contains('gs1-ss'))) {
         const done2 = () => { gh.remove(); g.classList.remove('flow-g'); btn.classList.remove('flow-on'); };
         const t0 = performance.now(), D = 440; const bz = cubicBz(0.3, 0.7, 0.25, 1);
         const step = () => {
