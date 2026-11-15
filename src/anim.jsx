@@ -103,23 +103,25 @@ export function gateFx(look) {
   const lv = ls.get('perf-lite', null); if (look?.perf === 'on' || (look?.perf !== 'off' && lv?.lite && Date.now() - lv.at < 14 * 864e5)) return {};
   const v = TRY_HOST ? readTry() : null; const A = look?.anim || {};
   const on = (k) => (v ? !!v[k] : liveOn(A, k));
-  // bnIn: banner giriş animasyonu (kum menüye giderken) '' bugünkü | iris | wipe | light | curtain | blinds — önizlemede ls 'bn-in-try' ile denenir
-  // önizlemede varsayılan B (iris; kullanıcı 15.11 'B'yi deneyelim'), canlıda ayar yoksa bugünkü
-  const bt = TRY_HOST ? ls.get('bn-in-try', 'iris') : null;
-  // önizleme seçicisi 'Açılış denemesi' (ls 'fly-try'): kum uçuşu biçimi — one/three/silk (logo kuma döner), drop/comet/light (net logo
-  // kum dökerek kayar), plain (kumsuz tek parça uçuş). Seçilmişse 'gsnd' kutusunu ezer.
-  const ft = TRY_HOST ? ls.get('fly-try', null) : null;
-  const shed = ft ? (['drop', 'comet', 'light'].includes(ft) ? ft : '') : (TRY_HOST && ls.get('shed-try', '')) || '';
-  const sand = ft ? ['one', 'three', 'silk'].includes(ft) : on('gsnd');
-  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum'), sand, flowSty: ft || 'one', bnIn: (bt ?? A.bnIn) || '', shed };
+  // 15.11.2026 YAYINA: açılış biçimi Ayarlar › Genel'den (look.anim.flySty, look.anim.bnIn); önizlemede 'Açılış denemesi' seçicisi
+  // (ls 'fly-try' / 'bn-in-try') ayarı ezer. flySty: one (varsayılan, tek ince kum kolu) | three | silk (logo kuma döner) |
+  // light | drop | comet (net logo kum dökerek kayar) | plain (kumsuz tek parça) | none (küçük logo YOK, sadece banner gelir).
+  // bnIn: iris (varsayılan, logodan doğan) | '' bugünkü | wipe | light | curtain | blinds
+  const ft = (TRY_HOST ? ls.get('fly-try', null) : null) || A.flySty || 'one';
+  const bt = TRY_HOST ? ls.get('bn-in-try', null) : null;
+  const bnIn = bt ?? A.bnIn ?? 'iris';
+  const shed = ['drop', 'comet', 'light'].includes(ft) ? ft : '';
+  const sand = ['one', 'three', 'silk'].includes(ft);
+  return { fly: on('gfly') && ft !== 'none', noLogo: ft === 'none', scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum'), sand, flowSty: ft, bnIn: bnIn || '', shed };
 }
 export const TRY = TRY_HOST;
 // 15.11.2026 'şimdiye kadar yaptıklarımızı demodaki seçiciye koy': açılış (kum uçuşu + banner girişi) seçenekleri, bu cihazda
-const FLY_OPTS = [['one', 'Kum · tek ince kol'], ['three', 'Kum · üç kol (sağ/sol/orta)'], ['silk', 'Kum · geniş ipeksi şerit'], ['light', 'Net logo · hafif serpinti'], ['drop', 'Net logo · kum dökerek'], ['comet', 'Net logo · kuyruklu yıldız'], ['plain', 'Net logo · kumsuz']];
-const BN_OPTS = [['iris', 'B · Logodan doğan'], ['', 'A · Bugünkü'], ['wipe', 'C · Kumun izinden'], ['light', 'D · Karanlıktan ışığa'], ['curtain', 'E · Perde'], ['blinds', 'F · Panjur']];
+export const FLY_OPTS = [['one', 'Kum · tek ince kol'], ['three', 'Kum · üç kol (sağ/sol/orta)'], ['silk', 'Kum · geniş ipeksi şerit'], ['light', 'Net logo · hafif serpinti'], ['drop', 'Net logo · kum dökerek'], ['comet', 'Net logo · kuyruklu yıldız'], ['plain', 'Net logo · kumsuz'], ['none', 'Logo yok · sadece banner gelir']];
+export const BN_OPTS = [['iris', 'B · Logodan doğan'], ['', 'A · Bugünkü'], ['wipe', 'C · Kumun izinden'], ['light', 'D · Karanlıktan ışığa'], ['curtain', 'E · Perde'], ['blinds', 'F · Panjur']];
 function GateTry() {
-  const [f, setF] = useState(() => ls.get('fly-try', null) || 'one');
-  const [b, setB] = useState(() => ls.get('bn-in-try', 'iris'));
+  const st = useStore((x) => x.settings?.look?.anim);
+  const [f, setF] = useState(() => ls.get('fly-try', null) || st?.flySty || 'one');
+  const [b, setB] = useState(() => ls.get('bn-in-try', null) ?? st?.bnIn ?? 'iris');
   const replay = () => { try { sessionStorage.removeItem('hero-seen'); } catch {} location.href = '/'; };
   return (
     <>

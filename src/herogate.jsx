@@ -548,10 +548,12 @@ export function HeroGate({ onOpen, onDone }) {
         // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar; kum uçuşu açıksa net logo giriş kum motoruyla akar
         const sd = fx.shed && fl ? shedLand(fl, fx.shed) : fx.sand && fl ? glLand(fl, fx.flowSty) : 0;
         if (!sd) { if (fl?.gl) fl.el.style.visibility = ''; killMark(); flyLand(fl); }
-        if (fx.scn) sceneIn(!!fl);
+        // logo yok + banner animasyonu: menüler sadece belirir, bannerı örtü açar (banner küçültülmez)
+        if (fx.scn) sceneIn(!!fl || !!(fx.noLogo && fx.bnIn));
         // banner giriş animasyonu: kumla aynı anda (sadece kum ya da tek parça uçuşta)
         // banner kendi hızında (kumu beklemez, kum yavaş akarken de ~0,9 sn'de açılır) — hepsi aynı anda
-        if (fx.bnIn && fl) bannerIn(fx.bnIn, fl, 1100);
+        // 'Logo yok' seçiliyse banner ortasından açılır (iris)
+        if (fx.bnIn && (fl || fx.noLogo)) bannerIn(fx.bnIn, fl, 1100);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
         // animasyon sürerken sayfa KİLİTLENMEZ: giriş katmanı dokunuşları geçirir, kaydırma kilidi hemen kalkar
         document.body.classList.remove('eh-lock');
