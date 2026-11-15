@@ -1180,8 +1180,11 @@ function useGs1Search(on) {
     };
     const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) { sr.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss');
       const nav = h.querySelector('.gs-nav'); clearTimeout(nT); nT = setTimeout(() => { if (nav && !sr.contains(document.activeElement)) { nav.style.justifyContent = ''; nav.style.paddingLeft = ''; } }, 480); } }, 200); };
+    // 16.11.2026: arama açıkken menüdeki bir sayfaya basınca arama KAPANMAZ (odak kutuda kalır, yeni sayfada açık devam eder)
+    const keep = (e) => { if (e.button === 0 && e.target.closest?.('.gs-nav .topnav-b') && h.querySelector('.gs-srch')?.contains(document.activeElement)) e.preventDefault(); };
+    h.addEventListener('mousedown', keep, true);
     h.addEventListener('focusin', open); h.addEventListener('focusout', close);
-    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss'); clearTimeout(nT); const nv = h.querySelector('.gs-nav'); if (nv) { nv.style.justifyContent = ''; nv.style.paddingLeft = ''; } };
+    return () => { h.removeEventListener('mousedown', keep, true); h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss'); clearTimeout(nT); const nv = h.querySelector('.gs-nav'); if (nv) { nv.style.justifyContent = ''; nv.style.paddingLeft = ''; } };
   }, [on]);
 }
 // 15.11.2026 (4) Tek satır 'Menü yazıları' hareketleri: fare bir başlıkta kısa durunca .xo (dönen yazı / cıva); cıva = sıvı damla
