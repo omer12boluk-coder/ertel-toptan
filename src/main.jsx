@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   useEffect(() => {
     const c = document.documentElement.classList; const on = gs1Cls ? gs1Cls.split(' ') : [];
@@ -723,7 +723,7 @@ function ShellFull() {
   }, [gs1Cls, heroW]);
   useGs1Top(gs1 && !phoneUI && LK.gs1Top === 'clear', tab);
   useGs1Search(gs1 && !phoneUI);
-  useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
+  useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island', 'line', 'spot'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
@@ -1154,6 +1154,21 @@ function useGs1Lbl(mode) {
       const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) nav.classList.remove('xo-all'); else out = setTimeout(lv, 300); }, 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
       return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
+    }
+    if (mode === 'line' || mode === 'spot') {
+      // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir
+      const ln = mode === 'line' ? Object.assign(document.createElement('span'), { className: 'gs1-line' }) : null;
+      if (ln) { ln.setAttribute('aria-hidden', 'true'); nav.prepend(ln); }
+      const put = (b, inst) => { if (!ln) return; if (!b) { ln.style.opacity = '0'; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
+        if (inst) ln.style.transition = 'none'; ln.style.transform = `translateX(${r.left - n.left + 14}px)`; ln.style.width = Math.max(0, r.width - 28) + 'px'; ln.style.opacity = '1';
+        if (inst) requestAnimationFrame(() => { ln.style.transition = ''; }); };
+      const home = (inst) => put(nav.querySelector('.topnav-b.on'), inst);
+      const t0 = setTimeout(() => home(true), 120); const ro = new ResizeObserver(() => home(true)); ro.observe(nav);
+      const ov = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); put(b); nav.classList.add('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x !== b && x.classList.remove('xo')); b.classList.add('xo'); };
+      const lv = () => { clearTimeout(out); out = setTimeout(() => { if (document.querySelector('.hd-p')) { out = setTimeout(lv, 300); return; } nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); home(); }, 160); };
+      const mo = new MutationObserver(() => { if (!nav.classList.contains('xo-any')) home(); }); mo.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] });
+      nav.addEventListener('pointerover', ov); nav.addEventListener('pointerleave', lv);
+      return () => { clearTimeout(t0); clearTimeout(out); ro.disconnect(); mo.disconnect(); nav.removeEventListener('pointerover', ov); nav.removeEventListener('pointerleave', lv); ln?.remove(); nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); };
     }
     let blob = null, at = null;
     const rectOf = (b) => { const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect(); return { x: r.left - n.left, y: r.top - n.top, w: r.width, h: r.height }; };

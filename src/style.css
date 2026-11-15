@@ -10850,23 +10850,50 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within):hover .hsearch-box { background: rgb(15 23 42 / .05) !important; }
 }
 /* 15.11.2026 Tek satır + ADA (look.hdrScroll 'island'): kayınca sadece logo · arama · sepet · hesap kalır, hepsi ortada kısa bir kapsülde.
-   Her parça kendi genişliğinden süzülerek kapanır/açılır (ERTEL yazısı, menü, ses/gece/bildirim) — anında kaybolma yok. */
+   Geçiş YAVAŞ ve yumuşak (~0,95 sn; 0,6 sn 'çok hızlı, göze batıyor' bulundu). Her parça kendi genişliğinden süzülerek kapanır/açılır (ERTEL yazısı, menü, ses/gece/bildirim) — anında kaybolma yok. */
 @media (min-width: 900px) {
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { max-width: none !important; justify-content: center;
-    transition: width .6s cubic-bezier(.32, .72, 0, 1), padding .6s cubic-bezier(.32, .72, 0, 1), gap .6s cubic-bezier(.32, .72, 0, 1), box-shadow .4s, background-color .35s, border-color .35s; }
+    transition: width .95s cubic-bezier(.45, 0, .2, 1), padding .95s cubic-bezier(.45, 0, .2, 1), gap .95s cubic-bezier(.45, 0, .2, 1), box-shadow .6s, background-color .5s, border-color .35s; }
   /* şekil değişmez: köşe yuvarlaklığı aynı, kaydırma/ölçek (transform) YOK — kenarlar geçişte yumuşayıp bulanıklaşıyordu (kullanıcı) */
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(600px, 100vw - 40px); gap: 8px; padding: 0 8px 0 10px !important; border-radius: 26px; transform: none !important; }
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { transform: none !important; border-radius: 26px; }
-  html.gs-one.gs-isl .hdr-gs .gs-nav { max-height: none; max-width: 1200px; transform: none !important; transition: max-width .6s cubic-bezier(.32, .72, 0, 1), opacity .35s ease .15s, flex-grow .6s cubic-bezier(.32, .72, 0, 1); }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; flex-grow: 0; opacity: 0; overflow: hidden; max-height: none; pointer-events: none; transition: max-width .55s cubic-bezier(.32, .72, 0, 1), opacity .16s ease, flex-grow .55s cubic-bezier(.32, .72, 0, 1); }
-  html.gs-one.gs-isl .hdr-gs .gs-brand { margin-right: 6px; transition: margin .6s cubic-bezier(.32, .72, 0, 1); }
+  html.gs-one.gs-isl .hdr-gs .gs-nav { max-height: none; max-width: 1200px; transform: none !important; transition: max-width .95s cubic-bezier(.45, 0, .2, 1), opacity .5s ease .3s, flex-grow .95s cubic-bezier(.45, 0, .2, 1); }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; flex-grow: 0; opacity: 0; overflow: hidden; max-height: none; pointer-events: none; transition: max-width .9s cubic-bezier(.45, 0, .2, 1), opacity .45s ease, flex-grow .9s cubic-bezier(.45, 0, .2, 1); }
+  html.gs-one.gs-isl .hdr-gs .gs-brand { margin-right: 6px; transition: margin .95s cubic-bezier(.45, 0, .2, 1); }
   html.gs-one.gs-isl.isl .hdr-gs .gs-brand { margin-right: 0; }
-  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .6s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .12s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .55s cubic-bezier(.32, .72, 0, 1), opacity .18s ease; }
-  html.gs-one.gs-isl .hdr-gs .gs-srch { transition: width .6s cubic-bezier(.32, .72, 0, 1), flex-grow .6s cubic-bezier(.32, .72, 0, 1); }
+  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .95s cubic-bezier(.45, 0, .2, 1), opacity .5s ease .3s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .9s cubic-bezier(.45, 0, .2, 1), opacity .45s ease; }
+  html.gs-one.gs-isl .hdr-gs .gs-srch { transition: width .95s cubic-bezier(.45, 0, .2, 1), flex-grow .95s cubic-bezier(.45, 0, .2, 1); }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch { flex: 1 1 auto; width: auto !important; min-width: 120px; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .08) !important; padding: 0 10px 0 14px !important; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch input { position: static !important; opacity: 1 !important; }
-  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .55s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .12s, margin .55s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; padding-inline: 0 !important; border-width: 0 !important; transition: max-width .5s cubic-bezier(.32, .72, 0, 1), opacity .15s ease, margin .5s; }
+  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .9s cubic-bezier(.45, 0, .2, 1), opacity .5s ease .3s, margin .9s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; padding-inline: 0 !important; border-width: 0 !important; transition: max-width .9s cubic-bezier(.45, 0, .2, 1), opacity .45s ease, margin .9s; }
+}
+
+/* 15.11.2026 (5) 'Menü yazıları' ek fikirler: ink = simge + yazı, sadece renk (kutu yok, seçilinin altında ince çizgi) ·
+   line = sadece isim + altında fareyi izleyen kayan çizgi · spot = sadece isim, fare bir yazıdayken diğerleri silikleşir ·
+   stack = simge üstte, küçük yazı altında (telefon alt menüsü gibi) */
+@media (min-width: 900px) {
+  html:is(.gs1-lb-ink, .gs1-lb-line, .gs1-lb-spot, .gs1-lb-stack) .hdr-gs .gs-nav .flow-ghost { display: none !important; }
+  html:is(.gs1-lb-ink, .gs1-lb-line, .gs1-lb-spot, .gs1-lb-stack) .hdr-gs .gs-nav .topnav-b { background: transparent !important; box-shadow: none !important; position: relative; }
+  html:is(.gs1-lb-ink, .gs1-lb-line, .gs1-lb-spot) .hdr-gs .gs-nav .topnav-b { color: var(--muted) !important; transition: color .2s ease, opacity .25s ease; }
+  html:is(.gs1-lb-ink, .gs1-lb-line, .gs1-lb-spot) .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.on, .hd.open > .topnav-b) { color: var(--fg) !important; }
+  html.gs1-lb-ink .hdr-gs .gs-nav .topnav-b.on::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 2px; height: 2px; border-radius: 2px; background: var(--accent); }
+  html.gs1-lb-ink .hdr-gs .gs-nav .topnav-b.on > svg:first-child { color: var(--accent); }
+  html:is(.gs1-lb-line, .gs1-lb-spot) .hdr-gs .gs-nav .topnav-b > svg:first-child { display: none !important; }
+  html:is(.gs1-lb-line, .gs1-lb-spot) .hdr-gs .gs-nav .topnav-b { padding: 0 14px; font-size: 14px; }
+  html.gs1-lb-line .hdr-gs .gs1-line { position: absolute; left: 0; bottom: 12px; height: 2px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 2;
+    transition: transform .38s cubic-bezier(.32, .72, 0, 1), width .38s cubic-bezier(.32, .72, 0, 1), opacity .2s; }
+  html.gs1-lb-spot .hdr-gs .gs-nav.xo-any .topnav-b:not(.xo):not(:hover) { opacity: .38; }
+  html.gs1-lb-spot .hdr-gs .gs-nav .topnav-b.on { font-weight: 700; }
+  html.gs1-lb-stack .hdr-gs .gs-nav { gap: 2px; }
+  html.gs1-lb-stack .hdr-gs .gs-nav .topnav-b { flex-direction: column; justify-content: center; gap: 3px; height: 54px; padding: 0 12px; border-radius: 14px; color: var(--muted) !important; transition: color .2s, background-color .2s; }
+  html.gs1-lb-stack .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 20px !important; height: 20px !important; }
+  html.gs1-lb-stack .hdr-gs .gs-nav .topnav-l { font: 600 11.5px/1.2 var(--f-body); }
+  html.gs1-lb-stack .hdr-gs .gs-nav .topnav-chev { display: none !important; }
+  html.gs1-lb-stack .hdr-gs .gs-nav :is(.topnav-b:hover, .hd.open > .topnav-b) { color: var(--fg) !important; background: rgb(15 23 42 / .045) !important; }
+  html.gs1-lb-stack .hdr-gs .gs-nav .topnav-b.on { color: var(--accent) !important; }
+  html.gs1-lb-ink.gs1-t-ink .hdr-gs .gs-nav .topnav-b, html.gs1-lb-line.gs1-t-ink .hdr-gs .gs-nav .topnav-b, html.gs1-lb-spot.gs1-t-ink .hdr-gs .gs-nav .topnav-b, html.gs1-lb-stack.gs1-t-ink .hdr-gs .gs-nav .topnav-b { color: rgb(233 237 246 / .7) !important; }
+  html.gs1-t-ink:is(.gs1-lb-ink, .gs1-lb-line, .gs1-lb-spot, .gs1-lb-stack) .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.on, .hd.open > .topnav-b) { color: #fff !important; }
 }

@@ -27,7 +27,7 @@ import { PackDecor, DECOR } from './decor.jsx';
 export const GS1_ROWS = [
   ['gs1Tone', 'Tek satır: renk', '', [['', 'Beyaz cam'], ['ice', 'Buz mavisi'], ['smoke', 'Duman'], ['tint', 'Tema tonu'], ['ink', 'Gece mavisi']]],
   ['gs1Top', 'Tek satır: cam', 'Cam: düz zeminde de belli olan kristal cam (bannerın üstüne binmez). Şeffaf: en üstte zemin yok, kaydırınca cam', [['', 'Düz (bugünkü)'], ['glass', 'Cam'], ['clear', 'Şeffaf']]],
-  ['gs1Lbl', 'Tek satır: menü yazıları', 'Dönen yazı: simge yukarı kayar, adı aşağıdan gelir. Cıva: renkli damla simgeden simgeye akar, adı içinde belirir. Ada: koyu kapsül, üstüne gelince açılıp tüm adları gösterir', [['', 'Simge + yazı'], ['text', 'Sadece isim'], ['roll', 'Dönen yazı'], ['mercury', 'Cıva'], ['island', 'Ada']]],
+  ['gs1Lbl', 'Tek satır: menü yazıları', 'Dönen yazı: simge yukarı kayar, adı aşağıdan gelir. Cıva: renkli damla simgeden simgeye akar, adı içinde belirir. Ada: koyu kapsül, üstüne gelince açılıp tüm adları gösterir', [['', 'Simge + yazı'], ['ink', 'Sade renk + çizgi'], ['stack', 'Simge üstte, yazı altta'], ['text', 'Sadece isim'], ['line', 'İsim + kayan çizgi'], ['spot', 'İsim + spot'], ['roll', 'Dönen yazı'], ['mercury', 'Cıva'], ['island', 'Ada']]],
   ['gs1Drop', 'Tek satır: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; başlığa basınca açılır, tekrar basınca kapanır', [['', 'Üstüne gelince'], ['click', 'Tıklayınca']]],
   ['gs1Srch', 'Tek satır: arama', 'Basınca kutu, menüyle arasındaki boş yere kadar genişler', [['', 'Kutu'], ['icon', 'Simge']]],
   ['gs1Hov', 'Tek satır: menüde fare', 'Kayan kutu: fareyi izleyen yumuşak zemin. Büyüme: fareye yakın yazı hafifçe büyür', [['', 'Bugünkü'], ['slide', 'Kayan kutu'], ['dock', 'Büyüme']]],
