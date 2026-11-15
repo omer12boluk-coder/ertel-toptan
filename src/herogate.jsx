@@ -115,6 +115,112 @@ function flyLand(st) {
     setTimeout(() => { cancelAnimationFrame(st.raf); f.remove(); setTimeout(() => { tg.style.transition = ''; }, 40); }, Math.max(D, D * 0.78 + 180));
   }
 }
+// ---- 15.11.2026 Kum akışı + sırayla kurulum (look.anim gkum; ÖNİZLEME, canlıda varsayılan kapalı) ----
+// Kullanıcı: C'nin (mağaza sırayla kurulur) tatlılığı + 'güzel ve hızlı olursa kumun akışıyla devam edebiliriz'.
+// Büyük logo hafif 2B kanvasta kuma gevşer (WebGL logosu o an söner), mağaza çizilir, telefon rahatlayınca kum TEK yayla
+// menüdeki logonun yerine akar (~0,7 sn) ve logoyu orada kurar; son karede kanvasa menü logosunun kendisi çizilir, sonraki
+// karede gerçek logoyla değişir. liquid.js gather KULLANILMAZ (donduruyordu). Ortada bekleyen küçük logo / ayrı uçuş yok.
+// CSS'e dokunmaz (stiller satır içi) — başka dallarla çakışmasın.
+const io3 = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const c01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+function sandFlow(img, root) {
+  const r = img?.getBoundingClientRect(); const mk = markImg;
+  if (!r || !r.width || !img.complete || !img.naturalWidth || !mk?.complete || !mk.naturalWidth) return null;
+  const mob = root.clientWidth < 640, cap = mob ? 3000 : 4400, asp = r.width / r.height;
+  const gh = Math.max(24, Math.round(Math.sqrt((cap * 2.4) / asp))), gw = Math.max(24, Math.round(gh * asp)), nt = 48;
+  let d, dt;
+  try {
+    const o = document.createElement('canvas'); o.width = gw; o.height = gh; const g = o.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0, gw, gh); d = g.getImageData(0, 0, gw, gh).data;
+    const o2 = document.createElement('canvas'); o2.width = o2.height = nt; const g2 = o2.getContext('2d', { willReadFrequently: true });
+    g2.drawImage(mk, 0, 0, nt, nt); dt = g2.getImageData(0, 0, nt, nt).data;
+  } catch { return null; }
+  const T = []; for (let j = 0; j < nt; j++) for (let i = 0; i < nt; i++) if (dt[(j * nt + i) * 4 + 3] > 90) T.push([(i + 0.5) / nt, (j + 0.5) / nt]);
+  let cnt = 0; for (let k = 3; k < d.length; k += 4) if (d[k] > 90) cnt++;
+  if (!T.length || cnt < 50) return null;
+  const keep = Math.min(1, cap / cnt), same = mob, mx = r.left + r.width / 2, my = r.top + r.height / 2, P = [];
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const k = (j * gw + i) * 4, a = d[k + 3]; if (a < 90 || Math.random() > keep) continue;
+    const u = (i + 0.5) / gw, v = (j + 0.5) / gh, x = r.left + u * r.width, y = r.top + v * r.height;
+    const an = Math.atan2(y - my, x - mx) + (Math.random() - 0.5), sp = r.height * (0.02 + 0.09 * Math.random());
+    const t = same ? [u, v] : T[(Math.random() * T.length) | 0];
+    P.push({ x, y, ex: Math.cos(an) * sp, ey: Math.sin(an) * sp, c: `rgb(${d[k]},${d[k + 1]},${d[k + 2]})`, a: Math.random(), b: Math.random(), tu: t[0], tv: t[1], x0: 0, y0: 0, bx: 0, by: 0, tx: 0, ty: 0, dl: 0 });
+  }
+  const W = innerWidth, H = innerHeight, dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(3e6 / (W * H)));
+  const c = document.createElement('canvas'); c.className = 'eh-sand'; c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+  Object.assign(c.style, { left: '0', top: '0', width: W + 'px', height: H + 'px' });
+  document.body.appendChild(c);
+  const ctx = c.getContext('2d'), sz0 = Math.max(1.3, (r.width / gw) * 1.2 / Math.sqrt(keep)), t0 = performance.now();
+  const st = { el: c, raf: 0, flow: null, still: false };
+  const kill = () => { cancelAnimationFrame(st.raf); c.remove(); };
+  const step = (now) => {
+    const t = now - t0, F = st.flow;
+    if (!F && st.still) { st.raf = requestAnimationFrame(step); return; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    if (F && now - F.t >= F.D) {
+      // son kare: menü logosunun kendisi (aynı dosya, aynı yer) → sonraki karede gerçek logo görünür, kanvas kalkar
+      const g = F.tg; ctx.globalAlpha = 1; ctx.imageSmoothingQuality = 'high';
+      if (F.bg) { ctx.fillStyle = F.bg; ctx.beginPath(); ctx.arc(g.x + g.w / 2, g.y + g.w / 2, F.R, 0, 6.2832); ctx.fill(); }
+      try { ctx.drawImage(F.im, g.x, g.y, g.w, g.w); } catch {}
+      requestAnimationFrame(() => { F.im.style.opacity = ''; requestAnimationFrame(kill); });
+      return;
+    }
+    const ek = 1 - Math.pow(1 - Math.min(1, t / 520), 3), al = Math.min(1, t / 140), q = F ? (now - F.t) / F.D : -1;
+    ctx.globalAlpha = al;
+    for (const p of P) {
+      let x, y, s = sz0;
+      if (q >= 0) {
+        const kk = io3(c01((q - p.dl) / 0.58)), m = 1 - kk;
+        x = m * m * p.x0 + 2 * m * kk * p.bx + kk * kk * p.tx; y = m * m * p.y0 + 2 * m * kk * p.by + kk * kk * p.ty; s = sz0 + (F.sz - sz0) * kk;
+      } else { x = p.x + p.ex * ek; y = p.y + p.ey * ek; }
+      ctx.fillStyle = p.c; ctx.fillRect(x - s / 2, y - s / 2, s, s);
+    }
+    if (!F && t > 560) st.still = true;
+    st.raf = requestAnimationFrame(step);
+  };
+  st.raf = requestAnimationFrame(step);
+  // menüdeki logoya ak; logo bulunamazsa kum yerinde söner
+  st.flowTo = () => {
+    const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
+    if (!tg) { c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).onfinish = kill; return; }
+    const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
+    const g = { x: r0.left + pl, y: r0.top + pt, w: r0.width - 2 * pl };
+    const bgc = cs.backgroundColor, bg = bgc && !/rgba\(0, 0, 0, 0\)|transparent/.test(bgc) ? bgc : '';
+    let dmin = 1e9, dmax = 0;
+    for (const p of P) {
+      p.x0 = p.x + p.ex; p.y0 = p.y + p.ey; p.tx = g.x + p.tu * g.w; p.ty = g.y + p.tv * g.w;
+      const dx = p.tx - p.x0, dy = p.ty - p.y0; p.dl = Math.hypot(dx, dy); if (p.dl < dmin) dmin = p.dl; if (p.dl > dmax) dmax = p.dl;
+      p.bx = (p.x0 + p.tx) / 2 - dy * 0.3 * (0.5 + p.b); p.by = (p.y0 + p.ty) / 2 + dx * 0.3 * (0.5 + p.b);
+    }
+    const dr = Math.max(1, dmax - dmin); for (const p of P) p.dl = 0.42 * (((p.dl - dmin) / dr) * 0.65 + p.a * 0.35);
+    tg.style.opacity = '0';
+    st.flow = { t: performance.now(), D: mob ? 700 : 760, tg: g, im: tg, bg, R: r0.width / 2, sz: Math.max(1, (g.w / nt) * 1.25) };
+  };
+  return st;
+}
+// mağaza sırayla kurulur: menü belirir, banner perdesi soldan sağa açılır, banner kendi giriş animasyonunu (resim + yazılar
+// satır satır) baştan oynar, telefonda alt menü düğmeleri sırayla gelir. Banner'ın KENDİSİ kıpırdamaz (üstünde sayfa renginde perde).
+function sceneKur() {
+  const sh = document.querySelector('.shell.public'); if (!sh) return;
+  const A = (el, kf, o) => el?.animate(kf, { easing: EZ, fill: 'backwards', ...o });
+  A(sh.querySelector('.topbar'), [{ opacity: 0 }, { opacity: 1 }], { duration: 450, delay: 40 });
+  if (innerWidth < 900) {
+    const bot = sh.querySelector('.botnav');
+    A(bot, [{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 40 });
+    [...(bot?.querySelectorAll('.botnav-b') || [])].forEach((b, i) => A(b, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 480, delay: 780 + i * 80 }));
+  }
+  const pg = sh.querySelector('.kp:not(.kp-off)') || sh;
+  const hero = pg.querySelector('.cd-hero .sh-hero') || pg.querySelector('.cd-hero') || pg.querySelector('.sh-hero');
+  if (!hero || hero.getBoundingClientRect().top > innerHeight) return;
+  const cv = document.createElement('div'); cv.setAttribute('aria-hidden', 'true');
+  Object.assign(cv.style, { position: 'absolute', inset: '0', zIndex: '12', pointerEvents: 'none', background: 'var(--bg)' });
+  if (getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
+  hero.appendChild(cv);
+  cv.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(101%)' }], { duration: 850, delay: 200, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' });
+  setTimeout(() => cv.remove(), 1150);
+  const sl = hero.querySelector('.pb-slide.ta-go');
+  if (sl) { sl.classList.remove('ta-go'); setTimeout(() => { if (sl.isConnected) { sl.classList.add('ta-go'); } }, 520); }
+}
 // telefon mağazayı çizmeyi bitirip rahatlayınca (art arda 2 kare < 34 ms) devam et; en geç 1,4 sn
 function whenCalm(fn) {
   const t0 = performance.now(); let last = t0, ok = 0;
@@ -296,12 +402,16 @@ export function HeroGate({ onOpen, onDone }) {
   // ve yavaştı (kullanıcı) → kullanılmıyor; kumun menüye akması / menüde toplanması da reddedildi.
   const go = () => {
     if (leaving || goneRef.current) return; goneRef.current = true;
-    const fl = fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
-    engRef.current?.explode(); setLeaving(true);
+    const kf = fx.flow ? sandFlow(imgRef.current, rootRef.current) : null;
+    const fl = !kf && fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
+    if (kf) { const sg = stageRef.current; if (sg) Object.assign(sg.style, { transition: 'opacity .16s ease', transform: 'none', opacity: '0' }); }
+    else engRef.current?.explode();
+    setLeaving(true);
     const t0 = performance.now();
     const open = () => {
       engRef.current?.stop(); onOpen();
       whenCalm(() => {
+        if (kf) { kf.flowTo(); sceneKur(); setReveal(true); setTimeout(onDone, 900); return; }
         flyLand(fl); // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar
         if (fx.scn) sceneIn(!!fl);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
