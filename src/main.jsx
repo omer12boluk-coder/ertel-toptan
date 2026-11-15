@@ -1142,19 +1142,21 @@ function gs1NavNeed(nav) {
   // 16.11.2026: menünün TÜM görünür parçaları sayılır ('Uzat / kısalt' düğmesi sayılmıyordu → arama büyüyünce menü logonun altına giriyordu)
   const ks = [...nav.children].filter((k) => k.offsetWidth && getComputedStyle(k).position !== 'absolute');
   const used = ks[ks.length - 1].getBoundingClientRect().right - ks[0].getBoundingClientRect().left;
-  const H = document.documentElement.classList; const all = H.contains('gs1-lb-expand') && !H.contains('gs1-lb-pick'), side = H.contains('gs1-lb-side');
+  const H = document.documentElement.classList; const all = H.contains('gs1-lb-expand') && !H.contains('gs1-lb-pick'), side = H.contains('gs1-lb-side') || H.contains('gs1-lb-pick');
   if (!all && !side) return used;
-  let now = 0, sum = 0, mx = 0;
+  let now = 0, sum = 0; const fs = [];
   bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (!l) return; const c = b.querySelector('.topnav-chev');
     now += l.getBoundingClientRect().width + (c ? c.getBoundingClientRect().width : 0);
-    const full = l.scrollWidth + 8 + (c ? 22 : 0) + 4; sum += full; mx = Math.max(mx, full); });
-  return used - now + (all ? sum : mx);
+    const full = l.scrollWidth + 8 + (c ? 22 : 0) + 4; sum += full; fs.push(full); });
+  // 16.11.2026: tek ad açılan biçimlerde aynı anda İKİ ad açık olabilir (seçili sayfa + açılır menüsü açık olan) → en uzun iki ad kadar yer
+  fs.sort((x, y) => y - x);
+  return used - now + (all ? sum : (fs[0] || 0) + (fs[1] || 0));
 }
 function useGs1Search(on) {
   useEffect(() => {
     if (!on) return undefined;
     const h = document.querySelector('.topbar.hdr-gs'); if (!h) return undefined;
-    let t = 0, nT = 0;
+    let t = 0, nT = 0, cT = 0;
     const open = (e) => {
       const sr = e.target.closest?.('.gs-srch'); if (!sr) return; clearTimeout(t);
       const nav = h.querySelector('.gs-nav'); const bs = nav ? [...nav.querySelectorAll('.topnav-b')] : [];
@@ -1175,16 +1177,20 @@ function useGs1Search(on) {
         bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (l && !b.style.getPropertyValue('--lw')) b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); });
         H.add('gs1-meas2', 'gs1-ss'); need = gs1NavNeed(nav); H.remove('gs1-ss'); void nav.offsetWidth; H.remove('gs1-meas2'); void nav.offsetWidth; H.add('gs1-ss');
       } else need = gs1NavNeed(nav);
+      // menünün sol payı dolu sayılır; sağ pay ('Sadece seçilinin adı') arama açılınca kalkar (html gs1-so) → simgeler itilir
+      if (!off) off = parseFloat(getComputedStyle(nav).paddingLeft) || 0;
+      H.add('gs1-so');
       const room = nav.clientWidth - off - need - 12; const w = sr.getBoundingClientRect().width;
       sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(ss ? 660 : 560, w + room))) + 'px');
+      clearTimeout(cT); sr.removeAttribute('data-cl'); sr.setAttribute('data-open', '');
     };
-    const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) { sr.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss');
+    const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) { sr.style.removeProperty('--gs1-sw'); if (sr.hasAttribute('data-open')) { sr.setAttribute('data-cl', ''); clearTimeout(cT); cT = setTimeout(() => sr.removeAttribute('data-cl'), 430); } sr.removeAttribute('data-open'); document.documentElement.classList.remove('gs1-ss', 'gs1-so');
       const nav = h.querySelector('.gs-nav'); clearTimeout(nT); nT = setTimeout(() => { if (nav && !sr.contains(document.activeElement)) { nav.style.justifyContent = ''; nav.style.paddingLeft = ''; } }, 480); } }, 200); };
     // 16.11.2026: arama açıkken menüdeki bir sayfaya basınca arama KAPANMAZ (odak kutuda kalır, yeni sayfada açık devam eder)
     const keep = (e) => { if (e.button === 0 && e.target.closest?.('.gs-nav .topnav-b') && h.querySelector('.gs-srch')?.contains(document.activeElement)) e.preventDefault(); };
     h.addEventListener('mousedown', keep, true);
     h.addEventListener('focusin', open); h.addEventListener('focusout', close);
-    return () => { h.removeEventListener('mousedown', keep, true); h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss'); clearTimeout(nT); const nv = h.querySelector('.gs-nav'); if (nv) { nv.style.justifyContent = ''; nv.style.paddingLeft = ''; } };
+    return () => { h.removeEventListener('mousedown', keep, true); h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss', 'gs1-so'); clearTimeout(nT); clearTimeout(cT); const nv = h.querySelector('.gs-nav'); if (nv) { nv.style.justifyContent = ''; nv.style.paddingLeft = ''; } };
   }, [on]);
 }
 // 15.11.2026 (4) Tek satır 'Menü yazıları' hareketleri: fare bir başlıkta kısa durunca .xo (dönen yazı / cıva); cıva = sıvı damla
