@@ -1132,7 +1132,7 @@ function useGs1Search(on) {
       const sr = e.target.closest?.('.gs-srch'); if (!sr) return; clearTimeout(t);
       const nav = h.querySelector('.gs-nav'); const bs = nav ? [...nav.querySelectorAll('.topnav-b')] : [];
       if (!bs.length) return;
-      if (nav.classList.contains('xo-all')) { sr.style.removeProperty('--gs1-sw'); return; } // uzayan menü açıkken arama büyümez
+      if (nav.classList.contains('xo-all')) { nav.classList.remove('xo-all'); clearTimeout(t); t = setTimeout(() => open({ target: sr }), 520); return; } // önce adlar kapanır, sonra arama büyür (üst üste binmez)
       const used = bs[bs.length - 1].getBoundingClientRect().right - bs[0].getBoundingClientRect().left;
       const room = nav.clientWidth - used - 24; const w = sr.getBoundingClientRect().width;
       sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(440, w + room))) + 'px');
@@ -1140,8 +1140,12 @@ function useGs1Search(on) {
     const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) sr.style.removeProperty('--gs1-sw'); }, 200); };
     // uzayan menü / ada adları açılıp kapanınca: arama odaktaysa yeri yeniden ölç (adlar açılırken arama geri küçülür, kapanınca tekrar büyür)
     const refit = () => { const sr = h.querySelector('.gs-srch'); if (sr && sr.contains(document.activeElement)) open({ target: sr }); };
+    const nv = () => h.querySelector('.gs-nav');
+    const fi = (e) => { if (e.target.closest?.('.gs-srch')) nv()?.classList.add('gs1-sf'); };
+    const fo = (e) => { const sr = e.target.closest?.('.gs-srch'); if (sr) setTimeout(() => { if (!sr.contains(document.activeElement)) nv()?.classList.remove('gs1-sf'); }, 200); };
+    h.addEventListener('focusin', fi); h.addEventListener('focusout', fo);
     h.addEventListener('focusin', open); h.addEventListener('focusout', close); h.addEventListener('gs1-refit', refit);
-    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); h.removeEventListener('gs1-refit', refit); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
+    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); h.removeEventListener('gs1-refit', refit); h.removeEventListener('focusin', fi); h.removeEventListener('focusout', fo); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
   }, [on]);
 }
 // 15.11.2026 (4) Tek satır 'Menü yazıları' hareketleri: fare bir başlıkta kısa durunca .xo (dönen yazı / cıva); cıva = sıvı damla
@@ -1167,7 +1171,12 @@ function useGs1Lbl(mode) {
       measure(); document.fonts?.ready?.then(measure);
       const hd = nav.closest('.topbar'); let rf = 0;
       const refit = (ms) => { clearTimeout(rf); rf = setTimeout(() => hd?.dispatchEvent(new Event('gs1-refit')), ms); };
-      const arm = () => { clearTimeout(t); t = setTimeout(() => { nav.classList.add('xo-all'); guardArm(); refit(0); }, mode === 'expand' ? 240 : 60); };
+      const sOpen = () => { const sr = hd?.querySelector('.gs-srch'); return !!(sr && sr.contains(document.activeElement)); };
+      // arama açıkken adlar AÇILMAZ (arama yer kaplıyor; ikisi birden sığmıyordu)
+      const arm = () => { clearTimeout(t); if (sOpen()) return; t = setTimeout(() => { if (sOpen() || !fits()) return; nav.classList.add('xo-all'); guardArm(); }, mode === 'expand' ? 240 : 60); };
+      // sığmıyorsa adlar açılmaz (dar ekranda soldaki 'Ana sayfa' logonun altına kayıyordu): gereken = şimdiki + kapalı adların genişliği
+      const fits = () => { const bs = nav.querySelectorAll('.topnav-b'); if (!bs.length) return true; let need = bs[bs.length - 1].getBoundingClientRect().right - bs[0].getBoundingClientRect().left; bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (!l || l.getBoundingClientRect().width > 2) return;
+        need += l.scrollWidth + 12 + (b.querySelector('.topnav-chev') ? 20 : 0); }); return need <= nav.clientWidth - 4; };
       const en = () => { clearTimeout(out); arm(); };
       // fare durmadan uzamaz (simgeye giderken yolda açılıp yerinden kaydırmasın); basınca bekleyen uzama iptal
       const mv = () => { if (!nav.classList.contains('xo-all')) arm(); };
