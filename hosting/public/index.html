@@ -11169,10 +11169,10 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
 /* 16.11.2026 arama açıkken menü yazıları kapanır (html gs1-ss; 'Simge + yazı' ve Uzat/kısalt uzun hâli): sadece simgeler, aramaya yer açılır.
    Yazı kutusu yatayda kırpılır (Ü noktası kesilmez); hız arama kutusuyla aynı (0,42 sn). */
 @media (min-width: 900px) {
-  html.gs-one:not([class*="gs1-lb-"]) .hdr-gs .gs-nav .topnav-l, html.gs-one.gs1-lb-toggle .hdr-gs .gs-nav .topnav-l { display: inline-block; max-width: var(--lw, 160px); overflow: visible; overflow-x: clip; white-space: nowrap; vertical-align: middle;
+  html.gs-one:not([class*="gs1-lb-"]) .hdr-gs .gs-nav .topnav-l, html.gs-one.gs1-lb-toggle:not(.gs1-tg-s) .hdr-gs .gs-nav .topnav-l { display: inline-block; max-width: var(--lw, 160px); overflow: visible; overflow-x: clip; white-space: nowrap; vertical-align: middle;
     transition: max-width .42s cubic-bezier(.22, .8, .24, 1), opacity .3s ease .08s; }
   html.gs-one:not([class*="gs1-lb-"]) .hdr-gs .gs-nav .topnav-chev { overflow: visible; overflow-x: clip; max-width: 24px; transition: max-width .42s cubic-bezier(.22, .8, .24, 1), opacity .25s ease .1s, margin .42s cubic-bezier(.22, .8, .24, 1); }
-  html.gs-one:not([class*="gs1-lb-"]) .hdr-gs .gs-nav .topnav-b, html.gs-one.gs1-lb-toggle .hdr-gs .gs-nav .topnav-b { transition: padding .42s cubic-bezier(.22, .8, .24, 1), gap .42s cubic-bezier(.22, .8, .24, 1), background-color .2s, color .2s; }
+  html.gs-one:not([class*="gs1-lb-"]) .hdr-gs .gs-nav .topnav-b, html.gs-one.gs1-lb-toggle:not(.gs1-tg-s) .hdr-gs .gs-nav .topnav-b { transition: padding .42s cubic-bezier(.22, .8, .24, 1), gap .42s cubic-bezier(.22, .8, .24, 1), background-color .2s, color .2s; }
   html.gs1-ss .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { max-width: 0 !important; opacity: 0; margin-left: 0 !important; margin-right: 0 !important; pointer-events: none; transition: max-width .42s cubic-bezier(.22, .8, .24, 1), opacity .12s ease, margin .42s cubic-bezier(.22, .8, .24, 1) !important; }
   html.gs1-ss .hdr-gs .gs-nav .topnav-chev { padding: 0 !important; }
   html.gs1-ss .hdr-gs .gs-nav .topnav-b { gap: 0 !important; padding: 0 12px !important; }
@@ -11183,7 +11183,7 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
 }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'a84a78f10e';</script>
+<script>window.__BUILD = '58d548d23f';</script>
 </head>
 <body>
 <div id="root"></div>
