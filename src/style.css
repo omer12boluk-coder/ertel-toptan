@@ -11062,7 +11062,11 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart, .me-login, .me) { transition: padding .55s cubic-bezier(.4, 0, .2, 1), gap .55s cubic-bezier(.4, 0, .2, 1), background-color .35s ease, border-color .35s ease, color .35s ease; }
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons { transition: gap .55s cubic-bezier(.4, 0, .2, 1); }
 
-  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(calc(482px + var(--gs1-icw, 0px)), 100vw - 40px); }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(calc(378px + var(--gs1-icw, 0px) + var(--gs1-iw, 104px)), 100vw - 40px); }
+  html.gs-one.gs1-meas .topbar.hdr-gs, html.gs-one.gs1-meas .topbar.hdr-gs * { transition: none !important; }
+  html.gs-one.gs1-meas .topbar.hdr-gs .gs-icons { flex: none !important; }
+  /* üye girişinde adada avatar: yazı kapalıyken boş kalan sol pay/boşluk kapanır (avatar sepetin yanına oturur) */
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-icons .me { gap: 0; padding: 3px !important; }
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-srch { width: 280px !important; }
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs1-islic { order: 2; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 40px; max-width: 0; margin-left: -10px; opacity: 0;
     overflow-x: clip; overflow-y: visible; pointer-events: none; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }

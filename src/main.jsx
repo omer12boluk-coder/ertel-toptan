@@ -1368,6 +1368,13 @@ const gs1Fit = new WeakMap();
 function gs1IslFit(goingIn) {
   const r = document.documentElement; if (!r.classList.contains('gs-one')) return;
   const h = document.querySelector('.topbar.hdr-gs'); if (!h) return;
+  // 16.11.2026: sağdaki parçaların (sepet + hesap/avatar) adadaki genişliği bir anlığına geçişsiz ölçülür → ada genişliği ona göre
+  // (üye girişinde avatar sabit 104 px'e sığmıyor, adanın dışına taşıyordu). Ölçüm aynı karede geri alınır, ekrana çizilmez.
+  if (goingIn) {
+    const ic = h.querySelector('.gs-icons');
+    if (ic) { r.classList.add('gs1-meas', 'isl'); const w = ic.getBoundingClientRect().width; r.classList.remove('isl'); void r.offsetWidth; r.classList.remove('gs1-meas'); void r.offsetWidth;
+      if (w > 0) r.style.setProperty('--gs1-iw', Math.ceil(w) + 'px'); }
+  }
   h.querySelectorAll(GS1_FIT).forEach((e) => {
     let w = e.getBoundingClientRect().width;
     if (goingIn) gs1Fit.set(e, w); else w = Math.max(gs1Fit.get(e) || 0, e.scrollWidth);
