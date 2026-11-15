@@ -10673,7 +10673,8 @@ html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { ba
 @media (min-width: 900px) { html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .flow-ghost { display: none !important; } }
 
 
-/* ===== 15.11.2026 'Cam + arama' bilgisayarda TEK SATIR (look.gsRow; 'two' = eski iki satır; html.gs-one — Cam + arama / Arama + cam 2, Kristal cam HARİÇ).
+/* ===== 15.11.2026 'Yüzen cam' bilgisayarda TEK SATIR (look.header 'glass' + look.glassPc; 'old' = eski Yüzen cam; html.gs-one). Cam + arama'ya DOKUNULMADI (kullanıcı).
+   Yüzen cam bilgisayarda Cam + arama'nın parçalarıyla çizilir (main.jsx hsG).
    Simgeler, arama kutusu, Sepet, menü yazıları AYNEN (kullanıcı: tasarım/boyutlar çok iyi, sadece çift satır kalabalık). Sıra: logo · menü · arama · simgeler.
    ≥1400px arama kutusu hep açık (daha dar); 1240–1399 büyüteç simgesi → basınca kutu menü ile simgeler arasındaki boşluğa açılır (HeaderSearch measure);
    1240 altı eski iki satır. */

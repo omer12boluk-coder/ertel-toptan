@@ -667,7 +667,9 @@ function ShellFull() {
   const phoneUI = usePhoneMQ();
   const LK = lookFor(S0.look, phoneUI);
   const hc = pub && LK.header === 'center';
-  const hs = pub && ['search', 'search2', 'search3'].includes(LK.header || 'search'); // 15.11.2026 'search2' = Arama + cam 2 (aynı menü, buz mavisi gerçek cam)
+  // 15.11.2026 'Yüzen cam' bilgisayarda TEK SATIR: Cam + arama'nın aynı parçaları (logo · menü · arama · simgeler) tek satırda (html gs-one, CSS ≥1240px; altında Cam + arama gibi iki satır). Telefon eski Yüzen cam. look.glassPc 'old' = eski Yüzen cam
+  const hsG = pub && !phoneUI && LK.header === 'glass' && LK.glassPc !== 'old';
+  const hs = hsG || (pub && ['search', 'search2', 'search3'].includes(LK.header || 'search')); // 15.11.2026 'search2' = Arama + cam 2 (aynı menü, buz mavisi gerçek cam)
   // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
   const lgOn = pub && LK.glass !== false;
   useEffect(() => { const c = document.documentElement.classList; c.toggle('hdr-gs-on', hs); c.toggle('hdr-c-on', hc); c.toggle('lg-on', lgOn); return () => c.remove('hdr-gs-on', 'hdr-c-on', 'lg-on'); }, [hs, hc, lgOn]);
@@ -689,8 +691,7 @@ function ShellFull() {
   // 15.11.2026 'Arama + cam 3' (look.header 'search3'): aynı menü/işlev, daha uzun + kristal cam (html gs-x3); look.gs3Tone 'ice' = buz mavisi tonu (html gs-x3i). Kalıp bulucu simgesi 'stencil'.
   const gsX3 = hs && LK.header === 'search3';
   const gsX3i = gsX3 && LK.gs3Tone === 'ice';
-  // 15.11.2026 Cam + arama bilgisayarda TEK SATIR (html gs-one, CSS ≥1240px; Kristal cam hariç); look.gsRow 'two' = eski iki satır
-  const gsOne = hs && !gsX3 && LK.gsRow !== 'two';
+  const gsOne = hsG;
   useEffect(() => { document.documentElement.classList.toggle('gs-one', gsOne); return () => document.documentElement.classList.remove('gs-one'); }, [gsOne]);
   useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-x3', gsX3); c.toggle('gs-x3i', gsX3i); return () => c.remove('gs-x3', 'gs-x3i'); }, [gsX3, gsX3i]);
   // 15.11.2026 Kristal cam bilgisayar görünümü (sadece ≥900px CSS'te): look.gs3Pc '' = 'web' şerit + en üstte şeffaf (kaydırınca cam) | 'strip' şerit | 'ada2' sade yüzen ada | 'ada' eski kapsül
