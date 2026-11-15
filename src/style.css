@@ -11019,3 +11019,21 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on > svg:first-child { color: var(--lg-blue); }
 }
 html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap * { transition: none !important; }
+@media (min-width: 900px) {
+  /* 'Uzat / kısalt' (gs1Lbl toggle): uzunken 'Simge + yazı'nın birebir aynısı; kısayken sadece simgeler (seçili hap + renkler aynı) */
+  html.gs1-lb-toggle .hdr-gs .gs-nav .topnav-b { transition: padding .45s cubic-bezier(.32, .72, 0, 1), gap .45s cubic-bezier(.32, .72, 0, 1), background-color .2s, color .2s; }
+  html.gs1-lb-toggle .hdr-gs .gs-nav .topnav-l { display: inline-block !important; max-width: var(--lw, 140px); overflow: hidden; white-space: nowrap; vertical-align: middle;
+    transition: max-width .45s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .08s; }
+  html.gs1-lb-toggle .hdr-gs .gs-nav .topnav-chev { overflow: hidden; max-width: 22px; transition: max-width .45s cubic-bezier(.32, .72, 0, 1), opacity .25s ease .1s; }
+  html.gs1-lb-toggle.gs1-tg-s .hdr-gs .gs-nav .topnav-b { gap: 0; padding: 0 11px !important; }
+  html.gs1-lb-toggle.gs1-tg-s .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { max-width: 0; opacity: 0; pointer-events: none; transition: max-width .45s cubic-bezier(.32, .72, 0, 1), opacity .15s ease; }
+  html.gs1-lb-toggle .hdr-gs .gs-nav .gs1-tgb { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-left: 4px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; opacity: .7; transition: background-color .2s, opacity .2s, color .2s; }
+  html.gs1-lb-toggle .hdr-gs .gs-nav .gs1-tgb:hover { background: rgb(118 118 128 / .12); opacity: 1; color: var(--fg); }
+}
+@media (min-width: 900px) and (max-width: 1199px) {
+  html.gs-one.gs1-lb-toggle .hdr-gs .gs-nav .topnav-b > svg:first-child { display: inline-block; }
+}
+@media (min-width: 900px) {
+  html.gs1-lb-toggle .hdr-gs .gs-nav .gs1-tgb { width: 26px; height: 26px; margin-left: 0; }
+  html.gs-one.gs1-lb-toggle:not(.gs1-sicon) .hdr-gs .gs-srch { width: var(--gs1-sw, 222px); }
+}

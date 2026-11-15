@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   // useLayoutEffect + son genişlik cihazda saklı (ls gs1-x): menü ilk karede doğru ölçüde çizilir → giriş sayfasından uçan logo
   // menü logosunun GERÇEK yerine iner (ayarlar geç gelince menü 100 px kayıyordu, logo boşluğa iniyordu)
@@ -726,6 +726,7 @@ function ShellFull() {
   }, [gs1Cls, heroW]);
   useGs1Top(gs1 && !phoneUI && LK.gs1Top === 'clear', tab);
   useGs1Search(gs1 && !phoneUI);
+  useGs1Toggle(gs1 && !phoneUI && LK.gs1Lbl === 'toggle');
   useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island', 'line', 'spot', 'pill', 'side', 'expand'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
@@ -1145,8 +1146,8 @@ function useGs1Search(on) {
       const sr = e.target.closest?.('.gs-srch'); if (!sr) return; clearTimeout(t);
       const nav = h.querySelector('.gs-nav'); const bs = nav ? [...nav.querySelectorAll('.topnav-b')] : [];
       if (!bs.length) return;
-      const room = nav.clientWidth - gs1NavNeed(nav) - 24; const w = sr.getBoundingClientRect().width;
-      sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(440, w + room))) + 'px');
+      const room = nav.clientWidth - gs1NavNeed(nav) - 12; const w = sr.getBoundingClientRect().width;
+      sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(560, w + room))) + 'px');
     };
     const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) sr.style.removeProperty('--gs1-sw'); }, 200); };
     h.addEventListener('focusin', open); h.addEventListener('focusout', close);
@@ -1156,6 +1157,25 @@ function useGs1Search(on) {
 // 15.11.2026 (4) Tek satır 'Menü yazıları' hareketleri: fare bir başlıkta kısa durunca .xo (dönen yazı / cıva); cıva = sıvı damla
 // eski yerinden yenisine önce iki başlığı kapsayacak kadar uzayıp sonra yeni yerine toplanarak akar (WAAPI, yaylanma yok);
 // ada = menünün üstüne gelince .xo-all → kapsül tek parça açılır (her düğme kendi adının genişliğine, --w ölçülür)
+// 15.11.2026 'Uzat / kısalt': Simge + yazı'nın aynısı + menünün sonunda küçük düğme; kısalt = hep simge, uzat = hep simge + ad (seçim cihazda: ls gs1-tg)
+function useGs1Toggle(on) {
+  useEffect(() => {
+    const H = document.documentElement.classList;
+    if (!on) { H.remove('gs1-tg-s'); return undefined; }
+    const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return undefined;
+    const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); });
+    measure(); document.fonts?.ready?.then(measure);
+    let short = false; try { short = localStorage.getItem('gs1-tg') === 's'; } catch { /* yok */ }
+    const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'gs1-tgb';
+    const ico = (s) => s ? '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7l5 5-5 5M6 7l5 5-5 5"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 7l-5 5 5 5M18 7l-5 5 5 5"/></svg>';
+    const paint = () => { H.toggle('gs1-tg-s', short); bt.innerHTML = ico(short); bt.title = short ? 'Menüyü uzat' : 'Menüyü kısalt'; bt.setAttribute('aria-label', bt.title); };
+    paint(); nav.append(bt);
+    const click = (e) => { e.preventDefault(); e.stopPropagation(); measure(); short = !short; try { localStorage.setItem('gs1-tg', short ? 's' : ''); } catch { /* yok */ } paint(); };
+    bt.addEventListener('click', click);
+    return () => { bt.removeEventListener('click', click); bt.remove(); H.remove('gs1-tg-s'); };
+  }, [on]);
+}
 function useGs1Lbl(mode) {
   useEffect(() => {
     if (!mode) return undefined;
@@ -1174,7 +1194,7 @@ function useGs1Lbl(mode) {
     if (mode === 'island' || mode === 'expand') {
       const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) { b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); } });
       measure(); document.fonts?.ready?.then(measure);
-      let hold = false, snapT = 0;
+      let hold = false;
       const arm = () => { clearTimeout(t); if (hold) return; t = setTimeout(() => { if (!fits()) return; nav.classList.add('xo-all'); guardArm(); }, mode === 'expand' ? 240 : 60); };
       // sığmıyorsa adlar açılmaz (dar ekranda soldaki 'Ana sayfa' logonun altına kayıyordu): gereken = şimdiki + kapalı adların genişliği
       const fits = () => gs1NavNeed(nav) <= nav.clientWidth - 2;
@@ -1183,14 +1203,13 @@ function useGs1Lbl(mode) {
       const mv = () => { if (!nav.classList.contains('xo-all')) arm(); };
       // kapalıyken bir düğmeye basınca: uzama iptal + fare menüden çıkana kadar bir daha uzamaz; seçili ad değişimi ANINDA olur
       // (eski seçilinin adı kapanırken yenisi açılıp menüyü iki yöne oynatıyordu)
-      const pd = (e) => { clearTimeout(t); if (nav.classList.contains('xo-all') || !e.target.closest?.('.topnav-b')) return; hold = true;
-        nav.classList.add('gs1-snap'); clearTimeout(snapT); snapT = setTimeout(() => nav.classList.remove('gs1-snap'), 700); };
+      const pd = (e) => { clearTimeout(t); if (nav.classList.contains('xo-all') || !e.target.closest?.('.topnav-b')) return; hold = true; };
       const pl = () => { hold = false; };
       nav.addEventListener('pointerleave', pl);
       nav.addEventListener('pointermove', mv); nav.addEventListener('pointerdown', pd);
       const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { nav.classList.remove('xo-all'); } else out = setTimeout(lv, 300); }, 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
-      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); nav.removeEventListener('pointerleave', pl); clearTimeout(snapT); nav.classList.remove('gs1-snap'); guardOff(); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
+      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); nav.removeEventListener('pointerleave', pl); guardOff(); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
     }
     if (mode === 'line' || mode === 'spot') {
       // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir
@@ -1248,9 +1267,10 @@ function useGs1Lbl(mode) {
       mo2 = new MutationObserver((ms) => { if (!cur && ms.some((m) => m.target !== blob)) place(homeB(), true); }); mo2.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] }); }
     let pend = null;
     const fire = (b) => { pend = null; guardArm(); set(b); };
-    const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); clearTimeout(t); if (b === cur) { pend = null; return; } pend = b; t = setTimeout(() => fire(b), mode === 'side' ? (cur ? 90 : 240) : cur ? 40 : 90); };
+    const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); clearTimeout(t); if (b === cur) { pend = null; return; } pend = b; t = setTimeout(() => fire(b), mode === 'side' ? 240 : cur ? 40 : 90); };
     // yanında ad: ilk açılış fare durunca (simgeye giderken yolda büyümesin); basınca bekleyen açılış iptal
-    const smv = () => { if (mode !== 'side' || cur || !pend) return; const b = pend; clearTimeout(t); t = setTimeout(() => fire(b), 240); };
+    const smv = () => { if (mode !== 'side' || !pend || pend === cur) return; // biri açıkken yandakine de aynı bekleme (fare kayınca hemen açılmasın)
+      const b = pend; clearTimeout(t); t = setTimeout(() => fire(b), 240); };
     const spd = () => { if (pend) { clearTimeout(t); pend = null; } };
     nav.addEventListener('pointermove', smv); nav.addEventListener('pointerdown', spd);
     const leave = () => { clearTimeout(t); pend = null; out = setTimeout(() => { if (!document.querySelector('.hd-p')) set(null); else out = setTimeout(leave, 300); }, 220); };
@@ -1291,21 +1311,23 @@ function useIsland(on, tab, topOnly) {
   useEffect(() => {
     const r = document.documentElement; r.classList.remove('isl');
     if (!on) return;
-    let last = 0, up = 0, raf = 0;
+    let last = 0, up = 0, raf = 0, mvT = 0;
+    // ada geçişi sırasında html.isl-mv: arama kutusu SADECE bu sırada adanın hızıyla (0,7 sn) değişir; odakta büyümesi kendi hızında (0,42 sn)
+    const mv = () => { r.classList.add('isl-mv'); clearTimeout(mvT); mvT = setTimeout(() => r.classList.remove('isl-mv'), 800); };
     const r0 = requestAnimationFrame(() => { last = scrollY; });
     const busy = () => document.querySelector('.hd-p, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
     const f = () => {
       raf = 0; const y = scrollY; const d = y - last; last = y;
       const isl = r.classList.contains('isl');
-      if (y < 40) { up = 0; if (isl) r.classList.remove('isl'); return; }
+      if (y < 40) { up = 0; if (isl) { mv(); r.classList.remove('isl'); } return; }
       if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
       if (d < 0) up += d; else if (d > 0) up = 0;
-      if (!isl && y > 90 && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); r.classList.add('isl'); }
-      else if (isl && !topOnly && up < -70) { r.classList.remove('isl'); up = 0; }
+      if (!isl && y > 90 && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
+      else if (isl && !topOnly && up < -70) { mv(); r.classList.remove('isl'); up = 0; }
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
     addEventListener('scroll', q, { passive: true });
-    return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); cancelAnimationFrame(r0); r.classList.remove('isl'); };
+    return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); cancelAnimationFrame(r0); clearTimeout(mvT); r.classList.remove('isl', 'isl-mv'); };
   }, [on, tab, topOnly]);
 }
 function useHideTop(on, upShow, tab, layer) {
