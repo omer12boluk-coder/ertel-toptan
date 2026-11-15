@@ -1159,12 +1159,21 @@ function useGs1Search(on) {
       const sr = e.target.closest?.('.gs-srch'); if (!sr) return; clearTimeout(t);
       const nav = h.querySelector('.gs-nav'); const bs = nav ? [...nav.querySelectorAll('.topnav-b')] : [];
       if (!bs.length) return;
-      const room = nav.clientWidth - gs1NavNeed(nav) - 12; const w = sr.getBoundingClientRect().width;
-      sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(560, w + room))) + 'px');
+      // 16.11.2026: 'Simge + yazı' (ve Uzat/kısalt'ın uzun hâli) açıkken arama açılınca menü yazıları kapanır, sadece simgeler kalır
+      // (html gs1-ss) → aramaya daha çok yer; kapanınca yazılar geri gelir. Kısa hâlin genişliği bir anlığına geçişsiz ölçülür.
+      const H = document.documentElement.classList; const lb = [...H].find((c) => c.startsWith('gs1-lb-'));
+      const ss = !lb || (lb === 'gs1-lb-toggle' && !H.contains('gs1-tg-s'));
+      let need;
+      if (ss && !H.contains('gs1-ss')) {
+        bs.forEach((b) => { const l = b.querySelector('.topnav-l'); if (l && !b.style.getPropertyValue('--lw')) b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); });
+        H.add('gs1-meas2', 'gs1-ss'); need = gs1NavNeed(nav); H.remove('gs1-ss'); void nav.offsetWidth; H.remove('gs1-meas2'); void nav.offsetWidth; H.add('gs1-ss');
+      } else need = gs1NavNeed(nav);
+      const room = nav.clientWidth - need - 12; const w = sr.getBoundingClientRect().width;
+      sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(ss ? 660 : 560, w + room))) + 'px');
     };
-    const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) sr.style.removeProperty('--gs1-sw'); }, 200); };
+    const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) { sr.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss'); } }, 200); };
     h.addEventListener('focusin', open); h.addEventListener('focusout', close);
-    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
+    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); document.documentElement.classList.remove('gs1-ss'); };
   }, [on]);
 }
 // 15.11.2026 (4) Tek satır 'Menü yazıları' hareketleri: fare bir başlıkta kısa durunca .xo (dönen yazı / cıva); cıva = sıvı damla
@@ -1187,7 +1196,7 @@ function useGs1Toggle(on) {
     let auto = false, need = 0, rT = 0;
     const paint = () => { H.toggle('gs1-tg-s', short || auto); bt.style.display = auto ? 'none' : ''; bt.innerHTML = ico(short); bt.title = short ? 'Menüyü uzat' : 'Menüyü kısalt'; bt.setAttribute('aria-label', bt.title); };
     paint(); nav.append(bt);
-    const fit = () => { if (!H.contains('gs1-tg-s') && !nav.querySelector('.gs-srch:focus-within')) need = gs1NavNeed(nav);
+    const fit = () => { if (H.contains('gs1-ss')) return; if (!H.contains('gs1-tg-s')) need = gs1NavNeed(nav);
       const a = !short && need > nav.clientWidth - 2; if (a !== auto) { auto = a; paint(); } };
     const ro = new ResizeObserver(() => { clearTimeout(rT); rT = setTimeout(fit, 60); }); ro.observe(nav);
     fit(); setTimeout(fit, 80); document.fonts?.ready?.then(() => setTimeout(fit, 80));
