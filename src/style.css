@@ -10584,3 +10584,90 @@ html.gs-ice .topbar.hdr-gs .topbar-in { position: relative;
   html.gs-isl .hdr-gs .gs-icons :is(.hcart, .me-login) { transition: padding .5s cubic-bezier(.32, .72, 0, 1), gap .5s; }
 }
 @media (min-width: 900px) and (prefers-reduced-motion: reduce) { html.gs-isl .topbar.hdr-gs :is(.topbar-in, .gs-nav, .gs-brand b, .gs-icons > *) { transition: none !important; } }
+
+/* ===== 15.11.2026 'Arama + cam 3' (look.header 'search3', html.gs-x3): Cam + arama ile aynı menü/işlev; daha UZUN + kristal cam.
+   Ton: look.gs3Tone '' kristal | 'ice' buz mavisi (html.gs-x3i). Diğer üst menülere dokunmaz (her kural html.gs-x3 ile başlar). */
+html.hdr-gs-on.gs-x3 { --top-h: 126px; --x3-a: rgb(255 255 255 / .6); --x3-b: rgb(255 255 255 / .28); --x3-edge: rgb(15 23 42 / .14); --x3-sh: rgb(15 23 42 / .36); --x3-ln: rgb(15 23 42 / .11); --x3-in: rgb(255 255 255 / .46); }
+html.hdr-gs-on.gs-x3.gs-x3i { --x3-a: rgb(228 239 255 / .64); --x3-b: rgb(200 220 255 / .34); --x3-edge: rgb(47 85 176 / .24); --x3-sh: rgb(47 85 176 / .5); --x3-ln: rgb(47 85 176 / .15); --x3-in: rgb(255 255 255 / .56); }
+html.gs-x3 .topbar.hdr-gs .topbar-in { position: relative; border-radius: 30px;
+  background: linear-gradient(180deg, var(--x3-a), var(--x3-b)) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(2.1) brightness(1.04); backdrop-filter: blur(30px) saturate(2.1) brightness(1.04);
+  border: 1px solid rgb(255 255 255 / .85) !important;
+  box-shadow: inset 0 1.5px 0 #fff, inset 0 16px 22px -20px #fff, inset 0 -1px 0 rgb(255 255 255 / .55), inset 0 -20px 26px -24px #fff, 0 0 0 .5px var(--x3-edge), 0 2px 5px rgb(15 23 42 / .05), 0 24px 46px -24px var(--x3-sh) !important; }
+/* cam kenarı: ışığı kıran ince halka (sabit, hareket yok) */
+html.gs-x3 .topbar.hdr-gs .topbar-in::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; padding: 1.5px;
+  background: linear-gradient(135deg, #fff 0%, rgb(255 255 255 / .1) 26%, rgb(255 255 255 / 0) 50%, rgb(255 255 255 / .2) 76%, #fff 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+html.gs-x3 .topbar.hdr-gs .gs-nav { position: relative; border-top-color: transparent !important; }
+html.gs-x3 .topbar.hdr-gs .gs-nav::before { content: ""; position: absolute; top: 0; left: 4%; right: 4%; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--x3-ln) 16%, var(--x3-ln) 84%, transparent); }
+/* cam içine oyulmuş arama + cam kapsüller */
+html.gs-x3 .hdr-gs .gs-srch .hsearch-box { background: var(--x3-in) !important; border-color: rgb(255 255 255 / .9) !important; box-shadow: inset 0 1.5px 3px rgb(15 23 42 / .1), inset 0 -1px 0 rgb(255 255 255 / .9), 0 0 0 .5px var(--x3-edge) !important; }
+html.gs-x3 .hdr-gs .gs-srch .hsearch-box:focus-within { background: #fff !important; box-shadow: inset 0 1px 2px rgb(15 23 42 / .06), 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent) !important; }
+html.gs-x3 .hdr-gs .gs-icons .hcart, html.gs-x3 .hdr-gs .gs-icons .btn.me-login { background: var(--x3-in); border-color: rgb(255 255 255 / .9); box-shadow: inset 0 1px 0 #fff, 0 0 0 .5px var(--x3-edge), 0 6px 14px -10px var(--x3-sh); }
+html.gs-x3 .topbar.hdr-gs .gs-nav .topnav-b.on { background: linear-gradient(180deg, #fff, rgb(255 255 255 / .74)); box-shadow: inset 0 1px 0 #fff, 0 0 0 .5px var(--x3-edge), 0 8px 16px -10px var(--x3-sh); }
+@media (min-width: 900px) {
+  html.gs-x3 .hdr-gs .gs-r1 { height: 68px; padding: 0 14px 0 16px !important; }
+  html.gs-x3 .hdr-gs .gs-brand { gap: 11px; }
+  html.gs-x3 .hdr-gs .gs-brand .brand-logo { width: 40px !important; height: 40px !important; }
+  html.gs-x3 .hdr-gs .gs-brand b { font-size: 20px; }
+  html.gs-x3 .hdr-gs .gs-srch .hsearch-box { height: 48px; border-radius: 24px; padding: 0 12px 0 18px; }
+  html.gs-x3 .hdr-gs .gs-icons { gap: 6px; }
+  html.gs-x3 .hdr-gs .gs-icons .hcart { height: 48px; border-radius: 24px; }
+  html.gs-x3 .hdr-gs .gs-icons .btn.me-login { height: 42px; border-radius: 21px; padding: 0 16px; }
+  html.gs-x3 .topbar.hdr-gs .gs-nav { height: 56px; gap: 6px; }
+  html.gs-x3 .hdr-gs .gs-nav .topnav-b { height: 40px; padding: 0 15px !important; gap: 8px; border-radius: 20px; font-size: 14.5px; }
+  html.gs-x3 .hdr-gs .gs-nav .topnav-b > .ic:first-child { width: 18px; height: 18px; }
+}
+@media (max-width: 899px) {
+  /* 15.11.2026: telefonda kalınlık 'Cam + arama' ile AYNI (68px 'çok kalın' bulundu) — sadece cam görünümü */
+  html.hdr-gs-on.gs-x3 { --top-h: 64px; }
+  html.gs-x3 .topbar.hdr-gs .topbar-in { border-radius: 26px; }
+  html.gs-x3 .hdr-gs .gs-icons .hcart { background: var(--x3-in); }
+  html.gs-x3 .hdr-gs .gs-icons .btn.me-login { background: none; box-shadow: none; }
+}
+html.gs-x3[data-theme="dark"] .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, rgb(52 58 74 / .62), rgb(22 26 38 / .46)) !important; border-color: rgb(255 255 255 / .16) !important; box-shadow: inset 0 1px 0 rgb(255 255 255 / .16), inset 0 -18px 26px -24px rgb(255 255 255 / .16), 0 24px 46px -22px rgb(0 0 0 / .8) !important; }
+html.gs-x3.gs-x3i[data-theme="dark"] .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, rgb(36 48 78 / .68), rgb(20 28 50 / .5)) !important; border-color: rgb(140 170 255 / .2) !important; }
+html.gs-x3[data-theme="dark"] .topbar.hdr-gs .topbar-in::before { opacity: .22; }
+html.gs-x3[data-theme="dark"] .topbar.hdr-gs .gs-nav::before { background: linear-gradient(90deg, transparent, rgb(255 255 255 / .12) 16%, rgb(255 255 255 / .12) 84%, transparent); }
+html.gs-x3[data-theme="dark"] .hdr-gs .gs-srch .hsearch-box, html.gs-x3[data-theme="dark"] .hdr-gs .gs-icons .hcart, html.gs-x3[data-theme="dark"] .hdr-gs .gs-icons .btn.me-login { background: rgb(255 255 255 / .08) !important; border-color: rgb(255 255 255 / .14) !important; box-shadow: inset 0 1px 0 rgb(255 255 255 / .08) !important; }
+html.gs-x3[data-theme="dark"] .topbar.hdr-gs .gs-nav .topnav-b.on { background: rgb(255 255 255 / .14); box-shadow: inset 0 1px 0 rgb(255 255 255 / .14); }
+/* zayıf cihaz (html.lite / pf-lite): bulanıklık yok → cam düz zemine döner, yazılar okunur kalır */
+html.gs-x3:is(.lite, .pf-lite) .topbar.hdr-gs .topbar-in { -webkit-backdrop-filter: none; backdrop-filter: none; background: linear-gradient(180deg, #fff, #f4f5f8) !important; }
+html.gs-x3.gs-x3i:is(.lite, .pf-lite) .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, #f1f6ff, #e3edff) !important; }
+html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { background: #1e2330 !important; }
+
+/* ===== 15.11.2026 Kristal cam — bilgisayar görünümü (look.gs3Pc; SADECE ≥900px, telefon aynı).
+   html.gs-x3-strip = kenardan kenara şerit ('web' + 'strip'), gs-x3-web + gs-x3-at0 = en üstte şeffaf (kaydırınca cam),
+   gs-x3-ada2 = sade yüzen ada. Hepsinde menü yazıları düz + seçilinin altında çizgi, arama/sepet az yuvarlak. 'ada' = eski kapsül. */
+@media (min-width: 900px) {
+  html.gs-x3.gs-x3-strip .topbar.hdr-gs { padding: 0 !important; }
+  html.gs-x3.gs-x3-strip .topbar.hdr-gs .topbar-in { border-radius: 0 !important; border: 0 !important; border-bottom: 1px solid rgb(15 23 42 / .09) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .9), 0 10px 30px -22px rgb(15 23 42 / .35) !important;
+    transition: background .28s ease, box-shadow .28s ease, border-color .28s ease, -webkit-backdrop-filter .28s ease, backdrop-filter .28s ease; }
+  html.gs-x3.gs-x3-strip .topbar.hdr-gs .topbar-in::before { display: none; }
+  html.gs-x3.gs-x3-strip .hdr-gs .gs-r1, html.gs-x3.gs-x3-strip .topbar.hdr-gs .gs-nav { max-width: 1640px; margin: 0 auto; width: 100%; padding-left: 28px !important; padding-right: 28px !important; }
+  html.gs-x3.gs-x3-strip[data-theme="dark"] .topbar.hdr-gs .topbar-in { border-bottom-color: rgb(255 255 255 / .1) !important; box-shadow: 0 12px 30px -22px rgb(0 0 0 / .8) !important; }
+  /* en üstte: zemin, gölge, çizgi yok — sayfayla bütün */
+  html.gs-x3.gs-x3-web.gs-x3-at0 .topbar.hdr-gs .topbar-in { background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: none !important; border-bottom-color: transparent !important; }
+  html.gs-x3.gs-x3-web.gs-x3-at0 .topbar.hdr-gs .gs-nav::before { opacity: 0; }
+  /* sade ada */
+  html.gs-x3.gs-x3-ada2 .topbar.hdr-gs { padding: 10px 14px 0 !important; }
+  html.gs-x3.gs-x3-ada2 .topbar.hdr-gs .topbar-in { border-radius: 18px !important; }
+  /* düz menü yazıları + alt çizgi (şerit + sade ada) */
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav { gap: 4px !important; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav > .hd { height: 100%; display: flex; align-items: stretch; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b, html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b.on {
+    background: none !important; box-shadow: none !important; border-radius: 0 !important; position: relative; padding: 0 16px !important; height: 100% !important; color: var(--fg) !important; opacity: .72; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b.on { opacity: 1; font-weight: 600; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: 0; height: 2.5px; border-radius: 2px 2px 0 0; background: var(--accent); opacity: 0; transform: scaleX(.4); transition: opacity .2s ease, transform .25s ease; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b.on::after { opacity: 1; transform: none; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b.on .ic { color: var(--accent); }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .hdr-gs .gs-srch .hsearch-box { border-radius: 12px !important; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .hdr-gs .gs-icons .hcart { border-radius: 12px !important; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .hdr-gs .gs-icons .btn.me-login { border-radius: 10px !important; }
+}
+@media (min-width: 900px) and (hover: hover) {
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b:hover { opacity: 1; }
+  html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b:not(.on):hover::after { opacity: .35; transform: none; }
+}
+@media (min-width: 900px) { html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .flow-ghost { display: none !important; } }
