@@ -10786,21 +10786,66 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs-one.gs1-under.gs1-t-smoke .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, rgb(244 245 248 / .8), rgb(222 224 230 / .45)) !important; }
   html.gs-one.gs1-under.gs1-t-tint .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 6%, rgb(255 255 255 / .8)), color-mix(in oklab, var(--accent) 14%, rgb(255 255 255 / .38))) !important; }
   html.gs-one.gs1-under[data-theme="dark"] .topbar.hdr-gs .topbar-in::before { opacity: .2; }
-  /* 'Sadece simge' (15.11 3. tur, floating dock gibi): ortalı küçük yuvarlak simgeler; fareye yakın olanlar yumuşakça büyür
-     (main.jsx useGs1Ico → --k 0..1, yaylanma yok), adı simgenin ALTINDA küçük etikette belirir — yazı satırı açılmaz, hiçbir şey kaymaz. */
-  html.gs-one.gs1-ico .hdr-gs .gs-nav { overflow: visible; gap: 8px; align-items: center; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b { --k: 0; position: relative; gap: 0; padding: 0; justify-content: center; border-radius: 50%;
-    width: calc(36px + 14px * var(--k)); height: calc(36px + 14px * var(--k)); min-width: 0; background: rgb(15 23 42 / .045); transition: background-color .2s, color .2s; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b.on { background: var(--lg-pill); }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b > svg:first-child { width: calc(17px + 6px * var(--k)) !important; height: calc(17px + 6px * var(--k)) !important; flex: none; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-chev { display: none !important; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-l { position: absolute; left: 50%; top: calc(100% + 9px); transform: translate(-50%, 4px); padding: 5px 10px; border-radius: 8px;
-    background: rgb(255 255 255 / .96); border: 1px solid rgb(15 23 42 / .1); box-shadow: 0 6px 16px -8px rgb(15 23 42 / .35); color: #1d1d1f;
-    font: 600 12.5px/1.25 var(--f-body); white-space: nowrap; opacity: 0; pointer-events: none; z-index: 30; transition: opacity .16s ease, transform .2s cubic-bezier(.22, .8, .24, 1); }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b.xo .topnav-l { opacity: 1; transform: translate(-50%, 0); }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .hd.open > .topnav-b .topnav-l { opacity: 1; transform: translate(-50%, 0); }
-  html[data-theme="dark"].gs-one.gs1-ico .hdr-gs .gs-nav .topnav-l, html.gs-one.gs1-ico.gs1-t-ink .hdr-gs .gs-nav .topnav-l { background: #1f2430; border-color: rgb(255 255 255 / .12); color: #fff; }
-  html[data-theme="dark"].gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b:not(.on), html.gs-one.gs1-ico.gs1-t-ink .hdr-gs .gs-nav .topnav-b:not(.on) { background: rgb(255 255 255 / .07); }
-  @media (max-width: 1199px) { html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b > svg:first-child { display: block; } }
+  /* (sadece simge / dock denemesi reddedildi → 'Menü yazıları' seçenekleri dosyanın sonunda: gs1-lb-*) */
 }
+
+/* 15.11.2026 (4) Tek satır 'Menü yazıları' (look.gs1Lbl; html gs1-lb-<x>; sadece bilgisayar):
+   text = sadece isim (simgesiz) · roll = DÖNEN YAZI: simge yukarı kayıp çıkar, adı aşağıdan gelir · mercury = CIVA: tek bir sıvı damla
+   simgeden simgeye esneyerek akar, adı damlanın içinde belirir · island = ADA: menü koyu bir kapsül, üstüne gelince kapsül tek parça açılır
+   ve tüm adlar simgelerin altında görünür. roll/mercury'de her düğmenin yeri adın genişliği kadar SABİT → hiçbir şey kaymaz. */
+@media (min-width: 900px) {
+  html.gs1-lb-text .hdr-gs .gs-nav .topnav-b > svg:first-child { display: none !important; }
+  html.gs1-lb-text .hdr-gs .gs-nav .topnav-b { padding: 0 14px; font-size: 14px; }
+  html.gs1-lb-text .hdr-gs .gs-nav { gap: 2px; }
+
+  html:is(.gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav { gap: 4px; }
+  html:is(.gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b { display: grid !important; place-items: center; overflow: hidden; height: 38px; padding: 0 14px; gap: 0; border-radius: 19px; }
+  html:is(.gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b > * { grid-area: 1 / 1; }
+  html:is(.gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-chev { display: none !important; }
+  html:is(.gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 19px !important; height: 19px !important; }
+  html:is(.gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-l { font: 600 14px/1.3 var(--f-body); padding: 2px 0; }
+  /* dönen yazı */
+  html.gs1-lb-roll .hdr-gs .gs-nav .topnav-b > svg:first-child, html.gs1-lb-roll .hdr-gs .gs-nav .topnav-l { transition: transform .46s cubic-bezier(.65, 0, .25, 1), opacity .3s ease; }
+  html.gs1-lb-roll .hdr-gs .gs-nav .topnav-l { transform: translateY(105%); opacity: 0; }
+  html.gs1-lb-roll .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) > svg:first-child { transform: translateY(-105%); opacity: 0; }
+  html.gs1-lb-roll .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) .topnav-l { transform: none; opacity: 1; }
+  html.gs1-lb-roll .hdr-gs .gs-nav .topnav-b:not(.on):hover { background: rgb(15 23 42 / .05); }
+  /* cıva */
+  html.gs1-lb-mercury .hdr-gs .gs-nav .topnav-b { background: transparent !important; box-shadow: none !important; z-index: 1; }
+  html.gs1-lb-mercury .hdr-gs .gs-nav .flow-ghost { display: none !important; }
+  html.gs1-lb-mercury .hdr-gs .gs-nav .topnav-b > svg:first-child, html.gs1-lb-mercury .hdr-gs .gs-nav .topnav-l { transition: opacity .28s ease, filter .28s ease, transform .36s cubic-bezier(.22, .8, .24, 1); }
+  html.gs1-lb-mercury .hdr-gs .gs-nav .topnav-l { opacity: 0; filter: blur(4px); transform: scale(.92); }
+  html.gs1-lb-mercury .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) > svg:first-child { opacity: 0; filter: blur(4px); transform: scale(.7); }
+  html.gs1-lb-mercury .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) .topnav-l { opacity: 1; filter: none; transform: none; }
+  html.gs1-lb-mercury .hdr-gs .gs-nav .topnav-b.xo, html.gs1-lb-mercury .hdr-gs .gs-nav .hd.open > .topnav-b { color: #fff !important; }
+  html.gs1-lb-mercury .hdr-gs .gs1-blob { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: 19px; opacity: 0;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 82%, #fff), var(--accent)); box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), 0 6px 16px -8px color-mix(in oklab, var(--accent) 70%, transparent); transition: opacity .25s ease; }
+  html.gs1-lb-mercury .hdr-gs .gs1-blob.on { opacity: 1; }
+  html.gs1-lb-mercury .hdr-gs .gs-nav .topnav-b.on:not(.xo) { color: var(--accent) !important; }
+  /* ada */
+  html.gs1-lb-island .hdr-gs .gs-nav { flex: 0 1 auto; margin: 0 auto; align-self: center; height: 44px; gap: 2px; padding: 0 6px; border-radius: 22px; overflow: hidden;
+    background: #16181d; box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 10px 22px -14px rgb(0 0 0 / .6); transition: height .44s cubic-bezier(.32, .72, 0, 1), border-radius .44s cubic-bezier(.32, .72, 0, 1), padding .44s cubic-bezier(.32, .72, 0, 1); }
+  html.gs1-lb-island .hdr-gs .gs-nav .flow-ghost { display: none !important; }
+  html.gs1-lb-island .hdr-gs .gs-nav .topnav-chev { display: none !important; }
+  html.gs1-lb-island .hdr-gs .gs-nav .topnav-b { flex-direction: column; justify-content: center; gap: 0; height: 100%; padding: 0; width: 42px; border-radius: 16px; color: rgb(255 255 255 / .7) !important; background: transparent !important; box-shadow: none !important;
+    transition: width .44s cubic-bezier(.32, .72, 0, 1), color .2s, background-color .2s; }
+  html.gs1-lb-island .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 19px !important; height: 19px !important; flex: none; transition: transform .44s cubic-bezier(.32, .72, 0, 1); }
+  html.gs1-lb-island .hdr-gs .gs-nav .topnav-l { font: 600 11.5px/1.25 var(--f-body); max-height: 0; opacity: 0; overflow: hidden; white-space: nowrap; transition: max-height .44s cubic-bezier(.32, .72, 0, 1), opacity .25s ease, margin .44s cubic-bezier(.32, .72, 0, 1); }
+  html.gs1-lb-island .hdr-gs .gs-nav .topnav-b.on { color: #fff !important; }
+  html.gs1-lb-island .hdr-gs .gs-nav .topnav-b.on::after { content: ""; position: absolute; bottom: 5px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 2px; background: #fff; transition: opacity .2s; }
+  html.gs1-lb-island .hdr-gs .gs-nav.xo-all { height: 58px; border-radius: 20px; padding: 0 8px; }
+  html.gs1-lb-island .hdr-gs .gs-nav.xo-all .topnav-b { width: var(--w, 84px); }
+  html.gs1-lb-island .hdr-gs .gs-nav.xo-all .topnav-l { max-height: 18px; opacity: 1; margin-top: 4px; transition: max-height .44s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .1s, margin .44s cubic-bezier(.32, .72, 0, 1); }
+  html.gs1-lb-island .hdr-gs .gs-nav.xo-all .topnav-b.on::after { opacity: 0; }
+  html.gs1-lb-island .hdr-gs .gs-nav .topnav-b:hover, html.gs1-lb-island .hdr-gs .gs-nav .hd.open > .topnav-b { color: #fff !important; background: rgb(255 255 255 / .1) !important; }
+  html.gs1-lb-island.gs1-t-ink .hdr-gs .gs-nav { background: rgb(255 255 255 / .1); }
+}
+@media (min-width: 900px) { html.gs1-lb-island .hdr-gs .gs-nav > .hd { height: 100%; display: flex; } html.gs1-lb-island .hdr-gs .gs-nav .topnav-b { position: relative; } html.gs1-lb-mercury .hdr-gs .gs-nav > .hd, html.gs1-lb-mercury .hdr-gs .gs-nav > .topnav-b { position: relative; z-index: 1; } }
+@media (min-width: 900px) {
+  html.gs-one.gs1-sicon .hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+  html.gs-one.gs1-sicon .hdr-gs .gs-srch .hsearch:not(:focus-within):hover .hsearch-box { background: rgb(15 23 42 / .05) !important; }
+}
+@media (min-width: 900px) and (max-width: 1365px) {
+  html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+  html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within):hover .hsearch-box { background: rgb(15 23 42 / .05) !important; }
 }

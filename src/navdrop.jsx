@@ -36,7 +36,7 @@ let active = null; // açık olan menü { id, close } (bir menüden diğerine ge
 let swapFrom = null; // { r: DOMRect, t: zaman }
 
 // 15.11.2026 Tek satır 'sadece simge': simgenin adı altında etikette durur → açılır menü etiketin altından başlar
-const icoGap = (btn) => (typeof document !== 'undefined' && document.documentElement.classList.contains('gs1-ico') && innerWidth >= 900 ? (btn ? 34 : 22) : 0);
+const icoGap = (btn) => (typeof document !== 'undefined' && document.documentElement.classList.contains('gs1-lb-island') && innerWidth >= 900 ? (btn ? 12 : 8) : 0);
 export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   const desk = useDesk();
   const [open, setOpen] = useState(false);
@@ -102,7 +102,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     if (clickMode()) { if (active && active.id !== myId.current) show(); return; }
     if (active && active.id !== myId.current) { if (cls.includes('hd-v3')) t.current = setTimeout(show, 90); else show(); return; } // başka menü açıkken yandakine geçiş: beklemeden (v3: 90 ms — panele çapraz inerken yoldaki başlıklar menüyü değiştirmesin)
     if (here()) return;
-    if (MENU.niyet && e) { anc.current = { x: e.clientX, y: e.clientY }; t.current = setTimeout(show, icoGap() ? 380 : DUR); return; }
+    if (MENU.niyet && e) { anc.current = { x: e.clientX, y: e.clientY }; t.current = setTimeout(show, DUR); return; }
     t.current = setTimeout(show, DELAY);
   };
   // niyet: fare belirgin kıpırdadıkça sayaç baştan başlar → sadece durunca açılır
@@ -110,7 +110,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     if (open || !MENU.niyet || mute.current || here() || clickMode()) return;
     const a = anc.current;
     if (a && Math.hypot(e.clientX - a.x, e.clientY - a.y) < TITRE) return;
-    anc.current = { x: e.clientX, y: e.clientY }; clearTimeout(t.current); t.current = setTimeout(show, icoGap() ? 380 : DUR);
+    anc.current = { x: e.clientX, y: e.clientY }; clearTimeout(t.current); t.current = setTimeout(show, DUR);
   };
   // kapanmadan önce farenin GERÇEKTEN dışarıda olduğunu sor: tarayıcı bazen yanlış 'çıktı' bildirimi veriyor
   // (fare menüde, satırın üstünde durma izi var ama menü kapanıyordu). Hâlâ üstündeyse kapanmaz, fare çıkınca kapanır.
