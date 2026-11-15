@@ -74,6 +74,7 @@ listesinde ara (yeni ad duyarsan listeye ekle); bulamazsan TEK soru sor ("Ana sa
 
 **Teknik dersler (hata yaşandı)**
 - **Giriş sayfasında (kum kanvası) yazı/düğmelere `will-change` VERME** — 15.11 telefonda kareler aşırı düştü; telefon + bilgisayardan kaldırıldı.
+- **Canlıda giriş sayfası kasılması (15.11):** App Check'in reCAPTCHA'sı sadece ertelmarket.com'da yüklenir ve her dokunuşu dinler → giriş sayfası açıkken KURULMAZ (`window.__gateWait`/`__gateDone`, backend-firebase.js `acGo`). Önizlemede görünmez, sadece canlıda denenebilir.
 - **Tek satırlık kodun ortasına `//` açıklama YAZMA** — satırın gerisini (else dalları, kapanış parantezi) yutuyor; 15.11 telefonda giriş logosu kayboldu. Açıklama ayrı satıra.
 - **Kendi adını çağıran kısa yardımcı yazma** (`const save = x => (lc ? updateLcart : save(x))` → sonsuz döngü, DHL aktarımı dondu).
 - `replace` ile metin eklerken o metin dosyada birden fazla yerde olabilir → ekledikten sonra ilgili ekranı aç, test et.

@@ -51,9 +51,12 @@ export class FirebaseBackend {
     // Yönetici paneli ayrı bir Firebase örneği kullanır: aynı tarayıcıda yönetici ve bayi oturumları birbirini etkilemez
     this.app = this.appName ? A.initializeApp(this.config, this.appName) : A.initializeApp(this.config);
     if (acP && own) { // veritabanı açılmadan önce kurulmalı; dosya 3 sn'de gelmezse App Check'siz devam (sayım eksik kalır, site etkilenmez)
-      try { const AC = await Promise.race([acP, new Promise((r) => setTimeout(() => r(null), 3000))]);
-        if (AC) AC.initializeAppCheck(this.app, { provider: new AC.ReCaptchaEnterpriseProvider(acKey), isTokenAutoRefreshEnabled: true });
-      } catch (e) { console.warn('App Check', e); }
+      const app = this.app;
+      const acGo = async () => { try { const AC = await Promise.race([acP, new Promise((r) => setTimeout(() => r(null), 3000))]);
+        if (AC) AC.initializeAppCheck(app, { provider: new AC.ReCaptchaEnterpriseProvider(acKey), isTokenAutoRefreshEnabled: true });
+      } catch (e) { console.warn('App Check', e); } };
+      // 15.11.2026: giriş sayfası (kum logo) açıksa reCAPTCHA giriş kapanınca kurulur (telefonda dokunuşta kasılma). Enforce kapalı: bu arada sadece sayım eksik.
+      if (window.__gateWait) window.__gateWait.then(acGo); else await acGo();
     }
     // Oturum: yönetici paneli ve "beni hatırlama" seçilen girişler sadece o sekmede yaşar (sekmeler birbirini etkilemez)
     this.tabOnly = this.appName !== 'shop' && sessionStorage.getItem('auth-tab') === '1'; // mağaza üyesi oturumu her zaman cihazda kalır

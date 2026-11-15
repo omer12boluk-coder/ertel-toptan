@@ -931,7 +931,7 @@ function App() {
       {b === 'ready' && pub && <RatePrompt />}
       {b === 'ready' && <SaveDock />}
       <IntroSplash />
-      {gate !== 'off' && <HeroGate onOpen={() => setGate((g) => (g === 'on' ? 'opening' : g))} onDone={() => setGate('off')} />}
+      {gate !== 'off' && <HeroGate onOpen={() => setGate((g) => (g === 'on' ? 'opening' : g))} onDone={() => { window.__gateDone?.(); setGate('off'); }} />}
       <Toast />
       <ContextMenu />
     </>

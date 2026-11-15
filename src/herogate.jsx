@@ -213,6 +213,10 @@ export const HERO_WANTED = (() => {
   } catch { return false; }
 })();
 
+// 15.11.2026: giriş sayfası açıkken Google doğrulaması (App Check / reCAPTCHA) başlatılmaz — her dokunuşu dinleyip telefonda
+// kum animasyonunu kasıyordu (sadece canlıda vardı). backend-firebase.js bunu bekler; giriş kapanınca (gateDone) kurulur.
+if (HERO_WANTED) { try { window.__gateWait = new Promise((r) => { window.__gateDone = r; }); } catch {} }
+
 export function HeroGate({ onOpen, onDone }) {
   const on = useStore((s) => s.settings.brand?.heroGate !== false);
   const boot = useStore((s) => s.boot);
