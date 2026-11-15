@@ -10969,7 +10969,6 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-chev { max-width: 16px; opacity: 1; margin-left: 4px; transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .06s; }
   html.gs1-lb-side .hdr-gs .gs-nav .topnav-b:not(.xo):not(.on):hover { color: var(--fg); }
   html[data-theme="dark"].gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b), html.gs1-lb-side.gs1-t-ink .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) { color: #fff !important; background: rgb(255 255 255 / .14) !important; box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset !important; }
-  html.gs1-click.gs1-lb-side .hdr-gs .gs-nav .topnav-b .topnav-chev { max-width: 22px !important; opacity: 1 !important; margin-left: 4px !important; }
 }
 
 /* 15.11.2026 (9) 'Uzayan menü' (gs1Lbl 'expand'): menü duruşta simge (seçili sayfa adıyla cam hapta); fare menüye girince TÜM adlar
@@ -11003,9 +11002,14 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html[data-theme="dark"].gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b), html.gs1-lb-side.gs1-t-ink .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) { color: #fff !important; }
   html[data-theme="dark"].gs1-lb-side .hdr-gs .gs-nav .topnav-chev, html.gs1-lb-side.gs1-t-ink .hdr-gs .gs-nav .topnav-chev { color: #fff !important; }
 }
+@media (min-width: 900px) {
+  /* 'Yanında ad': ok SADECE ad tamamen açılınca belirir (simge hâlinde ok yok); kapanırken hemen söner */
+  html.gs1-lb-side .hdr-gs .gs-nav .topnav-chev { transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .12s ease !important; }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-chev { transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .2s ease .4s !important; }
+}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '1371f4f4cd';</script>
+<script>window.__BUILD = '20a3e32ad6';</script>
 </head>
 <body>
 <div id="root"></div>
