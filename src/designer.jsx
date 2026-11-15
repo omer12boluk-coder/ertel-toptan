@@ -31,6 +31,7 @@ export const GS1_ROWS = [
   ['gs1Drop', 'Tek satır: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; sadece yanındaki aşağı oka basınca açılır, başlığa basmak sayfayı açar', [['', 'Üstüne gelince'], ['click', 'Tıklayınca']]],
   ['gs1Srch', 'Tek satır: arama', 'Basınca kutu, menüyle arasındaki boş yere kadar genişler', [['', 'Kutu'], ['icon', 'Simge']]],
   ['gs1IslNav', 'Tek satır: Ada içi', 'Aşağı kaydırınca Ada açıksa: arama kutusu kısalır, yanında menünün sadece simgeleri kalır', [['', 'Uzun arama'], ['icons', 'Simgeler + kısa arama']]],
+  ['gs1IslHov', 'Tek satır: Ada büyüsün', 'Üstüne gelince: en yukarı çıkmadan, fare adanın üstüne gelince menü tam hâline açılır, çıkınca tekrar ada olur', [['', 'Yukarı kaydırınca'], ['hover', 'Üstüne gelince de']]],
   ['gs1Hov', 'Tek satır: menüde fare', 'Kayan kutu: fareyi izleyen yumuşak zemin. Büyüme: fareye yakın yazı hafifçe büyür', [['', 'Bugünkü'], ['slide', 'Kayan kutu'], ['dock', 'Büyüme']]],
 ];
 export const GS3_PC = [['', 'Şerit, üstte şeffaf'], ['strip', 'Şerit'], ['ada2', 'Sade ada'], ['ada', 'Yüzen kapsül']];

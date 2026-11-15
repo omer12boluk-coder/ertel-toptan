@@ -731,7 +731,7 @@ function ShellFull() {
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
-  useIsland(islOn, tab, LK.islOpen === 'top');
+  useIsland(islOn, tab, LK.islOpen === 'top', LK.gs1IslHov === 'hover');
   useHideTop(pub && LK.hideTop !== false && !islOn, LK.hideTop === 'up', tab, urunLayer);
   // 14.11.2026 ortada logo menüsünün görünümü (look.hcStyle): '' bugünkü | 'glass2' cam iki satır | 'glass1' cam tek satır (menü logonun iki yanında) | 'clear' üstte şeffaf, kayınca cam.
   // Banner her durumda menünün BİTTİĞİ yerden başlar (menü bannerın üstüne binmez).
@@ -1319,7 +1319,7 @@ function useGs1Hover(mode) {
     return () => { nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerleave', lv); cancelAnimationFrame(raf); bs().forEach((b) => { b.style.transform = ''; }); };
   }, [mode]);
 }
-function useIsland(on, tab, topOnly) {
+function useIsland(on, tab, topOnly, hov) {
   useEffect(() => {
     const r = document.documentElement; r.classList.remove('isl');
     if (!on) return;
@@ -1332,15 +1332,20 @@ function useIsland(on, tab, topOnly) {
       raf = 0; const y = scrollY; const d = y - last; last = y;
       const isl = r.classList.contains('isl');
       if (y < 40) { up = 0; if (isl) { mv(); r.classList.remove('isl'); } return; }
-      if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
+      if (held || busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken / fare üstündeyken şekil değişmez
       if (d < 0) up += d; else if (d > 0) up = 0;
       if (!isl && y > 90 && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
       else if (isl && !topOnly && up < -70) { mv(); r.classList.remove('isl'); up = 0; }
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
     addEventListener('scroll', q, { passive: true });
-    return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); cancelAnimationFrame(r0); clearTimeout(mvT); r.classList.remove('isl', 'isl-mv'); };
-  }, [on, tab, topOnly]);
+    // 15.11.2026 look.gs1IslHov 'hover': fare adanın üstüne gelince (kısa bekleme) ada büyür, fare çıkınca (sayfa aşağıdaysa) tekrar adaya döner
+    let held = false, hT = 0; const tb = hov ? document.querySelector('.shell.public .topbar') : null;
+    const he = () => { held = true; clearTimeout(hT); hT = setTimeout(() => { if (held && r.classList.contains('isl')) { mv(); r.classList.remove('isl'); up = 0; } }, 220); };
+    const hl = () => { held = false; clearTimeout(hT); hT = setTimeout(() => { if (held || r.classList.contains('isl') || scrollY <= 90 || busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; mv(); r.classList.add('isl'); }, 500); };
+    tb?.addEventListener('pointerenter', he); tb?.addEventListener('pointerleave', hl);
+    return () => { tb?.removeEventListener('pointerenter', he); tb?.removeEventListener('pointerleave', hl); clearTimeout(hT); removeEventListener('scroll', q); cancelAnimationFrame(raf); cancelAnimationFrame(r0); clearTimeout(mvT); r.classList.remove('isl', 'isl-mv'); };
+  }, [on, tab, topOnly, hov]);
 }
 function useHideTop(on, upShow, tab, layer) {
   useEffect(() => {
