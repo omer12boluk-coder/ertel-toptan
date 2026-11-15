@@ -211,7 +211,7 @@ function glLand(st) {
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
   if (!e?.ready || e.lost || !tg || !st) return 0;
   const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
-  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1150 : 1080;
+  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1550 : 1450;
   if (!st.gl) { const [W, H] = markSize(e, st.y + st.z); e.resize(W, H, { x: st.x, y: st.y, w: st.z, h: st.z }); }
   let fin = false;
   const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
@@ -221,7 +221,7 @@ function glLand(st) {
   // bow: bütün akış birlikte yukarı doğru yumuşak bir kavis çizer (düz şerit değil)
   // 15.11 (kullanıcı: '1-2 farklı yerden, daha ince, rüzgârla uçuyor gibi'): iki kol (streams), tane gecikmeleri geniş (jit) →
   // uzun, savrulan tozlar; taneler giriş kumu kadar ince. 15.11 akşam ('ipeksi değil, çok parçacıklı; biraz hızlansın'): silk = taneler
-  // uzun, uca doğru incelen silik iplikler, gecikmeler dar (birlikte akan şerit), görünen tane %28, süre 1,15/1,08 sn.
+  // uzun, uca doğru incelen silik iplikler, gecikmeler dar (birlikte akan şerit), görünen tane %28, süre 1,55/1,45 sn ('kum biraz daha yavaş aksın').
   // 'kumların hizasını incelt': yana savrulma (girdap genliği) 30/24 px, iki kol birbirine yakın, iplikler daha ince
   e.fl.kEnd = 0.3; e.fl.bow = 0.24; e.fl.streams = 1; e.fl.jit = 0.13; e.fl.silk = 1; e.dotMin = 0.34; e.streakMul = 1;
   // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
@@ -547,8 +547,11 @@ export function HeroGate({ onOpen, onDone }) {
         if (!sd) { if (fl?.gl) fl.el.style.visibility = ''; killMark(); flyLand(fl); }
         if (fx.scn) sceneIn(!!fl);
         // banner giriş animasyonu: kumla aynı anda (sadece kum ya da tek parça uçuşta)
-        if (fx.bnIn && fl) bannerIn(fx.bnIn, fl, sd || 820);
+        // banner kendi hızında (kumu beklemez, kum yavaş akarken de ~0,9 sn'de açılır) — hepsi aynı anda
+        if (fx.bnIn && fl) bannerIn(fx.bnIn, fl, 1100);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
+        // animasyon sürerken sayfa KİLİTLENMEZ: giriş katmanı dokunuşları geçirir, kaydırma kilidi hemen kalkar
+        document.body.classList.remove('eh-lock');
         setReveal(true); setTimeout(onDone, sd ? sd + 160 : fl ? 820 : 420);
       });
     };

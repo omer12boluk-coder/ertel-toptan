@@ -9850,7 +9850,7 @@ body.eh-lock{overflow:hidden}
 @keyframes eh-in{to{opacity:1;transform:none}}
 /* Alışverişe başla → çıkış */
 .eh-root.leaving{will-change:opacity}
-.eh-root.reveal{opacity:0;transition:opacity .4s ease}
+.eh-root.reveal{opacity:0;transition:opacity .4s ease;pointer-events:none}
 .eh-root.leaving .eh-backdrop,.eh-root.leaving .eh-hint{opacity:0;transition:opacity .3s}
 .eh-root.leaving .eh-content{opacity:0;transform:translateY(-14px)}
 .eh-root.leaving .eh-nav{animation:eh-out .5s ease forwards}
