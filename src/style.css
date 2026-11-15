@@ -10671,3 +10671,22 @@ html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { ba
   html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b:not(.on):hover::after { opacity: .35; transform: none; }
 }
 @media (min-width: 900px) { html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .flow-ghost { display: none !important; } }
+
+/* ===== 15.11.2026 telefonda cam üst menü düzeni (look.gsPol; 'old' = eski hâl; html.gs-pol — 'Cam + arama' ve 'Arama + cam 2', Kristal cam HARİÇ).
+   Sunumdaki 1 + 2 + kenar hizası: simgeler eş boy/sade, giriş tek mavi yuvarlak, ışıklı kenar + iki katlı gölge, kenarlar banner'la aynı çizgide.
+   Köşe yuvarlaklığı DEĞİŞMEDİ (kullanıcı). Sadece ≤899px. */
+@media (max-width: 899px) {
+  html.gs-pol .topbar.hdr-g { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  html.gs-pol .topbar.hdr-g .topbar-in { background: linear-gradient(180deg, rgb(255 255 255 / .86), rgb(255 255 255 / .6)); border: 0;
+    -webkit-backdrop-filter: blur(26px) saturate(2); backdrop-filter: blur(26px) saturate(2);
+    box-shadow: 0 0 0 .5px rgb(15 23 42 / .12), inset 0 1px 0 #fff, inset 0 -1px 0 rgb(15 23 42 / .05), 0 2px 6px -2px rgb(15 23 42 / .1), 0 20px 40px -20px rgb(15 23 42 / .45); }
+  html.gs-pol .topbar.hdr-g .gs-brand b { font-weight: 800; letter-spacing: .03em; }
+  html.gs-pol .topbar.hdr-g .gs-icons { gap: 2px; }
+  html.gs-pol .topbar.hdr-g :is(.hsearch-btn, .gs-icons .icon-btn, .gs-icons .hcart) { width: 40px; height: 40px; min-width: 0; padding: 0; border-radius: 20px; background: transparent; border: 0; box-shadow: none; display: grid; place-items: center; color: var(--fg); }
+  html.gs-pol .topbar.hdr-g .gs-icons .btn.me-login { width: 40px; height: 40px; min-width: 0; padding: 0; border-radius: 20px; border: 0; box-shadow: none; display: grid; place-items: center;
+    background: color-mix(in oklab, var(--accent) 12%, #fff); color: var(--accent); }
+  html.gs-pol .topbar.hdr-g .gs-icons .me-login-s { display: none; }
+  html.gs-pol[data-theme="dark"] .topbar.hdr-g .topbar-in { background: linear-gradient(180deg, rgb(40 44 58 / .78), rgb(24 28 40 / .64));
+    box-shadow: 0 0 0 .5px rgb(255 255 255 / .1), inset 0 1px 0 rgb(255 255 255 / .12), inset 0 -1px 0 rgb(0 0 0 / .25), 0 2px 6px -2px rgb(0 0 0 / .4), 0 20px 40px -20px rgb(0 0 0 / .75); }
+  html.gs-pol[data-theme="dark"] .topbar.hdr-g .gs-icons .btn.me-login { background: color-mix(in oklab, var(--accent) 26%, transparent); color: #9fc0ff; }
+}
