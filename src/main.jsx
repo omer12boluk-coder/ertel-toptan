@@ -667,7 +667,7 @@ function ShellFull() {
   const phoneUI = usePhoneMQ();
   const LK = lookFor(S0.look, phoneUI);
   const hc = pub && LK.header === 'center';
-  const hs = pub && ['search', 'search2'].includes(LK.header || 'search'); // 15.11.2026 'search2' = Arama + cam 2 (aynı menü, buz mavisi gerçek cam)
+  const hs = pub && ['search', 'search2', 'search3'].includes(LK.header || 'search'); // 15.11.2026 'search2' = Arama + cam 2 (aynı menü, buz mavisi gerçek cam)
   // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
   const lgOn = pub && LK.glass !== false;
   useEffect(() => { const c = document.documentElement.classList; c.toggle('hdr-gs-on', hs); c.toggle('hdr-c-on', hc); c.toggle('lg-on', lgOn); return () => c.remove('hdr-gs-on', 'hdr-c-on', 'lg-on'); }, [hs, hc, lgOn]);
@@ -686,6 +686,10 @@ function ShellFull() {
   const gsIsl = hs && !phoneUI && LK.hdrScroll === 'island';
   useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-ice', gsIce); c.toggle('gs-isl', gsIsl); return () => c.remove('gs-ice', 'gs-isl'); }, [gsIce, gsIsl]);
   // 15.11.2026 menü logosunun arkasındaki beyaz yuvarlak + gri halka kalktı (her renkte menüye uyar); look.logoBg 'disc' = eski
+  // 15.11.2026 'Arama + cam 3' (look.header 'search3'): aynı menü/işlev, daha uzun + kristal cam (html gs-x3); look.gs3Tone 'ice' = buz mavisi tonu (html gs-x3i). Kalıp bulucu simgesi 'stencil'.
+  const gsX3 = hs && LK.header === 'search3';
+  const gsX3i = gsX3 && LK.gs3Tone === 'ice';
+  useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-x3', gsX3); c.toggle('gs-x3i', gsX3i); return () => c.remove('gs-x3', 'gs-x3i'); }, [gsX3, gsX3i]);
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
   useIsland(gsIsl, tab);
@@ -729,7 +733,7 @@ function ShellFull() {
           </div>
           <nav className="topnav gs-nav" aria-label="Ana menü">
             {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
-              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><Icon n={i} s={16} /><span className="topnav-l">{l}</span>{(k === 'katalog' || (v3 && k === 'kalip')) && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
+              const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><Icon n={gsX3 && k === 'kalip' ? 'stencil' : i} s={16} /><span className="topnav-l">{l}</span>{(k === 'katalog' || (v3 && k === 'kalip')) && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
               return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : k === 'kalip' ? <KalipDrop key={k}>{b}</KalipDrop> : b;
             })}
             <BrandsDrop><button className={'topnav-b' + (tab === 'markalar' ? ' on' : '')} onClick={() => go('markalar')}><Icon n="tag" s={16} /><span className="topnav-l">Markalar</span><span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span></button></BrandsDrop>
