@@ -366,12 +366,14 @@ export function HeroGate({ onOpen, onDone }) {
     const kumGo = () => {
     const wide = root.clientWidth >= 640, k = kumTarget(eng, wide), cvs = stageRef.current?.querySelector('canvas');
     if (!k) { setReveal(true); setTimeout(onDone, 420); return; }
-    k.tg.style.opacity = '0';
+    // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
+    const dur = wide ? 900 : 840;
+    k.tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.42, delay: dur * 0.6, easing: 'ease-out', fill: 'backwards' });
     root.style.transition = 'none'; root.style.backgroundColor = 'transparent';
     const openScene = sceneKur();
     let fin = false;
-    const end = () => { if (fin) return; fin = true; k.tg.style.opacity = ''; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
-    eng.flowTo(k.rect, wide ? 900 : 840, end, wide ? 60 : 44, openScene); setTimeout(() => { openScene(); end(); }, 2600);
+    const end = () => { if (fin) return; fin = true; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
+    eng.flowTo(k.rect, dur, end, wide ? 60 : 44, openScene); setTimeout(() => { openScene(); end(); }, 2600);
     // geniş logonun yazı kısmı menüye taşmasın: akışın sonuna doğru kanvas menü logosunun yuvarlağına kırpılır
     if (wide && cvs) { cvs.style.clipPath = `circle(${Math.hypot(innerWidth, innerHeight)}px at ${k.cx}px ${k.cy}px)`; setTimeout(() => { cvs.style.transition = 'clip-path .4s cubic-bezier(.5,0,.6,1)'; cvs.style.clipPath = `circle(${k.R + 1}px at ${k.cx}px ${k.cy}px)`; }, 520); }
     };

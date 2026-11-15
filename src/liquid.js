@@ -70,9 +70,9 @@ void main(){
     float ei = ti < 0.5 ? 4.0*ti*ti*ti : 1.0 - pow(-2.0*ti+2.0, 3.0)/2.0;
     vec2 dl = uFlowD.xy + hm.xy*uFlowD.zw;
     float r2 = clamp((hm.w-0.85)/0.3, 0.0, 1.0); float arc = sin(3.14159*ti);
-    vec2 fq = hm.xy*6.0 + vec2(uTime*0.6, sd*9.0);
-    vec2 tgt = (ei - uFlowP.y)*dl + vec2(-dl.y, dl.x)*arc*0.2*(0.1+sd*0.9) + curl(fq)*uFlowP.z*arc;
-    vec2 no = mix(off, tgt, 1.0 - pow(0.72, uDt));
+    vec2 fq = (hm.xy*uSize + off)*0.0095 + vec2(uTime*0.35, -uTime*0.2);
+    vec2 tgt = (ei - uFlowP.y)*dl + vec2(-dl.y, dl.x)*arc*0.2*(0.1+sd*0.9) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.z*arc;
+    vec2 no = mix(off, tgt, 1.0 - pow(0.8, uDt));
     o = vec4(no, (no-off)/max(uDt, 0.25)); return;
   }
   vec2 p = hm.xy*uSize + off;
@@ -102,7 +102,7 @@ precision highp float;
 layout(location=0) in vec2 aCorner;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uCol; uniform sampler2D uFlow;
 uniform int uTexW; uniform vec4 uRect; uniform vec2 uRes; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence;
-uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint; uniform float uThin;
+uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint; uniform float uThin; uniform float uFlowT;
 out vec2 vLocal; out float vHalfLen; out float vR; out vec3 vCol; out float vA;
 ${NOISE}
 ${ENERGY}
@@ -115,6 +115,7 @@ void main(){
   float lift = smoothstep(0.35, 2.5, length(st.xy));
   float a = max(max(E, lift), max(uRest, 1.0-uIntroVis));
   a *= smoothstep(uThin+0.06, uThin-0.06, clamp((hm.w-0.85)/0.3, 0.0, 1.0));
+  if(uFlowT >= 0.0){ float fti = clamp((uFlowT - hm.z*0.5)/0.5, 0.0, 1.0); a *= 1.0 - smoothstep(0.7, 0.96, fti); }
   if(a < 0.01 || hm.w <= 0.0){ gl_Position = vec4(2.0,2.0,2.0,1.0); return; }
   vec2 base = uRect.xy + hm.xy*uRect.zw + st.xy;
   base -= ambientField(hm.xy, uTime)*10.0*uAmbient;
@@ -342,7 +343,7 @@ export class LiquidEngine{
   }
   flowTo(rect,dur=800,done,amp=22,arrive){
     if(!this.ready||this.lost||this.destroyed)return false;
-    this.fl={a:{...this.rect},b:rect,t:0,e:0,dur,hold:0,done,amp,arrive};this.lockRect=true;this.dotMin=1;this.streakMul=.3;
+    this.fl={a:{...this.rect},b:rect,t:0,e:0,dur,hold:0,done,amp,arrive};this.lockRect=true;this.dotMin=1;this.streakMul=.55;
     this.presence=this.presenceTarget=this.burst=this.flowing=0;this.touchRelease=0;
     this.opts={...this.opts,interactive:false,ambient:false,restStyle:'particles'};
     this.settle=0;this.stateDirty=true;this.wake();return true;
@@ -353,13 +354,14 @@ export class LiquidEngine{
       F.t=Math.min(1,F.t+Math.min(rawMs,100)/F.dur);
       const x=F.t,e=x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,a=F.a,b=F.b;F.e=e;
       this.rect={x:a.x+(b.x-a.x)*e,y:a.y+(b.y-a.y)*e,w:a.w+(b.w-a.w)*e,h:a.h+(b.h-a.h)*e};
-      // yolda tanelerin ~%8'i görünür (kullanıcı: 'çok yoğun / çok kalın bir şey gidiyor'), varışta hepsi geri gelir
-      this.thin=x<.3?1.1-(x/.3)*1.02:x>.84?.08+((x-.84)/.16)*1.1:.08;
+      // yolda tanelerin ~%12'si görünür (kullanıcı: 'çok yoğun / çok kalın bir şey gidiyor'); taneler varırken SÖNER (PART_VS uFlowT),
+      // altında gerçek menü logosu belirir → kalın tane-logo ve son karede değişim ('oturma') yok
+      this.thin=x<.26?1.1-(x/.26)*1.01:.09;
       if(F.t>=1&&F.arrive){const ar=F.arrive;F.arrive=null;requestAnimationFrame(ar)}
       return;
     }
-    this.thin=2;F.hold+=dt;
-    if(F.hold>12&&!F.fin){F.fin=true;const cb=F.done;if(cb)requestAnimationFrame(cb)}
+    F.hold+=dt;
+    if(F.hold>4&&!F.fin){F.fin=true;const cb=F.done;if(cb)requestAnimationFrame(cb)}
   }
   explode(){ // Alışverişe başla: logo dağılır
     const r=this.rect;this.opts.radius=Math.max(r.w,r.h);this.opts.strength=2;this.opts.spread=2;
@@ -468,7 +470,7 @@ export class LiquidEngine{
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
     const dotN=Math.max(this.dotMin||0,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
-    gl.uniform3f(P.u.uTint,1,1,1);gl.uniform1f(P.u.uThin,this.thin??2);
+    gl.uniform3f(P.u.uTint,1,1,1);gl.uniform1f(P.u.uThin,this.thin??2);gl.uniform1f(P.u.uFlowT,this.fl?this.fl.t:-1);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
   }
 }
