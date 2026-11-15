@@ -115,7 +115,7 @@ void main(){
   float lift = smoothstep(0.35, 2.5, length(st.xy));
   float a = max(max(E, lift), max(uRest, 1.0-uIntroVis));
   a *= smoothstep(uThin+0.06, uThin-0.06, clamp((hm.w-0.85)/0.3, 0.0, 1.0));
-  if(uFlowT >= 0.0){ float fti = clamp((uFlowT - hm.z*0.5)/0.5, 0.0, 1.0); a *= 1.0 - smoothstep(0.7, 0.96, fti); }
+  if(uFlowT >= 0.0){ float fti = clamp((uFlowT - hm.z*0.5)/0.5, 0.0, 1.0); a *= 1.0 - smoothstep(0.84, 0.99, fti); }
   if(a < 0.01 || hm.w <= 0.0){ gl_Position = vec4(2.0,2.0,2.0,1.0); return; }
   vec2 base = uRect.xy + hm.xy*uRect.zw + st.xy;
   base -= ambientField(hm.xy, uTime)*10.0*uAmbient;
@@ -354,9 +354,9 @@ export class LiquidEngine{
       F.t=Math.min(1,F.t+Math.min(rawMs,100)/F.dur);
       const x=F.t,e=x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,a=F.a,b=F.b;F.e=e;
       this.rect={x:a.x+(b.x-a.x)*e,y:a.y+(b.y-a.y)*e,w:a.w+(b.w-a.w)*e,h:a.h+(b.h-a.h)*e};
-      // yolda tanelerin ~%12'si görünür (kullanıcı: 'çok yoğun / çok kalın bir şey gidiyor'); taneler varırken SÖNER (PART_VS uFlowT),
+      // yolda tanelerin ~%20'si görünür (%32 'kalın', %9 'aşırı sade' bulundu) (kullanıcı: 'çok yoğun / çok kalın bir şey gidiyor'); taneler varırken SÖNER (PART_VS uFlowT),
       // altında gerçek menü logosu belirir → kalın tane-logo ve son karede değişim ('oturma') yok
-      this.thin=x<.26?1.1-(x/.26)*1.01:.09;
+      this.thin=x<.26?1.1-(x/.26)*.9:.2;
       if(F.t>=1&&F.arrive){const ar=F.arrive;F.arrive=null;requestAnimationFrame(ar)}
       return;
     }
