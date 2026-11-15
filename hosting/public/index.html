@@ -11018,9 +11018,14 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-lb-expand .hdr-gs .gs-nav .topnav-chev { padding: 0 !important; margin-right: 0 !important; background: none !important; border-radius: 0; clip-path: none; overflow: visible; width: auto; }
   html.gs1-lb-expand .hdr-gs .gs-nav .topnav-chev svg { width: 14px; height: 14px; }
 }
+@media (min-width: 900px) {
+  /* 'Uzayan menü': adlar gri değil siyah, seçili sayfa mavi (kullanıcı 15.11) */
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b { color: var(--fg); }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on { color: var(--lg-blue) !important; }
+}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '51a05dc416';</script>
+<script>window.__BUILD = '846a3aa54f';</script>
 </head>
 <body>
 <div id="root"></div>
