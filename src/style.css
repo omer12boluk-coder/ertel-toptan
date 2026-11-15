@@ -10860,7 +10860,8 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; opacity: 0; overflow: hidden; pointer-events: none; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
   html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
-  html.gs-one.gs-isl .hdr-gs .gs-srch { transition: width .7s cubic-bezier(.4, 0, .2, 1); }
+  /* arama kutusu HER ZAMAN kendi hızında (0,42 sn); adanın hızı (0,7 sn) SADECE ada açılıp kapanırken (html.isl-mv, 0,8 sn) */
+  html.gs-one.gs-isl.isl-mv .hdr-gs .gs-srch { transition: width .7s cubic-bezier(.4, 0, .2, 1); }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch { width: 360px !important; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .08) !important; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch input { position: static !important; opacity: 1 !important; }
