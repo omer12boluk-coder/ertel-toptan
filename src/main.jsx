@@ -1196,33 +1196,19 @@ function useGs1Toggle(on) {
     return () => { ro.disconnect(); clearTimeout(rT); bt.removeEventListener('click', click); bt.remove(); H.remove('gs1-tg-s'); };
   }, [on]);
 }
-// 16.11.2026 Ada'da sayfa simgeleri: menü satırından BAĞIMSIZ küçük simge sırası (.gs1-islic) — menü yazısı biçimlerine hiç dokunmaz
-// (önceki 'Ada içi simgeler' menünün kendisini daralttığı için diğer biçimleri bozmuştu). Basınca menüdeki asıl düğmeye tıklar; seçili sayfa aynı.
+// 16.11.2026 Ada'da logodan sonra 'Başa dön' düğmesi (.gs1-islic > .gs1-ic): sayfanın en üstüne yumuşakça çıkar (üstte menü kendiliğinden açılır).
+// Önceki sayfa simgeleri kaldırıldı (kullanıcı istedi). Menüden bağımsız; menü yazısı biçimlerine dokunmaz.
 function useGs1IslIc(on) {
   useEffect(() => {
     if (!on) return undefined;
-    const inr = document.querySelector('.topbar.hdr-gs .topbar-in'); const nav = inr?.querySelector('.gs-nav'); if (!nav) return undefined;
-    const box = document.createElement('span'); box.className = 'gs1-islic'; inr.append(box);
-    let raf = 0, sig = '';
-    const sync = () => {
-      raf = 0; const bs = [...nav.querySelectorAll('.topnav-b')];
-      const s = bs.map((b) => b.querySelector('.topnav-l')?.textContent || '').join('|');
-      if (s !== sig) {
-        sig = s;
-        box.replaceChildren(...bs.map((b) => {
-          const x = document.createElement('button'); x.type = 'button'; x.className = 'gs1-ic'; x.tabIndex = -1;
-          const t = b.querySelector('.topnav-l')?.textContent || ''; x.title = t; x.setAttribute('aria-label', t);
-          const g = b.querySelector('svg'); if (g) x.append(g.cloneNode(true));
-          x.addEventListener('click', () => b.click()); return x;
-        }));
-        const n = bs.length; document.documentElement.style.setProperty('--gs1-icw', n ? n * 40 + (n - 1) * 4 + 'px' : '0px');
-      }
-      bs.forEach((b, i) => box.children[i]?.classList.toggle('on', b.classList.contains('on')));
-    };
-    sync();
-    const mo = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(sync); });
-    mo.observe(nav, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class'] });
-    return () => { mo.disconnect(); cancelAnimationFrame(raf); box.remove(); document.documentElement.style.removeProperty('--gs1-icw'); };
+    const inr = document.querySelector('.topbar.hdr-gs .topbar-in'); if (!inr) return undefined;
+    const box = document.createElement('span'); box.className = 'gs1-islic';
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'gs1-ic gs1-top'; x.tabIndex = -1; x.title = 'Başa dön'; x.setAttribute('aria-label', 'Sayfanın başına dön');
+    x.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+    const go = () => scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    x.addEventListener('click', go); box.append(x); inr.append(box);
+    document.documentElement.style.setProperty('--gs1-icw', '40px');
+    return () => { x.removeEventListener('click', go); box.remove(); document.documentElement.style.removeProperty('--gs1-icw'); };
   }, [on]);
 }
 function useGs1Lbl(mode) {

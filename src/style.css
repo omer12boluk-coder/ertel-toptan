@@ -11098,3 +11098,12 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
 @media (min-width: 900px) {
   html.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.xo-k, .hd.open > .topnav-b) > svg:first-child { color: var(--lg-blue, var(--accent)) !important; }
 }
+/* 16.11.2026 (5) arama kutusu yazı yazılacak yer gibi görünüyorsa imleç el değil yazı imleci (I) — simgeye dönmüş dar arama hariç */
+@media (min-width: 1366px) {
+  html.gs-one:not(.gs1-sicon) .hdr-gs .gs-srch :is(.hsearch-box, input) { cursor: text !important; }
+}
+@media (min-width: 900px) {
+  html.gs-one.gs1-lb-toggle:not(.gs1-sicon) .hdr-gs .gs-srch :is(.hsearch-box, input), html.gs-one.gs-isl.isl .hdr-gs .gs-srch :is(.hsearch-box, input),
+  html.gs-one .hdr-gs .gs-srch .hsearch:focus-within :is(.hsearch-box, input) { cursor: text !important; }
+  html.gs-one .hdr-gs .gs-srch .hsearch-box button { cursor: pointer !important; }
+}
