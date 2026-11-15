@@ -1213,7 +1213,9 @@ function useGs1Toggle(on) {
     let auto = false, need = 0, rT = 0;
     const paint = () => { H.toggle('gs1-tg-s', short || auto); bt.style.display = auto ? 'none' : ''; bt.innerHTML = ico(short); bt.title = short ? 'Menüyü uzat' : 'Menüyü kısalt'; bt.setAttribute('aria-label', bt.title); };
     paint(); nav.append(bt);
-    const fit = () => { if (H.contains('gs1-ss')) return; if (!H.contains('gs1-tg-s')) need = gs1NavNeed(nav);
+    // 16.11.2026: Ada'dayken / Ada geçişinde ve arama açıkken / kapanırken (menü hareket hâlinde) ÖLÇÜLMEZ — yarı yoldaki ölçü 'sığmıyor' sanıp kendi kendine kısaltıyordu
+    const busy = () => H.contains('isl') || H.contains('isl-mv') || H.contains('gs1-ss') || H.contains('gs1-so') || !!nav.style.paddingLeft || !!document.querySelector('.gs-srch[data-open], .gs-srch[data-cl], .gs-srch:focus-within');
+    const fit = () => { if (busy()) { clearTimeout(rT); rT = setTimeout(fit, 300); return; } if (!H.contains('gs1-tg-s')) need = gs1NavNeed(nav);
       const a = !short && need > nav.clientWidth - 2; if (a !== auto) { auto = a; paint(); } };
     const ro = new ResizeObserver(() => { clearTimeout(rT); rT = setTimeout(fit, 60); }); ro.observe(nav);
     fit(); setTimeout(fit, 80); document.fonts?.ready?.then(() => setTimeout(fit, 80));
