@@ -10939,3 +10939,23 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-click:is(.gs1-lb-stack, .gs1-lb-island) .hdr-gs .gs-nav .topnav-chev svg { width: 11px; height: 11px; }
 }
 @media (min-width: 900px) { html.gs1-click:is(.gs1-lb-pill, .gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b > svg:first-child { justify-self: end; } }
+
+/* 15.11.2026 (8) 'Yanında ad' (gs1Lbl 'side'): ortalı simgeler; fare bir simgede durunca adı simgenin YANINDA açılır, simge orijinal cam
+   hapın içine girer. Seçili sayfa adıyla hapta durur. Açılma TAM ölçülen genişliğe (--lw, JS) → hız her yazıda aynı, takılma yok.
+   Ad dikeyde kırpılmaz (Ü noktaları): yalnızca yanlardan kırpılır (clip-path). Oku gizlemez. */
+@media (min-width: 900px) {
+  html.gs1-lb-side .hdr-gs .gs-nav { gap: 4px; }
+  html.gs1-lb-side .hdr-gs .gs-nav .flow-ghost { display: none !important; }
+  html.gs1-lb-side .hdr-gs .gs-nav .topnav-b { gap: 0; height: 36px; padding: 0 10px; border-radius: 18px; background: transparent !important; box-shadow: none !important; color: var(--muted);
+    transition: background-color .3s ease, box-shadow .3s ease, color .25s ease, padding .42s cubic-bezier(.32, .72, 0, 1); }
+  html.gs1-lb-side .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 18px !important; height: 18px !important; flex: none; }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { display: inline-flex; max-width: 0; opacity: 0; margin-left: 0; white-space: nowrap; overflow: visible; clip-path: inset(-6px 0 -6px 0);
+    transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .22s ease; }
+  html.gs1-lb-side .hdr-gs .gs-nav .topnav-l { font: 600 13.5px/1.3 var(--f-body); }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) { padding: 0 13px 0 11px; color: var(--lg-blue) !important; background: var(--lg-pill) !important; box-shadow: 0 0 0 .5px rgb(255 255 255 / .85) inset, 0 2px 8px -4px rgb(70 90 220 / .3) !important; }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-l { max-width: var(--lw, 120px); opacity: 1; margin-left: 7px; transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .06s; }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-chev { max-width: 16px; opacity: 1; margin-left: 4px; transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .3s ease .06s; }
+  html.gs1-lb-side .hdr-gs .gs-nav .topnav-b:not(.xo):not(.on):hover { color: var(--fg); }
+  html[data-theme="dark"].gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b), html.gs1-lb-side.gs1-t-ink .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) { color: #fff !important; background: rgb(255 255 255 / .14) !important; box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset !important; }
+  html.gs1-click.gs1-lb-side .hdr-gs .gs-nav .topnav-b .topnav-chev { max-width: 22px !important; opacity: 1 !important; margin-left: 4px !important; }
+}
