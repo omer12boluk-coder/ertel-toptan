@@ -245,6 +245,50 @@ function sceneKur() {
     if (sl) setTimeout(() => { if (sl.isConnected) sl.classList.add('ta-go'); }, 260);
   };
 }
+// ---- 15.11.2026 Banner giriş animasyonu (look.anim.bnIn; ÖNİZLEME, varsayılan '' = bugünkü) ----
+// Kum menüye giderken banner aynı anda açılır. Bannerın KENDİSİ hiç büyütülüp küçültülmez/soldurulmaz (iPhone'da 'tık');
+// üstüne sayfa renginde bir örtü konur, örtü açılır. Yazılar (ta-go) + ürün resmi kum varırken baştan oynar.
+// iris: logonun durduğu noktadan yuvarlak açılır · wipe: kumun yönünde yumuşak kenarlı silinme · light: karanlıktan ışığa
+// curtain: perde soldan sağa · blinds: 5 dikey şerit sırayla. Konumlar bannerın kendi kutusuna göre (px) — vh kullanılmaz.
+function bannerIn(kind, st, dur) {
+  const sh = document.querySelector('.shell.public'); if (!sh || !kind) return;
+  const pg = sh.querySelector('.kp:not(.kp-off)') || sh;
+  const hero = pg.querySelector('.cd-hero .sh-hero') || pg.querySelector('.cd-hero') || pg.querySelector('.sh-hero');
+  if (!hero) return;
+  const hr = hero.getBoundingClientRect(); if (hr.top > innerHeight || hr.bottom < 0) return;
+  if (getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
+  const W = hr.width, H = hr.height;
+  const cv = document.createElement('div'); cv.setAttribute('aria-hidden', 'true'); cv.className = 'bn-in';
+  Object.assign(cv.style, { position: 'absolute', left: '0', top: '0', width: W + 'px', height: H + 'px', zIndex: '12', pointerEvents: 'none', overflow: 'hidden', borderRadius: 'inherit' });
+  hero.appendChild(cv);
+  const sl = hero.querySelector('.pb-slide.ta-go'); sl?.classList.remove('ta-go');
+  // logonun merkezi (bannera göre) ve kumun yönü
+  const lx = st ? st.x + st.z / 2 - hr.left : W / 2, ly = st ? st.y + st.z / 2 - hr.top : H / 2;
+  const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
+  const tr = tg?.getBoundingClientRect(); const mx = tr ? tr.left + tr.width / 2 - hr.left : 0, my = tr ? tr.top + tr.height / 2 - hr.top : -60;
+  const ang = Math.atan2(lx - mx, -(ly - my)) * 180 / Math.PI;
+  const D = Math.max(900, (dur || 1300) * 0.85), R0 = Math.hypot(Math.max(lx, W - lx), Math.max(ly, H - ly)) + 80;
+  const strips = [];
+  if (kind === 'blinds') for (let i = 0; i < 5; i++) { const d = document.createElement('div'); Object.assign(d.style, { position: 'absolute', top: '0', bottom: '0', left: (i * 20) + '%', width: '20.4%', background: 'var(--bg)', transformOrigin: '50% 0' }); cv.appendChild(d); strips.push(d); }
+  const dim = kind === 'light' ? document.createElement('div') : null;
+  if (dim) { Object.assign(dim.style, { position: 'absolute', inset: '0' }); cv.appendChild(dim); }
+  const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const eo = (x) => 1 - Math.pow(1 - x, 3);
+  let t0 = 0, played = false;
+  const step = (now) => {
+    if (!t0) t0 = now;
+    const ms = now - t0, r = Math.min(1, ms / D);
+    if (kind === 'iris') { const R = sm(0, 1, r) * (R0 + 24); cv.style.background = `radial-gradient(circle at ${lx}px ${ly}px, transparent ${Math.max(0, R - 24)}px, var(--bg) ${R}px)`; }
+    else if (kind === 'wipe') { const p = eo(r) * 150 - 25; cv.style.background = `linear-gradient(${ang}deg, var(--bg) ${100 - p - 8}%, transparent ${100 - p + 8}%)`; }
+    else if (kind === 'curtain') { cv.style.background = 'var(--bg)'; cv.style.transform = `translateX(${eo(r) * 101}%)`; }
+    else if (kind === 'blinds') strips.forEach((d, i) => { d.style.transform = `scaleY(${1 - eo(sm(i * 0.09, 0.55 + i * 0.09, r))})`; });
+    else if (kind === 'light') { cv.style.background = `color-mix(in srgb, var(--bg) ${Math.round((1 - sm(0, 0.25, r)) * 100)}%, transparent)`; const p = -30 + eo(sm(0.1, 1, r)) * 170; dim.style.background = `linear-gradient(100deg, rgba(0,0,0,0) ${p - 40}%, rgba(0,0,0,.88) ${p}%)`; }
+    // yazılar + ürün kum varırken baştan
+    if (!played && ms > D * 0.62) { played = true; if (sl?.isConnected) sl.classList.add('ta-go'); }
+    if (r < 1) requestAnimationFrame(step); else { cv.remove(); if (!played && sl?.isConnected) sl.classList.add('ta-go'); }
+  };
+  step(performance.now());
+}
 // telefon mağazayı çizmeyi bitirip rahatlayınca (art arda 2 kare < 34 ms) devam et; en geç 1,4 sn
 function whenCalm(fn) {
   const t0 = performance.now(); let last = t0, ok = 0;
@@ -471,6 +515,8 @@ export function HeroGate({ onOpen, onDone }) {
         const sd = fx.sand && fl ? glLand(fl) : 0;
         if (!sd) { if (fl?.gl) fl.el.style.visibility = ''; killMark(); flyLand(fl); }
         if (fx.scn) sceneIn(!!fl);
+        // banner giriş animasyonu: kumla aynı anda (sadece kum ya da tek parça uçuşta)
+        if (fx.bnIn && fl) bannerIn(fx.bnIn, fl, sd || 820);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
         setReveal(true); setTimeout(onDone, sd ? sd + 160 : fl ? 820 : 420);
       });
