@@ -10619,10 +10619,9 @@ html.gs-x3 .topbar.hdr-gs .gs-nav .topnav-b.on { background: linear-gradient(180
   html.gs-x3 .hdr-gs .gs-nav .topnav-b > .ic:first-child { width: 18px; height: 18px; }
 }
 @media (max-width: 899px) {
-  html.hdr-gs-on.gs-x3 { --top-h: 72px; }
+  /* 15.11.2026: telefonda kalınlık 'Cam + arama' ile AYNI (68px 'çok kalın' bulundu) — sadece cam görünümü */
+  html.hdr-gs-on.gs-x3 { --top-h: 64px; }
   html.gs-x3 .topbar.hdr-gs .topbar-in { border-radius: 26px; }
-  html.gs-x3 .hdr-gs .gs-brand .brand-logo { width: 38px !important; height: 38px !important; }
-  html.gs-x3 .hdr-gs .gs-brand b { font-size: 17px; }
   html.gs-x3 .hdr-gs .gs-icons .hcart { background: var(--x3-in); }
   html.gs-x3 .hdr-gs .gs-icons .btn.me-login { background: none; box-shadow: none; }
 }
