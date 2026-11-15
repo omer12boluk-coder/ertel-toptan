@@ -23,6 +23,14 @@ import { ProductSearch } from './shophome.jsx';
 import { snapshot, applyPreset, sameAs, APPLE, CLAUDE_CHANGES, P0, P0_CHANGES, CD, CD_CHANGES, upgradePresets, CORNERS, WIDTHS, BOX_PATS, BG_FX, layoutOut, lookFor } from './dzpresets.js';
 import { PackDecor, DECOR } from './decor.jsx';
 // 15.11.2026 Kristal cam bilgisayar görünümü (look.gs3Pc) — designv3 de kullanır
+// 15.11.2026 'Tek satır' üst menü ayarları (look.gs1*) — Tasarım v3 + Gelişmiş ortak
+export const GS1_ROWS = [
+  ['gs1Tone', 'Tek satır: renk', '', [['', 'Beyaz cam'], ['ice', 'Buz mavisi'], ['smoke', 'Duman'], ['tint', 'Tema tonu'], ['ink', 'Gece mavisi']]],
+  ['gs1Top', 'Tek satır: en üstte', 'Cam: banner menünün arkasından başlar, cam her zaman görünür. Şeffaf: en üstte zemin yok, kaydırınca cam', [['', 'Düz (bugünkü)'], ['glass', 'Cam'], ['clear', 'Şeffaf']]],
+  ['gs1Drop', 'Tek satır: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; başlığa basınca açılır, ikinci basışta sayfaya gider', [['', 'Üstüne gelince'], ['click', 'Tıklayınca']]],
+  ['gs1Srch', 'Tek satır: arama', 'İkisinde de basınca kutu menünün üstüne doğru genişler', [['', 'Kutu'], ['icon', 'Simge']]],
+  ['gs1Hov', 'Tek satır: menüde fare', 'Kayan kutu: fareyi izleyen yumuşak zemin. Büyüme: fareye yakın yazı hafifçe büyür', [['', 'Bugünkü'], ['slide', 'Kayan kutu'], ['dock', 'Büyüme']]],
+];
 export const GS3_PC = [['', 'Şerit, üstte şeffaf'], ['strip', 'Şerit'], ['ada2', 'Sade ada'], ['ada', 'Yüzen kapsül']];
 import { XelBar, XelPanel, Disclose, drawToEl, SHAPES, FONTS, FONT_BY, ensureFonts } from './slidex.jsx';
 
@@ -1118,9 +1126,10 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       <Field label="Bölümler arası boşluk"><span className="she-scale"><input type="range" min="0" max="80" step="2" value={Number(H.gap) || 0} onChange={(e) => set('shopHome.gap', Number(e.target.value))} /><code>{Number(H.gap) ? H.gap + ' px' : 'varsayılan'}</code></span></Field>
       <Toggle id="dz-home-on" label="Mağaza ana sayfası açık" hint="Kapalıysa mağaza doğrudan ürünler sayfasıyla açılır" checked={H.enabled !== false} onChange={(v) => set('shopHome.enabled', v)} />
     </LayoutFields>
-    <Disclose label="Menüler" value={<small>{({ center: 'logo ortada', classic: 'klasik', glass: 'yüzen cam', search2: 'arama + cam 2', search3: 'kristal cam' })[L.header] || 'cam + arama'}</small>}>
+    <Disclose label="Menüler" value={<small>{({ center: 'logo ortada', classic: 'klasik', glass: 'yüzen cam', search1: 'tek satır', search2: 'arama + cam 2', search3: 'kristal cam' })[L.header] || 'cam + arama'}</small>}>
       <DevPick L={L} set={set} k="header" def="search" label="Üst menü düzeni" hint="Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Arama + cam 2: aynısı, buz mavisi gerçek cam. Kristal cam: aynısı, daha uzun ve kristal cam. Eski açıklama: Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Ortada logo: logo ortada, menü altta."
-        opts={[['search', 'Cam + arama'], ['search2', 'Arama + cam 2'], ['search3', 'Kristal cam'], ['glass', 'Yüzen cam'], ['center', 'Ortada logo'], ['classic', 'Klasik']]} />
+        opts={[['search', 'Cam + arama'], ['search1', 'Tek satır'], ['search2', 'Arama + cam 2'], ['search3', 'Kristal cam'], ['glass', 'Yüzen cam'], ['center', 'Ortada logo'], ['classic', 'Klasik']]} />
+      {L.header === 'search1' && GS1_ROWS.map(([k, lb, h, o]) => <Field key={k} label={lb} hint={h || undefined}><span className="seg sw">{o.map(([v, l]) => <button key={v} type="button" className={(L[k] || '') === v ? 'on' : ''} onClick={() => set('look.' + k, v || undefined)}>{l}</button>)}</span></Field>)}
       {(L.header === 'search3' || L.headerM === 'search3') && <Field label="Kristal cam tonu"><span className="seg sw">{[['', 'Beyaz'], ['ice', 'Buz mavisi']].map(([k, l]) => <button key={k} type="button" className={(L.gs3Tone || '') === k ? 'on' : ''} onClick={() => set('look.gs3Tone', k || undefined)}>{l}</button>)}</span></Field>}
       {(L.header === 'search3' || L.headerM === 'search3') && <Field label="Kristal cam: bilgisayarda görünüm"><span className="seg sw">{GS3_PC.map(([k, l]) => <button key={k} type="button" className={(L.gs3Pc || '') === k ? 'on' : ''} onClick={() => set('look.gs3Pc', k || undefined)}>{l}</button>)}</span></Field>}
       {(L.header === 'center' || L.headerM === 'center') && <Field label="Ortada logo menüsünün görünümü" hint="Banner her durumda menünün bittiği yerden başlar."><span className="seg sw">{[['', 'Bugünkü (düz)'], ['glass2', 'Cam, iki satır'], ['glass1', 'Cam, tek satır'], ['clear', 'Üstte şeffaf, kayınca cam']].map(([k, l]) => <button key={k} type="button" className={(L.hcStyle || '') === k ? 'on' : ''} onClick={() => set('look.hcStyle', k || undefined)}>{l}</button>)}</span></Field>}

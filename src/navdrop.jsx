@@ -92,9 +92,12 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   if (!desk) return children;
   const here = () => MENU.burada && !!wrap.current?.firstElementChild?.classList.contains('on'); // başlık düğmesi 'on' = bu sayfadayız
   const show = () => { clearTimeout(t.current); if (active && active.id !== myId.current) { const r = active.rect?.(); if (r && r.width) swapFrom = { r, t: performance.now() }; active.close(); } active = { id: myId.current, close: () => me.current(), rect: () => pane.current?.getBoundingClientRect() }; setOpen(true); };
+  // 15.11.2026 Tek satır üst menü 'tıklayınca açılır' (html gs1-click): fareyle açılmaz; bir menü açıkken yandakine geçince geçer (Mac menü çubuğu gibi)
+  const clickMode = () => document.documentElement.classList.contains('gs1-click') && !!wrap.current?.closest('.hdr-gs');
   const enter = (e) => {
     clearTimeout(t.current);
     if (open || mute.current) return;
+    if (clickMode()) { if (active && active.id !== myId.current) show(); return; }
     if (active && active.id !== myId.current) { if (cls.includes('hd-v3')) t.current = setTimeout(show, 90); else show(); return; } // başka menü açıkken yandakine geçiş: beklemeden (v3: 90 ms — panele çapraz inerken yoldaki başlıklar menüyü değiştirmesin)
     if (here()) return;
     if (MENU.niyet && e) { anc.current = { x: e.clientX, y: e.clientY }; t.current = setTimeout(show, DUR); return; }
@@ -102,7 +105,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   };
   // niyet: fare belirgin kıpırdadıkça sayaç baştan başlar → sadece durunca açılır
   const move = (e) => {
-    if (open || !MENU.niyet || mute.current || here()) return;
+    if (open || !MENU.niyet || mute.current || here() || clickMode()) return;
     const a = anc.current;
     if (a && Math.hypot(e.clientX - a.x, e.clientY - a.y) < TITRE) return;
     anc.current = { x: e.clientX, y: e.clientY }; clearTimeout(t.current); t.current = setTimeout(show, DUR);
@@ -111,10 +114,11 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   // (fare menüde, satırın üstünde durma izi var ama menü kapanıyordu). Hâlâ üstündeyse kapanmaz, fare çıkınca kapanır.
   const inside = () => !!(wrap.current?.matches(':hover') || pane.current?.matches(':hover') || (pane.current?.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT' && document.activeElement.value));
   const later = () => { t.current = setTimeout(() => (inside() ? later() : close()), 400); };
-  const leave = () => { clearTimeout(t.current); mute.current = false; if (open) later(); };
+  const leave = () => { clearTimeout(t.current); mute.current = false; if (open && !clickMode()) later(); };
   // ok: oka tıklamak sayfaya gitmez, menüyü açar/kapatır
   const click = (e) => {
     clearTimeout(t.current);
+    if (clickMode() && !open && !e.target.closest?.('.hd-p')) { e.preventDefault(); e.stopPropagation(); mute.current = false; show(); return; } // ilk tık menüyü açar, açıkken başlığa tık sayfaya gider
     if (MENU.ok && e.target.closest?.('.topnav-chev')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } }
   };
   return (
