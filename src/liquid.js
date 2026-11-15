@@ -333,7 +333,7 @@ export class LiquidEngine{
   setOptions(o){this.opts={...this.opts,...o};this.wake()}
   resize(cssW,cssH,rect){
     this.cssW=Math.max(1,cssW);this.cssH=Math.max(1,cssH);if(!this.lockRect)this.rect=rect;
-    let dpr=Math.min(devicePixelRatio||1,this.lowPower?1.5:2);
+    let dpr=Math.min(devicePixelRatio||1,this.lowPower&&!this.opts.fullDpr?1.5:2);
     if(this.cssW*this.cssH*dpr*dpr>4.5e6)dpr=Math.max(1,Math.sqrt(4.5e6/(this.cssW*this.cssH)));
     const w=Math.round(this.cssW*dpr),h=Math.round(this.cssH*dpr);
     if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h}

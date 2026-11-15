@@ -56,7 +56,12 @@ function sandForm(x, y, z, root) {
   const st = { x, y, z, el: c, off: S, done, raf: 0, dpr };
   const step = (now) => {
     const T = Math.max(0, (now - t0) / D); ctx.clearRect(0, 0, c.width, c.height);
-    if (T >= 1) { ctx.globalAlpha = 1; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, S * dpr, S * dpr, z * dpr, z * dpr); res(); return; } // son kare: net logo, aynı kanvas
+    if (T >= 1) {
+      // son kare: net logo, aynı kanvas
+      ctx.globalAlpha = 1; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, S * dpr, S * dpr, z * dpr, z * dpr);
+      // kum uçuşu: net logo HEMEN kum motorunun kanvasına geçer (oluşma anında; sonradan, logo dururken geçince 'yeniden çizilme' görünüyordu)
+      markShow(st); res(); return;
+    }
     for (const p of P) {
       const k = Math.min(1, Math.max(0, (T - p[4]) / (1 - 0.32))), e = 1 - Math.pow(1 - k, 3);
       ctx.globalAlpha = Math.min(1, T * 4); ctx.fillStyle = p[5];
@@ -136,12 +141,23 @@ function prepMark(dark) {
   document.body.appendChild(c);
   try {
     const e = new LiquidEngine(c, { interactive: false, strength: 1.1, radius: 200, density: 1, dotSize: 1, spread: 1, turbulence: 1, liquid: 1, streaks: true,
-      restStyle: 'image', returnSpeed: 1, ambient: false, ambientIntensity: 0, speed: 1, intro: false, reducedMotion: false, bg: dark ? [0.04, 0.05, 0.07] : [1, 1, 1] }, () => killMark());
+      restStyle: 'image', returnSpeed: 1, ambient: false, ambientIntensity: 0, speed: 1, intro: false, reducedMotion: false, fullDpr: true, bg: dark ? [0.04, 0.05, 0.07] : [1, 1, 1] }, () => killMark());
     markEng = e;
     // ızgara logonun ~2,6 katı: taneler giriş kumu kadar ince (~0,75 px), yolda seyrelince de yeterince tane kalsın
     e.setImage(im, Math.round(z * 2.6));
     e.resize(innerWidth, innerHeight, { x: innerWidth / 2 - z / 2, y: innerHeight / 2 - z / 2, w: z, h: z });
+    // ısıtma: tüm çizim programları (akış, tane hesabı, taneler) bir kez gizlide çalıştırılır — telefon GPU'su ilk kullanımda
+    // programı hazırlarken uçuşun ilk karesi takılıyordu
+    e.fl = { a: { ...e.rect }, b: { ...e.rect }, t: 0.5, dur: 1, hold: 0, amp: 0, thin: 0.5, dx: 1, dy: 0 };
+    e.stepFlow(1); e.stepSim(1); e.stateDirty = true; e.draw();
+    e.fl = null; e.clearState(); e.clearFlow(); e.draw(); e.gl.finish();
   } catch { killMark(); }
+}
+function markShow(st) {
+  const e = markEng; if (!st || !e?.ready || e.lost || !st.wantGl) return false;
+  e.resize(innerWidth, innerHeight, { x: st.x, y: st.y, w: st.z, h: st.z });
+  e.canvas.style.visibility = 'visible'; st.el.style.visibility = 'hidden'; st.gl = true;
+  return true;
 }
 function glLand(st) {
   const e = markEng;
@@ -149,7 +165,7 @@ function glLand(st) {
   if (!e?.ready || e.lost || !tg || !st) return 0;
   const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
   const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1400 : 1300;
-  e.resize(innerWidth, innerHeight, { x: st.x, y: st.y, w: st.z, h: st.z });
+  if (!st.gl) e.resize(innerWidth, innerHeight, { x: st.x, y: st.y, w: st.z, h: st.z });
   let fin = false;
   const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
   // 15.11 (kullanıcı: 'çok kalın ve dümdüz akıyor'): yolda tanelerin sadece %12'si görünür (varışta %20), girdap genliği 2,5 katı
@@ -160,7 +176,7 @@ function glLand(st) {
   // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
   tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
   // aynı görev içinde: WebGL net logoyu çizer, 2B kanvas kalkar → aynı karede değişir
-  e.canvas.style.visibility = 'visible'; e.draw();
+  if (!st.gl) { e.canvas.style.visibility = 'visible'; e.draw(); }
   cancelAnimationFrame(st.raf); st.el?.remove();
   setTimeout(end, dur + 1500);
   return dur;
@@ -407,6 +423,7 @@ export function HeroGate({ onOpen, onDone }) {
     const eng = engRef.current, root = rootRef.current;
     const kf = !!(fx.flow && eng?.ready && !eng.lost && root?.dataset.gl === 'on');
     const fl = !kf && fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
+    if (fl && fx.sand) fl.wantGl = true;
     if (kf) { const sg = stageRef.current; if (sg) Object.assign(sg.style, { transition: 'none', transform: 'none', opacity: '1' }); }
     else engRef.current?.explode();
     setLeaving(true);
@@ -419,7 +436,7 @@ export function HeroGate({ onOpen, onDone }) {
         if (kf) { kumGo(); return; }
         // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar; kum uçuşu açıksa net logo giriş kum motoruyla akar
         const sd = fx.sand && fl ? glLand(fl) : 0;
-        if (!sd) { killMark(); flyLand(fl); }
+        if (!sd) { if (fl?.gl) fl.el.style.visibility = ''; killMark(); flyLand(fl); }
         if (fx.scn) sceneIn(!!fl);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
         setReveal(true); setTimeout(onDone, sd ? sd + 160 : fl ? 820 : 420);
