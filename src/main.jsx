@@ -1132,13 +1132,16 @@ function useGs1Search(on) {
       const sr = e.target.closest?.('.gs-srch'); if (!sr) return; clearTimeout(t);
       const nav = h.querySelector('.gs-nav'); const bs = nav ? [...nav.querySelectorAll('.topnav-b')] : [];
       if (!bs.length) return;
+      if (nav.classList.contains('xo-all')) { sr.style.removeProperty('--gs1-sw'); return; } // uzayan menü açıkken arama büyümez
       const used = bs[bs.length - 1].getBoundingClientRect().right - bs[0].getBoundingClientRect().left;
       const room = nav.clientWidth - used - 24; const w = sr.getBoundingClientRect().width;
       sr.style.setProperty('--gs1-sw', Math.round(Math.max(w, Math.min(440, w + room))) + 'px');
     };
     const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) sr.style.removeProperty('--gs1-sw'); }, 200); };
-    h.addEventListener('focusin', open); h.addEventListener('focusout', close);
-    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
+    // uzayan menü / ada adları açılıp kapanınca: arama odaktaysa yeri yeniden ölç (adlar açılırken arama geri küçülür, kapanınca tekrar büyür)
+    const refit = () => { const sr = h.querySelector('.gs-srch'); if (sr && sr.contains(document.activeElement)) open({ target: sr }); };
+    h.addEventListener('focusin', open); h.addEventListener('focusout', close); h.addEventListener('gs1-refit', refit);
+    return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); h.removeEventListener('gs1-refit', refit); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
   }, [on]);
 }
 // 15.11.2026 (4) Tek satır 'Menü yazıları' hareketleri: fare bir başlıkta kısa durunca .xo (dönen yazı / cıva); cıva = sıvı damla
@@ -1153,10 +1156,12 @@ function useGs1Lbl(mode) {
     if (mode === 'island' || mode === 'expand') {
       const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) { b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); } });
       measure(); document.fonts?.ready?.then(measure);
-      const en = () => { clearTimeout(out); clearTimeout(t); t = setTimeout(() => nav.classList.add('xo-all'), mode === 'expand' ? 90 : 60); };
-      const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) nav.classList.remove('xo-all'); else out = setTimeout(lv, 300); }, 260); };
+      const hd = nav.closest('.topbar'); let rf = 0;
+      const refit = (ms) => { clearTimeout(rf); rf = setTimeout(() => hd?.dispatchEvent(new Event('gs1-refit')), ms); };
+      const en = () => { clearTimeout(out); clearTimeout(t); t = setTimeout(() => { nav.classList.add('xo-all'); refit(0); }, mode === 'expand' ? 90 : 60); };
+      const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { nav.classList.remove('xo-all'); refit(540); } else out = setTimeout(lv, 300); }, 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
-      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
+      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); clearTimeout(t); clearTimeout(out); clearTimeout(rf); nav.classList.remove('xo-all'); };
     }
     if (mode === 'line' || mode === 'spot') {
       // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir
