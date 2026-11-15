@@ -692,6 +692,26 @@ function ShellFull() {
   const gsX3 = hs && LK.header === 'search3';
   const gsX3i = gsX3 && LK.gs3Tone === 'ice';
   const gsOne = hsG;
+  // 15.11.2026 Yüzen cam tek satır: menü 'dock' gibi (html gs-dock; sadece bilgisayar ≥1240, CSS): yazılar gizli, sadece simgeler; fare gelince simgeler mesafeye göre büyür (yaysız), üzerindekinin yazısı açılır. look.glassDock 'off' = yazılar hep görünür
+  const gsDock = gsOne && LK.glassDock !== 'off';
+  useEffect(() => {
+    const H = document.documentElement; H.classList.toggle('gs-dock', gsDock);
+    if (!gsDock) return () => H.classList.remove('gs-dock');
+    const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return () => H.classList.remove('gs-dock');
+    let x = null, raf = 0;
+    const paint = () => {
+      raf = 0;
+      nav.querySelectorAll('.topnav-b > svg').forEach((ic) => {
+        let k = 1;
+        if (x != null) { const r = ic.getBoundingClientRect(); const d = Math.abs(x - (r.left + r.width / 2)); k = 1 + 0.3 * Math.max(0, 1 - d / 120); }
+        ic.style.setProperty('--dk', k.toFixed(3));
+      });
+    };
+    const mv = (e) => { x = e.clientX; if (!raf) raf = requestAnimationFrame(paint); };
+    const lv = () => { x = null; if (!raf) raf = requestAnimationFrame(paint); };
+    nav.addEventListener('mousemove', mv); nav.addEventListener('mouseleave', lv);
+    return () => { nav.removeEventListener('mousemove', mv); nav.removeEventListener('mouseleave', lv); cancelAnimationFrame(raf); H.classList.remove('gs-dock'); };
+  }, [gsDock]);
   useEffect(() => { document.documentElement.classList.toggle('gs-one', gsOne); return () => document.documentElement.classList.remove('gs-one'); }, [gsOne]);
   useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-x3', gsX3); c.toggle('gs-x3i', gsX3i); return () => c.remove('gs-x3', 'gs-x3i'); }, [gsX3, gsX3i]);
   // 15.11.2026 Kristal cam bilgisayar görünümü (sadece ≥900px CSS'te): look.gs3Pc '' = 'web' şerit + en üstte şeffaf (kaydırınca cam) | 'strip' şerit | 'ada2' sade yüzen ada | 'ada' eski kapsül
