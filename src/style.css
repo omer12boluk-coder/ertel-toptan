@@ -11038,3 +11038,46 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
   html.gs1-lb-toggle .hdr-gs .gs-nav .gs1-tgb { width: 26px; height: 26px; margin-left: 0; }
   html.gs-one.gs1-lb-toggle:not(.gs1-sicon) .hdr-gs .gs-srch { width: var(--gs1-sw, 222px); }
 }
+
+/* 16.11.2026 Tek satır ADA 3. tur (titreme + simgeler):
+   - Kaybolan her parça GERÇEK genişliğinden (--gs1-mw, JS ölçer) 0'a iner; hepsi AYNI süre/eğri (0,7 sn) → arama/sepet ileri-geri oynamaz.
+     Ölçülü genişlik sadece geçişte/adadayken geçerli (sonra sınırsız → sepet yazısı uzarsa kesilmez).
+   - Anında zıplayan pay/boşluk/çerçeve değişimleri de aynı hızla kayar.
+   - Ada'da logodan sonra küçük sayfa simgeleri (.gs1-islic), arama 360 → 280 px; ada genişliği simge sayısına göre. */
+@media (min-width: 900px) {
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-brand { transition: gap .7s cubic-bezier(.4, 0, .2, 1); }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-brand b { overflow: visible; overflow-x: clip; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s, color .35s ease; }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-brand b { transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease, color .35s ease; }
+  html.gs-one.gs-isl:not(.isl):not(.isl-mv) .topbar.hdr-gs .topbar-in .gs-brand b { max-width: none; }
+  html.gs-one.gs-isl.isl-mv:not(.isl) .topbar.hdr-gs .topbar-in .gs-brand b { max-width: var(--gs1-mw, 220px); }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) {
+    transition: max-width .7s cubic-bezier(.4, 0, .2, 1), padding .7s cubic-bezier(.4, 0, .2, 1), border-width .7s cubic-bezier(.4, 0, .2, 1), margin .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s, color .35s ease, background-color .35s ease, border-color .35s ease; }
+  html.gs-one.gs-isl:not(.isl):not(.isl-mv) .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) { max-width: none; }
+  html.gs-one.gs-isl.isl-mv:not(.isl) .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) { max-width: var(--gs1-mw, 60px); }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) { transition: max-width .7s cubic-bezier(.4, 0, .2, 1), padding .7s cubic-bezier(.4, 0, .2, 1), border-width .7s cubic-bezier(.4, 0, .2, 1), margin .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart-t, .me-t, .me-login-l) { overflow: visible; overflow-x: clip;
+    transition: max-width .7s cubic-bezier(.4, 0, .2, 1), min-width .7s cubic-bezier(.4, 0, .2, 1), opacity .25s; }
+  html.gs-one.gs-isl.isl-mv:not(.isl) .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart-t, .me-t, .me-login-l) { max-width: var(--gs1-mw, 140px); }
+  html.gs-one.gs-isl:not(.isl):not(.isl-mv) .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart-t, .me-t, .me-login-l) { max-width: none; }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart, .me-login, .me) { transition: padding .7s cubic-bezier(.4, 0, .2, 1), gap .7s cubic-bezier(.4, 0, .2, 1), background-color .35s ease, border-color .35s ease, color .35s ease; }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons { transition: gap .7s cubic-bezier(.4, 0, .2, 1); }
+
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(calc(482px + var(--gs1-icw, 0px)), 100vw - 40px); }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-srch { width: 280px !important; }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs1-islic { order: 2; flex: none; display: inline-flex; align-items: center; gap: 2px; height: 32px; max-width: 0; margin-left: -10px; opacity: 0;
+    overflow-x: clip; overflow-y: visible; pointer-events: none; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs1-islic { max-width: var(--gs1-icw, 170px); opacity: 1; pointer-events: auto; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
+  html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic { flex: none; width: 32px; height: 32px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; transition: background-color .2s, color .2s; }
+  html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic svg { width: 17px !important; height: 17px !important; }
+  html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic.on { color: var(--lg-blue, var(--accent)); background: rgb(118 118 128 / .1); }
+  html[data-theme="dark"].gs-one .topbar.hdr-gs .topbar-in .gs1-ic.on, html.gs-one.gs1-t-ink .topbar.hdr-gs .topbar-in .gs1-ic.on { color: #fff; background: rgb(255 255 255 / .14); }
+}
+@media (min-width: 900px) and (hover: hover) {
+  html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic:hover { color: var(--fg); background: rgb(118 118 128 / .12); }
+  html[data-theme="dark"].gs-one .topbar.hdr-gs .topbar-in .gs1-ic:hover, html.gs-one.gs1-t-ink .topbar.hdr-gs .topbar-in .gs1-ic:hover { color: #fff; background: rgb(255 255 255 / .12); }
+}
+@media (min-width: 900px) and (prefers-reduced-motion: reduce) { html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs1-islic { transition: none !important; } }
+/* 16.11.2026 'Uzat / kısalt': yazı kutusu overflow:hidden'dı → Ü/Ş/Ğ'nin noktası/kuyruğu dikeyde kesiliyordu. Sadece YATAYDA kırpılır. */
+@media (min-width: 900px) {
+  html.gs1-lb-toggle .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { overflow: visible; overflow-x: clip; }
+}

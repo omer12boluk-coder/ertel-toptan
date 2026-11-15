@@ -727,6 +727,7 @@ function ShellFull() {
   useGs1Top(gs1 && !phoneUI && LK.gs1Top === 'clear', tab);
   useGs1Search(gs1 && !phoneUI);
   useGs1Toggle(gs1 && !phoneUI && LK.gs1Lbl === 'toggle');
+  useGs1IslIc(gs1 && gsIsl && !phoneUI);
   useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island', 'line', 'spot', 'pill', 'side', 'expand'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
@@ -1176,6 +1177,35 @@ function useGs1Toggle(on) {
     return () => { bt.removeEventListener('click', click); bt.remove(); H.remove('gs1-tg-s'); };
   }, [on]);
 }
+// 16.11.2026 Ada'da sayfa simgeleri: menü satırından BAĞIMSIZ küçük simge sırası (.gs1-islic) — menü yazısı biçimlerine hiç dokunmaz
+// (önceki 'Ada içi simgeler' menünün kendisini daralttığı için diğer biçimleri bozmuştu). Basınca menüdeki asıl düğmeye tıklar; seçili sayfa aynı.
+function useGs1IslIc(on) {
+  useEffect(() => {
+    if (!on) return undefined;
+    const inr = document.querySelector('.topbar.hdr-gs .topbar-in'); const nav = inr?.querySelector('.gs-nav'); if (!nav) return undefined;
+    const box = document.createElement('span'); box.className = 'gs1-islic'; inr.append(box);
+    let raf = 0, sig = '';
+    const sync = () => {
+      raf = 0; const bs = [...nav.querySelectorAll('.topnav-b')];
+      const s = bs.map((b) => b.querySelector('.topnav-l')?.textContent || '').join('|');
+      if (s !== sig) {
+        sig = s;
+        box.replaceChildren(...bs.map((b) => {
+          const x = document.createElement('button'); x.type = 'button'; x.className = 'gs1-ic'; x.tabIndex = -1;
+          const t = b.querySelector('.topnav-l')?.textContent || ''; x.title = t; x.setAttribute('aria-label', t);
+          const g = b.querySelector('svg'); if (g) x.append(g.cloneNode(true));
+          x.addEventListener('click', () => b.click()); return x;
+        }));
+        const n = bs.length; document.documentElement.style.setProperty('--gs1-icw', n ? n * 32 + (n - 1) * 2 + 'px' : '0px');
+      }
+      bs.forEach((b, i) => box.children[i]?.classList.toggle('on', b.classList.contains('on')));
+    };
+    sync();
+    const mo = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(sync); });
+    mo.observe(nav, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+    return () => { mo.disconnect(); cancelAnimationFrame(raf); box.remove(); document.documentElement.style.removeProperty('--gs1-icw'); };
+  }, [on]);
+}
 function useGs1Lbl(mode) {
   useEffect(() => {
     if (!mode) return undefined;
@@ -1195,7 +1225,28 @@ function useGs1Lbl(mode) {
       const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) { b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); } });
       measure(); document.fonts?.ready?.then(measure);
       let hold = false;
-      const arm = () => { clearTimeout(t); if (hold) return; t = setTimeout(() => { if (!fits()) return; nav.classList.add('xo-all'); guardArm(); }, mode === 'expand' ? 240 : 60); };
+      // 16.11.2026 uzayan menü: adlar açılırken farenin altındaki düğme YERİNDE kalır (menü ortalı olduğu için düğmeler kayıyor,
+      // fare yanındakine — ör. Kalıp bulucu — düşüyordu; video). Menü 'translate' ile kaydırılır (sınır: menünün kendi alanı),
+      // kapanınca yumuşakça ortaya döner. transform'a dokunulmaz (Ada kuralları transform:none !important).
+      let off = 0, aB = null, aX = 0, araf = 0, aEnd = 0;
+      const setOff = (v) => { off = v; nav.style.translate = Math.abs(v) < 0.05 ? '' : v.toFixed(2) + 'px 0'; };
+      const lim = () => { const n = nav.getBoundingClientRect(); const ks = [...nav.children].filter((k) => k.offsetWidth); if (!ks.length) return [0, 0];
+        const lo = n.left - ks[0].getBoundingClientRect().left, hi = n.right - ks[ks.length - 1].getBoundingClientRect().right; return lo > hi ? [0, 0] : [lo, hi]; };
+      const follow = () => { araf = 0; if (!aB) return; const r = (aB.querySelector('svg') || aB).getBoundingClientRect(); const [lo, hi] = lim();
+        setOff(Math.min(hi, Math.max(lo, off + aX - (r.left + r.width / 2)))); if (performance.now() < aEnd) araf = requestAnimationFrame(follow); };
+      const openAll = () => {
+        if (mode !== 'expand') { nav.classList.add('xo-all'); guardArm(); return; }
+        cancelAnimationFrame(araf); const el = gx < 0 ? null : document.elementFromPoint(gx, gy); aB = el?.closest?.('.topnav-b') || null; if (aB && !nav.contains(aB)) aB = null;
+        if (aB) { const r = (aB.querySelector('svg') || aB).getBoundingClientRect(); aX = r.left + r.width / 2; }
+        nav.classList.add('xo-all'); aEnd = performance.now() + 700; if (aB) follow();
+      };
+      const closeAll = () => {
+        nav.classList.remove('xo-all'); aB = null; cancelAnimationFrame(araf); if (mode !== 'expand' || !off) return;
+        const o0 = off, t0 = performance.now();
+        const back = () => { const k = Math.min(1, (performance.now() - t0) / 520); setOff(o0 * Math.pow(1 - k, 3)); araf = k < 1 ? requestAnimationFrame(back) : 0; };
+        araf = requestAnimationFrame(back);
+      };
+      const arm = () => { clearTimeout(t); if (hold) return; t = setTimeout(() => { if (!fits()) return; openAll(); }, mode === 'expand' ? 240 : 60); };
       // sığmıyorsa adlar açılmaz (dar ekranda soldaki 'Ana sayfa' logonun altına kayıyordu): gereken = şimdiki + kapalı adların genişliği
       const fits = () => gs1NavNeed(nav) <= nav.clientWidth - 2;
       const en = () => { clearTimeout(out); arm(); };
@@ -1207,9 +1258,10 @@ function useGs1Lbl(mode) {
       const pl = () => { hold = false; };
       nav.addEventListener('pointerleave', pl);
       nav.addEventListener('pointermove', mv); nav.addEventListener('pointerdown', pd);
-      const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { nav.classList.remove('xo-all'); } else out = setTimeout(lv, 300); }, 260); };
+      // uzayan menü fare çıkınca hemen kapanmaz: ~1 sn açık kalır (geri gelirse hiç kapanmaz)
+      const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { closeAll(); } else out = setTimeout(lv, 300); }, mode === 'expand' ? 1000 : 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
-      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); nav.removeEventListener('pointerleave', pl); guardOff(); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
+      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); nav.removeEventListener('pointerleave', pl); guardOff(); clearTimeout(t); clearTimeout(out); cancelAnimationFrame(araf); nav.classList.remove('xo-all'); nav.style.translate = ''; };
     }
     if (mode === 'line' || mode === 'spot') {
       // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir
@@ -1307,13 +1359,27 @@ function useGs1Hover(mode) {
     return () => { nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerleave', lv); cancelAnimationFrame(raf); bs().forEach((b) => { b.style.transform = ''; }); };
   }, [mode]);
 }
+// 16.11.2026 Tek satır Ada titremesi: kaybolan parçalar (marka adı, ses/gece düğmesi, sepet/giriş yazısı) 'max-width 220/60/140 → 0' ile
+// küçülüyordu; gerçek genişlikleri daha küçük olduğu için yarı yolda birden başlıyor, farklı hızdaki parçalarla birlikte arama/sepet
+// 5-10 px ileri-geri oynuyordu (ölçüldü). Artık her parçanın GERÇEK genişliği ölçülüp (--gs1-mw) oradan 0'a, hepsi aynı hız/eğriyle iner.
+const GS1_FIT = '.gs-brand b, .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc), .gs-icons :is(.hcart-t, .me-t, .me-login-l)';
+const gs1Fit = new WeakMap();
+function gs1IslFit(goingIn) {
+  const r = document.documentElement; if (!r.classList.contains('gs-one')) return;
+  const h = document.querySelector('.topbar.hdr-gs'); if (!h) return;
+  h.querySelectorAll(GS1_FIT).forEach((e) => {
+    let w = e.getBoundingClientRect().width;
+    if (goingIn) gs1Fit.set(e, w); else w = Math.max(gs1Fit.get(e) || 0, e.scrollWidth);
+    if (w > 0) e.style.setProperty('--gs1-mw', Math.ceil(w) + 'px');
+  });
+}
 function useIsland(on, tab, topOnly) {
   useEffect(() => {
     const r = document.documentElement; r.classList.remove('isl');
     if (!on) return;
     let last = 0, up = 0, raf = 0, mvT = 0;
     // ada geçişi sırasında html.isl-mv: arama kutusu SADECE bu sırada adanın hızıyla (0,7 sn) değişir; odakta büyümesi kendi hızında (0,42 sn)
-    const mv = () => { r.classList.add('isl-mv'); clearTimeout(mvT); mvT = setTimeout(() => r.classList.remove('isl-mv'), 800); };
+    const mv = () => { gs1IslFit(!r.classList.contains('isl')); r.classList.add('isl-mv'); void r.offsetWidth; clearTimeout(mvT); mvT = setTimeout(() => r.classList.remove('isl-mv'), 800); };
     const r0 = requestAnimationFrame(() => { last = scrollY; });
     const busy = () => document.querySelector('.hd-p, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
     const f = () => {
