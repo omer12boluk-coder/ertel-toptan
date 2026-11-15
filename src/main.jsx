@@ -1392,7 +1392,7 @@ function useIsland(on, tab, topOnly) {
   useEffect(() => {
     const r = document.documentElement; r.classList.remove('isl');
     if (!on) return;
-    let last = 0, up = 0, raf = 0, mvT = 0;
+    let last = 0, up = 0, dn = 0, raf = 0, mvT = 0;
     // ada geçişi sırasında html.isl-mv: arama kutusu SADECE bu sırada adanın hızıyla (0,7 sn) değişir; odakta büyümesi kendi hızında (0,42 sn)
     const mv = () => { gs1IslFit(!r.classList.contains('isl')); r.classList.add('isl-mv'); void r.offsetWidth; clearTimeout(mvT); mvT = setTimeout(() => r.classList.remove('isl-mv'), 650); };
     const r0 = requestAnimationFrame(() => { last = scrollY; });
@@ -1402,9 +1402,11 @@ function useIsland(on, tab, topOnly) {
       const isl = r.classList.contains('isl');
       if (y < 40) { up = 0; if (isl) { mv(); r.classList.remove('isl'); } return; }
       if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
-      if (d < 0) up += d; else if (d > 0) up = 0;
-      // 16.11.2026: tek satırda Ada daha aşağıda başlar (anında ada olmasın): ekranın ~yarısı kayınca (en az 420 px; 260 px fark edilmedi)
-      if (!isl && y > (r.classList.contains('gs-one') ? Math.max(420, innerHeight * 0.55) : 90) && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
+      if (d < 0) { up += d; dn = 0; } else if (d > 0) { up = 0; dn += d; }
+      // 16.11.2026: tek satırda Ada anında olmaz: ekranın ~yarısı kaydırılmış olmalı (en az 420 px) VE aşağı doğru en az 160 px aralıksız
+      // kaydırılmalı (sayfanın ortasında menü açıkken ufak bir aşağı kaydırmada hemen adaya dönüyordu)
+      const one = r.classList.contains('gs-one');
+      if (!isl && y > (one ? Math.max(420, innerHeight * 0.55) : 90) && d > 0 && (!one || dn > 160)) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
       else if (isl && !topOnly && up < -70) { mv(); r.classList.remove('isl'); up = 0; }
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
