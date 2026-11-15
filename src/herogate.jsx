@@ -148,13 +148,15 @@ function glLand(st) {
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
   if (!e?.ready || e.lost || !tg || !st) return 0;
   const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
-  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1300 : 1200;
+  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1400 : 1300;
   e.resize(innerWidth, innerHeight, { x: st.x, y: st.y, w: st.z, h: st.z });
   let fin = false;
   const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
-  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 30 : 24, null, 0.35)) return 0;
-  // giriş kumuyla aynı incelik (flowTo en az 1 px yapıyordu)
-  e.dotMin = 0.75;
+  // 15.11 (kullanıcı: 'çok kalın ve dümdüz akıyor'): yolda tanelerin sadece %12'si görünür (varışta %20), girdap genliği 2,5 katı
+  // (giriş kumundaki gibi kıvrılıp dalgalanır), izler kısa, taneler giriş kumu kadar ince
+  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 80 : 62, null, 0.12)) return 0;
+  // bow: bütün akış birlikte yukarı doğru yumuşak bir kavis çizer (düz şerit değil)
+  e.fl.kEnd = 0.2; e.fl.bow = 0.24; e.dotMin = 0.55; e.streakMul = 0.3;
   // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
   tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
   // aynı görev içinde: WebGL net logoyu çizer, 2B kanvas kalkar → aynı karede değişir

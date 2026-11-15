@@ -58,7 +58,7 @@ out vec4 o;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uFlow;
 uniform vec2 uSize; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence; uniform float uStrength;
 uniform float uSpread; uniform float uTurb; uniform float uReturn; uniform float uTime; uniform float uDt; uniform float uIntro;
-uniform vec4 uFlowD; uniform vec4 uFlowP;
+uniform vec4 uFlowD; uniform vec4 uFlowP; uniform float uFlowBow;
 ${FLOWG}
 ${NOISE}
 vec2 curl(vec2 p){ const float e = 0.35;
@@ -78,7 +78,7 @@ void main(){
     vec2 dl = uFlowD.xy + hm.xy*uFlowD.zw;
     float r2 = clamp((hm.w-0.85)/0.3, 0.0, 1.0); float arc = sin(3.14159*ei)*(1.0-ti*0.55);
     vec2 fq = (hm.xy*uSize + off)*0.0095 + vec2(uTime*0.35, -uTime*0.2);
-    vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*0.17*(0.15+r2*0.85) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
+    vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*(0.17*(0.15+r2*0.85) + uFlowBow) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
     vec2 no = mix(off, tgt, 1.0 - pow(0.78, uDt));
     o = vec4(no, (no-off)/max(uDt, 0.25)); return;
   }
@@ -110,7 +110,7 @@ layout(location=0) in vec2 aCorner;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uCol; uniform sampler2D uFlow;
 uniform int uTexW; uniform vec4 uRect; uniform vec2 uRes; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence;
 uniform float uDot; uniform float uTime; uniform float uAmbient; uniform float uStreak; uniform float uIntroVis; uniform float uRest; uniform vec3 uTint;
-uniform vec4 uFlowV;
+uniform vec4 uFlowV; uniform float uFlowK;
 out vec2 vLocal; out float vHalfLen; out float vR; out vec3 vCol; out float vA;
 ${NOISE}
 ${ENERGY}
@@ -126,7 +126,7 @@ void main(){
   if(uFlowV.x >= 0.0){
     // cephe gelince tane görünür olur (o an düz resim aynı yerde söner), yola çıkınca seyrelir, menüye varırken söner
     float fr = flowFront(hm.xy, uFlowV.zw); float fti = flowTi(fr, hm.z, uFlowV.x);
-    float kth = mix(uFlowV.y, 0.42, smoothstep(0.3, 0.6, fti));
+    float kth = mix(uFlowV.y, uFlowK, smoothstep(0.3, 0.6, fti));
     float keep = smoothstep(kth+0.05, kth-0.05, clamp((hm.w-0.85)/0.3, 0.0, 1.0));
     a = max(a, smoothstep(fr-0.02, fr, uFlowV.x))*mix(1.0, keep, smoothstep(0.0, 0.14, fti))*(1.0 - smoothstep(0.62, 0.99, fti));
     fsz = mix(1.0, 0.62, smoothstep(0.3, 0.7, fti));
@@ -437,7 +437,7 @@ export class LiquidEngine{
     gl.uniform1f(P.u.uStrength,this.strength()*(1+this.burst*1.5));gl.uniform1f(P.u.uSpread,clamp(o.spread,0,2));
     gl.uniform1f(P.u.uTurb,clamp(o.turbulence,0,2)*(o.reducedMotion?.3:1));gl.uniform1f(P.u.uReturn,clamp(o.returnSpeed,0,2));
     gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uDt,dt);gl.uniform1f(P.u.uIntro,intro);
-    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform4f(P.u.uFlowP,F.t,F.amp,F.dx,F.dy)}else gl.uniform4f(P.u.uFlowP,-1,0,0,0);
+    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform4f(P.u.uFlowP,F.t,F.amp,F.dx,F.dy)}else gl.uniform4f(P.u.uFlowP,-1,0,0,0);gl.uniform1f(P.u.uFlowBow,F?.bow||0);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);this.stateIdx=dst;this.stateDirty=true;
   }
   draw(){
@@ -471,7 +471,7 @@ export class LiquidEngine{
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
     const dotN=Math.max(this.dotMin||0,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
-    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);
+    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);gl.uniform1f(P.u.uFlowK,FL?.kEnd??.42);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
   }
 }
