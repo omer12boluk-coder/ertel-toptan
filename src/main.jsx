@@ -1403,10 +1403,10 @@ function useIsland(on, tab, topOnly) {
       if (y < 40) { up = 0; if (isl) { mv(); r.classList.remove('isl'); } return; }
       if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
       if (d < 0) { up += d; dn = 0; } else if (d > 0) { up = 0; dn += d; }
-      // 16.11.2026: tek satırda Ada anında olmaz: ekranın ~yarısı kaydırılmış olmalı (en az 420 px) VE aşağı doğru en az 160 px aralıksız
+      // 16.11.2026: tek satırda Ada anında olmaz: bir tam ekran kaydırılmış olmalı (en az 700 px) VE aşağı doğru en az 320 px aralıksız
       // kaydırılmalı (sayfanın ortasında menü açıkken ufak bir aşağı kaydırmada hemen adaya dönüyordu)
       const one = r.classList.contains('gs-one');
-      if (!isl && y > (one ? Math.max(420, innerHeight * 0.55) : 90) && d > 0 && (!one || dn > 160)) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
+      if (!isl && y > (one ? Math.max(700, innerHeight) : 90) && d > 0 && (!one || dn > 320)) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
       else if (isl && !topOnly && up < -70) { mv(); r.classList.remove('isl'); up = 0; }
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
