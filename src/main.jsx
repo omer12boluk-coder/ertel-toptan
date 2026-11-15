@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   useEffect(() => {
     const c = document.documentElement.classList; const on = gs1Cls ? gs1Cls.split(' ') : [];
@@ -723,7 +723,7 @@ function ShellFull() {
   }, [gs1Cls, heroW]);
   useGs1Top(gs1 && !phoneUI && LK.gs1Top === 'clear', tab);
   useGs1Search(gs1 && !phoneUI);
-  useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island', 'line', 'spot'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
+  useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island', 'line', 'spot', 'pill'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
@@ -1173,21 +1173,29 @@ function useGs1Lbl(mode) {
     let blob = null, at = null;
     const rectOf = (b) => { const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect(); return { x: r.left - n.left, y: r.top - n.top, w: r.width, h: r.height }; };
     const place = (b, anim) => {
-      if (!blob) return; if (!b) { blob.classList.remove('on'); at = null; return; }
+      if (!blob) return; if (!b) { if (blob.classList.contains('on')) blob.classList.remove('on'); at = null; return; }
       const R = rectOf(b); const to = { transform: `translate(${R.x}px, ${R.y}px)`, width: R.w + 'px', height: R.h + 'px' };
       if (anim && at && !still && blob.animate) {
         const A = at; const L = Math.min(A.x, R.x), W = Math.max(A.x + A.w, R.x + R.w) - L;
         blob.animate([{ transform: `translate(${A.x}px, ${A.y}px)`, width: A.w + 'px', height: A.h + 'px' },
           { transform: `translate(${L + (R.x < A.x ? 0 : W * 0.18)}px, ${R.y + 3}px)`, width: W * 0.82 + 'px', height: R.h - 6 + 'px', offset: 0.45 }, to], { duration: 460, easing: 'cubic-bezier(.45, 0, .2, 1)' });
       }
-      Object.assign(blob.style, to); blob.classList.add('on'); at = R;
+      Object.assign(blob.style, to); if (!blob.classList.contains('on')) blob.classList.add('on'); at = R;
     };
-    if (mode === 'mercury') { blob = document.createElement('span'); blob.className = 'gs1-blob'; blob.setAttribute('aria-hidden', 'true'); nav.prepend(blob); }
-    const set = (b) => { if (cur === b) return; cur?.classList.remove('xo'); const had = !!cur; cur = b; b?.classList.add('xo'); if (blob) place(b, had && !!b); };
+    const pill = mode === 'pill';
+    if (mode === 'mercury' || pill) { blob = document.createElement('span'); blob.className = 'gs1-blob'; blob.setAttribute('aria-hidden', 'true'); nav.prepend(blob); }
+    // dönen hap: fare yokken hap seçili sayfada durur (adı görünür); boyu ad değişince/ekran değişince yeniden ölçülür
+    const homeB = () => nav.querySelector('.topnav-b.on');
+    const set = (b) => { if (cur === b) return; cur?.classList.remove('xo'); const had = !!cur; cur = b; b?.classList.add('xo'); nav.classList.toggle('xo-any', !!b);
+      if (!blob) return; if (pill) place(b || homeB(), true); else place(b, had && !!b); };
+    let ro = null, mo2 = null;
+    if (pill) { const h0 = () => { if (!cur) place(homeB(), false); }; setTimeout(h0, 120); ro = new ResizeObserver(h0); ro.observe(nav);
+      // NOT: classList.add aynı sınıf olsa da özelliği yeniden yazar → gözlemci kendi değişikliğini görüp sonsuz döngüye giriyordu; damlanın kendi değişiklikleri yok sayılır
+      mo2 = new MutationObserver((ms) => { if (!cur && ms.some((m) => m.target !== blob)) place(homeB(), true); }); mo2.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] }); }
     const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); clearTimeout(t); if (b === cur) return; t = setTimeout(() => set(b), cur ? 40 : 90); };
     const leave = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) set(null); else out = setTimeout(leave, 300); }, 220); };
     nav.addEventListener('pointerover', over); nav.addEventListener('pointerleave', leave);
-    return () => { nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); clearTimeout(t); clearTimeout(out); set(null); blob?.remove(); };
+    return () => { nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); clearTimeout(t); clearTimeout(out); ro?.disconnect(); mo2?.disconnect(); cur?.classList.remove('xo'); cur = null; nav.classList.remove('xo-any'); blob?.remove(); };
   }, [mode]);
 }
 // 15.11.2026 Tek satır üst menü fare efektleri: 'slide' = menü yazılarının arkasında fareyi izleyen yumuşak kutu; 'dock' = fareye yakın hap hafifçe büyür

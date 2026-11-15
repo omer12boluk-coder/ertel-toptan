@@ -10850,27 +10850,32 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within):hover .hsearch-box { background: rgb(15 23 42 / .05) !important; }
 }
 /* 15.11.2026 Tek satır + ADA (look.hdrScroll 'island'): kayınca sadece logo · arama · sepet · hesap kalır, hepsi ortada kısa bir kapsülde.
-   Geçiş YAVAŞ ve yumuşak (~0,95 sn; 0,6 sn 'çok hızlı, göze batıyor' bulundu). Her parça kendi genişliğinden süzülerek kapanır/açılır (ERTEL yazısı, menü, ses/gece/bildirim) — anında kaybolma yok. */
+   Geçiş YAVAŞ ve yumuşak (~0,72 sn; 0,6 'çok hızlı', 0,95 'çok yavaş' bulundu). Her parça kendi genişliğinden süzülerek kapanır/açılır (ERTEL yazısı, menü, ses/gece/bildirim) — anında kaybolma yok. */
 @media (min-width: 900px) {
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { max-width: none !important; justify-content: center;
-    transition: width .95s cubic-bezier(.45, 0, .2, 1), padding .95s cubic-bezier(.45, 0, .2, 1), gap .95s cubic-bezier(.45, 0, .2, 1), box-shadow .6s, background-color .5s, border-color .35s; }
+    transition: width .72s cubic-bezier(.4, 0, .2, 1), padding .72s cubic-bezier(.4, 0, .2, 1), gap .72s cubic-bezier(.4, 0, .2, 1), box-shadow .6s, background-color .5s, border-color .35s; }
   /* şekil değişmez: köşe yuvarlaklığı aynı, kaydırma/ölçek (transform) YOK — kenarlar geçişte yumuşayıp bulanıklaşıyordu (kullanıcı) */
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(600px, 100vw - 40px); gap: 8px; padding: 0 8px 0 10px !important; border-radius: 26px; transform: none !important; }
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { transform: none !important; border-radius: 26px; }
-  html.gs-one.gs-isl .hdr-gs .gs-nav { max-height: none; max-width: 1200px; transform: none !important; transition: max-width .95s cubic-bezier(.45, 0, .2, 1), opacity .5s ease .3s, flex-grow .95s cubic-bezier(.45, 0, .2, 1); }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; flex-grow: 0; opacity: 0; overflow: hidden; max-height: none; pointer-events: none; transition: max-width .9s cubic-bezier(.45, 0, .2, 1), opacity .45s ease, flex-grow .9s cubic-bezier(.45, 0, .2, 1); }
-  html.gs-one.gs-isl .hdr-gs .gs-brand { margin-right: 6px; transition: margin .95s cubic-bezier(.45, 0, .2, 1); }
+  html.gs-one.gs-isl .hdr-gs .gs-nav { max-height: none; max-width: 1200px; transform: none !important; transition: max-width .72s cubic-bezier(.4, 0, .2, 1), opacity .4s ease .2s, flex-grow .72s cubic-bezier(.4, 0, .2, 1); }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; flex-grow: 0; opacity: 0; overflow: hidden; max-height: none; pointer-events: none; transition: max-width .68s cubic-bezier(.4, 0, .2, 1), opacity .3s ease, flex-grow .68s cubic-bezier(.4, 0, .2, 1); }
+  html.gs-one.gs-isl .hdr-gs .gs-brand { margin-right: 6px; transition: margin .72s cubic-bezier(.4, 0, .2, 1); }
   html.gs-one.gs-isl.isl .hdr-gs .gs-brand { margin-right: 0; }
-  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .95s cubic-bezier(.45, 0, .2, 1), opacity .5s ease .3s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .9s cubic-bezier(.45, 0, .2, 1), opacity .45s ease; }
-  html.gs-one.gs-isl .hdr-gs .gs-srch { transition: width .95s cubic-bezier(.45, 0, .2, 1), flex-grow .95s cubic-bezier(.45, 0, .2, 1); }
+  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .72s cubic-bezier(.4, 0, .2, 1), opacity .4s ease .2s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .68s cubic-bezier(.4, 0, .2, 1), opacity .3s ease; }
+  html.gs-one.gs-isl .hdr-gs .gs-srch { transition: width .42s cubic-bezier(.22, .8, .24, 1); }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch { flex: 1 1 auto; width: auto !important; min-width: 120px; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .08) !important; padding: 0 10px 0 14px !important; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch input { position: static !important; opacity: 1 !important; }
-  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .9s cubic-bezier(.45, 0, .2, 1), opacity .5s ease .3s, margin .9s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; padding-inline: 0 !important; border-width: 0 !important; transition: max-width .9s cubic-bezier(.45, 0, .2, 1), opacity .45s ease, margin .9s; }
+  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .68s cubic-bezier(.4, 0, .2, 1), opacity .4s ease .2s, margin .68s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; padding-inline: 0 !important; border-width: 0 !important; transition: max-width .68s cubic-bezier(.4, 0, .2, 1), opacity .3s ease, margin .68s; }
 }
 
+  /* adada arama kutusu: odakta ince çerçeve (kalın halka 'çok kalın' bulundu) */
+@media (min-width: 900px) {
+  html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box:focus-within { background: #fff !important; border-color: color-mix(in oklab, var(--accent) 38%, transparent) !important; box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 10%, transparent) !important; }
+  html.gs-one .hdr-gs .gs-srch .hsearch-box:focus-within { border-width: 1px !important; }
+}
 /* 15.11.2026 (5) 'Menü yazıları' ek fikirler: ink = simge + yazı, sadece renk (kutu yok, seçilinin altında ince çizgi) ·
    line = sadece isim + altında fareyi izleyen kayan çizgi · spot = sadece isim, fare bir yazıdayken diğerleri silikleşir ·
    stack = simge üstte, küçük yazı altında (telefon alt menüsü gibi) */
@@ -10896,4 +10901,29 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-lb-stack .hdr-gs .gs-nav .topnav-b.on { color: var(--accent) !important; }
   html.gs1-lb-ink.gs1-t-ink .hdr-gs .gs-nav .topnav-b, html.gs1-lb-line.gs1-t-ink .hdr-gs .gs-nav .topnav-b, html.gs1-lb-spot.gs1-t-ink .hdr-gs .gs-nav .topnav-b, html.gs1-lb-stack.gs1-t-ink .hdr-gs .gs-nav .topnav-b { color: rgb(233 237 246 / .7) !important; }
   html.gs1-t-ink:is(.gs1-lb-ink, .gs1-lb-line, .gs1-lb-spot, .gs1-lb-stack) .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.on, .hd.open > .topnav-b) { color: #fff !important; }
+}
+
+/* 15.11.2026 (6) 'Dönen hap' (gs1Lbl 'pill'): dönen yazı + cıva karışımı, ORİJİNAL seçili hap görünümünde (cam beyaz hap, mavi yazı).
+   Seçili sayfa adıyla hapın içinde durur, diğerleri simge; fare bir başlığa gelince hap esneyerek oraya akar ve simge yukarı dönüp adı gelir;
+   menüden çıkınca hap seçili sayfaya geri akar. Yerler sabit (adın genişliği) → hiçbir şey kaymaz. */
+@media (min-width: 900px) {
+  html.gs1-lb-pill .hdr-gs .gs-nav { gap: 4px; }
+  html.gs1-lb-pill .hdr-gs .gs-nav .flow-ghost { display: none !important; }
+  html.gs1-lb-pill .hdr-gs .gs-nav > .hd, html.gs1-lb-pill .hdr-gs .gs-nav > .topnav-b { position: relative; z-index: 1; }
+  html.gs1-lb-pill .hdr-gs .gs-nav .topnav-b { display: grid !important; place-items: center; overflow: hidden; height: 34px; padding: 0 13px; gap: 0; border-radius: 17px; background: transparent !important; box-shadow: none !important; color: var(--muted); }
+  html.gs1-lb-pill .hdr-gs .gs-nav .topnav-b > * { grid-area: 1 / 1; }
+  html.gs1-lb-pill .hdr-gs .gs-nav .topnav-chev { display: none !important; }
+  html.gs1-lb-pill .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 18px !important; height: 18px !important; }
+  html.gs1-lb-pill .hdr-gs .gs-nav .topnav-l { font: 600 13.5px/1.3 var(--f-body); padding: 2px 0; }
+  html.gs1-lb-pill .hdr-gs .gs-nav .topnav-b > svg:first-child, html.gs1-lb-pill .hdr-gs .gs-nav .topnav-l { transition: transform .46s cubic-bezier(.65, 0, .25, 1), opacity .3s ease; }
+  html.gs1-lb-pill .hdr-gs .gs-nav .topnav-l { transform: translateY(105%); opacity: 0; }
+  html.gs1-lb-pill .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b), html.gs1-lb-pill .hdr-gs .gs-nav:not(.xo-any) .topnav-b.on { color: var(--lg-blue) !important; }
+  html.gs1-lb-pill .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) > svg:first-child, html.gs1-lb-pill .hdr-gs .gs-nav:not(.xo-any) .topnav-b.on > svg:first-child { transform: translateY(-105%); opacity: 0; }
+  html.gs1-lb-pill .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) .topnav-l, html.gs1-lb-pill .hdr-gs .gs-nav:not(.xo-any) .topnav-b.on .topnav-l { transform: none; opacity: 1; }
+  html.gs1-lb-pill .hdr-gs .gs-nav .topnav-b.on:not(.xo) > svg:first-child { color: var(--lg-blue); }
+  html.gs1-lb-pill .hdr-gs .gs1-blob { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: 17px; opacity: 0; transition: opacity .25s ease;
+    background: var(--lg-pill); box-shadow: 0 0 0 .5px rgb(255 255 255 / .85) inset, 0 2px 8px -4px rgb(70 90 220 / .3); }
+  html.gs1-lb-pill .hdr-gs .gs1-blob.on { opacity: 1; }
+  html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs1-blob, html.gs1-lb-pill.gs1-t-ink .hdr-gs .gs1-blob { background: linear-gradient(120deg, rgb(64 132 255 / .3), rgb(110 150 255 / .22)); box-shadow: 0 0 0 .5px rgb(160 180 255 / .3) inset; }
+  html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b), html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs-nav:not(.xo-any) .topnav-b.on { color: #6ea8ff !important; }
 }
