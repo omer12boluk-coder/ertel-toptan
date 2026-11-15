@@ -10854,20 +10854,20 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
    arama 'auto'ya ani geçmez, sabit genişlikten sabit genişliğe kayar. Süre ~0,7 sn. */
 @media (min-width: 900px) {
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { max-width: none !important; transform: none !important; border-radius: 26px;
-    transition: width .7s cubic-bezier(.4, 0, .2, 1), box-shadow .4s, background-color .35s, border-color .35s; }
+    transition: width .55s cubic-bezier(.4, 0, .2, 1), box-shadow .4s, background-color .35s, border-color .35s; }
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(600px, 100vw - 40px); }
-  html.gs-one.gs-isl .hdr-gs .gs-nav { max-width: 1200px; flex: 1 1 0; transform: none !important; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; opacity: 0; overflow: hidden; pointer-events: none; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
-  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl .hdr-gs .gs-nav { max-width: 1200px; flex: 1 1 0; transform: none !important; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; opacity: 0; overflow: hidden; pointer-events: none; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
   /* arama kutusu HER ZAMAN kendi hızında (0,42 sn); adanın hızı (0,7 sn) SADECE ada açılıp kapanırken (html.isl-mv, 0,8 sn) */
-  html.gs-one.gs-isl.isl-mv .hdr-gs .gs-srch { transition: width .7s cubic-bezier(.4, 0, .2, 1); }
+  html.gs-one.gs-isl.isl-mv .hdr-gs .gs-srch { transition: width .55s cubic-bezier(.4, 0, .2, 1); }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch { width: 360px !important; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .08) !important; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch input { position: static !important; opacity: 1 !important; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { padding: 0 10px 0 16px !important; cursor: text; }
-  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
 }
   /* adada arama kutusu: odakta ince çerçeve (kalın halka 'çok kalın' bulundu) */
 @media (min-width: 900px) {
@@ -11045,28 +11045,28 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
    - Anında zıplayan pay/boşluk/çerçeve değişimleri de aynı hızla kayar.
    - Ada'da logodan sonra küçük sayfa simgeleri (.gs1-islic), arama 360 → 280 px; ada genişliği simge sayısına göre. */
 @media (min-width: 900px) {
-  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-brand { transition: gap .7s cubic-bezier(.4, 0, .2, 1); }
-  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-brand b { overflow: visible; overflow-x: clip; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s, color .35s ease; }
-  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-brand b { transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease, color .35s ease; }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-brand { transition: gap .55s cubic-bezier(.4, 0, .2, 1); }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-brand b { overflow: visible; overflow-x: clip; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s, color .35s ease; }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-brand b { transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .2s ease, color .35s ease; }
   html.gs-one.gs-isl:not(.isl):not(.isl-mv) .topbar.hdr-gs .topbar-in .gs-brand b { max-width: none; }
   html.gs-one.gs-isl.isl-mv:not(.isl) .topbar.hdr-gs .topbar-in .gs-brand b { max-width: var(--gs1-mw, 220px); }
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) {
-    transition: max-width .7s cubic-bezier(.4, 0, .2, 1), padding .7s cubic-bezier(.4, 0, .2, 1), border-width .7s cubic-bezier(.4, 0, .2, 1), margin .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s, color .35s ease, background-color .35s ease, border-color .35s ease; }
+    transition: max-width .55s cubic-bezier(.4, 0, .2, 1), padding .55s cubic-bezier(.4, 0, .2, 1), border-width .55s cubic-bezier(.4, 0, .2, 1), margin .55s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s, color .35s ease, background-color .35s ease, border-color .35s ease; }
   html.gs-one.gs-isl:not(.isl):not(.isl-mv) .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) { max-width: none; }
   html.gs-one.gs-isl.isl-mv:not(.isl) .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) { max-width: var(--gs1-mw, 60px); }
-  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) { transition: max-width .7s cubic-bezier(.4, 0, .2, 1), padding .7s cubic-bezier(.4, 0, .2, 1), border-width .7s cubic-bezier(.4, 0, .2, 1), margin .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc, .icon-btn[aria-label*="temaya"]) { transition: max-width .55s cubic-bezier(.4, 0, .2, 1), padding .55s cubic-bezier(.4, 0, .2, 1), border-width .55s cubic-bezier(.4, 0, .2, 1), margin .55s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart-t, .me-t, .me-login-l) { overflow: visible; overflow-x: clip;
-    transition: max-width .7s cubic-bezier(.4, 0, .2, 1), min-width .7s cubic-bezier(.4, 0, .2, 1), opacity .25s; }
+    transition: max-width .55s cubic-bezier(.4, 0, .2, 1), min-width .55s cubic-bezier(.4, 0, .2, 1), opacity .25s; }
   html.gs-one.gs-isl.isl-mv:not(.isl) .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart-t, .me-t, .me-login-l) { max-width: var(--gs1-mw, 140px); }
   html.gs-one.gs-isl:not(.isl):not(.isl-mv) .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart-t, .me-t, .me-login-l) { max-width: none; }
-  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart, .me-login, .me) { transition: padding .7s cubic-bezier(.4, 0, .2, 1), gap .7s cubic-bezier(.4, 0, .2, 1), background-color .35s ease, border-color .35s ease, color .35s ease; }
-  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons { transition: gap .7s cubic-bezier(.4, 0, .2, 1); }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons :is(.hcart, .me-login, .me) { transition: padding .55s cubic-bezier(.4, 0, .2, 1), gap .55s cubic-bezier(.4, 0, .2, 1), background-color .35s ease, border-color .35s ease, color .35s ease; }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs-icons { transition: gap .55s cubic-bezier(.4, 0, .2, 1); }
 
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(calc(482px + var(--gs1-icw, 0px)), 100vw - 40px); }
   html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs-srch { width: 280px !important; }
   html.gs-one.gs-isl .topbar.hdr-gs .topbar-in .gs1-islic { order: 2; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 40px; max-width: 0; margin-left: -10px; opacity: 0;
-    overflow-x: clip; overflow-y: visible; pointer-events: none; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
-  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs1-islic { max-width: var(--gs1-icw, 170px); opacity: 1; pointer-events: auto; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
+    overflow-x: clip; overflow-y: visible; pointer-events: none; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in .gs1-islic { max-width: var(--gs1-icw, 170px); opacity: 1; pointer-events: auto; transition: max-width .55s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
   html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic { flex: none; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; transition: background-color .2s, color .2s; }
   html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic svg { width: 21px !important; height: 21px !important; stroke-width: 1.9; }
   html.gs-one .topbar.hdr-gs .topbar-in .gs1-ic.on { color: var(--lg-blue, var(--accent)); background: rgb(118 118 128 / .1); }

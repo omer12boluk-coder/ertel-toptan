@@ -1261,7 +1261,7 @@ function useGs1Lbl(mode) {
         nav.classList.add('xo-all');
       };
       const closeAll = () => { keepOff(); nav.classList.remove('xo-all'); };
-      const arm = () => { clearTimeout(t); if (hold) return; t = setTimeout(() => { if (!fits()) return; openAll(); }, mode === 'expand' ? 240 : 60); };
+      const arm = () => { clearTimeout(t); if (hold) return; t = setTimeout(() => { if (!fits()) return; openAll(); }, mode === 'expand' ? 420 : 60); };
       // sığmıyorsa adlar açılmaz (dar ekranda soldaki 'Ana sayfa' logonun altına kayıyordu): gereken = şimdiki + kapalı adların genişliği
       const fits = () => gs1NavNeed(nav) <= nav.clientWidth - 2;
       const en = () => { clearTimeout(out); arm(); };
@@ -1394,7 +1394,7 @@ function useIsland(on, tab, topOnly) {
     if (!on) return;
     let last = 0, up = 0, raf = 0, mvT = 0;
     // ada geçişi sırasında html.isl-mv: arama kutusu SADECE bu sırada adanın hızıyla (0,7 sn) değişir; odakta büyümesi kendi hızında (0,42 sn)
-    const mv = () => { gs1IslFit(!r.classList.contains('isl')); r.classList.add('isl-mv'); void r.offsetWidth; clearTimeout(mvT); mvT = setTimeout(() => r.classList.remove('isl-mv'), 800); };
+    const mv = () => { gs1IslFit(!r.classList.contains('isl')); r.classList.add('isl-mv'); void r.offsetWidth; clearTimeout(mvT); mvT = setTimeout(() => r.classList.remove('isl-mv'), 650); };
     const r0 = requestAnimationFrame(() => { last = scrollY; });
     const busy = () => document.querySelector('.hd-p, .ctx-catch, .nc-panel, .sheet-bg') || r.classList.contains('dz-in-frame');
     const f = () => {
@@ -1403,7 +1403,8 @@ function useIsland(on, tab, topOnly) {
       if (y < 40) { up = 0; if (isl) { mv(); r.classList.remove('isl'); } return; }
       if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
       if (d < 0) up += d; else if (d > 0) up = 0;
-      if (!isl && y > 90 && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
+      // 16.11.2026: tek satırda Ada daha aşağıda başlar (anında ada olmasın)
+      if (!isl && y > (r.classList.contains('gs-one') ? 260 : 90) && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
       else if (isl && !topOnly && up < -70) { mv(); r.classList.remove('isl'); up = 0; }
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
