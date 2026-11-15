@@ -367,8 +367,8 @@ export function HeroGate({ onOpen, onDone }) {
       const wide = root.clientWidth >= 640, k = kumTarget(eng, wide), cvs = stageRef.current?.querySelector('canvas');
       if (!k) { setReveal(true); setTimeout(onDone, 420); return; }
       // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
-      const dur = wide ? 1250 : 1150;
-      k.tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.4, delay: dur * 0.5, easing: 'ease-out', fill: 'backwards' });
+      const dur = wide ? 1450 : 1350;
+      k.tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
       root.style.transition = 'none'; root.style.backgroundColor = 'transparent';
       const openScene = sceneKur();
       let fin = false;

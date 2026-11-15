@@ -22,7 +22,7 @@ float energyAt(vec2 rectPx, vec2 mouse, float radius, float presence, float wake
 // 15.11.2026 kum akışı (flowTo): fp = tanenin/pikselin logodaki yeri (0 = menüye en yakın kenar, 1 = en uzak). Çözülme cephesi
 // yakın kenardan başlayıp logoyu boydan boya geçer (FG), her tane cephe gelince küçük bir gecikmeyle (FJ) yola çıkar.
 const FLOWG=`
-const float FG = 0.46; const float FJ = 0.11;
+const float FG = 0.34; const float FJ = 0.1;
 float flowFront(vec2 uv, vec2 dir){ return clamp(dot(uv-0.5, dir)+0.5, 0.0, 1.0)*FG; }
 float flowTi(float front, float sd, float T){ return clamp((T - front - sd*FJ)/(1.0-FG-FJ), 0.0, 1.0); }`;
 const QUAD_VS=`#version 300 es
@@ -74,9 +74,9 @@ void main(){
   float sd = hm.z; float light = 0.45 + sd*1.1;
   if(uFlowP.x >= 0.0){
     float ti = flowTi(flowFront(hm.xy, uFlowP.zw), sd, uFlowP.x);
-    float ei = ti*ti*(3.0-2.0*ti); ei = ei*ei*(3.0-2.0*ei)*0.35 + ei*0.65;
+    float ei = 1.0 - pow(1.0 - ti, 4.0); ei = mix(ti*ti*(3.0-2.0*ti), ei, smoothstep(0.0, 0.12, ti));
     vec2 dl = uFlowD.xy + hm.xy*uFlowD.zw;
-    float r2 = clamp((hm.w-0.85)/0.3, 0.0, 1.0); float arc = sin(3.14159*ti);
+    float r2 = clamp((hm.w-0.85)/0.3, 0.0, 1.0); float arc = sin(3.14159*ei)*(1.0-ti*0.55);
     vec2 fq = (hm.xy*uSize + off)*0.0095 + vec2(uTime*0.35, -uTime*0.2);
     vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*0.17*(0.15+r2*0.85) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
     vec2 no = mix(off, tgt, 1.0 - pow(0.78, uDt));
@@ -122,19 +122,21 @@ void main(){
   float wakeE = texture(uFlow, hm.xy).b;
   float E = energyAt(hm.xy*uRect.zw, uMouse, uRadius, uPresence, wakeE);
   float lift = smoothstep(0.35, 2.5, length(st.xy));
-  float a = max(max(E, lift), max(uRest, 1.0-uIntroVis));
+  float a = max(max(E, lift), max(uRest, 1.0-uIntroVis)); float fsz = 1.0;
   if(uFlowV.x >= 0.0){
     // cephe gelince tane görünür olur (o an düz resim aynı yerde söner), yola çıkınca seyrelir, menüye varırken söner
     float fr = flowFront(hm.xy, uFlowV.zw); float fti = flowTi(fr, hm.z, uFlowV.x);
-    float keep = smoothstep(uFlowV.y+0.05, uFlowV.y-0.05, clamp((hm.w-0.85)/0.3, 0.0, 1.0));
-    a = max(a, smoothstep(fr-0.02, fr, uFlowV.x))*mix(1.0, keep, smoothstep(0.0, 0.14, fti))*(1.0 - smoothstep(0.82, 0.99, fti));
+    float kth = mix(uFlowV.y, 0.42, smoothstep(0.3, 0.6, fti));
+    float keep = smoothstep(kth+0.05, kth-0.05, clamp((hm.w-0.85)/0.3, 0.0, 1.0));
+    a = max(a, smoothstep(fr-0.02, fr, uFlowV.x))*mix(1.0, keep, smoothstep(0.0, 0.14, fti))*(1.0 - smoothstep(0.62, 0.99, fti));
+    fsz = mix(1.0, 0.62, smoothstep(0.3, 0.7, fti));
   }
   if(a < 0.01 || hm.w <= 0.0){ gl_Position = vec4(2.0,2.0,2.0,1.0); return; }
   vec2 base = uRect.xy + hm.xy*uRect.zw + st.xy;
   base -= ambientField(hm.xy, uTime)*10.0*uAmbient;
   vec2 v = st.zw; float sp = length(v);
   vec2 dir = sp > 0.001 ? v/sp : vec2(1.0,0.0);
-  float r = uDot*hm.w*0.5;
+  float r = uDot*hm.w*0.5*fsz;
   float len = min(sp*1.25, 18.0)*uStreak;
   vec2 lc = aCorner*vec2(r + len*0.5 + 1.0, r + 1.0);
   vec2 center = base - dir*len*0.5;
@@ -351,7 +353,7 @@ export class LiquidEngine{
   // (giriş sayfasının kendi taneleri, yeniden KURULMAZ) yay çizip girdap alanıyla tel tel menüdeki logonun yerine akar ve varırken
   // söner. Çözülmemiş kısım düz resim olarak yerinde durur (birden 'tanelerden logo'ya dönmez — kullanıcı 'sahte' buldu).
   // rect = menü logosunun yeri; thin = yolda görünen tane oranı. SIM_FS / PART_VS / IMAGE_FS'te uFlow* dalları.
-  flowTo(rect,dur=1150,done,amp=26,arrive,thin=.15){
+  flowTo(rect,dur=1350,done,amp=26,arrive,thin=.1){
     if(!this.ready||this.lost||this.destroyed)return false;
     const a=this.rect,ax=a.x+a.w/2-(rect.x+rect.w/2),ay=a.y+a.h/2-(rect.y+rect.h/2),L=Math.hypot(ax,ay)||1,ux=ax/L,uy=ay/L,ext=Math.abs(ux)*a.w+Math.abs(uy)*a.h||1;
     this.fl={a:{...a},b:rect,t:0,dur,hold:0,done,amp,arrive,thin,dx:ux*a.w/ext,dy:uy*a.h/ext};this.lockRect=true;this.dotMin=1;this.streakMul=.5;
