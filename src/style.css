@@ -10927,3 +10927,15 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs1-blob, html.gs1-lb-pill.gs1-t-ink .hdr-gs .gs1-blob { background: linear-gradient(120deg, rgb(64 132 255 / .3), rgb(110 150 255 / .22)); box-shadow: 0 0 0 .5px rgb(160 180 255 / .3) inset; }
   html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b), html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs-nav:not(.xo-any) .topnav-b.on { color: #6ea8ff !important; }
 }
+/* 15.11.2026 (7) Tek satır 'Tıklayınca': açılır menü SADECE aşağı oka basınca açılır/kapanır, başlığa basmak sayfayı açar, fareyle hiçbir menü açılmaz.
+   Oku gizleyen yazı biçimlerinde (dönen hap/yazı, cıva, ada, simge üstte) ok bu ayarda geri gelir; okun basma alanı büyük. */
+@media (min-width: 900px) {
+  html.gs1-click .hdr-gs .gs-nav .topnav-chev { display: inline-flex !important; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: -6px; border-radius: 11px; cursor: pointer; transition: background-color .15s; }
+  html.gs1-click .hdr-gs .gs-nav .topnav-chev:hover { background: rgb(15 23 42 / .08); }
+  html.gs1-click.gs1-t-ink .hdr-gs .gs-nav .topnav-chev:hover, html.gs1-click[data-theme="dark"] .hdr-gs .gs-nav .topnav-chev:hover, html.gs1-click.gs1-lb-island .hdr-gs .gs-nav .topnav-chev:hover { background: rgb(255 255 255 / .14); }
+  html.gs1-click:is(.gs1-lb-pill, .gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b { grid-template-columns: auto auto; column-gap: 2px; }
+  html.gs1-click:is(.gs1-lb-pill, .gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b > .topnav-chev { grid-area: 1 / 2; }
+  html.gs1-click:is(.gs1-lb-stack, .gs1-lb-island) .hdr-gs .gs-nav .topnav-chev { position: absolute; top: 2px; right: 0; width: 18px; height: 18px; margin: 0; }
+  html.gs1-click:is(.gs1-lb-stack, .gs1-lb-island) .hdr-gs .gs-nav .topnav-chev svg { width: 11px; height: 11px; }
+}
+@media (min-width: 900px) { html.gs1-click:is(.gs1-lb-pill, .gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b > svg:first-child { justify-self: end; } }

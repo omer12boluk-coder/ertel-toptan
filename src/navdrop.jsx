@@ -99,7 +99,7 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   const enter = (e) => {
     clearTimeout(t.current);
     if (open || mute.current) return;
-    if (clickMode()) { if (active && active.id !== myId.current) show(); return; }
+    if (clickMode()) return; // tıklama ayarı: fareyle HİÇ açılmaz (bir menü açıkken yandakinin üstüne gelmek de açmaz)
     if (active && active.id !== myId.current) { if (cls.includes('hd-v3')) t.current = setTimeout(show, 90); else show(); return; } // başka menü açıkken yandakine geçiş: beklemeden (v3: 90 ms — panele çapraz inerken yoldaki başlıklar menüyü değiştirmesin)
     if (here()) return;
     if (MENU.niyet && e) { anc.current = { x: e.clientX, y: e.clientY }; t.current = setTimeout(show, DUR); return; }
@@ -120,8 +120,6 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   // ok: oka tıklamak sayfaya gitmez, menüyü açar/kapatır
   const click = (e) => {
     clearTimeout(t.current);
-    // tıklama ayarı: başlığa her basış menüyü açar/kapatır, sayfaya GİTMEZ (sayfaya menünün içinden gidilir)
-    if (clickMode() && !e.target.closest?.('.hd-p')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } return; }
     if (MENU.ok && e.target.closest?.('.topnav-chev')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } }
   };
   return (
