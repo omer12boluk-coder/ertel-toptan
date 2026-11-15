@@ -40,21 +40,22 @@ function sandForm(x, y, z, root, keep) {
   const im = markImg; if (!im?.complete || !im.naturalWidth) return null;
   const mob = root.clientWidth < 640;
   const dpr = Math.min(2, devicePixelRatio || 1), S = Math.round(z * (mob ? 1.8 : 2.3)), W = z + 2 * S;
-  const n = Math.max(40, Math.round(z * dpr * (mob ? 0.6 : 0.8))), o = document.createElement('canvas'); o.width = o.height = n;
+  // kumdan logo (keep): daha sık ızgara + birbirine değen taneler → logo dolu ve net görünür (15.11: 'silik, parçaları eksik')
+  const n = Math.max(40, Math.round(z * dpr * (keep ? (mob ? 0.85 : 1) : (mob ? 0.6 : 0.8)))), o = document.createElement('canvas'); o.width = o.height = n;
   let d; try { const g = o.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, n, n); d = g.getImageData(0, 0, n, n).data; } catch { return null; }
   const c = document.createElement('canvas'); c.className = 'eh-sand'; c.width = c.height = Math.round(W * dpr);
   Object.assign(c.style, { left: x - S + 'px', top: y - S + 'px', width: W + 'px', height: W + 'px' });
-  const P = [], cx = W * dpr / 2, cy = cx, sz = (z * dpr / n) * 1.05;
+  const P = [], cx = W * dpr / 2, cy = cx, sz = (z * dpr / n) * (keep ? 1.3 : 1.05);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-    const k = (j * n + i) * 4, a = d[k + 3]; if (a < 80) continue;
+    const k = (j * n + i) * 4, a = d[k + 3]; if (a < (keep ? 40 : 80)) continue;
     const tx = (S + (i + 0.5) / n * z) * dpr, ty = (S + (j + 0.5) / n * z) * dpr;
     const an = Math.random() * 6.2832, r = (0.25 + Math.random() * 0.75) * S * dpr;
     const r1 = Math.random(), r2 = Math.random();
     if (keep) {
       // kumdan logo: taneler birbirinden hafif farklı koyulukta, kenarlarda birkaç serpinti tane (düz resme DÖNMEZ)
-      const st2 = r2 < 0.05 ? sz * 2.2 : sz * 0.22;
+      const st2 = r2 < 0.015 ? sz * 1.6 : 0;
       P.push([cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.62, tx + (Math.random() - 0.5) * st2, ty + (Math.random() - 0.5) * st2, Math.random() * 0.32,
-        `rgb(${d[k]},${d[k + 1]},${d[k + 2]})`, (a / 255) * (0.74 + 0.26 * r1), (i + 0.5) / n, (j + 0.5) / n, r1, r2]);
+        `rgb(${d[k]},${d[k + 1]},${d[k + 2]})`, Math.min(1, (a / 255) * 1.15) * (0.93 + 0.07 * r1), (i + 0.5) / n, (j + 0.5) / n, r1, r2]);
     } else P.push([cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.62, tx, ty, Math.random() * 0.32, `rgba(${d[k]},${d[k + 1]},${d[k + 2]},${a / 255})`]);
   }
   document.body.appendChild(c);
