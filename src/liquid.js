@@ -22,7 +22,8 @@ float energyAt(vec2 rectPx, vec2 mouse, float radius, float presence, float wake
 // 15.11.2026 kum akışı (flowTo): fp = tanenin/pikselin logodaki yeri (0 = menüye en yakın kenar, 1 = en uzak). Çözülme cephesi
 // yakın kenardan başlayıp logoyu boydan boya geçer (FG), her tane cephe gelince küçük bir gecikmeyle (FJ) yola çıkar.
 const FLOWG=`
-const float FG = 0.34; const float FJ = 0.1;
+uniform float uFlowJ; const float FG = 0.34;
+#define FJ uFlowJ
 float flowFront(vec2 uv, vec2 dir){ return clamp(dot(uv-0.5, dir)+0.5, 0.0, 1.0)*FG; }
 float flowTi(float front, float sd, float T){ return clamp((T - front - sd*FJ)/(1.0-FG-FJ), 0.0, 1.0); }`;
 const QUAD_VS=`#version 300 es
@@ -58,7 +59,7 @@ out vec4 o;
 uniform sampler2D uState; uniform sampler2D uHome; uniform sampler2D uFlow;
 uniform vec2 uSize; uniform vec2 uMouse; uniform float uRadius; uniform float uPresence; uniform float uStrength;
 uniform float uSpread; uniform float uTurb; uniform float uReturn; uniform float uTime; uniform float uDt; uniform float uIntro;
-uniform vec4 uFlowD; uniform vec4 uFlowP; uniform float uFlowBow;
+uniform vec4 uFlowD; uniform vec4 uFlowP; uniform float uFlowBow; uniform float uFlowS;
 ${FLOWG}
 ${NOISE}
 vec2 curl(vec2 p){ const float e = 0.35;
@@ -78,7 +79,10 @@ void main(){
     vec2 dl = uFlowD.xy + hm.xy*uFlowD.zw;
     float r2 = clamp((hm.w-0.85)/0.3, 0.0, 1.0); float arc = sin(3.14159*ei)*(1.0-ti*0.55);
     vec2 fq = (hm.xy*uSize + off)*0.0095 + vec2(uTime*0.35, -uTime*0.2);
-    vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*(0.17*(0.15+r2*0.85) + uFlowBow) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
+    // uFlowS > 0 (küçük logo uçuşu): iki kol — taneler iki ayrı kavisten gider, rüzgâr gibi geniş girdap + tane başı savrulma
+    float bw = uFlowBow; float fsc = 1.0;
+    if(uFlowS > 0.0){ float k2 = step(0.42, fract(sd*7.31)); bw = mix(uFlowBow, -uFlowBow*0.45, k2); fsc = 0.55; fq = fq*fsc + vec2(k2*3.7, 0.0); }
+    vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*(0.17*(0.15+r2*0.85)*(1.0-uFlowS) + bw) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
     vec2 no = mix(off, tgt, 1.0 - pow(0.78, uDt));
     o = vec4(no, (no-off)/max(uDt, 0.25)); return;
   }
@@ -437,7 +441,7 @@ export class LiquidEngine{
     gl.uniform1f(P.u.uStrength,this.strength()*(1+this.burst*1.5));gl.uniform1f(P.u.uSpread,clamp(o.spread,0,2));
     gl.uniform1f(P.u.uTurb,clamp(o.turbulence,0,2)*(o.reducedMotion?.3:1));gl.uniform1f(P.u.uReturn,clamp(o.returnSpeed,0,2));
     gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uDt,dt);gl.uniform1f(P.u.uIntro,intro);
-    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform4f(P.u.uFlowP,F.t,F.amp,F.dx,F.dy)}else gl.uniform4f(P.u.uFlowP,-1,0,0,0);gl.uniform1f(P.u.uFlowBow,F?.bow||0);
+    const F=this.fl;if(F){gl.uniform4f(P.u.uFlowD,F.b.x-F.a.x,F.b.y-F.a.y,F.b.w-F.a.w,F.b.h-F.a.h);gl.uniform4f(P.u.uFlowP,F.t,F.amp,F.dx,F.dy)}else gl.uniform4f(P.u.uFlowP,-1,0,0,0);gl.uniform1f(P.u.uFlowBow,F?.bow||0);gl.uniform1f(P.u.uFlowS,F?.streams||0);gl.uniform1f(P.u.uFlowJ,F?.jit??.1);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);this.stateIdx=dst;this.stateDirty=true;
   }
   draw(){
@@ -459,7 +463,7 @@ export class LiquidEngine{
     gl.uniform1f(I.u.uPresence,pres);gl.uniform1f(I.u.uRadius,this.radiusPx());gl.uniform1f(I.u.uStrength,this.strength());
     gl.uniform1f(I.u.uTime,this.time);gl.uniform1f(I.u.uAmbient,amb);gl.uniform1f(I.u.uIntroVis,introVis);
     gl.uniform1f(I.u.uRest,rest);gl.uniform1f(I.u.uAlphaMode,this.alphaMode?1:0);
-    const FL=this.fl;if(FL)gl.uniform4f(I.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(I.u.uFlowV,-1,0,0,0);
+    const FL=this.fl;if(FL)gl.uniform4f(I.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(I.u.uFlowV,-1,0,0,0);gl.uniform1f(I.u.uFlowJ,FL?.jit??.1);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     if(!this.n||(!this.stateDirty&&rest===0&&introVis>=1&&!FL))return;
     const P=this.pPart;gl.useProgram(P.p);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
@@ -471,7 +475,7 @@ export class LiquidEngine{
     gl.uniform2f(P.u.uMouse,mx,my);gl.uniform1f(P.u.uRadius,this.radiusPx());gl.uniform1f(P.u.uPresence,pres);
     const dotN=Math.max(this.dotMin||0,(r.w/this.gridW)*1.45*clamp(o.dotSize,.2,3));gl.uniform1f(P.u.uDot,this.dotFrom?this.dotFrom+(dotN-this.dotFrom)*Math.pow(this.introT,1.6):dotN);gl.uniform1f(P.u.uTime,this.time);gl.uniform1f(P.u.uAmbient,amb);
     gl.uniform1f(P.u.uStreak,(o.streaks?1:0)*(.45+.55*introVis)*(this.streakMul??1));gl.uniform1f(P.u.uIntroVis,introVis);gl.uniform1f(P.u.uRest,rest);gl.uniform1f(P.u.uDpr,dpr);
-    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);gl.uniform1f(P.u.uFlowK,FL?.kEnd??.42);
+    gl.uniform3f(P.u.uTint,1,1,1);if(FL)gl.uniform4f(P.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(P.u.uFlowV,-1,0,0,0);gl.uniform1f(P.u.uFlowK,FL?.kEnd??.42);gl.uniform1f(P.u.uFlowJ,FL?.jit??.1);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);gl.disable(gl.BLEND);
   }
 }

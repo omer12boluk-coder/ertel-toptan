@@ -150,8 +150,8 @@ function prepMark(dark, step) {
     }
     const e = markEng; if (!e) return false;
     if (step === 1) {
-      // ızgara logonun ~2,6 katı: taneler giriş kumu kadar ince (~0,75 px), yolda seyrelince de yeterince tane kalsın
-      e.setImage(im, Math.round(z * 2.6));
+      // ızgara logonun 4 katı (~20-36 bin tane): giriş kumu gibi ince toz, yolda seyrelince de bol tane kalsın
+      e.setImage(im, Math.round(z * 4));
       return true;
     }
     // ısıtma: tüm çizim programları (akış, tane hesabı, taneler) bir kez gizlide çalıştırılır — telefon GPU'su ilk kullanımda
@@ -182,15 +182,17 @@ function glLand(st) {
   const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
   if (!e?.ready || e.lost || !tg || !st) return 0;
   const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
-  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1400 : 1300;
+  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1650 : 1550;
   if (!st.gl) { const [W, H] = markSize(e, st.y + st.z); e.resize(W, H, { x: st.x, y: st.y, w: st.z, h: st.z }); }
   let fin = false;
   const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
   // 15.11 (kullanıcı: 'çok kalın ve dümdüz akıyor'): yolda tanelerin sadece %12'si görünür (varışta %20), girdap genliği 2,5 katı
   // (giriş kumundaki gibi kıvrılıp dalgalanır), izler kısa, taneler giriş kumu kadar ince
-  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 80 : 62, null, 0.12)) return 0;
+  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 80 : 60, null, 0.13)) return 0;
   // bow: bütün akış birlikte yukarı doğru yumuşak bir kavis çizer (düz şerit değil)
-  e.fl.kEnd = 0.2; e.fl.bow = 0.24; e.dotMin = 0.55; e.streakMul = 0.3;
+  // 15.11 (kullanıcı: '1-2 farklı yerden, daha ince, rüzgârla uçuyor gibi'): iki kol (streams), tane gecikmeleri geniş (jit) →
+  // uzun, savrulan tozlar; taneler giriş kumu kadar ince
+  e.fl.kEnd = 0.2; e.fl.bow = 0.17; e.fl.streams = 1; e.fl.jit = 0.24; e.dotMin = 0.42; e.streakMul = 0.28;
   // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
   tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
   // aynı görev içinde: WebGL net logoyu çizer, 2B kanvas kalkar → aynı karede değişir
@@ -364,26 +366,25 @@ export function HeroGate({ onOpen, onDone }) {
   useEffect(() => { preloadMark(); }, []);
   // kum uçuşu açıksa küçük logonun kum motoru giriş sayfası açıkken, boşta önceden kurulur (basınca kurmak donduruyordu)
   const sandOn = !!(fx.fly && fx.sand);
+  const stepRef = useRef(null);
   useEffect(() => {
     if (!sandOn) return undefined;
-    // büyük logonun girişi bitip durulana kadar bekle (giriş motoru introT 1 + 0,6 sn), sonra 3 adım, her biri ayrı boş anda
-    let t = 0, id = 0, step = 0, calm = 0, n = 0; const t0 = performance.now();
-    const idle = window.requestIdleCallback || ((f) => setTimeout(f, 60));
-    const next = () => { t = setTimeout(() => { id = idle(run, { timeout: 1200 }); }, step ? 120 : 0); };
+    // büyük logo oluşurken DEĞİL (takılma), oluşunca hemen: 3 adım, aralarında 60 ms (her adım küçük)
+    let t = 0, step = 0, n = 0; const t0 = performance.now();
     const run = () => {
       if (goneRef.current) return;
-      if (!prepMark(darkRef.current, step)) { if (step === 0 && n++ < 20) t = setTimeout(run, 400); return; }
-      if (++step < 3) next();
+      if (!prepMark(darkRef.current, step)) { if (step === 0 && n++ < 20) t = setTimeout(run, 300); return; }
+      if (++step < 3) t = setTimeout(run, 60);
     };
     const wait = () => {
       if (goneRef.current) return;
       const g = engRef.current;
-      calm = g && (!g.ready || g.introT < 1) ? 0 : calm + 1;
-      // en geç 6 sn (giriş normalde 3,2 sn'de biter)
-      if (calm >= 3 || performance.now() - t0 > 6000) next(); else t = setTimeout(wait, 200);
+      // giriş motoru yoksa / bittiyse ya da en geç 5 sn
+      if (!g?.ready || g.introT >= 0.97 || performance.now() - t0 > 5000) run(); else t = setTimeout(wait, 100);
     };
-    t = setTimeout(wait, 1200);
-    return () => { clearTimeout(t); window.cancelIdleCallback?.(id); if (!goneRef.current) killMark(); };
+    t = setTimeout(wait, 600);
+    stepRef.current = () => { clearTimeout(t); while (step < 3 && prepMark(darkRef.current, step)) step++; return step >= 3; };
+    return () => { clearTimeout(t); stepRef.current = null; if (!goneRef.current) killMark(); };
   }, [sandOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ayar kapalı gelirse hemen kapan (ve bir sonraki açılış için hatırla)
@@ -454,7 +455,8 @@ export function HeroGate({ onOpen, onDone }) {
     const eng = engRef.current, root = rootRef.current;
     const kf = !!(fx.flow && eng?.ready && !eng.lost && root?.dataset.gl === 'on');
     const fl = !kf && fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
-    if (fl && fx.sand) fl.wantGl = true;
+    // kum motoru henüz hazır değilse (çok erken basıldı) kalan adımlar şimdi tamamlanır — logo dağılırken, görünmez
+    if (fl && fx.sand) { stepRef.current?.(); fl.wantGl = true; }
     if (kf) { const sg = stageRef.current; if (sg) Object.assign(sg.style, { transition: 'none', transform: 'none', opacity: '1' }); }
     else engRef.current?.explode();
     setLeaving(true);
