@@ -10773,3 +10773,7 @@ html.gs-one.gs1-slide .hdr-gs .gs-nav > .hd, html.gs-one.gs1-slide .hdr-gs .gs-n
 html.gs-one.gs1-slide .hdr-gs .gs-nav .topnav-b:not(.on):hover { background: transparent !important; }
 html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will-change: auto; }
 @media (min-width: 900px) { html.gs-one.gs1-under .shell.public section[data-kp="anasayfa"] .cd-hero .pb-box { padding-top: var(--gs1-pull, 0px); box-sizing: border-box; } }
+/* 15.11.2026 önizleme 'Üst menü' paneli (hdrtry.jsx): sol altta */
+.an-panel.an-left { right: auto; left: 14px; justify-items: start; }
+.an-panel.an-left .an-dev { display: block; padding: 10px 4px 2px; color: #6e6e73; font-size: 12px; font-weight: 600; }
+@media (min-width: 900px) { html.gs-one:is(.gs1-t-ink, .gs1-dk.gs1-at0) .topbar.hdr-gs .gs-nav .hd.open > .topnav-b:not(.on) { color: #fff !important; background: rgb(255 255 255 / .1) !important; } }
