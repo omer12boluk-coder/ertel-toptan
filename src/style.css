@@ -10849,28 +10849,25 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
   html.gs-one .hdr-gs .gs-srch .hsearch:not(:focus-within):hover .hsearch-box { background: rgb(15 23 42 / .05) !important; }
 }
-/* 15.11.2026 Tek satır + ADA (look.hdrScroll 'island'): kayınca sadece logo · arama · sepet · hesap kalır, hepsi ortada kısa bir kapsülde.
-   Geçiş YAVAŞ ve yumuşak (~0,72 sn; 0,6 'çok hızlı', 0,95 'çok yavaş' bulundu). Her parça kendi genişliğinden süzülerek kapanır/açılır (ERTEL yazısı, menü, ses/gece/bildirim) — anında kaybolma yok. */
+/* 15.11.2026 Tek satır + ADA (look.hdrScroll 'island'): kayınca sadece logo · arama · sepet · hesap kalır, ortada kısa kapsül.
+   Titreme düzeltmesi (2. tur): SADECE kapsül genişliği + parçaların genişliği/solması değişir; iç pay, boşluk, köşe, kaydırma (transform) SABİT;
+   arama 'auto'ya ani geçmez, sabit genişlikten sabit genişliğe kayar. Süre ~0,7 sn. */
 @media (min-width: 900px) {
-  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { max-width: none !important; justify-content: center;
-    transition: width .72s cubic-bezier(.4, 0, .2, 1), padding .72s cubic-bezier(.4, 0, .2, 1), gap .72s cubic-bezier(.4, 0, .2, 1), box-shadow .6s, background-color .5s, border-color .35s; }
-  /* şekil değişmez: köşe yuvarlaklığı aynı, kaydırma/ölçek (transform) YOK — kenarlar geçişte yumuşayıp bulanıklaşıyordu (kullanıcı) */
-  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(600px, 100vw - 40px); gap: 8px; padding: 0 8px 0 10px !important; border-radius: 26px; transform: none !important; }
-  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { transform: none !important; border-radius: 26px; }
-  html.gs-one.gs-isl .hdr-gs .gs-nav { max-height: none; max-width: 1200px; transform: none !important; transition: max-width .72s cubic-bezier(.4, 0, .2, 1), opacity .4s ease .2s, flex-grow .72s cubic-bezier(.4, 0, .2, 1); }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; flex-grow: 0; opacity: 0; overflow: hidden; max-height: none; pointer-events: none; transition: max-width .68s cubic-bezier(.4, 0, .2, 1), opacity .3s ease, flex-grow .68s cubic-bezier(.4, 0, .2, 1); }
-  html.gs-one.gs-isl .hdr-gs .gs-brand { margin-right: 6px; transition: margin .72s cubic-bezier(.4, 0, .2, 1); }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-brand { margin-right: 0; }
-  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .72s cubic-bezier(.4, 0, .2, 1), opacity .4s ease .2s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .68s cubic-bezier(.4, 0, .2, 1), opacity .3s ease; }
-  html.gs-one.gs-isl .hdr-gs .gs-srch { transition: width .42s cubic-bezier(.22, .8, .24, 1); }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-srch { flex: 1 1 auto; width: auto !important; min-width: 120px; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .08) !important; padding: 0 10px 0 14px !important; }
+  html.gs-one.gs-isl .topbar.hdr-gs .topbar-in { max-width: none !important; transform: none !important; border-radius: 26px;
+    transition: width .7s cubic-bezier(.4, 0, .2, 1), box-shadow .4s, background-color .35s, border-color .35s; }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .topbar-in { width: min(600px, 100vw - 40px); }
+  html.gs-one.gs-isl .hdr-gs .gs-nav { max-width: 1200px; flex: 1 1 0; transform: none !important; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-nav { max-width: 0; opacity: 0; overflow: hidden; pointer-events: none; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl .hdr-gs .gs-brand b { max-width: 220px; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-brand b { max-width: 0; opacity: 0; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
+  html.gs-one.gs-isl .hdr-gs .gs-srch { transition: width .7s cubic-bezier(.4, 0, .2, 1); }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-srch { width: 360px !important; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box { background: rgb(118 118 128 / .1) !important; border-color: rgb(15 23 42 / .08) !important; }
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch input { position: static !important; opacity: 1 !important; }
-  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .68s cubic-bezier(.4, 0, .2, 1), opacity .4s ease .2s, margin .68s; }
-  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; padding-inline: 0 !important; border-width: 0 !important; transition: max-width .68s cubic-bezier(.4, 0, .2, 1), opacity .3s ease, margin .68s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { padding: 0 10px 0 16px !important; cursor: text; }
+  html.gs-one.gs-isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 60px; overflow: hidden; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .35s ease .25s; }
+  html.gs-one.gs-isl.isl .hdr-gs .gs-icons > :is(.sfx-wrap, [data-theme-btn], .nc) { max-width: 0 !important; opacity: 0; pointer-events: none; transition: max-width .7s cubic-bezier(.4, 0, .2, 1), opacity .2s ease; }
 }
-
   /* adada arama kutusu: odakta ince çerçeve (kalın halka 'çok kalın' bulundu) */
 @media (min-width: 900px) {
   html.gs-one.gs-isl.isl .hdr-gs .gs-srch .hsearch-box:focus-within { background: #fff !important; border-color: color-mix(in oklab, var(--accent) 38%, transparent) !important; box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 10%, transparent) !important; }
@@ -10927,18 +10924,12 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs1-blob, html.gs1-lb-pill.gs1-t-ink .hdr-gs .gs1-blob { background: linear-gradient(120deg, rgb(64 132 255 / .3), rgb(110 150 255 / .22)); box-shadow: 0 0 0 .5px rgb(160 180 255 / .3) inset; }
   html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b), html[data-theme="dark"].gs1-lb-pill .hdr-gs .gs-nav:not(.xo-any) .topnav-b.on { color: #6ea8ff !important; }
 }
-/* 15.11.2026 (7) Tek satır 'Tıklayınca': açılır menü SADECE aşağı oka basınca açılır/kapanır, başlığa basmak sayfayı açar, fareyle hiçbir menü açılmaz.
-   Oku gizleyen yazı biçimlerinde (dönen hap/yazı, cıva, ada, simge üstte) ok bu ayarda geri gelir; okun basma alanı büyük. */
+/* 15.11.2026 (7) Tek satır 'Tıklayınca': açılır menü SADECE aşağı oka basınca açılır/kapanır, başlık sayfayı açar, fareyle hiçbir menü açılmaz.
+   Okun GÖRÜNÜŞÜ aynı (hap şekli bozulmaz); sadece görünmez basma alanı büyük. Oku gizleyen yazı biçimlerine ok EKLENMEZ ('berbat' bulundu). */
 @media (min-width: 900px) {
-  html.gs1-click .hdr-gs .gs-nav .topnav-chev { display: inline-flex !important; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: -6px; border-radius: 11px; cursor: pointer; transition: background-color .15s; }
-  html.gs1-click .hdr-gs .gs-nav .topnav-chev:hover { background: rgb(15 23 42 / .08); }
-  html.gs1-click.gs1-t-ink .hdr-gs .gs-nav .topnav-chev:hover, html.gs1-click[data-theme="dark"] .hdr-gs .gs-nav .topnav-chev:hover, html.gs1-click.gs1-lb-island .hdr-gs .gs-nav .topnav-chev:hover { background: rgb(255 255 255 / .14); }
-  html.gs1-click:is(.gs1-lb-pill, .gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b { grid-template-columns: auto auto; column-gap: 2px; }
-  html.gs1-click:is(.gs1-lb-pill, .gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b > .topnav-chev { grid-area: 1 / 2; }
-  html.gs1-click:is(.gs1-lb-stack, .gs1-lb-island) .hdr-gs .gs-nav .topnav-chev { position: absolute; top: 2px; right: 0; width: 18px; height: 18px; margin: 0; }
-  html.gs1-click:is(.gs1-lb-stack, .gs1-lb-island) .hdr-gs .gs-nav .topnav-chev svg { width: 11px; height: 11px; }
+  html.gs1-click .hdr-gs .gs-nav .topnav-chev { position: relative; cursor: pointer; }
+  html.gs1-click .hdr-gs .gs-nav .topnav-chev::before { content: ""; position: absolute; inset: -9px -8px; }
 }
-@media (min-width: 900px) { html.gs1-click:is(.gs1-lb-pill, .gs1-lb-roll, .gs1-lb-mercury) .hdr-gs .gs-nav .topnav-b > svg:first-child { justify-self: end; } }
 
 /* 15.11.2026 (8) 'Yanında ad' (gs1Lbl 'side'): ortalı simgeler; fare bir simgede durunca adı simgenin YANINDA açılır, simge orijinal cam
    hapın içine girer. Seçili sayfa adıyla hapta durur. Açılma TAM ölçülen genişliğe (--lw, JS) → hız her yazıda aynı, takılma yok.
@@ -10958,4 +10949,20 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-lb-side .hdr-gs .gs-nav .topnav-b:not(.xo):not(.on):hover { color: var(--fg); }
   html[data-theme="dark"].gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b), html.gs1-lb-side.gs1-t-ink .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) { color: #fff !important; background: rgb(255 255 255 / .14) !important; box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset !important; }
   html.gs1-click.gs1-lb-side .hdr-gs .gs-nav .topnav-b .topnav-chev { max-width: 22px !important; opacity: 1 !important; margin-left: 4px !important; }
+}
+
+/* 15.11.2026 (9) 'Uzayan menü' (gs1Lbl 'expand'): menü duruşta simge (seçili sayfa adıyla cam hapta); fare menüye girince TÜM adlar
+   aynı anda, tek hareketle yana açılır (birer birer açılmadığı için titreme yok), çıkınca birlikte kapanır. Ok, ad açıkken görünür. */
+@media (min-width: 900px) {
+  html.gs1-lb-expand .hdr-gs .gs-nav { gap: 4px; }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b { gap: 0; height: 36px; padding: 0 10px; border-radius: 18px; color: var(--muted); transition: padding .5s cubic-bezier(.32, .72, 0, 1), color .25s, background-color .25s; }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 18px !important; height: 18px !important; flex: none; }
+  html.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { display: inline-flex; max-width: 0; opacity: 0; margin-left: 0; white-space: nowrap; overflow: visible; clip-path: inset(-6px 0 -6px 0);
+    transition: max-width .5s cubic-bezier(.32, .72, 0, 1), margin-left .5s cubic-bezier(.32, .72, 0, 1), opacity .2s ease; }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-l { font: 600 13.5px/1.3 var(--f-body); }
+  html.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b.on, .hd.open > .topnav-b) .topnav-l, html.gs1-lb-expand .hdr-gs .gs-nav.xo-all .topnav-l { max-width: var(--lw, 120px); opacity: 1; margin-left: 7px; transition: max-width .5s cubic-bezier(.32, .72, 0, 1), margin-left .5s cubic-bezier(.32, .72, 0, 1), opacity .32s ease .1s; }
+  html.gs1-lb-expand .hdr-gs .gs-nav.xo-all .topnav-chev, html.gs1-lb-expand .hdr-gs .gs-nav .hd.open > .topnav-b .topnav-chev { max-width: 16px; opacity: 1; margin-left: 4px; transition: max-width .5s cubic-bezier(.32, .72, 0, 1), margin-left .5s cubic-bezier(.32, .72, 0, 1), opacity .32s ease .1s; }
+  html.gs1-lb-expand .hdr-gs .gs-nav.xo-all .topnav-b, html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on { padding: 0 13px 0 11px; }
+  html.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.on, .hd.open > .topnav-b) { color: var(--fg); }
+  html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on { color: var(--lg-blue) !important; }
 }

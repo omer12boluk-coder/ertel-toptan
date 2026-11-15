@@ -713,17 +713,20 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), LK.gs1Drop === 'click' && 'gs1-click', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
-  useEffect(() => {
+  // useLayoutEffect + son genişlik cihazda saklı (ls gs1-x): menü ilk karede doğru ölçüde çizilir → giriş sayfasından uçan logo
+  // menü logosunun GERÇEK yerine iner (ayarlar geç gelince menü 100 px kayıyordu, logo boşluğa iniyordu)
+  useLayoutEffect(() => {
     const c = document.documentElement.classList; const on = gs1Cls ? gs1Cls.split(' ') : [];
     on.forEach((k) => c.add(k));
-    document.documentElement.style.setProperty('--gs1-x', { narrow: '1280px', mid: '1440px', wide: '1640px', full: '100vw' }[heroW] || '1440px');
+    const gx = { narrow: '1280px', mid: '1440px', wide: '1640px', full: '100vw' }[heroW] || (S0.shopHome ? '1440px' : ls.get('gs1-x', '1440px'));
+    document.documentElement.style.setProperty('--gs1-x', gx); if (S0.shopHome) ls.set('gs1-x', gx);
     return () => { on.forEach((k) => c.remove(k)); document.documentElement.style.removeProperty('--gs1-x'); };
   }, [gs1Cls, heroW]);
   useGs1Top(gs1 && !phoneUI && LK.gs1Top === 'clear', tab);
   useGs1Search(gs1 && !phoneUI);
-  useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island', 'line', 'spot', 'pill', 'side'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
+  useGs1Lbl(gs1 && !phoneUI && ['roll', 'mercury', 'island', 'line', 'spot', 'pill', 'side', 'expand'].includes(LK.gs1Lbl) ? LK.gs1Lbl : '');
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
@@ -1147,10 +1150,10 @@ function useGs1Lbl(mode) {
     const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return undefined;
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let t = 0, out = 0, cur = null;
-    if (mode === 'island') {
-      const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); });
-      measure();
-      const en = () => { clearTimeout(out); clearTimeout(t); t = setTimeout(() => nav.classList.add('xo-all'), 60); };
+    if (mode === 'island' || mode === 'expand') {
+      const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) { b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); } });
+      measure(); document.fonts?.ready?.then(measure);
+      const en = () => { clearTimeout(out); clearTimeout(t); t = setTimeout(() => nav.classList.add('xo-all'), mode === 'expand' ? 90 : 60); };
       const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) nav.classList.remove('xo-all'); else out = setTimeout(lv, 300); }, 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
       return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
