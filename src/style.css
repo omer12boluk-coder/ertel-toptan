@@ -10534,7 +10534,7 @@ html[data-theme="dark"] .brand-logo { background: transparent !important; box-sh
 
 /* 14.11.2026 gece: 'burada.' transform ile kayar (WordRoll FLIP); giriş yazıları katmanında başlar (sayfa bir kez, giriş kalkınca gider) */
 .eh-after { display: inline-block; white-space: pre; }
-.eh-root .eh-a { will-change: transform, opacity; }
+/* 15.11: .eh-a will-change KALDIRILDI — kum kanvasının üstünde kalıcı katmanlar telefonda kareleri düşürüyordu */
 /* ===== 15.11.2026 cam + arama üst menü: BUZ MAVİSİ gerçek cam (html.gs-ice) + kaydırınca ADA (html.gs-isl / .isl) =====
    Buz mavisi cam = Üst menü düzeni 'Arama + cam 2' (look.header 'search2'; telefon + bilgisayar). Ada = look.hdrScroll 'island' (sadece bilgisayar, varsayılan kapalı). Hap değişmedi. */
 html.gs-ice .topbar.hdr-gs .topbar-in { position: relative;
