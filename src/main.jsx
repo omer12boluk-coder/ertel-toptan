@@ -683,8 +683,11 @@ function ShellFull() {
   // 15.11.2026 'Arama + cam 2' (look.header 'search2'): Cam + arama ile aynı menü, buz mavisi gerçek cam (html gs-ice).
   // look.hdrScroll 'island' = Ada (bilgisayarda kaydırınca daralır; isteğe bağlı, varsayılan kapalı)
   const gsIce = hs && LK.header === 'search2';
-  const gsIsl = hs && !phoneUI && LK.hdrScroll === 'island';
-  useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-ice', gsIce); c.toggle('gs-isl', gsIsl); return () => c.remove('gs-ice', 'gs-isl'); }, [gsIce, gsIsl]);
+  // 15.11.2026 Ada artık TÜM üst menülerde (bilgisayar): cam + arama ailesi kendi Ada'sı (gs-isl), diğerleri ortak Ada (html isl-any). look.islOpen 'top' = sadece sayfanın en başında açılır
+  const islOn = pub && !phoneUI && LK.hdrScroll === 'island';
+  const gsIsl = hs && islOn;
+  const islAny = islOn && !hs;
+  useEffect(() => { const c = document.documentElement.classList; c.toggle('gs-ice', gsIce); c.toggle('gs-isl', gsIsl); c.toggle('isl-any', islAny); return () => c.remove('gs-ice', 'gs-isl', 'isl-any'); }, [gsIce, gsIsl, islAny]);
   // 15.11.2026 menü logosunun arkasındaki beyaz yuvarlak + gri halka kalktı (her renkte menüye uyar); look.logoBg 'disc' = eski
   // 15.11.2026 'Arama + cam 3' (look.header 'search3'): aynı menü/işlev, daha uzun + kristal cam (html gs-x3); look.gs3Tone 'ice' = buz mavisi tonu (html gs-x3i). Kalıp bulucu simgesi 'stencil'.
   const gsX3 = hs && LK.header === 'search3';
@@ -705,8 +708,8 @@ function ShellFull() {
   }, [gs3Pc]);
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
-  useIsland(gsIsl, tab);
-  useHideTop(pub && LK.hideTop !== false && !gsIsl, LK.hideTop === 'up', tab, urunLayer);
+  useIsland(islOn, tab, LK.islOpen === 'top');
+  useHideTop(pub && LK.hideTop !== false && !islOn, LK.hideTop === 'up', tab, urunLayer);
   // 14.11.2026 ortada logo menüsünün görünümü (look.hcStyle): '' bugünkü | 'glass2' cam iki satır | 'glass1' cam tek satır (menü logonun iki yanında) | 'clear' üstte şeffaf, kayınca cam.
   // Banner her durumda menünün BİTTİĞİ yerden başlar (menü bannerın üstüne binmez).
   const hcSt = hc ? (LK.hcStyle || '') : '';
@@ -1082,7 +1085,8 @@ function usePhoneMQ() {
 }
 // 15.11.2026 'Ada' üst menü: aşağı kaydırınca html.isl → cam daralır, menü satırı kaybolur (CSS). Titreme olmasın diye
 // 90px'te daralır, 40px'in altında ya da 70px+ yukarı kaydırınca açılır. Sayfa yüksekliği değişmez (topbar dış kutusu sabit).
-function useIsland(on, tab) {
+// 15.11.2026: topOnly (look.islOpen 'top') = yukarı kaydırınca AÇILMAZ, sadece sayfanın en başında. Ortak Ada'da (isl-any) dış kutu boyu --isl-h ile sabitlenir.
+function useIsland(on, tab, topOnly) {
   useEffect(() => {
     const r = document.documentElement; r.classList.remove('isl');
     if (!on) return;
@@ -1095,13 +1099,13 @@ function useIsland(on, tab) {
       if (y < 40) { up = 0; if (isl) r.classList.remove('isl'); return; }
       if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
       if (d < 0) up += d; else if (d > 0) up = 0;
-      if (!isl && y > 90 && d > 0) r.classList.add('isl');
-      else if (isl && up < -70) { r.classList.remove('isl'); up = 0; }
+      if (!isl && y > 90 && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); r.classList.add('isl'); }
+      else if (isl && !topOnly && up < -70) { r.classList.remove('isl'); up = 0; }
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
     addEventListener('scroll', q, { passive: true });
     return () => { removeEventListener('scroll', q); cancelAnimationFrame(raf); cancelAnimationFrame(r0); r.classList.remove('isl'); };
-  }, [on, tab]);
+  }, [on, tab, topOnly]);
 }
 function useHideTop(on, upShow, tab, layer) {
   useEffect(() => {

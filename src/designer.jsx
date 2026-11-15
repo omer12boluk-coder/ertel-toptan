@@ -1127,6 +1127,8 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
       {(L.header === 'center' || L.headerM === 'center') && <Field label="Ortada logo menüsünde arama (bilgisayar)" hint="Tam genişlik: arama satırı logonun yanından sağa açılır, altında son aramalar ve size özel ürünler, sayfa kararır. Küçük kutu = eski."><span className="seg sw">{[['', 'Tam genişlik panel'], ['old', 'Küçük kutu (eski)']].map(([k, l]) => <button key={k} type="button" className={(L.hcSearch || '') === k ? 'on' : ''} onClick={() => set('look.hcSearch', k || undefined)}>{l}</button>)}</span></Field>}
       <DevPick L={L} set={set} k="hideTop" def="top" label="Aşağı kaydırınca üst menü" hint="Sepet, ödeme ve Hesabım sayfalarında menü hep görünür."
         opts={[['top', 'Gizlen · en üstte gelsin'], ['up', 'Gizlen · yukarı kayınca gelsin'], [false, 'Hep görünsün']]} />
+      <Field label="Ada (bilgisayar, aşağı kaydırınca cam daralır)"><span className="seg sw">{[['', 'Kapalı'], ['island', 'Ada']].map(([k, l]) => <button key={k} type="button" className={(L.hdrScroll === 'island' ? 'island' : '') === k ? 'on' : ''} onClick={() => set('look.hdrScroll', k || undefined)}>{l}</button>)}</span></Field>
+      {L.hdrScroll === 'island' && <Field label="Ada ne zaman tekrar açılsın"><span className="seg sw">{[['', 'Yukarı kaydırınca'], ['top', 'Sadece en başta']].map(([k, l]) => <button key={k} type="button" className={(L.islOpen === 'top' ? 'top' : '') === k ? 'on' : ''} onClick={() => set('look.islOpen', k || undefined)}>{l}</button>)}</span></Field>}
       <BotNavPick v={L.botnav} set={(v) => set('look.botnav', v)} />
     </Disclose>
     <Disclose label="Ürün kartları" value={<small>{C2.addPos === 'side' ? 'düğme yanda' : 'düğme altta'}</small>}>

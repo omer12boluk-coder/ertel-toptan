@@ -10671,3 +10671,25 @@ html.gs-x3:is(.lite, .pf-lite)[data-theme="dark"] .topbar.hdr-gs .topbar-in { ba
   html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .topnav-b:not(.on):hover::after { opacity: .35; transform: none; }
 }
 @media (min-width: 900px) { html.gs-x3:is(.gs-x3-strip, .gs-x3-ada2) .topbar.hdr-gs .gs-nav .flow-ghost { display: none !important; } }
+
+/* ===== 15.11.2026 ORTAK ADA (html.isl-any + .isl; look.hdrScroll 'island'): Yüzen cam / Klasik / Ortada logo menüleri için (cam + arama ailesinin kendi Ada'sı gs-isl).
+   Sadece bilgisayar. Dış kutu boyu --isl-h ile sabit (sayfa zıplamaz); iç kısım ortada cam kapsüle daralır: logo + menü simgeleri + arama + sepet + giriş. */
+@media (min-width: 900px) {
+  html.isl-any .shell.public .topbar .topbar-in { transition: max-width .55s cubic-bezier(.32, .72, 0, 1), border-radius .55s cubic-bezier(.32, .72, 0, 1), transform .55s cubic-bezier(.32, .72, 0, 1), background-color .3s, box-shadow .4s; }
+  html.isl-any.isl .shell.public .topbar { height: var(--isl-h, auto); background: transparent !important; border-bottom-color: transparent !important; box-shadow: none !important; pointer-events: none; transform: none !important; opacity: 1 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html.isl-any.isl .shell.public .topbar .topbar-in { pointer-events: auto; width: fit-content; max-width: min(820px, calc(100vw - 20px)); margin-inline: auto; margin-top: 8px; gap: 10px; height: 56px; min-height: 0; border-radius: 28px; padding: 0 8px 0 12px;
+    background: rgb(255 255 255 / .74); -webkit-backdrop-filter: blur(20px) saturate(1.8); backdrop-filter: blur(20px) saturate(1.8);
+    border: 1px solid rgb(255 255 255 / .7); box-shadow: 0 0 0 .5px rgb(15 23 42 / .1), 0 14px 34px -16px rgb(10 20 40 / .4); }
+  html.isl-any.isl[data-theme="dark"] .shell.public .topbar .topbar-in { background: rgb(28 32 44 / .72); border-color: rgb(255 255 255 / .1); }
+  html.isl-any.isl .shell.public .topbar :is(.pub-id, .topnav-l, .topnav-chev, .hcart-t, .me-login-l, .hc-l) { display: none !important; }
+  html.isl-any.isl .shell.public .topbar::before, html.isl-any.isl .shell.public .topbar::after { display: none !important; }
+  html.isl-any.isl .shell.public .topbar .top-sp { flex: 0 0 18px; }
+  html.isl-any.isl .shell.public .topbar .topnav-b { padding-inline: 10px; }
+  /* ortada logo: tek satıra iner, alt menü satırı simgesiz olduğu için gizlenir */
+  html.isl-any.isl .shell.public .topbar.hdr-c .topbar-in { display: flex; align-items: center; gap: 8px; grid-template-rows: none; }
+  html.isl-any.isl .shell.public .topbar.hdr-c .hc-nav { display: none !important; }
+  html.isl-any.isl .shell.public .topbar.hdr-c .hc-r { margin-left: 18px; }
+  html.isl-any.isl .shell.public .topbar.hdr-c .hc-name { font-size: 17px; letter-spacing: .1em; }
+  html.isl-any.isl .shell.public .topbar.hdr-c .hc-mid .brand-logo { width: 34px !important; height: 34px !important; }
+}
+@media (min-width: 900px) and (prefers-reduced-motion: reduce) { html.isl-any .shell.public .topbar .topbar-in { transition: none !important; } }
