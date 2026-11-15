@@ -1190,29 +1190,32 @@ function useGs1Lbl(mode) {
     let roS = null;
     // yanında ad: tek bir cam hap (orijinal seçili hap görünümünde) fareyi izleyerek simgeden simgeye KAYAR; düğmeler açılırken genişlik
     // değiştiği için hap her karede hedefin o anki yerine yumuşakça yaklaşır (rAF) → atlama yok, düzgün süzülür
-    let sb = null, sraf = 0, sx = null, sw = 0, calm = 0;
+    let sb = null, sraf = 0, sx = null, sw = 0, calm = 0, mo2 = null;
     const sTarget = () => cur || nav.querySelector('.topnav-b.on');
     const sTick = () => { sraf = 0; const b = sTarget(); if (!b || !sb) return; const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
       const tx = r.left - n.left, tw = r.width; if (sx == null) { sx = tx; sw = tw; } else { sx += (tx - sx) * 0.24; sw += (tw - sw) * 0.24; }
       sb.style.transform = `translate(${sx.toFixed(2)}px, ${(r.top - n.top).toFixed(1)}px)`; sb.style.width = sw.toFixed(2) + 'px'; sb.style.height = r.height + 'px';
-      if (Math.abs(tx - sx) < 0.3 && Math.abs(tw - sw) < 0.3) { if (++calm > 24) { calm = 0; return; } } else calm = 0;
+      if (Math.abs(tx - sx) < 0.3 && Math.abs(tw - sw) < 0.3) { if (++calm > 40) { calm = 0; return; } } else calm = 0;
       sraf = requestAnimationFrame(sTick); };
     const sGo = () => { calm = 0; if (!sraf) sraf = requestAnimationFrame(sTick); };
     if (mode === 'side') { const ms = () => { nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); }); sGo(); }; ms(); roS = new ResizeObserver(ms); roS.observe(nav); document.fonts?.ready?.then(ms);
-      sb = document.createElement('span'); sb.className = 'gs1-sblob'; sb.setAttribute('aria-hidden', 'true'); nav.prepend(sb); setTimeout(sGo, 60); }
+      sb = document.createElement('span'); sb.className = 'gs1-sblob'; sb.setAttribute('aria-hidden', 'true'); nav.prepend(sb); setTimeout(sGo, 60);
+      // hap yarıda kalmasın: menü içindeki her genişlik/sınıf değişiminde (ad açılıp kapanırken, sayfa değişince) izleme yeniden başlar
+      nav.addEventListener('transitionrun', sGo); nav.addEventListener('transitionend', sGo);
+      mo2 = new MutationObserver((ms) => { if (ms.some((m) => m.target !== sb)) sGo(); }); mo2.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] }); }
     if (mode === 'mercury' || pill) { blob = document.createElement('span'); blob.className = 'gs1-blob'; blob.setAttribute('aria-hidden', 'true'); nav.prepend(blob); }
     // dönen hap: fare yokken hap seçili sayfada durur (adı görünür); boyu ad değişince/ekran değişince yeniden ölçülür
     const homeB = () => nav.querySelector('.topnav-b.on');
     const set = (b) => { if (cur === b) return; cur?.classList.remove('xo'); const had = !!cur; cur = b; b?.classList.add('xo'); nav.classList.toggle('xo-any', !!b); if (sb) sGo();
       if (!blob) return; if (pill) place(b || homeB(), true); else place(b, had && !!b); };
-    let ro = null, mo2 = null;
+    let ro = null;
     if (pill) { const h0 = () => { if (!cur) place(homeB(), false); }; setTimeout(h0, 120); ro = new ResizeObserver(h0); ro.observe(nav);
       // NOT: classList.add aynı sınıf olsa da özelliği yeniden yazar → gözlemci kendi değişikliğini görüp sonsuz döngüye giriyordu; damlanın kendi değişiklikleri yok sayılır
       mo2 = new MutationObserver((ms) => { if (!cur && ms.some((m) => m.target !== blob)) place(homeB(), true); }); mo2.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] }); }
     const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); clearTimeout(t); if (b === cur) return; t = setTimeout(() => set(b), mode === 'side' ? (cur ? 70 : 120) : cur ? 40 : 90); };
     const leave = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) set(null); else out = setTimeout(leave, 300); }, 220); };
     nav.addEventListener('pointerover', over); nav.addEventListener('pointerleave', leave);
-    return () => { nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); clearTimeout(t); clearTimeout(out); ro?.disconnect(); mo2?.disconnect(); roS?.disconnect(); cancelAnimationFrame(sraf); sb?.remove(); cur?.classList.remove('xo'); cur = null; nav.classList.remove('xo-any'); blob?.remove(); };
+    return () => { nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); clearTimeout(t); clearTimeout(out); ro?.disconnect(); mo2?.disconnect(); roS?.disconnect(); cancelAnimationFrame(sraf); nav.removeEventListener('transitionrun', sGo); nav.removeEventListener('transitionend', sGo); sb?.remove(); cur?.classList.remove('xo'); cur = null; nav.classList.remove('xo-any'); blob?.remove(); };
   }, [mode]);
 }
 // 15.11.2026 Tek satır üst menü fare efektleri: 'slide' = menü yazılarının arkasında fareyi izleyen yumuşak kutu; 'dock' = fareye yakın hap hafifçe büyür
