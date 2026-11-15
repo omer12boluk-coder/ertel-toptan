@@ -81,7 +81,9 @@ void main(){
     vec2 fq = (hm.xy*uSize + off)*0.0095 + vec2(uTime*0.35, -uTime*0.2);
     // uFlowS > 0 (küçük logo uçuşu): iki kol — taneler iki ayrı kavisten gider, rüzgâr gibi geniş girdap + tane başı savrulma
     float bw = uFlowBow; float fsc = 1.0;
-    if(uFlowS > 0.0){ float k2 = step(0.42, fract(sd*7.31)); bw = mix(uFlowBow, -uFlowBow*0.3, k2); fsc = 0.55; fq = fq*fsc + vec2(k2*3.7, 0.0); }
+    // 15.11 akşam ('3 yoldan gitsin: sağdan, soldan, ortadan'): taneler 3 kola ayrılır — biri bir yana kavis, biri öbür yana, biri düz;
+    // üçü de menü logosunda birleşir
+    if(uFlowS > 0.0){ float k3 = floor(fract(sd*7.31)*3.0); bw = uFlowBow*(k3 - 1.0); fsc = 0.55; fq = fq*fsc + vec2(k3*3.7, 0.0); }
     vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*(0.17*(0.15+r2*0.85)*(1.0-uFlowS) + bw) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
     vec2 no = mix(off, tgt, 1.0 - pow(0.78, uDt));
     o = vec4(no, (no-off)/max(uDt, 0.25)); return;

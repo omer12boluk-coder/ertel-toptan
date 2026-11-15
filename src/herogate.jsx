@@ -188,12 +188,13 @@ function glLand(st) {
   const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
   // 15.11 (kullanıcı: 'çok kalın ve dümdüz akıyor'): yolda tanelerin sadece %12'si görünür (varışta %20), girdap genliği 2,5 katı
   // (giriş kumundaki gibi kıvrılıp dalgalanır), izler kısa, taneler giriş kumu kadar ince
-  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 52 : 40, null, 0.28)) return 0;
+  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 30 : 24, null, 0.28)) return 0;
   // bow: bütün akış birlikte yukarı doğru yumuşak bir kavis çizer (düz şerit değil)
   // 15.11 (kullanıcı: '1-2 farklı yerden, daha ince, rüzgârla uçuyor gibi'): iki kol (streams), tane gecikmeleri geniş (jit) →
   // uzun, savrulan tozlar; taneler giriş kumu kadar ince. 15.11 akşam ('ipeksi değil, çok parçacıklı; biraz hızlansın'): silk = taneler
-  // uzun, uca doğru incelen silik iplikler, gecikmeler dar (birlikte akan şerit), görünen tane %34, süre 1,15/1,08 sn
-  e.fl.kEnd = 0.3; e.fl.bow = 0.15; e.fl.streams = 1; e.fl.jit = 0.13; e.fl.silk = 1; e.dotMin = 0.42; e.streakMul = 1;
+  // uzun, uca doğru incelen silik iplikler, gecikmeler dar (birlikte akan şerit), görünen tane %28, süre 1,15/1,08 sn.
+  // 'kumların hizasını incelt': yana savrulma (girdap genliği) 30/24 px, iki kol birbirine yakın, iplikler daha ince
+  e.fl.kEnd = 0.3; e.fl.bow = 0.24; e.fl.streams = 1; e.fl.jit = 0.13; e.fl.silk = 1; e.dotMin = 0.34; e.streakMul = 1;
   // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
   tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
   // aynı görev içinde: WebGL net logoyu çizer, 2B kanvas kalkar → aynı karede değişir
