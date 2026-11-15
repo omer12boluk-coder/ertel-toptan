@@ -44,6 +44,8 @@ function useMobile() {
   useEffect(() => { const mq = matchMedia(q); const f = () => setM(mq.matches); mq.addEventListener?.('change', f); return () => mq.removeEventListener?.('change', f); }, []);
   return m;
 }
+// 15.11.2026 üst menü düzeni artık burada da (telefondan değiştirilebilsin; Gelişmiş › Menüler'de de duruyor)
+const HDR_OPTS = [['search', 'Cam + arama'], ['search2', 'Arama + cam 2'], ['search3', 'Kristal cam'], ['glass', 'Yüzen cam'], ['center', 'Ortada logo'], ['classic', 'Klasik']];
 const Seg = ({ v, opts, on }) => <span className="v3-seg">{opts.map(([k, l]) => <button key={k} type="button" className={(v ?? '') === k ? 'on' : ''} onClick={() => on(k)}>{l}</button>)}</span>;
 // 7.11.2026 (gece) yeni Ürünler sayfasının açılış sayfası: aç/kapat, kutu resimleri, gizlenecek kategoriler (shopHome.p0.hub)
 function HubRows({ d, set }) {
@@ -223,6 +225,9 @@ function LookPanel({ d, set, setAll, A }) {
     <Row label="Köşeler" hint="Banner, kartlar ve düğmeler birlikte değişir"><Seg v={corner} opts={CORNERS.map(([k, l]) => [k, l])} on={(k) => set('look.style', { ...st, ...CORNERS.find((x) => x[0] === k)[2] })} /></Row>
     <Row label="Sayfa genişliği" hint="Banner hariç bütün bölümler (banner genişliği bannerın kendi ayarında)"><Seg v={Lk.width || ''} opts={WIDTHS.map(([k, l]) => [k, l])} on={(k) => set('look.width', k)} /></Row>
     <Row label="Yazı tipi"><Seg v={font} opts={[['apple', 'Apple sade'], ['classic', 'Klasik']]} on={(k) => set('look.style', k === 'apple' ? { ...st, head: 'intert', body: 'inter', price: 'intert' } : { ...st, head: '', body: '', price: '' })} /></Row>
+    <Row label={Lk.headerM ? 'Üst menü (bilgisayar)' : 'Üst menü'} hint="Telefon ve bilgisayarda birlikte değişir"><Seg v={Lk.header || 'search'} opts={HDR_OPTS} on={(k) => set('look.header', k)} /></Row>
+    {Lk.headerM && <Row label="Üst menü (telefon)"><Seg v={Lk.headerM} opts={HDR_OPTS} on={(k) => set('look.headerM', k)} /></Row>}
+    {(Lk.header === 'search3' || Lk.headerM === 'search3') && <Row label="Kristal cam tonu"><Seg v={Lk.gs3Tone || ''} opts={[['', 'Beyaz'], ['ice', 'Buz mavisi']]} on={(k) => set('look.gs3Tone', k || undefined)} /></Row>}
     {Lk.header === 'center' && <Row label="Ortada logo menüsünün görünümü" hint="Banner her durumda menünün bittiği yerden başlar. Cam: aşağı kaydırınca altından geçen sayfa buzlu görünür"><Seg v={Lk.hcStyle || ''} opts={[['', 'Bugünkü (düz)'], ['glass2', 'Cam, iki satır'], ['glass1', 'Cam, tek satır'], ['clear', 'Üstte şeffaf, kayınca cam']]} on={(k) => set('look.hcStyle', k || undefined)} /></Row>}
     {Lk.header === 'center' && <Row label="Ortada logo menüsünde arama" hint="Bilgisayarda. Tam genişlik: logonun yanından açılan arama + son aramalar + size özel ürünler"><Seg v={Lk.hcSearch || ''} opts={[['', 'Tam genişlik'], ['old', 'Küçük kutu (eski)']]} on={(k) => set('look.hcSearch', k || undefined)} /></Row>}
     {['search', 'search2', 'search3'].includes(Lk.header || 'search') && <Row label="Aşağı kaydırınca (cam + arama menüleri)" hint="Bilgisayarda. Ada: menü satırı kaybolur, cam daralıp ortada logo + arama + sepet + hesap olarak kalır; en üste dönünce ya da biraz yukarı kaydırınca açılır"><Seg v={Lk.hdrScroll === 'island' ? 'island' : ''} opts={[['', 'Bugünkü (gizlenir)'], ['island', 'Ada']]} on={(k) => set('look.hdrScroll', k || undefined)} /></Row>}
