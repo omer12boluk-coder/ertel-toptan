@@ -1403,8 +1403,8 @@ function useIsland(on, tab, topOnly) {
       if (y < 40) { up = 0; if (isl) { mv(); r.classList.remove('isl'); } return; }
       if (busy() || r.querySelector('.gs-srch .hsearch-box:focus-within')) return; // açık menü / aramaya yazarken şekil değişmez
       if (d < 0) up += d; else if (d > 0) up = 0;
-      // 16.11.2026: tek satırda Ada daha aşağıda başlar (anında ada olmasın)
-      if (!isl && y > (r.classList.contains('gs-one') ? 260 : 90) && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
+      // 16.11.2026: tek satırda Ada daha aşağıda başlar (anında ada olmasın): ekranın ~yarısı kayınca (en az 420 px; 260 px fark edilmedi)
+      if (!isl && y > (r.classList.contains('gs-one') ? Math.max(420, innerHeight * 0.55) : 90) && d > 0) { const tb = document.querySelector('.shell.public .topbar'); if (tb && r.classList.contains('isl-any')) r.style.setProperty('--isl-h', tb.offsetHeight + 'px'); mv(); r.classList.add('isl'); }
       else if (isl && !topOnly && up < -70) { mv(); r.classList.remove('isl'); up = 0; }
     };
     const q = () => { if (!raf) raf = requestAnimationFrame(f); };
