@@ -8,7 +8,7 @@
 // DİKKAT: html sınıfları an-<anahtar>; başka öğeye bu adları (an-bn, an-raf…) VERME (an-fly/an-hd çakışıp sayfayı kilitlemişti).
 // Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try9').
 import { useEffect, useState } from 'react';
-import { useStore } from './store.js';
+import { useStore, store } from './store.js';
 import { ls } from './utils.js';
 
 export const ANIMS = [
@@ -138,6 +138,20 @@ function GateTry() {
     </>
   );
 }
+// 15.11.2026 önizlemede üst menü denemesi (sadece bu cihaz, bilgisayar ≥900px): ls 'hdr-try' → main.jsx LK'yi ezer (Yüzen cam + look.glassSty)
+export const HDR_TRY = [['', 'Canlı ayar (değiştirme)'], ['glass', 'Yüzen cam · bugünkü'], ['strip', 'A · Şerit'], ['quiet', 'B · Sade ada'], ['search', 'C · Arama odaklı']];
+function HdrTry() {
+  const v = useStore((x) => x.hdrTry) ?? (ls.get('hdr-try', '') || '');
+  const pick = (k) => { ls.set('hdr-try', k); store.set({ hdrTry: k }); };
+  return (
+    <>
+      <div className="an-ph"><b>Üst menü denemesi</b><small>Bilgisayarda (pencere geniş olmalı); telefon değişmez</small></div>
+      {HDR_TRY.map(([k, t]) => (
+        <label key={'h' + k} className="an-row"><input type="radio" name="hdr-try" checked={v === k} onChange={() => pick(k)} /><span>{t}</span></label>
+      ))}
+    </>
+  );
+}
 export const isLite = () => typeof document !== 'undefined' && document.documentElement.classList.contains('pf-lite');
 const LITE_DAYS = 14;
 function useLite(mode) {
@@ -219,6 +233,7 @@ function AnimPanel({ v, set, lite }) {
     <div className={'an-panel' + (open ? ' open' : '')}>
       {open && <div className="an-box" role="dialog" aria-label="Hareket denemesi">
         <div className="an-ph"><b>Hareket denemesi</b><small>Sadece bu önizlemede, bu cihazda</small></div>
+        <HdrTry />
         <GateTry />
         {ANIMS.map(([k, L, t]) => (
           <label key={k} className="an-row"><input type="checkbox" checked={!!v[k]} onChange={(e) => set({ ...v, [k]: e.target.checked })} /><span className="an-l">{L}</span><span>{t}</span></label>

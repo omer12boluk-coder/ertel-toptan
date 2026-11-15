@@ -50,7 +50,7 @@ import { DesignEntry } from './designv3.jsx'; // 7.11.2026: tasarım modu v3 (es
 import { AdminHome, Reports } from './dashboard.jsx';
 import { Archive } from './archive.jsx';
 import { UsagePage } from './usagepage.jsx';
-import { AnimLayer } from './anim.jsx';
+import { AnimLayer, TRY as ANIM_TRY } from './anim.jsx';
 import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
@@ -665,7 +665,10 @@ function ShellFull() {
   // 3.11.2026 mağaza üst menüsü: 'classic' (eski) · 'center' (logo ortada, menü altında — Tasarım › Renkler ve sayfa › Üst menü)
   // 5.11.2026: her görünüm ayarı telefonda ayrı olabilir (look.headerM, hideTopM, glassM — Tasarım › 'Telefonda farklı')
   const phoneUI = usePhoneMQ();
-  const LK = lookFor(S0.look, phoneUI);
+  // 15.11.2026 önizleme 'Üst menü denemesi' (anim.jsx HdrTry, ls 'hdr-try'): bilgisayarda canlı ayarı bu cihazda ezer
+  const hdrTry = useStore((x) => x.hdrTry) ?? (ANIM_TRY ? ls.get('hdr-try', '') || '' : '');
+  const LK0 = lookFor(S0.look, phoneUI);
+  const LK = ANIM_TRY && hdrTry && !phoneUI ? { ...LK0, header: 'glass', glassSty: hdrTry === 'glass' ? '' : hdrTry } : LK0;
   const hc = pub && LK.header === 'center';
   const hs = pub && ['search', 'search2', 'search3'].includes(LK.header || 'search'); // 15.11.2026 'search2' = Arama + cam 2 (aynı menü, buz mavisi gerçek cam)
   // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
