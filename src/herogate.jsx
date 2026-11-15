@@ -36,54 +36,42 @@ const preloadMark = () => { if (!markImg) { markImg = new Image(); markImg.decod
 // 14.11.2026 (gece, mobil ölçümü): kum son karede NET logoyu aynı kanvasa çizer ve menüye bu kanvas uçar (eskiden sonda ayrı
 // <img> konuyordu → telefonda resim o an hazır olmadığından bir kare boş = 'yanıp sönme'). Mağaza kum BİTTİKTEN sonra çizilir
 // (çizim telefonda ~0,9 sn donduruyor; kumun son kareleri o donmaya denk gelince takılıyordu), uçuş da telefon rahatlayınca başlar.
-function sandForm(x, y, z, root, keep) {
+function sandForm(x, y, z, root) {
   const im = markImg; if (!im?.complete || !im.naturalWidth) return null;
   const mob = root.clientWidth < 640;
   const dpr = Math.min(2, devicePixelRatio || 1), S = Math.round(z * (mob ? 1.8 : 2.3)), W = z + 2 * S;
-  // kumdan logo (keep): daha sık ızgara + birbirine değen taneler → logo dolu ve net görünür (15.11: 'silik, parçaları eksik')
-  const n = Math.max(40, Math.round(z * dpr * (keep ? (mob ? 0.85 : 1) : (mob ? 0.6 : 0.8)))), o = document.createElement('canvas'); o.width = o.height = n;
+  const n = Math.max(40, Math.round(z * dpr * (mob ? 0.6 : 0.8))), o = document.createElement('canvas'); o.width = o.height = n;
   let d; try { const g = o.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, n, n); d = g.getImageData(0, 0, n, n).data; } catch { return null; }
   const c = document.createElement('canvas'); c.className = 'eh-sand'; c.width = c.height = Math.round(W * dpr);
   Object.assign(c.style, { left: x - S + 'px', top: y - S + 'px', width: W + 'px', height: W + 'px' });
-  const P = [], cx = W * dpr / 2, cy = cx, sz = (z * dpr / n) * (keep ? 1.3 : 1.05);
+  const P = [], cx = W * dpr / 2, cy = cx, sz = (z * dpr / n) * 1.05;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-    const k = (j * n + i) * 4, a = d[k + 3]; if (a < (keep ? 40 : 80)) continue;
+    const k = (j * n + i) * 4, a = d[k + 3]; if (a < 80) continue;
     const tx = (S + (i + 0.5) / n * z) * dpr, ty = (S + (j + 0.5) / n * z) * dpr;
     const an = Math.random() * 6.2832, r = (0.25 + Math.random() * 0.75) * S * dpr;
-    const r1 = Math.random(), r2 = Math.random();
-    if (keep) {
-      // kumdan logo: taneler birbirinden hafif farklı koyulukta, kenarlarda birkaç serpinti tane (düz resme DÖNMEZ)
-      const st2 = r2 < 0.015 ? sz * 1.6 : 0;
-      P.push([cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.62, tx + (Math.random() - 0.5) * st2, ty + (Math.random() - 0.5) * st2, Math.random() * 0.32,
-        `rgb(${d[k]},${d[k + 1]},${d[k + 2]})`, Math.min(1, (a / 255) * 1.15) * (0.93 + 0.07 * r1), (i + 0.5) / n, (j + 0.5) / n, r1, r2]);
-    } else P.push([cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.62, tx, ty, Math.random() * 0.32, `rgba(${d[k]},${d[k + 1]},${d[k + 2]},${a / 255})`]);
+    P.push([cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.62, tx, ty, Math.random() * 0.32, `rgba(${d[k]},${d[k + 1]},${d[k + 2]},${a / 255})`]);
   }
   document.body.appendChild(c);
   const ctx = c.getContext('2d'), D = 520, t0 = performance.now() + 40; let res; const done = new Promise((r) => { res = r; });
-  const st = { x, y, z, el: c, off: S, done, raf: 0, dpr, P: keep ? P : null, sz };
+  const st = { x, y, z, el: c, off: S, done, raf: 0, dpr };
   const step = (now) => {
     const T = Math.max(0, (now - t0) / D); ctx.clearRect(0, 0, c.width, c.height);
-    // son kare: net logo, aynı kanvas
-    if (T >= 1 && !keep) { ctx.globalAlpha = 1; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, S * dpr, S * dpr, z * dpr, z * dpr); res(); return; }
-    let lc = '';
+    if (T >= 1) { ctx.globalAlpha = 1; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, S * dpr, S * dpr, z * dpr, z * dpr); res(); return; } // son kare: net logo, aynı kanvas
     for (const p of P) {
       const k = Math.min(1, Math.max(0, (T - p[4]) / (1 - 0.32))), e = 1 - Math.pow(1 - k, 3);
-      ctx.globalAlpha = Math.min(1, T * 4) * (keep ? p[6] : 1);
-      if (p[5] !== lc) { lc = p[5]; ctx.fillStyle = lc; }
+      ctx.globalAlpha = Math.min(1, T * 4); ctx.fillStyle = p[5];
       ctx.fillRect(p[0] + (p[2] - p[0]) * e - sz / 2, p[1] + (p[3] - p[1]) * e - sz / 2, sz, sz);
     }
-    // kumdan logo: taneler yerine oturunca kanvas öyle kalır (uçuşu sandLand devralır)
-    if (T >= 1) { res(); return; }
     st.raf = requestAnimationFrame(step);
   };
   st.raf = requestAnimationFrame(step);
   return st;
 }
-function flySmall(img, root, keep) {
+function flySmall(img, root) {
   const r = img?.getBoundingClientRect(); if (!r || !r.width) return null;
   const z = Math.round(Math.min(root.clientWidth < 640 ? 60 : 80, r.height * 0.9));
   const x = r.left + r.width / 2 - z / 2, y = r.top + r.height / 2 - z / 2;
-  const sd = sandForm(x, y, z, root, keep); if (sd) return sd;
+  const sd = sandForm(x, y, z, root); if (sd) return sd;
   const f = document.createElement('img'); f.src = MOBILE_SRC; f.alt = ''; f.className = 'eh-fly';
   Object.assign(f.style, { left: x + 'px', top: y + 'px', width: z + 'px', height: z + 'px', opacity: '0' });
   document.body.appendChild(f);
@@ -127,72 +115,53 @@ function flyLand(st) {
     setTimeout(() => { cancelAnimationFrame(st.raf); f.remove(); setTimeout(() => { tg.style.transition = ''; }, 40); }, Math.max(D, D * 0.78 + 180));
   }
 }
-// ---- 15.11.2026 Kumdan logo, ince kumla uçuş (look.anim gsnd; ÖNİZLEME, canlıda varsayılan kapalı) ----
-// Kullanıcı: 'uçan logo kumdan olmalı, yerine giderken çok ince kum taneleriyle gitmeli'. Ortadaki küçük logo düz resme dönmez,
-// kum taneleri olarak kalır (sandForm keep). Uçuşta logo, menüye en yakın kenarından başlayarak tane tane kalkar; taneler yolda
-// incelir (yaklaşık 1 ekran pikseli), tel tel hafif bir yay çizerek menüdeki logonun yerine akar ve varırken söner — menü logosu
-// varan tane oranında altında belirir (kalınlaşma / 'oturma' yok, son karede değişim yok). Hafif 2B kanvas (birkaç bin tane),
-// sadece yolun kapladığı alan kadar; WebGL motoruna dokunmaz. Dönen değer = süre (ms); 0 ise uçuş yapılamadı.
-function sandLand(st) {
-  const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((e) => e.getBoundingClientRect().width > 0);
-  const P = st?.P; if (!tg || !P?.length) return 0;
-  const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
-  const tw = r0.width - 2 * pl, tx0 = r0.left + pl, ty0 = r0.top + pt, d = st.dpr || 1, z = st.z;
-  const Dx = tx0 + tw / 2 - (st.x + z / 2), Dy = ty0 + tw / 2 - (st.y + z / 2), L = Math.hypot(Dx, Dy) || 1, ux = Dx / L, uy = Dy / L;
-  // yay yönü: yola dik, yukarı bakan taraf
-  let px = -uy, py = ux; if (py > 0 || (Math.abs(py) < 0.05 && px < 0)) { px = -px; py = -py; }
-  const bow = Math.min(L * 0.13, 90), pad = Math.ceil(bow * 1.9 + 24);
-  const bx = Math.max(0, Math.floor(Math.min(st.x, tx0) - pad)), by = Math.max(0, Math.floor(Math.min(st.y, ty0) - pad));
-  const bw = Math.min(innerWidth, Math.ceil(Math.max(st.x + z, tx0 + tw) + pad)) - bx, bh = Math.min(innerHeight, Math.ceil(Math.max(st.y + z, ty0 + tw) + pad)) - by;
-  const c = document.createElement('canvas'); c.className = 'eh-sand'; c.width = Math.round(bw * d); c.height = Math.round(bh * d);
-  Object.assign(c.style, { left: bx + 'px', top: by + 'px', width: bw + 'px', height: bh + 'px' });
-  const ctx = c.getContext('2d'), N = P.length, FG = 0.3, FJ = 0.12, TR = (1 - FG - FJ) / 1.14, ext = Math.abs(ux) + Math.abs(uy);
-  const ox = (st.x - st.off - bx) * d, oy = (st.y - st.off - by) * d; // eski kanvasın bu kanvastaki yeri
-  // tane başına: ev (x,y), yol (dx,dy), kalkış gecikmesi, hız, yay payı, dalga evresi, saydamlık
-  const G = new Float32Array(N * 9), fine = Math.max(1, d * 0.62), s0 = st.sz;
-  for (let i = 0; i < N; i++) {
-    const p = P[i], u = p[7], v = p[8], r1 = p[9], r2 = p[10], o = i * 9;
-    const hx = ox + p[2], hy = oy + p[3];
-    G[o] = hx; G[o + 1] = hy;
-    G[o + 2] = (tx0 - bx + u * tw) * d - hx; G[o + 3] = (ty0 - by + v * tw) * d - hy;
-    const fr = ((u - 0.5) * ux + (v - 0.5) * uy) / ext + 0.5;
-    G[o + 4] = (1 - fr) * FG + r2 * FJ;
-    G[o + 5] = TR * (0.86 + 0.28 * r1);
-    // teller: komşu taneler aynı tele girer (ipeksi akış), her tanede küçük kendi payı
-    const strand = Math.sin(u * 9 + v * 4) * 0.6 + Math.sin(v * 13 + u * 3 + 1.7) * 0.4;
-    G[o + 6] = (0.62 + 0.38 * strand + (r1 - 0.5) * 0.3) * bow * d;
-    G[o + 7] = r2 * 6.2832;
-    G[o + 8] = p[6];
-  }
-  const D = Math.round(Math.min(1250, Math.max(980, 820 + L * 0.55))), wob = Math.min(7, L * 0.014) * d;
-  let T = 0, last = 0, first = true;
-  const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-  tg.style.opacity = '0';
-  const step = (now) => {
-    // kare gecikirse zaman sıçramaz (yolda 'atlama' olmasın)
-    if (last) T = Math.min(1, T + Math.min(34, now - last) / D); last = now;
-    ctx.clearRect(0, 0, c.width, c.height);
-    let lc = '', arr = 0;
-    for (let i = 0; i < N; i++) {
-      const o = i * 9, k = Math.min(1, Math.max(0, (T - G[o + 4]) / G[o + 5]));
-      if (k >= 1) { arr++; continue; }
-      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, lift = sm(0, 0.2, k);
-      if (k > 0.9) arr += (k - 0.9) * 10;
-      const b = Math.sin(3.14159 * e), w = b * (G[o + 6] + Math.sin(e * 7.5 + G[o + 7]) * wob);
-      const x = G[o] + G[o + 2] * e + px * w, y = G[o + 1] + G[o + 3] * e + py * w;
-      const s = s0 + (fine - s0) * lift;
-      ctx.globalAlpha = G[o + 8] * (1 - lift * 0.22) * (1 - sm(0.8, 1, k));
-      const col = P[i][5]; if (col !== lc) { lc = col; ctx.fillStyle = col; }
-      ctx.fillRect(x - s / 2, y - s / 2, s, s);
-    }
-    if (first) { first = false; cancelAnimationFrame(st.raf); st.el?.remove(); }
-    const op = arr / N; tg.style.opacity = (op * op * (3 - 2 * op)).toFixed(3);
-    if (T >= 1) { tg.style.opacity = ''; c.remove(); return; }
-    requestAnimationFrame(step);
-  };
+// ---- 15.11.2026 Net logo, menüye giriş sayfasının kum motoruyla akar (look.anim gsnd; ÖNİZLEME, canlıda varsayılan kapalı) ----
+// Kullanıcı: 'logo kumdan olmasın, net olsun; giderken kum gitsin. Kum taneleri düşük çözünürlüklü gibi, en baştaki açılıştakiler
+// çok daha iyi → aynı motoru kullan'. Ortadaki küçük logo eskisi gibi NET oluşur (sandForm). Giriş sayfası açıkken, boşta,
+// küçük logo için AYRI bir LiquidEngine (giriş kumunun aynı WebGL motoru, aynı yuvarlak taneler/izler) gizli kanvasta HAZIR
+// kurulur — basınca kurmak donduruyordu (gather dersi). Uçuşta: WebGL kanvas aynı karede net logoyu çizer, 2B kanvas kalkar,
+// flowTo ile logo menüye yakın kenarından ufalanır, taneler yay çizip menü logosunun yerine akar, varırken söner; menü logosu
+// altında belirir. Motor hazır değilse eski tek parça uçuş (flyLand).
+let markEng = null;
+function killMark() {
+  const e = markEng; markEng = null; if (!e) return;
+  try { e.stop(); e.gl?.getExtension('WEBGL_lose_context')?.loseContext(); } catch {}
+  e.canvas?.remove();
+}
+function prepMark(dark) {
+  const im = markImg; if (markEng || !im?.complete || !im.naturalWidth) return;
+  const mob = innerWidth < 640, z = mob ? 60 : 80;
+  const c = document.createElement('canvas'); c.className = 'eh-sand'; c.setAttribute('aria-hidden', 'true');
+  Object.assign(c.style, { left: '0', top: '0', width: '100vw', height: '100vh', visibility: 'hidden' });
   document.body.appendChild(c);
-  requestAnimationFrame(step);
-  return D;
+  try {
+    const e = new LiquidEngine(c, { interactive: false, strength: 1.1, radius: 200, density: 1, dotSize: 1, spread: 1, turbulence: 1, liquid: 1, streaks: true,
+      restStyle: 'image', returnSpeed: 1, ambient: false, ambientIntensity: 0, speed: 1, intro: false, reducedMotion: false, bg: dark ? [0.04, 0.05, 0.07] : [1, 1, 1] }, () => killMark());
+    markEng = e;
+    // ızgara logonun ~2,6 katı: taneler giriş kumu kadar ince (~0,75 px), yolda seyrelince de yeterince tane kalsın
+    e.setImage(im, Math.round(z * 2.6));
+    e.resize(innerWidth, innerHeight, { x: innerWidth / 2 - z / 2, y: innerHeight / 2 - z / 2, w: z, h: z });
+  } catch { killMark(); }
+}
+function glLand(st) {
+  const e = markEng;
+  const tg = [...document.querySelectorAll('.shell.public .topbar img.brand-logo')].find((x) => x.getBoundingClientRect().width > 0);
+  if (!e?.ready || e.lost || !tg || !st) return 0;
+  const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
+  const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1300 : 1200;
+  e.resize(innerWidth, innerHeight, { x: st.x, y: st.y, w: st.z, h: st.z });
+  let fin = false;
+  const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
+  if (!e.flowTo({ x: r0.left + pl, y: r0.top + pt, w: tw, h: tw }, dur, end, wide ? 30 : 24, null, 0.35)) return 0;
+  // giriş kumuyla aynı incelik (flowTo en az 1 px yapıyordu)
+  e.dotMin = 0.75;
+  // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
+  tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
+  // aynı görev içinde: WebGL net logoyu çizer, 2B kanvas kalkar → aynı karede değişir
+  e.canvas.style.visibility = 'visible'; e.draw();
+  cancelAnimationFrame(st.raf); st.el?.remove();
+  setTimeout(end, dur + 1500);
+  return dur;
 }
 // ---- 15.11.2026 Kum akışı + sırayla kurulum (look.anim gkum; ÖNİZLEME, canlıda varsayılan kapalı) ----
 // Kullanıcı: C'nin (mağaza sırayla kurulur) tatlılığı + kumun akışı, giriş sayfasındaki kumun ipeksiliğiyle. Son tasarım (6. tur,
@@ -357,6 +326,16 @@ export function HeroGate({ onOpen, onDone }) {
   const fx = gateFx(look);
   useState(() => { gateT0 = performance.now(); });
   useEffect(() => { preloadMark(); }, []);
+  // kum uçuşu açıksa küçük logonun kum motoru giriş sayfası açıkken, boşta önceden kurulur (basınca kurmak donduruyordu)
+  const sandOn = !!(fx.fly && fx.sand);
+  useEffect(() => {
+    if (!sandOn) return undefined;
+    let t = 0, id = 0, n = 0;
+    const idle = window.requestIdleCallback || ((f) => setTimeout(f, 60));
+    const tryPrep = () => { if (goneRef.current) return; if (markImg?.complete && markImg.naturalWidth) { prepMark(darkRef.current); return; } if (n++ < 20) t = setTimeout(tryPrep, 400); };
+    t = setTimeout(() => { id = idle(tryPrep, { timeout: 1500 }); }, 1400);
+    return () => { clearTimeout(t); window.cancelIdleCallback?.(id); if (!goneRef.current) killMark(); };
+  }, [sandOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ayar kapalı gelirse hemen kapan (ve bir sonraki açılış için hatırla)
   useEffect(() => { if (boot === 'ready' || boot === 'login') { try { localStorage.setItem('hero-gate', on ? '1' : '0'); } catch {} if (!on) { onOpen(); onDone(); } } }, [on, boot]);
@@ -425,8 +404,7 @@ export function HeroGate({ onOpen, onDone }) {
     if (leaving || goneRef.current) return; goneRef.current = true;
     const eng = engRef.current, root = rootRef.current;
     const kf = !!(fx.flow && eng?.ready && !eng.lost && root?.dataset.gl === 'on');
-    const snd = !kf && fx.fly && fx.sand;
-    const fl = !kf && fx.fly ? flySmall(imgRef.current, rootRef.current, snd) : null;
+    const fl = !kf && fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
     if (kf) { const sg = stageRef.current; if (sg) Object.assign(sg.style, { transition: 'none', transform: 'none', opacity: '1' }); }
     else engRef.current?.explode();
     setLeaving(true);
@@ -437,9 +415,9 @@ export function HeroGate({ onOpen, onDone }) {
       whenCalm(() => {
         // kum: mağaza ÖNCE çizilir (logo o sırada kıpırdamaz → çizim donması görünmez), telefon rahatlayınca çözülme başlar
         if (kf) { kumGo(); return; }
-        // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar; kumdan logo ince kumla akar (olmazsa tek parça uçuş)
-        const sd = snd && fl?.P ? sandLand(fl) : 0;
-        if (!sd) flyLand(fl);
+        // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar; kum uçuşu açıksa net logo giriş kum motoruyla akar
+        const sd = fx.sand && fl ? glLand(fl) : 0;
+        if (!sd) { killMark(); flyLand(fl); }
         if (fx.scn) sceneIn(!!fl);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
         setReveal(true); setTimeout(onDone, sd ? sd + 160 : fl ? 820 : 420);

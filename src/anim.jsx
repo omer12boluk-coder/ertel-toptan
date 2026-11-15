@@ -13,7 +13,7 @@ import { ls } from './utils.js';
 
 export const ANIMS = [
   ['gfly', 'B1', 'Açılış: logo menüye uçar'],
-  ['gsnd', 'B2', 'Açılış: uçan logo kumdan, ince kumla gider (yeni)'],
+  ['gsnd', 'B2', 'Açılış: net logo menüye giriş kumuyla akar (yeni)'],
   ['gscn', 'C1', 'Açılış: sahne kurulur (menüler, banner, Yeni gelenler)'],
   ['gkum', 'K', 'Açılış: kum menüye akar, mağaza sırayla kurulur (yeni)'],
   ['gwrd', 'D1', 'Giriş: dönen kelime'],
