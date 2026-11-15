@@ -11133,16 +11133,26 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
   html.gs-one .hdr-gs .gs-srch .hsearch-box button { cursor: pointer !important; }
 }
 /* 16.11.2026 'Bölünmüş düğme' (gs1Drop 'split' = Tıklayınca + görünüş): ad ile ok arasında ince dikey çizgi; sol taraf sayfayı, sağ taraf
-   (ok) açılır menüyü açar. Okun üstüne gelince SADECE ok tarafı ayrı yuvarlak zeminle aydınlanır, adın zemini yanmaz. */
+   (ok) açılır menüyü açar. Okun üstüne gelince SADECE ok tarafı, hapın İÇİNDE sağ yarım kapsül zeminle aydınlanır (hapı tutar).
+   Ok görünen düğmeler (V): sabit oklu biçimler (kısa hâl hariç) + adı açılan biçimlerde açık olanlar. */
 @media (min-width: 900px) {
   html.gs1-split .hdr-gs .gs-nav .topnav-chev { position: relative; overflow: visible !important; clip-path: none !important; }
-  html.gs1-split .hdr-gs .gs-nav .topnav-chev::after { content: ""; position: absolute; left: -5px; top: 50%; width: 1px; height: 16px; margin-top: -8px; background: currentColor; opacity: .22; pointer-events: none; }
-  /* sabit oklu biçimler (pay 5 px): ok biraz sağa, çizgi arada */
-  html.gs1-split:not(.gs1-lb-expand):not(.gs1-lb-side) .hdr-gs .gs-nav .topnav-chev { margin-left: 6px !important; }
-  /* adı açılan biçimler: SADECE ok görünürken boşluk açılır (kapalıyken yer kaplamaz) */
-  html.gs1-split.gs1-lb-expand .hdr-gs .gs-nav:is(.xo-all) .topnav-chev, html.gs1-split.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b.on, .hd.open > .topnav-b) .topnav-chev,
-  html.gs1-split.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-chev { margin-left: 13px !important; }
-  html.gs1-split .hdr-gs .gs-nav .topnav-chev::before { content: ""; position: absolute; inset: -7px -6px -7px -3px; border-radius: 10px; background: transparent; transition: background-color .18s; }
+  html.gs1-split:not(.gs1-lb-expand):not(.gs1-lb-side):not(.gs1-tg-s) .hdr-gs .gs-nav .topnav-b:has(> .topnav-chev),
+  html.gs1-split.gs1-lb-expand:not(.gs1-lb-pick) .hdr-gs .gs-nav.xo-all .topnav-b:has(> .topnav-chev),
+  html.gs1-split.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b.on, .hd.open > .topnav-b):has(> .topnav-chev),
+  html.gs1-split.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b):has(> .topnav-chev) { padding-right: 3px !important; --sp-on: 1; }
+  html.gs1-split .hdr-gs .gs-nav .topnav-b:has(> .topnav-chev) .topnav-chev { transition: max-width .5s cubic-bezier(.32, .72, 0, 1), margin-left .5s cubic-bezier(.32, .72, 0, 1), padding .5s cubic-bezier(.32, .72, 0, 1), opacity .25s ease; }
+  html.gs1-split:not(.gs1-lb-expand):not(.gs1-lb-side):not(.gs1-tg-s) .hdr-gs .gs-nav .topnav-b > .topnav-chev,
+  html.gs1-split.gs1-lb-expand:not(.gs1-lb-pick) .hdr-gs .gs-nav.xo-all .topnav-b > .topnav-chev,
+  html.gs1-split.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b.on, .hd.open > .topnav-b) > .topnav-chev,
+  html.gs1-split.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) > .topnav-chev {
+    display: inline-flex !important; align-items: center; height: 30px; max-width: 34px !important; margin-left: 11px !important; margin-right: 0 !important; padding: 0 9px 0 7px !important; }
+  /* adı açılan biçimlerde düğme içi boşluk (gap) 0 → çizgi yazıya yapışmasın diye ok 6 px daha sağda (sabit oklularla aynı aralık) */
+  html.gs1-split.gs1-lb-expand:not(.gs1-lb-pick) .hdr-gs .gs-nav.xo-all .topnav-b > .topnav-chev,
+  html.gs1-split.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b.on, .hd.open > .topnav-b) > .topnav-chev,
+  html.gs1-split.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) > .topnav-chev { margin-left: 17px !important; }
+  html.gs1-split .hdr-gs .gs-nav .topnav-chev::after { content: ""; position: absolute; left: -6px; top: 50%; width: 1px; height: 16px; margin-top: -8px; background: currentColor; opacity: .22; pointer-events: none; }
+  html.gs1-split .hdr-gs .gs-nav .topnav-chev::before { content: ""; position: absolute; inset: 0 0 0 -1px; border-radius: 5px 15px 15px 5px; background: transparent; transition: background-color .18s; }
   html.gs1-split .hdr-gs .gs-nav .hd.open > .topnav-b .topnav-chev::before { background: rgb(118 118 128 / .16); }
   html.gs1-split[data-theme="dark"] .hdr-gs .gs-nav .hd.open > .topnav-b .topnav-chev::before, html.gs1-split.gs1-t-ink .hdr-gs .gs-nav .hd.open > .topnav-b .topnav-chev::before { background: rgb(255 255 255 / .16); }
 }
@@ -11155,11 +11165,10 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
 @media (min-width: 900px) {
   html.gs1-lb-pick .hdr-gs .gs-nav .topnav-b.on .topnav-chev { max-width: 16px; opacity: .6; margin-left: 4px; pointer-events: auto;
     transition: max-width .5s cubic-bezier(.32, .72, 0, 1), margin-left .5s cubic-bezier(.32, .72, 0, 1), opacity .32s ease .1s; }
-  html.gs1-split.gs1-lb-pick .hdr-gs .gs-nav .topnav-b.on .topnav-chev { margin-left: 13px !important; }
 }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = 'fe1ded3c47';</script>
+<script>window.__BUILD = '19eed56a3f';</script>
 </head>
 <body>
 <div id="root"></div>
