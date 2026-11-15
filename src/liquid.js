@@ -66,12 +66,12 @@ void main(){
   vec2 off = st.xy; vec2 vel = st.zw;
   float sd = hm.z; float light = 0.45 + sd*1.1;
   if(uFlowP.x >= 0.0){
-    float g = 0.42; float ti = clamp((uFlowP.x - sd*g)/(1.0-g), 0.0, 1.0);
+    float g = 0.5; float ti = clamp((uFlowP.x - sd*g)/(1.0-g), 0.0, 1.0);
     float ei = ti < 0.5 ? 4.0*ti*ti*ti : 1.0 - pow(-2.0*ti+2.0, 3.0)/2.0;
     vec2 dl = uFlowD.xy + hm.xy*uFlowD.zw;
     float r2 = clamp((hm.w-0.85)/0.3, 0.0, 1.0); float arc = sin(3.14159*ti);
     vec2 fq = hm.xy*6.0 + vec2(uTime*0.6, sd*9.0);
-    vec2 tgt = (ei - uFlowP.y)*dl + vec2(-dl.y, dl.x)*arc*0.16*(0.35+r2) + curl(fq)*uFlowP.z*arc;
+    vec2 tgt = (ei - uFlowP.y)*dl + vec2(-dl.y, dl.x)*arc*0.2*(0.1+sd*0.9) + curl(fq)*uFlowP.z*arc;
     vec2 no = mix(off, tgt, 1.0 - pow(0.72, uDt));
     o = vec4(no, (no-off)/max(uDt, 0.25)); return;
   }
@@ -342,7 +342,7 @@ export class LiquidEngine{
   }
   flowTo(rect,dur=800,done,amp=22,arrive){
     if(!this.ready||this.lost||this.destroyed)return false;
-    this.fl={a:{...this.rect},b:rect,t:0,e:0,dur,hold:0,done,amp,arrive};this.lockRect=true;this.dotMin=1;this.streakMul=.4;
+    this.fl={a:{...this.rect},b:rect,t:0,e:0,dur,hold:0,done,amp,arrive};this.lockRect=true;this.dotMin=1;this.streakMul=.3;
     this.presence=this.presenceTarget=this.burst=this.flowing=0;this.touchRelease=0;
     this.opts={...this.opts,interactive:false,ambient:false,restStyle:'particles'};
     this.settle=0;this.stateDirty=true;this.wake();return true;
@@ -353,8 +353,8 @@ export class LiquidEngine{
       F.t=Math.min(1,F.t+Math.min(rawMs,100)/F.dur);
       const x=F.t,e=x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,a=F.a,b=F.b;F.e=e;
       this.rect={x:a.x+(b.x-a.x)*e,y:a.y+(b.y-a.y)*e,w:a.w+(b.w-a.w)*e,h:a.h+(b.h-a.h)*e};
-      // yolda taneler seyrelir (kullanıcı: 'çok yoğun'), varışta hepsi geri gelir
-      this.thin=x<.22?1.1-(x/.22)*.78:x>.7?.32+((x-.7)/.3)*.85:.32;
+      // yolda tanelerin ~%8'i görünür (kullanıcı: 'çok yoğun / çok kalın bir şey gidiyor'), varışta hepsi geri gelir
+      this.thin=x<.3?1.1-(x/.3)*1.02:x>.84?.08+((x-.84)/.16)*1.1:.08;
       if(F.t>=1&&F.arrive){const ar=F.arrive;F.arrive=null;requestAnimationFrame(ar)}
       return;
     }

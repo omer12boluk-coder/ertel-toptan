@@ -346,7 +346,7 @@ export function HeroGate({ onOpen, onDone }) {
     const eng = engRef.current, root = rootRef.current;
     const kf = !!(fx.flow && eng?.ready && !eng.lost && root?.dataset.gl === 'on');
     const fl = !kf && fx.fly ? flySmall(imgRef.current, rootRef.current) : null;
-    if (kf) { const sg = stageRef.current; if (sg) Object.assign(sg.style, { transition: 'none', transform: 'none', opacity: '1' }); eng.puff(); }
+    if (kf) { const sg = stageRef.current; if (sg) Object.assign(sg.style, { transition: 'none', transform: 'none', opacity: '1' }); }
     else engRef.current?.explode();
     setLeaving(true);
     const t0 = performance.now();
@@ -354,27 +354,29 @@ export function HeroGate({ onOpen, onDone }) {
       if (!kf) engRef.current?.stop();
       onOpen();
       whenCalm(() => {
-        if (kf) {
-          const wide = root.clientWidth >= 640, k = kumTarget(eng, wide), cvs = stageRef.current?.querySelector('canvas');
-          if (!k) { setReveal(true); setTimeout(onDone, 420); return; }
-          k.tg.style.opacity = '0';
-          root.style.transition = 'none'; root.style.backgroundColor = 'transparent';
-          const openScene = sceneKur();
-          let fin = false;
-          const end = () => { if (fin) return; fin = true; k.tg.style.opacity = ''; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
-          eng.flowTo(k.rect, wide ? 860 : 800, end, wide ? 30 : 22, openScene); setTimeout(() => { openScene(); end(); }, 2600);
-          // geniş logonun yazı kısmı menüye taşmasın: akışın sonuna doğru kanvas menü logosunun yuvarlağına kırpılır
-          if (wide && cvs) { cvs.style.clipPath = `circle(${Math.hypot(innerWidth, innerHeight)}px at ${k.cx}px ${k.cy}px)`; setTimeout(() => { cvs.style.transition = 'clip-path .4s cubic-bezier(.5,0,.6,1)'; cvs.style.clipPath = `circle(${k.R + 1}px at ${k.cx}px ${k.cy}px)`; }, 520); }
-          return;
-        }
+        // kum: mağaza ÖNCE çizilir (logo o sırada kıpırdamaz → çizim donması görünmez; 15.11: kum gevşerken çizilince 'logo ilk
+        // dağıldığı anda takılıyordu'), telefon rahatlayınca logo gevşer (puff) ve durmadan menüye akar
+        if (kf) { eng.puff(); setTimeout(kumGo, 230); return; }
         flyLand(fl); // önce hedef ölçülür (menü yerindeyken), sonra sahne başlar
         if (fx.scn) sceneIn(!!fl);
         // giriş sayfası uçuş BİTTİKTEN sonra kaldırılır (kaldırma uçuşun ortasında ~0,35 sn takılma yapıyordu); görünmez zaten (reveal)
         setReveal(true); setTimeout(onDone, fl ? 820 : 420);
       });
     };
+    const kumGo = () => {
+    const wide = root.clientWidth >= 640, k = kumTarget(eng, wide), cvs = stageRef.current?.querySelector('canvas');
+    if (!k) { setReveal(true); setTimeout(onDone, 420); return; }
+    k.tg.style.opacity = '0';
+    root.style.transition = 'none'; root.style.backgroundColor = 'transparent';
+    const openScene = sceneKur();
+    let fin = false;
+    const end = () => { if (fin) return; fin = true; k.tg.style.opacity = ''; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
+    eng.flowTo(k.rect, wide ? 900 : 840, end, wide ? 60 : 44, openScene); setTimeout(() => { openScene(); end(); }, 2600);
+    // geniş logonun yazı kısmı menüye taşmasın: akışın sonuna doğru kanvas menü logosunun yuvarlağına kırpılır
+    if (wide && cvs) { cvs.style.clipPath = `circle(${Math.hypot(innerWidth, innerHeight)}px at ${k.cx}px ${k.cy}px)`; setTimeout(() => { cvs.style.transition = 'clip-path .4s cubic-bezier(.5,0,.6,1)'; cvs.style.clipPath = `circle(${k.R + 1}px at ${k.cx}px ${k.cy}px)`; }, 520); }
+    };
     // mağaza ancak dağılma (560 ms) VE kum bittikten sonra çizilir; kumun son karesi boyansın diye bir kare daha beklenir
-    const wait = Math.max(0, (kf ? 380 : 560) - (performance.now() - t0));
+    const wait = Math.max(0, (kf ? 120 : 560) - (performance.now() - t0));
     Promise.all([fl?.done, new Promise((r) => setTimeout(r, wait))]).then(() => requestAnimationFrame(() => requestAnimationFrame(open)));
   };
 
