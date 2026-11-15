@@ -11184,15 +11184,29 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
   html.gs-one.gs1-sicon:not(.isl) .hdr-gs .gs-srch[data-open] .hsearch-box { background: #fff !important; border-color: color-mix(in oklab, var(--accent) 50%, transparent) !important; box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 14%, transparent) !important; }
   html[data-theme="dark"].gs-one.gs1-sicon:not(.isl) .hdr-gs .gs-srch[data-open] .hsearch-box { background: rgb(255 255 255 / .14) !important; }
 }
-/* 16.11.2026 'Simge üstte, yazı altta (hap)' (gs1Lbl 'stack2'): 'Simge + yazı'nın BİREBİR aynısı (seçili beyaz hap, kayan hap animasyonu,
-   renkler: seçili ad siyah + simge mavi, diğerleri silik gri, üstüne gelince gri zemin) — sadece simge üstte, ad + ok altta */
+/* 16.11.2026 'Simge üstte, yazı altta (hap)' (gs1Lbl 'stack2', 2. tur): hap SADECE simgenin etrafında, ad hapın DIŞINDA altta.
+   Seçili hap = orijinal beyaz hap (gölgeli), tek hap sayfalar arasında orijinal kayan hap hızı/eğrisiyle kayar (.gs1-iblob, JS yerini verir);
+   üstüne gelince simgenin etrafında gri hap. Renkler 'Simge + yazı' ile aynı (seçili ad siyah + simge mavi, diğerleri silik gri). */
 @media (min-width: 900px) {
-  html.gs1-lb-stack2 .hdr-gs .gs-nav { gap: 2px; }
-  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b { display: inline-grid !important; grid-template-columns: auto auto; justify-content: center; align-content: center; column-gap: 1px; row-gap: 3px;
-    height: 52px; padding: 0 13px !important; border-radius: 17px; }
-  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b > svg:first-child { display: block !important; grid-column: 1 / -1; justify-self: center; width: 19px !important; height: 19px !important; }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav { gap: 4px; position: relative; }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .flow-ghost { display: none !important; }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b { display: inline-grid !important; grid-template-columns: auto auto; justify-content: center; align-content: start; column-gap: 1px; row-gap: 4px;
+    position: relative; z-index: 1; height: 56px; padding: 5px 8px 0 !important; border-radius: 0; background: transparent !important; box-shadow: none !important; color: var(--muted); }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 4px; width: 46px; height: 28px; margin-left: -23px; border-radius: 14px; background: transparent; transition: background-color .2s; }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav > .gs1-iblob { position: absolute; left: 0; top: 0; z-index: 0; width: 46px; height: 28px; border-radius: 14px; pointer-events: none; background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 4px 14px -6px rgb(15 23 42 / .22); transition: transform .44s cubic-bezier(.3, .7, .25, 1), opacity .2s; }
+  html[data-theme="dark"].gs1-lb-stack2 .hdr-gs .gs-nav > .gs1-iblob, html.gs1-lb-stack2.gs1-t-ink .hdr-gs .gs-nav > .gs1-iblob { background: rgb(255 255 255 / .14); box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset; }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b > svg:first-child { display: block !important; grid-column: 1 / -1; justify-self: center; align-self: center; width: 19px !important; height: 19px !important; margin: 4px 0 1px; }
   html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-l { display: block !important; font: 600 11.5px/1.25 var(--f-body); white-space: nowrap; max-width: none !important; opacity: 1 !important; }
   html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b:not(:has(> .topnav-chev)) .topnav-l { grid-column: 1 / -1; justify-self: center; }
-  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-chev { display: inline-flex !important; align-items: center; margin: 0 !important; padding: 0 !important; width: auto; height: auto; background: none !important; max-width: none !important; }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-chev { display: inline-flex !important; align-items: center; margin: 0 !important; padding: 0 !important; width: auto; height: auto; background: none !important; max-width: none !important; opacity: .6; }
   html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-chev svg { width: 11px !important; height: 11px !important; }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav :is(.topnav-b.on, .hd.open > .topnav-b) { color: var(--fg) !important; }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b.on > svg:first-child { color: var(--lg-blue, var(--accent)); }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .hd.open > .topnav-b:not(.on)::before { background: rgb(118 118 128 / .14); }
+}
+@media (min-width: 900px) and (hover: hover) {
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b:not(.on):hover { color: var(--fg); }
+  html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b:not(.on):hover::before { background: rgb(118 118 128 / .14); }
+  html[data-theme="dark"].gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b:not(.on):hover::before { background: rgb(255 255 255 / .1); }
 }

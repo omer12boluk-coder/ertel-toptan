@@ -728,6 +728,7 @@ function ShellFull() {
   useGs1Search(gs1 && !phoneUI);
   useGs1Toggle(gs1 && !phoneUI && LK.gs1Lbl === 'toggle');
   useGs1IslIc(gs1 && gsIsl && !phoneUI);
+  useGs1IconPill(gs1 && !phoneUI && LK.gs1Lbl === 'stack2');
   // 16.11.2026 'Sadece seçilinin adı' (gs1Lbl 'pick'): Uzayan menünün aynısı ama fareyle uzamaz; adı kapalı simgelerin üstünde ipucu (title)
   const gs1Pick = gs1 && !phoneUI && LK.gs1Lbl === 'pick';
   useEffect(() => {
@@ -1237,6 +1238,25 @@ function useGs1IslIc(on) {
     x.addEventListener('click', go); box.append(x); inr.append(box);
     document.documentElement.style.setProperty('--gs1-icw', '40px');
     return () => { x.removeEventListener('click', go); box.remove(); document.documentElement.style.removeProperty('--gs1-icw'); };
+  }, [on]);
+}
+// 16.11.2026 'Simge üstte, yazı altta (hap)': tek beyaz hap seçili sayfanın SİMGESİNİN etrafında, sayfa değişince CSS geçişiyle kayar
+function useGs1IconPill(on) {
+  useEffect(() => {
+    if (!on) return undefined;
+    const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return undefined;
+    const bl = document.createElement('span'); bl.className = 'gs1-iblob'; bl.setAttribute('aria-hidden', 'true'); nav.prepend(bl);
+    let raf = 0, first = true;
+    const put = () => { raf = 0; const b = nav.querySelector('.topnav-b.on'); if (!b) { bl.style.opacity = '0'; return; }
+      const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
+      const x = r.left - n.left + r.width / 2 - 23, y = r.top - n.top + 4;
+      if (first) { bl.style.transition = 'none'; first = false; requestAnimationFrame(() => { bl.style.transition = ''; }); }
+      bl.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`; bl.style.opacity = '1'; };
+    const go = () => { if (!raf) raf = requestAnimationFrame(put); };
+    go(); const mo = new MutationObserver((ms) => { if (ms.some((m) => m.target !== bl)) go(); });
+    mo.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true });
+    const ro = new ResizeObserver(() => { first = true; go(); }); ro.observe(nav);
+    return () => { mo.disconnect(); ro.disconnect(); cancelAnimationFrame(raf); bl.remove(); };
   }, [on]);
 }
 function useGs1Lbl(mode) {
