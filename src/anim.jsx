@@ -6,13 +6,14 @@
 // bitince açılır ('ok') — yoksa kartlar hareket sonunda bir daha 'gidip yerine oturuyordu'. Bu kutulara will-change VERME (titretti). bn: tek rAF kaydırma dinleyicisi, sadece banner'a satır içi transform/opacity yazar
 // (layout okumaz → takılmaz). 'Hareketi azalt' açıksa hiçbiri yok. Reddedilenler style.css başlığında.
 // DİKKAT: html sınıfları an-<anahtar>; başka öğeye bu adları (an-bn, an-raf…) VERME (an-fly/an-hd çakışıp sayfayı kilitlemişti).
-// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try8').
+// Önizleme hostunda (adında '--' olan ya da ?hareket) sağ altta 'Hareket' paneli: tek tek aç/kapat (bu cihazda, ls 'anim-try9').
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
 import { ls } from './utils.js';
 
 export const ANIMS = [
   ['gfly', 'B1', 'Açılış: logo menüye uçar'],
+  ['gsnd', 'B2', 'Açılış: uçan logo kumdan, ince kumla gider (yeni)'],
   ['gscn', 'C1', 'Açılış: sahne kurulur (menüler, banner, Yeni gelenler)'],
   ['gkum', 'K', 'Açılış: kum menüye akar, mağaza sırayla kurulur (yeni)'],
   ['gwrd', 'D1', 'Giriş: dönen kelime'],
@@ -34,13 +35,14 @@ export const ANIMS = [
 const KEYS = ANIMS.map((a) => a[0]);
 // 14.11.2026 YAYIN: kullanıcının beğendikleri canlıda varsayılan AÇIK (D4 düğme ışığı kapalı). Geri: look.anim.all = 'off'
 // (Tasarım v3 › Görünüm 'Sayfa hareketleri') ya da tek tek look.anim.<k> = 'off'.
-// 15.11.2026 gkum (kum akışı) önizlemede; canlıda varsayılan KAPALI (look.anim.gkum 'on' ile açılır)
-const DEF_ON = KEYS.filter((k) => k !== 'gkum'); // 14.11.2026 gece: D4 düğme ışığı da canlıda AÇIK (kullanıcı)
+// 15.11.2026 gsnd (kumdan logo, ince kumla uçuş) ve gkum (kum akışı) önizlemede; canlıda varsayılan KAPALI (look.anim.gkum 'on' ile açılır)
+const DEF_ON = KEYS.filter((k) => k !== 'gkum' && k !== 'gsnd'); // 14.11.2026 gece: D4 düğme ışığı da canlıda AÇIK (kullanıcı)
 const liveOn = (A, k) => { if (A?.all === 'off') return false; const x = A?.[k]; return x === 'on' || (x !== 'off' && DEF_ON.includes(k)); };
 const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function readTry() { const v = ls.get('anim-try8', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, true])); }
+// önizlemede varsayılan: hepsi açık, eski kum akışı (gkum) kapalı → kumdan uçan logo (gsnd) görünür
+function readTry() { const v = ls.get('anim-try9', null); return v && typeof v === 'object' ? v : Object.fromEntries(KEYS.map((k) => [k, k !== 'gkum'])); }
 
 export function AnimLayer() {
   const A = useStore((s) => s.settings?.look?.anim) || null;
@@ -84,7 +86,7 @@ export function AnimLayer() {
     };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!TRY_HOST) return null;
-  const set = (v) => { ls.set('anim-try8', v); setTry(v); };
+  const set = (v) => { ls.set('anim-try9', v); setTry(v); };
   return <AnimPanel v={tryV} set={set} lite={lite} />;
 }
 
@@ -101,7 +103,7 @@ export function gateFx(look) {
   const lv = ls.get('perf-lite', null); if (look?.perf === 'on' || (look?.perf !== 'off' && lv?.lite && Date.now() - lv.at < 14 * 864e5)) return {};
   const v = TRY_HOST ? readTry() : null; const A = look?.anim || {};
   const on = (k) => (v ? !!v[k] : liveOn(A, k));
-  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum') };
+  return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum'), sand: on('gsnd') };
 }
 export const TRY = TRY_HOST;
 export const isLite = () => typeof document !== 'undefined' && document.documentElement.classList.contains('pf-lite');
