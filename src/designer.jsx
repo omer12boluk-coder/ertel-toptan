@@ -30,6 +30,7 @@ export const GS1_ROWS = [
   ['gs1Lbl', 'Tek satır: menü yazıları', 'Dönen yazı: simge yukarı kayar, adı aşağıdan gelir. Cıva: renkli damla simgeden simgeye akar, adı içinde belirir. Ada: koyu kapsül, üstüne gelince açılıp tüm adları gösterir', [['', 'Simge + yazı'], ['expand', 'Uzayan menü'], ['side', 'Yanında ad'], ['toggle', 'Uzat / kısalt'], ['pill', 'Dönen hap'], ['ink', 'Sade renk + çizgi'], ['stack', 'Simge üstte, yazı altta'], ['text', 'Sadece isim'], ['line', 'İsim + kayan çizgi'], ['spot', 'İsim + spot'], ['roll', 'Dönen yazı'], ['mercury', 'Cıva'], ['island', 'Ada']]],
   ['gs1Drop', 'Tek satır: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; sadece yanındaki aşağı oka basınca açılır, başlığa basmak sayfayı açar', [['', 'Üstüne gelince'], ['click', 'Tıklayınca']]],
   ['gs1Srch', 'Tek satır: arama', 'Basınca kutu, menüyle arasındaki boş yere kadar genişler', [['', 'Kutu'], ['icon', 'Simge']]],
+  ['gs1IslNav', 'Tek satır: Ada içi', 'Aşağı kaydırınca Ada açıksa: arama kutusu kısalır, yanında menünün sadece simgeleri kalır', [['', 'Uzun arama'], ['icons', 'Simgeler + kısa arama']]],
   ['gs1Hov', 'Tek satır: menüde fare', 'Kayan kutu: fareyi izleyen yumuşak zemin. Büyüme: fareye yakın yazı hafifçe büyür', [['', 'Bugünkü'], ['slide', 'Kayan kutu'], ['dock', 'Büyüme']]],
 ];
 export const GS3_PC = [['', 'Şerit, üstte şeffaf'], ['strip', 'Şerit'], ['ada2', 'Sade ada'], ['ada', 'Yüzen kapsül']];
