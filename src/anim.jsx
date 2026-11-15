@@ -104,7 +104,8 @@ export function gateFx(look) {
   const v = TRY_HOST ? readTry() : null; const A = look?.anim || {};
   const on = (k) => (v ? !!v[k] : liveOn(A, k));
   // bnIn: banner giriş animasyonu (kum menüye giderken) '' bugünkü | iris | wipe | light | curtain | blinds — önizlemede ls 'bn-in-try' ile denenir
-  const bt = TRY_HOST ? ls.get('bn-in-try', null) : null;
+  // önizlemede varsayılan B (iris; kullanıcı 15.11 'B'yi deneyelim'), canlıda ayar yoksa bugünkü
+  const bt = TRY_HOST ? ls.get('bn-in-try', 'iris') : null;
   return { fly: on('gfly'), scn: on('gscn'), word: on('gwrd'), num: on('gnum'), shine: on('gshn'), flow: on('gkum'), sand: on('gsnd'), bnIn: (bt ?? A.bnIn) || '' };
 }
 export const TRY = TRY_HOST;
