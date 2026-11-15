@@ -10966,3 +10966,19 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-lb-expand .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.on, .hd.open > .topnav-b) { color: var(--fg); }
   html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on { color: var(--lg-blue) !important; }
 }
+
+/* 15.11.2026 (10) 'Yanında ad' 2. tur: hap ORİJİNAL seçili hap (beyaz, gölgeli, koyu yazı, mavi simge) ve TEK hap kayar (.gs1-sblob, JS izler);
+   düğmelerin kendi zemini yok. Aşağı ok yazıyla AYNI hapın içinde, daha belirgin. */
+@media (min-width: 900px) {
+  html.gs1-lb-side .hdr-gs .gs-nav > .hd, html.gs1-lb-side .hdr-gs .gs-nav > .topnav-b { position: relative; z-index: 1; }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) { background: transparent !important; box-shadow: none !important; color: #1d1d1f !important; }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) > svg:first-child { color: var(--accent); }
+  html.gs1-lb-side .hdr-gs .gs-nav .topnav-b { height: 34px; }
+  html.gs1-lb-side .hdr-gs .gs1-sblob { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: 17px; background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .08), 0 4px 14px -6px rgb(15 23 42 / .22); }
+  html.gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) .topnav-chev { max-width: 18px; margin-left: 5px; opacity: .85; color: #1d1d1f; }
+  html.gs1-lb-side .hdr-gs .gs-nav .topnav-chev svg { width: 14px; height: 14px; stroke-width: 2.4; }
+  html[data-theme="dark"].gs1-lb-side .hdr-gs .gs1-sblob, html.gs1-lb-side.gs1-t-ink .hdr-gs .gs1-sblob { background: rgb(255 255 255 / .14); box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset; }
+  html[data-theme="dark"].gs1-lb-side .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b), html.gs1-lb-side.gs1-t-ink .hdr-gs .gs-nav :is(.topnav-b.xo, .topnav-b.on, .hd.open > .topnav-b) { color: #fff !important; }
+  html[data-theme="dark"].gs1-lb-side .hdr-gs .gs-nav .topnav-chev, html.gs1-lb-side.gs1-t-ink .hdr-gs .gs-nav .topnav-chev { color: #fff !important; }
+}
