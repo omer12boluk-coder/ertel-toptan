@@ -233,7 +233,7 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 9. E-posta: Firebase Auth e-posta alan adı Verify + gönderen noreply@ertelmarket.com; destek@ adresi + alt bilgi + Gmail 'farklı adresten gönder'; info@ spam filtresi.
 
 **Claude'un yapacakları:**
-10. Blaze günü: sahte harcama denemesi düğmesi, Firebase App Check, hızlı kota bekçisi (Monitoring okuma sayısı), gerekirse Cloudflare hız sınırı.
+10. Blaze günü: sahte harcama denemesi düğmesi, Firebase App Check (Enforce'tan ÖNCE: giriş sayfası açıkken App Check kurulmuyor (`__gateWait`) → o sırada okumalar jetonsuz; Enforce'ta giriş sayfası sayıları vb. engellenir, önce düzelt), hızlı kota bekçisi (Monitoring okuma sayısı), gerekirse Cloudflare hız sınırı.
 10b. **Sanal POS bağlanınca demo kartı KALDIR:** `src/paylink.jsx` `DEMO_PAY = false` + `DemoPay` bileşeni ve `DEMO_OTP = '111111'` (3D ekranında 'başarılı' deneme kodu) silinir; müşteri linkine gerçek ödeme bağlanır.
 11. Sipariş e-postasını Resend'den Cloudflare Email Service'e taşı ('en son döneriz').
 12. Resend 'verified' kontrolü.
