@@ -11210,3 +11210,9 @@ html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.
   html.gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b:not(.on):hover::before { background: rgb(118 118 128 / .14); }
   html[data-theme="dark"].gs1-lb-stack2 .hdr-gs .gs-nav .topnav-b:not(.on):hover::before { background: rgb(255 255 255 / .1); }
 }
+/* 16.11.2026 Ada'da arama alanı ayrı gri/beyaz kutu gibi değil, adanın (üst menünün) kendi zemininde: zemin saydam, çerçeve yok;
+   yazarken sadece ince tema rengi çerçeve (nerede yazıldığı belli olsun) */
+@media (min-width: 900px) {
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .gs-srch .hsearch-box, html.gs-one.gs-isl.isl .topbar.hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+  html.gs-one.gs-isl.isl .topbar.hdr-gs .gs-srch .hsearch-box:focus-within { background: transparent !important; border-color: color-mix(in oklab, var(--accent) 38%, transparent) !important; box-shadow: none !important; }
+}
