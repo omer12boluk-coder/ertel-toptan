@@ -223,7 +223,7 @@ function glLand(st) {
   // uzun, savrulan tozlar; taneler giriş kumu kadar ince. 15.11 akşam ('ipeksi değil, çok parçacıklı; biraz hızlansın'): silk = taneler
   // uzun, uca doğru incelen silik iplikler, gecikmeler dar (birlikte akan şerit), görünen tane %28, süre 1,55/1,45 sn ('kum biraz daha yavaş aksın').
   // 'kumların hizasını incelt': yana savrulma (girdap genliği) 30/24 px, iki kol birbirine yakın, iplikler daha ince
-  e.fl.kEnd = 0.3; e.fl.bow = 0.24; e.fl.streams = 1; e.fl.jit = 0.13; e.fl.silk = 1; e.dotMin = 0.34; e.streakMul = 1;
+  e.fl.kEnd = 0.3; e.fl.bow = 0.24; e.fl.streams = 2; e.fl.jit = 0.13; e.fl.silk = 1; e.dotMin = 0.34; e.streakMul = 1;
   // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
   tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
   // aynı görev içinde: WebGL net logoyu çizer, 2B kanvas kalkar → aynı karede değişir

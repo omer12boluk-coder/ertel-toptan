@@ -101,8 +101,9 @@ void main(){
     float bw = uFlowBow; float fsc = 1.0;
     // 15.11 akşam ('3 yoldan gitsin: sağdan, soldan, ortadan'): taneler 3 kola ayrılır — biri bir yana kavis, biri öbür yana, biri düz;
     // üçü de menü logosunda birleşir
-    if(uFlowS > 0.0){ float k3 = floor(fract(sd*7.31)*3.0); bw = uFlowBow*(k3 - 1.0); fsc = 0.55; fq = fq*fsc + vec2(k3*3.7, 0.0); }
-    vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*(0.17*(0.15+r2*0.85)*(1.0-uFlowS) + bw) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
+    // uFlowS 2 = tek kol (15.11 akşam 'akan kumu teke indirelim'): hepsi aynı yumuşak kavisten
+    if(uFlowS > 0.0){ float k3 = uFlowS > 1.5 ? 0.0 : floor(fract(sd*7.31)*3.0); bw = uFlowS > 1.5 ? uFlowBow*0.6 : uFlowBow*(k3 - 1.0); fsc = 0.55; fq = fq*fsc + vec2(k3*3.7, 0.0); }
+    vec2 tgt = ei*dl + vec2(-dl.y, dl.x)*arc*(0.17*(0.15+r2*0.85)*(1.0-min(uFlowS, 1.0)) + bw) + (curl(fq) + 0.5*curl(fq*2.3 + 7.1))*uFlowP.y*arc;
     vec2 no = mix(off, tgt, 1.0 - pow(0.78, uDt));
     o = vec4(no, (no-off)/max(uDt, 0.25)); return;
   }
