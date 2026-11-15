@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick'].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick'].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   // useLayoutEffect + son genişlik cihazda saklı (ls gs1-x): menü ilk karede doğru ölçüde çizilir → giriş sayfasından uçan logo
   // menü logosunun GERÇEK yerine iner (ayarlar geç gelince menü 100 px kayıyordu, logo boşluğa iniyordu)
@@ -729,6 +729,7 @@ function ShellFull() {
   useGs1Toggle(gs1 && !phoneUI && LK.gs1Lbl === 'toggle');
   useGs1IslIc(gs1 && gsIsl && !phoneUI);
   useGs1IconPill(gs1 && !phoneUI && LK.gs1Lbl === 'stack2');
+  useGs1Tip(gs1 && !phoneUI && LK.gs1Lbl === 'dock');
   // 16.11.2026 'Sadece seçilinin adı' (gs1Lbl 'pick'): Uzayan menünün aynısı ama fareyle uzamaz; adı kapalı simgelerin üstünde ipucu (title)
   const gs1Pick = gs1 && !phoneUI && LK.gs1Lbl === 'pick';
   useEffect(() => {
@@ -1166,10 +1167,10 @@ function useGs1Search(on) {
       // (html gs1-ss) → aramaya daha çok yer; kapanınca yazılar geri gelir. Kısa hâlin genişliği bir anlığına geçişsiz ölçülür.
       const H = document.documentElement.classList; const lb = [...H].find((c) => c.startsWith('gs1-lb-'));
       const ss = !lb || (lb === 'gs1-lb-toggle' && !H.contains('gs1-tg-s'));
-      let need, off = 0;
+      let need, off = 0; const fix = ss || lb === 'gs1-lb-dock'; // Dock: yazı yok ama simgeler yine yerinde kalsın
       // 16.11.2026: menü öğeleri YERİNDE kalır — arama büyürken ortalı menü sola kayıyordu ('ufak tık'). Menünün o anki sol payı sabitlenir
       // (sola yaslı + aynı pay), arama sadece sağdaki boşluğa büyür; yazılar kapanırken simgeler soldan yerinde durur. Kapanınca ortalamaya döner.
-      if (ss) {
+      if (fix) {
         clearTimeout(nT); const ks = [...nav.children].filter((k) => k.offsetWidth && getComputedStyle(k).position !== 'absolute');
         if (ks.length && !nav.style.paddingLeft) { const nr = nav.getBoundingClientRect(); off = ks[0].getBoundingClientRect().left - nr.left; nav.style.justifyContent = 'flex-start'; nav.style.paddingLeft = off.toFixed(2) + 'px'; }
         else off = parseFloat(nav.style.paddingLeft) || 0;
@@ -1241,6 +1242,47 @@ function useGs1IslIc(on) {
   }, [on]);
 }
 // 16.11.2026 'Simge üstte, yazı altta (hap)': tek beyaz hap seçili sayfanın SİMGESİNİN etrafında, sayfa değişince CSS geçişiyle kayar
+// 16.11.2026 Dock (gs1Lbl 'dock'): menüde sadece simgeler (seçili = orijinal kayan hap), ok yok; ad sadece üstüne gelince
+// simgenin altında küçük etikette. Tek etiket: simgeden simgeye geçerken kayarak yer + yazı değiştirir (yeniden belirmez).
+// Açılır menü açılınca etiket söner (panelin üstüne binmesin).
+function useGs1Tip(on) {
+  useEffect(() => {
+    if (!on) return undefined;
+    const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return undefined;
+    const tip = document.createElement('div'); tip.className = 'gs1-tip'; tip.setAttribute('aria-hidden', 'true');
+    const tx = document.createElement('span'); tip.append(tx); document.body.append(tip);
+    const tray = document.createElement('span'); tray.className = 'gs1-tray'; tray.setAttribute('aria-hidden', 'true'); nav.prepend(tray);
+    const fit = () => { const bs = [...nav.querySelectorAll('.topnav-b')].filter((b) => b.offsetWidth); if (!bs.length) { tray.style.width = '0'; return; }
+      const n = nav.getBoundingClientRect(), a = bs[0].getBoundingClientRect(), z = bs.at(-1).getBoundingClientRect();
+      Object.assign(tray.style, { width: (z.right - a.left + 6) + 'px', height: (a.height + 6) + 'px', transform: `translate(${a.left - n.left - 3}px, ${a.top - n.top - 3}px)` }); };
+    fit(); const ro = new ResizeObserver(fit); ro.observe(nav); nav.querySelectorAll('.topnav-b').forEach((b) => ro.observe(b));
+    let cur = null, tIn = 0, tOut = 0, vis = false;
+    const nameOf = (b) => (b.querySelector('.topnav-l')?.textContent || '').trim();
+    nav.querySelectorAll('.topnav-b').forEach((b) => { const n = nameOf(b); if (n) b.setAttribute('aria-label', n); });
+    const place = (b, glide) => {
+      const r = b.getBoundingClientRect(); tx.textContent = nameOf(b);
+      tip.style.transition = glide ? '' : 'none';
+      const w = tip.offsetWidth; const x = Math.round(r.left + r.width / 2 - w / 2), y = Math.round(r.bottom + 9);
+      tip.style.transform = `translate(${x}px, ${y}px)`;
+      if (!glide) { void tip.offsetWidth; tip.style.transition = ''; }
+    };
+    const dropOpen = () => !!nav.querySelector('.hd.open');
+    const show = (b) => { if (dropOpen()) return; place(b, vis); vis = true; tip.classList.add('on'); };
+    const hide = () => { vis = false; tip.classList.remove('on'); };
+    const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b) || b === cur) return;
+      cur = b; clearTimeout(tOut); clearTimeout(tIn);
+      if (vis) show(b); else tIn = setTimeout(() => show(b), 140); };
+    const out = (e) => { const to = e.relatedTarget; if (to && to.closest?.('.topnav-b') && nav.contains(to)) return;
+      cur = null; clearTimeout(tIn); clearTimeout(tOut); tOut = setTimeout(hide, 90); };
+    const down = () => { clearTimeout(tIn); hide(); };
+    nav.addEventListener('mouseover', over); nav.addEventListener('mouseout', out); nav.addEventListener('pointerdown', down);
+    const mo = new MutationObserver(() => { if (vis && dropOpen()) hide(); });
+    mo.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    const sc = () => { clearTimeout(tIn); hide(); }; addEventListener('scroll', sc, { passive: true });
+    return () => { nav.removeEventListener('mouseover', over); nav.removeEventListener('mouseout', out); nav.removeEventListener('pointerdown', down);
+      mo.disconnect(); ro.disconnect(); removeEventListener('scroll', sc); clearTimeout(tIn); clearTimeout(tOut); tip.remove(); tray.remove(); };
+  }, [on]);
+}
 function useGs1IconPill(on) {
   useEffect(() => {
     if (!on) return undefined;
