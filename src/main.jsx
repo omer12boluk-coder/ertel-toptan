@@ -723,6 +723,7 @@ function ShellFull() {
   }, [gs1Cls, heroW]);
   useGs1Top(gs1 && !phoneUI && LK.gs1Top === 'clear', tab);
   useGs1Search(gs1 && !phoneUI);
+  useGs1Ico(gs1 && !phoneUI && LK.gs1Lbl === 'icon');
   useGs1Hover(gs1 && !phoneUI && (LK.gs1Hov === 'slide' || LK.gs1Hov === 'dock') ? LK.gs1Hov : '');
   const lgDisc = LK.logoBg === 'disc';
   useEffect(() => { document.documentElement.classList.toggle('lg-disc', lgDisc); }, [lgDisc]);
@@ -1135,6 +1136,20 @@ function useGs1Search(on) {
     const close = (e) => { const sr = e.target.closest?.('.gs-srch'); if (!sr) return; t = setTimeout(() => { if (!sr.contains(document.activeElement)) sr.style.removeProperty('--gs1-sw'); }, 200); };
     h.addEventListener('focusin', open); h.addEventListener('focusout', close);
     return () => { h.removeEventListener('focusin', open); h.removeEventListener('focusout', close); clearTimeout(t); h.querySelector('.gs-srch')?.style.removeProperty('--gs1-sw'); };
+  }, [on]);
+}
+// 15.11.2026 'Sadece simge': ad, fare bir simgede kısa süre DURUNCA açılır (üstünden geçerken açılmaz → titreme yok);
+// başka simgeye geçince eskisi kapanır, menüden çıkınca biraz bekleyip kapanır
+function useGs1Ico(on) {
+  useEffect(() => {
+    if (!on) return undefined;
+    const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return undefined;
+    let t = 0, out = 0, cur = null;
+    const set = (b) => { if (cur === b) return; cur?.classList.remove('xo'); cur = b; b?.classList.add('xo'); };
+    const over = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); clearTimeout(t); if (b === cur) return; t = setTimeout(() => set(b), cur ? 90 : 140); };
+    const leave = () => { clearTimeout(t); out = setTimeout(() => set(null), 320); };
+    nav.addEventListener('pointerover', over); nav.addEventListener('pointerleave', leave);
+    return () => { nav.removeEventListener('pointerover', over); nav.removeEventListener('pointerleave', leave); clearTimeout(t); clearTimeout(out); set(null); };
   }, [on]);
 }
 // 15.11.2026 Tek satır üst menü fare efektleri: 'slide' = menü yazılarının arkasında fareyi izleyen yumuşak kutu; 'dock' = fareye yakın hap hafifçe büyür

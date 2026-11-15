@@ -10786,10 +10786,18 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs-one.gs1-under.gs1-t-smoke .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, rgb(244 245 248 / .8), rgb(222 224 230 / .45)) !important; }
   html.gs-one.gs1-under.gs1-t-tint .topbar.hdr-gs .topbar-in { background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 6%, rgb(255 255 255 / .8)), color-mix(in oklab, var(--accent) 14%, rgb(255 255 255 / .38))) !important; }
   html.gs-one.gs1-under[data-theme="dark"] .topbar.hdr-gs .topbar-in::before { opacity: .2; }
-  /* 'Sadece simge': menüde yazılar gizli, üstüne gelince (ya da açılır menüsü açıkken) yazı yana açılır */
-  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b { gap: 0; padding: 0 10px; }
+  /* 'Sadece simge' (15.11 2. tur): simgeler büyük, logonun yanından SOLA yaslı (ortalı değil); ad yalnızca fare bir simgede DURUNCA
+     (main.jsx useGs1Ico → .xo) yumuşakça sağa açılır, solundakiler hiç kıpırdamaz; geçişte bir önceki aynı anda kapanır. */
+  html.gs-one.gs1-ico .hdr-gs .gs-nav { justify-content: flex-start; gap: 6px; padding-left: 14px; margin-left: 4px; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav::after { content: ""; position: absolute; left: 0; top: 50%; height: 24px; width: 1px; transform: translateY(-50%); background: rgb(15 23 42 / .1); }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b { gap: 0; height: 42px; min-width: 42px; padding: 0 11px; border-radius: 21px; justify-content: flex-start; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 20px !important; height: 20px !important; flex: none; }
   html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-l, .topnav-chev) { display: inline-flex; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; margin-left: 0;
-    transition: max-width .34s cubic-bezier(.22, .8, .24, 1), opacity .22s ease, margin-left .34s cubic-bezier(.22, .8, .24, 1); }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-b:hover, .hd.open > .topnav-b, .topnav-b:focus-visible) :is(.topnav-l, .topnav-chev) { max-width: 140px; opacity: 1; margin-left: 6px; }
-  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-b:hover, .hd.open > .topnav-b) .topnav-chev { margin-left: 4px; }
+    transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .34s ease; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-l { font-size: 14px; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) :is(.topnav-l, .topnav-chev) { max-width: 150px; opacity: 1; margin-left: 8px; transition: max-width .42s cubic-bezier(.32, .72, 0, 1), margin-left .42s cubic-bezier(.32, .72, 0, 1), opacity .26s ease .08s; }
+  html.gs-one.gs1-ico .hdr-gs .gs-nav :is(.topnav-b.xo, .hd.open > .topnav-b) .topnav-chev { margin-left: 4px; }
+  html[data-theme="dark"].gs-one.gs1-ico .hdr-gs .gs-nav::after, html.gs-one.gs1-ico.gs1-t-ink .hdr-gs .gs-nav::after { background: rgb(255 255 255 / .14); }
+  @media (max-width: 1199px) { html.gs-one.gs1-ico .hdr-gs .gs-nav .topnav-b > svg:first-child { display: block; } }
+}
 }
