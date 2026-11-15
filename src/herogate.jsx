@@ -133,25 +133,35 @@ function killMark() {
   try { e.stop(); e.gl?.getExtension('WEBGL_lose_context')?.loseContext(); } catch {}
   e.canvas?.remove();
 }
-function prepMark(dark) {
-  const im = markImg; if (markEng || !im?.complete || !im.naturalWidth) return;
+// hazırlık PARÇA PARÇA ve büyük logonun girişi BİTTİKTEN sonra yapılır (her adım ayrı boş anda): 1,4 sn'de tek seferde kurmak
+// telefonda büyük logo tam oluşurken ~0,1 sn takılma yapıyordu (kullanıcı fark etti). gl.finish() YOK (bekletir).
+function prepMark(dark, step) {
+  const im = markImg; if (!im?.complete || !im.naturalWidth) return false;
   const mob = innerWidth < 640, z = mob ? 60 : 80;
-  const c = document.createElement('canvas'); c.className = 'eh-sand'; c.setAttribute('aria-hidden', 'true');
-  Object.assign(c.style, { left: '0', top: '0', visibility: 'hidden' });
-  document.body.appendChild(c);
   try {
-    const e = new LiquidEngine(c, { interactive: false, strength: 1.1, radius: 200, density: 1, dotSize: 1, spread: 1, turbulence: 1, liquid: 1, streaks: true,
-      restStyle: 'image', returnSpeed: 1, ambient: false, ambientIntensity: 0, speed: 1, intro: false, reducedMotion: false, fullDpr: true, bg: dark ? [0.04, 0.05, 0.07] : [1, 1, 1] }, () => killMark());
-    markEng = e;
-    // ızgara logonun ~2,6 katı: taneler giriş kumu kadar ince (~0,75 px), yolda seyrelince de yeterince tane kalsın
-    e.setImage(im, Math.round(z * 2.6));
-    const [W, H] = markSize(e, innerHeight / 2 + z); e.resize(W, H, { x: W / 2 - z / 2, y: H / 2 - z / 2, w: z, h: z });
+    if (step === 0) {
+      if (markEng) return true;
+      const c = document.createElement('canvas'); c.className = 'eh-sand'; c.setAttribute('aria-hidden', 'true');
+      Object.assign(c.style, { left: '0', top: '0', visibility: 'hidden' });
+      document.body.appendChild(c);
+      markEng = new LiquidEngine(c, { interactive: false, strength: 1.1, radius: 200, density: 1, dotSize: 1, spread: 1, turbulence: 1, liquid: 1, streaks: true,
+        restStyle: 'image', returnSpeed: 1, ambient: false, ambientIntensity: 0, speed: 1, intro: false, reducedMotion: false, fullDpr: true, bg: dark ? [0.04, 0.05, 0.07] : [1, 1, 1] }, () => killMark());
+      return true;
+    }
+    const e = markEng; if (!e) return false;
+    if (step === 1) {
+      // ızgara logonun ~2,6 katı: taneler giriş kumu kadar ince (~0,75 px), yolda seyrelince de yeterince tane kalsın
+      e.setImage(im, Math.round(z * 2.6));
+      return true;
+    }
     // ısıtma: tüm çizim programları (akış, tane hesabı, taneler) bir kez gizlide çalıştırılır — telefon GPU'su ilk kullanımda
     // programı hazırlarken uçuşun ilk karesi takılıyordu
+    const [W, H] = markSize(e, innerHeight / 2 + z); e.resize(W, H, { x: W / 2 - z / 2, y: H / 2 - z / 2, w: z, h: z });
     e.fl = { a: { ...e.rect }, b: { ...e.rect }, t: 0.5, dur: 1, hold: 0, amp: 0, thin: 0.5, dx: 1, dy: 0 };
     e.stepFlow(1); e.stepSim(1); e.stateDirty = true; e.draw();
-    e.fl = null; e.clearState(); e.clearFlow(); e.draw(); e.gl.finish();
-  } catch { killMark(); }
+    e.fl = null; e.clearState(); e.clearFlow(); e.draw();
+    return true;
+  } catch { killMark(); return false; }
 }
 // kanvas sadece akışın geçtiği alan kadar: ekranın üstünden logonun altına (+ pay), tam genişlik. Tam ekran kanvas her karede
 // bütün ekranı çiziyordu (telefonda ağır); 100vh de iPhone Safari'de adres çubuğu payı kadar uzun olduğundan kanvas dikeyde
@@ -356,10 +366,23 @@ export function HeroGate({ onOpen, onDone }) {
   const sandOn = !!(fx.fly && fx.sand);
   useEffect(() => {
     if (!sandOn) return undefined;
-    let t = 0, id = 0, n = 0;
+    // büyük logonun girişi bitip durulana kadar bekle (giriş motoru introT 1 + 0,6 sn), sonra 3 adım, her biri ayrı boş anda
+    let t = 0, id = 0, step = 0, calm = 0, n = 0; const t0 = performance.now();
     const idle = window.requestIdleCallback || ((f) => setTimeout(f, 60));
-    const tryPrep = () => { if (goneRef.current) return; if (markImg?.complete && markImg.naturalWidth) { prepMark(darkRef.current); return; } if (n++ < 20) t = setTimeout(tryPrep, 400); };
-    t = setTimeout(() => { id = idle(tryPrep, { timeout: 1500 }); }, 1400);
+    const next = () => { t = setTimeout(() => { id = idle(run, { timeout: 1200 }); }, step ? 120 : 0); };
+    const run = () => {
+      if (goneRef.current) return;
+      if (!prepMark(darkRef.current, step)) { if (step === 0 && n++ < 20) t = setTimeout(run, 400); return; }
+      if (++step < 3) next();
+    };
+    const wait = () => {
+      if (goneRef.current) return;
+      const g = engRef.current;
+      calm = g && (!g.ready || g.introT < 1) ? 0 : calm + 1;
+      // en geç 6 sn (giriş normalde 3,2 sn'de biter)
+      if (calm >= 3 || performance.now() - t0 > 6000) next(); else t = setTimeout(wait, 200);
+    };
+    t = setTimeout(wait, 1200);
     return () => { clearTimeout(t); window.cancelIdleCallback?.(id); if (!goneRef.current) killMark(); };
   }, [sandOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
