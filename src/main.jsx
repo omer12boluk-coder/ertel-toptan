@@ -1174,17 +1174,23 @@ function useGs1Lbl(mode) {
     if (mode === 'island' || mode === 'expand') {
       const measure = () => nav.querySelectorAll('.topnav-b').forEach((b) => { const l = b.querySelector('.topnav-l'); if (l) { b.style.setProperty('--w', Math.ceil(Math.max(42, l.scrollWidth + 20)) + 'px'); b.style.setProperty('--lw', Math.ceil(l.scrollWidth + 1) + 'px'); } });
       measure(); document.fonts?.ready?.then(measure);
-      const arm = () => { clearTimeout(t); t = setTimeout(() => { if (!fits()) return; nav.classList.add('xo-all'); guardArm(); }, mode === 'expand' ? 240 : 60); };
+      let hold = false, snapT = 0;
+      const arm = () => { clearTimeout(t); if (hold) return; t = setTimeout(() => { if (!fits()) return; nav.classList.add('xo-all'); guardArm(); }, mode === 'expand' ? 240 : 60); };
       // sığmıyorsa adlar açılmaz (dar ekranda soldaki 'Ana sayfa' logonun altına kayıyordu): gereken = şimdiki + kapalı adların genişliği
       const fits = () => gs1NavNeed(nav) <= nav.clientWidth - 2;
       const en = () => { clearTimeout(out); arm(); };
       // fare durmadan uzamaz (simgeye giderken yolda açılıp yerinden kaydırmasın); basınca bekleyen uzama iptal
       const mv = () => { if (!nav.classList.contains('xo-all')) arm(); };
-      const pd = () => clearTimeout(t);
+      // kapalıyken bir düğmeye basınca: uzama iptal + fare menüden çıkana kadar bir daha uzamaz; seçili ad değişimi ANINDA olur
+      // (eski seçilinin adı kapanırken yenisi açılıp menüyü iki yöne oynatıyordu)
+      const pd = (e) => { clearTimeout(t); if (nav.classList.contains('xo-all') || !e.target.closest?.('.topnav-b')) return; hold = true;
+        nav.classList.add('gs1-snap'); clearTimeout(snapT); snapT = setTimeout(() => nav.classList.remove('gs1-snap'), 700); };
+      const pl = () => { hold = false; };
+      nav.addEventListener('pointerleave', pl);
       nav.addEventListener('pointermove', mv); nav.addEventListener('pointerdown', pd);
       const lv = () => { clearTimeout(t); out = setTimeout(() => { if (!document.querySelector('.hd-p')) { nav.classList.remove('xo-all'); } else out = setTimeout(lv, 300); }, 260); };
       nav.addEventListener('pointerenter', en); nav.addEventListener('pointerleave', lv);
-      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); guardOff(); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
+      return () => { nav.removeEventListener('pointerenter', en); nav.removeEventListener('pointerleave', lv); nav.removeEventListener('pointermove', mv); nav.removeEventListener('pointerdown', pd); nav.removeEventListener('pointerleave', pl); clearTimeout(snapT); nav.classList.remove('gs1-snap'); guardOff(); clearTimeout(t); clearTimeout(out); nav.classList.remove('xo-all'); };
     }
     if (mode === 'line' || mode === 'spot') {
       // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir

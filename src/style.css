@@ -11018,3 +11018,4 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on { color: var(--fg) !important; }
   html.gs1-lb-expand .hdr-gs .gs-nav .topnav-b.on > svg:first-child { color: var(--lg-blue); }
 }
+html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap, html.gs1-lb-expand .hdr-gs .gs-nav.gs1-snap * { transition: none !important; }
