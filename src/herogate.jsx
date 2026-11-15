@@ -137,7 +137,7 @@ function prepMark(dark) {
   const im = markImg; if (markEng || !im?.complete || !im.naturalWidth) return;
   const mob = innerWidth < 640, z = mob ? 60 : 80;
   const c = document.createElement('canvas'); c.className = 'eh-sand'; c.setAttribute('aria-hidden', 'true');
-  Object.assign(c.style, { left: '0', top: '0', width: '100vw', height: '100vh', visibility: 'hidden' });
+  Object.assign(c.style, { left: '0', top: '0', visibility: 'hidden' });
   document.body.appendChild(c);
   try {
     const e = new LiquidEngine(c, { interactive: false, strength: 1.1, radius: 200, density: 1, dotSize: 1, spread: 1, turbulence: 1, liquid: 1, streaks: true,
@@ -145,7 +145,7 @@ function prepMark(dark) {
     markEng = e;
     // ızgara logonun ~2,6 katı: taneler giriş kumu kadar ince (~0,75 px), yolda seyrelince de yeterince tane kalsın
     e.setImage(im, Math.round(z * 2.6));
-    e.resize(innerWidth, innerHeight, { x: innerWidth / 2 - z / 2, y: innerHeight / 2 - z / 2, w: z, h: z });
+    const [W, H] = markSize(e, innerHeight / 2 + z); e.resize(W, H, { x: W / 2 - z / 2, y: H / 2 - z / 2, w: z, h: z });
     // ısıtma: tüm çizim programları (akış, tane hesabı, taneler) bir kez gizlide çalıştırılır — telefon GPU'su ilk kullanımda
     // programı hazırlarken uçuşun ilk karesi takılıyordu
     e.fl = { a: { ...e.rect }, b: { ...e.rect }, t: 0.5, dur: 1, hold: 0, amp: 0, thin: 0.5, dx: 1, dy: 0 };
@@ -153,9 +153,17 @@ function prepMark(dark) {
     e.fl = null; e.clearState(); e.clearFlow(); e.draw(); e.gl.finish();
   } catch { killMark(); }
 }
+// kanvas sadece akışın geçtiği alan kadar: ekranın üstünden logonun altına (+ pay), tam genişlik. Tam ekran kanvas her karede
+// bütün ekranı çiziyordu (telefonda ağır); 100vh de iPhone Safari'de adres çubuğu payı kadar uzun olduğundan kanvas dikeyde
+// gerilip logo 'aşağı kayarak hizalanıyordu'. Ölçüler px; kanvas ekranın sol üstünde, konumlar ekranla aynı.
+function markSize(e, bottom) {
+  const W = innerWidth, H = Math.min(innerHeight, Math.ceil(bottom + 140));
+  Object.assign(e.canvas.style, { width: W + 'px', height: H + 'px' });
+  return [W, H];
+}
 function markShow(st) {
   const e = markEng; if (!st || !e?.ready || e.lost || !st.wantGl) return false;
-  e.resize(innerWidth, innerHeight, { x: st.x, y: st.y, w: st.z, h: st.z });
+  const [W, H] = markSize(e, st.y + st.z); e.resize(W, H, { x: st.x, y: st.y, w: st.z, h: st.z });
   e.canvas.style.visibility = 'visible'; st.el.style.visibility = 'hidden'; st.gl = true;
   return true;
 }
@@ -165,7 +173,7 @@ function glLand(st) {
   if (!e?.ready || e.lost || !tg || !st) return 0;
   const r0 = tg.getBoundingClientRect(), cs = getComputedStyle(tg), pl = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0), pt = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0);
   const tw = r0.width - 2 * pl, wide = innerWidth >= 640, dur = wide ? 1400 : 1300;
-  if (!st.gl) e.resize(innerWidth, innerHeight, { x: st.x, y: st.y, w: st.z, h: st.z });
+  if (!st.gl) { const [W, H] = markSize(e, st.y + st.z); e.resize(W, H, { x: st.x, y: st.y, w: st.z, h: st.z }); }
   let fin = false;
   const end = () => { if (fin) return; fin = true; tg.style.opacity = ''; killMark(); };
   // 15.11 (kullanıcı: 'çok kalın ve dümdüz akıyor'): yolda tanelerin sadece %12'si görünür (varışta %20), girdap genliği 2,5 katı
