@@ -21,35 +21,44 @@ export function Typewriter({ text, speed = 55, cursor = '|', className }) {
   return (
     <span className={className}>
       {text.slice(0, n)}
-      <span className="as-cursor" aria-hidden="true">{cursor}</span>
+      {n < text.length && <span className="as-cursor" aria-hidden="true">{cursor}</span>}
     </span>
   );
 }
 
+// Sağ bölme: koyu "sahne" (banner tarzı). Görseller koyu zeminde temiz kesimli banner resimleri.
+// sahne = tek büyük ürün, kenardan taşar, arkada mavi ışık hüzmeleri + toz | kolaj = üç ürün derinlikli
 const SIDE = {
-  login: { img: '/bn/sugon.webp', mul: false, q: 'Tekrar hoş geldiniz. Tezgâhınız sizi bekliyor.', a: 'ERTEL GSM · Tahtakale' },
-  signup: { img: '/bn/tezgah.webp', mul: false, q: 'Üye olun; adresiniz, faturanız ve siparişleriniz hep elinizin altında.', a: 'ERTEL GSM · Tahtakale' },
+  login: { q: 'Tekrar hoş geldiniz. Tezgâhınız sizi bekliyor.', a: 'ERTEL GSM · Tahtakale',
+    hero: '/bn/film-q861-on.webp', layers: ['/bn/sm4.webp', '/bn/film-q861-on.webp', '/bn/da07.webp'] },
+  signup: { q: 'Üye olun; adresiniz, faturanız ve siparişleriniz hep elinizin altında.', a: 'ERTEL GSM · Tahtakale',
+    hero: '/bn/sm4.webp', layers: ['/bn/sm4.webp', '/bn/sugon.webp', '/bn/v1s.webp'] },
 };
+const asTry = () => { try { return localStorage.getItem('as-try') || 'sahne'; } catch { return 'sahne'; } };
 
 // view: AuthForm'un o anki görünümü (login | signup | reset | bayi …)
 export function AuthSplit({ view, children }) {
   const k = view === 'signup' ? 'signup' : 'login';
   const c = SIDE[k];
+  const v = asTry();
   return (
-    <div className={'as-wrap as-v-' + ((typeof localStorage !== 'undefined' && localStorage.getItem('as-try')) || 'gri')}>
+    <div className={'as-wrap as-v-' + v}>
       <div className="as-form">
         <div className="as-form-in">{children}</div>
       </div>
       <aside className="as-side" aria-hidden="true">
         <div className="as-stick">
-        <div key={k} className="as-art">
-          <img src={c.img} alt="" className={'as-img' + (c.mul ? ' mul' : '')} decoding="async" />
-          <span className="as-shd" />
-        </div>
-        <blockquote className="as-q">
-          <p>“<Typewriter key={c.q} text={c.q} />”</p>
-          <cite>— {c.a}</cite>
-        </blockquote>
+          <span className="as-beam b1" /><span className="as-beam b2" /><span className="as-dust" />
+          <div key={k} className={'as-art as-' + k}>
+            {v === 'kolaj'
+              ? c.layers.map((src, i) => <img key={i} src={src} alt="" className={'as-ly l' + i} decoding="async" />)
+              : <img src={c.hero} alt="" className="as-hero" decoding="async" />}
+          </div>
+          <span className="as-fade" />
+          <blockquote className="as-q">
+            <p>“<Typewriter key={c.q} text={c.q} />”</p>
+            <cite>— {c.a}</cite>
+          </blockquote>
         </div>
       </aside>
     </div>
