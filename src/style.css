@@ -11439,3 +11439,13 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   .as-form .auth-view.v-signup > .fine.center:not(.auth-sw):not(.auth-legal) { display: none; }
   .as-form .auth-view.v-signup .soc-btn { min-height: 0; padding-top: 9px; padding-bottom: 9px; }
 }
+/* 16.11 (4): tam boy değil — geniş kart, sağ/sol eşit boşluk, altta da aynı boşluk */
+.as-wrap { --as-gap: 32px; width: min(calc(100vw - 2 * var(--as-gap)), 1680px); margin-left: 50%; transform: translateX(-50%);
+  min-height: calc(100svh - var(--as-top, 96px) - var(--as-gap)); border: 1px solid var(--line); border-radius: 24px; }
+@media (min-width: 900px) { .as-page { margin-bottom: calc(var(--as-gap, 32px) - 40px); } }
+@media (max-width: 899px) { .as-wrap { --as-gap: 10px; border-radius: 18px; min-height: 0; } }
+@media (min-width: 900px) and (max-height: 760px) {
+  .as-form { padding-top: 12px; padding-bottom: 12px; }
+  .as-form .auth-view.v-signup { row-gap: 8px; }
+  .as-form .auth-view.v-signup .auth-h { font-size: 22px; }
+}
