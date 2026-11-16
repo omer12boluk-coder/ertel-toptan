@@ -26,6 +26,7 @@ import { feat } from './extras.jsx';
 import { OrderRate, useRateable } from './reviews.jsx';
 import { sfx } from './sfx.js';
 import { SoundToggle } from './soundui.jsx';
+import { AuthSplit, authSplitOn } from './authsplit.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -739,9 +740,10 @@ async function bayiLogin(A, u, pw) {
   if (!bayiB) { bayiB = new FirebaseBackend(window.FIREBASE_CONFIG); await bayiB.init(); }
   await bayiB.login(u, pw, true);
 }
-function AuthForm({ onDone, compact }) {
+function AuthForm({ onDone, compact, start, onView }) {
   const { api: A, settings: S } = useStore();
-  const [view, setView] = useState('login'); // login | signup | reset | resetSent | verifySent | unverified
+  const [view, setView] = useState(start || 'login');
+  useEffect(() => { onView?.(view); }, [view]); // login | signup | reset | resetSent | verifySent | unverified
   const [f, setF] = useState({ id: '', email: '', uname: '', pw: '', pw2: '', name: '', phone: '' });
   const [err, setErr] = useState('');
   const [sentTo, setSentTo] = useState('');
@@ -923,6 +925,8 @@ function AuthSheet({ onClose }) {
 export function Account() {
   const member = useStore((s) => s.member);
   const S = useStore((s) => s.settings);
+  const acct = useStore((s) => s.acct);
+  const [aView, setAView] = useState(acct === 'signup' ? 'signup' : 'login');
   // çok yakında: üyelik hazır ama müşteriye henüz açık değil (Ayarlar > Online mağaza)
   if (!member && soon(S, 'accountsSoon')) return (
     <div className="page narrow acct">
@@ -933,6 +937,12 @@ export function Account() {
         <p className="muted">Üye olup adres ve fatura bilgilerinizi kaydedebilecek, siparişlerinizi buradan takip edebileceksiniz. Şimdilik ürünleri sepete ekleyip WhatsApp’tan gönderebilirsiniz.</p>
         <button className="btn primary" onClick={() => go('katalog')}><Icon n="grid" s={16} />Ürünlere göz at</button>
       </div>
+    </div>
+  );
+  if (!member && authSplitOn(S)) return (
+    <div className="page as-page">
+      <AuthSplit view={aView}><AuthForm start={acct === 'signup' ? 'signup' : undefined} onView={setAView} /></AuthSplit>
+      <div className="as-local"><LocalOrders /></div>
     </div>
   );
   if (!member) return (
