@@ -57,7 +57,14 @@ export function AuthSplit({ view, children }) {
   useLayoutEffect(() => {
     const el = wrapRef.current; if (!el) return;
     let lastW = 0;
-    const fit = () => { if (innerWidth === lastW) return; lastW = innerWidth; el.style.setProperty('--as-top', Math.max(0, Math.round(el.getBoundingClientRect().top + scrollY)) + 'px'); };
+    // 17.11.2026: alttaki boşluk = üst menü ile kart arasındaki boşluk (--as-gb)
+    const fit = () => {
+      if (innerWidth === lastW) return; lastW = innerWidth;
+      const top = el.getBoundingClientRect().top;
+      const hb = document.querySelector('.topbar')?.getBoundingClientRect().bottom || 0;
+      el.style.setProperty('--as-top', Math.max(0, Math.round(top + scrollY)) + 'px');
+      el.style.setProperty('--as-gb', Math.round(Math.min(40, Math.max(10, top - hb))) + 'px');
+    };
     fit(); const t = setTimeout(() => { lastW = 0; fit(); }, 600);
     addEventListener('resize', fit);
     return () => { clearTimeout(t); removeEventListener('resize', fit); };

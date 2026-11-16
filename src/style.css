@@ -11534,3 +11534,17 @@ html.nav-mv .as-ring, html.nav-mv .as-float, html.nav-mv .as-beam, html.nav-mv .
   .as-form .auth-view.v-signup .legal-ok { font-size: 12.5px; padding: 7px 10px; }
   .as-form.sg { padding-top: 12px; }
 }
+/* 17.11.2026 (3): alt boşluk = üst boşluk */
+@media (min-width: 900px) {
+  .as-wrap { min-height: calc(100svh - var(--as-top, 96px) - var(--as-gb, 22px)); }
+  .as-form.sg { padding-top: 10px; padding-bottom: 10px; }
+  .as-form .auth-view.v-signup { gap: 10px; }
+  .as-form .auth-view.v-signup .field { gap: 4px; }
+}
+@media (min-width: 900px) and (max-height: 760px) {
+  .as-form.sg .as-form-in { max-width: 470px; }
+  .as-form .auth-view.v-signup { gap: 7px; }
+  .as-form .auth-view.v-signup input:not([type=checkbox]) { height: 38px; }
+  .as-form .auth-view.v-signup .soc-btn, .as-form .auth-view.v-signup .center-btn { height: 40px; }
+  .as-form .auth-view.v-signup .auth-or { margin: -4px 0; }
+}
