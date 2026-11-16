@@ -35,7 +35,7 @@ const SIDE = {
     hero: '/bn/sm4.webp', layers: ['/bn/sm4.webp', '/bn/sugon.webp', '/bn/v1s.webp'] },
 };
 const asTry = () => { try { return localStorage.getItem('as-try') || 'dev'; } catch { return 'dev'; } };
-const LOGO = '/bn/hero-logo-mark.webp';
+const LOGO = '/bn/ert-amblem.webp'; // 16.11: düzeltilmiş amblem (halka gerçek daire, e kenarı pürüzsüz)
 
 // view: AuthForm'un o anki görünümü (login | signup | reset | bayi …)
 export function AuthSplit({ view, children }) {
@@ -50,7 +50,7 @@ export function AuthSplit({ view, children }) {
       {[['dev', 'B · Dev amblem'], ['amblem', 'A · Amblem ortada']].map(([k2, l]) => <button key={k2} type="button" className={v === k2 ? 'on' : ''} onClick={() => pick(k2)}>{l}</button>)}
     </div>}
     <div className={'as-wrap as-v-' + v}>
-      <div className="as-form">
+      <div className={'as-form' + (k === 'signup' ? ' sg' : '')}>
         <div className="as-form-in">{children}</div>
       </div>
       <aside className="as-side" aria-hidden="true">

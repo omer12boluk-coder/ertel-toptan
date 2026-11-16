@@ -821,7 +821,7 @@ function AuthForm({ onDone, compact, start, onView }) {
   );
   return (
     <form ref={formRef} className="auth-form" onSubmit={submit}>
-      <div key={view} className={'auth-view' + (dir ? ' ' + dir : '')}>
+      <div key={view} className={'auth-view v-' + view + (dir ? ' ' + dir : '')}>
       {!compact && <h2 className="auth-h">{{ login: 'Giriş yapın', signup: 'Üye olun', bayi: 'Bayi girişi', reset: 'Şifremi unuttum', unverified: 'Giriş yapın' }[view]}</h2>}
       {['login', 'signup'].includes(view) && (social.google || social.facebook) && <>
         <div className="auth-social">

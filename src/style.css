@@ -11303,12 +11303,12 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
 
 /* ===== İki bölmeli giriş / üye ol (16.11.2026, kayit-demo — authsplit.jsx) ===== */
 .as-page { max-width: 1180px; margin: 0 auto; width: 100%; }
-.as-wrap { display: grid; grid-template-columns: 1fr 1fr; min-height: min(760px, calc(100svh - 170px)); background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: clip; }
-.as-form { display: flex; align-items: center; justify-content: center; padding: 44px 32px; }
+.as-wrap { display: grid; grid-template-columns: 1fr 1fr; height: max(540px, calc(100svh - 170px)); background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: clip; }
+.as-form { display: flex; align-items: center; justify-content: center; padding: 24px 32px; overflow: auto; }
 .as-form-in { width: 100%; max-width: 380px; }
 .as-form .auth-h { font-size: 26px; text-align: center; margin-bottom: 6px; }
 .as-side { position: relative; background: #0b111d; color: #fff; }
-.as-stick { position: sticky; top: 84px; height: min(760px, calc(100svh - 110px)); overflow: clip; isolation: isolate;
+.as-stick { position: relative; height: 100%; overflow: clip; isolation: isolate;
   background: radial-gradient(90% 70% at 55% 38%, #22335a 0%, #121b2f 55%, #0b111d 100%); }
 /* ışık hüzmeleri (çapraz, yumuşak) + toz */
 .as-beam { position: absolute; z-index: 0; width: 46%; height: 150%; top: -25%; filter: blur(26px); opacity: .55; pointer-events: none;
@@ -11383,6 +11383,38 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   .as-v-dev .as-fade { background: linear-gradient(to right, #0b111d 30%, rgba(11, 17, 29, .6) 60%, transparent); height: 100%; width: 75%; }
 }
 .as-v-dev .as-q p { min-height: 0; }
-.as-try { display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+.as-try { position: fixed; z-index: 30; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0, 0, 0, .14); font-size: 13px; color: var(--muted); white-space: nowrap; }
+.as-try span { padding-left: 6px; }
+@media (max-width: 899px) { .as-try { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); font-size: 12px; } .as-try span { display: none; } }
 .as-try button { font: inherit; font-weight: 600; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
 .as-try button.on { background: var(--fg); color: var(--surface); border-color: var(--fg); }
+
+/* 16.11 (2): üye ol tek ekrana sığar — iki sütunlu alanlar, ipuçları gizli */
+.as-page { padding-top: 0; padding-bottom: 0; }
+.as-form .auth-view.v-signup { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; row-gap: 10px; }
+.as-form .auth-view.v-signup > * { grid-column: 1 / -1; }
+.as-form .auth-view.v-signup > .row2 { display: contents; }
+.as-form .auth-view.v-signup .field { grid-column: auto; gap: 4px; }
+.as-form .auth-view.v-signup .field-h { display: none; }
+.as-form .auth-view.v-signup .legal-ok { font-size: 12.5px; line-height: 1.4; padding: 8px 10px; }
+.as-form .auth-view.v-signup .auth-h { margin-bottom: 2px; }
+.as-form.sg .as-form-in { max-width: 460px; }
+@media (max-width: 899px) {
+  .as-wrap { height: auto; }
+  .as-v-amblem .as-side, .as-v-dev .as-side, .as-side { height: 92px; }
+  .as-v-amblem .as-logo { top: 50%; left: 46px; height: 58px; width: auto; transform: translate(-50%, -50%); }
+  .as-v-amblem .as-glow { top: 50%; left: 46px; width: 140px; }
+  .as-q { left: 86px; right: 14px; bottom: auto; top: 50%; transform: translateY(-50%); padding: 0; text-align: left; }
+  .as-v-dev .as-q { left: 18px; right: 30%; top: 50%; bottom: auto; }
+  .as-v-dev .as-logo { height: 260%; left: 86%; }
+  .as-word-top { display: none; }
+  .as-q p { font-size: 13px; min-height: 0; margin: 0; }
+  .as-q cite { display: none; }
+  .as-v-amblem .as-fade { display: none; }
+  .as-form { padding: 14px 14px 16px; }
+  .as-form .auth-h { font-size: 20px; }
+  .as-form .auth-view.v-signup { row-gap: 8px; column-gap: 10px; }
+  .as-form .auth-view.v-signup > .field:first-of-type, .as-form .auth-view.v-signup > .field:nth-of-type(2) { grid-column: 1 / -1; }
+  .as-form .auth-view.v-signup input { padding-top: 9px; padding-bottom: 9px; }
+  .as-form .auth-view.v-signup .center-btn { padding-top: 11px; padding-bottom: 11px; }
+}
