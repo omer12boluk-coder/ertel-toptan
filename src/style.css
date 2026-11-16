@@ -11449,3 +11449,19 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   .as-form .auth-view.v-signup { row-gap: 8px; }
   .as-form .auth-view.v-signup .auth-h { font-size: 22px; }
 }
+/* 16.11 (5): logo tarafı sakin hareket — logo yavaşça süzülür, ışık nefes alır, hüzmeler çok yavaş salınır, toz parıldar (zıplama yok) */
+.as-float { position: absolute; inset: 0; animation: asFloat 9s ease-in-out 1s infinite; }
+@keyframes asFloat { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(-6px, -10px) rotate(-1.2deg); } }
+.as-glow { animation: asBeam 1.4s ease both, asBreath 6s ease-in-out 1.4s infinite; }
+@keyframes asBreath { 0%, 100% { opacity: 1; } 50% { opacity: .62; } }
+.as-beam.b1 { animation: asBeam 1.4s cubic-bezier(.22, 1, .36, 1) both, asSway1 18s ease-in-out 1.4s infinite; }
+.as-beam.b2 { animation: asBeam 1.4s cubic-bezier(.22, 1, .36, 1) .15s both, asSway2 22s ease-in-out 1.6s infinite; }
+@keyframes asSway1 { 0%, 100% { transform: rotate(24deg) translateX(0); } 50% { transform: rotate(29deg) translateX(30px); } }
+@keyframes asSway2 { 0%, 100% { transform: rotate(-18deg) translateX(0); } 50% { transform: rotate(-23deg) translateX(-24px); } }
+.as-dust { animation: asTwinkle 7s ease-in-out infinite; }
+@keyframes asTwinkle { 0%, 100% { opacity: .5; } 50% { opacity: .25; } }
+.as-q cite { letter-spacing: .3em; font-weight: 600; font-size: 12px; }
+html.pf-lite .as-float, html.pf-lite .as-glow, html.pf-lite .as-beam, html.pf-lite .as-dust { animation: none; }
+@media (prefers-reduced-motion: reduce) { .as-float, .as-glow, .as-beam, .as-dust { animation: none; } }
+/* kontrol hissi için sayfanın altında küçük kaydırma payı (açılışta görünen aynı) */
+@media (min-width: 900px) { .as-page { padding-bottom: 56px; } }

@@ -3,9 +3,11 @@
 // kendi AuthForm'u (gerçek giriş/üyelik mantığı aynen) kullanılır. Sağ bölmede ürün görseli + yazılan söz.
 // Ayar: look.authUi 'split' = yeni | '' eski tek kutu. Önizleme hostunda (--) hep yeni.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useStore } from './store.js';
 
 const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
-export const authSplitOn = (S) => PV_HOST || S?.look?.authUi === 'split';
+export const authSplitOn = (S) => PV_HOST || (S?.orders?.authUi || 'split') === 'split';
+export const AUTH_TXT = { login: 'Tekrar hoş geldiniz. Tezgâhınız sizi bekliyor.', signup: 'Usta işi tamir, doğru ekipmanla başlar.' };
 
 // Daktilo yazısı (preetsuthar17/typewriter-text uyarlaması; hareket azaltma açıksa yazı direkt görünür)
 export function Typewriter({ text, speed = 55, cursor = '|', className }) {
@@ -28,20 +30,15 @@ export function Typewriter({ text, speed = 55, cursor = '|', className }) {
 
 // Sağ bölme: koyu "sahne" (banner tarzı). Görseller koyu zeminde temiz kesimli banner resimleri.
 // sahne = tek büyük ürün, kenardan taşar, arkada mavi ışık hüzmeleri + toz | kolaj = üç ürün derinlikli
-const SIDE = {
-  login: { q: 'Tekrar hoş geldiniz. Tezgâhınız sizi bekliyor.', a: 'ERTEL GSM · Tahtakale',
-    hero: '/bn/film-q861-on.webp', layers: ['/bn/sm4.webp', '/bn/film-q861-on.webp', '/bn/da07.webp'] },
-  signup: { q: 'Tamircinin tezgâhına ne lazımsa, hepsi burada.', a: 'ERTEL GSM · Tahtakale',
-    hero: '/bn/sm4.webp', layers: ['/bn/sm4.webp', '/bn/sugon.webp', '/bn/v1s.webp'] },
-};
-const asTry = () => { try { return localStorage.getItem('as-try') || 'dev'; } catch { return 'dev'; } };
+const asTry = (S) => { const def = S?.orders?.authSide === 'amblem' ? 'amblem' : 'dev'; if (!PV_HOST) return def; try { return localStorage.getItem('as-try') || def; } catch { return def; } };
 const LOGO = '/bn/ert-amblem.webp'; // 16.11: düzeltilmiş amblem (halka gerçek daire, e kenarı pürüzsüz)
 
 // view: AuthForm'un o anki görünümü (login | signup | reset | bayi …)
 export function AuthSplit({ view, children }) {
   const k = view === 'signup' ? 'signup' : 'login';
-  const c = SIDE[k];
-  const [v, setV] = useState(asTry);
+  const S = useStore((st) => st.settings);
+  const q = (k === 'signup' ? S?.orders?.authSignup : S?.orders?.authLogin)?.trim() || AUTH_TXT[k];
+  const [v, setV] = useState(() => asTry(S));
   const pick = (x) => { try { localStorage.setItem('as-try', x); } catch {} setV(x); };
   // tam sayfa: bölme üst menünün altından ekranın dibine kadar; üst konum ölçülür, sadece genişlik değişince yeniden
   // (Safari adres çubuğu açılıp kapanınca yükseklik oynamasın)
@@ -68,17 +65,13 @@ export function AuthSplit({ view, children }) {
         <div className="as-stick">
           <span className="as-beam b1" /><span className="as-beam b2" /><span className="as-dust" />
           <div key={k} className={'as-art as-' + k}>
-            {(v === 'amblem' || v === 'dev')
-              ? <><span className="as-glow" /><img src={LOGO} alt="" className="as-logo" decoding="async" />{v === 'amblem' && <span className="as-word">ERTEL GSM</span>}</>
-              : v === 'kolaj'
-              ? c.layers.map((src, i) => <img key={i} src={src} alt="" className={'as-ly l' + i} decoding="async" />)
-              : <img src={c.hero} alt="" className="as-hero" decoding="async" />}
+            <span className="as-glow" />
+            <div className="as-float"><img src={LOGO} alt="" className="as-logo" decoding="async" /></div>
           </div>
-          {v === 'dev' && <span className="as-word as-word-top">ERTEL GSM</span>}
           <span className="as-fade" />
           <blockquote className="as-q">
-            <p>“<Typewriter key={c.q} text={c.q} />”</p>
-            <cite>— {c.a}</cite>
+            <p>“<Typewriter key={q} text={q} />”</p>
+            <cite>ERTEL GSM</cite>
           </blockquote>
         </div>
       </aside>

@@ -1,4 +1,5 @@
 import { FLY_OPTS, BN_OPTS } from './anim.jsx';
+import { AUTH_TXT } from './authsplit.jsx';
 import { can, secOK, secPerm } from './team.js';
 import { TeamPage, NoPerm } from './ekip.jsx';
 import { ShopHomeEditor, BrandLogosEditor, ImgPick, Rows, withProdFallback } from './shophome.jsx';
@@ -696,7 +697,7 @@ const SEC_KEYS = {
   katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.pageSizeM', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
   resim: ['catalog.imageThumb', 'catalog.imageLarge'],
   dukkan: ['shop.name', 'shop.hours', 'shop.address', 'shop.phone', 'shop.whatsapp', 'shop.pickupNote'],
-  siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook'],
+  siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook', 'orders.unameReq', 'orders.authUi', 'orders.authSide', 'orders.authLogin', 'orders.authSignup'],
   teslimat: ['orders.cargo', 'orders.pickup', 'orders.cargoNote', 'orders.carriers', 'orders.carrierDef'],
   odeme: ['orders.payHavale', 'orders.storeCard', 'orders.inst', 'orders.payCard', 'orders.cardSoon', 'orders.payShop', 'shop.payInfo', 'shop.ibans'],
   sepetlink: ['orders.lcartHours'],
@@ -1002,6 +1003,12 @@ export function Settings() {
           <Toggle id="s-osign" label="Müşteriler mağazaya üye olabilsin" hint="Adres ve fatura bilgileri kayıtlı kalır, siparişlerini takip ederler" checked={d.orders.signup !== false} onChange={(v) => set('orders.signup', v)} />
           <Toggle id="s-lgoogle" label="Google ile giriş" hint="Önce Firebase > Authentication > Sign-in method'da Google açılmalı" checked={d.orders.loginGoogle === true} onChange={(v) => set('orders.loginGoogle', v)} />
           <Toggle id="s-lfb" label="Facebook ile giriş" hint="Önce Facebook uygulaması kurulup Firebase'de Facebook sağlayıcısı açılmalı" checked={d.orders.loginFacebook === true} onChange={(v) => set('orders.loginFacebook', v)} />
+          <Toggle id="s-unreq" label="Üye olurken kullanıcı adı zorunlu" hint="Kapalıysa kullanıcı adı isteğe bağlı olur" checked={d.orders.unameReq !== false} onChange={(v) => set('orders.unameReq', v)} />
+          <h3>Giriş / üye ol sayfası</h3>
+          <Toggle id="s-authui" label="Yeni görünüm (solda form, sağda logolu koyu bölme)" hint="Kapalıysa eski tek kutu" checked={(d.orders.authUi || 'split') === 'split'} onChange={(v) => set('orders.authUi', v ? 'split' : 'old')} />
+          <Field label="Sağ bölmedeki logo"><select id="s-authside" value={d.orders.authSide === 'amblem' ? 'amblem' : 'dev'} onChange={(e) => set('orders.authSide', e.target.value)}><option value="dev">Dev amblem (kenardan taşar)</option><option value="amblem">Amblem ortada</option></select></Field>
+          <Field label="Giriş yazısı" hint="Boş bırakırsanız varsayılan yazı çıkar"><input id="s-authl" value={d.orders.authLogin || ''} placeholder={AUTH_TXT.login} onChange={(e) => set('orders.authLogin', e.target.value)} /></Field>
+          <Field label="Üye ol yazısı" hint="Boş bırakırsanız varsayılan yazı çıkar"><input id="s-auths" value={d.orders.authSignup || ''} placeholder={AUTH_TXT.signup} onChange={(e) => set('orders.authSignup', e.target.value)} /></Field>
         </>}
 
         {sec === 'bildirim' && <>

@@ -740,7 +740,7 @@ async function bayiLogin(A, u, pw) {
   if (!bayiB) { bayiB = new FirebaseBackend(window.FIREBASE_CONFIG); await bayiB.init(); }
   await bayiB.login(u, pw, true);
 }
-function AuthForm({ onDone, compact, start, onView }) {
+function AuthForm({ onDone, compact, start, onView, noGrow }) {
   const { api: A, settings: S } = useStore();
   const [view, setView] = useState(start || 'login');
   useEffect(() => { onView?.(view); }, [view]); // login | signup | reset | resetSent | verifySent | unverified
@@ -750,6 +750,7 @@ function AuthForm({ onDone, compact, start, onView }) {
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e?.target ? e.target.value : e }));
   const canSignup = S.orders?.signup !== false;
+  const unameReq = S.orders?.unameReq !== false; // 16.11.2026: Ayarlar › Online mağaza › 'Kullanıcı adı zorunlu'
   // görünüm geçişi: mağazadaki sayfa geçişleri gibi hafif kayma + soluş (girişe dönüş soldan, diğerleri sağdan)
   const [dir, setDir] = useState('');
   // 3.11.2026: kutunun BOYU da yumuşakça değişir (giriş ⇄ üye ol arasında boy farkı ani zıplıyor, sonra yerine oturuyordu);
@@ -758,7 +759,8 @@ function AuthForm({ onDone, compact, start, onView }) {
   const go2 = (v) => { setErr(''); prevH.current = formRef.current?.offsetHeight || 0; setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
   useLayoutEffect(() => {
     const el = formRef.current; const h0 = prevH.current; prevH.current = 0;
-    if (!el || !h0 || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // noGrow: iki bölmeli sayfada form ortalı durur, boy animasyonu bitince içerik 10-18 px sıçrıyordu (16.11.2026)
+    if (noGrow || !el || !h0 || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const h1 = el.offsetHeight; if (Math.abs(h1 - h0) < 2) return;
     el.style.overflow = 'clip';
     const a = el.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' });
@@ -789,6 +791,7 @@ function AuthForm({ onDone, compact, start, onView }) {
         const email = f.email.trim().toLowerCase();
         if (f.name.trim().length < 3) throw new Error('Adınızı ve soyadınızı yazın.');
         if (!emailOk(email)) throw new Error('E-posta adresini kontrol edin.');
+        if (unameReq && !f.uname) throw new Error('Bir kullanıcı adı belirleyin.');
         if (f.uname && !unameOk(f.uname)) throw new Error('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).');
         if (phoneDigits(f.phone).length !== 11) throw new Error('Telefonu 0(5xx) xxx xx xx şeklinde yazın.');
         if (f.pw.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
@@ -838,9 +841,9 @@ function AuthForm({ onDone, compact, start, onView }) {
       {view === 'reset' && <p className="fine">E-posta adresinizi ya da kullanıcı adınızı yazın; şifre yenileme bağlantısı gönderelim.</p>}
       {view === 'signup' && <>
         <Field label="Ad soyad"><input id="m-name" autoComplete="name" value={f.name} onChange={set('name')} /></Field>
-        <Field label="E-posta" hint="Doğrulama bağlantısı buraya gelir"><input id="m-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={(e) => { const v = e.target.value; setF((x) => ({ ...x, email: v, uname: x.unameTouched ? x.uname : suggestUser(v) })); }} /></Field>
+        <Field label="E-posta" hint="Doğrulama bağlantısı buraya gelir"><input id="m-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={set('email')} /></Field>
         <div className="row2">
-          <Field label="Kullanıcı adı" opt hint="E-posta yerine bununla da girebilirsiniz"><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
+          <Field label="Kullanıcı adı" opt={!unameReq} hint="E-posta yerine bununla da girebilirsiniz"><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
           <Field label="Cep telefonu"><PhoneInput id="m-phone" value={f.phone} onChange={set('phone')} /></Field>
         </div>
       </>}
@@ -941,7 +944,7 @@ export function Account() {
   );
   if (!member && authSplitOn(S)) return (
     <div className="page as-page">
-      <AuthSplit view={aView}><AuthForm start={acct === 'signup' ? 'signup' : undefined} onView={setAView} /></AuthSplit>
+      <AuthSplit view={aView}><AuthForm noGrow start={acct === 'signup' ? 'signup' : undefined} onView={setAView} /></AuthSplit>
       <div className="as-local"><LocalOrders /></div>
     </div>
   );

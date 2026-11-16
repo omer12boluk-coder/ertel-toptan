@@ -145,6 +145,10 @@ export const DEFAULT_SETTINGS = {
     lcartHours: 12, // sepet linki: müşteri bu kadar saat içinde onaylamazsa link kapanır ve kayıt silinir (Ayarlar > Sepet linki)
     payShop: true, // dükkanda ödeme (sadece dükkandan teslimde)
     signup: true, // mağazada üye olunabilsin
+    unameReq: true, // 16.11.2026: üye olurken kullanıcı adı zorunlu (false = isteğe bağlı)
+    // 16.11.2026 giriş / üye ol sayfası (authsplit.jsx): authUi 'split' iki bölmeli | 'old' eski tek kutu; authSide 'dev' dev amblem | 'amblem' ortada
+    // authLogin / authSignup: sağ bölmedeki büyük yazı (boş = varsayılan metin)
+    authUi: 'split', authSide: 'dev', authLogin: '', authSignup: '',
     // "Çok yakında": sistem hazır ama müşteriye henüz açılmadı (Ayarlar > Online mağaza'dan tek tıkla açılır)
     checkoutSoon: false, // sepette "Sepeti onayla" (online sipariş) çok yakında
     accountsSoon: false, // Hesabım / üyelik çok yakında
