@@ -34,15 +34,21 @@ const SIDE = {
   signup: { q: 'Üye olun; adresiniz, faturanız ve siparişleriniz hep elinizin altında.', a: 'ERTEL GSM · Tahtakale',
     hero: '/bn/sm4.webp', layers: ['/bn/sm4.webp', '/bn/sugon.webp', '/bn/v1s.webp'] },
 };
-const asTry = () => { try { return localStorage.getItem('as-try') || 'amblem'; } catch { return 'amblem'; } };
+const asTry = () => { try { return localStorage.getItem('as-try') || 'dev'; } catch { return 'dev'; } };
 const LOGO = '/bn/hero-logo-mark.webp';
 
 // view: AuthForm'un o anki görünümü (login | signup | reset | bayi …)
 export function AuthSplit({ view, children }) {
   const k = view === 'signup' ? 'signup' : 'login';
   const c = SIDE[k];
-  const v = asTry();
+  const [v, setV] = useState(asTry);
+  const pick = (x) => { try { localStorage.setItem('as-try', x); } catch {} setV(x); };
   return (
+    <>
+    {PV_HOST && <div className="as-try" role="group" aria-label="Görünüm denemesi">
+      <span>Deneme:</span>
+      {[['dev', 'B · Dev amblem'], ['amblem', 'A · Amblem ortada']].map(([k2, l]) => <button key={k2} type="button" className={v === k2 ? 'on' : ''} onClick={() => pick(k2)}>{l}</button>)}
+    </div>}
     <div className={'as-wrap as-v-' + v}>
       <div className="as-form">
         <div className="as-form-in">{children}</div>
@@ -66,5 +72,6 @@ export function AuthSplit({ view, children }) {
         </div>
       </aside>
     </div>
+    </>
   );
 }

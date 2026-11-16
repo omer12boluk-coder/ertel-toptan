@@ -11383,3 +11383,6 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   .as-v-dev .as-fade { background: linear-gradient(to right, #0b111d 30%, rgba(11, 17, 29, .6) 60%, transparent); height: 100%; width: 75%; }
 }
 .as-v-dev .as-q p { min-height: 0; }
+.as-try { display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+.as-try button { font: inherit; font-weight: 600; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.as-try button.on { background: var(--fg); color: var(--surface); border-color: var(--fg); }
