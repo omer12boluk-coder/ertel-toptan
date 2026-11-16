@@ -196,7 +196,9 @@ export function startHistory(defTab) {
     const tab = st.tab || tabFromPath() || defTab();
     store.set({ urunLayer: tab === 'urun' ? store.s.urunLayer : false, tab, acct: tab === 'hesap' ? st.acct ?? acctFromPath() : null, pid: tab === 'urun' ? st.pid ?? pidFromPath() : null, setId: tab === 'set' ? st.setId ?? (/\/set\/([\w-]+)/.exec(lpath()) || [])[1] ?? null : null, openOrder: st.openOrder || null, openReq: st.openReq || null, lcOpen: st.lcOpen || null, orderJust: false });
     // ilk karede (React çizdikten hemen sonra) yerine kaydır → üstte bir kare görünüp zıplamaz; içerik geç uzarsa bir kez daha
-    const yy = Math.round(st.y || 0); requestAnimationFrame(() => { window.scrollTo(0, yy); requestAnimationFrame(() => { if (Math.abs(scrollY - yy) > 2) window.scrollTo(0, yy); }); });
+    const yy = Math.round(st.y || 0);
+    window.__navY = { y: yy, t: Date.now() }; // 16.11.2026: geri dönüş geçişi (main.jsx lightTargets) dönülecek yeri bilsin
+    requestAnimationFrame(() => { window.scrollTo(0, yy); requestAnimationFrame(() => { if (Math.abs(scrollY - yy) > 2) window.scrollTo(0, yy); }); });
   });
 }
 // arkada açık kalan sekmeler (mağaza: ana sayfa, Tüm ürünler) dönünce kaldığı yerden devam eder
@@ -210,6 +212,7 @@ export function go(tab) {
   if (tab !== from || store.s.openOrder || store.s.openReq || store.s.acct || store.s.lcOpen) pushTab(tab);
   const y = tab !== from && (store.s.user?.role === 'public' || (store.s.user?.role === 'admin' && tab === 'katalog')) && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
   // zaten o sayfadaysak (alt menüde aynı sekmeye tekrar basmak) en üste ŞAK diye atlamak yerine yumuşakça kayarak çıkılır
+  window.__navY = { y, t: Date.now() }; // 16.11.2026: sayfa geçişi (main.jsx lightTargets) dönülecek kaydırma yerini bilsin (kaydırma bir kare sonra yapılıyor)
   const same = tab === from && !store.s.openOrder && !store.s.openReq && !store.s.acct && !store.s.lcOpen;
   store.set({ urunFrom: null, urunLayer: false, tab, acct: null, openReq: null, openOrder: null, lcOpen: null, orderJust: false });
   if (same) store.set({ tabTap: (store.s.tabTap || 0) + 1 }); // aynı sekmeye tekrar basıldı (ör. Ayarlar içindeyken Ayarlar → ana ekran)
