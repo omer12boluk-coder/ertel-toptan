@@ -11309,3 +11309,10 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
     background: currentColor; opacity: 0; transform: scaleX(.6); transition: opacity .15s ease, transform .2s cubic-bezier(.2, 0, 0, 1); pointer-events: none; }
   html.gs1-lb-line .hdr-gs .gs-nav .topnav-b:not(.on):hover::after, html.gs1-lb-line .hdr-gs .gs-nav .hd.open > .topnav-b:not(.on)::after { opacity: .22; transform: none; }
 }
+/* 16.11.2026 İsim + kayan çizgi 2. tur: gece modunda seçili sayfanın arkasında beliren gizli hap kaldırıldı (eski .hdr-g kuralı);
+   çizgi JS ile 'tırtıl' gibi kayar (CSS geçişi yok), seçili yazı biraz kalın, üstüne gelinen yazı koyulaşır */
+@media (min-width: 900px) {
+  html.gs-one:is(.gs1-lb-ink, .gs1-lb-line, .gs1-lb-spot, .gs1-lb-stack) .topbar.hdr-gs .gs-nav .topnav-b, html.gs-one:is(.gs1-lb-ink, .gs1-lb-line, .gs1-lb-spot, .gs1-lb-stack)[data-theme] .topbar.hdr-gs .gs-nav .topnav-b.on { background: transparent !important; box-shadow: none !important; }
+  html.gs1-lb-line .hdr-gs .gs1-line { transition: opacity .15s; height: 2.5px; border-radius: 3px; }
+  html.gs1-lb-line .hdr-gs .gs-nav .topnav-b.on .topnav-l { font-weight: 650; }
+}
