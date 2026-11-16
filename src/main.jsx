@@ -1367,7 +1367,10 @@ function useGs1Lbl(mode) {
       const put = (b, inst) => { if (!ln) return; if (!b) { ln.style.opacity = '0'; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
         const to = { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) }; ln.style.opacity = '1';
         const set = (q) => { ln.style.transform = `translateX(${q.x}px)`; ln.style.width = q.w + 'px'; };
-        const from = cur; cur = to; anim?.cancel(); anim = null;
+        // aynı hedef tekrar istenirse (menüde başka bir sınıf değişti: açılır menü açıldı vb.) yürüyen animasyona DOKUNMA — rastgele 'tık'ın sebebi buydu
+        if (cur && Math.abs(cur.x - to.x) < 1 && Math.abs(cur.w - to.w) < 1 && !inst) return;
+        if (anim && inst) return;
+        const from = anim ? (() => { const m = new DOMMatrix(getComputedStyle(ln).transform); return { x: m.m41, w: ln.getBoundingClientRect().width }; })() : cur; cur = to; anim?.cancel(); anim = null;
         if (inst || !from || (Math.abs(from.x - to.x) < 1 && Math.abs(from.w - to.w) < 1) || !ln.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { set(to); return; }
         const L = Math.min(from.x, to.x), R = Math.max(from.x + from.w, to.x + to.w);
         set(to);
