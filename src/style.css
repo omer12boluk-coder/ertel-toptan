@@ -11355,3 +11355,31 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   .as-form .auth-h { font-size: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .as-hero, .as-ly, .as-beam, .as-cursor { animation: none; } }
+/* logolu bölmeler (as-try amblem | dev) */
+.as-glow { position: absolute; left: 50%; top: 40%; width: 80%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(40, 190, 230, .32), rgba(40, 110, 220, .14) 55%, transparent); filter: blur(10px); animation: asBeam 1.4s ease both; }
+.as-logo { position: absolute; left: 50%; top: 40%; width: 56%; max-height: 60%; object-fit: contain; transform: translate(-50%, -50%);
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, .5)) drop-shadow(0 0 34px rgba(40, 180, 230, .28)); animation: asLogoIn 1s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes asLogoIn { from { opacity: 0; transform: translate(-50%, -46%) scale(.96); } }
+.as-word { position: absolute; left: 0; right: 0; top: calc(40% + min(30%, 28vh) + 4px); text-align: center; font-weight: 700; font-size: 15px; letter-spacing: .42em; padding-left: .42em; color: rgba(255, 255, 255, .82); animation: asBeam 1.6s ease .2s both; }
+.as-v-amblem .as-fade { height: 30%; }
+/* dev: amblem kenardan taşar, yazılar solda */
+.as-v-dev .as-glow { left: 72%; top: 58%; width: 120%; }
+.as-v-dev .as-logo { left: 74%; top: 56%; width: 118%; max-height: none; }
+@keyframes asDevIn { from { opacity: 0; transform: translate(-46%, -50%); } }
+.as-v-dev .as-logo { animation-name: asDevIn; }
+.as-word-top { top: 34px; left: 32px; right: auto; text-align: left; z-index: 3; font-size: 14px; }
+.as-v-dev .as-q { text-align: left; margin: 0; left: 32px; right: 32px; padding: 0; }
+.as-v-dev .as-fade { height: 48%; }
+@media (max-width: 899px) {
+  .as-v-amblem .as-side { height: 230px; }
+  .as-v-amblem .as-logo { top: 34%; width: auto; height: 46%; }
+  .as-v-amblem .as-glow { top: 34%; width: 60%; }
+  .as-v-amblem .as-word { display: none; }
+  .as-v-dev .as-logo { left: 82%; top: 50%; width: auto; height: 170%; }
+  .as-v-dev .as-glow { left: 82%; top: 50%; width: 90%; }
+  .as-word-top { top: 18px; left: 18px; font-size: 12px; }
+  .as-v-dev .as-q { left: 18px; right: 34%; bottom: 14px; }
+  .as-v-dev .as-fade { background: linear-gradient(to right, #0b111d 30%, rgba(11, 17, 29, .6) 60%, transparent); height: 100%; width: 75%; }
+}
+.as-v-dev .as-q p { min-height: 0; }

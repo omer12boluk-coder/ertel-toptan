@@ -34,7 +34,8 @@ const SIDE = {
   signup: { q: 'Üye olun; adresiniz, faturanız ve siparişleriniz hep elinizin altında.', a: 'ERTEL GSM · Tahtakale',
     hero: '/bn/sm4.webp', layers: ['/bn/sm4.webp', '/bn/sugon.webp', '/bn/v1s.webp'] },
 };
-const asTry = () => { try { return localStorage.getItem('as-try') || 'sahne'; } catch { return 'sahne'; } };
+const asTry = () => { try { return localStorage.getItem('as-try') || 'amblem'; } catch { return 'amblem'; } };
+const LOGO = '/bn/hero-logo-mark.webp';
 
 // view: AuthForm'un o anki görünümü (login | signup | reset | bayi …)
 export function AuthSplit({ view, children }) {
@@ -50,10 +51,13 @@ export function AuthSplit({ view, children }) {
         <div className="as-stick">
           <span className="as-beam b1" /><span className="as-beam b2" /><span className="as-dust" />
           <div key={k} className={'as-art as-' + k}>
-            {v === 'kolaj'
+            {(v === 'amblem' || v === 'dev')
+              ? <><span className="as-glow" /><img src={LOGO} alt="" className="as-logo" decoding="async" />{v === 'amblem' && <span className="as-word">ERTEL GSM</span>}</>
+              : v === 'kolaj'
               ? c.layers.map((src, i) => <img key={i} src={src} alt="" className={'as-ly l' + i} decoding="async" />)
               : <img src={c.hero} alt="" className="as-hero" decoding="async" />}
           </div>
+          {v === 'dev' && <span className="as-word as-word-top">ERTEL GSM</span>}
           <span className="as-fade" />
           <blockquote className="as-q">
             <p>“<Typewriter key={c.q} text={c.q} />”</p>
