@@ -19,7 +19,7 @@ export function useHdrTry() {
   return v;
 }
 
-const HDRS = [['search1', 'Tek satır (yeni)'], ['', 'Canlıdaki menü']];
+const HDRS = [['search1', 'Yüzen cam (tek satır)'], ['', 'Canlıdaki menü']];
 export function HdrPanel() {
   const v = useHdrTry();
   const [open, setOpen] = useState(() => ls.get('hdr-try-open', true));
@@ -35,7 +35,7 @@ export function HdrPanel() {
         {HDRS.map(([k, t]) => <label key={'h' + k} className="an-row"><input type="radio" name="hdr-h" checked={(v.header || '') === k} onChange={() => set('header', k)} /><span>{t}</span></label>)}
         {one && GS1_ROWS.map(([k, lb, , o]) => (
           <div key={k}>
-            <small className="an-dev">{((x) => x[0].toLocaleUpperCase('tr') + x.slice(1))(lb.replace('Tek satır: ', ''))}</small>
+            <small className="an-dev">{((x) => x[0].toLocaleUpperCase('tr') + x.slice(1))(lb.replace('Yüzen cam: ', ''))}</small>
             {o.map(([x, t]) => <label key={k + x} className="an-row"><input type="radio" name={'hdr-' + k} checked={(v[k] || '') === x} onChange={() => set(k, x)} /><span>{t}</span></label>)}
           </div>
         ))}
