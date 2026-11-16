@@ -1812,7 +1812,7 @@ function setupNavAnim() {
     live = as;
     // 6.11.2026 (7): iPhone'da kayan sayfanın üstündeki cam menü, altındaki ürün resmini bulanık değil 'büyütülmüş' gösteriyordu
     // (WebKit: hareket eden katman üstünde backdrop-filter). Geçiş süresince menüler neredeyse opak (html.nav-mv), bitince eski cam.
-    const R = document.documentElement; R.classList.add('nav-mv'); clearTimeout(R.__nmv); R.__nmv = setTimeout(() => R.classList.remove('nav-mv'), (kind === 'tab' ? Math.min(ms, 220) : ms) + 80);
+    const R = document.documentElement; R.classList.add('nav-mv'); R.classList.toggle('nav-mvg', (store.s.settings?.look?.navMv || '') === 'old'); clearTimeout(R.__nmv); R.__nmv = setTimeout(() => R.classList.remove('nav-mv'), (kind === 'tab' ? Math.min(ms, 220) : ms) + 80);
     as.forEach((a) => a.pause());
     requestAnimationFrame(() => { as.forEach((a) => { try { a.play(); } catch {} }); hold(as); });
   };
