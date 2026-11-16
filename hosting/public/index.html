@@ -11450,7 +11450,10 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
 /* 17.11.2026 logo + menü birlikte sağa (look.gs1Shift): logonun soluna boşluk, menü logoyu izler; Ada'da yok */
 @media (min-width: 900px) {
   html.gs-one.gs1-sh-12 { --gs1-sh: 12px; } html.gs-one.gs1-sh-24 { --gs1-sh: 24px; } html.gs-one.gs1-sh-40 { --gs1-sh: 40px; } html.gs-one.gs1-sh-64 { --gs1-sh: 64px; }
-  html.gs-one:is(.gs1-sh-12, .gs1-sh-24, .gs1-sh-40, .gs1-sh-64):not(.isl) .topbar.hdr-gs .gs-brand { margin-left: var(--gs1-sh) !important; transition: margin-left .55s cubic-bezier(.4, 0, .2, 1); }
+  html.gs-one:is(.gs1-sh-12, .gs1-sh-24, .gs1-sh-40, .gs1-sh-64):not(.isl) .topbar.hdr-gs .gs-brand { margin-left: var(--gs1-sh) !important; }
+  /* 17.11.2026 kayma SADECE Ada geçişinde: her zaman açık geçiş, ayarlar sayfa açıldıktan sonra gelince logoyu (giriş sayfasından
+     menüye inince) yerine 'kayarak' oturtuyordu */
+  html.gs-one.isl-mv:is(.gs1-sh-12, .gs1-sh-24, .gs1-sh-40, .gs1-sh-64) .topbar.hdr-gs .gs-brand { transition: margin-left .55s cubic-bezier(.4, 0, .2, 1); }
 }
 
 /* ===== İki bölmeli giriş / üye ol (16.11.2026, kayit-demo — authsplit.jsx) ===== */
@@ -11802,9 +11805,15 @@ html.nav-mv .as-fxsvg *, html.nav-mv .as-fx-x { animation-play-state: paused !im
 @keyframes hsSkL2 { from { transform: none; } to { transform: translateX(calc(var(--hsx, 0px) + 1px)); } }
 @keyframes hsSkR2 { from { transform: none; } to { transform: translateX(calc(-1 * var(--hsr, 0px) - 1px)); } }
 @keyframes hsSkM2 { from { transform: none; } to { transform: translateX(calc(var(--hsx, 0px) + 1px)) scaleX(var(--hss, .1)); } }
+/* 17.11.2026 giriş sayfasından sonra logo 'kayarak oturuyordu': Ada açıkken üst menü kutusunun genişliği HER ZAMAN 0,55 sn'lik geçişle
+   değişiyordu; sayfa açılınca menü genişliği (banner genişliği --gs1-x, ayarlar gelince) değişince bütün menü + logo kayıyordu.
+   Genişlik geçişi artık sadece Ada'ya giriş/çıkış sırasında (isl-mv). */
+@media (min-width: 900px) {
+  html.gs-one.gs-isl:not(.isl-mv) .topbar.hdr-gs .topbar-in { transition: box-shadow .4s, background-color .35s, border-color .35s !important; }
+}
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '58ae1116bc';</script>
+<script>window.__BUILD = 'c5307a7cc4';</script>
 </head>
 <body>
 <div id="root"></div>
