@@ -11369,11 +11369,39 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   html.gs1-ls-bmw .hdr-gs .gs-nav .topnav-b::after { left: 0 !important; right: 0 !important; bottom: -15px !important; height: 3px !important; border-radius: 2px 2px 0 0 !important; transform: none !important; }
   html.gs1-ls-bmw .hdr-gs .gs-nav .topnav-b:not(.on):hover::after, html.gs1-ls-bmw .hdr-gs .gs-nav .hd.open > .topnav-b:not(.on)::after { opacity: .28 !important; }
 }
-/* 16.11.2026 Yüzen cam: sadece logo (look.gs1Name 'off'): ERTEL GSM yazısı kalkar, logo biraz sağa kayar */
+/* 16.11.2026 Yüzen cam: sadece logo (look.gs1Name 'off'): ERTEL GSM yazısı görünmez ama yeri durur; logo yazının yerine, menünün hemen yanına geçer
+   (sıra ters çevrilir: görünmez ad solda, logo sağda → menü yerinden kıpırdamaz) */
 @media (min-width: 900px) {
-  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand { padding-left: 14px; gap: 0; }
-  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand b { display: none !important; }
-  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand .brand-logo { width: 38px; height: 38px; }
+  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand { flex-direction: row-reverse; }
+  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand b { visibility: hidden; }
 }
 /* 16.11.2026 hapsız biçimlerde (spot/çizgi/sade renk) Gece mavisi tonunda açılır menüsü açık yazının arkasında gri hap çıkmasın */
 @media (min-width: 900px) { html.gs-one.gs1-t-ink:is(.gs1-lb-spot, .gs1-lb-line, .gs1-lb-ink) .topbar.hdr-gs .gs-nav .hd.open > .topnav-b:not(.on) { background: transparent !important; } }
+/* 16.11.2026 İsim + spot daha belirgin: boştakiler daha silik, seçili ve üstüne gelinen tam koyu (kalınlık değişmez → yazılar kaymaz) */
+@media (min-width: 900px) {
+  html.gs1-lb-spot .hdr-gs .gs-nav .topnav-b { color: color-mix(in oklab, var(--fg) 46%, transparent) !important; }
+  html.gs1-lb-spot .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.on, .hd.open > .topnav-b) { color: var(--fg) !important; }
+  html.gs1-lb-spot.gs1-t-ink .hdr-gs .gs-nav .topnav-b { color: rgb(233 237 246 / .5) !important; }
+  html.gs1-lb-spot.gs1-t-ink .hdr-gs .gs-nav :is(.topnav-b:hover, .topnav-b.on, .hd.open > .topnav-b) { color: #fff !important; }
+}
+/* 16.11.2026 Ürün ara: menü renginde (look.gs1SrchBg 'clear'): Ada'daki gibi ayrı gri kutu yok, sadece çok silik ince çizgi; yazarken tema rengi çizgi */
+@media (min-width: 900px) {
+  html.gs-one.gs1-sclear .topbar.hdr-gs .gs-srch .hsearch-box, html.gs-one.gs1-sclear .topbar.hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { background: transparent !important; border-color: color-mix(in oklab, var(--fg) 10%, transparent) !important; box-shadow: none !important; }
+  html.gs-one.gs1-sclear .topbar.hdr-gs .gs-srch .hsearch-box:focus-within { background: transparent !important; border-color: color-mix(in oklab, var(--accent) 38%, transparent) !important; box-shadow: none !important; }
+  html.gs-one.gs1-sclear.gs1-t-ink .topbar.hdr-gs .gs-srch .hsearch:not(:focus-within) .hsearch-box { border-color: rgb(255 255 255 / .12) !important; }
+}
+/* 16.11.2026 Menü logosu ara ara oynar (look.logoAnim): 8 sn'de bir, ~1 sn hareket, kalan süre durur. Hareketi azalt açıksa yok */
+@keyframes lga-flip { 0% { transform: perspective(300px) rotateY(0); } 12% { transform: perspective(300px) rotateY(360deg); } 100% { transform: perspective(300px) rotateY(360deg); } }
+@keyframes lga-tilt { 0%, 14%, 100% { transform: rotate(0); } 3% { transform: rotate(-12deg); } 6% { transform: rotate(9deg); } 9% { transform: rotate(-5deg); } 12% { transform: rotate(2deg); } }
+@keyframes lga-hop { 0%, 12%, 100% { transform: translateY(0); } 4% { transform: translateY(-6px); } 8% { transform: translateY(0); } 10% { transform: translateY(-2px); } }
+@keyframes lga-glow { 0%, 18%, 100% { filter: none; } 8% { filter: brightness(1.18) drop-shadow(0 0 7px color-mix(in oklab, var(--accent) 70%, transparent)); } }
+@keyframes lga-ring { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 45%, transparent); } 16% { box-shadow: 0 0 0 12px transparent; } 100% { box-shadow: 0 0 0 12px transparent; } }
+@keyframes lga-spin { 0% { transform: rotate(0); } 14% { transform: rotate(360deg); } 100% { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  html.lga-flip .topbar .brand-logo { animation: lga-flip 8s cubic-bezier(.45, 0, .2, 1) 2s infinite; }
+  html.lga-tilt .topbar .brand-logo { animation: lga-tilt 8s ease-in-out 2s infinite; transform-origin: 50% 85%; }
+  html.lga-hop .topbar .brand-logo { animation: lga-hop 8s cubic-bezier(.3, 0, .3, 1) 2s infinite; }
+  html.lga-glow .topbar .brand-logo { animation: lga-glow 8s ease-in-out 2s infinite; }
+  html.lga-ring .topbar .brand-logo { animation: lga-ring 8s ease-out 2s infinite; border-radius: 50%; }
+  html.lga-spin .topbar .brand-logo { animation: lga-spin 8s cubic-bezier(.6, 0, .2, 1) 2s infinite; }
+}
