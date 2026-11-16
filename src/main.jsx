@@ -1775,11 +1775,25 @@ function setupNavAnim() {
     // sadece sayfa GERÇEKTEN kaydırılınca bırakılır (fark hareketin içinde kalır); başka sayfaya geçişte play() bırakır (sayfa zaten gizlenir)
     if (lingering.length === 1 && !lingerOff) { let y0 = scrollY; lingerOff = () => { if (live.some((x) => x.playState === 'running' || x.playState === 'paused')) { y0 = scrollY; return; } /* geçiş sürerken (kaldığı yere geri kaydırma) sayılmaz */ if (Math.abs(scrollY - y0) >= 3) unlinger(); }; addEventListener('scroll', lingerOff, { capture: true, passive: true }); }
   };
-  // 16.11.2026 (4 ekran kaydı, 60 kare/sn): alt menüden Ürünler'e (liste + açılış) geçişte iPhone, uzun ve resimli sayfa YANA KAYMAYA
-  // başladığı an 2-3 kare ekranı güncelleyemiyor → sayfa yarı yolda donup 20-30 px sıçrıyordu ('tık'). Bekletme / gecikmeli başlatma
-  // denendi, işe yaramadı (geri alındı). Ürünler'e geçiş artık kaymaz: sayfa yerinde belirir (örtü solması, diğer sayfaların
-  // yön bilinmeyen geçişiyle aynı). Diğer sekmeler eskisi gibi kayar. look.navSlideP 'on' = eski kayma.
-  const noSlide = () => mob() && store.s.tab === 'katalog' && (store.s.settings?.look?.navSlideP || '') !== 'on';
+  // 16.11.2026 (4 ekran kaydı, 60 kare/sn): alt menüden Ürünler'e (liste + açılış) geçişte iPhone, uzun ve resimli sayfayı TEK PARÇA
+  // yana kaydırmaya başladığı an 2-3 kare ekranı güncelleyemiyor → sayfa yarı yolda donup 20-30 px sıçrıyordu ('tık'). Bekletme /
+  // gecikmeli başlatma işe yaramadı (geri alındı); kaymasız belirme sorunu çözdü ama animasyon gitti. Şimdi: sayfa yine kayar ama
+  // sadece EKRANDA GÖRÜNEN küçük parçalar (başlık, filtreler, ekrandaki kartlar) ayrı ayrı kayar; ekran dışındaki binlerce px'lik
+  // liste kaydırılmaz (görünmüyor zaten) → telefonun hazırlaması gereken alan küçük. look.navSlideP: '' = bu | 'fade' = kaymasız | 'on' = eski.
+  const noSlide = () => { if (!mob() || store.s.tab !== 'katalog') return ''; const v = store.s.settings?.look?.navSlideP || ''; return v === 'on' ? '' : v === 'fade' ? 'fade' : 'light'; };
+  const lightTargets = (main) => {
+    const H = innerHeight, out = [];
+    // dönüşte kaydırma yeri (store.js go → __navY) bir kare SONRA verilir → ölçüm o yere göre yapılır
+    const off = (window.__navY || 0) - scrollY;
+    const dig = (el, d) => {
+      const b = el.getBoundingClientRect(); const r = { top: b.top - off, bottom: b.bottom - off, height: b.height };
+      if (r.bottom <= 0 || r.top >= H || !r.height) return; // ekran dışı: kaymaz
+      if (d < 9 && r.height > H * 1.2 && el.children.length && !el.matches(SELF)) { for (const c of el.children) if (!c.matches(FIX) && !c.classList.contains('win-gap')) dig(c, d + 1); return; }
+      out.push(el);
+    };
+    for (const t of pageTargets(main)) dig(t, 0);
+    return out;
+  };
   const play = (els, kind, ms0, dk = 1, c0 = 1) => { // c0: örtünün başlangıç saydamlığı (1 = tam)
     unlinger();
     const busy = live.some((a) => a.playState === 'running' || a.playState === 'paused');
@@ -1846,7 +1860,7 @@ function setupNavAnim() {
     const h = Date.now() - hintAt < 800 ? hint : ''; hint = '';
     // 5.11.2026 alt menüyle sekme değişimi de yandan kayar: sağdaki sekmeye geçince sağdan, soldakine geçince soldan (iOS sekme hissi)
     const ti = navIdx();
-    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : ti >= 0 ? (ti === 0 ? -1 : 1) : 0; /* 12.11.2026: alt menüde olmayan sayfadan (Markalar…) dönüşte de kayar: Ana sayfa soldan, diğerleri sağdan (eskiden animasyonsuzdu) */ lastIdx = ti; if (d && !noSlide()) play(pageTargets(watched), d < 0 ? 'back' : 'fwd', 365, 0.6); else play([], 'tab', 180); return; } // (12.11.2026 örtüyü %45'ten başlatma denendi, GERİ ALINDI: yeni sayfa ilk 1–5 karede henüz çizilmemiş (boş) geliyor, tam örtü bunu saklıyordu; yarı saydamda her geçiş pürüzlü göründü)
+    if (h === 'tab' && prev.split('|')[0] !== k.split('|')[0]) { const d = ti >= 0 && lastIdx >= 0 ? Math.sign(ti - lastIdx) : ti >= 0 ? (ti === 0 ? -1 : 1) : 0; /* 12.11.2026: alt menüde olmayan sayfadan (Markalar…) dönüşte de kayar: Ana sayfa soldan, diğerleri sağdan (eskiden animasyonsuzdu) */ lastIdx = ti; const ns = noSlide(); if (d && ns !== 'fade') play(ns ? lightTargets(watched) : pageTargets(watched), d < 0 ? 'back' : 'fwd', 365, 0.6); else play([], 'tab', 180); return; } // (12.11.2026 örtüyü %45'ten başlatma denendi, GERİ ALINDI: yeni sayfa ilk 1–5 karede henüz çizilmemiş (boş) geliyor, tam örtü bunu saklıyordu; yarı saydamda her geçiş pürüzlü göründü)
     lastIdx = ti;
     // 6.11.2026: bilgisayarda Hesabım içinde bölüm değişince (sol menü sabit) bütün sayfa kayıp örtü solmasın — ekran 'sekiyordu';
     // sadece sağdaki içerik kısa ve hafif kayarak belirir, sol menü yerinden oynamaz

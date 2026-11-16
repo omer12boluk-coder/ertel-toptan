@@ -210,6 +210,7 @@ export function go(tab) {
   if (tab !== from || store.s.openOrder || store.s.openReq || store.s.acct || store.s.lcOpen) pushTab(tab);
   const y = tab !== from && (store.s.user?.role === 'public' || (store.s.user?.role === 'admin' && tab === 'katalog')) && KEEP.includes(tab) && !(tab === 'katalog' && store.s.catalogGo) ? tabY[tab] || 0 : 0;
   // zaten o sayfadaysak (alt menüde aynı sekmeye tekrar basmak) en üste ŞAK diye atlamak yerine yumuşakça kayarak çıkılır
+  window.__navY = y; // 16.11.2026: sayfa geçişi (main.jsx lightTargets) dönülecek kaydırma yerini bilsin (kaydırma bir kare sonra yapılıyor)
   const same = tab === from && !store.s.openOrder && !store.s.openReq && !store.s.acct && !store.s.lcOpen;
   store.set({ urunFrom: null, urunLayer: false, tab, acct: null, openReq: null, openOrder: null, lcOpen: null, orderJust: false });
   if (same) store.set({ tabTap: (store.s.tabTap || 0) + 1 }); // aynı sekmeye tekrar basıldı (ör. Ayarlar içindeyken Ayarlar → ana ekran)
