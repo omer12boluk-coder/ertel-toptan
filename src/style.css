@@ -11296,3 +11296,7 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   html.gs1-ss .hdr-gs .gs-nav .topnav-l { transform: translateX(-6px); }
   html.gs-one:not([class*="gs1-lb-"]) .hdr-gs .gs-nav .topnav-b > svg:first-child, html.gs-one.gs1-lb-toggle:not(.gs1-tg-s) .hdr-gs .gs-nav .topnav-b > svg:first-child { transition: width .42s cubic-bezier(.22, .8, .24, 1), height .42s cubic-bezier(.22, .8, .24, 1); }
 }
+/* 16.11.2026 Yüzen cam + açılır menüler 'Üstüne gelince': aşağı ok işareti gizli (fareyle zaten açılıyor). look.gs1Chev 'show' = eski hâl */
+@media (min-width: 900px) {
+  html.gs-one:not(.gs1-click):not(.gs1-chev) .hdr-gs .gs-nav .topnav-chev { display: none !important; }
+}
