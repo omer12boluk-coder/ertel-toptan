@@ -2,6 +2,7 @@
 // Seçimler bu cihazda (ls 'hdr-try') saklanır ve canlı ayarın (look.header, look.gs1*) ÜSTÜNE yazılır; canlıya hiçbir şey gitmez.
 import { useEffect, useState } from 'react';
 import { ls } from './utils.js';
+import { useStore } from './store.js';
 import { GS1_ROWS } from './designer.jsx';
 
 // 16.11.2026: Claude'daki demo sayfasında da (canlı adres değilse) panel açık
@@ -22,10 +23,14 @@ export function useHdrTry() {
 const HDRS = [['search1', 'Yüzen cam (tek satır)'], ['', 'Canlıdaki menü']];
 export function HdrPanel() {
   const v = useHdrTry();
+  const live = useStore((s) => s.settings?.look) || {};
+  // seçili görünen = önizlemede seçilen, yoksa CANLIDAKİ değer (eskiden canlıda 'Simge' varken 'Kutu' seçili görünüp basılamıyordu)
+  const eff = (k) => String((k in v ? v[k] : live[k]) ?? '');
   const [open, setOpen] = useState(() => ls.get('hdr-try-open', true));
   const tog = (o) => { ls.set('hdr-try-open', o); setOpen(o); };
   if (!HDR_TRY) return null;
-  const set = (k, x) => { const n = { ...v }; if (x) n[k] = x; else delete n[k]; put(n); };
+  // 16.11.2026: '' de yazılır (silinince canlıdaki değer geri geliyordu → 'Kutu' gibi varsayılan seçenekler seçilemiyordu)
+  const set = (k, x) => { const n = { ...v }; n[k] = x; put(n); };
   const one = v.header === 'search1';
   return (
     <div className={'an-panel an-left' + (open ? ' open' : '')}>
@@ -36,7 +41,7 @@ export function HdrPanel() {
         {one && GS1_ROWS.map(([k, lb, , o]) => (
           <div key={k}>
             <small className="an-dev">{((x) => x[0].toLocaleUpperCase('tr') + x.slice(1))(lb.replace('Yüzen cam: ', ''))}</small>
-            {o.map(([x, t]) => <label key={k + x} className="an-row"><input type="radio" name={'hdr-' + k} checked={(v[k] || '') === x} onChange={() => set(k, x)} /><span>{t}</span></label>)}
+            {o.map(([x, t]) => <label key={k + x} className="an-row"><input type="radio" name={'hdr-' + k} checked={eff(k) === x} onChange={() => set(k, x)} /><span>{t}</span></label>)}
           </div>
         ))}
         {one && <div>

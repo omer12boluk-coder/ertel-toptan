@@ -416,3 +416,4 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 - **16.11.2026 (35) GERİ ALINDI:** (31)–(33) (çizginin fareye sekmesi, gölge, BMW düz şerit) kullanıcı isteğiyle geri alındı → kayan çizgi/BMW (30)'daki ilk hâlinde. (34) açılır menü yeri duruyor.
 - **16.11.2026 (36):** BMW biçiminde menünün altındaki ince gri çizgi (`.topbar-in::after`) kaldırıldı.
 - **16.11.2026 (37):** Bulunulan sayfanın menüsü (ör. Ürünler sayfasındayken Ürünler) artık fareyle de açılır (navdrop `MENU.burada` false; eski hâl true). Tüm üst menüleri etkiler.
+- **16.11.2026 (38) Önizleme 'Üst menü' paneli:** canlıda farklı bir değer varken varsayılan seçenekler ('Kutu', 'Beyaz', 'Düz'…) seçilemiyordu (panel '' değerini silip canlıyı geri getiriyordu + işaret canlıyı göstermediği için radyo tıklanmıyordu) → '' de yazılır, işaret = önizleme seçimi yoksa CANLIDAKİ değer (`hdrtry.jsx eff`).
