@@ -2,7 +2,7 @@
 // 21st.dev "auth-ui" bileşeninden uyarlandı: Tailwind / shadcn / TypeScript yok, sitenin kendi CSS'i (.as-*) ve
 // kendi AuthForm'u (gerçek giriş/üyelik mantığı aynen) kullanılır. Sağ bölmede ürün görseli + yazılan söz.
 // Ayar: look.authUi 'split' = yeni | '' eski tek kutu. Önizleme hostunda (--) hep yeni.
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 const PV_HOST = typeof location !== 'undefined' && /--/.test(location.hostname);
 export const authSplitOn = (S) => PV_HOST || S?.look?.authUi === 'split';
@@ -31,7 +31,7 @@ export function Typewriter({ text, speed = 55, cursor = '|', className }) {
 const SIDE = {
   login: { q: 'Tekrar hoş geldiniz. Tezgâhınız sizi bekliyor.', a: 'ERTEL GSM · Tahtakale',
     hero: '/bn/film-q861-on.webp', layers: ['/bn/sm4.webp', '/bn/film-q861-on.webp', '/bn/da07.webp'] },
-  signup: { q: 'Üye olun; adresiniz, faturanız ve siparişleriniz hep elinizin altında.', a: 'ERTEL GSM · Tahtakale',
+  signup: { q: 'Tamircinin tezgâhına ne lazımsa, hepsi burada.', a: 'ERTEL GSM · Tahtakale',
     hero: '/bn/sm4.webp', layers: ['/bn/sm4.webp', '/bn/sugon.webp', '/bn/v1s.webp'] },
 };
 const asTry = () => { try { return localStorage.getItem('as-try') || 'dev'; } catch { return 'dev'; } };
@@ -43,13 +43,24 @@ export function AuthSplit({ view, children }) {
   const c = SIDE[k];
   const [v, setV] = useState(asTry);
   const pick = (x) => { try { localStorage.setItem('as-try', x); } catch {} setV(x); };
+  // tam sayfa: bölme üst menünün altından ekranın dibine kadar; üst konum ölçülür, sadece genişlik değişince yeniden
+  // (Safari adres çubuğu açılıp kapanınca yükseklik oynamasın)
+  const wrapRef = useRef(null);
+  useLayoutEffect(() => {
+    const el = wrapRef.current; if (!el) return;
+    let lastW = 0;
+    const fit = () => { if (innerWidth === lastW) return; lastW = innerWidth; el.style.setProperty('--as-top', Math.max(0, Math.round(el.getBoundingClientRect().top + scrollY)) + 'px'); };
+    fit(); const t = setTimeout(() => { lastW = 0; fit(); }, 600);
+    addEventListener('resize', fit);
+    return () => { clearTimeout(t); removeEventListener('resize', fit); };
+  }, []);
   return (
     <>
     {PV_HOST && <div className="as-try" role="group" aria-label="Görünüm denemesi">
       <span>Deneme:</span>
       {[['dev', 'B · Dev amblem'], ['amblem', 'A · Amblem ortada']].map(([k2, l]) => <button key={k2} type="button" className={v === k2 ? 'on' : ''} onClick={() => pick(k2)}>{l}</button>)}
     </div>}
-    <div className={'as-wrap as-v-' + v}>
+    <div ref={wrapRef} className={'as-wrap as-v-' + v}>
       <div className={'as-form' + (k === 'signup' ? ' sg' : '')}>
         <div className="as-form-in">{children}</div>
       </div>

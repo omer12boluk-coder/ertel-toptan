@@ -11418,3 +11418,24 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   .as-form .auth-view.v-signup input { padding-top: 9px; padding-bottom: 9px; }
   .as-form .auth-view.v-signup .center-btn { padding-top: 11px; padding-bottom: 11px; }
 }
+
+/* 16.11 (3): TAM SAYFA — kenardan kenara, üst menünün altından ekranın dibine; içeride ayrı kaydırma YOK */
+.as-page { max-width: none; }
+.as-wrap { width: 100vw; margin-left: calc(50% - 50vw); height: auto; min-height: calc(100svh - var(--as-top, 96px)); border: 0; border-radius: 0; border-top: 1px solid var(--line); }
+.as-form { overflow: visible; padding: 20px 32px; }
+.as-form.sg .as-form-in { max-width: 480px; }
+.as-form .auth-view.v-signup .auth-social { margin: 0; }
+.as-form .auth-view.v-signup .auth-or { margin: -2px 0; }
+.as-form .auth-view.v-signup > .fine.center:not(.auth-sw):not(.auth-legal) { display: none; }
+.as-form .auth-view.v-signup .auth-h { font-size: 24px; }
+.as-local { max-width: 760px; margin: 18px auto; padding: 0 16px; }
+@media (max-width: 899px) {
+  .as-wrap { min-height: 0; border-top: 0; }
+  .as-form .auth-view.v-signup > .fine.center:not(.auth-sw):not(.auth-legal) { display: block; }
+}
+.as-local:empty { display: none; }
+@media (min-width: 900px) { .as-page { margin-bottom: -40px; } }
+@media (max-width: 899px) {
+  .as-form .auth-view.v-signup > .fine.center:not(.auth-sw):not(.auth-legal) { display: none; }
+  .as-form .auth-view.v-signup .soc-btn { min-height: 0; padding-top: 9px; padding-bottom: 9px; }
+}
