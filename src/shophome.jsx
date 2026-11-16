@@ -508,7 +508,7 @@ export function HeaderSearch() {
     setFit({ w: Math.max(220, Math.min(400, Math.floor(wrap.current.getBoundingClientRect().right - left + 2))), drop: true });
   };
   // kapanış da animasyonlu: önce küçülerek kaybolur, sonra simgeye döner
-  const close = () => { setOpen(false); clearTimeout(closeT.current); setClosing(true); closeT.current = setTimeout(() => { setMob(false); setClosing(false); }, 220); };
+  const close = () => { setOpen(false); clearTimeout(closeT.current); setClosing(true); closeT.current = setTimeout(() => { setMob(false); setClosing(false); }, 260); };
   const hideList = () => setOpen(false); // sadece sonuç listesi kapanır; kutu ve yazı yerinde kalır
   const goAll = () => { if (!q.trim()) return; store.set({ catalogGo: { q: q.trim() } }); go('katalog'); hideList(); inp.current?.blur(); setQ(''); close(); };
   const pick = (p) => { setQ(''); close(); inp.current?.blur(); setProd(p); }; // ürüne bakınca arama temizlenir
@@ -522,8 +522,11 @@ export function HeaderSearch() {
     <div ref={wrap} className={'hsearch' + (mob ? ' mob-open' : '') + (closing ? ' closing' : '') + (fit?.drop ? ' drop' : '')} style={fit ? { '--hsw': fit.w + 'px' } : undefined}>
       <button type="button" className="icon-btn hsearch-btn" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); const box = wrap.current?.querySelector('.hsearch-box'); const cb = (box && getComputedStyle(box).position === 'fixed' ? null : box?.offsetParent?.getBoundingClientRect()) || (wrap.current?.closest('.topbar-in') || wrap.current?.closest('.topbar'))?.getBoundingClientRect() || { left: 0, right: innerWidth };
             // telefonda kutu üst menünün (cam şeridin) içine yerleşir → başlangıç kenar boşlukları ona göre: arama simgesinin yerinden uzar
-            wrap.current?.style.setProperty('--hsx', Math.max(0, r.left - cb.left - 4) + 'px'); wrap.current?.style.setProperty('--hsr', Math.max(0, cb.right - r.right - 4) + 'px'); measure(); clearTimeout(closeT.current); flushSync(() => { setClosing(false); setMob(true); }); inp.current?.focus(); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
+            wrap.current?.style.setProperty('--hsx', Math.max(0, r.left - cb.left - 4) + 'px'); wrap.current?.style.setProperty('--hsr', Math.max(0, cb.right - r.right - 4) + 'px');
+            { const W = cb.right - cb.left + 2, pill = W - Math.max(0, r.left - cb.left - 4) - Math.max(0, cb.right - r.right - 4) - 2; wrap.current?.style.setProperty('--hss', String(Math.max(0.01, (pill - 42) / Math.max(1, W - 42)))); } // 17.11.2026 telefonda kutunun zemini 3 parça (hs-sk): orta parçanın başlangıç genişlik oranı
+            measure(); clearTimeout(closeT.current); flushSync(() => { setClosing(false); setMob(true); }); inp.current?.focus(); setTimeout(() => inp.current?.focus(), 30); }} aria-label="Ürün ara"><Icon n="search" s={19} /></button>
       <div className="hsearch-box">
+        <i className="hs-sk" aria-hidden="true"><b /><b /><b /></i>
         <Icon n="search" s={19} />
         <input ref={inp} type="search" value={q} placeholder="Ürün ara…" aria-label="Ürün ara"
           onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(-1); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => { setOpen(false); if (!inp.current?.value) close(); }, 180)} onKeyDown={key} />

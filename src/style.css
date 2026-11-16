@@ -8424,7 +8424,8 @@ html.th-dash .csel-pop { background: var(--surface); border-color: var(--line); 
 
 /* 6.11.2026 (7) sayfa geçişi sırasında cam menüler neredeyse opak (iPhone'da altından geçen resim büyütülmüş görünüyordu) */
 .topbar.hdr-g .topbar-in, .shell .botnav { transition: background-color .18s ease; }
-@media (hover: none) { html.nav-mv.nav-mv.nav-mv .topbar.hdr-g .topbar-in, html.nav-mv.nav-mv.nav-mv .shell .botnav { background-color: color-mix(in oklab, var(--surface) 96%, transparent) !important; } }
+/* 17.11.2026: üst menü sayfa geçişinde artık DEĞİŞMEZ (kullanıcı: 'her geçişte F5 gibi yeniden çiziliyor'); eski hâl look.navMvTop 'on' (html.nmv-top) */
+@media (hover: none) { html.nav-mv.nav-mv.nav-mv.nmv-top .topbar.hdr-g .topbar-in, html.nav-mv.nav-mv.nav-mv .shell .botnav { background-color: color-mix(in oklab, var(--surface) 96%, transparent) !important; } }
 
 /* 6.11.2026 (7) yönetim yan menüsündeki ses düğmesi: kaydırıcı düğmenin ÜSTÜNDE açılır (alt köşede ekran dışına taşmasın) */
 .shell.admin .sfx-pop { top: auto; bottom: calc(100% + 8px); transform-origin: 50% 100%; }
@@ -11601,3 +11602,52 @@ html.nav-mv .as-fxsvg *, html.nav-mv .as-fx-x { animation-play-state: paused !im
   .fx-mikro .as-mark .as-float, .fx-mikro .as-ring { animation: none; }
   .as-v-dev .as-art:not(.fx-ring) ~ .as-q, .as-art:not(.fx-ring) ~ .as-q { left: 86px; right: 14px; }
 }
+/* 17.11.2026 telefonda cam üst menü araması: kutunun zemini 3 parça (sol kapak · orta · sağ kapak), sadece transform ile açılır
+   (clip-path Safari'de her karede yeniden çiziliyordu; sol kenarda köşe/çerçeve kutunun köşesiyle aynı değildi).
+   Kapaklar kayar, orta parça yatay büyür → köşeler hep 22px, çerçeve her karede tam. Kutunun kendisi saydam, hareket etmez (imleç kaymaz).
+   (2) kullanıcı 'hâlâ smooth değil': kutu kapalıyken de GİZLİ olarak yerinde durur (display:none → açılınca ilk karede kurulum/yerleşim
+   yükü yoktu, şimdi sadece görünür olur), açılış biraz daha uzun + yumuşak yavaşlama, kapanış kendi eğrisiyle (ters oynatma eğriyi bozuyordu). */
+.hs-sk { display: none; }
+@media (max-width: 899px) {
+  .topbar.hdr-g .hsearch-box { --hsR: 22px; --hs-bg: var(--surface); --hs-bd: color-mix(in oklab, var(--lg-blue) 45%, transparent); }
+  html[data-theme="dark"] .topbar.hdr-g .hsearch-box { --hs-bg: #23252b; --hs-bd: color-mix(in oklab, var(--lg-blue) 55%, rgb(255 255 255 / .2)); }
+  /* kapalıyken: açık hâliyle aynı yerde, görünmez ve dokunulmaz */
+  .topbar.hdr-gs .gs-srch .hsearch:not(.mob-open) .hsearch-box { display: flex !important; position: fixed; top: -1px; left: -1px; right: -1px; width: auto !important;
+    height: calc(var(--top-h) - 6px + 2px); visibility: hidden; pointer-events: none; background: transparent !important; border-color: transparent !important; box-shadow: none !important; animation: none !important; }
+  .topbar.hdr-gs .gs-srch .hsearch:not(.mob-open) .hs-sk { display: block; position: absolute; inset: -1px; z-index: -1; opacity: 0; }
+  .topbar.hdr-g .hsearch.mob-open .hsearch-box {
+    background: transparent !important; border-color: transparent !important; box-shadow: none !important; animation: none !important; clip-path: none !important; will-change: auto !important; isolation: isolate; }
+  html[data-theme="dark"] .topbar.hdr-g .hsearch.mob-open .hsearch-box,
+  html[data-theme="dark"] .topbar.hdr-g .hsearch.mob-open .hsearch-box:focus-within { background: transparent !important; }
+  .topbar.hdr-g.hdr-gs .gs-srch .hsearch.mob-open .hsearch-box, .topbar.hdr-g.hdr-gs .gs-srch .hsearch.mob-open.closing .hsearch-box { animation: none !important; clip-path: none !important; opacity: 1 !important; }
+  .topbar.hdr-g .hsearch .hs-sk b { position: absolute; top: 0; bottom: 0; background: var(--hs-bg); border: 1px solid var(--hs-bd); box-sizing: border-box; }
+  .topbar.hdr-g .hsearch .hs-sk b:nth-child(1) { left: 0; width: var(--hsR); border-right: 0; border-radius: var(--hsR) 0 0 var(--hsR); z-index: 1; }
+  .topbar.hdr-g .hsearch .hs-sk b:nth-child(2) { left: calc(var(--hsR) - 1px); right: calc(var(--hsR) - 1px); border-left: 0; border-right: 0; transform-origin: 0 50%; }
+  .topbar.hdr-g .hsearch .hs-sk b:nth-child(3) { right: 0; width: var(--hsR); border-left: 0; border-radius: 0 var(--hsR) var(--hsR) 0; z-index: 1; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk { display: block; position: absolute; inset: -1px; z-index: -1; pointer-events: none; animation: hsSkIn .36s cubic-bezier(.22, .9, .3, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk::after { content: ''; position: absolute; inset: 0; border-radius: var(--hsR); box-shadow: 0 10px 30px -14px rgb(10 20 40 / .4); opacity: 0; animation: hsFadeIn .22s .24s ease both; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(1) { animation: hsSkL .4s cubic-bezier(.22, .9, .3, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(2) { animation: hsSkM .4s cubic-bezier(.22, .9, .3, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(3) { animation: hsSkR .4s cubic-bezier(.22, .9, .3, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open .hsearch-box > svg, .topbar.hdr-g .hsearch.mob-open .hsearch-box > .hsearch-x, .topbar.hdr-g .hsearch.mob-open .hsearch-box input { animation: hsFadeIn .22s .12s ease both !important; }
+  /* büyüteç: açılırken kutunun altında söner, kapanırken kutu ona dönerken belirir */
+  .hdr-gs .gs-srch .hsearch.mob-open .hsearch-btn, .topbar.hdr-g .hsearch.mob-open .hsearch-btn { visibility: visible !important; animation: hsFadeOut .14s ease both; }
+  .hdr-gs .gs-srch .hsearch.mob-open.closing .hsearch-btn, .topbar.hdr-g .hsearch.mob-open.closing .hsearch-btn { animation: hsFadeIn .1s .14s ease both; }
+  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk { animation: hsSkOut .24s linear both; }
+  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk::after { animation: hsFadeOut .08s ease both; }
+  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk b:nth-child(1) { animation: hsSkL2 .24s cubic-bezier(.45, 0, .55, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk b:nth-child(2) { animation: hsSkM2 .24s cubic-bezier(.45, 0, .55, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk b:nth-child(3) { animation: hsSkR2 .24s cubic-bezier(.45, 0, .55, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open.closing .hsearch-box > svg, .topbar.hdr-g .hsearch.mob-open.closing .hsearch-box > .hsearch-x, .topbar.hdr-g .hsearch.mob-open.closing .hsearch-box input { animation: hsFadeOut .08s ease both !important; }
+}
+@keyframes hsSkIn { from { opacity: .6; } 35% { opacity: 1; } to { opacity: 1; } }
+@keyframes hsSkOut { from { opacity: 1; } 70% { opacity: 1; } to { opacity: 0; } }
+@keyframes hsFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hsFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes hsSkL { from { transform: translateX(calc(var(--hsx, 0px) + 1px)); } to { transform: none; } }
+@keyframes hsSkR { from { transform: translateX(calc(-1 * var(--hsr, 0px) - 1px)); } to { transform: none; } }
+@keyframes hsSkM { from { transform: translateX(calc(var(--hsx, 0px) + 1px)) scaleX(var(--hss, .1)); } to { transform: none; } }
+/* kapanış: tam kutudan büyüteçe (kendi eğrisi) */
+@keyframes hsSkL2 { from { transform: none; } to { transform: translateX(calc(var(--hsx, 0px) + 1px)); } }
+@keyframes hsSkR2 { from { transform: none; } to { transform: translateX(calc(-1 * var(--hsr, 0px) - 1px)); } }
+@keyframes hsSkM2 { from { transform: none; } to { transform: translateX(calc(var(--hsx, 0px) + 1px)) scaleX(var(--hss, .1)); } }
