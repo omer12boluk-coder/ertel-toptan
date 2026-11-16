@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick', LK.gs1Lbl === 'dock' && LK.gs1Dock && 'gs1-dk-' + LK.gs1Dock, LK.gs1SsIc === 'off' && 'gs1-noss', LK.gs1Chev === 'show' && 'gs1-chev'].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick', LK.gs1Lbl === 'dock' && LK.gs1Dock && 'gs1-dk-' + LK.gs1Dock, LK.gs1SsIc === 'off' && 'gs1-noss', LK.gs1Chev === 'show' && 'gs1-chev', LK.gs1Lbl === 'line' && LK.gs1LineSty && 'gs1-ls-' + LK.gs1LineSty].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   // useLayoutEffect + son genişlik cihazda saklı (ls gs1-x): menü ilk karede doğru ölçüde çizilir → giriş sayfasından uçan logo
   // menü logosunun GERÇEK yerine iner (ayarlar geç gelince menü 100 px kayıyordu, logo boşluğa iniyordu)
@@ -1365,7 +1365,8 @@ function useGs1Lbl(mode) {
       // 16.11.2026 tırtıl kayması: önce gidilen yöndeki ucu uzanır (iki sayfayı birden kapsar), sonra arka uç yetişir — net, kaygan değil.
       let cur = null, anim = null;
       const put = (b, inst) => { if (!ln) return; if (!b) { ln.style.opacity = '0'; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
-        const to = { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) }; ln.style.opacity = '1';
+        const dot = document.documentElement.classList.contains('gs1-ls-dot');
+        const to = dot ? { x: r.left - n.left + r.width / 2 - 3, w: 6 } : { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) }; ln.style.opacity = '1';
         const set = (q) => { ln.style.transform = `translateX(${q.x}px)`; ln.style.width = q.w + 'px'; };
         // aynı hedef tekrar istenirse (menüde başka bir sınıf değişti: açılır menü açıldı vb.) yürüyen animasyona DOKUNMA — rastgele 'tık'ın sebebi buydu
         if (cur && Math.abs(cur.x - to.x) < 1 && Math.abs(cur.w - to.w) < 1 && !inst) return;

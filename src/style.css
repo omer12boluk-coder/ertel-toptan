@@ -11316,3 +11316,21 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   html.gs1-lb-line .hdr-gs .gs1-line { transition: opacity .15s; height: 2.5px; border-radius: 3px; }
   html.gs1-lb-line .hdr-gs .gs-nav .topnav-b.on .topnav-l { font-weight: 650; }
 }
+/* 16.11.2026 kayan çizgi biçimleri (look.gs1LineSty; html gs1-ls-*): sade çizgi 'kuru' bulundu */
+@media (min-width: 900px) {
+  /* Parıltılı: çizginin çevresinde yumuşak tema rengi ışık */
+  html.gs1-ls-glow .hdr-gs .gs1-line { box-shadow: 0 0 10px 1px color-mix(in oklab, var(--accent) 55%, transparent), 0 2px 14px color-mix(in oklab, var(--accent) 35%, transparent); }
+  /* Işık havuzu: çizgiden yukarı doğru, yazının arkasına sönen hafif renk */
+  html.gs1-ls-pool .hdr-gs .gs1-line::before { content: ""; position: absolute; left: -10px; right: -10px; bottom: 0; height: 34px; border-radius: 12px 12px 3px 3px; pointer-events: none;
+    background: linear-gradient(0deg, color-mix(in oklab, var(--accent) 16%, transparent), transparent 85%); }
+  /* Ray: menünün altında ince silik ray, seçili parça onun üstünde kayar */
+  html.gs1-ls-track .hdr-gs .gs-nav .topnav-b::before { content: ""; position: absolute; left: 0; right: 0; bottom: -7px; height: 2.5px; background: color-mix(in oklab, var(--fg) 8%, transparent); pointer-events: none; }
+  html.gs1-ls-track .hdr-gs .gs-nav > .hd:not(:last-child) .topnav-b::before, html.gs1-ls-track .hdr-gs .gs-nav > .topnav-b:not(:last-child)::before { right: -8px; }
+  html.gs1-ls-track .hdr-gs .gs-nav > :first-child .topnav-b::before, html.gs1-ls-track .hdr-gs .gs-nav > .topnav-b:first-of-type::before { border-radius: 3px 0 0 3px; }
+  /* Nokta: yazının altında küçük nokta, tırtıl gibi uzayıp gider */
+  html.gs1-ls-dot .hdr-gs .gs1-line { height: 6px; border-radius: 3px; bottom: 6px; }
+  html.gs1-ls-dot .hdr-gs .gs-nav .topnav-b::after { left: calc(50% - 3px) !important; right: auto !important; width: 6px; height: 6px !important; border-radius: 3px; bottom: -9px !important; transform: scale(.5) !important; }
+  html.gs1-ls-dot .hdr-gs .gs-nav .topnav-b:not(.on):hover::after { transform: none !important; }
+  /* Renk geçişli: tema renginden açık camgöbeğine akan çizgi, hafif parıltı */
+  html.gs1-ls-grad .hdr-gs .gs1-line { background: linear-gradient(90deg, var(--accent), #22c3e6); box-shadow: 0 2px 10px -2px color-mix(in oklab, var(--accent) 50%, transparent); }
+}
