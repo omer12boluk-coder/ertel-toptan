@@ -1396,7 +1396,6 @@ function useGs1Lbl(mode) {
       // gölge ilk belirişte seçili sayfanın yerinden çıkar (oradan seker), menüden çıkınca söner
       const ghost = () => { if (!gh) return; const b = hov || nav.querySelector('.hd.open > .topnav-b');
         if (!b || b.classList.contains('on')) { gh.style.opacity = '0'; G.seed(null); return; }
-        if (!G.cur && M.cur) G.seed(M.cur);
         G.put(b); };
       const t0 = setTimeout(() => home(true), 120); const ro = new ResizeObserver(() => { if (M.busy()) return; home(true); }); ro.observe(nav);
       // 16.11.2026: çizgi fareyi KOVALAMAZ ('sabun gibi kaygan') → mavi çizgi sadece seçili sayfanın altında; üstüne gelinen yazının altında yerinde silik gri çizgi belirir (CSS ::after). Tıklayınca mavi çizgi kısa ve net kayar.
