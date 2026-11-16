@@ -127,6 +127,7 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/notify-member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyMember(env, b)); }
       if (url.pathname === '/push/fav' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushFav(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/push/back-admin' && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); return json(await sendBack(env, b)); }
       if (url.pathname === '/push/back' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushBack(env, req.headers.get('X-Key') || '', b)); }
@@ -731,6 +732,24 @@ async function notifyReq(env, b) {
   await adminPush(env, { title: `${r.type === 'order' ? '🛒 Yeni bayi siparişi' : '📨 Yeni talep'} #${r.no || ''} · ${who}`, body: (head + (r.note ? ' · ' + r.note : '')).slice(0, 160), url: '/admin/t/' + id, tag: 'ar-' + id }).catch(() => {});
   const text = `📨 Yeni bayi talebi #${r.no || ''}\n${who}\n${head}${r.pickup ? '\nGeliş: ' + r.pickup : ''}${r.note ? '\nNot: ' + r.note : ''}${lines ? '\n\n' + lines : ''}\n\nPanelde aç: ${link}`;
   return notifySend(env, { subject: `${r.type === 'order' ? 'Yeni bayi siparişi' : 'Yeni talep'} #${r.no || ''} · ${who}`, text, link });
+}
+
+// 17.11.2026 Yeni mağaza üyesi: üye kaydolunca kendi oturum anahtarıyla çağırır (members/{uid} o anahtarla okunur → başkası adına yollanamaz).
+// Telegram + yönetici push; e-posta yok (Resend günlük sınırı siparişlere kalsın). Aynı üye için bir kez (KV nmb:<uid>).
+async function notifyMember(env, b) {
+  const tok = String(b.token || ''); const uid = tokUid(tok);
+  if (!uid) return { ok: false, error: 'eksik' };
+  const key = 'nmb:' + uid;
+  if (await env.KV.get(key)) return { ok: true, already: true };
+  const m = await fsAuth('members/' + uid, tok);
+  if (!m) return { ok: false, error: 'üye yok' };
+  if (m.byAdmin || (m.createdAt && Date.now() - Number(m.createdAt) > 864e5)) return { ok: true, skip: true }; // panelden açılan / eski üye
+  await env.KV.put(key, '1', { expirationTtl: 60 * 60 * 24 * 30 });
+  const who = m.name || m.username || m.email || 'Yeni üye';
+  const via = b.via === 'google' ? 'Google ile' : b.via === 'facebook' ? 'Facebook ile' : 'E-posta ile';
+  await adminPush(env, { title: `👤 Yeni mağaza üyesi · ${who}`, body: [via, m.phone, m.email].filter(Boolean).join(' · ').slice(0, 160), url: '/admin/musteriler', tag: 'mb-' + uid }).catch(() => {});
+  const text = `👤 Yeni mağaza üyesi\n${who}${m.username ? ` (@${m.username})` : ''}\n${[m.email, m.phone].filter(Boolean).join(' · ')}\n${via} kayıt oldu\n\nPanelde aç: https://ertelmarket.com/admin/musteriler`;
+  return notifySend(env, { subject: `Yeni mağaza üyesi · ${who}`, text, noEmail: true });
 }
 
 // R2'ye yazma kapısı (resim taşıma işi, tools/r2-mirror.mjs): PUT/GET /r2obj/<anahtar>, başlık X-Key = sha256('r2:' + TELEGRAM_TOKEN).

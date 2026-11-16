@@ -413,7 +413,9 @@ export class LiquidEngine{
   strength(){return this.opts.strength*(this.opts.reducedMotion?.5:1)}
   frame(now){
     if(!this.running)return;
-    const rawMs=now-this.last,dt=clamp(rawMs/16.6667,.25,3);this.last=now;
+    // 17.11.2026 telefonda kum toplanırken (giriş, introT<1) geç gelen kare animasyonu ileri SIÇRATMAZ: süre en çok ~2 kare sayılır
+    // (sayfa yüklenirken ana iş parçacığı meşgul → eskiden 100 ms'lik atlama = gözle görülen takılma; şimdi kısa bir duraksama)
+    const introOn=this.introT<1&&!this.fl,rawMs=introOn?Math.min(now-this.last,34):now-this.last,dt=clamp(rawMs/16.6667,.25,introOn?2:3);this.last=now;
     const o=this.opts,ambientOn=o.ambient&&!o.reducedMotion;
     if(this.touchRelease&&now>this.touchRelease){this.presenceTarget=0;this.touchRelease=0}
     const ease=1-Math.pow(1-.22,dt);
@@ -494,7 +496,7 @@ export class LiquidEngine{
     gl.uniform1f(I.u.uTime,this.time);gl.uniform1f(I.u.uAmbient,amb);gl.uniform1f(I.u.uIntroVis,introVis);
     gl.uniform1f(I.u.uRest,rest);gl.uniform1f(I.u.uAlphaMode,this.alphaMode?1:0);
     const FL=this.fl;if(FL)gl.uniform4f(I.u.uFlowV,FL.t,FL.thin,FL.dx,FL.dy);else gl.uniform4f(I.u.uFlowV,-1,0,0,0);gl.uniform1f(I.u.uFlowJ,FL?.jit??.1);
-    if(!FL?.shed)gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    if(!FL?.shed&&(introVis>.002||rest>0||FL))gl.drawArrays(gl.TRIANGLE_STRIP,0,4); // 17.11.2026: kum toplanırken resim henüz görünmüyorsa tam kat çizim atlanır
     if(!this.n||(!this.stateDirty&&rest===0&&introVis>=1&&!FL))return;
     const P=this.pPart;gl.useProgram(P.p);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.stateTex[this.stateIdx]);gl.uniform1i(P.u.uState,0);

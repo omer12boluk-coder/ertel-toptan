@@ -627,7 +627,10 @@ export class FirebaseBackend {
   async _ensureMember(u, legal) {
     try {
       const ref = this.d('members', u.uid); const s = await timeout(this.F.getDoc(ref));
-      if (!s.exists()) await timeout(this.F.setDoc(ref, { uid: u.uid, email: String(u.email || '').toLowerCase(), name: u.displayName || '', phone: '', createdAt: now(), addresses: [], invoice: { type: 'person' }, ...(legal ? { legal } : {}) }));
+      if (!s.exists()) {
+        await timeout(this.F.setDoc(ref, { uid: u.uid, email: String(u.email || '').toLowerCase(), name: u.displayName || '', phone: '', createdAt: now(), addresses: [], invoice: { type: 'person' }, ...(legal ? { legal } : {}) }));
+        this._pingMember(u, u.providerData?.some((p) => p.providerId === 'facebook.com') ? 'facebook' : 'google');
+      }
     } catch (e) { console.warn(e); }
   }
   async _finishSocial(pend) {
@@ -688,11 +691,14 @@ export class FirebaseBackend {
       const m = { uid: cred.user.uid, email, name, phone, createdAt: now(), addresses, invoice, ...(username ? { username } : {}), ...(legal ? { legal } : {}) };
       await timeout(this.F.setDoc(this.d('members', m.uid), m));
       if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid: m.uid, email })).catch((e) => console.warn(e));
+      await this._pingMember(cred.user, 'mail');
       await this.U.sendEmailVerification(cred.user, this.actionUrl()).catch((e) => console.warn(e));
       if (!keep) await this.memberDone();
       return { ...m, verifySent: true };
     } catch (e) { await this.memberDone(); throw e; }
   }
+  // 17.11.2026 yeni üye bildirimi (Telegram + yönetici push): oturum kapanmadan anahtar alınır, istek arka planda gider
+  async _pingMember(user, via) { try { const token = await user.getIdToken(); if (token) pingWatch('/notify-member', { token, via }); } catch (e) { console.warn(e); } }
   async memberDone() { this.signingUp = false; await this.U.signOut(this.auth); }
   async emailOf(id) {
     id = String(id || '').trim().toLowerCase();
