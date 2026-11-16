@@ -10891,7 +10891,7 @@ html.gs-one.gs1-dock .hdr-gs .gs-nav .topnav-b { transform-origin: 50% 60%; will
   html:is(.gs1-lb-line, .gs1-lb-spot) .hdr-gs .gs-nav .topnav-b { padding: 0 14px; font-size: 14px; }
   html.gs1-lb-line .hdr-gs .gs1-line { position: absolute; left: 0; bottom: 12px; height: 2px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 2;
     transition: transform .38s cubic-bezier(.32, .72, 0, 1), width .38s cubic-bezier(.32, .72, 0, 1), opacity .2s; }
-  html.gs1-lb-spot .hdr-gs .gs-nav.xo-any .topnav-b:not(.xo):not(:hover) { opacity: .38; }
+  /* 16.11.2026: spot artık diğerlerini KARARTMAZ, sadece üstüne gelineni aydınlatır (eski: diğerleri opacity .38) */
   html.gs1-lb-spot .hdr-gs .gs-nav .topnav-b.on { font-weight: 700; }
   html.gs1-lb-stack .hdr-gs .gs-nav { gap: 2px; }
   html.gs1-lb-stack .hdr-gs .gs-nav .topnav-b { flex-direction: column; justify-content: center; gap: 3px; height: 54px; padding: 0 12px; border-radius: 14px; color: var(--muted) !important; transition: color .2s, background-color .2s; }
