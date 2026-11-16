@@ -11393,8 +11393,9 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
 /* 16.11.2026 Yüzen cam: sadece logo (look.gs1Name 'off'): ERTEL GSM yazısı görünmez ama yeri durur; logo yazının yerine, menünün hemen yanına geçer
    (sıra ters çevrilir: görünmez ad solda, logo sağda → menü yerinden kıpırdamaz) */
 @media (min-width: 900px) {
-  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand { flex-direction: row-reverse; }
-  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand b { visibility: hidden; }
+  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand b { display: none !important; }
+  /* 16.11.2026 (2): ad yerine menü gelir — ilk menü yazısı logoya, adın durduğu kadar yakın */
+  html.gs-one.gs1-noname .topbar.hdr-gs .gs-nav { padding-left: 0 !important; margin-left: -20px; }
 }
 /* 16.11.2026 hapsız biçimlerde (spot/çizgi/sade renk) Gece mavisi tonunda açılır menüsü açık yazının arkasında gri hap çıkmasın */
 @media (min-width: 900px) { html.gs-one.gs1-t-ink:is(.gs1-lb-spot, .gs1-lb-line, .gs1-lb-ink) .topbar.hdr-gs .gs-nav .hd.open > .topnav-b:not(.on) { background: transparent !important; } }
@@ -11428,7 +11429,7 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
 }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '9b2aa6db77';</script>
+<script>window.__BUILD = '8a1774019c';</script>
 </head>
 <body>
 <div id="root"></div>
