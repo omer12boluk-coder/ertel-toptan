@@ -11351,7 +11351,7 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
 }
 /* 16.11.2026 İsim + kayan çizgi / hap: menü 'Simge + yazı' gibi logodan hemen sonra başlar (sola yaslı, aynı aralık) */
 @media (min-width: 900px) {
-  html.gs-one.gs1-lb-line .hdr-gs .gs-nav { justify-content: flex-start !important; padding-left: 24px; }
+  html.gs-one:is(.gs1-lb-line, .gs1-lb-spot) .hdr-gs .gs-nav { justify-content: flex-start !important; padding-left: 24px; }
 }
 /* 16.11.2026 'Tıklayınca' = tek düğme: ok ayrı tıklanır parça değil (görünmez geniş basma alanı ve ayrı imleç yok), düğmenin tamamı menüyü açar/kapatır; açıkken ok döner */
 @media (min-width: 900px) {
@@ -11369,3 +11369,11 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   html.gs1-ls-bmw .hdr-gs .gs-nav .topnav-b::after { left: 0 !important; right: 0 !important; bottom: -15px !important; height: 3px !important; border-radius: 2px 2px 0 0 !important; transform: none !important; }
   html.gs1-ls-bmw .hdr-gs .gs-nav .topnav-b:not(.on):hover::after, html.gs1-ls-bmw .hdr-gs .gs-nav .hd.open > .topnav-b:not(.on)::after { opacity: .28 !important; }
 }
+/* 16.11.2026 Yüzen cam: sadece logo (look.gs1Name 'off'): ERTEL GSM yazısı kalkar, logo biraz sağa kayar */
+@media (min-width: 900px) {
+  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand { padding-left: 14px; gap: 0; }
+  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand b { display: none !important; }
+  html.gs-one.gs1-noname .topbar.hdr-gs .gs-brand .brand-logo { width: 38px; height: 38px; }
+}
+/* 16.11.2026 hapsız biçimlerde (spot/çizgi/sade renk) Gece mavisi tonunda açılır menüsü açık yazının arkasında gri hap çıkmasın */
+@media (min-width: 900px) { html.gs-one.gs1-t-ink:is(.gs1-lb-spot, .gs1-lb-line, .gs1-lb-ink) .topbar.hdr-gs .gs-nav .hd.open > .topnav-b:not(.on) { background: transparent !important; } }

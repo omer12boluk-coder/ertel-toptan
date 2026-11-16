@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick', LK.gs1Lbl === 'dock' && LK.gs1Dock && 'gs1-dk-' + LK.gs1Dock, LK.gs1SsIc === 'off' && 'gs1-noss', LK.gs1Chev === 'show' && 'gs1-chev', LK.gs1Lbl === 'line' && LK.gs1LineSty && 'gs1-ls-' + LK.gs1LineSty].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick', LK.gs1Lbl === 'dock' && LK.gs1Dock && 'gs1-dk-' + LK.gs1Dock, LK.gs1SsIc === 'off' && 'gs1-noss', LK.gs1Chev === 'show' && 'gs1-chev', LK.gs1Name === 'off' && 'gs1-noname', LK.gs1Lbl === 'line' && LK.gs1LineSty && 'gs1-ls-' + LK.gs1LineSty].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   // useLayoutEffect + son genişlik cihazda saklı (ls gs1-x): menü ilk karede doğru ölçüde çizilir → giriş sayfasından uçan logo
   // menü logosunun GERÇEK yerine iner (ayarlar geç gelince menü 100 px kayıyordu, logo boşluğa iniyordu)
@@ -784,7 +784,7 @@ function ShellFull() {
             </span>
           </div>
           <nav className="topnav gs-nav" aria-label="Ana menü">
-            {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim').map(([k, l, i]) => {
+            {nav.filter(([k]) => k !== 'hesap' && k !== 'sepet' && k !== 'tasarim' && !(gs1 && LK.gs1Home === 'off' && k === 'anasayfa')).map(([k, l, i]) => {
               const b = <button key={k} className={'topnav-b' + (navTab === k ? ' on' : '')} onClick={() => navGo(k)}><Icon n={gsX3 && k === 'kalip' ? 'stencil' : i} s={16} /><span className="topnav-l">{l}</span>{(k === 'katalog' || (v3 && k === 'kalip')) && <span className="topnav-chev" aria-hidden="true"><Icon n="down" s={13} /></span>}</button>;
               return k === 'katalog' ? <ProductsDrop key={k}>{b}</ProductsDrop> : k === 'kalip' ? <KalipDrop key={k}>{b}</KalipDrop> : b;
             })}
