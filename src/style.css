@@ -11349,3 +11349,7 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   html:is(.gs1-ls-pill, .gs1-ls-tint) .hdr-gs .gs-nav .topnav-b:not(.on):hover::after, html:is(.gs1-ls-pill, .gs1-ls-tint) .hdr-gs .gs-nav .hd.open > .topnav-b:not(.on)::after { opacity: 1 !important; transform: none !important; }
   html:is(.gs1-ls-pill, .gs1-ls-tint)[data-theme="dark"] .hdr-gs .gs-nav .topnav-b::after { background: rgb(255 255 255 / .08) !important; }
 }
+/* 16.11.2026 İsim + kayan çizgi / hap: menü 'Simge + yazı' gibi logodan hemen sonra başlar (sola yaslı, aynı aralık) */
+@media (min-width: 900px) {
+  html.gs-one.gs1-lb-line .hdr-gs .gs-nav { justify-content: flex-start !important; padding-left: 24px; }
+}
