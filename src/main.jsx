@@ -403,24 +403,6 @@ function useTheme() {
   }, [T.select, T.imgMenu]);
 }
 store.set({ deviceTheme: ls.get('device-theme', null) });
-// tema geçiş örtüsü (telefon): boy px (Safari adres çubuğu: 100vh yok), sayfa koordinatı yok — ekranın kendisi
-function themeVeil(n, fx, x, y, R, apply) {
-  const bgOf = () => { for (const el of [document.body, document.documentElement]) { const c = getComputedStyle(el).backgroundColor; if (c && !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c; } return getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || (document.documentElement.dataset.theme === 'dark' ? '#0f1012' : '#f5f5f7'); };
-  const v = document.createElement('div'); v.className = 'theme-veil'; v.setAttribute('aria-hidden', 'true');
-  v.style.cssText = `position:fixed;left:0;top:0;width:${innerWidth}px;height:${innerHeight}px;z-index:2147483000;pointer-events:none;background:${ls.get('th-bg-' + n, n === 'dark' ? '#0f1012' : '#f5f5f7')}`;
-  document.body.appendChild(v);
-  const kf = fx === 'fade' ? [{ opacity: 0 }, { opacity: 1 }] : fx === 'curtain' ? [{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0 0)' }]
-    : [{ clipPath: `circle(0px at ${x}px ${y}px)` }, { clipPath: `circle(${R}px at ${x}px ${y}px)` }];
-  const a = v.animate(kf, { duration: fx === 'fade' ? 260 : 380, easing: 'cubic-bezier(.33, 0, .2, 1)', fill: 'forwards' });
-  a.finished.then(() => {
-    apply(); try { ls.set('th-bg-' + n, bgOf()); v.style.background = bgOf(); } catch {}
-    // yeni tema bir kare çizilsin (ağır kare örtünün arkasında kalır), sonra örtü solar
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const o = v.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: 'ease-out', fill: 'forwards' });
-      o.finished.then(() => v.remove(), () => v.remove());
-    }));
-  }, () => { apply(); v.remove(); });
-}
 function ThemeButton() {
   const S = useStore((s) => s.settings);
   const dev = useStore((s) => s.deviceTheme);
@@ -435,13 +417,9 @@ function ThemeButton() {
     const n = dark ? 'light' : 'dark';
     const R0 = document.documentElement;
     const apply = () => { ls.set('device-theme', n); R0.setAttribute('data-theme', n); flushSync(() => store.set({ deviceTheme: n })); };
-    if (fx === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(); return; }
+    if (fx === 'none' || !document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(); return; }
     const r = e.currentTarget.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
     const R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-    // 17.11.2026 telefonda (kullanıcı: geçişte ufak kare sorunu): View Transition yerine yeni temanın zemin renginde düz bir örtü
-    // daireyle yayılır (sadece tek renk boyanır, sayfanın anlık görüntüsü / bulanık camlar her karede çizilmez), örtünün ALTINDA tema
-    // değişir, sonra örtü solar. Eski hâl look.darkFxM 'vt'.
-    if ((matchMedia('(pointer: coarse)').matches && S.look?.darkFxM !== 'vt') || !document.startViewTransition) { themeVeil(n, fx, x, y, R, apply); sfx('tap'); return; }
     R0.classList.add('vt-lite', 'vt-' + fx);
     const t = document.startViewTransition(apply);
     const kf = fx === 'fade' ? [{ opacity: 0 }, { opacity: 1 }]
