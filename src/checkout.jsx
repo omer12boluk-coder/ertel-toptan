@@ -26,6 +26,7 @@ import { feat } from './extras.jsx';
 import { OrderRate, useRateable } from './reviews.jsx';
 import { sfx } from './sfx.js';
 import { SoundToggle } from './soundui.jsx';
+import { AuthSplit, authSplitOn } from './authsplit.jsx';
 
 const CODE = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
 const orderNo = () => Array.from({ length: 6 }, () => CODE[Math.floor(Math.random() * CODE.length)]).join('');
@@ -739,15 +740,19 @@ async function bayiLogin(A, u, pw) {
   if (!bayiB) { bayiB = new FirebaseBackend(window.FIREBASE_CONFIG); await bayiB.init(); }
   await bayiB.login(u, pw, true);
 }
-function AuthForm({ onDone, compact }) {
+function AuthForm({ onDone, compact, start, onView, noGrow }) {
   const { api: A, settings: S } = useStore();
-  const [view, setView] = useState('login'); // login | signup | reset | resetSent | verifySent | unverified
+  const [view, setView] = useState(start || 'login');
+  useEffect(() => { onView?.(view); }, [view]); // login | signup | reset | resetSent | verifySent | unverified
   const [f, setF] = useState({ id: '', email: '', uname: '', pw: '', pw2: '', name: '', phone: '' });
   const [err, setErr] = useState('');
   const [sentTo, setSentTo] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e?.target ? e.target.value : e }));
   const canSignup = S.orders?.signup !== false;
+  const unameReq = S.orders?.unameReq !== false; // 16.11.2026: Ayarlar › Sipariş ve üyelik › 'Kullanıcı adı zorunlu'
+  // 17.11.2026: 'Şifre (tekrar)' alanı — iki bölmeli sayfada varsayılan YOK (göz düğmesiyle şifre görülebiliyor); orders.pw2 'on' = geri gelir
+  const pw2On = !noGrow || S.orders?.pw2 === 'on';
   // görünüm geçişi: mağazadaki sayfa geçişleri gibi hafif kayma + soluş (girişe dönüş soldan, diğerleri sağdan)
   const [dir, setDir] = useState('');
   // 3.11.2026: kutunun BOYU da yumuşakça değişir (giriş ⇄ üye ol arasında boy farkı ani zıplıyor, sonra yerine oturuyordu);
@@ -756,7 +761,8 @@ function AuthForm({ onDone, compact }) {
   const go2 = (v) => { setErr(''); prevH.current = formRef.current?.offsetHeight || 0; setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
   useLayoutEffect(() => {
     const el = formRef.current; const h0 = prevH.current; prevH.current = 0;
-    if (!el || !h0 || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // noGrow: iki bölmeli sayfada form ortalı durur, boy animasyonu bitince içerik 10-18 px sıçrıyordu (16.11.2026)
+    if (noGrow || !el || !h0 || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const h1 = el.offsetHeight; if (Math.abs(h1 - h0) < 2) return;
     el.style.overflow = 'clip';
     const a = el.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 300, easing: 'cubic-bezier(.22, 1, .36, 1)' });
@@ -787,10 +793,11 @@ function AuthForm({ onDone, compact }) {
         const email = f.email.trim().toLowerCase();
         if (f.name.trim().length < 3) throw new Error('Adınızı ve soyadınızı yazın.');
         if (!emailOk(email)) throw new Error('E-posta adresini kontrol edin.');
+        if (unameReq && !f.uname) throw new Error('Bir kullanıcı adı belirleyin.');
         if (f.uname && !unameOk(f.uname)) throw new Error('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).');
         if (phoneDigits(f.phone).length !== 11) throw new Error('Telefonu 0(5xx) xxx xx xx şeklinde yazın.');
         if (f.pw.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
-        if (f.pw !== f.pw2) throw new Error('Şifreler aynı değil.');
+        if (pw2On && f.pw !== f.pw2) throw new Error('Şifreler aynı değil.');
         if (!f.legal) throw new Error('Üye olmak için üyelik sözleşmesini onaylayın.');
         await A.memberSignup({ email, password: f.pw, name: f.name.trim(), phone: f.phone, username: f.uname || undefined, legal: { v: LEGAL_V, at: now() } });
         setSentTo(email); setF((x) => ({ ...x, id: f.uname || email, pw: '' })); setView(A.mode === 'demo' ? 'login' : 'verifySent');
@@ -819,7 +826,7 @@ function AuthForm({ onDone, compact }) {
   );
   return (
     <form ref={formRef} className="auth-form" onSubmit={submit}>
-      <div key={view} className={'auth-view' + (dir ? ' ' + dir : '')}>
+      <div key={view} className={'auth-view v-' + view + (dir ? ' ' + dir : '')}>
       {!compact && <h2 className="auth-h">{{ login: 'Giriş yapın', signup: 'Üye olun', bayi: 'Bayi girişi', reset: 'Şifremi unuttum', unverified: 'Giriş yapın' }[view]}</h2>}
       {['login', 'signup'].includes(view) && (social.google || social.facebook) && <>
         <div className="auth-social">
@@ -836,15 +843,15 @@ function AuthForm({ onDone, compact }) {
       {view === 'reset' && <p className="fine">E-posta adresinizi ya da kullanıcı adınızı yazın; şifre yenileme bağlantısı gönderelim.</p>}
       {view === 'signup' && <>
         <Field label="Ad soyad"><input id="m-name" autoComplete="name" value={f.name} onChange={set('name')} /></Field>
-        <Field label="E-posta" hint="Doğrulama bağlantısı buraya gelir"><input id="m-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={(e) => { const v = e.target.value; setF((x) => ({ ...x, email: v, uname: x.unameTouched ? x.uname : suggestUser(v) })); }} /></Field>
+        <Field label="E-posta" hint="Doğrulama bağlantısı buraya gelir"><input id="m-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={set('email')} /></Field>
         <div className="row2">
-          <Field label="Kullanıcı adı" opt hint="E-posta yerine bununla da girebilirsiniz"><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
+          <Field label="Kullanıcı adı" opt={!unameReq} hint="E-posta yerine bununla da girebilirsiniz"><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
           <Field label="Cep telefonu"><PhoneInput id="m-phone" value={f.phone} onChange={set('phone')} /></Field>
         </div>
       </>}
       {!['signup', 'bayi'].includes(view) && <Field label="E-posta ya da kullanıcı adı"><input id="m-id" autoComplete="username" autoCapitalize="none" value={f.id} onChange={set('id')} required /></Field>}
       {!['reset', 'bayi'].includes(view) && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}
-      {view === 'signup' && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}
+      {view === 'signup' && pw2On && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}
       {view === 'signup' && <SignupConsent checked={!!f.legal} onChange={(v) => setF((x) => ({ ...x, legal: v }))} />}
       {err && <p className="err">{err}</p>}
       {view === 'unverified'
@@ -923,6 +930,8 @@ function AuthSheet({ onClose }) {
 export function Account() {
   const member = useStore((s) => s.member);
   const S = useStore((s) => s.settings);
+  const acct = useStore((s) => s.acct);
+  const [aView, setAView] = useState(acct === 'signup' ? 'signup' : 'login');
   // çok yakında: üyelik hazır ama müşteriye henüz açık değil (Ayarlar > Online mağaza)
   if (!member && soon(S, 'accountsSoon')) return (
     <div className="page narrow acct">
@@ -933,6 +942,12 @@ export function Account() {
         <p className="muted">Üye olup adres ve fatura bilgilerinizi kaydedebilecek, siparişlerinizi buradan takip edebileceksiniz. Şimdilik ürünleri sepete ekleyip WhatsApp’tan gönderebilirsiniz.</p>
         <button className="btn primary" onClick={() => go('katalog')}><Icon n="grid" s={16} />Ürünlere göz at</button>
       </div>
+    </div>
+  );
+  if (!member && authSplitOn(S)) return (
+    <div className="page as-page">
+      <AuthSplit view={aView}><AuthForm noGrow start={acct === 'signup' ? 'signup' : undefined} onView={setAView} /></AuthSplit>
+      <div className="as-local"><LocalOrders /></div>
     </div>
   );
   if (!member) return (

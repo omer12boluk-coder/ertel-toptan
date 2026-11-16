@@ -158,7 +158,7 @@ function pushTab(tab) {
   } catch {}
 }
 // Hesabım alt sayfaları: /magaza/hesap/<bölüm> (telefonda geri kaydırınca Hesabım'a döner)
-export const ACCT = { orders: 'siparisler', addr: 'adresler', info: 'profil', inv: 'fatura', favs: 'favoriler', wait: 'haber-beklenenler', notif: 'bildirimler', pay: 'odeme' };
+export const ACCT = { orders: 'siparisler', addr: 'adresler', info: 'profil', inv: 'fatura', favs: 'favoriler', wait: 'haber-beklenenler', notif: 'bildirimler', pay: 'odeme', signup: 'uye-ol' };
 export function acctFromPath() { const m = /^\/magaza\/hesap\/([\w-]+)/.exec(lpath()); const slug = m && (m[1] === 'haber-bekleyenler' ? 'haber-beklenenler' : m[1]); /* eski bildirim linki */ const e = m && Object.entries(ACCT).find(([, x]) => x === slug); return e ? e[0] : null; }
 export function openAcct(v) {
   try {
