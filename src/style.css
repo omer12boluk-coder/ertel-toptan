@@ -11353,3 +11353,19 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
 @media (min-width: 900px) {
   html.gs-one.gs1-lb-line .hdr-gs .gs-nav { justify-content: flex-start !important; padding-left: 24px; }
 }
+/* 16.11.2026 'Tıklayınca' = tek düğme: ok ayrı tıklanır parça değil (görünmez geniş basma alanı ve ayrı imleç yok), düğmenin tamamı menüyü açar/kapatır; açıkken ok döner */
+@media (min-width: 900px) {
+  html.gs1-click:not(.gs1-split) .hdr-gs .gs-nav .topnav-chev { pointer-events: none; }
+  html.gs1-click:not(.gs1-split) .hdr-gs .gs-nav .topnav-chev::before { content: none; }
+  html.gs1-click:not(.gs1-split) .hdr-gs .gs-nav .topnav-chev svg { transition: transform .25s cubic-bezier(.2, 0, 0, 1); }
+  html.gs1-click:not(.gs1-split) .hdr-gs .gs-nav .hd.open .topnav-chev svg { transform: rotate(180deg); }
+}
+/* 16.11.2026 'Menünün altında' (gs1LineSty 'bmw', bmw.com.tr örneği): menünün alt kenarı boyunca ince silik çizgi; seçili sayfanın altında
+   o kenarda kalın tema rengi parça (düğmenin tam genişliği), tırtıl gibi kayar; üstüne gelince aynı kenarda silik parça */
+@media (min-width: 900px) {
+  html.gs1-ls-bmw .topbar.hdr-gs .topbar-in { position: relative; }
+  html.gs1-ls-bmw .topbar.hdr-gs .topbar-in::after { content: ""; position: absolute; left: 24px; right: 24px; bottom: 0; height: 1px; z-index: 1; background: color-mix(in oklab, var(--fg) 22%, transparent); pointer-events: none; }
+  html.gs1-ls-bmw .hdr-gs .gs1-line { bottom: 0; height: 3px; z-index: 2; border-radius: 2px 2px 0 0; }
+  html.gs1-ls-bmw .hdr-gs .gs-nav .topnav-b::after { left: 0 !important; right: 0 !important; bottom: -15px !important; height: 3px !important; border-radius: 2px 2px 0 0 !important; transform: none !important; }
+  html.gs1-ls-bmw .hdr-gs .gs-nav .topnav-b:not(.on):hover::after, html.gs1-ls-bmw .hdr-gs .gs-nav .hd.open > .topnav-b:not(.on)::after { opacity: .28 !important; }
+}

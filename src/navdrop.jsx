@@ -120,6 +120,8 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
   // ok: oka tıklamak sayfaya gitmez, menüyü açar/kapatır
   const click = (e) => {
     clearTimeout(t.current);
+    // 16.11.2026 Yüzen cam 'Tıklayınca' (bölünmüş düğme DEĞİL): ad + ok TEK düğme — basınca sayfaya gitmez, menüyü açar/kapatır
+    if (clickMode() && !document.documentElement.classList.contains('gs1-split') && e.target.closest?.('.topnav-b')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } return; }
     if (MENU.ok && e.target.closest?.('.topnav-chev')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } }
   };
   return (
