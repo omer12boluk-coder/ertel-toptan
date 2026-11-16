@@ -64,7 +64,10 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
       if (document.documentElement.classList.contains('adm-apple') && innerWidth >= 1100 && wrap.current?.closest('.shell.admin')) {
         el.style.left = Math.round(b.right + 12) + 'px'; el.style.top = Math.max(12, Math.min(Math.round(b.top - 8), innerHeight - el.offsetHeight - 12)) + 'px'; return;
       }
-      el.style.left = x + 'px'; el.style.top = Math.round(b.bottom + 10 + icoGap(true)) + 'px';
+      let y = b.bottom + 10 + icoGap(true);
+      // 16.11.2026 tek satır (Yüzen cam): dar menüler (Kalıp bulucu, Setler) de geniş olanlar gibi menü şeridinin ALTINDAN açılır (BMW şeridinde üstüne biniyordu)
+      if (document.documentElement.classList.contains('gs-one') && innerWidth >= 900) { const c = wrap.current?.closest('.topbar')?.querySelector('.topbar-in')?.getBoundingClientRect(); if (c && c.height) y = Math.max(y, c.bottom + 8 + icoGap()); }
+      el.style.left = x + 'px'; el.style.top = Math.round(y) + 'px';
     };
     place(); addEventListener('resize', place); addEventListener('scroll', place, true);
     // v3: yandaki menüden geçiş → panel kapanıp açılmaz, eski yerinden yeni yerine/boyuna kayar, içerik hafifçe belirir
