@@ -1364,7 +1364,7 @@ function useGs1Lbl(mode) {
       if (ln) { ln.setAttribute('aria-hidden', 'true'); nav.prepend(ln); }
       // 16.11.2026 tırtıl kayması: önce gidilen yöndeki ucu uzanır (iki sayfayı birden kapsar), sonra arka uç yetişir — net, kaygan değil.
       let cur = null, anim = null;
-      const put = (b, inst) => { if (!ln) return; if (!b) { ln.style.opacity = '0'; cur = null; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
+      const put = (b, inst) => { if (!ln) return; if (!b) { ln.style.opacity = '0'; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
         const to = { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) }; ln.style.opacity = '1';
         const set = (q) => { ln.style.transform = `translateX(${q.x}px)`; ln.style.width = q.w + 'px'; };
         const from = cur; cur = to; anim?.cancel(); anim = null;
@@ -1372,9 +1372,11 @@ function useGs1Lbl(mode) {
         const L = Math.min(from.x, to.x), R = Math.max(from.x + from.w, to.x + to.w);
         set(to);
         anim = ln.animate([{ transform: `translateX(${from.x}px)`, width: from.w + 'px' }, { transform: `translateX(${L}px)`, width: (R - L) + 'px', offset: .5 }, { transform: `translateX(${to.x}px)`, width: to.w + 'px' }],
-          { duration: 420, easing: 'cubic-bezier(.45,0,.2,1)' }); };
+          { duration: 420, easing: 'cubic-bezier(.45,0,.2,1)' });
+        // kalın yazı / sayfa değişimi sırasında boyut ölçümü değişirse sonda sessizce düzelt (animasyon yarıda kesilmez)
+        anim.onfinish = () => { anim = null; home(true); }; };
       const home = (inst) => put(nav.querySelector('.topnav-b.on'), inst);
-      const t0 = setTimeout(() => home(true), 120); const ro = new ResizeObserver(() => home(true)); ro.observe(nav);
+      const t0 = setTimeout(() => home(true), 120); const ro = new ResizeObserver(() => { if (anim) return; home(true); }); ro.observe(nav);
       // 16.11.2026: çizgi fareyi KOVALAMAZ ('sabun gibi kaygan') → mavi çizgi sadece seçili sayfanın altında; üstüne gelinen yazının altında yerinde silik gri çizgi belirir (CSS ::after). Tıklayınca mavi çizgi kısa ve net kayar.
       const ov = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); if (mode === 'spot') { nav.classList.add('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x !== b && x.classList.remove('xo')); b.classList.add('xo'); } };
       const lv = () => { clearTimeout(out); out = setTimeout(() => { if (document.querySelector('.hd-p')) { out = setTimeout(lv, 300); return; } nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); home(); }, 160); };
