@@ -1784,7 +1784,7 @@ function setupNavAnim() {
   const lightTargets = (main) => {
     const H = innerHeight, out = [];
     // dönüşte kaydırma yeri (store.js go → __navY) bir kare SONRA verilir → ölçüm o yere göre yapılır
-    const off = (window.__navY || 0) - scrollY;
+    const ny = window.__navY; const off = ny && Date.now() - ny.t < 400 ? ny.y - scrollY : 0;
     const dig = (el, d) => {
       const b = el.getBoundingClientRect(); const r = { top: b.top - off, bottom: b.bottom - off, height: b.height };
       if (r.bottom <= 0 || r.top >= H || !r.height) return; // ekran dışı: kaymaz
@@ -1876,7 +1876,8 @@ function setupNavAnim() {
       for (const x of pageTargets(watched)) if (!x.matches('.page-h, .subnav, .prod-top')) x.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 170, easing: 'ease-out', id: 'nav' });
       return;
     }
-    play(pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
+    // 16.11.2026: ürün sayfasından (ve başka sayfalardan) Ürünler'e dönüşte de uzun liste tek parça kaymaz, sadece ekrandaki parçalar (alt menüdekiyle aynı çözüm)
+    play(noSlide() === 'light' && !watched.querySelector(':scope > .pp-layer') ? lightTargets(watched) : pageTargets(watched), h === 'back' ? 'back' : 'fwd', 300);
   };
   storeListen(() => {
     if (!pend && key(store.s) !== last) pend = requestAnimationFrame(() => runKey(0));
