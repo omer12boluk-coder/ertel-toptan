@@ -11245,4 +11245,39 @@ html[data-theme="dark"] .gs1-tip, html.gs1-t-ink .gs1-tip { background: #2a2c33;
   html.gs1-lb-dock .hdr-gs .gs-nav .topnav-b { height: 38px; width: 48px; border-radius: 19px; }
   html[data-theme="dark"].gs1-lb-dock .hdr-gs .gs-nav > .gs1-tray, html.gs1-lb-dock.gs1-t-ink .hdr-gs .gs-nav > .gs1-tray { background: rgb(255 255 255 / .06); box-shadow: 0 0 0 .5px rgb(255 255 255 / .08) inset; }
 }
+/* 16.11.2026 Dock yerleri (look.gs1Dock; sadece gs1Lbl 'dock'): gri tepsi yok, simgeler 20 px */
+@media (min-width: 900px) {
+  html.gs1-lb-dock:is(.gs1-dk-center, .gs1-dk-brand, .gs1-dk-right) .hdr-gs .gs-nav > .gs1-tray { display: none; }
+  html.gs1-lb-dock:is(.gs1-dk-center, .gs1-dk-brand, .gs1-dk-right) .hdr-gs .gs-nav .topnav-b > svg:first-child { width: 20px !important; height: 20px !important; }
+  html.gs1-lb-dock:is(.gs1-dk-center, .gs1-dk-brand, .gs1-dk-right) .hdr-gs .gs-nav { gap: 4px; }
+
+  /* A · Ortada: menü sayfanın tam ortasında; üstüne gelince simge yukarı kalkar, adı altında (bar içinde) belirir */
+  html.gs1-dk-center .hdr-gs .topbar-in { position: relative; }
+  html.gs1-dk-center:not(.isl):not(.isl-mv) .hdr-gs .gs-nav { position: absolute; left: 50%; top: 0; translate: -50% 0; flex: none; width: max-content; }
+  html.gs1-dk-center .hdr-gs .gs-srch { margin-left: auto; }
+  html.gs1-lb-dock.gs1-dk-center .hdr-gs .gs-nav .topnav-b { width: 58px; height: 50px; border-radius: 16px; position: relative; }
+  html.gs1-lb-dock.gs1-dk-center .hdr-gs .gs-nav .topnav-b > svg:first-child { transition: transform .32s cubic-bezier(.3, .7, .25, 1); }
+  html.gs1-lb-dock.gs1-dk-center .hdr-gs .gs-nav .topnav-b > .topnav-l { display: block !important; position: absolute; left: 50%; bottom: 6px; translate: -50% 0; max-width: none !important; margin: 0 !important;
+    font: 600 11px/1.2 var(--f-body) !important; letter-spacing: 0; white-space: nowrap; opacity: 0; transform: translateY(5px); pointer-events: none; transition: opacity .18s ease, transform .32s cubic-bezier(.3, .7, .25, 1); }
+  html.gs1-lb-dock.gs1-dk-center .hdr-gs .gs-nav .topnav-b:hover > svg:first-child, html.gs1-lb-dock.gs1-dk-center .hdr-gs .gs-nav .hd.open > .topnav-b > svg:first-child { transform: translateY(-7px); }
+  html.gs1-lb-dock.gs1-dk-center .hdr-gs .gs-nav .topnav-b:hover > .topnav-l, html.gs1-lb-dock.gs1-dk-center .hdr-gs .gs-nav .hd.open > .topnav-b > .topnav-l { opacity: 1; transform: none; transition: opacity .22s ease .04s, transform .32s cubic-bezier(.3, .7, .25, 1); }
+
+  /* B · Logonun yanında: logodan ince çizgiyle ayrılır; adı menünün sağında düz yazı olarak belirir */
+  html.gs1-dk-brand .hdr-gs .gs-nav { justify-content: flex-start !important; padding-left: 18px !important; }
+  html.gs1-dk-brand .hdr-gs .gs-nav::before { content: ""; position: absolute; left: 4px; top: 50%; width: 1px; height: 24px; margin-top: -12px; background: rgb(0 0 0 / .12); z-index: 1; display: block !important; }
+  html[data-theme="dark"].gs1-dk-brand .hdr-gs .gs-nav::before, html.gs1-dk-brand.gs1-t-ink .hdr-gs .gs-nav::before { background: rgb(255 255 255 / .14); }
+  html.gs1-lb-dock.gs1-dk-brand .hdr-gs .gs-nav .topnav-b { width: 44px; height: 40px; border-radius: 20px; }
+
+  /* C · Sağda: arama ortada ana öğe, simgeler sepetin yanında */
+  html.gs1-dk-right .hdr-gs .gs-srch { order: 2; margin-inline: auto; width: var(--gs1-sw, min(520px, 42vw)); }
+  html.gs1-dk-right .hdr-gs .gs-nav { order: 3; flex: none; }
+  html.gs1-dk-right .hdr-gs .gs-icons { order: 4; }
+  html.gs1-lb-dock.gs1-dk-right .hdr-gs .gs-nav .topnav-b { width: 42px; height: 42px; border-radius: 21px; }
 }
+/* Logonun yanında: menü içi düz yazı */
+.gs1-tip.gs1-tip-in { position: absolute; z-index: 2; padding: 0; background: none; box-shadow: none; border-radius: 0; color: var(--fg); font: 600 14px/1.3 var(--f-body); transition: transform 0s, opacity .16s ease; }
+.gs1-tip.gs1-tip-in > span { translate: -6px 0; transition: translate .3s cubic-bezier(.3, .7, .25, 1); }
+.gs1-tip.gs1-tip-in.on > span { translate: 0 0; }
+/* Sağda: küçük koyu etiket (macOS ipucu gibi) */
+.gs1-tip.gs1-tip-dk { padding: 4px 9px 5px; border-radius: 8px; background: rgb(29 29 31 / .92); color: #fff; font: 500 12px/1.25 var(--f-body); box-shadow: 0 6px 16px -8px rgb(0 0 0 / .45); }
+html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95); color: #1d1d1f; }

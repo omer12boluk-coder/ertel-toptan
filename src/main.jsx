@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick'].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick', LK.gs1Lbl === 'dock' && LK.gs1Dock && 'gs1-dk-' + LK.gs1Dock].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   // useLayoutEffect + son genişlik cihazda saklı (ls gs1-x): menü ilk karede doğru ölçüde çizilir → giriş sayfasından uçan logo
   // menü logosunun GERÇEK yerine iner (ayarlar geç gelince menü 100 px kayıyordu, logo boşluğa iniyordu)
@@ -729,7 +729,7 @@ function ShellFull() {
   useGs1Toggle(gs1 && !phoneUI && LK.gs1Lbl === 'toggle');
   useGs1IslIc(gs1 && gsIsl && !phoneUI);
   useGs1IconPill(gs1 && !phoneUI && LK.gs1Lbl === 'stack2');
-  useGs1Tip(gs1 && !phoneUI && LK.gs1Lbl === 'dock');
+  useGs1Tip(gs1 && !phoneUI && LK.gs1Lbl === 'dock' && LK.gs1Dock !== 'center' ? LK.gs1Dock || 'below' : '');
   // 16.11.2026 'Sadece seçilinin adı' (gs1Lbl 'pick'): Uzayan menünün aynısı ama fareyle uzamaz; adı kapalı simgelerin üstünde ipucu (title)
   const gs1Pick = gs1 && !phoneUI && LK.gs1Lbl === 'pick';
   useEffect(() => {
@@ -1246,11 +1246,13 @@ function useGs1IslIc(on) {
 // simgenin altında küçük etikette. Tek etiket: simgeden simgeye geçerken kayarak yer + yazı değiştirir (yeniden belirmez).
 // Açılır menü açılınca etiket söner (panelin üstüne binmesin).
 function useGs1Tip(on) {
+  // on: 'below' simgenin altında etiket | 'brand' menünün sağında düz yazı | 'right' altta koyu küçük etiket
   useEffect(() => {
     if (!on) return undefined;
+    const inl = on === 'brand';
     const nav = document.querySelector('.topbar.hdr-gs .gs-nav'); if (!nav) return undefined;
-    const tip = document.createElement('div'); tip.className = 'gs1-tip'; tip.setAttribute('aria-hidden', 'true');
-    const tx = document.createElement('span'); tip.append(tx); document.body.append(tip);
+    const tip = document.createElement('div'); tip.className = 'gs1-tip' + (inl ? ' gs1-tip-in' : on === 'right' ? ' gs1-tip-dk' : ''); tip.setAttribute('aria-hidden', 'true');
+    const tx = document.createElement('span'); tip.append(tx); (inl ? nav : document.body).append(tip);
     const tray = document.createElement('span'); tray.className = 'gs1-tray'; tray.setAttribute('aria-hidden', 'true'); nav.prepend(tray);
     const fit = () => { const bs = [...nav.querySelectorAll('.topnav-b')].filter((b) => b.offsetWidth); if (!bs.length) { tray.style.width = '0'; return; }
       const n = nav.getBoundingClientRect(), a = bs[0].getBoundingClientRect(), z = bs.at(-1).getBoundingClientRect();
@@ -1262,8 +1264,10 @@ function useGs1Tip(on) {
     const place = (b, glide) => {
       const r = b.getBoundingClientRect(); tx.textContent = nameOf(b);
       tip.style.transition = glide ? '' : 'none';
-      const w = tip.offsetWidth; const x = Math.round(r.left + r.width / 2 - w / 2), y = Math.round(r.bottom + 9);
-      tip.style.transform = `translate(${x}px, ${y}px)`;
+      if (inl) { const bs = [...nav.querySelectorAll('.topnav-b')].filter((q) => q.offsetWidth); const n = nav.getBoundingClientRect(), z = bs.at(-1).getBoundingClientRect();
+        tip.style.transform = `translate(${Math.round(z.right - n.left + 14)}px, ${Math.round(n.height / 2 - tip.offsetHeight / 2)}px)`; }
+      else { const w = tip.offsetWidth; const x = Math.round(r.left + r.width / 2 - w / 2), y = Math.round(r.bottom + (on === 'right' ? 7 : 9));
+        tip.style.transform = `translate(${x}px, ${y}px)`; }
       if (!glide) { void tip.offsetWidth; tip.style.transition = ''; }
     };
     const dropOpen = () => !!nav.querySelector('.hd.open');
