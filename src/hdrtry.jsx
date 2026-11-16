@@ -8,7 +8,9 @@ import { GS1_ROWS } from './designer.jsx';
 // 16.11.2026: Claude'daki demo sayfasında da (canlı adres değilse) panel açık
 export const HDR_TRY = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]ustmenu\b/.test(location.search) || !/ertelmarket\.com|web\.app|firebaseapp\.com/.test(location.hostname));
 const DEF = { header: 'search1' }; // önizleme ilk açılışta Tek satır ile gelir
-const read = () => { const v = ls.get('hdr-try', null); return v && typeof v === 'object' ? v : DEF; };
+// logo-spot dalı: bu önizlemede SADECE bu tasarım (panel yok, cihazdaki eski denemeler yok sayılır)
+const ONLY = { header: 'search1', gs1Lbl: 'spot', gs1Name: 'off', gs1Home: 'off' };
+const read = () => ONLY;
 const subs = new Set();
 let cur = HDR_TRY ? read() : null;
 const put = (v) => { cur = v; ls.set('hdr-try', v); subs.forEach((f) => f(v)); };
@@ -28,7 +30,7 @@ export function HdrPanel() {
   const eff = (k) => String((k in v ? v[k] : live[k]) ?? '');
   const [open, setOpen] = useState(() => ls.get('hdr-try-open', true));
   const tog = (o) => { ls.set('hdr-try-open', o); setOpen(o); };
-  if (!HDR_TRY) return null;
+  if (!HDR_TRY || ONLY) return null;
   // 16.11.2026: '' de yazılır (silinince canlıdaki değer geri geliyordu → 'Kutu' gibi varsayılan seçenekler seçilemiyordu)
   const set = (k, x) => { const n = { ...v }; n[k] = x; put(n); };
   const one = v.header === 'search1';
