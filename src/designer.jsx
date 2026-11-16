@@ -32,7 +32,7 @@ export const GS1_ROWS = [
   ['gs1Drop', 'Yüzen cam: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; sadece yanındaki aşağı oka basınca açılır, başlığa basmak sayfayı açar', [['', 'Üstüne gelince'], ['click', 'Tıklayınca'], ['split', 'Bölünmüş düğme']]],
   ['gs1Srch', 'Yüzen cam: arama', 'Basınca kutu, menüyle arasındaki boş yere kadar genişler', [['', 'Kutu'], ['icon', 'Simge']]],
   ['gs1Chev', 'Yüzen cam: ok işareti', 'Açılır menüler üstüne gelince açılıyorsa (Tıklayınca seçili değilse) Ürünler, Markalar vb. yanındaki aşağı ok gizlenir. Görünsün = eski hâl', [['', 'Gizli'], ['show', 'Görünsün']]],
-  ['gs1LineSty', 'Yüzen cam: kayan çizgi biçimi', 'Sadece "İsim + kayan çizgi" seçiliyken', [['', 'Sade çizgi'], ['glow', 'Parıltılı'], ['pool', 'Işık havuzu'], ['track', 'Ray'], ['dot', 'Nokta'], ['grad', 'Renk geçişli']]],
+  ['gs1LineSty', 'Yüzen cam: kayan çizgi biçimi', 'Sadece "İsim + kayan çizgi" seçiliyken', [['', 'Sade çizgi'], ['glow', 'Parıltılı'], ['pool', 'Işık havuzu'], ['track', 'Ray'], ['dot', 'Nokta'], ['grad', 'Renk geçişli'], ['pill', 'Beyaz hap'], ['tint', 'Renkli hap']]],
   ['gs1SsIc', 'Yüzen cam: arama açılınca', 'Simgeye dön: menü yazıları kapanır, sadece simgeler kalır, arama daha çok büyür (Simge + yazı ve Uzat / kısalt). Yazılar kalsın: menü hiç değişmez, arama sadece boş yere büyür', [['', 'Simgeye dön'], ['off', 'Yazılar kalsın']]],
   ['gs1Hov', 'Yüzen cam: menüde fare', 'Kayan kutu: fareyi izleyen yumuşak zemin. Büyüme: fareye yakın yazı hafifçe büyür', [['', 'Bugünkü'], ['slide', 'Kayan kutu'], ['dock', 'Büyüme']]],
 ];

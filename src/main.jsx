@@ -1365,8 +1365,9 @@ function useGs1Lbl(mode) {
       // 16.11.2026 tırtıl kayması: önce gidilen yöndeki ucu uzanır (iki sayfayı birden kapsar), sonra arka uç yetişir — net, kaygan değil.
       let cur = null, anim = null;
       const put = (b, inst) => { if (!ln) return; if (!b) { ln.style.opacity = '0'; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
-        const dot = document.documentElement.classList.contains('gs1-ls-dot');
-        const to = dot ? { x: r.left - n.left + r.width / 2 - 3, w: 6 } : { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) }; ln.style.opacity = '1';
+        const H2 = document.documentElement.classList, dot = H2.contains('gs1-ls-dot'), pil = H2.contains('gs1-ls-pill') || H2.contains('gs1-ls-tint');
+        if (pil) { ln.style.top = (r.top - n.top) + 'px'; ln.style.height = r.height + 'px'; } else { ln.style.top = ''; ln.style.height = ''; }
+        const to = dot ? { x: r.left - n.left + r.width / 2 - 3, w: 6 } : pil ? { x: r.left - n.left, w: r.width } : { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) }; ln.style.opacity = '1';
         const set = (q) => { ln.style.transform = `translateX(${q.x}px)`; ln.style.width = q.w + 'px'; };
         // aynı hedef tekrar istenirse (menüde başka bir sınıf değişti: açılır menü açıldı vb.) yürüyen animasyona DOKUNMA — rastgele 'tık'ın sebebi buydu
         if (cur && Math.abs(cur.x - to.x) < 1 && Math.abs(cur.w - to.w) < 1 && !inst) return;

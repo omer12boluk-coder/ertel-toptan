@@ -11334,3 +11334,18 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   /* Renk geçişli: tema renginden açık camgöbeğine akan çizgi, hafif parıltı */
   html.gs1-ls-grad .hdr-gs .gs1-line { background: linear-gradient(90deg, var(--accent), #22c3e6); box-shadow: 0 2px 10px -2px color-mix(in oklab, var(--accent) 50%, transparent); }
 }
+/* 16.11.2026 kayan çizgi → HAP (look.gs1LineSty 'pill' beyaz hap = sitenin orijinal seçili hapı | 'tint' tema renginde açık hap, mavi yazı):
+   sadece isimler; hap tırtıl gibi uzayıp yeni sayfaya geçer; üstüne gelince yerinde silik gri hap */
+@media (min-width: 900px) {
+  html:is(.gs1-ls-pill, .gs1-ls-tint) .hdr-gs .gs1-line { bottom: auto; z-index: 0; border-radius: 999px; }
+  html.gs1-ls-pill .hdr-gs .gs1-line { background: #fff; box-shadow: 0 0 0 .5px rgb(0 0 0 / .06), 0 0 0 .5px rgb(255 255 255 / .85) inset, 0 2px 8px -4px rgb(70 90 220 / .3), 0 1px 3px -1px rgb(0 0 0 / .1); }
+  html.gs1-ls-pill[data-theme="dark"] .hdr-gs .gs1-line, html.gs1-ls-pill.gs1-t-ink .hdr-gs .gs1-line { background: rgb(255 255 255 / .15); box-shadow: 0 0 0 .5px rgb(255 255 255 / .16) inset; }
+  html.gs1-ls-tint .hdr-gs .gs1-line { background: color-mix(in oklab, var(--accent) 12%, transparent); box-shadow: 0 0 0 .5px color-mix(in oklab, var(--accent) 18%, transparent) inset; }
+  html.gs1-ls-tint[data-theme="dark"] .hdr-gs .gs1-line { background: color-mix(in oklab, var(--accent) 30%, transparent); }
+  html.gs1-ls-tint .hdr-gs .gs-nav .topnav-b.on { color: var(--accent) !important; }
+  html.gs1-ls-tint[data-theme="dark"] .hdr-gs .gs-nav .topnav-b.on { color: #fff !important; }
+  html:is(.gs1-ls-pill, .gs1-ls-tint) .hdr-gs .gs-nav .topnav-b { z-index: 1; }
+  html:is(.gs1-ls-pill, .gs1-ls-tint) .hdr-gs .gs-nav .topnav-b::after { left: 0 !important; right: 0 !important; top: 0; bottom: 0 !important; height: auto !important; border-radius: 999px !important; background: rgb(118 118 128 / .1) !important; transform: scale(.94) !important; z-index: -1; }
+  html:is(.gs1-ls-pill, .gs1-ls-tint) .hdr-gs .gs-nav .topnav-b:not(.on):hover::after, html:is(.gs1-ls-pill, .gs1-ls-tint) .hdr-gs .gs-nav .hd.open > .topnav-b:not(.on)::after { opacity: 1 !important; transform: none !important; }
+  html:is(.gs1-ls-pill, .gs1-ls-tint)[data-theme="dark"] .hdr-gs .gs-nav .topnav-b::after { background: rgb(255 255 255 / .08) !important; }
+}
