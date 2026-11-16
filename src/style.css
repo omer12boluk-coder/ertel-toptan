@@ -11377,3 +11377,11 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
 @media (min-width: 900px) {
   html.gs1-lb-line .hdr-gs .gs-nav .topnav-b::after { display: none !important; }
 }
+/* 16.11.2026 gölge çizgi/hap (.gs1-ghost): fare gezerken üstüne gelinene seker, seçilininki yerinde kalır. Silik: aynı biçim, düşük renk */
+@media (min-width: 900px) {
+  html.gs1-lb-line .hdr-gs .gs1-line.gs1-ghost { opacity: 0; transition: opacity .18s ease; background: color-mix(in oklab, var(--accent) 35%, transparent); box-shadow: none; z-index: 1; }
+  html.gs1-lb-line .hdr-gs .gs1-line.gs1-ghost::before { display: none; }
+  html.gs1-ls-bmw .hdr-gs .gs1-line.gs1-ghost { background: color-mix(in oklab, var(--fg) 28%, transparent); z-index: 2; }
+  html.gs1-ls-pill .hdr-gs .gs1-line.gs1-ghost, html.gs1-ls-tint .hdr-gs .gs1-line.gs1-ghost { background: rgb(118 118 128 / .12); box-shadow: none; z-index: 0; }
+  html:is(.gs1-ls-pill, .gs1-ls-tint)[data-theme="dark"] .hdr-gs .gs1-line.gs1-ghost { background: rgb(255 255 255 / .08); }
+}

@@ -668,7 +668,9 @@ function ShellFull() {
   const phoneUI = usePhoneMQ();
   const hdrTry = useHdrTry(); // 15.11.2026 önizlemede 'Üst menü' paneli canlı ayarın üstüne yazar
   const LK0 = lookFor(S0.look, phoneUI);
-  const LK = hdrTry && !phoneUI ? { ...LK0, ...hdrTry, header: hdrTry.header || LK0.header } : LK0;
+  const LK1 = hdrTry && !phoneUI ? { ...LK0, ...hdrTry, header: hdrTry.header || LK0.header } : LK0;
+  // 16.11.2026: kayan çizgi biçimi seçildiyse ('Menünün altında' vb.) menü yazıları 'Simge + yazı' / 'Sadece isim'de kalmış olsa bile çizgi görünsün
+  const LK = LK1.gs1LineSty && (!LK1.gs1Lbl || LK1.gs1Lbl === 'text') ? { ...LK1, gs1Lbl: 'line' } : LK1;
   const hc = pub && LK.header === 'center';
   const hs = pub && ['search', 'search2', 'search3', 'search1'].includes(LK.header || 'search'); // 15.11.2026 'search2' = Arama + cam 2 (aynı menü, buz mavisi gerçek cam)
   // üst menü türü ve cam tema html sınıfı (CSS :root:has(...) yerine — :has sayfa genelinde stil hesabını ağırlaştırıyordu)
@@ -1361,36 +1363,48 @@ function useGs1Lbl(mode) {
     if (mode === 'line' || mode === 'spot') {
       // line: altta ince çizgi fareyi izler, menüden çıkınca seçili sayfanın altına döner · spot: üzerindeki yazı dışında hepsi silikleşir
       const ln = mode === 'line' ? Object.assign(document.createElement('span'), { className: 'gs1-line' }) : null;
-      if (ln) { ln.setAttribute('aria-hidden', 'true'); nav.prepend(ln); }
-      // 16.11.2026 tırtıl kayması: önce gidilen yöndeki ucu uzanır (iki sayfayı birden kapsar), sonra arka uç yetişir — net, kaygan değil.
-      let cur = null, anim = null, hov = null, ht = 0;
-      const put = (b, inst) => { if (!ln) return; if (!b) { ln.style.opacity = '0'; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
-        const H2 = document.documentElement.classList, dot = H2.contains('gs1-ls-dot'), pil = H2.contains('gs1-ls-pill') || H2.contains('gs1-ls-tint'), bmw = H2.contains('gs1-ls-bmw');
-        if (pil) { ln.style.top = (r.top - n.top) + 'px'; ln.style.height = r.height + 'px'; }
-        else if (bmw) { const tb = (nav.closest('.topbar-in') || nav).getBoundingClientRect(); ln.style.top = (tb.bottom - n.top - 3) + 'px'; ln.style.height = ''; nav.style.setProperty('--gs1-bmw', (tb.bottom - r.bottom) + 'px'); }
-        else { ln.style.top = ''; ln.style.height = ''; }
-        const to = dot ? { x: r.left - n.left + r.width / 2 - 3, w: 6 } : (pil || bmw) ? { x: r.left - n.left, w: r.width } : { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) }; ln.style.opacity = '1';
-        const set = (q) => { ln.style.transform = `translateX(${q.x}px)`; ln.style.width = q.w + 'px'; };
-        // aynı hedef tekrar istenirse (menüde başka bir sınıf değişti: açılır menü açıldı vb.) yürüyen animasyona DOKUNMA — rastgele 'tık'ın sebebi buydu
-        if (cur && Math.abs(cur.x - to.x) < 1 && Math.abs(cur.w - to.w) < 1 && !inst) return;
-        if (anim && inst) return;
-        const from = anim ? (() => { const m = new DOMMatrix(getComputedStyle(ln).transform); return { x: m.m41, w: ln.getBoundingClientRect().width }; })() : cur; cur = to; anim?.cancel(); anim = null;
-        if (inst || !from || (Math.abs(from.x - to.x) < 1 && Math.abs(from.w - to.w) < 1) || !ln.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { set(to); return; }
-        const L = Math.min(from.x, to.x), R = Math.max(from.x + from.w, to.x + to.w);
-        set(to);
-        anim = ln.animate([{ transform: `translateX(${from.x}px)`, width: from.w + 'px' }, { transform: `translateX(${L}px)`, width: (R - L) + 'px', offset: .5 }, { transform: `translateX(${to.x}px)`, width: to.w + 'px' }],
-          { duration: 420, easing: 'cubic-bezier(.45,0,.2,1)' });
-        // kalın yazı / sayfa değişimi sırasında boyut ölçümü değişirse sonda sessizce düzelt (animasyon yarıda kesilmez)
-        anim.onfinish = () => { anim = null; home(true); }; };
-      // 16.11.2026: fare menüde gezerken mavi, üstüne gelinen sayfaya tırtıl gibi seker (tıklamadan önce nereye gideceği görünür); menüden çıkınca seçiliye döner
-      const home = (inst) => put((mode === 'line' && (hov || nav.querySelector('.hd.open > .topnav-b'))) || nav.querySelector('.topnav-b.on'), inst);
-      const t0 = setTimeout(() => home(true), 120); const ro = new ResizeObserver(() => { if (anim) return; home(true); }); ro.observe(nav);
+      // 16.11.2026: ikinci 'gölge' çizgi/hap: fare menüde gezerken üstüne gelinene seker; seçili sayfanınki TIKLAYANA KADAR yerinde kalır
+      const gh = mode === 'line' ? Object.assign(document.createElement('span'), { className: 'gs1-line gs1-ghost' }) : null;
+      if (ln) { ln.setAttribute('aria-hidden', 'true'); gh.setAttribute('aria-hidden', 'true'); nav.prepend(ln); nav.prepend(gh); }
+      // tırtıl kayması: önce gidilen yöndeki ucu uzanır (iki sayfayı birden kapsar), sonra arka uç yetişir — net, kaygan değil.
+      let hov = null, ht = 0;
+      const mover = (el, again) => {
+        let cur = null, anim = null;
+        const put = (b, inst) => { if (!el) return; if (!b) { el.style.opacity = '0'; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
+          const H2 = document.documentElement.classList, dot = H2.contains('gs1-ls-dot'), pil = H2.contains('gs1-ls-pill') || H2.contains('gs1-ls-tint'), bmw = H2.contains('gs1-ls-bmw');
+          if (pil) { el.style.top = (r.top - n.top) + 'px'; el.style.height = r.height + 'px'; }
+          else if (bmw) { const tb = (nav.closest('.topbar-in') || nav).getBoundingClientRect(); el.style.top = (Math.min(tb.bottom, n.bottom) - n.top - 3) + 'px'; el.style.height = ''; }
+          else { el.style.top = ''; el.style.height = ''; }
+          const to = dot ? { x: r.left - n.left + r.width / 2 - 3, w: 6 } : (pil || bmw) ? { x: r.left - n.left, w: r.width } : { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) };
+          const wasHidden = el.style.opacity === '0' || !el.style.opacity; el.style.opacity = '1';
+          const set = (q) => { el.style.transform = `translateX(${q.x}px)`; el.style.width = q.w + 'px'; };
+          // aynı hedef tekrar istenirse (menüde başka bir sınıf değişti) yürüyen animasyona DOKUNMA — rastgele 'tık'ın sebebi buydu
+          if (cur && Math.abs(cur.x - to.x) < 1 && Math.abs(cur.w - to.w) < 1 && !inst && !wasHidden) return;
+          if (anim && inst) return;
+          const from = anim ? (() => { const m = new DOMMatrix(getComputedStyle(el).transform); return { x: m.m41, w: el.getBoundingClientRect().width }; })() : cur; cur = to; anim?.cancel(); anim = null;
+          if (inst || !from || (Math.abs(from.x - to.x) < 1 && Math.abs(from.w - to.w) < 1) || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { set(to); return; }
+          const L = Math.min(from.x, to.x), R = Math.max(from.x + from.w, to.x + to.w);
+          set(to);
+          anim = el.animate([{ transform: `translateX(${from.x}px)`, width: from.w + 'px' }, { transform: `translateX(${L}px)`, width: (R - L) + 'px', offset: .5 }, { transform: `translateX(${to.x}px)`, width: to.w + 'px' }],
+            { duration: 420, easing: 'cubic-bezier(.45,0,.2,1)' });
+          // kalın yazı / sayfa değişimi sırasında ölçü değişirse sonda sessizce düzelt (animasyon yarıda kesilmez)
+          anim.onfinish = () => { anim = null; again(true); }; };
+        return { put, seed: (q) => { cur = q; }, get cur() { return cur; }, busy: () => !!anim };
+      };
+      const M = mover(ln, (i) => home(i)), G = mover(gh, () => ghost());
+      const home = (inst) => M.put(nav.querySelector('.topnav-b.on'), inst);
+      // gölge ilk belirişte seçili sayfanın yerinden çıkar (oradan seker), menüden çıkınca söner
+      const ghost = () => { if (!gh) return; const b = hov || nav.querySelector('.hd.open > .topnav-b');
+        if (!b || b.classList.contains('on')) { gh.style.opacity = '0'; G.seed(null); return; }
+        if (!G.cur && M.cur) G.seed(M.cur);
+        G.put(b); };
+      const t0 = setTimeout(() => home(true), 120); const ro = new ResizeObserver(() => { if (M.busy()) return; home(true); }); ro.observe(nav);
       // 16.11.2026: çizgi fareyi KOVALAMAZ ('sabun gibi kaygan') → mavi çizgi sadece seçili sayfanın altında; üstüne gelinen yazının altında yerinde silik gri çizgi belirir (CSS ::after). Tıklayınca mavi çizgi kısa ve net kayar.
-      const ov = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); if (mode === 'line' && hov !== b) { clearTimeout(ht); ht = setTimeout(() => { hov = b; home(); }, 60); } if (mode === 'spot') { nav.classList.add('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x !== b && x.classList.remove('xo')); b.classList.add('xo'); } };
-      const lv = () => { clearTimeout(out); out = setTimeout(() => { if (document.querySelector('.hd-p')) { out = setTimeout(lv, 300); return; } nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); hov = null; home(); }, 160); clearTimeout(ht); };
-      const mo = new MutationObserver(() => { if (!nav.classList.contains('xo-any')) home(); }); mo.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] });
+      const ov = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); if (mode === 'line' && hov !== b) { clearTimeout(ht); ht = setTimeout(() => { hov = b; ghost(); }, 60); } if (mode === 'spot') { nav.classList.add('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x !== b && x.classList.remove('xo')); b.classList.add('xo'); } };
+      const lv = () => { clearTimeout(out); out = setTimeout(() => { if (document.querySelector('.hd-p')) { out = setTimeout(lv, 300); return; } nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); hov = null; ghost(); home(); }, 160); clearTimeout(ht); };
+      const mo = new MutationObserver(() => { if (!nav.classList.contains('xo-any')) { home(); ghost(); } }); mo.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] });
       nav.addEventListener('pointerover', ov); nav.addEventListener('pointerleave', lv);
-      return () => { clearTimeout(t0); clearTimeout(out); clearTimeout(ht); ro.disconnect(); mo.disconnect(); nav.removeEventListener('pointerover', ov); nav.removeEventListener('pointerleave', lv); ln?.remove(); guardOff(); nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); };
+      return () => { clearTimeout(t0); clearTimeout(out); clearTimeout(ht); ro.disconnect(); mo.disconnect(); nav.removeEventListener('pointerover', ov); nav.removeEventListener('pointerleave', lv); ln?.remove(); gh?.remove(); guardOff(); nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); };
     }
     let blob = null, at = null;
     const rectOf = (b) => { const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect(); return { x: r.left - n.left, y: r.top - n.top, w: r.width, h: r.height }; };
