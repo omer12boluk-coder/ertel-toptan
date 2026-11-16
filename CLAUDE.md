@@ -414,3 +414,4 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 - **16.11.2026 (33) BMW:** `gs1LineSty` 'bmw' seçilince üst menü kenardan kenara düz şerit (yuvarlak yüzen kutu değil; Ada'da eski hâl), seçili parça şeridin TAM alt kenarında, gri ayırıcı çizgi kaldırıldı. Gölge artık gri değil silik mavi ve seçiliden ayrılarak ÇIKMAZ: üstüne gelinen yerde belirir, menüde gezerken sonrakine kayar. ÖNİZLEMEDE.
 - **16.11.2026 (34):** Yüzen cam (gs-one, bilgisayar): dar açılır menüler (Kalıp bulucu, Setler) de geniş olanlar gibi menü şeridinin altından (+8 px) açılır (navdrop `place`); BMW şeridinde üstüne biniyordu.
 - **16.11.2026 (35) GERİ ALINDI:** (31)–(33) (çizginin fareye sekmesi, gölge, BMW düz şerit) kullanıcı isteğiyle geri alındı → kayan çizgi/BMW (30)'daki ilk hâlinde. (34) açılır menü yeri duruyor.
+- **16.11.2026 (36):** BMW biçiminde menünün altındaki ince gri çizgi (`.topbar-in::after`) kaldırıldı.
