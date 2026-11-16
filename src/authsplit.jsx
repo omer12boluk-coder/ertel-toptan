@@ -40,7 +40,7 @@ if (typeof window !== 'undefined') {
 // 17.11.2026 (sunum): sağ bölme efekti — ring (dönen halka, bugünkü) | devre (devre izlerinden logoya akan akım)
 // | mikro (mikroskop vizörü, odak) | osilo (osiloskop sinyali). Önizlemede ls 'as-fx', sonra ayar orders.authFx.
 const FX = ['ring', 'devre', 'mikro', 'osilo'];
-const asFx = (S) => { let x = S?.orders?.authFx; if (PV_HOST || !x) { try { x = localStorage.getItem('as-fx') || x; } catch {} } return FX.includes(x) ? x : 'ring'; };
+const asFx = (S) => { let x = S?.orders?.authFx; if (PV_HOST) { try { x = localStorage.getItem('as-fx') || x; } catch {} } return FX.includes(x) ? x : 'ring'; };
 // logo merkezi (300, 320), viewBox 600×760 — sağ bölmenin oranı
 const TRACES = ['M0 180H90L159 249V269', 'M0 440H100L159 381V371', 'M150 0V110L225 185V190', 'M470 0V100L375 195', 'M600 200H500L441 259V269',
   'M600 470H510L441 401V371', 'M480 760V555L375 450', 'M110 760V560L225 445'];
@@ -93,8 +93,11 @@ export function AuthSplit({ view, children }) {
   const k = view === 'signup' ? 'signup' : 'login';
   const S = useStore((st) => st.settings);
   const q = (k === 'signup' ? S?.orders?.authSignup : S?.orders?.authLogin)?.trim() || AUTH_TXT[k];
-  const [v, setV] = useState(() => asTry(S));
-  const [fx, setFx] = useState(() => asFx(S));
+  // ayar sonradan gelebilir → her çizimde ayardan okunur; önizlemedeki seçim üstüne yazar
+  const [vTry, setV] = useState(null);
+  const v = vTry || asTry(S);
+  const [fxTry, setFx] = useState(null);
+  const fx = fxTry || asFx(S);
   const pickFx = (x) => { try { localStorage.setItem('as-fx', x); } catch {} setFx(x); };
   const pick = (x) => { try { localStorage.setItem('as-try', x); } catch {} setV(x); };
   // tam sayfa: bölme üst menünün altından ekranın dibine kadar; üst konum ölçülür, sadece genişlik değişince yeniden

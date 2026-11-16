@@ -148,7 +148,7 @@ export const DEFAULT_SETTINGS = {
     unameReq: true, // 16.11.2026: üye olurken kullanıcı adı zorunlu (false = isteğe bağlı)
     // 16.11.2026 giriş / üye ol sayfası (authsplit.jsx): authUi 'split' iki bölmeli | 'old' eski tek kutu; authSide 'dev' dev amblem | 'amblem' ortada
     // authLogin / authSignup: sağ bölmedeki büyük yazı (boş = varsayılan metin)
-    authUi: 'split', authSide: 'dev', authLogin: '', authSignup: '',
+    authUi: 'split', authSide: 'dev', authLogin: '', authSignup: '', authFx: 'ring', // authFx: sağ bölme hareketi ring | devre | mikro | osilo (17.11.2026)
     // "Çok yakında": sistem hazır ama müşteriye henüz açılmadı (Ayarlar > Online mağaza'dan tek tıkla açılır)
     checkoutSoon: false, // sepette "Sepeti onayla" (online sipariş) çok yakında
     accountsSoon: false, // Hesabım / üyelik çok yakında

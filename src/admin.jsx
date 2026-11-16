@@ -697,7 +697,7 @@ const SEC_KEYS = {
   katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.pageSizeM', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
   resim: ['catalog.imageThumb', 'catalog.imageLarge'],
   dukkan: ['shop.name', 'shop.hours', 'shop.address', 'shop.phone', 'shop.whatsapp', 'shop.pickupNote'],
-  siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook', 'orders.unameReq', 'orders.authUi', 'orders.authSide', 'orders.authLogin', 'orders.authSignup', 'orders.pw2'],
+  siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook', 'orders.unameReq', 'orders.authUi', 'orders.authSide', 'orders.authLogin', 'orders.authSignup', 'orders.pw2', 'orders.authFx'],
   teslimat: ['orders.cargo', 'orders.pickup', 'orders.cargoNote', 'orders.carriers', 'orders.carrierDef'],
   odeme: ['orders.payHavale', 'orders.storeCard', 'orders.inst', 'orders.payCard', 'orders.cardSoon', 'orders.payShop', 'shop.payInfo', 'shop.ibans'],
   sepetlink: ['orders.lcartHours'],
@@ -1007,7 +1007,8 @@ export function Settings() {
           <h3>Giriş / üye ol sayfası</h3>
           <Toggle id="s-pw2" label="Üye olurken “Şifre (tekrar)” alanı" hint="Kapalıysa tek şifre alanı var (göz düğmesiyle yazılan görülebilir)" checked={d.orders.pw2 === 'on'} onChange={(v) => set('orders.pw2', v ? 'on' : '')} />
           <Toggle id="s-authui" label="Yeni görünüm (solda form, sağda logolu koyu bölme)" hint="Kapalıysa eski tek kutu" checked={(d.orders.authUi || 'split') === 'split'} onChange={(v) => set('orders.authUi', v ? 'split' : 'old')} />
-          <Field label="Sağ bölmedeki logo"><select id="s-authside" value={d.orders.authSide === 'amblem' ? 'amblem' : 'dev'} onChange={(e) => set('orders.authSide', e.target.value)}><option value="dev">Dev amblem (kenardan taşar)</option><option value="amblem">Amblem ortada</option></select></Field>
+          <Field label="Sağ bölmedeki hareket"><select id="s-authfx" value={['devre', 'mikro', 'osilo'].includes(d.orders.authFx) ? d.orders.authFx : 'ring'} onChange={(e) => set('orders.authFx', e.target.value)}><option value="ring">Dönen halka</option><option value="devre">Devre kartı (akım logoya akar)</option><option value="mikro">Mikroskop vizörü (odaklanma)</option><option value="osilo">Osiloskop (sinyal)</option></select></Field>
+          <Field label="Sağ bölmedeki logo" hint="Sadece 'Dönen halka'da geçerli; diğerlerinde logo ortada"><select id="s-authside" value={d.orders.authSide === 'amblem' ? 'amblem' : 'dev'} onChange={(e) => set('orders.authSide', e.target.value)}><option value="dev">Dev amblem (kenardan taşar)</option><option value="amblem">Amblem ortada</option></select></Field>
           <Field label="Giriş yazısı" hint="Boş bırakırsanız varsayılan yazı çıkar"><input id="s-authl" value={d.orders.authLogin || ''} placeholder={AUTH_TXT.login} onChange={(e) => set('orders.authLogin', e.target.value)} /></Field>
           <Field label="Üye ol yazısı" hint="Boş bırakırsanız varsayılan yazı çıkar"><input id="s-auths" value={d.orders.authSignup || ''} placeholder={AUTH_TXT.signup} onChange={(e) => set('orders.authSignup', e.target.value)} /></Field>
         </>}
