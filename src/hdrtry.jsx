@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ls } from './utils.js';
 import { useStore } from './store.js';
-import { GS1_ROWS } from './designer.jsx';
+import { GS1_ROWS, gs1Show } from './designer.jsx';
 
 // 16.11.2026: Claude'daki demo sayfasında da (canlı adres değilse) panel açık
 export const HDR_TRY = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]ustmenu\b/.test(location.search) || !/ertelmarket\.com|web\.app|firebaseapp\.com/.test(location.hostname));
@@ -38,7 +38,7 @@ export function HdrPanel() {
         <div className="an-ph"><b>Üst menü denemesi</b><small>Sadece bu önizlemede, bu cihazda. Ayarlar bilgisayar görünümü içindir; telefonda menü aynı.</small></div>
         <small className="an-dev">Üst menü</small>
         {HDRS.map(([k, t]) => <label key={'h' + k} className="an-row"><input type="radio" name="hdr-h" checked={(v.header || '') === k} onChange={() => set('header', k)} /><span>{t}</span></label>)}
-        {one && GS1_ROWS.map(([k, lb, , o]) => (
+        {one && GS1_ROWS.filter(([k]) => gs1Show(k, Object.fromEntries(GS1_ROWS.map(([q]) => [q, eff(q)])))).map(([k, lb, , o]) => (
           <div key={k}>
             <small className="an-dev">{((x) => x[0].toLocaleUpperCase('tr') + x.slice(1))(lb.replace('Yüzen cam: ', ''))}</small>
             {o.map(([x, t]) => <label key={k + x} className="an-row"><input type="radio" name={'hdr-' + k} checked={eff(k) === x} onChange={() => set(k, x)} /><span>{t}</span></label>)}

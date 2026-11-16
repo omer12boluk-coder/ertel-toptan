@@ -24,6 +24,14 @@ import { snapshot, applyPreset, sameAs, APPLE, CLAUDE_CHANGES, P0, P0_CHANGES, C
 import { PackDecor, DECOR } from './decor.jsx';
 // 15.11.2026 Kristal cam bilgisayar görünümü (look.gs3Pc) — designv3 de kullanır
 // 15.11.2026 'Tek satır' üst menü ayarları (look.gs1*) — Tasarım v3 + Gelişmiş ortak
+// 17.11.2026 birbirine bağlı ayarlar: sadece ilgili seçenek seçiliyken görünür (L = geçerli look)
+const GS1_SHOW = {
+  gs1Dock: (L) => L.gs1Lbl === 'dock',
+  gs1LineSty: (L) => L.gs1Lbl === 'line',
+  gs1Chev: (L) => !['click', 'split'].includes(L.gs1Drop) && L.gs1Lbl !== 'dock',
+  gs1SsIc: (L) => ['', 'toggle'].includes(L.gs1Lbl || ''),
+};
+export const gs1Show = (k, L) => !GS1_SHOW[k] || GS1_SHOW[k](L || {});
 export const GS1_ROWS = [
   ['gs1Tone', 'Yüzen cam: renk', '', [['', 'Beyaz cam'], ['ice', 'Buz mavisi'], ['smoke', 'Duman'], ['tint', 'Tema tonu'], ['ink', 'Gece mavisi']]],
   ['gs1Top', 'Yüzen cam: cam', 'Cam: düz zeminde de belli olan kristal cam (bannerın üstüne binmez). Şeffaf: en üstte zemin yok, kaydırınca cam', [['', 'Düz (bugünkü)'], ['glass', 'Cam'], ['clear', 'Şeffaf']]],
@@ -31,6 +39,7 @@ export const GS1_ROWS = [
   ['gs1Dock', 'Yüzen cam: Dock yeri', 'Sadece Dock seçiliyken: Ortada (ad simgenin altında, bar içinde) · Logonun yanında (ad menünün sağında yazı) · Sağda (arama ortada, ad koyu etikette)', [['', 'Bugünkü'], ['center', 'Ortada'], ['brand', 'Logonun yanında'], ['right', 'Sağda']]],
   ['gs1Drop', 'Yüzen cam: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; sadece yanındaki aşağı oka basınca açılır, başlığa basmak sayfayı açar', [['', 'Üstüne gelince'], ['click', 'Tıklayınca'], ['split', 'Bölünmüş düğme']]],
   ['logoAnim', 'Menü logosu animasyonu', '8 saniyede bir kısa bir hareket yapar, kalan sürede durur', [['', 'Yok'], ['flip', 'Para gibi döner'], ['spin', 'Kendi etrafında döner'], ['tilt', 'Sallanır'], ['hop', 'Zıplar'], ['glow', 'Parlar'], ['ring', 'Halka dalgası'], ['sand', 'Kum: rüzgâr dağıtır (bilgisayar)'], ['sandin', 'Kum: kumdan oluşur (bilgisayar)'], ['sandpuff', 'Kum: savrulup toplanır (bilgisayar)']]],
+  ['gs1Shift', 'Yüzen cam: logo ve menü sağa', 'Logo ve menü yazıları birlikte sağa kayar', [['', 'Yok'], ['12', '12 px'], ['24', '24 px'], ['40', '40 px'], ['64', '64 px']]],
   ['gs1Mark', 'Yüzen cam: logo yanı', 'Logo ile menü arasında ince çizgi; Büyük + çizgi: logo da büyür (sadece logo bırakınca çıplak durmasın)', [['', 'Yok'], ['line', 'İnce çizgi'], ['big', 'Büyük logo + çizgi']]],
   ['gs1SrchBg', 'Yüzen cam: arama kutusu rengi', 'Menü rengi: ayrı gri kutu yok, Ada\'daki gibi menünün renginde, sadece çok silik ince çizgi', [['', 'Gri kutu'], ['clear', 'Menü rengi (silik)']]],
   ['gs1Srch', 'Yüzen cam: arama', 'Basınca kutu, menüyle arasındaki boş yere kadar genişler', [['', 'Kutu'], ['icon', 'Simge']]],
@@ -1139,7 +1148,7 @@ function PagePanel({ d, set, setPeek, setSel, pack, openVers }) {
     <Disclose label="Menüler" value={<small>{({ center: 'logo ortada', classic: 'klasik', glass: 'yüzen cam', search1: 'tek satır', search2: 'arama + cam 2', search3: 'kristal cam' })[L.header] || 'cam + arama'}</small>}>
       <DevPick L={L} set={set} k="header" def="search" label="Üst menü düzeni" hint="Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Arama + cam 2: aynısı, buz mavisi gerçek cam. Kristal cam: aynısı, daha uzun ve kristal cam. Eski açıklama: Cam + arama: bilgisayarda ortada hep açık arama ve altında menü; telefonda yüzen cam şerit. Ortada logo: logo ortada, menü altta."
         opts={[['search', 'Cam + arama'], ['search1', 'Yüzen cam'], ['search2', 'Arama + cam 2'], ['search3', 'Kristal cam'], ['glass', 'Eski yüzen cam'], ['center', 'Ortada logo'], ['classic', 'Klasik']]} />
-      {L.header === 'search1' && GS1_ROWS.map(([k, lb, h, o]) => <Field key={k} label={lb} hint={h || undefined}><span className="seg sw">{o.map(([v, l]) => <button key={v} type="button" className={(L[k] || '') === v ? 'on' : ''} onClick={() => set('look.' + k, v || undefined)}>{l}</button>)}</span></Field>)}
+      {L.header === 'search1' && GS1_ROWS.filter(([k]) => gs1Show(k, L)).map(([k, lb, h, o]) => <Field key={k} label={lb} hint={h || undefined}><span className="seg sw">{o.map(([v, l]) => <button key={v} type="button" className={(L[k] || '') === v ? 'on' : ''} onClick={() => set('look.' + k, v || undefined)}>{l}</button>)}</span></Field>)}
       {(L.header === 'search3' || L.headerM === 'search3') && <Field label="Kristal cam tonu"><span className="seg sw">{[['', 'Beyaz'], ['ice', 'Buz mavisi']].map(([k, l]) => <button key={k} type="button" className={(L.gs3Tone || '') === k ? 'on' : ''} onClick={() => set('look.gs3Tone', k || undefined)}>{l}</button>)}</span></Field>}
       {(L.header === 'search3' || L.headerM === 'search3') && <Field label="Kristal cam: bilgisayarda görünüm"><span className="seg sw">{GS3_PC.map(([k, l]) => <button key={k} type="button" className={(L.gs3Pc || '') === k ? 'on' : ''} onClick={() => set('look.gs3Pc', k || undefined)}>{l}</button>)}</span></Field>}
       {(L.header === 'center' || L.headerM === 'center') && <Field label="Ortada logo menüsünün görünümü" hint="Banner her durumda menünün bittiği yerden başlar."><span className="seg sw">{[['', 'Bugünkü (düz)'], ['glass2', 'Cam, iki satır'], ['glass1', 'Cam, tek satır'], ['clear', 'Üstte şeffaf, kayınca cam']].map(([k, l]) => <button key={k} type="button" className={(L.hcStyle || '') === k ? 'on' : ''} onClick={() => set('look.hcStyle', k || undefined)}>{l}</button>)}</span></Field>}
