@@ -27,7 +27,7 @@ export const MENU = {
   niyet: true,  // 1) Fare başlıkta gerçekten DURUNCA açılır (üstünden geçerken açılmaz); durunca eskisinden hızlı açılır
   ok: true,     // 2) Başlıktaki küçük ok (˅) tıklanınca sadece menüyü açar/kapatır; yazıya tıklamak yine sayfaya gider. Dışarı tıklayınca kapanır
   nisan: true,  // 3) Alt kategorilere çapraz giderken yoldaki başlık değişmez; düz gezerken başlık anında değişir
-  burada: true, // 4) Şu an açık olan sayfanın menüsü fareyle açılmaz (sayfada aynı seçenekler zaten var); ok ile ve başka menü açıkken yandakine geçişte açılır
+  burada: false, // 16.11.2026 kullanıcı kaldırttı: bulunulan sayfanın menüsü de fareyle açılır (eski hâl: true). // 4) Şu an açık olan sayfanın menüsü fareyle açılmaz (sayfada aynı seçenekler zaten var); ok ile ve başka menü açıkken yandakine geçişte açılır
 };
 const DUR = 110;  // niyet: fare bu kadar ms (neredeyse) kıpırdamazsa menü açılır
 const TITRE = 6;  // niyet: bu kadar px'ten az kıpırdama "durdu" sayılır

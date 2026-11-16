@@ -415,3 +415,4 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 - **16.11.2026 (34):** Yüzen cam (gs-one, bilgisayar): dar açılır menüler (Kalıp bulucu, Setler) de geniş olanlar gibi menü şeridinin altından (+8 px) açılır (navdrop `place`); BMW şeridinde üstüne biniyordu.
 - **16.11.2026 (35) GERİ ALINDI:** (31)–(33) (çizginin fareye sekmesi, gölge, BMW düz şerit) kullanıcı isteğiyle geri alındı → kayan çizgi/BMW (30)'daki ilk hâlinde. (34) açılır menü yeri duruyor.
 - **16.11.2026 (36):** BMW biçiminde menünün altındaki ince gri çizgi (`.topbar-in::after`) kaldırıldı.
+- **16.11.2026 (37):** Bulunulan sayfanın menüsü (ör. Ürünler sayfasındayken Ürünler) artık fareyle de açılır (navdrop `MENU.burada` false; eski hâl true). Tüm üst menüleri etkiler.
