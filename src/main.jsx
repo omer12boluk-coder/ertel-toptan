@@ -1367,7 +1367,8 @@ function useGs1Lbl(mode) {
         if (inst) requestAnimationFrame(() => { ln.style.transition = ''; }); };
       const home = (inst) => put(nav.querySelector('.topnav-b.on'), inst);
       const t0 = setTimeout(() => home(true), 120); const ro = new ResizeObserver(() => home(true)); ro.observe(nav);
-      const ov = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); put(b); nav.classList.add('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x !== b && x.classList.remove('xo')); b.classList.add('xo'); };
+      // 16.11.2026: çizgi fareyi KOVALAMAZ ('sabun gibi kaygan') → mavi çizgi sadece seçili sayfanın altında; üstüne gelinen yazının altında yerinde silik gri çizgi belirir (CSS ::after). Tıklayınca mavi çizgi kısa ve net kayar.
+      const ov = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); if (mode === 'spot') { nav.classList.add('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x !== b && x.classList.remove('xo')); b.classList.add('xo'); } };
       const lv = () => { clearTimeout(out); out = setTimeout(() => { if (document.querySelector('.hd-p')) { out = setTimeout(lv, 300); return; } nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); home(); }, 160); };
       const mo = new MutationObserver(() => { if (!nav.classList.contains('xo-any')) home(); }); mo.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] });
       nav.addEventListener('pointerover', ov); nav.addEventListener('pointerleave', lv);

@@ -11300,3 +11300,12 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
 @media (min-width: 900px) {
   html.gs-one:not(.gs1-click):not(.gs1-chev) .hdr-gs .gs-nav .topnav-chev { display: none !important; }
 }
+/* 16.11.2026 İsim + kayan çizgi ('kaygan, kontrolü zor, sabun gibi; çizgi isme çok yakın'): mavi çizgi sadece seçili sayfada durur,
+   tıklayınca kısa ve net kayar (yaylanma/uzun kuyruk yok); üstüne gelince o yazının altında yerinde silik gri çizgi belirir;
+   çizgi yazıdan daha aşağıda (yazıyla arası ~11 → 15 px; gri hover çizgisi de aynı hizada). */
+@media (min-width: 900px) {
+  html.gs1-lb-line .hdr-gs .gs1-line { bottom: 8px; transition: transform .26s cubic-bezier(.2, 0, 0, 1), width .26s cubic-bezier(.2, 0, 0, 1), opacity .15s; }
+  html.gs1-lb-line .hdr-gs .gs-nav .topnav-b::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: -7px; height: 2px; border-radius: 2px;
+    background: currentColor; opacity: 0; transform: scaleX(.6); transition: opacity .15s ease, transform .2s cubic-bezier(.2, 0, 0, 1); pointer-events: none; }
+  html.gs1-lb-line .hdr-gs .gs-nav .topnav-b:not(.on):hover::after, html.gs1-lb-line .hdr-gs .gs-nav .hd.open > .topnav-b:not(.on)::after { opacity: .22; transform: none; }
+}
