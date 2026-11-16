@@ -508,7 +508,7 @@ export function HeaderSearch() {
     setFit({ w: Math.max(220, Math.min(400, Math.floor(wrap.current.getBoundingClientRect().right - left + 2))), drop: true });
   };
   // kapanış da animasyonlu: önce küçülerek kaybolur, sonra simgeye döner
-  const close = () => { setOpen(false); clearTimeout(closeT.current); setClosing(true); closeT.current = setTimeout(() => { setMob(false); setClosing(false); }, 220); };
+  const close = () => { setOpen(false); clearTimeout(closeT.current); setClosing(true); closeT.current = setTimeout(() => { setMob(false); setClosing(false); }, 260); };
   const hideList = () => setOpen(false); // sadece sonuç listesi kapanır; kutu ve yazı yerinde kalır
   const goAll = () => { if (!q.trim()) return; store.set({ catalogGo: { q: q.trim() } }); go('katalog'); hideList(); inp.current?.blur(); setQ(''); close(); };
   const pick = (p) => { setQ(''); close(); inp.current?.blur(); setProd(p); }; // ürüne bakınca arama temizlenir

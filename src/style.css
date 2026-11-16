@@ -11312,27 +11312,31 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
     background: transparent !important; border-color: transparent !important; box-shadow: none !important; animation: none !important; clip-path: none !important; will-change: auto !important; isolation: isolate; }
   html[data-theme="dark"] .topbar.hdr-g .hsearch.mob-open .hsearch-box,
   html[data-theme="dark"] .topbar.hdr-g .hsearch.mob-open .hsearch-box:focus-within { --hs-bg: #23252b; --hs-bd: color-mix(in oklab, var(--lg-blue) 55%, rgb(255 255 255 / .2)); background: transparent !important; }
-  .topbar.hdr-g .hsearch.mob-open .hs-sk { display: block; position: absolute; inset: -1px; z-index: -1; pointer-events: none; animation: hsSkIn .3s cubic-bezier(.32, .72, 0, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk { display: block; position: absolute; inset: -1px; z-index: -1; pointer-events: none; animation: hsSkIn .38s cubic-bezier(.22, .9, .24, 1) both; }
   .topbar.hdr-g .hsearch.mob-open .hs-sk::after { content: ''; position: absolute; inset: 0; border-radius: var(--hsR); box-shadow: 0 10px 30px -14px rgb(10 20 40 / .4); opacity: 0; animation: hsFadeIn .2s .2s ease both; }
   .topbar.hdr-g .hsearch.mob-open .hs-sk b { position: absolute; top: 0; bottom: 0; background: var(--hs-bg); border: 1px solid var(--hs-bd); box-sizing: border-box; }
-  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(1) { left: 0; width: var(--hsR); border-right: 0; border-radius: var(--hsR) 0 0 var(--hsR); z-index: 1; animation: hsSkL .3s cubic-bezier(.32, .72, 0, 1) both; }
-  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(2) { left: calc(var(--hsR) - 1px); right: calc(var(--hsR) - 1px); border-left: 0; border-right: 0; transform-origin: 0 50%; animation: hsSkM .3s cubic-bezier(.32, .72, 0, 1) both; }
-  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(3) { right: 0; width: var(--hsR); border-left: 0; border-radius: 0 var(--hsR) var(--hsR) 0; z-index: 1; animation: hsSkR .3s cubic-bezier(.32, .72, 0, 1) both; }
-  .topbar.hdr-g .hsearch.mob-open .hsearch-box > svg, .topbar.hdr-g .hsearch.mob-open .hsearch-box > .hsearch-x { animation: hsFadeIn .18s .1s ease both !important; }
-  .topbar.hdr-g .hsearch.mob-open .hsearch-box input { animation: hsFadeIn .18s .1s ease both !important; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(1) { left: 0; width: var(--hsR); border-right: 0; border-radius: var(--hsR) 0 0 var(--hsR); z-index: 1; animation: hsSkL .38s cubic-bezier(.22, .9, .24, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(2) { left: calc(var(--hsR) - 1px); right: calc(var(--hsR) - 1px); border-left: 0; border-right: 0; transform-origin: 0 50%; animation: hsSkM .38s cubic-bezier(.22, .9, .24, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open .hs-sk b:nth-child(3) { right: 0; width: var(--hsR); border-left: 0; border-radius: 0 var(--hsR) var(--hsR) 0; z-index: 1; animation: hsSkR .38s cubic-bezier(.22, .9, .24, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open .hsearch-box > svg, .topbar.hdr-g .hsearch.mob-open .hsearch-box input { animation: hsTxtIn .26s .12s cubic-bezier(.22, .9, .24, 1) both !important; }
+  .topbar.hdr-g .hsearch.mob-open .hsearch-box > .hsearch-x { animation: hsFadeIn .2s .18s ease both !important; }
+  /* 17.11.2026 (2) kutu açılırken menüdeki logo/simgeler kutunun altında kalmadan önce yumuşakça söner (kutu üstlerinden 'yiyerek' geçmiyor); kapanınca geri gelir */
+  .topbar.hdr-g .gs-r1 > :is(.gs-brand, .gs-icons) { transition: opacity .22s ease .1s; }
+  .topbar.hdr-g .gs-r1:has(.hsearch.mob-open:not(.closing)) > :is(.gs-brand, .gs-icons) { opacity: 0; transition: opacity .16s ease; }
   /* büyüteç: açılırken kutunun altında söner, kapanırken kutu ona dönerken belirir */
   .hdr-gs .gs-srch .hsearch.mob-open .hsearch-btn, .topbar.hdr-g .hsearch.mob-open .hsearch-btn { visibility: visible !important; animation: hsFadeOut .12s ease both; }
   .hdr-gs .gs-srch .hsearch.mob-open.closing .hsearch-btn, .topbar.hdr-g .hsearch.mob-open.closing .hsearch-btn { animation: hsFadeIn .1s .13s ease both; }
   .topbar.hdr-g.hdr-gs .gs-srch .hsearch.mob-open .hsearch-box, .topbar.hdr-g.hdr-gs .gs-srch .hsearch.mob-open.closing .hsearch-box { animation: none !important; clip-path: none !important; opacity: 1 !important; }
-  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk { animation: hsSkOut .22s cubic-bezier(.4, 0, .2, 1) both; }
+  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk { animation: hsSkOut .26s cubic-bezier(.4, 0, .2, 1) both; }
   .topbar.hdr-g .hsearch.mob-open.closing .hs-sk::after { animation: hsFadeOut .08s ease both; }
-  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk b { animation-duration: .22s; animation-timing-function: cubic-bezier(.4, 0, .2, 1); animation-direction: reverse; }
+  .topbar.hdr-g .hsearch.mob-open.closing .hs-sk b { animation-duration: .26s; animation-timing-function: cubic-bezier(.3, .1, .2, 1); animation-direction: reverse; }
   .topbar.hdr-g .hsearch.mob-open.closing .hs-sk b:nth-child(1) { animation-name: hsSkL2; } .topbar.hdr-g .hsearch.mob-open.closing .hs-sk b:nth-child(2) { animation-name: hsSkM2; } .topbar.hdr-g .hsearch.mob-open.closing .hs-sk b:nth-child(3) { animation-name: hsSkR2; }
   .topbar.hdr-g .hsearch.mob-open.closing .hsearch-box > svg, .topbar.hdr-g .hsearch.mob-open.closing .hsearch-box > .hsearch-x, .topbar.hdr-g .hsearch.mob-open.closing .hsearch-box input { animation: hsFadeOut .08s ease both !important; }
 }
-@keyframes hsSkIn { from { opacity: .4; } 40% { opacity: 1; } to { opacity: 1; } }
+@keyframes hsSkIn { from { opacity: 0; } 30% { opacity: 1; } to { opacity: 1; } }
 @keyframes hsSkOut { from { opacity: 1; } 72% { opacity: 1; } to { opacity: 0; } }
 @keyframes hsFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hsTxtIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 @keyframes hsFadeOut { from { opacity: 1; } to { opacity: 0; } }
 @keyframes hsSkL { from { transform: translateX(calc(var(--hsx, 0px) + 1px)); } to { transform: none; } }
 @keyframes hsSkR { from { transform: translateX(calc(-1 * var(--hsr, 0px) - 1px)); } to { transform: none; } }
