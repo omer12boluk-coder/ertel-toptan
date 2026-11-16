@@ -697,7 +697,7 @@ const SEC_KEYS = {
   katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.pageSizeM', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
   resim: ['catalog.imageThumb', 'catalog.imageLarge'],
   dukkan: ['shop.name', 'shop.hours', 'shop.address', 'shop.phone', 'shop.whatsapp', 'shop.pickupNote'],
-  siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook', 'orders.unameReq', 'orders.authUi', 'orders.authSide', 'orders.authLogin', 'orders.authSignup'],
+  siparis: ['access.publicShop', 'orders.enabled', 'orders.checkoutSoon', 'orders.accountsSoon', 'orders.signup', 'orders.loginGoogle', 'orders.loginFacebook', 'orders.unameReq', 'orders.authUi', 'orders.authSide', 'orders.authLogin', 'orders.authSignup', 'orders.pw2'],
   teslimat: ['orders.cargo', 'orders.pickup', 'orders.cargoNote', 'orders.carriers', 'orders.carrierDef'],
   odeme: ['orders.payHavale', 'orders.storeCard', 'orders.inst', 'orders.payCard', 'orders.cardSoon', 'orders.payShop', 'shop.payInfo', 'shop.ibans'],
   sepetlink: ['orders.lcartHours'],
@@ -1005,6 +1005,7 @@ export function Settings() {
           <Toggle id="s-lfb" label="Facebook ile giriş" hint="Önce Facebook uygulaması kurulup Firebase'de Facebook sağlayıcısı açılmalı" checked={d.orders.loginFacebook === true} onChange={(v) => set('orders.loginFacebook', v)} />
           <Toggle id="s-unreq" label="Üye olurken kullanıcı adı zorunlu" hint="Kapalıysa kullanıcı adı isteğe bağlı olur" checked={d.orders.unameReq !== false} onChange={(v) => set('orders.unameReq', v)} />
           <h3>Giriş / üye ol sayfası</h3>
+          <Toggle id="s-pw2" label="Üye olurken “Şifre (tekrar)” alanı" hint="Kapalıysa tek şifre alanı var (göz düğmesiyle yazılan görülebilir)" checked={d.orders.pw2 === 'on'} onChange={(v) => set('orders.pw2', v ? 'on' : '')} />
           <Toggle id="s-authui" label="Yeni görünüm (solda form, sağda logolu koyu bölme)" hint="Kapalıysa eski tek kutu" checked={(d.orders.authUi || 'split') === 'split'} onChange={(v) => set('orders.authUi', v ? 'split' : 'old')} />
           <Field label="Sağ bölmedeki logo"><select id="s-authside" value={d.orders.authSide === 'amblem' ? 'amblem' : 'dev'} onChange={(e) => set('orders.authSide', e.target.value)}><option value="dev">Dev amblem (kenardan taşar)</option><option value="amblem">Amblem ortada</option></select></Field>
           <Field label="Giriş yazısı" hint="Boş bırakırsanız varsayılan yazı çıkar"><input id="s-authl" value={d.orders.authLogin || ''} placeholder={AUTH_TXT.login} onChange={(e) => set('orders.authLogin', e.target.value)} /></Field>

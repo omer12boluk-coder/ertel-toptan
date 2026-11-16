@@ -750,7 +750,9 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e?.target ? e.target.value : e }));
   const canSignup = S.orders?.signup !== false;
-  const unameReq = S.orders?.unameReq !== false; // 16.11.2026: Ayarlar › Online mağaza › 'Kullanıcı adı zorunlu'
+  const unameReq = S.orders?.unameReq !== false; // 16.11.2026: Ayarlar › Sipariş ve üyelik › 'Kullanıcı adı zorunlu'
+  // 17.11.2026: 'Şifre (tekrar)' alanı — iki bölmeli sayfada varsayılan YOK (göz düğmesiyle şifre görülebiliyor); orders.pw2 'on' = geri gelir
+  const pw2On = !noGrow || S.orders?.pw2 === 'on';
   // görünüm geçişi: mağazadaki sayfa geçişleri gibi hafif kayma + soluş (girişe dönüş soldan, diğerleri sağdan)
   const [dir, setDir] = useState('');
   // 3.11.2026: kutunun BOYU da yumuşakça değişir (giriş ⇄ üye ol arasında boy farkı ani zıplıyor, sonra yerine oturuyordu);
@@ -795,7 +797,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
         if (f.uname && !unameOk(f.uname)) throw new Error('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).');
         if (phoneDigits(f.phone).length !== 11) throw new Error('Telefonu 0(5xx) xxx xx xx şeklinde yazın.');
         if (f.pw.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
-        if (f.pw !== f.pw2) throw new Error('Şifreler aynı değil.');
+        if (pw2On && f.pw !== f.pw2) throw new Error('Şifreler aynı değil.');
         if (!f.legal) throw new Error('Üye olmak için üyelik sözleşmesini onaylayın.');
         await A.memberSignup({ email, password: f.pw, name: f.name.trim(), phone: f.phone, username: f.uname || undefined, legal: { v: LEGAL_V, at: now() } });
         setSentTo(email); setF((x) => ({ ...x, id: f.uname || email, pw: '' })); setView(A.mode === 'demo' ? 'login' : 'verifySent');
@@ -849,7 +851,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
       </>}
       {!['signup', 'bayi'].includes(view) && <Field label="E-posta ya da kullanıcı adı"><input id="m-id" autoComplete="username" autoCapitalize="none" value={f.id} onChange={set('id')} required /></Field>}
       {!['reset', 'bayi'].includes(view) && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}
-      {view === 'signup' && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}
+      {view === 'signup' && pw2On && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}
       {view === 'signup' && <SignupConsent checked={!!f.legal} onChange={(v) => setF((x) => ({ ...x, legal: v }))} />}
       {err && <p className="err">{err}</p>}
       {view === 'unverified'

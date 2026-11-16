@@ -30,6 +30,13 @@ export function Typewriter({ text, speed = 55, cursor = '|', className }) {
 
 // Sağ bölme: koyu "sahne" (banner tarzı). Görseller koyu zeminde temiz kesimli banner resimleri.
 // sahne = tek büyük ürün, kenardan taşar, arkada mavi ışık hüzmeleri + toz | kolaj = üç ürün derinlikli
+// 17.11.2026: başka sayfadan bu sayfaya geçerken ilk kareler ağırdı (büyük resimlerin çözülmesi) → site boşta iken
+// halka + e resimleri önceden çözülür; sayfa açılırken hazır olur
+if (typeof window !== 'undefined') {
+  const warm = () => ['/bn/ert-ring.webp', '/bn/ert-e.webp'].forEach((u) => { const i = new Image(); i.decoding = 'async'; i.src = u; i.decode?.().catch(() => {}); (window.__asImgs ||= []).push(i); });
+  const later = () => (window.requestIdleCallback ? requestIdleCallback(warm, { timeout: 4000 }) : setTimeout(warm, 2500));
+  if (document.readyState === 'complete') setTimeout(later, 1500); else addEventListener('load', () => setTimeout(later, 1500), { once: true });
+}
 // 17.11.2026: yazı daktilo gibi yazılmasın → kelimeler sırayla bulanıktan netleşerek belirir
 function Words({ text }) {
   return String(text).split(/(\s+)/).map((w, i) => /^\s+$/.test(w) ? ' ' : w && <span key={i} className="as-w" style={{ '--d': (0.25 + 0.07 * (i / 2)).toFixed(2) + 's' }}>{w}</span>);

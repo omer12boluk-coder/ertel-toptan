@@ -11492,3 +11492,45 @@ html.pf-lite .as-ring, html.pf-lite .as-mark .as-float { animation: none; }
   .as-v-dev .as-mark { left: 86%; top: 50%; width: 240px; }
   .as-form .sfx-row { display: none; }
 }
+/* 17.11.2026 (2) */
+/* geçiş düzeltmesi: kart transform ile ortalanmasın — sayfa geçişi (WAAPI transform) bunu ezip kartı yarım genişlik kaydırıyordu */
+.as-wrap { transform: none; margin-left: calc(50% - min(50vw - var(--as-gap), 840px)); }
+/* giriş animasyonları kalktı (geçiş sırasında beliriyordu); sadece sürekli hareketler, geçişte durur */
+.as-mark, .as-v-dev .as-mark { animation: none; }
+.as-beam.b1 { animation: asSway1 18s ease-in-out infinite; }
+.as-beam.b2 { animation: asSway2 22s ease-in-out infinite; }
+.as-glow { animation: asBreath 6s ease-in-out infinite; }
+html.nav-mv .as-stick *, html.nav-mv .as-stick { animation-play-state: running !important; }
+html.nav-mv .as-ring, html.nav-mv .as-float, html.nav-mv .as-beam, html.nav-mv .as-glow { animation-play-state: paused !important; }
+/* dev amblem biraz uzakta: 'e' tümüyle seçilsin */
+.as-v-dev .as-mark { left: 66%; top: 47%; width: 92%; }
+.as-v-dev .as-glow { left: 66%; top: 47%; width: 100%; }
+/* üye ol: tek sütun (iki sütun 'iç içe' bulundu) */
+.as-form .auth-view.v-signup { display: flex; flex-direction: column; gap: 12px; }
+.as-form .auth-view.v-signup > .row2 { display: flex; flex-direction: column; gap: 12px; }
+.as-form .auth-view.v-signup .field { gap: 5px; }
+.as-form.sg .as-form-in { max-width: 400px; }
+/* sadece kısa iki alan (kullanıcı adı | telefon) yan yana — eski formdaki gibi; geri kalanı tek sütun */
+.as-form .auth-view.v-signup > .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.as-form.sg .as-form-in { max-width: 440px; }
+.as-form.sg { padding-top: 16px; padding-bottom: 16px; }
+@media (min-width: 900px) and (max-height: 820px) {
+  .as-form .auth-view.v-signup { gap: 9px; }
+  .as-form .auth-view.v-signup > .row2 { gap: 10px; }
+  .as-form .auth-view.v-signup input:not([type=checkbox]) { min-height: 0; height: 40px; padding-top: 0; padding-bottom: 0; }
+  .as-form .auth-view.v-signup .soc-btn, .as-form .auth-view.v-signup .center-btn { min-height: 0; height: 42px; padding-top: 0; padding-bottom: 0; }
+  .as-form .auth-view.v-signup .legal-ok { padding: 6px 10px; font-size: 12px; }
+  .as-form .auth-view.v-signup .auth-h { font-size: 21px; }
+}
+@media (max-width: 899px) { .as-form .auth-view.v-signup > .row2 { gap: 10px; } }
+/* geçişte hafiflik: büyük resimlerde gölge filtresi yok (parlaklığı arka ışık veriyor) */
+.as-ring, .as-e { filter: none; }
+@media (max-width: 899px) {
+  .as-form .auth-view.v-signup { gap: 9px; }
+  .as-form .auth-view.v-signup .auth-h { font-size: 20px; }
+  .as-form .auth-view.v-signup .field { gap: 4px; }
+  .as-form .auth-view.v-signup input:not([type=checkbox]) { min-height: 0; height: 44px; padding-top: 0; padding-bottom: 0; }
+  .as-form .auth-view.v-signup .soc-btn { min-height: 0; height: 44px; padding-top: 0; padding-bottom: 0; }
+  .as-form .auth-view.v-signup .legal-ok { font-size: 12.5px; padding: 7px 10px; }
+  .as-form.sg { padding-top: 12px; }
+}
