@@ -31,6 +31,7 @@ export const GS1_ROWS = [
   ['gs1Dock', 'Yüzen cam: Dock yeri', 'Sadece Dock seçiliyken: Ortada (ad simgenin altında, bar içinde) · Logonun yanında (ad menünün sağında yazı) · Sağda (arama ortada, ad koyu etikette)', [['', 'Bugünkü'], ['center', 'Ortada'], ['brand', 'Logonun yanında'], ['right', 'Sağda']]],
   ['gs1Drop', 'Yüzen cam: açılır menüler', 'Tıklayınca: menü fareyle açılmaz; sadece yanındaki aşağı oka basınca açılır, başlığa basmak sayfayı açar', [['', 'Üstüne gelince'], ['click', 'Tıklayınca'], ['split', 'Bölünmüş düğme']]],
   ['gs1Srch', 'Yüzen cam: arama', 'Basınca kutu, menüyle arasındaki boş yere kadar genişler', [['', 'Kutu'], ['icon', 'Simge']]],
+  ['gs1SsIc', 'Yüzen cam: arama açılınca', 'Simgeye dön: menü yazıları kapanır, sadece simgeler kalır, arama daha çok büyür (Simge + yazı ve Uzat / kısalt). Yazılar kalsın: menü hiç değişmez, arama sadece boş yere büyür', [['', 'Simgeye dön'], ['off', 'Yazılar kalsın']]],
   ['gs1Hov', 'Yüzen cam: menüde fare', 'Kayan kutu: fareyi izleyen yumuşak zemin. Büyüme: fareye yakın yazı hafifçe büyür', [['', 'Bugünkü'], ['slide', 'Kayan kutu'], ['dock', 'Büyüme']]],
 ];
 export const GS3_PC = [['', 'Şerit, üstte şeffaf'], ['strip', 'Şerit'], ['ada2', 'Sade ada'], ['ada', 'Yüzen kapsül']];

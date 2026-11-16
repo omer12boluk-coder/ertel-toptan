@@ -713,7 +713,7 @@ function ShellFull() {
   // look.gs1Tone '' beyaz | ice | smoke | tint | ink · gs1Top '' düz | glass (banner menünün arkasından başlar) | clear (en üstte şeffaf)
   // gs1Drop '' fareyle | click (tıklayınca açılır) · gs1Srch '' kutu | icon (simge, basınca açılır) · gs1Hov '' bugünkü | slide (kayan kutu) | dock (büyüme)
   const gs1 = hs && LK.header === 'search1';
-  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick', LK.gs1Lbl === 'dock' && LK.gs1Dock && 'gs1-dk-' + LK.gs1Dock].filter(Boolean).join(' ') : '';
+  const gs1Cls = gs1 ? ['gs-one', 'gs1-t-' + (LK.gs1Tone || 'white'), (LK.gs1Drop === 'click' || LK.gs1Drop === 'split') && 'gs1-click', LK.gs1Drop === 'split' && 'gs1-split', LK.gs1Srch === 'icon' && 'gs1-sicon', LK.gs1Hov === 'slide' && 'gs1-slide', LK.gs1Hov === 'dock' && 'gs1-dock', LK.gs1Top === 'glass' && 'gs1-under', LK.gs1Top === 'clear' && 'gs1-clear', ['text', 'roll', 'mercury', 'island', 'ink', 'line', 'spot', 'stack', 'pill', 'side', 'expand', 'toggle', 'stack2', 'dock'].includes(LK.gs1Lbl) && 'gs1-lb-' + LK.gs1Lbl, LK.gs1Lbl === 'pick' && 'gs1-lb-expand gs1-lb-pick', LK.gs1Lbl === 'dock' && LK.gs1Dock && 'gs1-dk-' + LK.gs1Dock, LK.gs1SsIc === 'off' && 'gs1-noss'].filter(Boolean).join(' ') : '';
   const heroW = S0.shopHome?.heroW || '';
   // useLayoutEffect + son genişlik cihazda saklı (ls gs1-x): menü ilk karede doğru ölçüde çizilir → giriş sayfasından uçan logo
   // menü logosunun GERÇEK yerine iner (ayarlar geç gelince menü 100 px kayıyordu, logo boşluğa iniyordu)
@@ -1166,8 +1166,8 @@ function useGs1Search(on) {
       // 16.11.2026: 'Simge + yazı' (ve Uzat/kısalt'ın uzun hâli) açıkken arama açılınca menü yazıları kapanır, sadece simgeler kalır
       // (html gs1-ss) → aramaya daha çok yer; kapanınca yazılar geri gelir. Kısa hâlin genişliği bir anlığına geçişsiz ölçülür.
       const H = document.documentElement.classList; const lb = [...H].find((c) => c.startsWith('gs1-lb-'));
-      const ss = !lb || (lb === 'gs1-lb-toggle' && !H.contains('gs1-tg-s'));
-      let need, off = 0; const fix = ss || lb === 'gs1-lb-dock'; // Dock: yazı yok ama simgeler yine yerinde kalsın
+      const ss = !H.contains('gs1-noss') && (!lb || (lb === 'gs1-lb-toggle' && !H.contains('gs1-tg-s')));
+      let need, off = 0; const fix = ss || lb === 'gs1-lb-dock' || ((!lb || lb === 'gs1-lb-toggle') && H.contains('gs1-noss')); // Dock: yazı yok ama simgeler yine yerinde kalsın
       // 16.11.2026: menü öğeleri YERİNDE kalır — arama büyürken ortalı menü sola kayıyordu ('ufak tık'). Menünün o anki sol payı sabitlenir
       // (sola yaslı + aynı pay), arama sadece sağdaki boşluğa büyür; yazılar kapanırken simgeler soldan yerinde durur. Kapanınca ortalamaya döner.
       if (fix) {
