@@ -30,8 +30,12 @@ export function Typewriter({ text, speed = 55, cursor = '|', className }) {
 
 // Sağ bölme: koyu "sahne" (banner tarzı). Görseller koyu zeminde temiz kesimli banner resimleri.
 // sahne = tek büyük ürün, kenardan taşar, arkada mavi ışık hüzmeleri + toz | kolaj = üç ürün derinlikli
+// 17.11.2026: yazı daktilo gibi yazılmasın → kelimeler sırayla bulanıktan netleşerek belirir
+function Words({ text }) {
+  return String(text).split(/(\s+)/).map((w, i) => /^\s+$/.test(w) ? ' ' : w && <span key={i} className="as-w" style={{ '--d': (0.25 + 0.07 * (i / 2)).toFixed(2) + 's' }}>{w}</span>);
+}
 const asTry = (S) => { const def = S?.orders?.authSide === 'amblem' ? 'amblem' : 'dev'; if (!PV_HOST) return def; try { return localStorage.getItem('as-try') || def; } catch { return def; } };
-const LOGO = '/bn/ert-amblem.webp'; // 16.11: düzeltilmiş amblem (halka gerçek daire, e kenarı pürüzsüz)
+// 16.11: düzeltilmiş amblem (halka gerçek daire, e kenarı pürüzsüz); 17.11: halka (bn/ert-ring) ve e (bn/ert-e) ayrı katman — halka döner, e süzülür
 
 // view: AuthForm'un o anki görünümü (login | signup | reset | bayi …)
 export function AuthSplit({ view, children }) {
@@ -63,14 +67,17 @@ export function AuthSplit({ view, children }) {
       </div>
       <aside className="as-side" aria-hidden="true">
         <div className="as-stick">
-          <span className="as-beam b1" /><span className="as-beam b2" /><span className="as-dust" />
+          <span className="as-beam b1" /><span className="as-beam b2" />
           <div key={k} className={'as-art as-' + k}>
             <span className="as-glow" />
-            <div className="as-float"><img src={LOGO} alt="" className="as-logo" decoding="async" /></div>
+            <div className="as-mark">
+              <img src="/bn/ert-ring.webp" alt="" className="as-ring" decoding="async" />
+              <div className="as-float"><img src="/bn/ert-e.webp" alt="" className="as-e" decoding="async" /></div>
+            </div>
           </div>
           <span className="as-fade" />
           <blockquote className="as-q">
-            <p>“<Typewriter key={q} text={q} />”</p>
+            <p key={q}><Words text={'“' + q + '”'} /></p>
             <cite>ERTEL GSM</cite>
           </blockquote>
         </div>
