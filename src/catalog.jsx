@@ -863,6 +863,10 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
     let lastW = -1, VH = 0;
     const touch = matchMedia('(hover: none)').matches; // dokunmatik: sadece yükseklik değişimi (Safari çubuğu) yok sayılır; bilgisayarda pencere boyu da ölçtürür
     const m = (force) => {
+      // 16.11.2026 (2): Ürünler sayfası arka planda GİZLİYKEN (.kp-off, Ana sayfadayken önceden kurulur) ölçmek yanlış: sayfa Ana sayfanın
+      // altında durduğu için 'üst' ~4.000 px çıkıyor → kutular en küçük boya iniyor; iPhone'da gösterilince genişlik değişmediğinden
+      // ResizeObserver tetiklenmiyor → öyle kalıyordu ('yarıda kalıyor'). Gizliyken ölçülmez, sayfa açılınca (sınıf değişimi) ölçülür.
+      if (el.closest('.kp-off')) return;
       const R = el.getBoundingClientRect(); if (!R.width) return;
       // giriş animasyonu (sayfa aşağıdan kayarak gelir) getBoundingClientRect'i büyütür → kutular küçük kalıyordu; offsetTop dönüşümden etkilenmez, küçük olan alınır
       let oy = 0; for (let e = el; e; e = e.offsetParent) oy += e.offsetTop;
@@ -896,8 +900,12 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
     addEventListener('resize', onRs); addEventListener('pageshow', again); document.addEventListener('visibilitychange', onVis);
     // sayfa arka planda gizliyken kurulur (kp-off) → görünür olunca kutunun GENİŞLİĞİ değişir → yeniden ölç (14.11.2026: 'yarıda kalıyor')
     let elW = -1; const ro = new ResizeObserver((en) => { const w = Math.round(en[0].contentRect.width); if (w !== elW) { elW = w; m(true); } }); ro.observe(el);
+    // gizli sayfa (.kp-off) görünür olunca yeniden ölç: hemen + geçiş animasyonu bitince
+    const kp = el.closest('.kp'); let kt = 0;
+    const mo = kp && new MutationObserver(() => { if (kp.classList.contains('kp-off')) return; m(true); requestAnimationFrame(() => m(true)); clearTimeout(kt); kt = setTimeout(again, 500); });
+    mo?.observe(kp, { attributes: true, attributeFilter: ['class'] });
     document.fonts?.ready?.then(() => { if (ref.current) m(); });
-    return () => { cancelAnimationFrame(r); clearTimeout(t); clearTimeout(t2); clearTimeout(t3); ro.disconnect(); removeEventListener('resize', onRs); removeEventListener('pageshow', again); document.removeEventListener('visibilitychange', onVis); R0.classList.remove('hub-fit'); };
+    return () => { cancelAnimationFrame(r); clearTimeout(t); clearTimeout(t2); clearTimeout(t3); clearTimeout(kt); mo?.disconnect(); ro.disconnect(); removeEventListener('resize', onRs); removeEventListener('pageshow', again); document.removeEventListener('visibilitychange', onVis); R0.classList.remove('hub-fit'); };
   }, [sets.length, list.length]);
   return <div className={'pmo pbn' + (anim ? ' pbn-in' : '')} ref={ref}>
     <div className="pmo-g">
