@@ -11427,9 +11427,14 @@ html[data-theme="dark"] .gs1-tip.gs1-tip-dk { background: rgb(245 245 247 / .95)
   html.lga-ring .topbar .brand-logo { animation: lga-ring 8s ease-out 2s infinite; border-radius: 50%; }
   html.lga-spin .topbar .brand-logo { animation: lga-spin 8s cubic-bezier(.6, 0, .2, 1) 2s infinite; }
 }
+/* 17.11.2026 Bölünmüş düğme: ok tarafındaki zemin her yerde tam yuvarlak küçük kapsül (yarım kapsül sadece hap içinde oturuyordu; hapsız biçimlerde ve seçili olmayan düğmede yamuk kare gibi duruyordu) */
+@media (min-width: 900px) {
+  html.gs1-split .hdr-gs .gs-nav .topnav-chev::before { inset: 3px 1px 3px 0; border-radius: 999px; }
+}
+@media (min-width: 900px) { html.gs1-split .hdr-gs .gs-nav .topnav-chev, html.gs1-split .hdr-gs .gs-nav .topnav-chev:hover { background: transparent !important; } }
 </style>
 <script src="config.js"></script>
-<script>window.__BUILD = '8a1774019c';</script>
+<script>window.__BUILD = '5243b6e0d4';</script>
 </head>
 <body>
 <div id="root"></div>
