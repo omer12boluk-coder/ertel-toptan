@@ -1363,10 +1363,12 @@ function useGs1Lbl(mode) {
       const ln = mode === 'line' ? Object.assign(document.createElement('span'), { className: 'gs1-line' }) : null;
       if (ln) { ln.setAttribute('aria-hidden', 'true'); nav.prepend(ln); }
       // 16.11.2026 tırtıl kayması: önce gidilen yöndeki ucu uzanır (iki sayfayı birden kapsar), sonra arka uç yetişir — net, kaygan değil.
-      let cur = null, anim = null;
+      let cur = null, anim = null, hov = null, ht = 0;
       const put = (b, inst) => { if (!ln) return; if (!b) { ln.style.opacity = '0'; return; } const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect();
         const H2 = document.documentElement.classList, dot = H2.contains('gs1-ls-dot'), pil = H2.contains('gs1-ls-pill') || H2.contains('gs1-ls-tint'), bmw = H2.contains('gs1-ls-bmw');
-        if (pil) { ln.style.top = (r.top - n.top) + 'px'; ln.style.height = r.height + 'px'; } else { ln.style.top = ''; ln.style.height = ''; }
+        if (pil) { ln.style.top = (r.top - n.top) + 'px'; ln.style.height = r.height + 'px'; }
+        else if (bmw) { const tb = (nav.closest('.topbar-in') || nav).getBoundingClientRect(); ln.style.top = (tb.bottom - n.top - 3) + 'px'; ln.style.height = ''; nav.style.setProperty('--gs1-bmw', (tb.bottom - r.bottom) + 'px'); }
+        else { ln.style.top = ''; ln.style.height = ''; }
         const to = dot ? { x: r.left - n.left + r.width / 2 - 3, w: 6 } : (pil || bmw) ? { x: r.left - n.left, w: r.width } : { x: r.left - n.left + 14, w: Math.max(0, r.width - 28) }; ln.style.opacity = '1';
         const set = (q) => { ln.style.transform = `translateX(${q.x}px)`; ln.style.width = q.w + 'px'; };
         // aynı hedef tekrar istenirse (menüde başka bir sınıf değişti: açılır menü açıldı vb.) yürüyen animasyona DOKUNMA — rastgele 'tık'ın sebebi buydu
@@ -1380,14 +1382,15 @@ function useGs1Lbl(mode) {
           { duration: 420, easing: 'cubic-bezier(.45,0,.2,1)' });
         // kalın yazı / sayfa değişimi sırasında boyut ölçümü değişirse sonda sessizce düzelt (animasyon yarıda kesilmez)
         anim.onfinish = () => { anim = null; home(true); }; };
-      const home = (inst) => put(nav.querySelector('.topnav-b.on'), inst);
+      // 16.11.2026: fare menüde gezerken mavi, üstüne gelinen sayfaya tırtıl gibi seker (tıklamadan önce nereye gideceği görünür); menüden çıkınca seçiliye döner
+      const home = (inst) => put((mode === 'line' && (hov || nav.querySelector('.hd.open > .topnav-b'))) || nav.querySelector('.topnav-b.on'), inst);
       const t0 = setTimeout(() => home(true), 120); const ro = new ResizeObserver(() => { if (anim) return; home(true); }); ro.observe(nav);
       // 16.11.2026: çizgi fareyi KOVALAMAZ ('sabun gibi kaygan') → mavi çizgi sadece seçili sayfanın altında; üstüne gelinen yazının altında yerinde silik gri çizgi belirir (CSS ::after). Tıklayınca mavi çizgi kısa ve net kayar.
-      const ov = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); if (mode === 'spot') { nav.classList.add('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x !== b && x.classList.remove('xo')); b.classList.add('xo'); } };
-      const lv = () => { clearTimeout(out); out = setTimeout(() => { if (document.querySelector('.hd-p')) { out = setTimeout(lv, 300); return; } nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); home(); }, 160); };
+      const ov = (e) => { const b = e.target.closest?.('.topnav-b'); if (!b || !nav.contains(b)) return; clearTimeout(out); if (mode === 'line' && hov !== b) { clearTimeout(ht); ht = setTimeout(() => { hov = b; home(); }, 60); } if (mode === 'spot') { nav.classList.add('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x !== b && x.classList.remove('xo')); b.classList.add('xo'); } };
+      const lv = () => { clearTimeout(out); out = setTimeout(() => { if (document.querySelector('.hd-p')) { out = setTimeout(lv, 300); return; } nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); hov = null; home(); }, 160); clearTimeout(ht); };
       const mo = new MutationObserver(() => { if (!nav.classList.contains('xo-any')) home(); }); mo.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] });
       nav.addEventListener('pointerover', ov); nav.addEventListener('pointerleave', lv);
-      return () => { clearTimeout(t0); clearTimeout(out); ro.disconnect(); mo.disconnect(); nav.removeEventListener('pointerover', ov); nav.removeEventListener('pointerleave', lv); ln?.remove(); guardOff(); nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); };
+      return () => { clearTimeout(t0); clearTimeout(out); clearTimeout(ht); ro.disconnect(); mo.disconnect(); nav.removeEventListener('pointerover', ov); nav.removeEventListener('pointerleave', lv); ln?.remove(); guardOff(); nav.classList.remove('xo-any'); nav.querySelectorAll('.topnav-b.xo').forEach((x) => x.classList.remove('xo')); };
     }
     let blob = null, at = null;
     const rectOf = (b) => { const n = nav.getBoundingClientRect(), r = b.getBoundingClientRect(); return { x: r.left - n.left, y: r.top - n.top, w: r.width, h: r.height }; };
