@@ -424,3 +424,4 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
   Logo animasyonu sunumu: https://claude.ai/artifact/Ar8Zw2YG1ENz4TSukrFZrr (karar bekliyor)
 - **16.11.2026 (43):** `gs1Name` 'off' yeniden: ad tamamen kalkar (display none), menü ADIN yerine gelir (ilk menü yazısı logoya ~16 px; nav margin-left -20px). Görünmez ad Ada'da yer kaplayıp avatarı adanın dışına itiyordu → düzeldi.
 - **17.11.2026 (44):** Bölünmüş düğme (split) ok tarafı zemini her yerde tam yuvarlak küçük kapsül (`.topnav-chev::before` inset 3px, radius 999; okun kendi gri kare zemini kaldırıldı) — hapsız biçimlerde yamuk kare gibi duruyordu.
+  Sadece logo önerileri sunumu (büyük logo / çizgi / rozet / büyük+çizgi önerildi / menü ortada; karar bekliyor): https://claude.ai/artifact/BNvWqLNkpRKoKERtA2f9US
