@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { ls } from './utils.js';
 import { GS1_ROWS } from './designer.jsx';
 
-export const HDR_TRY = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]ustmenu\b/.test(location.search));
+// 16.11.2026: Claude'daki demo sayfasında da (canlı adres değilse) panel açık
+export const HDR_TRY = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]ustmenu\b/.test(location.search) || !/ertelmarket\.com|web\.app|firebaseapp\.com/.test(location.hostname));
 const DEF = { header: 'search1' }; // önizleme ilk açılışta Tek satır ile gelir
 const read = () => { const v = ls.get('hdr-try', null); return v && typeof v === 'object' ? v : DEF; };
 const subs = new Set();
