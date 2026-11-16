@@ -11548,3 +11548,56 @@ html.nav-mv .as-ring, html.nav-mv .as-float, html.nav-mv .as-beam, html.nav-mv .
   .as-form .auth-view.v-signup .soc-btn, .as-form .auth-view.v-signup .center-btn { height: 40px; }
   .as-form .auth-view.v-signup .auth-or { margin: -4px 0; }
 }
+/* ===== 17.11.2026 sunum: sağ bölme efektleri (fx-devre | fx-mikro | fx-osilo); fx-ring = bugünkü dönen halka ===== */
+.as-art:not(.fx-ring) .as-mark, .as-v-dev .as-art:not(.fx-ring) .as-mark { left: 50%; top: 41.5%; width: 46%; }
+.as-art:not(.fx-ring) .as-glow, .as-v-dev .as-art:not(.fx-ring) .as-glow { left: 50%; top: 41.5%; width: 70%; }
+.as-art:not(.fx-ring) .as-ring, .as-art:not(.fx-ring) .as-float { animation: none; }
+.as-stick:not(.sfx-ring) .as-beam { display: none; }
+.as-stick { container-type: size; }
+.as-fxsvg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+/* devre: izler sönük, akım ışığı kenardan logoya akar, varınca uç (pad) parlar */
+.as-circ path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.as-circ .cd { stroke: rgba(110, 160, 255, .12); stroke-width: 2; }
+.as-circ .cb { stroke: rgba(90, 160, 255, .24); stroke-width: 2.2; }
+.as-circ .cg { stroke: rgba(80, 200, 255, .22); stroke-width: 9; stroke-dasharray: 10 110; animation: asCur 2.96s cubic-bezier(.55, 0, .75, 1) infinite both; }
+.as-circ .cp { stroke: #8fe6ff; stroke-width: 2.6; stroke-dasharray: 10 110; animation: asCur 2.96s cubic-bezier(.55, 0, .75, 1) infinite both; }
+@keyframes asCur { 0% { stroke-dashoffset: 10; opacity: 0; } 8% { opacity: 1; } 62% { stroke-dashoffset: -92; opacity: 1; } 70%, 100% { stroke-dashoffset: -100; opacity: 0; } }
+.as-circ .ce { fill: #12233f; stroke: rgba(120, 190, 255, .55); stroke-width: 2; animation: asPad 2.96s ease-out infinite both; }
+@keyframes asPad { 0%, 58% { fill: #12233f; stroke: rgba(120, 190, 255, .55); } 66% { fill: #9eeaff; stroke: #cff6ff; } 100% { fill: #12233f; stroke: rgba(120, 190, 255, .55); } }
+.fx-devre .as-glow { animation: asBreath 2.96s ease-in-out infinite; }
+/* mikro: vizör — dışı karanlık mercek, ölçek halkası yavaş döner, logo odaklanır */
+.as-lens { position: absolute; inset: 0; background: radial-gradient(circle at 50% 41.5%, transparent 0, transparent 38cqw, rgba(4, 8, 16, .75) 47cqw); }
+.as-ret { color: rgba(140, 200, 255, .5); }
+.as-ret .rr { fill: none; stroke: rgba(140, 200, 255, .22); stroke-width: 1.5; }
+.as-ret .rt line { stroke: currentColor; stroke-width: 1.4; }
+.as-ret .rt { transform-origin: 300px 320px; animation: asSpin 60s linear infinite; }
+.as-ret .ra path { fill: none; stroke: rgba(120, 220, 255, .65); stroke-width: 2.4; stroke-linecap: round; }
+.as-ret .ra { transform-origin: 300px 320px; animation: asSpinR 9s cubic-bezier(.6, 0, .4, 1) infinite; }
+@keyframes asSpinR { 0% { transform: rotate(0); } 50% { transform: rotate(-120deg); } 100% { transform: rotate(-360deg); } }
+.as-ret .rx { stroke: rgba(140, 200, 255, .35); stroke-width: 1.4; }
+.as-ret .rl { fill: rgba(170, 215, 255, .55); font: 600 15px/1 system-ui, sans-serif; letter-spacing: .2em; text-anchor: middle; }
+.fx-mikro .as-mark .as-float { animation: asFocus 7s ease-in-out infinite; }
+@keyframes asFocus { 0% { filter: blur(9px); transform: scale(1.05); } 16% { filter: blur(0); transform: scale(1); } 80% { filter: blur(0); transform: scale(1); } 86% { filter: blur(2.5px); transform: scale(1.012); } 92%, 100% { filter: blur(0); transform: scale(1); } }
+.fx-mikro .as-ring { animation: asFocus 7s ease-in-out infinite; }
+/* osilo: ekran ızgarası + soldan sağa giden sinyal */
+.as-grid { position: absolute; inset: 0; opacity: .55;
+  background-image: linear-gradient(rgba(110, 170, 255, .09) 1px, transparent 1px), linear-gradient(90deg, rgba(110, 170, 255, .09) 1px, transparent 1px);
+  background-size: 48px 48px; background-position: center center;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 40%, transparent 100%); }
+.as-scope path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.as-scope .sb { stroke: rgba(90, 180, 255, .16); stroke-width: 2; }
+.as-scope .sg { stroke: rgba(80, 210, 255, .25); stroke-width: 10; stroke-dasharray: 22 100; animation: asSig 3.2s linear infinite; }
+.as-scope .sp { stroke: #9ff0ff; stroke-width: 2.6; stroke-dasharray: 22 100; animation: asSig 3.2s linear infinite; }
+@keyframes asSig { from { stroke-dashoffset: 22; } to { stroke-dashoffset: -100; } }
+.fx-osilo .as-glow { animation: asBreath 3.2s ease-in-out infinite; }
+/* geçişte duran hareketler */
+html.nav-mv .as-fxsvg *, html.nav-mv .as-fx-x { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .as-fxsvg *, .fx-mikro .as-mark .as-float, .fx-mikro .as-ring { animation: none !important; } }
+/* telefonda kısa şeritte efekt yok, sadece logo */
+@media (max-width: 899px) {
+  .as-fxsvg, .as-lens, .as-grid { display: none; }
+  .as-art:not(.fx-ring) .as-mark { left: 46px; top: 50%; width: 62px; }
+  .as-art:not(.fx-ring) .as-glow { left: 46px; top: 50%; width: 140px; }
+  .fx-mikro .as-mark .as-float, .fx-mikro .as-ring { animation: none; }
+  .as-v-dev .as-art:not(.fx-ring) ~ .as-q, .as-art:not(.fx-ring) ~ .as-q { left: 86px; right: 14px; }
+}
