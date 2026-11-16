@@ -874,7 +874,9 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
       const units = ph ? 1.4 + k + .72 : k; const rows = ph ? k + 2 : k;
       const gap = ph ? 8 : 16; const strip = sets.length ? (ph ? 58 : 76) : 0;
       let bot = ph ? 12 : 22;
-      if (ph) { const bn = document.querySelector('.botnav'); const r = bn && bn.getBoundingClientRect(); if (r && r.height > 10 && r.top < window.innerHeight) bot += window.innerHeight - r.top; } // menü yüksekliği (gerçek pencereye göre)
+      // menü yüksekliği: konumdan DEĞİL boy + alt boşluktan (16.11.2026: iPhone ilk açılışta alt menü bir an ekranın ortasında
+      // durabiliyor / açılış animasyonunda kayıyor → konumdan ölçünce kutular en küçük boya iniyor ve öyle kalıyordu)
+      if (ph) { const bn = document.querySelector('.botnav'); if (bn && bn.offsetHeight > 10 && getComputedStyle(bn).display !== 'none') bot += bn.offsetHeight + Math.max(0, parseFloat(getComputedStyle(bn).bottom) || 0); }
       const h = Math.floor((innerHeight - top - bot - strip - gap * (rows - 1)) / units);
       const min = ph ? 54 : 110; const v = Math.max(min, Math.min(ph ? 150 : 260, h)) + 'px'; el.classList.toggle('pmo-tight', ph && h < 80); /* Safari çubukları açıkken de sığsın: kutular kısalır, yazı sıkılaşır */ if (el.style.getPropertyValue('--pmo-h') !== v) el.style.setProperty('--pmo-h', v);
       el.style.setProperty('--pmo-k', k);
@@ -885,12 +887,17 @@ function HubMosaic({ roots, counts, total, brandsN, sets, onCat, onAll, onSets, 
       const fit = ph && h >= min && getComputedStyle(el).display !== 'none';
       if (fit !== R0.classList.contains('hub-fit')) R0.classList.toggle('hub-fit', fit);
     };
-    const onRs = () => { if (innerWidth !== lastW) m(); else if (!touch) m(true); }; // Safari çubuğu (sadece yükseklik) → yok sayılır
-    m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); addEventListener('resize', onRs);
+    // Safari çubuğu (sadece yükseklik) → yok sayılır; AMA 100svh'nin kendisi değiştiyse (iPhone ana ekran uygulaması ilk açılışta
+    // ekran boyunu bir an yanlış/kısa veriyor, sonra düzeltiyor — çubuk aç/kapa svh'yi değiştirmez) yeniden ölçülür (16.11.2026: kutular küçük kalıyordu)
+    const onRs = () => { if (innerWidth !== lastW) m(); else if (!touch) m(true); else if (Math.abs(svh() - VH) > 2) m(true); };
+    const again = () => m(true);
+    const onVis = () => { if (document.visibilityState === 'visible') setTimeout(again, 60); };
+    m(); const r = requestAnimationFrame(m); const t = setTimeout(m, 450); const t2 = setTimeout(again, 1200); const t3 = setTimeout(again, 2600);
+    addEventListener('resize', onRs); addEventListener('pageshow', again); document.addEventListener('visibilitychange', onVis);
     // sayfa arka planda gizliyken kurulur (kp-off) → görünür olunca kutunun GENİŞLİĞİ değişir → yeniden ölç (14.11.2026: 'yarıda kalıyor')
     let elW = -1; const ro = new ResizeObserver((en) => { const w = Math.round(en[0].contentRect.width); if (w !== elW) { elW = w; m(true); } }); ro.observe(el);
     document.fonts?.ready?.then(() => { if (ref.current) m(); });
-    return () => { cancelAnimationFrame(r); clearTimeout(t); ro.disconnect(); removeEventListener('resize', onRs); R0.classList.remove('hub-fit'); };
+    return () => { cancelAnimationFrame(r); clearTimeout(t); clearTimeout(t2); clearTimeout(t3); ro.disconnect(); removeEventListener('resize', onRs); removeEventListener('pageshow', again); document.removeEventListener('visibilitychange', onVis); R0.classList.remove('hub-fit'); };
   }, [sets.length, list.length]);
   return <div className={'pmo pbn' + (anim ? ' pbn-in' : '')} ref={ref}>
     <div className="pmo-g">
