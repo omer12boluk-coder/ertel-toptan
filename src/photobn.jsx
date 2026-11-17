@@ -10,6 +10,7 @@ import { store, setQty, toast, useStore } from './store.js';
 import { ensureFonts } from './slidex.jsx';
 import { useWin } from './dzframe.jsx';
 import BANNERS from './icerik/bannerlar.json';
+import { PlayVideo } from './catalog.jsx';
 
 const ACC = '#2f62d6';
 const IMG = (f) => '/bn/' + f;
@@ -206,8 +207,33 @@ function Phone({ b, H, act, br }) {
   return <>{top}<img className="pb-im" src={IMG('da07.webp')} alt="2UUL DA07" style={abs({ left: '50%', bottom: 22, height: h, width: 'auto', transform: 'translateX(-50%)' })} /></>;
 }
 
+
+// 17.11.2026 Video banner (lay: 'video'): kutuyu dolduran video (ana sayfadaki video bölümünün oynatıcısı PlayVideo: sessiz başlar,
+// ses / büyüt / sarma). Dosyalar bekçide: worker/media/_m/<vid> → WATCH_URL/v/<vid> (iPhone için parça parça). vidM = telefon (4:5).
+// Videonun kendi yazıları videoda; 'Ürüne git' gerçek düğme: video btnAt saniyesine gelince (kapanış kartı) kartın boş yerinde belirir.
+// İmza (ert logosu) sol üstte küçük, beyaz; diğer bannerlar gibi Tasarım › Banner › 'Banner imzası' ile kapanır (sig: false).
+const vidUrl = (f) => (/^(https?:)?\//.test(f) ? f : String(window.WATCH_URL || '').replace(/\/$/, '') + '/v/' + f);
+function VideoBanner({ b, on, act, onEnd, loop }) {
+  const ref = useRef(null); const [ph, setPh] = useState(null); const [cta, setCta] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    const read = () => { const r = el.getBoundingClientRect(); if (r.width && r.height) setPh(r.width / r.height < 1.05); };
+    read(); if (!('ResizeObserver' in window)) return; const ro = new ResizeObserver(read); ro.observe(el); return () => ro.disconnect();
+  }, []);
+  const at = b.btnAt ?? 1e9;
+  const src = ph == null ? null : vidUrl(ph ? b.vidM || b.vid : b.vid);
+  const pst = ph == null ? undefined : IMG(ph ? b.posterM || b.poster : b.poster);
+  return <div ref={ref} className="pb-box pb-dark pb-vid" style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#000' }}>
+    {src && <PlayVideo key={src} src={src} poster={pst} active={on} auto fit="cover" loop={loop} onTime={(x) => { const c = x >= at; setCta((o) => (o === c ? o : c)); }} onEnd={onEnd} />}
+    {sigOn(b) && <span className="pb-sig pb-vsig" style={{ position: 'absolute', left: ph ? 16 : 26, top: ph ? 16 : 24, zIndex: 2, pointerEvents: 'none' }}><img className="pb-sig-i" src={SIG_LOGO} alt="ERTEL" style={{ height: ph ? 20 : 26, width: 'auto', display: 'block', opacity: 0.8, filter: 'brightness(0) invert(1)' }} /></span>}
+    {b.a1 && <div className="pb-vcta" style={{ position: 'absolute', left: 0, right: 0, top: ph ? '58%' : '65%', zIndex: 2, display: 'flex', justifyContent: 'center', opacity: cta ? 1 : 0, transform: cta ? 'none' : 'translateY(10px)', transition: 'opacity .6s ease, transform .6s ease', pointerEvents: cta ? 'auto' : 'none' }}>
+      <button type="button" className="pb-b1" onClick={act(b.a1[1])} style={{ height: ph ? 44 : 50, padding: '0 28px', borderRadius: 999, background: '#fff', color: '#000', font: `600 ${ph ? 15 : 16}px/1 Inter, sans-serif`, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>{b.a1[0]} <Chev /></button>
+    </div>}
+  </div>;
+}
+
 // Kutuyu tamamen dolduran banner (konumlu bir ebeveynin içine konur)
-export function PhotoBanner({ b, open, onProduct, edit }) {
+export function PhotoBanner({ b, open, onProduct, edit, on = true, onEnd, loop = true }) {
   const ref = useRef(null); const [sz, setSz] = useState(null);
   const win = useWin();
   // köşeler: Stil Stüdyosu'nda büyük reklam köşesi (look.style.rHero) küçültülünce düğmeler de aynı oranda sivrileşir (Apple yuvarlağı = hap)
@@ -234,6 +260,7 @@ export function PhotoBanner({ b, open, onProduct, edit }) {
     }
     open(l)();
   };
+  if (b.lay === 'video') return <VideoBanner b={b} on={on && !edit} act={act} onEnd={onEnd} loop={loop} />;
   let cv = null; let bg = b.bg;
   if (sz) {
     const phone = sz.w / sz.h < 1.05;

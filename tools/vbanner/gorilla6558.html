@@ -1,0 +1,102 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas><script>
+// Qianli Gorilla 6558X — kaynak videonun kurgusu + orijinal müziği; İngilizce yazılar silindi, yerine Türkçe grafikler.
+const Q=new URLSearchParams(location.search);const W=+Q.get('w')||1920,H=+Q.get('h')||1080;
+const cv=document.getElementById('c');cv.width=W;cv.height=H;const X=cv.getContext('2d');
+const VERT=H>W,U=Math.min(W,H)/1080;const FD='"Inter Display"',FT='Inter';
+const END=105.64,TOTAL=111.0;window.TOTAL=TOTAL;
+const CACHE=new Map();const LG={};
+const loadImg=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=s});
+window.ready=(async()=>{await Promise.all([[FD,600],[FD,500],[FT,400],[FT,500],[FT,600]].map(([f,w])=>document.fonts.load(`${w} 100px ${f}`)));LG.q=await loadImg('qianli-w.png');})();
+function frame(i){i=Math.max(0,Math.min(Math.round(END*25)-1,i));const k=i+1;
+  if(!CACHE.has(k)){const im=new Image();im.src=`clean/${String(k).padStart(5,'0')}.jpg`;CACHE.set(k,im.decode().then(()=>im));if(CACHE.size>12)CACHE.delete(CACHE.keys().next().value)}
+  return CACHE.get(k);}
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));const P=(t,a,d)=>cl((t-a)/d);
+const oQ=x=>1-Math.pow(1-x,4),ioS=x=>-(Math.cos(Math.PI*x)-1)/2;
+// dikey (4:5) kırpmada her planın odak noktası
+const FX=[[0,.5],[5.0,.68],[9.44,.5],[11.4,.68],[15.3,.45],[19.9,.5],[29.6,.62],[34.04,.5],[36.2,.55],[40.96,.75],[44.64,.45],[47.68,.65],[50.12,.55],[51.48,.42],[53.52,.5],[55.2,.3],[58.86,.55],[63.6,.35],[68.04,.3],[71,.6],[79.12,.5],[80.24,.6],[82.64,.5],[83.96,.42],[85.6,.5],[89.24,.45],[91.28,.5],[95.16,.6],[96.48,.5],[101.4,.33]];
+const fxAt=t=>{let f=.5;for(const [a,v] of FX)if(t>=a)f=v;return f};
+let CUR=null; // o anki temiz kare
+function geo(t,z=1){const sc=Math.max(W/1920,H/1080)*z,dw=1920*sc,dh=1080*sc;let dx=W/2-fxAt(t)*dw;dx=cl(dx,W-dw,0);return {dx,dy:(H-dh)/2,dw,dh,sc}}
+function drawFrame(t,o={}){const g=geo(t,o.z||1);X.save();if(o.filter)X.filter=o.filter;X.drawImage(CUR,g.dx,g.dy,g.dw,g.dh);X.restore();return g}
+// kaynak koordinatı (1920x1080) → ekran
+const S=(t,x,y)=>{const g=geo(t);return [g.dx+x*g.sc,g.dy+y*g.sc,g.sc]};
+// ---- yazı ----
+function lineTxt(s,x,y,o){const t=o.t;const p=oQ(P(t,o.a,o.d??.8));const q=o.out!=null?1-ioS(P(t,o.out,.45)):1;const al=p*q;if(al<=0.002)return;
+  X.save();X.font=`${o.w} ${o.size}px ${o.f}`;X.letterSpacing=(o.tr??0)*o.size+'px';X.textAlign=o.al||'left';X.textBaseline='alphabetic';X.fillStyle=o.col||'#fff';X.globalAlpha=al;
+  const bl=(1-p)*12*U;if(bl>.3)X.filter=`blur(${bl}px)`;if(o.sh){X.shadowColor='rgba(0,0,0,.55)';X.shadowBlur=24*U}
+  const lines=s.split('\n');lines.forEach((ln,i)=>X.fillText(ln,x,y+(1-p)*20*U+i*o.size*1.08));X.restore();}
+const RED='#ff4a3d';
+// blok: etiket (küçük, kırmızı, aralıklı) + başlık + açıklama
+function block(t,a,out,x,y,{label,head,sub,note,al='left',hs=64,sh=true}){const hS=hs*U,lS=19*U,sS=27*U,nS=19*U;let yy=y;
+  if(label){lineTxt(label.toLocaleUpperCase('tr'),x,yy,{t,a,out,size:lS,w:600,f:FT,tr:.16,al,col:RED,sh});yy+=lS*.5+hS*1.05}
+  lineTxt(head,x,yy,{t,a:a+.12,out,size:hS,w:600,f:FD,tr:-.02,al,sh});const nl=head.split('\n').length;yy+=(nl-1)*hS*1.08;
+  if(sub){yy+=sS*1.75;lineTxt(sub,x,yy,{t,a:a+.28,out,size:sS,w:400,f:FT,tr:0,al,col:'rgba(255,255,255,.82)',sh})}
+  if(note){yy+=nS*2.1;lineTxt(note,x,yy,{t,a:a+.4,out,size:nS,w:400,f:FT,tr:.01,al,col:'rgba(255,255,255,.55)',sh})}}
+// okunurluk için yumuşak karartma
+function scrim(kind,a,al=1){if(al<=0)return;X.save();X.globalAlpha=al;let g;
+  if(kind==='l'){g=X.createLinearGradient(0,0,W*.62,0)}else if(kind==='r'){g=X.createLinearGradient(W,0,W*.38,0)}else if(kind==='b'){g=X.createLinearGradient(0,H,0,H*.45)}else{g=X.createLinearGradient(0,0,0,H*.4)}
+  g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');X.fillStyle=g;X.fillRect(0,0,W,H);X.restore()}
+const env=(t,a,b,f=.4)=>Math.min(P(t,a,f),1-P(t,b-f,f));
+// konum: yatayda verilen yer, dikeyde alt orta
+function pos(h,v){return VERT?v:h}
+const BL=(t,a,out,o)=>{const L=VERT?{x:W/2,y:H-200*U-((o.sub?1:0)+(o.note?1:0))*48*U,al:'center'}:o.at;block(t,a,out,L.x,L.y,{...o,al:L.al||'left'})};
+// ---- planlar ----
+// kart: kaynaktaki yazılı siyah ara kartların yerine
+async function card(t,a,b,o){const e=t>=a&&t<b?1:0;const g=X.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.7);g.addColorStop(0,'#17171a');g.addColorStop(1,'#030303');
+  X.save();X.globalAlpha=e;X.fillStyle=g;X.fillRect(0,0,W,H);X.restore();
+  const hs=(VERT?66:76);const lines=o.head.split('\n').length;const y0=H/2-((lines-1)*hs*1.08*U)/2-(o.sub?18:0)*U;
+  block(t,a+.08,b-.5,W/2,y0,{...o,al:'center',hs,sh:false});
+  const lp=oQ(P(t,a+.15,.9));X.save();X.globalAlpha=lp*(1-P(t,b-.5,.4))*.5;X.fillStyle=RED;const lw=70*U*lp;X.fillRect(W/2-lw/2,y0-hs*U*1.45,lw,2*U);X.restore();}
+// bulanık plaka: yazı kaplayan planı bulanıklaştırıp üstüne Türkçe başlık
+function blurPlate(t,a,b,o){const e=Math.min(P(t,a,.3),1-P(t,o.fo??b-.3,o.fd??.3));X.save();X.globalAlpha=e;drawFrame(t,{z:1.12,filter:`blur(${(o.bl||26)*U}px) brightness(${o.br||.42}) saturate(${o.sat??1.1})`});X.restore();
+  if(o.logo){const qw=230*U,qh=qw*95/347;X.save();X.globalAlpha=oQ(P(t,a+.05,.8))*(1-P(t,(o.fo??b)-.45,.4));X.drawImage(LG.q,W/2-qw/2,H/2-150*U-qh,qw,qh);X.restore()}
+  block(t,a+.1,(o.fo??b)-.45,W/2,H/2+(o.logo?10:-10)*U,{...o,al:'center',hs:o.hs||(VERT?80:92),sh:false});}
+// cam hap: yazının yerini kaplayan buzlu cam
+function pill(t,a,b,cx,cy,w,h,o){const e=env(t,a,b,.25);if(e<=0)return;const [x,y,sc]=S(t,cx,cy);const pw=w*sc,ph=h*sc;
+  X.save();X.globalAlpha=e;X.beginPath();X.roundRect(x-pw/2,y-ph/2,pw,ph,ph/2);X.clip();drawFrame(t,{filter:`blur(${22*U}px) brightness(.7)`});
+  X.fillStyle='rgba(12,12,14,.38)';X.fillRect(0,0,W,H);X.restore();
+  X.save();X.globalAlpha=e*.5;X.strokeStyle='rgba(255,255,255,.22)';X.lineWidth=1.2*U;X.beginPath();X.roundRect(x-pw/2,y-ph/2,pw,ph,ph/2);X.stroke();X.restore();
+  lineTxt(o.head,x,y+o.size*U*.36,{t,a:a+.15,out:b-.45,size:o.size*U,w:600,f:FD,tr:-.015,al:'center'});}
+const OV=[
+ // açılış başlığı
+ [2.40,5.62,t=>blurPlate(t,2.40,5.62,{fo:5.32,fd:.28,bl:60,br:.33,sat:0,logo:1,head:'Gorilla 6558X',sub:'Trinoküler stereo mikroskop'})],
+ [5.00,9.44,t=>{scrim(pos('l','b'),.55,env(t,5.0,9.44,.3));BL(t,5.55,9.0,{at:{x:150*U,y:520*U},label:'Yeni nesil',head:'Işık modülü',sub:'Gövdeye yerleşik, güçlü aydınlatma.'})}],
+ [9.40,11.28,t=>card(t,9.40,11.28,{label:'Tasarım',head:'Formun evrimi.',sub:'Işık modülü gövdeyle bütünleşik.'})],
+ [11.40,15.30,t=>{scrim(pos('l','b'),.5,env(t,11.6,15.3,.3));BL(t,11.95,14.9,{at:{x:150*U,y:520*U},label:'Kısa bas, aç',head:'LED aydınlatma'})}],
+ [15.30,19.90,t=>{scrim(pos('r','b'),.55,env(t,15.5,19.9,.3));BL(t,15.75,19.5,{at:{x:W-130*U,y:930*U,al:'right'},label:'Uzun bas, değiştir',head:'Parlaklık kademeleri'})}],
+ [19.90,24.28,t=>pill(t,19.92,24.28,960,545,1520,178,{head:'Koaksiyel lazer hizalama',size:VERT?50:64})],
+ [24.28,27.76,t=>pill(t,24.40,27.70,945,540,760,96,{head:'Anında konumlama',size:VERT?34:40})],
+ [27.72,29.60,t=>card(t,27.72,29.60,{label:'Netlik',head:'Yüksek çözünürlük,\nyüksek büyütme.',sub:'6,5× – 58× kademesiz, senkron zoom.'})],
+ [29.60,34.04,t=>{scrim(pos('l','b'),.5,env(t,29.6,34.04,.3));BL(t,29.85,33.6,{at:{x:110*U,y:520*U},label:'Kontrol',head:'Geniş zoom düğmesi',sub:'Rahat tutuş, engelsiz kontrol.'})}],
+ [36.20,39.12,t=>{scrim('b',.6,env(t,36.2,39.12,.3));BL(t,36.45,38.75,{at:{x:110*U,y:H-120*U},label:'Görüntü',head:'Her pin, her lehim noktası net.',hs:48})}],
+ [39.08,41.04,t=>card(t,39.08,41.04,{label:'Uyumluluk',head:'Farklı CTV adaptörleriyle\nuyumlu.',sub:'1/1.8” ve 1/2.3” sensörlü endüstriyel kameralar için.'})],
+ [40.96,44.64,t=>{scrim(pos('l','b'),.5,env(t,40.96,44.64,.3));BL(t,41.2,44.25,{at:{x:100*U,y:520*U},label:'Trinoküler',head:'Üç göz, tek netlik.',sub:'Bilimsel optik yol tasarımı.'})}],
+ [47.68,50.12,t=>{scrim('b',.55,env(t,47.68,50.12,.3));BL(t,47.9,49.75,{at:{x:110*U,y:H-120*U},label:'Kamera çıkışı',head:'Tak, bağla, ekrandan izle.',hs:48})}],
+ [53.48,55.16,t=>card(t,53.48,55.16,{label:'Daha fazlası',head:'Sadece yenilikçi değil.',sub:'Kullanım alanını genişlet.'})],
+ [55.20,58.86,t=>{scrim('b',.6,env(t,55.2,58.86,.3));BL(t,55.4,58.5,{at:{x:100*U,y:H-250*U},label:'Ayarlanabilir odak · 256',head:'Termal kamera',note:'Termal kamera kullanımı için ek aparat gerekir.'})}],
+ [63.60,68.04,t=>{scrim('b',.55,env(t,63.6,68.04,.3));BL(t,63.85,67.65,{at:{x:110*U,y:H-120*U},label:'Termal',head:'Isınan bileşeni anında gör.',hs:48})}],
+ [68.04,71.00,t=>{scrim('b',.6,env(t,68.04,71.0,.25));BL(t,68.2,70.65,{at:{x:60*U,y:H-210*U},label:'UV kürleme',head:'UV lamba',sub:'Ayarlanabilir aydınlatma alanı.'})}],
+ [71.00,77.44,t=>{scrim('b',.55,env(t,71.4,77.44,.3));BL(t,71.8,77.0,{at:{x:110*U,y:H-120*U},label:'UV',head:'Yapıştırıcıyı mikroskop altında kürle.',hs:48})}],
+ [77.40,79.08,t=>card(t,77.40,79.08,{label:'Aksesuar',head:'Genişletme braketi',sub:'1/4” ve 3/8” Arri standart vida yuvaları.'})],
+ [80.24,82.64,t=>blurPlate(t,80.24,82.64,{bl:70,br:.3,sat:.2,label:'Ergonomi',head:'İt-çek tutma kolu'})],
+ [83.96,87.00,t=>{scrim('b',.5,env(t,83.96,87.0,.3));BL(t,84.2,86.6,{at:{x:110*U,y:H-120*U},label:'Montaj',head:'Mafsallı kol ile ekran bağlantısı.',hs:48})}],
+ [87.00,89.24,t=>blurPlate(t,87.00,89.24,{bl:70,br:.3,sat:.2,label:'İzleme',head:'Ekrandan takip et'})],
+ [91.28,95.16,t=>{scrim('b',.55,env(t,91.28,95.16,.3));BL(t,91.55,94.75,{at:{x:110*U,y:H-120*U},label:'Atölye',head:'Tezgâhının yeni merkezi.',hs:56})}],
+ [101.40,105.64,t=>{scrim('b',.75,env(t,101.4,105.64,.3));
+   const e=a=>({t,a,out:105.2,size:20*U,w:500,f:FT,tr:.04,al:'center',col:'rgba(255,255,255,.85)'});
+   {const [x,y]=S(t,740,812);lineTxt('Standart model',x,y,e(101.8))}
+   if(!VERT){const [x,y]=S(t,1470,760);lineTxt('Opsiyonel: döner kol',x,y,e(102.0))}
+   block(t,102.1,105.2,W/2,H-90*U,{head:'Gorilla 6558X',al:'center',hs:VERT?66:72,sh:false});}],
+];
+// kapanış kartı (Ürüne git düğmesi sitede gerçek düğme olarak üstüne gelir → %68 yükseklik boş bırakıldı)
+function endCard(t){const a=END;const g=X.createRadialGradient(W/2,H*.42,0,W/2,H*.42,Math.max(W,H)*.7);g.addColorStop(0,'#1a1a1d');g.addColorStop(1,'#030303');
+  X.save();X.globalAlpha=P(t,a,.5);X.fillStyle=g;X.fillRect(0,0,W,H);X.restore();
+  const qw=(VERT?300:320)*U,qh=qw*95/347;const p=oQ(P(t,a+.3,1.0));X.save();X.globalAlpha=p;X.filter=`blur(${(1-p)*10*U}px)`;X.drawImage(LG.q,W/2-qw/2,H*.3-qh/2,qw,qh);X.restore();
+  block(t,a+.6,TOTAL+5,W/2,H*.3+qh/2+105*U,{head:'Gorilla 6558X',sub:'Trinoküler stereo mikroskop',al:'center',hs:VERT?76:84,sh:false});
+  lineTxt('LED ışık modülü, lens ve UV lamba paket içeriğinde.',W/2,H*.3+qh/2+(VERT?250:240)*U,{t,a:a+1.0,size:20*U,w:400,f:FT,tr:.01,al:'center',col:'rgba(255,255,255,.5)'});
+  const f=P(t,TOTAL-.6,.6);if(f>0){X.fillStyle=`rgba(0,0,0,${f})`;X.fillRect(0,0,W,H)}}
+window.render=async(t)=>{X.setTransform(1,0,0,1,0,0);X.globalAlpha=1;X.filter='none';X.fillStyle='#000';X.fillRect(0,0,W,H);
+  if(t<END){CUR=await frame(Math.round(t*25));drawFrame(t);for(const [a,b,f] of OV)if(t>=a&&t<b)await f(t);}
+  else{CUR=await frame(Math.round(END*25)-1);X.save();X.globalAlpha=1-P(t,END,.5);drawFrame(t);X.restore();endCard(t);}};
+</script></body></html>

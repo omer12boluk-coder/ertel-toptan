@@ -400,18 +400,28 @@ async function serveVideo(req, env, url, cors) {
   if (!/^[\w.-]+\.(mp4|webm|jpg|webp)$/.test(name)) return new Response('yok', { status: 404, headers: cors });
   const a = await env.ASSETS.fetch(new Request(new URL('/_m/' + name, url.origin)));
   if (!a.ok) return new Response('yok', { status: 404, headers: cors });
-  const buf = await a.arrayBuffer();
-  const size = buf.byteLength;
+  // 17.11.2026: büyük videolar (banner, ~20 MB) belleğe alınmadan akıtılır; istenen parça dışındaki baytlar atlanır
+  const len = Number(a.headers.get('Content-Length')) || 0;
+  const buf = len && len > 4e6 ? null : await a.arrayBuffer();
+  const size = buf ? buf.byteLength : len;
   const type = name.endsWith('.mp4') ? 'video/mp4' : name.endsWith('.webm') ? 'video/webm' : name.endsWith('.jpg') ? 'image/jpeg' : 'image/webp';
   const base = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400', ...cors, 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges' };
   const m = /bytes=(\d*)-(\d*)/.exec(req.headers.get('Range') || '');
-  if (!m) return new Response(req.method === 'HEAD' ? null : buf, { headers: { ...base, 'Content-Length': String(size) } });
+  if (!m) return new Response(req.method === 'HEAD' ? null : buf || a.body, { headers: { ...base, 'Content-Length': String(size) } });
   let start = m[1] === '' ? size - Number(m[2]) : Number(m[1]);
   let end = m[1] !== '' && m[2] !== '' ? Number(m[2]) : size - 1;
   if (m[1] === '') end = size - 1;
   if (!(start >= 0) || start >= size || end < start) return new Response(null, { status: 416, headers: { ...base, 'Content-Range': `bytes */${size}` } });
   end = Math.min(end, size - 1);
-  return new Response(req.method === 'HEAD' ? null : buf.slice(start, end + 1), { status: 206, headers: { ...base, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) } });
+  const part = req.method === 'HEAD' ? null : buf ? buf.slice(start, end + 1) : sliceStream(a.body, start, end);
+  return new Response(part, { status: 206, headers: { ...base, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) } });
+}
+
+function sliceStream(body, start, end) {
+  let pos = 0;
+  const { readable, writable } = new TransformStream({ transform(ch, ctl) { const s = pos; pos += ch.byteLength; if (pos <= start || s > end) return; ctl.enqueue(ch.subarray(Math.max(0, start - s), Math.min(ch.byteLength, end + 1 - s))); if (pos > end) ctl.terminate(); } });
+  body.pipeTo(writable).catch(() => {});
+  return readable;
 }
 
 async function proxyR2(req, url, cors) {
