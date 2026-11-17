@@ -991,7 +991,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const onScroll = (e) => {
     const el = e.currentTarget; const s = step(el);
     // 17.11.2026 banner seçici (html.em-dots): çubuk boyu kaydırmaya 1:1 bağlı (parmakla kaydırırken yarı yolda birden zıplıyordu)
-    if (s > 0 && document.documentElement.classList.contains('em-dots')) { const p = el.scrollLeft / s; fsRef.current?.querySelectorAll('.sh-dots .sh-dot').forEach((d, k) => d.style.setProperty('--f', Math.max(0, 1 - Math.abs(p - k)).toFixed(3))); }
+    if (s > 0 && innerWidth >= 900 && document.documentElement.classList.contains('em-dots')) { const p = el.scrollLeft / s; fsRef.current?.querySelectorAll('.sh-dots .sh-dot').forEach((d, k) => d.style.setProperty('--f', Math.max(0, 1 - Math.abs(p - k)).toFixed(3))); }
     if (target.current != null) { const tk = target.current; if (Math.abs(el.scrollLeft - tk * s) < s * 0.35) { if (playRef.current !== tk) setPlay(tk); } if (Math.abs(el.scrollLeft - tk * s) < 2) { target.current = null; clearTimeout(targetT.current); } return; }
     const k = Math.round(el.scrollLeft / s); if (k !== i) setI(k);
     // parmak kalktıysa ve reklam yerine %70 yaklaştıysa hemen dök (iPhone'un oturma kayması bitene kadar BEKLEME — 1-2 sn boş kalıyordu)
