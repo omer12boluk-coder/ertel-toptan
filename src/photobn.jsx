@@ -214,7 +214,7 @@ function Phone({ b, H, act, br }) {
 // İmza (ert logosu) sadece sonda, 'Ürüne git' düğmesinin altında, beyaz; Tasarım › Banner › 'Banner imzası' ile kapanır (sig: false).
 // Video kutuya sığdırılır (fit contain, kırpılmaz): masaüstü videosu 2.6:1, telefon 0.77 — kutu oranına yakın, boşluklar siyah.
 const vidUrl = (f) => (/^(https?:)?\//.test(f) ? f : String(window.WATCH_URL || '').replace(/\/$/, '') + '/v/' + f);
-function VideoBanner({ b, on, act, onEnd, loop, onProg, onIdle }) {
+function VideoBanner({ b, on, act, onEnd, loop, onProg, onIdle, cur }) {
   const ref = useRef(null); const [ph, setPh] = useState(null); const [cta, setCta] = useState(false);
   // 17.11.2026 video oynatıcı standardı: oynarken ~2.5 sn dokunulmazsa / fare durursa kontroller (ve banner seçici) kaybolur;
   // gizliyken ilk dokunuş sadece geri getirir (videoyu durdurmaz). 'Ürüne git' düğmesi hep tıklanır.
@@ -237,6 +237,8 @@ function VideoBanner({ b, on, act, onEnd, loop, onProg, onIdle }) {
     if (!v.paused) pl(); tu();
     return () => { v.removeEventListener('play', pl); v.removeEventListener('pause', pa); v.removeEventListener('ended', pa); v.removeEventListener('timeupdate', tu); v.removeEventListener('seeked', tu); };
   }, [src]);
+  // 17.11.2026 başka banner'a geçilince video başa sarılır (ses tercihi aynı kalır); sayfa değişip dönünce kaldığı yerden devam eder
+  useEffect(() => { if (cur !== false) return; const v = ref.current?.querySelector('video'); if (v && v.currentTime > 0) { v.currentTime = 0; setCta(false); onProg?.(0); } }, [cur]);
   const pst = ph == null ? undefined : IMG(ph ? b.posterM || b.poster : b.poster);
   return <div ref={ref} className={'pb-box pb-dark pb-vid' + (idle ? ' vb-idle' : '')} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#000' }}
     onPointerMove={(e) => { if (e.pointerType === 'mouse') wake(); }} onPointerLeave={(e) => { if (e.pointerType === 'mouse' && playing.current) { clearTimeout(idleT.current); idleT.current = setTimeout(() => setIdle(true), 600); } }}
@@ -245,13 +247,13 @@ function VideoBanner({ b, on, act, onEnd, loop, onProg, onIdle }) {
     {src && <PlayVideo key={src} src={src} poster={pst} active={on} auto fit={b.fit || 'contain'} loop={loop} onTime={(x) => { const c = x >= at; setCta((o) => (o === c ? o : c)); }} onEnd={onEnd} />}
     {b.a1 && <div className="pb-vcta" style={{ position: 'absolute', left: 0, right: 0, top: ph ? '61%' : '64%', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: ph ? 16 : 18, opacity: cta ? 1 : 0, transform: cta ? 'none' : 'translateY(10px)', transition: 'opacity .6s ease, transform .6s ease', pointerEvents: cta ? 'auto' : 'none' }}>
       <button type="button" className="pb-b1" onClick={act(b.a1[1])} style={{ height: ph ? 44 : 50, padding: '0 28px', borderRadius: 999, background: '#fff', color: '#000', font: `600 ${ph ? 15 : 16}px/1 Inter, sans-serif`, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>{b.a1[0]} <Chev /></button>
-      {sigOn(b) && <img className="pb-sig-i pb-vsig" src={SIG_LOGO} alt="ERTEL" style={{ height: ph ? 22 : 26, width: 'auto', display: 'block', opacity: 0.85, filter: 'brightness(0) invert(1)', pointerEvents: 'none' }} />}
+      {sigOn(b) && <img className="pb-sig-i pb-vsig" src={SIG_LOGO} alt="ERTEL" style={{ height: ph ? 40 : 52, width: 'auto', display: 'block', pointerEvents: 'none' }} />}
     </div>}
   </div>;
 }
 
 // Kutuyu tamamen dolduran banner (konumlu bir ebeveynin içine konur)
-export function PhotoBanner({ b, open, onProduct, edit, on = true, onEnd, loop = true, onProg, onIdle }) {
+export function PhotoBanner({ b, open, onProduct, edit, on = true, onEnd, loop = true, onProg, onIdle, cur }) {
   const ref = useRef(null); const [sz, setSz] = useState(null);
   const win = useWin();
   // köşeler: Stil Stüdyosu'nda büyük reklam köşesi (look.style.rHero) küçültülünce düğmeler de aynı oranda sivrileşir (Apple yuvarlağı = hap)
@@ -278,7 +280,7 @@ export function PhotoBanner({ b, open, onProduct, edit, on = true, onEnd, loop =
     }
     open(l)();
   };
-  if (b.lay === 'video') return <VideoBanner b={b} on={on && !edit} act={act} onEnd={onEnd} loop={loop} onProg={onProg} onIdle={onIdle} />;
+  if (b.lay === 'video') return <VideoBanner b={b} on={on && !edit} act={act} onEnd={onEnd} loop={loop} onProg={onProg} onIdle={onIdle} cur={cur} />;
   let cv = null; let bg = b.bg;
   if (sz) {
     const phone = sz.w / sz.h < 1.05;
