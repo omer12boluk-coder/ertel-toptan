@@ -1,0 +1,72 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas><script>
+// Qianli Gorilla 6558X — v5: sadece yazısız temiz planlar; görüntü kırpılmaz.
+// Masaüstü (geniş, ~2.6:1): solda yazı paneli, sağda tam boy video. Telefon (~0.77): ortada video bandı, altında yazı.
+const Q=new URLSearchParams(location.search);const W=+Q.get('w')||1920,H=+Q.get('h')||740;
+const cv=document.getElementById('c');cv.width=W;cv.height=H;const X=cv.getContext('2d');
+const MOB=W<H;const FD='"Inter Display"',FT='Inter';
+const CACHE=new Map();const LG={};
+const loadImg=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=s});
+window.ready=(async()=>{await Promise.all([[FD,500],[FD,600],[FT,400],[FT,500],[FT,600]].map(([f,w])=>document.fonts.load(`${w} 100px ${f}`)));LG.q=await loadImg('qianli-w.png');})();
+function frame(ts){const i=Math.max(0,Math.round(ts*25));const k=i+1;
+  if(!CACHE.has(k)){const im=new Image();im.src=`clean/${String(k).padStart(5,'0')}.jpg`;CACHE.set(k,im.decode().then(()=>im));if(CACHE.size>16)CACHE.delete(CACHE.keys().next().value)}
+  return CACHE.get(k);}
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));const P=(t,a,d)=>cl((t-a)/d);
+const oQ=x=>1-Math.pow(1-x,4),ioS=x=>-(Math.cos(Math.PI*x)-1)/2;
+// ---- kurgu: her "vuruş" bir mesaj; içinde orijinal planlar sırayla (kaynak saniyeleri) ----
+const BEATS=[
+ {shots:[[0.0,2.4],[95.2,96.45]],title:1},
+ {shots:[[34.1,36.15],[36.25,39.05]],label:'Zoom',head:'6,5× – 58×',sub:'Kademesiz, senkron büyütme.\nHer pin, her lehim noktası net.'},
+ {shots:[[45.6,47.62],[47.72,50.1],[89.3,91.25]],label:'Trinoküler',head:'Kamerayı bağla,\nekrandan izle.',sub:'Üçüncü göz çıkışı;\nCTV adaptörleriyle uyumlu.'},
+ {shots:[[96.5,97.66],[97.72,99.38]],label:'Aydınlatma',head:'Entegre LED ışık',sub:'Gölgesiz, ayarlanabilir aydınlatma.'},
+ {shots:[[64.0,67.7]],label:'Termal',head:'Termal kamera desteği',sub:'Isınan bileşeni anında gör.',note:'Termal kamera kullanımı için ek aparat gerekir.'},
+ {shots:[[72.0,76.1]],label:'UV',head:'UV lamba',sub:'Yapıştırıcıyı mikroskop altında kürle.'},
+ {shots:[[91.35,95.1]],label:'Atölye',head:'Tezgâhının\nyeni merkezi.',sub:'Teşhisten onarıma, her adımda net görüş.'},
+ {shots:[[99.45,101.4]],hero:1},
+];
+let T=0;for(const b of BEATS){b.t0=T;b.d=b.shots.reduce((a,[s,e])=>a+e-s,0);T+=b.d;b.t1=T}
+const ENDT=T,TOTAL=T+4.6;window.TOTAL=TOTAL;
+function srcAt(b,lt){let acc=0;for(const [s,e] of b.shots){if(lt<acc+e-s)return {ts:s+lt-acc,i:b.shots.indexOf([s,e])};acc+=e-s}const l=b.shots[b.shots.length-1];return {ts:l[1]-.04}}
+// ---- yerleşim ----
+const R=MOB?{x:0,y:250,w:W,h:W*9/16}:{x:W-H*16/9,y:0,w:H*16/9,h:H};
+async function footage(t,b){const lt=t-b.t0;let acc=0,s0=0,ts=0;for(const [s,e] of b.shots){if(lt<acc+e-s||e===b.shots[b.shots.length-1][1]){ts=Math.min(e-.04,s+lt-acc);s0=acc;break}acc+=e-s}
+  const im=await frame(ts);const z=1.0+.035*P(lt-s0,0,4);
+  X.save();X.beginPath();X.rect(R.x,R.y,R.w,R.h);X.clip();const w=R.w*z,h=R.h*z;X.drawImage(im,R.x+(R.w-w)/2,R.y+(R.h-h)/2,w,h);X.restore();
+  // kenarları siyaha erit (banner kutusundaki siyah boşluklarla birleşsin)
+  const f=(x0,y0,x1,y1,a=1)=>{const g=X.createLinearGradient(x0,y0,x1,y1);g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');X.fillStyle=g;X.fillRect(R.x,R.y,R.w,R.h)};
+  if(MOB){f(0,R.y,0,R.y+60);f(0,R.y+R.h,0,R.y+R.h-60)}else{f(R.x,0,R.x+300,0);f(W,0,W-70,0);f(0,0,0,40,.6);f(0,H,0,H-40,.6)}}
+function lineTxt(s,x,y,o){const t=o.t;const p=oQ(P(t,o.a,o.d??.9));const q=o.out!=null?1-ioS(P(t,o.out,.5)):1;const al=p*q;if(al<=0.002)return;
+  X.save();X.font=`${o.w} ${o.size}px ${o.f}`;X.letterSpacing=(o.tr??0)*o.size+'px';X.textAlign=o.al||'left';X.textBaseline='alphabetic';X.fillStyle=o.col||'#fff';X.globalAlpha=al;
+  const bl=(1-p)*10;if(bl>.3)X.filter=`blur(${bl}px)`;s.split('\n').forEach((ln,i)=>X.fillText(ln,x,y+(1-p)*16+i*o.size*(o.lh||1.12)));X.restore();}
+const RED='#ff5547';
+// yazı bloğu
+function block(t,b){const a=b.t0+.35,out=b.t1-.55;const al=MOB?'center':'left';const x=MOB?W/2:118;
+  const hs=MOB?72:68,ls=MOB?22:20,ss=MOB?31:26,ns=MOB?22:18;
+  const hl=b.head.split('\n').length,sl=b.sub?b.sub.split('\n').length:0;
+  const tot=ls*1.9+hs*1.12*hl+(sl?ss*.9+ss*1.4*sl:0)+(b.note?ns*2.4:0);
+  let y=MOB?R.y+R.h+105:H/2-tot/2+ls;
+  lineTxt(b.label.toLocaleUpperCase('tr'),x,y,{t,a,out,size:ls,w:600,f:FT,tr:.2,al,col:RED});y+=ls*.9+hs;
+  lineTxt(b.head,x,y,{t,a:a+.1,out,size:hs,w:500,f:FD,tr:-.025,al,lh:1.1});y+=(hl-1)*hs*1.1;
+  if(b.sub){y+=ss*1.75;lineTxt(b.sub,x,y,{t,a:a+.25,out,size:ss,w:400,f:FT,tr:0,al,col:'rgba(255,255,255,.72)',lh:1.4});y+=(sl-1)*ss*1.4}
+  if(b.note){y+=ns*2.4;lineTxt(b.note,x,y,{t,a:a+.4,out,size:ns,w:400,f:FT,tr:.01,al,col:'rgba(255,255,255,.45)'})}}
+function title(t,b,end){const a=b.t0+(end?.35:.45),out=end?99:b.t1-.55;const al=MOB?'center':'left';
+  const cx=end?W/2:(MOB?W/2:118);const A=end?'center':al;
+  const qw=end?(MOB?330:300):(MOB?300:250),qh=qw*95/347;
+  let y=end?(MOB?380:140):(MOB?R.y+R.h+80:H/2-130);
+  const p=oQ(P(t,a,1.0))*(end?1:1-ioS(P(t,out,.5)));
+  X.save();X.globalAlpha=p;X.filter=`blur(${(1-oQ(P(t,a,1.0)))*8}px)`;const lx=A==='center'?cx-qw/2:cx-6;X.drawImage(LG.q,lx,y,qw,qh);X.restore();
+  y+=qh+(end?(MOB?120:112):(MOB?118:104));
+  const ts=end?(MOB?96:92):(MOB?92:84);
+  lineTxt('Gorilla 6558X',cx,y,{t,a:a+.2,out,size:ts,w:500,f:FD,tr:-.03,al:A});
+  y+=ts*.62+(MOB?20:16);
+  lineTxt('TRİNOKÜLER STEREO MİKROSKOP',A==='center'?cx+.16*19:cx+2,y+18,{t,a:a+.4,out,size:MOB?22:19,w:500,f:FT,tr:.32,al:A,col:'rgba(255,255,255,.7)'});
+  if(end)lineTxt('LED ışık modülü, lens ve UV lamba paket içeriğinde.',cx,y+(MOB?78:64),{t,a:a+.7,out,size:MOB?23:19,w:400,f:FT,tr:.01,al:A,col:'rgba(255,255,255,.45)'});}
+window.render=async(t)=>{X.setTransform(1,0,0,1,0,0);X.globalAlpha=1;X.filter='none';X.fillStyle='#000';X.fillRect(0,0,W,H);
+  if(t<ENDT){const b=BEATS.find(b=>t>=b.t0&&t<b.t1);await footage(t,b);
+    if(b.title)title(t,b);else if(!b.hero)block(t,b);
+    // vuruş geçişi: kısa kararma
+    const dip=Math.max(1-P(t,b.t0,.28),b===BEATS[BEATS.length-1]?P(t,b.t1-.6,.6):P(t,b.t1-.22,.22));if(b!==BEATS[0]||t>b.t0+.3){X.fillStyle=`rgba(0,0,0,${dip})`;X.fillRect(0,0,W,H)}
+    if(b===BEATS[0]){const f=1-P(t,0,.8);X.fillStyle=`rgba(0,0,0,${f})`;X.fillRect(0,0,W,H)}}
+  else{title(t,{t0:ENDT},1);const f=P(t,TOTAL-.5,.5);if(f>0){X.fillStyle=`rgba(0,0,0,${f})`;X.fillRect(0,0,W,H)}}};
+window.INFO={ENDT,TOTAL,beats:BEATS.map(b=>[b.t0.toFixed(2),b.t1.toFixed(2)])};
+</script></body></html>
