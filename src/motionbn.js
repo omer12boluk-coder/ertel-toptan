@@ -17,22 +17,23 @@ const eIO4 = (p) => (p < 0.5 ? 8 * p ** 4 : 1 - (-2 * p + 2) ** 4 / 2);
 
 // ---- zaman çizelgesi ------------------------------------------------------------------------------------
 const VS = 2.4; // montaj videosu bu anda başlar
-const VLEN = 11.6; // montaj süresi (bn/mot-q861-*.mp4)
-const CUTS = [0, 2.0, 3.6, 5.0, 6.6, 8.4, 10.0, 11.6]; // montajdaki kesmeler (video saniyesi)
+const VLEN = 13.0; // montaj süresi (bn/mot-q861-*.mp4)
+const CUTS = [0, 1.8, 3.8, 5.4, 6.8, 8.4, 10.0, 11.8, 13.0]; // montajdaki kesmeler (video saniyesi)
 const T_CLICK = 1.72;
 const T_PUSH0 = 2.5; const T_PUSH1 = 3.42;
 const T_END = VS + VLEN - 0.35; // kapanışa geçiş
 export const MOTION_DUR = T_END + 2.4; // son öğe yerleşince
 
 // montaj yazıları (video saniyesi): satırlar + alt etiket. Her yazı en az ~1,2 sn ekranda.
+// 17.11.2026 (2): montaj dosyası kırpmasız (net tam kare + bulanık kenar, tools/motion/kes.py) → bilgisayarda yazılar soldaki bulanık alanda.
 const CAPS = [
-  { a: 1.08, b: 1.9, l: [], tag: 'Yeni · Quick 861 Pro Max' },
-  { a: 2.04, b: 3.5, l: ['Söyle,', 'ısıtsın.'], tag: 'Sesli komut', big: true },
-  { a: 3.64, b: 4.92, l: ['Akıllı PID.', 'Sabit ısı.'], tag: 'Sıcaklık kontrolü' },
-  { a: 5.04, b: 6.5, num: 1300, unit: 'W', l: ['Fırçasız vorteks fan'], tag: 'Güç' },
-  { a: 6.64, b: 8.3, l: ['Standa koy,', 'kendini soğutsun.'], tag: 'Otomatik uyku' },
+  { a: 1.06, b: 1.72, l: [], tag: 'Yeni · Quick 861 Pro Max' },
+  { a: 1.84, b: 3.7, l: ['Söyle,', 'ısıtsın.'], tag: 'Sesli komut', big: true },
+  { a: 3.84, b: 5.3, l: ['Akıllı PID.', 'Sabit ısı.'], tag: 'Sıcaklık kontrolü' },
+  { a: 5.44, b: 6.7, num: 1300, unit: 'W', l: ['Fırçasız vorteks fan'], tag: 'Güç' },
+  { a: 6.84, b: 8.3, l: ['Standa koy,', 'kendini soğutsun.'], tag: 'Otomatik uyku' },
   { a: 8.44, b: 9.9, l: ['Zor entegre.', 'Kolay söküm.'], tag: 'BGA · çip · çok katmanlı kart' },
-  { a: 10.04, b: 11.25, l: ['Tek istasyon.', 'Her iş.'], tag: '50–550 °C' },
+  { a: 10.04, b: 11.7, l: ['Tek istasyon.', 'Her iş.'], tag: '50–550 °C' },
 ];
 
 // ---- stil (bir kez) -------------------------------------------------------------------------------------
@@ -232,7 +233,7 @@ export function createMotion(root, opt = {}) {
       if (c.num) inner += `<span class="mq-ln"><span class="mq-num mq-w" style="font-size:${ph ? 92 : 190}px"><span class="nv">0</span><u>${c.unit}</u></span></span><span class="mq-ln" style="margin-top:${ph ? 6 : 10}px"><span class="mq-h" style="font-size:${ph ? 20 : 34}px;font-weight:600;letter-spacing:-.01em">${words(c.l[0])}</span></span>`;
       else inner += c.l.map((s, i) => `<span class="mq-ln"><span class="mq-h" style="font-size:${fs}px;${i ? 'color:#bcd3ff' : ''}">${words(s)}</span></span>`).join('');
       d.innerHTML = inner;
-      if (ph) Object.assign(d.style, { left: '26px', top: 'auto', bottom: '64px', width: '350px' }); else Object.assign(d.style, { left: '96px', bottom: '96px', top: 'auto', width: '900px' });
+      if (ph) Object.assign(d.style, { left: '26px', top: 'auto', bottom: '64px', width: '350px' }); else Object.assign(d.style, { left: '80px', bottom: '96px', top: 'auto', width: '900px' });
       ov.appendChild(d);
       return { c, d, ws: [...d.querySelectorAll('.mq-w')], tg: d.querySelector('.mq-tg'), nv: d.querySelector('.nv') };
     });
@@ -346,7 +347,7 @@ export function createMotion(root, opt = {}) {
     // montaj: kesmede minik 'punch' (kısa büyüme → 1) + beyaz flaş
     const m = tt - VS; let ci = 0; for (let i = 0; i < CUTS.length - 1; i++) if (m >= CUTS[i]) ci = i;
     const since = m - CUTS[ci];
-    const punch = m > 0.2 && ci > 0 ? 1 + 0.045 * (1 - eOut3(clamp(since / 0.42))) : 1;
+    const punch = 1; // zum yok (kullanıcı: 'her şey çok yakın')
     S(R.v, { transform: `scale(${punch})` });
     const fl = ci > 0 && m < VLEN ? Math.max(0, 1 - since / 0.14) * 0.28 : 0;
     S(R.flash, { opacity: String(fl) });
