@@ -758,9 +758,21 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
   // 3.11.2026: kutunun BOYU da yumuşakça değişir (giriş ⇄ üye ol arasında boy farkı ani zıplıyor, sonra yerine oturuyordu);
   // içerik yana kaymaz, sadece solup gelir
   const formRef = useRef(null); const prevH = useRef(0);
-  const go2 = (v) => { setErr(''); prevH.current = formRef.current?.offsetHeight || 0; setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
+  const docH = useRef(null);
+  const go2 = (v) => { setErr(''); prevH.current = formRef.current?.offsetHeight || 0; docH.current = [document.documentElement.scrollHeight, scrollY]; setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
   useLayoutEffect(() => {
     const el = formRef.current; const h0 = prevH.current; prevH.current = 0;
+    // 17.11.2026: iki bölmeli sayfada sayfa aşağı kaymışken kısa forma (girişe) geçince tarayıcı kaydırmayı anında yukarı
+    // kırpıyordu → içerik 100+ px sıçrıyordu. Eski boy tutulur, sayfa yumuşakça başa kayar, başa varınca boy serbest kalır.
+    const [d0, y0] = docH.current || [0, 0]; docH.current = null;
+    if (noGrow && el && h0 && y0 > 0 && document.documentElement.scrollHeight < d0 - 2) {
+      el.style.minHeight = h0 + 'px';
+      if (Math.abs(scrollY - y0) > 1) window.scrollTo(0, y0);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const t0 = Date.now();
+      const chk = () => { if (scrollY <= 1 || Date.now() - t0 > 900) el.style.minHeight = ''; else requestAnimationFrame(chk); };
+      requestAnimationFrame(chk);
+    }
     // noGrow: iki bölmeli sayfada form ortalı durur, boy animasyonu bitince içerik 10-18 px sıçrıyordu (16.11.2026)
     if (noGrow || !el || !h0 || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const h1 = el.offsetHeight; if (Math.abs(h1 - h0) < 2) return;
