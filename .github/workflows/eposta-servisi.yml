@@ -54,6 +54,7 @@ jobs:
     steps:
       - name: Alan adı kayıtları (SPF / DMARC / Resend)
         continue-on-error: true
+        shell: bash {0}
         run: |
           D=ertelmarket.com
           spf=$(dig +short TXT $D | tr -d '"' | grep -i '^v=spf1' | tr '\n' ' ')
@@ -64,7 +65,7 @@ jobs:
           cfb=$(dig +short TXT cf-bounce.$D | tr -d '"' | tr '\n' ' ')
           echo "::notice title=Cloudflare Email Sending kaydı (cf-bounce)::${cfb:-yok (Cloudflare'de alan adı henüz gönderime açılmamış)}"
           if [ -n "$RESEND_KEY" ]; then
-            st=$(curl -s -H "Authorization: Bearer $RESEND_KEY" https://api.resend.com/domains | jq -c '[.data[]? | {name, status}]')
+            st=$(curl -s -H "Authorization: Bearer $RESEND_KEY" https://api.resend.com/domains | jq -c '[.data[]? | {name, status}]' 2>/dev/null || echo 'okunamadı (anahtar sadece gönderme izinli olabilir)')
             echo "::notice title=Resend alan adları::$st"
           fi
       - name: Deneme e-postası
