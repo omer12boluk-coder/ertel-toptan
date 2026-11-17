@@ -826,8 +826,8 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
   );
   return (
     <form ref={formRef} className="auth-form" onSubmit={submit}>
-      {/* 17.11.2026: no-anim = giriş ↔ üye ol değişimini site 'yeni sayfa' sanıp sayfa geçişi (beyaz örtü + sağdan kayma) oynatıyordu (setupNavAnim onMut) */}
-      <div key={view} className={'auth-view v-' + view + (dir ? ' ' + dir : '') + (noGrow ? ' no-anim' : '')}>
+      {/* 17.11.2026: data-navskip = giriş ↔ üye ol değişimini site 'yeni sayfa' sanıp sayfa geçişi (beyaz örtü + sağdan kayma) oynatıyordu (setupNavAnim onMut) */}
+      <div key={view} className={'auth-view v-' + view + (dir ? ' ' + dir : '') }{...(noGrow ? { 'data-navskip': '' } : {})}>
       {!compact && <h2 className="auth-h">{{ login: 'Giriş yapın', signup: 'Üye olun', bayi: 'Bayi girişi', reset: 'Şifremi unuttum', unverified: 'Giriş yapın' }[view]}</h2>}
       {['login', 'signup'].includes(view) && (social.google || social.facebook) && <>
         <div className="auth-social">

@@ -1912,7 +1912,7 @@ function setupNavAnim() {
     const min = innerHeight * 0.45, added = [];
     for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1 && !n.closest('.sheet, .sheet-bg, .ctx-sheet-bg') && n.offsetHeight > min && !n.matches(FIX)) added.push(n);
     const top = added.filter((n) => !added.some((o) => o !== n && o.contains(n)));
-    if (!top.length || top.some((n) => n.classList.contains('no-anim') || n.querySelector('.no-anim'))) return; // animasyonsuz dönüş isteyen sayfa
+    if (!top.length || top.some((n) => n.classList.contains('no-anim') || n.querySelector('.no-anim') || n.hasAttribute('data-navskip') || n.querySelector('[data-navskip]'))) return; // animasyonsuz dönüş isteyen sayfa
     click = null;
     const els = []; for (const n of top) { if (n.classList.contains('page') || n.querySelector(FIX) || n.querySelector(SELF)) els.push(...pageTargets({ children: [n] })); else els.push(n); }
     play(els, c.back ? 'back' : 'fwd', 300);

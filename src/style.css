@@ -11790,3 +11790,9 @@ html.nav-mv .as-fxsvg *, html.nav-mv .as-fx-x { animation-play-state: paused !im
 @media (min-width: 900px) {
   html.gs-one.gs-isl:not(.isl-mv) .topbar.hdr-gs .topbar-in { transition: box-shadow .4s, background-color .35s, border-color .35s !important; }
 }
+/* 17.11.2026: iki bölmeli giriş ↔ üye ol geçişi — sayfa geçişi yerine form kendi yerinde yönlü kayarak belirir */
+.as-form .auth-view.fwd { animation: asViewF .34s cubic-bezier(.22, 1, .36, 1) both; }
+.as-form .auth-view.back { animation: asViewB .34s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes asViewF { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes asViewB { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .as-form .auth-view.fwd, .as-form .auth-view.back { animation: none; } }
