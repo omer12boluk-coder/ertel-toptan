@@ -132,7 +132,7 @@ export function AuthSplit({ view, children }) {
       <aside className="as-side" aria-hidden="true">
         <div className={'as-stick sfx-' + fx}>
           <span className="as-beam b1" /><span className="as-beam b2" />
-          <div key={k} className={'as-art as-' + k + ' fx-' + fx}>
+          <div className={'as-art as-' + k + ' fx-' + fx}>
             <span className="as-glow" />
             {fx === 'devre' && <Circuit />}
             {fx === 'mikro' && <Reticle />}
