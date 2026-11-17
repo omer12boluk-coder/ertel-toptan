@@ -144,7 +144,7 @@ export function AuthSplit({ view, children }) {
           </div>
           <span className="as-fade" />
           <blockquote className="as-q">
-            <p key={q}><Words text={'“' + q + '”'} /></p>
+            <p key={q}><Words text={q} /></p>
             <cite>ERTEL GSM</cite>
           </blockquote>
         </div>
