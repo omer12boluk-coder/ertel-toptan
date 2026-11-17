@@ -238,8 +238,8 @@ Hepsi Ayarlar › Renkler ve görünüm ya da Tasarım modundan değişir; ayrı
 **Claude'un yapacakları:**
 10. Blaze günü: sahte harcama denemesi düğmesi, Firebase App Check (Enforce'tan ÖNCE: giriş sayfası açıkken App Check kurulmuyor (`__gateWait`) → o sırada okumalar jetonsuz; Enforce'ta giriş sayfası sayıları vb. engellenir, önce düzelt), hızlı kota bekçisi (Monitoring okuma sayısı), gerekirse Cloudflare hız sınırı.
 10b. **Sanal POS bağlanınca demo kartı KALDIR:** `src/paylink.jsx` `DEMO_PAY = false` + `DemoPay` bileşeni ve `DEMO_OTP = '111111'` (3D ekranında 'başarılı' deneme kodu) silinir; müşteri linkine gerçek ödeme bağlanır.
-11. Sipariş e-postasını Resend'den Cloudflare Email Service'e taşı ('en son döneriz').
-12. Resend 'verified' kontrolü.
+11. ~~Sipariş e-postasını Cloudflare'e taşı~~ → HAZIR (17.11.2026): tüm e-postalar bekçi `sendMail()` (KV `mail-via` resend|cloudflare). Geçiş = Actions **'E-posta servisi'** (`eposta-servisi.yml`, servis: durum|cloudflare|resend) — önce kullanıcı Workers Paid + Cloudflare › Email Service › Onboard Domain. Cloudflare hata verirse aynı mail Resend'den gider; worker.yml bağlantı eklenemezse bağlantısız yükler.
+12. Üyelik e-postaları (doğrulama + şifre yenileme) artık Firebase'den değil bekçi `/mail/auth`'tan (noreply@ertelmarket.com, bağlantı servis hesabıyla `accounts:sendOobCode returnOobLink`, link `/islem?...`); olmazsa uygulama eski Firebase gönderimine düşer (`_authMail`/`_sendVerify`, backend-firebase.js). İzin/kayıt durumu: 'E-posta servisi' › durum.
 13. WhatsApp bilgilendirme (Meta Cloud API, kargoya verildi / teslim edildi) — önce Meta işletme doğrulaması.
 14. Siparişleri okuma yükü: tek 'özet belge' (son 7 gün) — kullanıcı kararı bekliyor.
 15. Yurtiçi Kargo entegrasyonu; sepet linkinden gelen siparişi normal siparişe çevirme + yasal onay + üye adres önerisi.

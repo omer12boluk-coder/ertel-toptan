@@ -38,5 +38,7 @@ id = "__KV_ID__"
 [vars]
 FEED_URL = "https://www.ertelgsm.com/xml-cikti/gm"
 REPO = "omer12boluk-coder/ertel-toptan"
+# üye e-postalarına (doğrulama / şifre) verilen yanıtlar buraya gelir (Cloudflare yönlendirmesiyle Gmail'e)
+MAIL_REPLY = "info@ertelmarket.com"
 # sipariş bildirimi (Ayarlar > Online mağaza > Bildirimler'de anlatılıyor)
 NOTIFY_EMAIL = "omer.12boluk@gmail.com"

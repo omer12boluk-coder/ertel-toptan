@@ -127,6 +127,8 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/mail/auth' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await authMail(req, env, b)); }
+      if (url.pathname === '/mail/test' && req.method === 'POST') return json(await mailTest(req, env));
       if (url.pathname === '/notify-member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyMember(env, b)); }
       if (url.pathname === '/push/fav' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushFav(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/push/back-admin' && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); return json(await sendBack(env, b)); }
@@ -339,7 +341,8 @@ async function tgBot(env) {
 }
 async function notifyStatus(env) {
   const chat = env.TELEGRAM_TOKEN ? JSON.parse((await env.KV.get('tg-chat')) || 'null') : null;
-  return { email: !!(env.NOTIFY_EMAIL && env.RESEND_KEY), emailVia: env.RESEND_KEY ? 'resend' : 'formsubmit', telegram: !!env.TELEGRAM_TOKEN, telegramBot: await tgBot(env), telegramLinked: chat ? chat.name || true : false };
+  const mv = await mailVia(env);
+  return { email: !!(env.NOTIFY_EMAIL && (env.RESEND_KEY || env.EMAIL)), emailVia: mv === 'cloudflare' && env.EMAIL ? 'cloudflare' : env.RESEND_KEY ? 'resend' : 'formsubmit', telegram: !!env.TELEGRAM_TOKEN, telegramBot: await tgBot(env), telegramLinked: chat ? chat.name || true : false };
 }
 async function tgLink(env, code) {
   if (!env.TELEGRAM_TOKEN) return { ok: false, error: 'Telegram bot anahtarı (TELEGRAM_TOKEN) henüz eklenmemiş' };
@@ -357,6 +360,132 @@ async function tgLink(env, code) {
   await fetch(TG(env, 'sendMessage'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: m.chat.id, text: '✅ Bağlandı. Yeni mağaza siparişleri buraya bildirilecek.' }) }).catch(() => {});
   return { ok: true, name };
 }
+// ============================================================================================
+// E-POSTA GÖNDERİMİ (17.11.2026) — tek kapı: sendMail()
+// Servis KV 'mail-via' anahtarından okunur: 'resend' (varsayılan) | 'cloudflare' (Cloudflare Email Service, `EMAIL` bağlantısı).
+// Değiştirmek: Actions › 'E-posta servisi' (eposta-servisi.yml) → servis seç → tek tık. Bekçi yeniden yüklenirken worker.yml
+// KV'ye bakar, 'cloudflare' ise wrangler.toml'a [[send_email]] bağlantısını ekler.
+// Cloudflare hata verirse (alan adı açılmamış, Workers Paid yok…) aynı e-posta KENDİLİĞİNDEN Resend'den gider → mail kaybolmaz.
+let viaMem = null;
+async function mailVia(env) {
+  if (viaMem && viaMem.t > Date.now() - 60000) return viaMem.v;
+  const v = (await env.KV.get('mail-via').catch(() => null)) || env.MAIL_VIA || 'resend';
+  viaMem = { v, t: Date.now() }; return v;
+}
+const splitFrom = (s) => { const m = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(s || ''); return m ? { name: m[1].trim(), email: m[2].trim() } : { name: '', email: String(s || '').trim() }; };
+async function sendMail(env, { to, from, subject, text, html, replyTo, devFallback }) {
+  const tos = [].concat(to).filter(Boolean);
+  const via = await mailVia(env); let cfErr = '';
+  if (via === 'cloudflare' && env.EMAIL) {
+    const f = splitFrom(from);
+    const msg = { to: tos.length === 1 ? tos[0] : tos, subject, text, html, ...(replyTo ? { replyTo } : {}) };
+    try { const r = await env.EMAIL.send({ ...msg, from: f.name ? { email: f.email, name: f.name } : f.email }); return { ok: true, via: 'cloudflare', id: r?.messageId || '' }; }
+    catch (e) {
+      // bazı sürümler gönderen adını nesne olarak kabul etmiyor → düz adresle bir kez daha
+      try { const r = await env.EMAIL.send({ ...msg, from: f.email }); return { ok: true, via: 'cloudflare', id: r?.messageId || '' }; }
+      catch (e2) { cfErr = String(e2?.message || e2 || e); }
+    }
+    if (!env.RESEND_KEY) return { ok: false, via: 'cloudflare', error: cfErr };
+  }
+  if (!env.RESEND_KEY) return { ok: false, via: 'yok', error: 'E-posta servisi kurulmamış' };
+  const send = (fr) => fetch('https://api.resend.com/emails', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: fr, to: tos, subject, text, html, ...(replyTo ? { reply_to: replyTo } : {}), headers: { 'X-Entity-Ref-ID': crypto.randomUUID() } }),
+  });
+  let r = await send(from);
+  // sadece yöneticiye giden bildirimlerde: alan adı sorunu olursa Resend'in deneme adresi (yalnız hesap sahibine ulaşır)
+  if (devFallback && !r.ok && (r.status === 403 || r.status === 422)) r = await send('ERTEL GSM <onboarding@resend.dev>');
+  const j = await r.json().catch(() => ({}));
+  return r.ok ? { ok: true, via: 'resend', id: j.id || '', ...(cfErr ? { cfError: cfErr } : {}) } : { ok: false, via: 'resend', status: r.status, error: j.message || String(r.status), ...(cfErr ? { cfError: cfErr } : {}) };
+}
+
+// Üyelik e-postaları (doğrulama + şifre yenileme) artık Firebase'in kendi gönderiminden DEĞİL, bizim alan adımızdan
+// (DKIM/SPF/DMARC uyumlu) gider → spam'e düşmez. Bağlantıyı Firebase üretir (servis hesabı, accounts:sendOobCode returnOobLink),
+// e-postayı sendMail atar. Bir sorun olursa { fallback: true } döner → uygulama eski yoldan (Firebase) gönderir.
+const MAIL_THR = new Map();
+const AUTH_FROM = (env) => env.MAIL_FROM_AUTH || 'ERTEL GSM <noreply@ertelmarket.com>';
+const AUTH_REPLY = (env) => env.MAIL_REPLY || undefined; // yanıtlar nereye gitsin (wrangler.toml [vars])
+const okOrigin = (o) => /^https:\/\/((www\.)?ertelmarket\.com|erteltoptan(--[\w-]+)?\.(web\.app|firebaseapp\.com))$/.test(String(o || '')) ? o : 'https://ertelmarket.com';
+function authMailHtml({ title, intro, btn, link, note }) {
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title></head>`
+    + `<body style="margin:0;padding:0;background:#f4f5f7"><div style="max-width:520px;margin:0 auto;padding:32px 20px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">`
+    + `<div style="font-size:20px;font-weight:700;letter-spacing:.5px;margin:0 0 20px">ERTEL GSM</div>`
+    + `<div style="background:#ffffff;border-radius:14px;padding:28px 24px;border:1px solid #e5e7eb">`
+    + `<h1 style="font-size:19px;margin:0 0 12px">${esc(title)}</h1><p style="font-size:15px;line-height:1.6;margin:0 0 22px">${esc(intro)}</p>`
+    + `<p style="margin:0 0 22px"><a href="${esc(link)}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 24px;border-radius:10px">${esc(btn)}</a></p>`
+    + `<p style="font-size:13px;color:#64748b;line-height:1.5;margin:0">Düğme açılmazsa bu adresi tarayıcınıza yapıştırın:<br><span style="word-break:break-all;color:#1d4ed8">${esc(link)}</span></p></div>`
+    + `<p style="font-size:12px;color:#94a3b8;line-height:1.5;margin:18px 4px 0">${esc(note)}<br>ERTEL GSM · Santral Center, Tahtakale, Fatih / İstanbul · ertelmarket.com</p>`
+    + `</div></body></html>`;
+}
+async function authMail(req, env, b) {
+  if (!env.FIREBASE_SA) return { ok: false, fallback: true, error: 'anahtar yok' };
+  const kind = b.kind === 'reset' ? 'reset' : 'verify';
+  const origin = okOrigin(b.origin);
+  let email = '';
+  if (kind === 'verify') {
+    const tok = String(b.token || ''); const uid = tokUid(tok);
+    if (!uid) return { ok: false, fallback: true };
+    const m = await fsAuth('members/' + uid, tok).catch(() => null); // anahtarı Firestore doğrular → başkası adına istenemez
+    email = String(m?.email || '').trim().toLowerCase();
+  } else email = String(b.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, fallback: true };
+  // aynı adrese 60 sn'de bir, aynı IP'den 10 dk'da 8 istek (KV'ye yazmadan, önbellekte sayılır)
+  const h = async (s) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode(s)))].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  // (workers.dev adresinde Cache API yazmıyor → bellekteki sayaç da tutulur)
+  const nowT = Date.now(); for (const [k, v] of MAIL_THR) if (v.until < nowT) MAIL_THR.delete(k);
+  const ck = new Request('https://mail.throttle/' + kind + '/' + (await h(email)));
+  if (MAIL_THR.has(ck.url) || (await caches.default.match(ck).catch(() => null))) return { ok: true, throttled: true };
+  const ip = req.headers.get('CF-Connecting-IP') || '';
+  const ik = new Request('https://mail.throttle/ip/' + (await h(ip)));
+  const ic = Math.max(MAIL_THR.get(ik.url)?.n || 0, Number((await (await caches.default.match(ik).catch(() => null))?.text().catch(() => '0')) || 0));
+  if (ic >= 8) return { ok: false, error: 'Çok fazla deneme. Birkaç dakika sonra tekrar deneyin.' };
+  const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
+  let oob;
+  try {
+    const tok = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:sendOobCode`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestType: kind === 'reset' ? 'PASSWORD_RESET' : 'VERIFY_EMAIL', email, returnOobLink: true, continueUrl: origin + '/' }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.oobLink) return { ok: false, fallback: true, error: j.error?.message || String(r.status) }; // ör. EMAIL_NOT_FOUND → uygulama Firebase'in kendi mesajını gösterir
+    oob = new URL(j.oobLink).searchParams.get('oobCode');
+  } catch (e) { return { ok: false, fallback: true, error: String(e.message || e) }; }
+  if (!oob) return { ok: false, fallback: true };
+  const link = `${origin}/islem?mode=${kind === 'reset' ? 'resetPassword' : 'verifyEmail'}&oobCode=${encodeURIComponent(oob)}&lang=tr`;
+  const t = kind === 'reset'
+    ? { subject: 'ERTEL GSM şifre yenileme', title: 'Şifrenizi yenileyin', intro: `${email} hesabı için şifre yenileme isteği aldık. Yeni şifrenizi belirlemek için aşağıdaki düğmeye dokunun.`, btn: 'Yeni şifre belirle', note: 'Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.' }
+    : { subject: 'ERTEL GSM üyeliğinizi onaylayın', title: 'E-posta adresinizi onaylayın', intro: `ERTEL GSM'e hoş geldiniz. Üyeliğinizi tamamlamak için ${email} adresini onaylamanız yeterli.`, btn: 'E-postamı onayla', note: 'Bu üyeliği siz açmadıysanız bu e-postayı yok sayabilirsiniz.' };
+  const text = `${t.title}\n\n${t.intro}\n\n${link}\n\n${t.note}\n\nERTEL GSM · ertelmarket.com`;
+  const r = await sendMail(env, { to: email, from: AUTH_FROM(env), subject: t.subject, text, html: authMailHtml({ ...t, link }), replyTo: AUTH_REPLY(env) });
+  if (!r.ok) return { ok: false, fallback: true, error: r.error };
+  MAIL_THR.set(ck.url, { until: Date.now() + 60e3 }); MAIL_THR.set(ik.url, { n: ic + 1, until: MAIL_THR.get(ik.url)?.until || Date.now() + 600e3 });
+  await caches.default.put(ck, new Response('1', { headers: { 'Cache-Control': 'max-age=60' } })).catch(() => {});
+  await caches.default.put(ik, new Response(String(ic + 1), { headers: { 'Cache-Control': 'max-age=600' } })).catch(() => {});
+  return { ok: true, via: r.via };
+}
+// Actions 'E-posta servisi' denemesi: X-Key = sha256('mail:' + TELEGRAM_TOKEN) → yöneticiye deneme e-postası
+const mailKey = async (env) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('mail:' + (env.TELEGRAM_TOKEN || ''))))].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 40);
+async function mailTest(req, env) {
+  if (!env.TELEGRAM_TOKEN || req.headers.get('X-Key') !== (await mailKey(env))) return { ok: false, error: 'izin yok' };
+  viaMem = null;
+  const via = await mailVia(env);
+  if (!env.NOTIFY_EMAIL) return { ok: false, via, error: 'NOTIFY_EMAIL yok' };
+  const subject = 'ERTEL GSM · e-posta servisi denemesi';
+  const text = `Bu bir deneme e-postasıdır.\nSeçili servis: ${via}${via === 'cloudflare' && !env.EMAIL ? ' (bağlantı yok → Resend)' : ''}\nGelen kutusuna düştüyse her şey yolunda.`;
+  const r = await sendMail(env, { to: env.NOTIFY_EMAIL, from: AUTH_FROM(env), subject, text, html: authMailHtml({ title: 'E-posta servisi denemesi', intro: text.replace(/\n/g, ' '), btn: 'Siteye git', link: 'https://ertelmarket.com/', note: 'Bu e-postayı Actions › E-posta servisi işi gönderdi.' }), replyTo: AUTH_REPLY(env) });
+  // üyelik bağlantısı üretme izni var mı (bağlantı üretilir, GÖNDERİLMEZ; EMAIL_NOT_FOUND da 'izin var' demek)
+  let authCheck = 'anahtar yok';
+  if (env.FIREBASE_SA) try {
+    const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
+    const tok = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+    const x = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:sendOobCode`, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ requestType: 'PASSWORD_RESET', email: env.NOTIFY_EMAIL, returnOobLink: true }) });
+    const j = await x.json().catch(() => ({}));
+    authCheck = j.oobLink || /EMAIL_NOT_FOUND/.test(j.error?.message || '') ? 'tamam' : 'hata: ' + (j.error?.message || x.status);
+  } catch (e) { authCheck = 'hata: ' + (e.message || e); }
+  return { selected: via, binding: !!env.EMAIL, authCheck, ...r };
+}
+
 async function notifySend(env, { subject, text, short, replyTo, link, noEmail, photo }) {
   const out = {};
   if (env.TELEGRAM_TOKEN) {
@@ -371,16 +500,11 @@ async function notifySend(env, { subject, text, short, replyTo, link, noEmail, p
     } catch (e) { out.telegram = 'hata: ' + e; }
   } else out.telegram = 'TELEGRAM_TOKEN eklenmemiş';
   if (noEmail) out.email = 'yok';
-  else if (env.NOTIFY_EMAIL && env.RESEND_KEY) {
+  else if (env.NOTIFY_EMAIL && (env.RESEND_KEY || env.EMAIL)) {
     try {
-      // Gönderen: kendi alan adımız (ertelmarket.com Resend'de doğrulandı → spam'e düşmez). Alan adı sorunu olursa eski adres.
-      const send = (from) => fetch('https://api.resend.com/emails', {
-        method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: [env.NOTIFY_EMAIL], subject, text, html: mailHtml(subject, text, link), ...(replyTo ? { reply_to: replyTo } : {}) }),
-      });
-      let r = await send(env.MAIL_FROM || 'ERTEL GSM <siparis@ertelmarket.com>');
-      if (!r.ok && (r.status === 403 || r.status === 422)) r = await send('ERTEL GSM <onboarding@resend.dev>');
-      const j = await r.json().catch(() => ({})); out.email = r.ok ? 'gönderildi' : 'hata: ' + (j.message || r.status);
+      // Gönderen: kendi alan adımız. Servis (Resend / Cloudflare) sendMail'de seçilir.
+      const r = await sendMail(env, { to: env.NOTIFY_EMAIL, from: env.MAIL_FROM || 'ERTEL GSM <siparis@ertelmarket.com>', subject, text, html: mailHtml(subject, text, link), replyTo, devFallback: true });
+      out.email = r.ok ? 'gönderildi (' + r.via + ')' : 'hata: ' + r.error;
     } catch (e) { out.email = 'hata: ' + e; }
   } else if (env.NOTIFY_EMAIL) {
     try {

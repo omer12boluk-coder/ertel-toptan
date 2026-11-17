@@ -1,0 +1,85 @@
+# E-posta servisi (17.11.2026) — tek tıkla Resend ⇄ Cloudflare Email Service.
+#   durum      : hiçbir şeyi değiştirmez; seçili servisi, Resend alan adı durumunu, SPF/DMARC kayıtlarını gösterir + deneme e-postası atar
+#   cloudflare : KV 'mail-via' = cloudflare → bekçi [[send_email]] bağlantısıyla yeniden yüklenir → deneme e-postası
+#   resend     : geri dönüş (KV 'mail-via' = resend)
+# Cloudflare'e geçmeden önce BİR KEZ: Workers Paid + Cloudflare panelinde Compute › Email Service › Email Sending › Onboard Domain
+# (ertelmarket.com). Bunlar yokken 'cloudflare' seçilse bile e-postalar kendiliğinden Resend'den gitmeye devam eder.
+name: E-posta servisi
+on:
+  workflow_dispatch:
+    inputs:
+      servis:
+        description: 'Ne yapılsın?'
+        type: choice
+        options: [durum, cloudflare, resend]
+        default: durum
+jobs:
+  sec:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SERVIS: ${{ inputs.servis }}
+    steps:
+      - name: Servisi kaydet
+        run: |
+          set -e
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/storage/kv/namespaces"
+          auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          id=$(curl -s -H "$auth" "$api?per_page=100" | jq -r '.result[]? | select(.title=="ertel-b2b-sync") | .id' | head -1)
+          [ -n "$id" ] || { echo "::error title=KV bulunamadı::ertel-b2b-sync"; exit 1; }
+          cur=$(curl -s -H "$auth" "$api/$id/values/mail-via" || true)
+          case "$cur" in cloudflare|resend) ;; *) cur="resend";; esac
+          echo "::notice title=Şu anki servis::$cur"
+          if [ "$SERVIS" != "durum" ]; then
+            r=$(curl -s -X PUT -H "$auth" -H "Content-Type: text/plain" "$api/$id/values/mail-via" --data "$SERVIS" | jq -r '.success')
+            [ "$r" = "true" ] || { echo "::error title=Kaydedilemedi::KV yazma hatası"; exit 1; }
+            echo "::notice title=Yeni servis::$SERVIS (bekçi şimdi yeniden yükleniyor)"
+          fi
+  yukle:
+    needs: sec
+    if: inputs.servis != 'durum'
+    uses: ./.github/workflows/worker.yml
+    secrets: inherit
+  dene:
+    needs: [sec, yukle]
+    if: always() && needs.sec.result == 'success' && needs.yukle.result != 'failure'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      RESEND_KEY: ${{ secrets.RESEND_KEY }}
+      SERVIS: ${{ inputs.servis }}
+    steps:
+      - name: Alan adı kayıtları (SPF / DMARC / Resend)
+        continue-on-error: true
+        run: |
+          D=ertelmarket.com
+          spf=$(dig +short TXT $D | tr -d '"' | grep -i '^v=spf1' | tr '\n' ' ')
+          echo "::notice title=SPF ($D)::${spf:-YOK}"
+          dm=$(dig +short TXT _dmarc.$D | tr -d '"' | tr '\n' ' ')
+          if [ -n "$dm" ]; then echo "::notice title=DMARC::$dm"; else echo "::warning title=DMARC yok::_dmarc.$D kaydı yok — Gmail/Outlook spam'e atabilir"; fi
+          for s in resend send; do v=$(dig +short TXT $s._domainkey.$D | head -c 60); [ -n "$v" ] && echo "::notice title=DKIM ($s._domainkey)::var"; done
+          cfb=$(dig +short TXT cf-bounce.$D | tr -d '"' | tr '\n' ' ')
+          echo "::notice title=Cloudflare Email Sending kaydı (cf-bounce)::${cfb:-yok (Cloudflare'de alan adı henüz gönderime açılmamış)}"
+          if [ -n "$RESEND_KEY" ]; then
+            st=$(curl -s -H "Authorization: Bearer $RESEND_KEY" https://api.resend.com/domains | jq -c '[.data[]? | {name, status}]')
+            echo "::notice title=Resend alan adları::$st"
+          fi
+      - name: Deneme e-postası
+        run: |
+          sleep 20
+          sub=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | jq -r '.result.subdomain // empty')
+          key=$(printf '%s' "mail:$TELEGRAM_TOKEN" | sha256sum | cut -c1-40)
+          out=$(curl -s -m 40 -X POST -H "X-Key: $key" "https://ertel-b2b-watch.$sub.workers.dev/mail/test" || echo '{"ok":false,"error":"bekçiye ulaşılamadı"}')
+          ok=$(echo "$out" | jq -r '.ok'); via=$(echo "$out" | jq -r '.via // "?"'); sel=$(echo "$out" | jq -r '.selected // "?"')
+          cfe=$(echo "$out" | jq -r '.cfError // empty'); err=$(echo "$out" | jq -r '.error // empty')
+          if [ "$ok" = "true" ]; then echo "::notice title=Deneme e-postası gönderildi::seçili: $sel · giden: $via — gelen kutusuna bakın (spam klasörüne de)"
+          else echo "::error title=Deneme e-postası gitmedi::$err"; fi
+          ac=$(echo "$out" | jq -r '.authCheck // "?"')
+          if [ "$ac" = "tamam" ]; then echo "::notice title=Üyelik e-postaları::Doğrulama / şifre e-postaları kendi alan adımızdan gidiyor"
+          else echo "::warning title=Üyelik e-postaları hâlâ Firebase'den::Servis hesabının Firebase Authentication izni yok ($ac). Google Cloud › IAM'de FIREBASE_SERVICE_ACCOUNT hesabına 'Firebase Authentication Admin' rolü verin."; fi
+          if [ "$sel" = "cloudflare" ] && [ "$via" != "cloudflare" ]; then
+            echo "::warning title=Cloudflare henüz göndermiyor (mailler Resend'den gidiyor)::${cfe:-bağlantı yok} — Workers Paid alınmış mı ve Cloudflare › Email Service › Email Sending › Onboard Domain (ertelmarket.com) yapılmış mı? Sonra bu işi tekrar 'cloudflare' ile çalıştırın."
+          fi

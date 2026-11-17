@@ -679,6 +679,23 @@ export class FirebaseBackend {
     await this._emitMember?.(this.auth.currentUser);
   }
   actionUrl() { return { url: location.origin + '/' }; }
+  // 17.11.2026 üyelik e-postaları bekçiden (kendi alan adımızdan, spam'e düşmesin); olmazsa false → eski yol (Firebase gönderir)
+  async _authMail(body) {
+    const W = String(window.WATCH_URL || '').replace(/\/$/, ''); if (!W) return false;
+    let j = {};
+    try {
+      const r = await timeout(fetch(W + '/mail/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, origin: location.origin }) }), 15000);
+      j = await r.json().catch(() => ({}));
+    } catch { return false; } // bekçiye ulaşılamadı → Firebase gönderir
+    if (j.ok) return true;
+    if (j.error && !j.fallback) throw new Error(j.error); // ör. çok fazla deneme
+    return false;
+  }
+  async _sendVerify(user) {
+    let sent = false;
+    try { sent = await this._authMail({ kind: 'verify', token: await user.getIdToken() }); } catch { sent = false; }
+    if (!sent) await this.U.sendEmailVerification(user, this.actionUrl());
+  }
   async usernameFree(name) { const s = await timeout(this.F.getDoc(this.d('usernames', name))); return !s.exists(); }
   // keep: true → sipariş adımında üye olunca sipariş yazılana kadar oturum açık kalır; sonra memberDone() çağrılır
   async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' }, legal }, keep) {
@@ -692,7 +709,7 @@ export class FirebaseBackend {
       await timeout(this.F.setDoc(this.d('members', m.uid), m));
       if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid: m.uid, email })).catch((e) => console.warn(e));
       await this._pingMember(cred.user, 'mail');
-      await this.U.sendEmailVerification(cred.user, this.actionUrl()).catch((e) => console.warn(e));
+      await this._sendVerify(cred.user).catch((e) => console.warn(e));
       if (!keep) await this.memberDone();
       return { ...m, verifySent: true };
     } catch (e) { await this.memberDone(); throw e; }
@@ -717,13 +734,18 @@ export class FirebaseBackend {
   async memberResendVerify(id, pw) {
     const email = await this.emailOf(id);
     this.signingUp = true;
-    try { const c = await this.U.signInWithEmailAndPassword(this.auth, email, pw); await this.U.sendEmailVerification(c.user, this.actionUrl()); }
+    try { const c = await this.U.signInWithEmailAndPassword(this.auth, email, pw); await this._sendVerify(c.user); }
     catch (e) { throw new Error(authMsg(e)); }
     finally { await this.memberDone(); }
     return email;
   }
   async memberLogout() { await this.U.signOut(this.auth); }
-  async memberReset(id) { const email = await this.emailOf(id); try { await this.U.sendPasswordResetEmail(this.auth, email, this.actionUrl()); } catch (e) { throw new Error(authMsg(e)); } return email; }
+  async memberReset(id) {
+    const email = await this.emailOf(id);
+    if (await this._authMail({ kind: 'reset', email })) return email; // kendi alan adımızdan gitti
+    try { await this.U.sendPasswordResetEmail(this.auth, email, this.actionUrl()); } catch (e) { throw new Error(authMsg(e)); }
+    return email;
+  }
   // E-postadaki bağlantılar (Firebase > Authentication > Templates > işlem adresi: /magaza/islem)
   async authCheckReset(code) { try { return await this.U.verifyPasswordResetCode(this.auth, code); } catch (e) { throw new Error(authMsg(e)); } }
   async authConfirmReset(code, pw) { try { await this.U.confirmPasswordReset(this.auth, code, pw); } catch (e) { throw new Error(authMsg(e)); } }

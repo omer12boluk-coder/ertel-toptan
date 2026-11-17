@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths: ['worker/**', 'wrangler.toml', '.github/workflows/worker.yml']
   workflow_dispatch:
+  workflow_call: # 'E-posta servisi' işi servis değişince bekçiyi buradan yeniden yükler
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -42,6 +43,16 @@ jobs:
             id=$(curl -s -X POST -H "$auth" -H "Content-Type: application/json" "$api" -d '{"title":"ertel-b2b-sync"}' | node -e 'const r=JSON.parse(require("fs").readFileSync(0));if(!r.success){console.error(JSON.stringify(r.errors));process.exit(1)}console.log(r.result.id)')
           fi
           sed -i "s/__KV_ID__/$id/" wrangler.toml
+          echo "KV_ID=$id" >> $GITHUB_ENV
+      - name: E-posta servisi (KV mail-via)
+        if: steps.ok.outputs.go == 'yes'
+        run: |
+          # 'E-posta servisi' işi KV'ye 'cloudflare' yazdıysa Cloudflare Email Service bağlantısı eklenir; yoksa Resend
+          via=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/storage/kv/namespaces/$KV_ID/values/mail-via" || true)
+          if [ "$via" = "cloudflare" ]; then
+            printf '\n[[send_email]]\nname = "EMAIL"\n' >> wrangler.toml
+            echo "::notice title=E-posta servisi::Cloudflare Email Service (Resend yedekte)"
+          else echo "::notice title=E-posta servisi::Resend"; fi
       - name: workers.dev adresi hazırla
         if: steps.ok.outputs.go == 'yes'
         run: |
@@ -61,7 +72,14 @@ jobs:
         if: steps.ok.outputs.go == 'yes'
         run: |
           set -o pipefail
-          npx -y wrangler@3 deploy 2>&1 | tail -n 20 | tee out.txt || { echo "::error title=Yükleme hatası::$(tail -n 8 out.txt | tr '\n' ' ')"; exit 1; }
+          if ! npx -y wrangler@3 deploy 2>&1 | tail -n 20 | tee out.txt; then
+            # e-posta bağlantısı yüzünden olduysa bağlantısız (Resend) tekrar dene → bekçi asla yayınsız kalmaz
+            if grep -q 'send_email' wrangler.toml; then
+              echo "::warning title=Cloudflare e-posta bağlantısı eklenemedi::$(tail -n 6 out.txt | tr '\n' ' ') → Resend ile yüklendi"
+              sed -i '/^\[\[send_email\]\]$/,$d' wrangler.toml
+              npx -y wrangler@3 deploy 2>&1 | tail -n 20 | tee out.txt || { echo "::error title=Yükleme hatası::$(tail -n 8 out.txt | tr '\n' ' ')"; exit 1; }
+            else echo "::error title=Yükleme hatası::$(tail -n 8 out.txt | tr '\n' ' ')"; exit 1; fi
+          fi
           printf '%s' "$GH_DISPATCH_TOKEN" | npx -y wrangler@3 secret put GH_TOKEN 2>&1 | tail -n 5 | tee out2.txt || { echo "::error title=Gizli ayar hatası::$(tail -n 5 out2.txt | tr '\n' ' ')"; exit 1; }
           if [ -n "$TELEGRAM_TOKEN" ]; then printf '%s' "$TELEGRAM_TOKEN" | npx -y wrangler@3 secret put TELEGRAM_TOKEN 2>&1 | tail -n 3; else echo "::warning title=Telegram bildirimi kapalı::TELEGRAM_TOKEN gizli ayarı eklenince açılır."; fi
           if [ -n "$RESEND_KEY" ]; then printf '%s' "$RESEND_KEY" | npx -y wrangler@3 secret put RESEND_KEY 2>&1 | tail -n 3; else echo "::warning title=E-posta bildirimi kapalı::RESEND_KEY gizli ayarı eklenince açılır."; fi
