@@ -1,0 +1,148 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas><script>
+// Qianli Gorilla 6558X — v6: vuruşlu kurgu (120 BPM), müzik kesintileri, sesle senkron kinetik yazılar.
+// Masaüstü 2.6:1 (solda yazı paneli, sağda tam görüntü) · Telefon 0.77 (ortada görüntü bandı, altında yazı). Görüntü kırpılmaz.
+const Q=new URLSearchParams(location.search);const W=+Q.get('w')||1920,H=+Q.get('h')||740;
+const cv=document.getElementById('c');cv.width=W;cv.height=H;const X=cv.getContext('2d');
+const MOB=W<H;const FD='"Inter Display"',FT='Inter';
+const CACHE=new Map();const LG={};
+const loadImg=s=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=s});
+window.ready=(async()=>{await Promise.all([[FD,500],[FD,600],[FD,700],[FT,400],[FT,500],[FT,600]].map(([f,w])=>document.fonts.load(`${w} 100px ${f}`)));LG.q=await loadImg('qianli-w.png');})();
+function frame(ts){const i=Math.max(0,Math.round(ts*25));const k=i+1;const rr=ts>=102.4&&ts<105.64;const key=(rr?'r':'c')+k;
+  if(!CACHE.has(key)){const im=new Image();im.src=`${rr?'clean_rr':'clean'}/${String(k).padStart(5,'0')}.jpg`;CACHE.set(key,im.decode().then(()=>im));if(CACHE.size>24)CACHE.delete(CACHE.keys().next().value)}
+  return CACHE.get(key);}
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));const P=(t,a,d)=>cl((t-a)/d);
+const oQ=x=>1-Math.pow(1-x,4),oE=x=>x>=1?1:1-Math.pow(2,-10*x),ioS=x=>-(Math.cos(Math.PI*x)-1)/2,ioC=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const RED='#ff5547';
+// ---- yerleşim ----
+const R=MOB?{x:0,y:300,w:W,h:W*9/16}:{x:W-H*16/9,y:0,w:H*16/9,h:H};
+const TX=MOB?W/2:118, TA=MOB?'center':'left';
+// görüntü: kaynak saniyesi ts; z = yakınlaştırma (kısa vuruş "punch" için)
+async function shot(ts,z=1,rect=R){const im=await frame(ts);X.save();X.beginPath();X.rect(rect.x,rect.y,rect.w,rect.h);X.clip();const w=rect.w*z,h=rect.h*z;X.drawImage(im,rect.x+(rect.w-w)/2,rect.y+(rect.h-h)/2,w,h);X.restore();}
+function feather(){const f=(x0,y0,x1,y1,a=1)=>{const g=X.createLinearGradient(x0,y0,x1,y1);g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');X.fillStyle=g;X.fillRect(R.x,R.y,R.w,R.h)};
+  if(MOB){f(0,R.y,0,R.y+60);f(0,R.y+R.h,0,R.y+R.h-60)}else{f(R.x,0,R.x+300,0);f(W,0,W-70,0);f(0,0,0,40,.6);f(0,H,0,H-40,.6)}}
+const punch=(t,a,amt=.07,d=.4)=>t<a?1:1+amt*(1-oE(P(t,a,d)));
+function fill(c){X.fillStyle=c;X.fillRect(0,0,W,H)}
+function flash(t,a,d=.16,al=.55){const p=P(t,a,d);if(t>=a&&p<1){X.fillStyle=`rgba(255,255,255,${al*(1-p)})`;X.fillRect(0,0,W,H)}}
+// ---- yazı ----
+function txt(s,x,y,o){const p=o.a!=null?oQ(P(o.t,o.a,o.d??.7)):1;const q=o.out!=null?1-ioS(P(o.t,o.out,.35)):1;const al=p*q*(o.al??1);if(al<=.002)return;
+  X.save();X.font=`${o.w||500} ${o.size}px ${o.f||FD}`;X.letterSpacing=(o.tr??-.025)*o.size+'px';X.textAlign=o.align||TA;X.textBaseline='alphabetic';X.fillStyle=o.col||'#fff';X.globalAlpha=al;
+  const bl=o.blur===false?0:(1-p)*10;if(bl>.3)X.filter=`blur(${bl}px)`;const sc=o.pop?1+.18*(1-oE(P(o.t,o.a,.35))):1;
+  X.translate(x,y+(o.rise===false?0:(1-p)*16));if(sc!==1)X.scale(sc,sc);s.split('\n').forEach((ln,i)=>X.fillText(ln,0,i*o.size*(o.lh||1.1)));X.restore();}
+const LBL=MOB?22:20,HS=MOB?72:68,SS=MOB?31:26,BIG=MOB?190:176;
+const yTop=MOB?R.y+R.h+95:H/2-120; // yazı bloğunun başladığı yer
+function label(t,s,a,out,y=yTop){txt(s.toLocaleUpperCase('tr'),TX,y,{t,a,out,size:LBL,w:600,f:FT,tr:.2,col:RED})}
+function sub(t,s,a,out,y){txt(s,TX,y,{t,a,out,size:SS,w:400,f:FT,tr:0,col:'rgba(255,255,255,.72)',lh:1.4})}
+// ---- sahneler [başla, bitir, çiz] ----
+const SC=[
+ // AÇILIŞ: üstten görünüş → yan kapak; başlık
+ [0,3.5,async t=>{await shot(t<2.4?t:95.2+(t-2.4),punch(t,2.4,.05));feather();fill(`rgba(0,0,0,${1-P(t,0,.9)})`);
+   const qw=MOB?300:250,qh=qw*95/347,y0=MOB?R.y+R.h+70:H/2-140;const p=oQ(P(t,.5,1));
+   X.save();X.globalAlpha=p*(1-P(t,3.15,.3));X.filter=`blur(${(1-p)*8}px)`;X.drawImage(LG.q,MOB?W/2-qw/2:TX-6,y0,qw,qh);X.restore();
+   txt('Gorilla 6558X',TX,y0+qh+(MOB?112:100),{t,a:1.0,out:3.15,size:MOB?92:84,w:500,tr:-.03,pop:1});
+   txt('TRİNOKÜLER STEREO MİKROSKOP',MOB?TX+.16*21:TX+2,y0+qh+(MOB?175:156),{t,a:1.4,out:3.15,size:MOB?21:18,w:500,f:FT,tr:.32,col:'rgba(255,255,255,.7)'});}],
+ // MÜZİK KESİLİR (3.5–4.0): siyah, sessiz
+ [3.5,4.0,async t=>{fill('#000');}],
+ // ZOOM: 6,5× → 58× sayacı vuruşlarla
+ [4.0,8.5,async t=>{const lt=t-4;await shot(t<6?34.1+lt:36.25+(t-6),punch(t,t<6?4:6,.08));feather();flash(t,4,.14,.5);flash(t,6,.12,.35);
+   label(t,'Zoom',4.05,8.15);
+   const v=t<4.5?6.5:t<5.5?6.5+(58-6.5)*ioC(P(t,4.5,1)):58;const n=v<10?v.toFixed(1).replace('.',','):String(Math.round(v));
+   txt(n+'×',TX,yTop+(MOB?BIG*.95:BIG*.95),{t,a:4.0,out:8.15,size:BIG,w:600,tr:-.04,pop:1,d:.35,blur:false});
+   if(t>=5.5&&t<6.0){const g=oE(P(t,5.5,.45));txt(n+'×',TX,yTop+BIG*.95,{t,al:(1-g)*.55,size:BIG*(1+.22*g),w:600,tr:-.04,blur:false,rise:false,col:RED});}
+   sub(t,'Kademesiz, senkron büyütme.\nHer pin, her lehim noktası net.',6.05,8.15,yTop+BIG*.95+(MOB?78:70));}],
+ // TRİNOKÜLER: iki adımlı başlık
+ [8.5,14.5,async t=>{const ts=t<10.5?45.6+(t-8.5):t<12.5?47.72+(t-10.5):89.3+Math.min(t-12.5,1.9);await shot(ts,punch(t,t<10.5?8.5:t<12.5?10.5:12.5,.06));feather();flash(t,12.5,.12,.35);
+   label(t,'Trinoküler',8.6,14.15);
+   txt('Kamerayı bağla,',TX,yTop+HS+10,{t,a:8.7,out:14.15,size:HS,w:500});
+   txt('ekrandan izle.',TX,yTop+HS*2.1+10,{t,a:12.5,out:14.15,size:HS,w:500,pop:1,d:.45});
+   sub(t,'Üçüncü göz çıkışı;\nCTV adaptörleriyle uyumlu.',10.55,14.15,yTop+HS*2.1+10+(MOB?70:62));}],
+ // MÜZİK KESİLİR (14.5–15.0): siyah + fısıltı gibi yazı
+ [14.5,15.0,async t=>{fill('#000');txt('Dahası var.',W/2,H/2+14,{t,a:14.55,size:MOB?44:40,w:500,f:FT,tr:0,align:'center',col:'rgba(255,255,255,.85)',d:.3});}],
+ // ÖZELLİK VURUŞLARI: LED / UV / Termal — her biri vuruşla gelir
+ [15.0,21.0,async t=>{const k=t<17?0:t<19?1:2,a=15+k*2,lt=t-a;
+   const ts=k===0?(lt<.85?95.6+lt:96.5+Math.min(lt-.85,1.12)):k===1?73.0+lt:64.5+lt;await shot(ts,punch(t,a,.1,.45));feather();flash(t,a,.13,k?.4:.55);
+   const W3=[['LED','Entegre, gölgesiz aydınlatma.','Aydınlatma'],['UV','Yapıştırıcıyı mikroskop altında kürle.','UV lamba'],['Termal','Isınan bileşeni anında gör.','Termal kamera desteği']][k];
+   label(t,W3[2],a+.02,a+1.8);
+   txt(W3[0],TX,yTop+BIG*.95,{t,a,out:a+1.8,size:BIG,w:600,tr:-.04,pop:1,d:.3,blur:false});
+   sub(t,W3[1],a+.25,a+1.8,yTop+BIG*.95+(MOB?72:64));
+   if(k===2)txt('Termal kamera kullanımı için ek aparat gerekir.',TX,yTop+BIG*.95+(MOB?122:106),{t,a:a+.4,out:a+1.8,size:MOB?20:17,w:400,f:FT,tr:.01,col:'rgba(255,255,255,.45)'});}],
+ // ÜÇLÜ ÖZET: üç pano tik-tik-tik
+ [21.0,23.0,async t=>{fill('#000');const g=MOB?10:14;const cols=3;const pw=(R.w-g*(cols+1))/cols,ph=MOB?R.h:R.h*.62,py=MOB?R.y:R.y+(R.h-ph)/2-30;
+   const src=[[96.6,0],[75.0,0],[66.5,0]];const names=['LED','UV','Termal'];
+   for(let i=0;i<3;i++){const a=21+i*.25;if(t<a)continue;const e=oE(P(t,a,.35));const x=R.x+g+i*(pw+g);
+     X.save();X.globalAlpha=e;X.beginPath();X.roundRect(x,py+(1-e)*30,pw,ph,MOB?14:18);X.clip();
+     const im=await frame(src[i][0]+(t-a));const s=Math.max(pw/1920,ph/1080)*1.15;X.drawImage(im,x+pw/2-960*s,py+(1-e)*30+ph/2-540*s,1920*s,1080*s);X.restore();
+     txt(names[i],x+pw/2,py+ph+(MOB?44:46),{t,a,size:MOB?26:24,w:600,f:FT,tr:.02,align:'center',d:.3});}
+   if(!MOB)feather();
+   txt('Hepsi tek gövdede.',TX,MOB?R.y+R.h+150:H/2+14,{t,a:21.8,out:22.75,size:MOB?64:60,w:500,align:MOB?'center':'left'});}],
+ // ATÖLYE
+ [23.0,26.5,async t=>{await shot(91.35+(t-23),punch(t,23,.06));feather();flash(t,23,.12,.4);
+   label(t,'Atölye',23.1,26.2);txt('Tezgâhının',TX,yTop+HS+10,{t,a:23.15,out:26.2,size:HS,w:500});txt('yeni merkezi.',TX,yTop+HS*2.1+10,{t,a:23.4,out:26.2,size:HS,w:500});
+   sub(t,'Teşhisten onarıma, her adımda net görüş.',23.7,26.2,yTop+HS*2.1+10+(MOB?70:62));}],
+ // MÜZİK KESİLİR (26.5–27.0)
+ [26.5,27.0,async t=>{fill('#000')}],
+];
+const ENDT=27.0,TOTAL=31.4;window.TOTAL=TOTAL;
+function endCard(t){const a=ENDT;fill('#000');const g=X.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.6);g.addColorStop(0,'rgba(255,255,255,.06)');g.addColorStop(1,'rgba(255,255,255,0)');X.fillStyle=g;X.fillRect(0,0,W,H);
+  const qw=MOB?330:300,qh=qw*95/347;let y=MOB?380:140;const p=oQ(P(t,a+.15,1));
+  X.save();X.globalAlpha=p;X.filter=`blur(${(1-p)*8}px)`;X.drawImage(LG.q,W/2-qw/2,y,qw,qh);X.restore();
+  y+=qh+(MOB?120:112);txt('Gorilla 6558X',W/2,y,{t,a:a+.35,size:MOB?96:92,w:500,tr:-.03,align:'center'});
+  y+=(MOB?96:92)*.62+(MOB?20:16);txt('TRİNOKÜLER STEREO MİKROSKOP',W/2+.16*20,y+18,{t,a:a+.55,size:MOB?22:19,w:500,f:FT,tr:.32,align:'center',col:'rgba(255,255,255,.7)'});
+  const f=P(t,TOTAL-.5,.5);if(f>0)fill(`rgba(0,0,0,${f})`);}
+window.render=async t=>{X.setTransform(1,0,0,1,0,0);X.globalAlpha=1;X.filter='none';fill('#000');
+  if(t>=ENDT){endCard(t);return}const s=SC.find(s=>t>=s[0]&&t<s[1]);if(s)await s[2](t);};
+// ---- müzik (120 BPM, La minör) — vuruşlar, kesintiler, darbe sesleri ----
+window.music=async()=>{const SR=48000,T=TOTAL,ac=new OfflineAudioContext(2,SR*T,SR);
+  const comp=ac.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;comp.attack.value=.003;comp.release.value=.15;
+  const mst=ac.createGain();mst.gain.value=.9;comp.connect(mst);mst.connect(ac.destination);
+  const irL=SR*2.6,ir=ac.createBuffer(2,irL,SR);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<irL;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/irL,3)}
+  const rv=ac.createConvolver();rv.buffer=ir;const rvg=ac.createGain();rvg.gain.value=.25;rv.connect(rvg);rvg.connect(comp);
+  const nb=ac.createBuffer(1,SR*2,SR);{const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+  const out=(n,g=1,wet=0,pan=0)=>{const p=ac.createStereoPanner();p.pan.value=pan;n.connect(p);const a=ac.createGain();a.gain.value=g;p.connect(a);a.connect(comp);if(wet){const w=ac.createGain();w.gain.value=wet;p.connect(w);w.connect(rv)}};
+  const noise=(t,d)=>{const s=ac.createBufferSource();s.buffer=nb;s.start(t,Math.random(),d+.05);return s};
+  // her şey "susma" aralıklarında kesilsin
+  const MUTE=[[3.5,4.0],[14.5,15.0],[26.5,27.0]];const muted=t=>MUTE.some(([a,b])=>t>=a-.001&&t<b);
+  function kick(t,g=1){if(muted(t))return;const o=ac.createOscillator(),e=ac.createGain();o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(42,t+.11);
+    e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(g,t+.004);e.gain.exponentialRampToValueAtTime(.001,t+.42);o.connect(e);out(e,1);o.start(t);o.stop(t+.45);}
+  function clap(t,g=.42){if(muted(t))return;for(const dt of [0,.011,.022]){const s=noise(t+dt,.2),f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=1500;f.Q.value=.9;const e=ac.createGain();
+    e.gain.setValueAtTime(g,t+dt);e.gain.exponentialRampToValueAtTime(.001,t+dt+(dt?.03:.18));s.connect(f);f.connect(e);out(e,1,.5)}}
+  function hat(t,g=.12,d=.035){if(muted(t))return;const s=noise(t,d),f=ac.createBiquadFilter();f.type='highpass';f.frequency.value=8000;const e=ac.createGain();e.gain.setValueAtTime(g,t);e.gain.exponentialRampToValueAtTime(.001,t+d);s.connect(f);f.connect(e);out(e,1,0,(Math.random()-.5)*.4)}
+  function bass(t,fq,d=.2,g=.24){if(muted(t))return;const o=ac.createOscillator(),o2=ac.createOscillator(),f=ac.createBiquadFilter(),e=ac.createGain();o.type='sawtooth';o2.type='square';o.frequency.value=fq;o2.frequency.value=fq/2;
+    f.type='lowpass';f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(180,t+d);f.Q.value=6;e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(g,t+.008);e.gain.exponentialRampToValueAtTime(.001,t+d);
+    o.connect(f);o2.connect(f);f.connect(e);out(e,1);o.start(t);o2.start(t);o.stop(t+d+.02);o2.stop(t+d+.02)}
+  function pluck(t,fq,g=.07,pan=0){if(muted(t))return;for(const [h,gg] of [[1,1],[2,.3],[3,.1]]){const o=ac.createOscillator();o.type='triangle';o.frequency.value=fq*h;const e=ac.createGain();e.gain.setValueAtTime(g*gg,t);e.gain.exponentialRampToValueAtTime(.001,t+.6/h);o.connect(e);out(e,.8,.6,pan);o.start(t);o.stop(t+.7)}}
+  // pad: susma aralıklarında tamamen kapanır
+  function pad(t0,t1,notes,g=.045,cut=1000){for(const n of notes)for(const dt of [-8,0,8]){const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=n;o.detune.value=dt;const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=cut;
+    const e=ac.createGain();e.gain.setValueAtTime(0,t0);e.gain.linearRampToValueAtTime(g,t0+.5);
+    for(const [a,b] of MUTE)if(a>t0&&a<t1){e.gain.setValueAtTime(g,a-.01);e.gain.linearRampToValueAtTime(0,a);e.gain.setValueAtTime(0,b-.005);e.gain.linearRampToValueAtTime(g,b+.02)}
+    e.gain.setValueAtTime(g,t1-.6);e.gain.linearRampToValueAtTime(0,t1);o.connect(f);f.connect(e);out(e,1,.6);o.start(t0);o.stop(t1)}}
+  function riser(t0,t1,g=.35){const s=noise(t0,t1-t0),f=ac.createBiquadFilter();f.type='bandpass';f.Q.value=3;f.frequency.setValueAtTime(300,t0);f.frequency.exponentialRampToValueAtTime(9000,t1);
+    const e=ac.createGain();e.gain.setValueAtTime(.001,t0);e.gain.exponentialRampToValueAtTime(g,t1);e.gain.setValueAtTime(0,t1);s.connect(f);f.connect(e);out(e,1,.3)}
+  function whoosh(t,d=.35,g=.3){const s=noise(t,d),f=ac.createBiquadFilter();f.type='bandpass';f.Q.value=1.5;f.frequency.setValueAtTime(5000,t);f.frequency.exponentialRampToValueAtTime(400,t+d);
+    const e=ac.createGain();e.gain.setValueAtTime(.001,t);e.gain.linearRampToValueAtTime(g,t+d*.3);e.gain.exponentialRampToValueAtTime(.001,t+d);s.connect(f);f.connect(e);out(e,1,.3)}
+  function boom(t,g=1){const o=ac.createOscillator(),e=ac.createGain();o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(30,t+.9);e.gain.setValueAtTime(g,t);e.gain.exponentialRampToValueAtTime(.001,t+1.6);o.connect(e);out(e,1,.4);o.start(t);o.stop(t+1.7);
+    const s=noise(t,.6),f=ac.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(3000,t);f.frequency.exponentialRampToValueAtTime(200,t+.5);const n=ac.createGain();n.gain.setValueAtTime(.5*g,t);n.gain.exponentialRampToValueAtTime(.001,t+.6);s.connect(f);f.connect(n);out(n,1,.8)}
+  function tick(t,fq=1800,g=.24,pan=0){const o=ac.createOscillator(),e=ac.createGain();o.type='triangle';o.frequency.value=fq;e.gain.setValueAtTime(g,t);e.gain.exponentialRampToValueAtTime(.001,t+.12);o.connect(e);out(e,1,.5,pan);o.start(t);o.stop(t+.15)}
+  function tape(t,d=.35){// "bant durdu" sesi: inen ton
+    const o=ac.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(40,t+d);const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=900;const e=ac.createGain();e.gain.setValueAtTime(.18,t);e.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(f);f.connect(e);out(e,1,.2);o.start(t);o.stop(t+d+.02)}
+  const A1=55,F1=43.65,C2=65.41,G1=49;const prog=[A1,A1,F1,F1,C2,C2,G1,G1];const ARP=[440,523.3,659.3,523.3,587.3,523.3,440,392];
+  function groove(t0,t1,o={}){for(let t=t0;t<t1-1e-6;t+=.5){const b=Math.round((t-t0)/.5);if(o.half&&b%2)continue;kick(t,o.kg??.95);
+      if(o.clap!==false&&b%2===1)clap(t);if(o.hat!==false){hat(t+.25,.14);hat(t,.05)}const fq=prog[Math.floor(t)%8];if(o.bass!==false){bass(t+.25,fq*2,.2);bass(t+.375,fq*2,.1,.15)}
+      if(o.arp)pluck(t+.25,ARP[b%8]*(o.arp===2?2:1),.05,b%2?.35:-.35)}}
+  // AÇILIŞ
+  pad(0,3.5,[220,261.6,329.6],.045,800);tick(.5,1320,.25);boom(1.0,.55);pluck(1.0,440,.06);pluck(1.5,523.3,.05);pluck(2.0,659.3,.05);riser(2.0,3.48,.4);kick(2.5,.5);kick(3.0,.6);kick(3.25,.6);tape(3.3,.2);
+  // ZOOM düşüşü
+  boom(4.0,1.0);groove(4.0,8.5,{arp:1});for(let i=0;i<5;i++)tick(4.5+i*.2,1200+i*180,.14,(i%2?.3:-.3));boom(5.5,.8);tick(5.5,2200,.25);whoosh(5.82,.2,.3);boom(6.0,.5);
+  // TRİNOKÜLER
+  whoosh(8.32,.2,.3);groove(8.5,14.5,{arp:2});boom(12.5,.7);tick(12.5,1760,.22);riser(13.6,14.48,.3);tape(14.3,.2);
+  // "Dahası var." sessizlik → ÖZELLİK VURUŞLARI
+  tick(14.6,880,.12);boom(15.0,1.1);boom(17.0,.9);boom(19.0,.9);[15,17,19].forEach((a,i)=>{tick(a,[1320,1568,1976][i],.28);whoosh(a-.18,.18,.25)});
+  groove(15.0,21.0,{arp:1});
+  // ÜÇLÜ ÖZET: tik-tik-tik
+  [21.0,21.25,21.5].forEach((a,i)=>{kick(a,1);tick(a,[1320,1568,1976][i],.3)});clap(21.75,.5);groove(22.0,23.0);boom(21.8,.6);
+  // ATÖLYE: yarı tempo, sonra yükseliş ve kesinti
+  boom(23.0,.7);groove(23.0,25.5,{half:1,clap:false,arp:1});groove(25.5,26.5,{arp:2});riser(25.5,26.48,.4);tape(26.3,.2);
+  // KAPANIŞ
+  boom(27.0,1.2);pad(27.0,TOTAL,[220,261.6,329.6,440],.05,1100);[880,659.3,523.3,440].forEach((f,i)=>pluck(27.3+i*.5,f,.06,i%2?.3:-.3));tick(27.6,1760,.16);
+  return await ac.startRendering();};
+</script></body></html>

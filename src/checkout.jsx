@@ -751,16 +751,28 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e?.target ? e.target.value : e }));
   const canSignup = S.orders?.signup !== false;
   const unameReq = S.orders?.unameReq !== false; // 16.11.2026: Ayarlar › Sipariş ve üyelik › 'Kullanıcı adı zorunlu'
-  // 17.11.2026: 'Şifre (tekrar)' alanı — iki bölmeli sayfada varsayılan YOK (göz düğmesiyle şifre görülebiliyor); orders.pw2 'on' = geri gelir
-  const pw2On = !noGrow || S.orders?.pw2 === 'on';
+  // 17.11.2026: 'Şifre (tekrar)' alanı varsayılan VAR (kullanıcı istedi); iki bölmeli sayfada Şifre ile yan yana; orders.pw2 'off' = yok
+  const pw2On = !noGrow || S.orders?.pw2 !== 'off';
   // görünüm geçişi: mağazadaki sayfa geçişleri gibi hafif kayma + soluş (girişe dönüş soldan, diğerleri sağdan)
   const [dir, setDir] = useState('');
   // 3.11.2026: kutunun BOYU da yumuşakça değişir (giriş ⇄ üye ol arasında boy farkı ani zıplıyor, sonra yerine oturuyordu);
   // içerik yana kaymaz, sadece solup gelir
   const formRef = useRef(null); const prevH = useRef(0);
-  const go2 = (v) => { setErr(''); prevH.current = formRef.current?.offsetHeight || 0; setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
+  const docH = useRef(null);
+  const go2 = (v) => { setErr(''); prevH.current = formRef.current?.offsetHeight || 0; docH.current = [document.documentElement.scrollHeight, scrollY]; setDir(v === 'login' ? 'back' : 'fwd'); setView(v); };
   useLayoutEffect(() => {
     const el = formRef.current; const h0 = prevH.current; prevH.current = 0;
+    // 17.11.2026: iki bölmeli sayfada sayfa aşağı kaymışken kısa forma (girişe) geçince tarayıcı kaydırmayı anında yukarı
+    // kırpıyordu → içerik 100+ px sıçrıyordu. Eski boy tutulur, sayfa yumuşakça başa kayar, başa varınca boy serbest kalır.
+    const [d0, y0] = docH.current || [0, 0]; docH.current = null;
+    if (noGrow && el && h0 && y0 > 0 && document.documentElement.scrollHeight < d0 - 2) {
+      el.style.minHeight = h0 + 'px';
+      if (Math.abs(scrollY - y0) > 1) window.scrollTo(0, y0);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const t0 = Date.now();
+      const chk = () => { if (scrollY <= 1 || Date.now() - t0 > 900) el.style.minHeight = ''; else requestAnimationFrame(chk); };
+      requestAnimationFrame(chk);
+    }
     // noGrow: iki bölmeli sayfada form ortalı durur, boy animasyonu bitince içerik 10-18 px sıçrıyordu (16.11.2026)
     if (noGrow || !el || !h0 || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const h1 = el.offsetHeight; if (Math.abs(h1 - h0) < 2) return;
@@ -851,8 +863,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
         </div>
       </>}
       {!['signup', 'bayi'].includes(view) && <Field label="E-posta ya da kullanıcı adı"><input id="m-id" autoComplete="username" autoCapitalize="none" value={f.id} onChange={set('id')} required /></Field>}
-      {!['reset', 'bayi'].includes(view) && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}
-      {view === 'signup' && pw2On && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}
+      {noGrow && view === 'signup' && pw2On ? <div className="row2">{!['reset', 'bayi'].includes(view) && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}{view === 'signup' && pw2On && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}</div> : <>{!['reset', 'bayi'].includes(view) && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}{view === 'signup' && pw2On && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}</>}
       {view === 'signup' && <SignupConsent checked={!!f.legal} onChange={(v) => setF((x) => ({ ...x, legal: v }))} />}
       {err && <p className="err">{err}</p>}
       {view === 'unverified'

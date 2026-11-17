@@ -11875,3 +11875,9 @@ html.em-hubfast .pbn-in .pbn-sh { animation-duration: .4s; animation-delay: calc
 /* 20 · Gece modunda banner hafif kısık (perde; filtre değil — performans) */
 html.em-bndk[data-theme=dark] .sh-hero { position: relative; }
 html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; border-radius: inherit; background: rgb(8 10 14 / .14); }
+/* 17.11.2026 video banner: ses düğmesi sol üstte; sarma çubuğu altta (yerinde). Video açıkken sayfa seçici dokunuşu almaz → çubuk parmakla sürüklenir (bannerlar kaydırarak geçilir) */
+.pb-vid .gal-vid-snd { top: 14px; bottom: auto; left: 14px; }
+.pb-vid .gal-vid-seek { z-index: 6; }
+@media (hover: none) and (pointer: coarse) { .pb-vid .gal-vid-seek { height: 40px; } }
+.sh-hero.vid-on .sh-dots, .sh-hero.vid-on .hx-in, .sh-hero.vid-on .hx-in *, .sh-hero.vid-on .hx-st-top, .sh-hero.vid-on .hx-st-top * { pointer-events: none; }
+.pb-vid video { background: #000; }

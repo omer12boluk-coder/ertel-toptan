@@ -936,12 +936,13 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
     });
     io.observe(el); return () => io.disconnect();
   }, [n, deck]);
+  const vidNow = slides[i]?.pb?.lay === 'video'; // 17.11.2026 video banner: süre sayacı yok, video bitince sıradakine geçer
   useEffect(() => {
-    if (n < 2 || paused || hold || E || !vis) return;
+    if (n < 2 || paused || hold || E || !vis || vidNow) return;
     since.current = Date.now();
     const t = setTimeout(() => goTo((i + 1) % n), Math.max(300, left.current));
     return () => { clearTimeout(t); left.current -= Date.now() - since.current; };
-  }, [i, paused, hold, n, vis]);
+  }, [i, paused, hold, n, vis, vidNow]);
   // telefonda reklamlar arasında boşluk var (ayrık kartlar) → bir adım = genişlik + boşluk
   const step = (el) => el.clientWidth + (parseFloat(getComputedStyle(el).columnGap) || 0);
   // yazı giriş animasyonu (play): sadece reklam kendiliğinden / nokta-ok ile geldiğinde oynar. Parmakla kaydırırken yazı zaten
@@ -1009,7 +1010,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const ownArrows = frame === 'story' || frame === 'deck';
   const pagerOn = !!pagerK && pagerK !== 'off';
   const inner = frame === 'story' ? (hxPhone ? '' : 'story') : frame === 'glow' ? (pagerOn ? 'glow' : '') : frame === '' && pagerOn ? 'p' : '';
-  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
+  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} on={k === i && vis} loop={n < 2} onEnd={() => { if (k === i && !hold && !E) goTo((k + 1) % n); }} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
   // deste: parmakla sağa/sola çekince önceki/sonraki (tıklamayla karışmasın diye çekilmişse tık yutulur)
   const sw = useRef(null);
   const dkDown = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };
@@ -1019,7 +1020,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const tEnd = () => { release(); clearTimeout(resumeT.current); resumeT.current = setTimeout(() => setPaused(false), TOUCH ? 0 : 4000); };
   const tCancel = () => { release(); setPaused(false); };
   const section = (
-    <section ref={fsRef} className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '') + (slides.some((x) => x?.pb) ? ' pb-sh' : '') + (frame ? ' hx-on hx-' + frame : '') + (pz ? ' hx-pz' : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
+    <section ref={fsRef} className={'sh-hero nd-' + (nv.dots || 'bars') + ' na-' + (nv.arr || 'glass') + ' dp-' + (nv.dpos || 'left') + (nv.full ? ' hf-' + nv.full : '') + (nv.fs ? ' fs-' + nv.fs : '') + (slides.some((x) => x?.pb) ? ' pb-sh' : '') + (vidNow ? ' vid-on' : '') + (frame ? ' hx-on hx-' + frame : '') + (pz ? ' hx-pz' : '')} style={heroH ? { '--hero-h': heroH + 'px', '--hero-mk': Math.round((heroH * 0.82 / 358) * 10000) / 10000 } : undefined} onMouseEnter={() => !TOUCH && setPaused(true)} onMouseLeave={() => !TOUCH && setPaused(false)} aria-roledescription="carousel">
       {deck ? <div className="hx-dk" ref={track} onPointerDown={dkDown} onPointerUp={dkUp} onClickCapture={dkClick} onTouchStart={tStart} onTouchEnd={tEnd} onTouchCancel={tCancel}>
         {slides.map((s, k) => { const r = (k - i + n) % n; const c = r === 0 ? '0' : r === 1 ? '1' : r === 2 && n > 3 ? '2' : r === n - 1 ? 'p' : 'h'; return <div key={k} className={'hx-dc dk-' + c} aria-hidden={r === 0 ? undefined : 'true'} onClick={r === 1 ? (e) => { e.stopPropagation(); goTo(k); } : undefined}>{renderSlide(s, k)}</div>; })}
       </div> : <div className="sh-hero-track" ref={track} onScroll={onScroll} onTouchStart={tStart} onTouchEnd={tEnd} onTouchCancel={tCancel}>

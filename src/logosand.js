@@ -42,16 +42,25 @@ export function startLogoSand(kind) {
     } catch { kill(); return false; }
     tgt = lg; return true;
   };
-  // bitiş: taneler evine dönünce (motorun 4,5 sn'lik 'durulma' beklemesini BEKLEMEDEN) düz resim alttan görünür,
-  // kanvas yumuşakça söner → 'bekleyip sonra flaş' yok
-  const finish = (ret = 1200) => {
-    clearTimeout(fT);
-    fT = setTimeout(() => {
-      if (dead || !cv) { busy = false; return; }
+  // bitiş: taneler evine GERÇEKTEN dönünce (yay hesabı: ~2,5 sn'de 1 pikselin altı) düz resim alttan görünür, kanvas 0,7 sn'de
+  // yavaşça söner → yerine oturmuş kum netleşip logo olur. 1,2 sn erken çıktı (taneler hâlâ dışarıdayken logoya geçiyordu, 17.11 akşam);
+  // motorun kendi 4,5 sn 'durulma' sonu da beklenmez (taneler yerindeyken sonda bir anda netleşme = flaş)
+  const finish = (need = 110) => {
+    // süre değil MOTORUN saati: motorla aynı hesapla (kare başı clamp(ms/16,67, .25, 3)) etkileşim bittikten sonra geçen simülasyon karesi.
+    // Yavaş cihazda kareler düşünce kum da yavaş döner → gerçek saatle beklemek erken kesiyordu (Intel Mac'te 'kumlar varken logoya geçti').
+    // Film kare kare ölçüldü: taneler ~70 karede evde → 110 kare + intro bitmiş olmalı. Güvenlik: 7 sn.
+    cancelAnimationFrame(raf); clearTimeout(fT);
+    const t0 = performance.now(); let prev = t0, sim = 0;
+    const wait = (now) => {
+      if (dead || !cv || !eng) { busy = false; return; }
+      if (now) { sim += Math.min(3, Math.max(0.25, (now - prev) / 16.6667)); prev = now; }
+      const home = eng.introT >= 1 && sim >= need;
+      if (!home && performance.now() - t0 < 7000) { raf = requestAnimationFrame(wait); return; }
       if (tgt) tgt.style.visibility = '';
-      cv.style.transition = 'opacity .45s ease'; cv.style.opacity = '0';
-      fT = setTimeout(() => { eng?.stop(); if (cv) { cv.style.visibility = 'hidden'; cv.style.transition = ''; } busy = false; }, 480);
-    }, ret);
+      cv.style.transition = 'opacity .7s cubic-bezier(.4, 0, .2, 1)'; cv.style.opacity = '0';
+      fT = setTimeout(() => { eng?.stop(); if (cv) { cv.style.visibility = 'hidden'; cv.style.transition = ''; } busy = false; }, 740);
+    };
+    raf = requestAnimationFrame(wait);
   };
   // başlangıç: kanvas önce düz resmin ÜSTÜNDE aynı resmi çizer (2 kare), sonra resim gizlenir → başta da flaş yok
   const show = (go) => {
@@ -72,11 +81,11 @@ export function startLogoSand(kind) {
       if (kind === 'sandin') {
         // kumdan oluşur: logo bir an kum bulutu olur, taneler girdapla evlerine toplanır (giriş sayfasının ilk hâli)
         eng.opts = { ...eng.opts, intro: true }; eng.introDur = 1500; eng.replay();
-        setTimeout(() => { if (eng) eng.opts = { ...eng.opts, intro: false }; finish(300); }, 1600);
+        setTimeout(() => { if (eng) eng.opts = { ...eng.opts, intro: false }; finish(60); }, 1600);
       } else if (kind === 'sandpuff') {
         // savrulur: ortadan bir 'üfleme', taneler dağılıp geri döner
         eng.pointer('down', cx, cy, true);
-        setTimeout(() => { eng?.pointer('up', cx, cy, true); finish(1300); }, 160);
+        setTimeout(() => { eng?.pointer('up', cx, cy, true); finish(110); }, 160);
       } else {
         // rüzgâr: görünmez bir parmak logonun üstünden soldan sağa geçer (giriş sayfasında fareyle yapılanın aynısı)
         const x0 = r.x - r.w * 0.9, x1 = r.x + r.w * 1.9, D = 760, s0 = performance.now();
@@ -84,7 +93,7 @@ export function startLogoSand(kind) {
           if (dead || !eng) return;
           const u = Math.min(1, (now - s0) / D), x = x0 + (x1 - x0) * u, y = cy + Math.sin(u * Math.PI) * r.h * 0.12;
           eng.pointer('move', x, y, false);
-          if (u < 1) raf = requestAnimationFrame(sweep); else { eng.pointer('leave', x, y, false); finish(1200); }
+          if (u < 1) raf = requestAnimationFrame(sweep); else { eng.pointer('leave', x, y, false); finish(110); }
         };
         raf = requestAnimationFrame(sweep);
       }

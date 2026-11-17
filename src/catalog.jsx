@@ -1476,7 +1476,7 @@ export function VideoThumb({ src: src0, poster }) {
 // Video: sitenin kendi oynatıcısı gibi (tarayıcı düğmeleri yok). Görünürken sessiz ve döngülü oynar, dokununca
 // durur/devam eder, köşede ses ve büyütme düğmesi, altta ilerleme çizgisi. Büyüt → tam ekran izleme (VideoViewer).
 // Ürün penceresi (galeri) ve mağaza ana sayfasındaki video bölümü bunu kullanır.
-export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', auto = true, className = '' }) {
+export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', auto = true, className = '', loop = true, onTime, onEnd }) {
   const src = mediaUrl(src0);
   const v = useRef(null);
   const [muted, setMuted] = useState(auto); // dokununca oynayanlar sesli başlar
@@ -1502,9 +1502,9 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   if (err) return <div className={'gal-vid-err ' + className}><Icon n="play" s={26} /><span>Video açılamadı</span></div>;
   return (
     <div className={'gal-vid' + (playing ? ' playing' : '') + (started ? ' started' : ' fresh') + ' ' + className}>
-      <video ref={v} src={live ? src : undefined} poster={pst} muted={muted} loop playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
+      <video ref={v} src={live ? src : undefined} poster={pst} muted={muted} loop={loop} playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
         style={{ objectFit: fit }} onPlay={() => { setPlaying(true); setStarted(true); }} onPause={() => setPlaying(false)} onError={(e) => { if (!fbSkip(e)) setErr(true); }}
-        onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); }} onClick={() => !big && toggle()} />
+        onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); onTime?.(e.currentTarget.currentTime); }} onEnded={() => onEnd?.()} onClick={() => !big && toggle()} />
       {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={started ? 24 : 17} /></button>}
       {started && <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>}
       {started && <button className="gal-vid-big" onClick={open} aria-label="Büyüt" title="Büyük izle"><Icon n="full" s={17} /></button>}
