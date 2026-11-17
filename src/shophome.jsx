@@ -1028,7 +1028,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
       {E && <E.HeroTools i={i} goTo={goTo} n={n} />}
       {n > 1 && <>
         {legacyDots && (nv.dots === 'num' ? <div className={'sh-dots sh-num' + LT} aria-live="polite"><b>{i + 1}</b><span>/</span>{n}</div>
-          : nv.dots !== 'none' && <div className={'sh-dots' + LT}>{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>)}
+          : nv.dots !== 'none' && <div className={'sh-dots' + LT} data-pos={`${i + 1} / ${n}`}>{slides.map((_, k) => <button key={k} className={'sh-dot' + (k === i ? ' on' : '') + (paused ? ' paused' : '')} onClick={() => goTo(k)} aria-label={`${k + 1}. reklam`}><i /></button>)}</div>)}
         {!ownArrows && <><button className={'sh-hero-nav prev' + LT} onClick={() => goTo((i - 1 + n) % n)} aria-label="Önceki"><Icon n="back" s={20} /></button>
         <button className={'sh-hero-nav next' + LT} onClick={() => goTo((i + 1) % n)} aria-label="Sonraki"><Icon n="back" s={20} className="flip" /></button></>}
         {frame === 'story' && hxPhone && <div className={'hx-st-top' + (metas[i]?.dark ? ' dk' : '')}><HeroPager kind="seg" metas={metas} i={i} goTo={goTo} /></div>}

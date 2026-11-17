@@ -6,7 +6,8 @@ import { useStore } from './store.js';
 import { GS1_ROWS, gs1Show } from './designer.jsx';
 
 // 16.11.2026: Claude'daki demo sayfasında da (canlı adres değilse) panel açık
-export const HDR_TRY = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]ustmenu\b/.test(location.search) || !/ertelmarket\.com|web\.app|firebaseapp\.com/.test(location.hostname));
+// 17.11.2026: kullanıcı önizleme/demolarda bu paneli istemiyor → sadece adreste ?ustmenu varsa (yerine 'Düzeltmeler' paneli, emil.jsx)
+export const HDR_TRY = typeof location !== 'undefined' && /[?&]ustmenu\b/.test(location.search);
 const DEF = { header: 'search1' }; // önizleme ilk açılışta Tek satır ile gelir
 const read = () => { const v = ls.get('hdr-try', null); return v && typeof v === 'object' ? v : DEF; };
 const subs = new Set();

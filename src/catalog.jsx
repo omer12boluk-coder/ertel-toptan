@@ -19,6 +19,7 @@ import { GuestGuide } from './guestcart.jsx';
 import { useTwin, useTwinSum, tl2 } from './storepay.jsx';
 import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
+import { useEm } from './emil.jsx';
 import { SetGrid, InSets, liveSets, ProductsSwitch, SetCard, searchSets, openSet } from './sets.jsx';
 
 export function useTree() {
@@ -75,7 +76,7 @@ function PriceExtras({ v, cur, S: So, role: ro }) {
   const inc = sh.inc && vat > 0 ? v * (1 + vat / 100) : null;
   return <>
     {sh.tl && (rate && cur === 'USD' ? <span className="tl-hint num">≈ {fmtTL(v * rate.usd)}</span> : <TLHint v={v} cur={cur} />)}
-    {inc != null && <span className="vat-inc num">KDV dahil {fmt(inc, cur)}{tl(inc) && cur !== 'TRY' ? ' · ' + tl(inc) : ''}</span>}
+    {inc != null && <span className="vat-inc num">KDV dahil {tl(inc) && cur !== 'TRY' ? <><span className="vi-x">{fmt(inc, cur)} · </span>{tl(inc)}</> : fmt(inc, cur)}</span>}
   </>;
 }
 // 6.11.2026 ürün sayfası 'Toplam': adet değişince rakam yumuşakça sayarak gider (birden sıçramıyordu), altında fiyattaki gibi
@@ -556,6 +557,7 @@ export function Catalog({ admin }) {
   const shown = list.slice(0, limit);
   const cartCount = Object.keys(cart).length;
   const setN = useStore((st) => (st.user?.role === 'public' ? liveSets(st.settings).length : 0));
+  const emSrch = useEm('srch'); // 17.11.2026 önizleme düzeltmesi 9 (emil.jsx)
   // 31.10.2026: ürün listesi ayrı tutulur → ürüne dokunup pencere açılınca (setOpen / setEdit) bütün liste yeniden çizilmez
   // (telefonda dokunuşu 'takılmış' hissettiren asıl sebep buydu). Satırlar sepet/favori gibi değişiklikleri kendileri izler.
   const addCls = cardCls(S, user?.role);
@@ -596,7 +598,7 @@ export function Catalog({ admin }) {
           {/* 7.11.2026 (akşam): arama açılır/kapanır — kapalıyken belirgin 'Ürün ara' düğmesi; basınca uzar, X ile kapanır. Boşken gri, yazı varken beyaz + mavi çerçeve */}
           <div className={'pv2-q' + (q ? ' has' : '')}>
             <Icon n="search" s={17} />
-            <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} />
+            <input id="cat-search" type="search" autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" placeholder={scopeName ? `${scopeName} içinde ara` : emSrch ? 'Bu listede ara: ad veya stok kodu' : 'Ürün adı veya stok kodu'} value={q} onChange={(e) => setQ(e.target.value)} />
             {q && <button type="button" className="pv2-qx" onClick={() => setQ('')} aria-label="Temizle"><Icon n="x" s={12} /></button>}
           </div>
         </div>

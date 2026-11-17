@@ -38,7 +38,8 @@ const KEYS = ANIMS.map((a) => a[0]);
 // 15.11.2026 gsnd (kumdan logo, ince kumla uçuş) ve gkum (kum akışı) önizlemede; canlıda varsayılan KAPALI (look.anim.gkum 'on' ile açılır)
 const DEF_ON = KEYS.filter((k) => k !== 'gkum' && k !== 'gsnd'); // 14.11.2026 gece: D4 düğme ışığı da canlıda AÇIK (kullanıcı)
 const liveOn = (A, k) => { if (A?.all === 'off') return false; const x = A?.[k]; return x === 'on' || (x !== 'off' && DEF_ON.includes(k)); };
-const TRY_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]hareket\b/.test(location.search));
+// 17.11.2026: önizlemede panel (Hareket / Akıcılık) sadece ?hareket ile; yoksa önizleme canlı ayarlarla aynı oynar
+const TRY_HOST = typeof location !== 'undefined' && /[?&]hareket\b/.test(location.search);
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // önizlemede varsayılan: hepsi açık, eski kum akışı (gkum) kapalı → kumdan uçan logo (gsnd) görünür

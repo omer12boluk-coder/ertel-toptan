@@ -11796,3 +11796,64 @@ html.nav-mv .as-fxsvg *, html.nav-mv .as-fx-x { animation-play-state: paused !im
 @keyframes asViewF { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
 @keyframes asViewB { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .as-form .auth-view.fwd, .as-form .auth-view.back { animation: none; } }
+
+/* ===== 17.11.2026 Emil düzeltmeleri (SADECE önizleme; emil.jsx html.em-<k>; canlı adreste sınıf eklenmez) ===== */
+.em-panel .an-box { width: min(380px, calc(100vw - 28px)); }
+.em-panel .em-row { align-items: flex-start !important; }
+.em-panel .em-row input, .em-panel .em-row .an-l { margin-top: 1px; }
+.em-tx { display: grid; gap: 3px; } .em-tx b { font-size: 14px; font-weight: 600; } .em-tx small { font-size: 12px; color: #6e6e73; line-height: 1.35; }
+/* 1 · Menü yazıları okunur (spot: %46 → %68) */
+@media (min-width: 900px) {
+  html.em-nav.gs1-lb-spot .hdr-gs .gs-nav .topnav-b { color: color-mix(in oklab, var(--fg) 68%, transparent) !important; }
+  html.em-nav.gs1-lb-spot.gs1-t-ink .hdr-gs .gs-nav .topnav-b { color: rgb(233 237 246 / .74) !important; }
+}
+/* 2 · Sağ üst düğmeler tek aile: yumuşak düğme (çerçevesiz 40 px), Giriş yap tek renk dolgu, sepet tek satır */
+html.em-btn .topbar .gs-icons .hcart:not(.full) { border-color: transparent; background: transparent; box-shadow: none; }
+html.em-btn .topbar .gs-icons .hcart { height: 40px; border-radius: 20px; transition: background-color .15s ease, transform .16s cubic-bezier(.23, 1, .32, 1); }
+@media (hover: hover) and (pointer: fine) {
+  html.em-btn .topbar .gs-icons .hcart:not(.full):hover, html.em-btn .topbar .gs-icons .icon-btn:hover { background: color-mix(in oklab, var(--fg) 7%, transparent); border-color: transparent; }
+  html.em-btn .topbar .gs-icons .me-login:hover { background: color-mix(in oklab, var(--accent) 16%, transparent) !important; }
+}
+html.em-btn .topbar .gs-icons :is(.hcart, .icon-btn, .me-login):active { transform: scale(.97); }
+@media (min-width: 900px) {
+  html.em-btn .topbar .gs-icons .hcart { padding: 0 14px 0 6px; gap: 4px; }
+  html.em-btn .topbar .hcart-t { flex-direction: row; align-items: baseline; gap: 6px; }
+  html.em-btn .topbar .hcart:not(.full) .hcart-t small { display: none; }
+  html.em-btn .topbar .gs-icons .me-login { height: 40px; border: 0 !important; border-radius: 20px; padding: 0 16px; background: color-mix(in oklab, var(--accent) 10%, transparent) !important; color: var(--accent) !important; box-shadow: none !important; font-weight: 600; }
+}
+/* 3 · kum: logosand.js clip() — burada sadece taşma payı yok */
+/* 4 · Banner seçici: 32 px basma alanı, seçili çubuk uzun, '3 / 13' sayacı */
+html.em-dots .sh-hero.nd-bars .sh-dots { align-items: center; gap: 4px; }
+html.em-dots .sh-hero.nd-bars .sh-dot { height: 32px; flex: 0 1 18px; min-width: 12px; cursor: pointer; }
+html.em-dots .sh-hero.nd-bars .sh-dot.on { flex: 0 0 44px; }
+html.em-dots .sh-hero.nd-bars .sh-dot i { height: 3px; }
+html.em-dots .sh-hero.nd-bars .sh-dots::after { content: attr(data-pos); margin-left: 10px; font: 600 12px/1 var(--f-body); font-variant-numeric: tabular-nums; letter-spacing: .02em; color: rgb(255 255 255 / .86); white-space: nowrap; }
+html.em-dots .sh-hero.nd-bars .sh-dots.lt::after { color: rgb(0 0 0 / .52); }
+/* 5 · Kartta 2 satır fiyat (mağaza): ≈ TL ve dolar KDV dahil kalkar */
+html.em-price .shell.public .price:not(.big) .tl-hint, html.em-price .shell.public .price:not(.big) .vat-inc .vi-x { display: none; }
+/* 6 · Ürünler açılışı telefon: yazı resmin üstüne binmez, alt kategoriler kesilmez (yana kayan tek satır) */
+@media (max-width: 899px) {
+  html.em-hubm .phub-mos-m .pmo-t:not(.big):not(.pmo-all) .pmo-n { max-width: 100%; }
+  html.em-hubm .phub-mos-m .pmo-t:not(.big):not(.pmo-all) .pmo-iw { width: 44%; height: 46%; bottom: 7%; right: 5%; }
+  html.em-hubm .phub-mos-m .pmo-t.big .pbn-subs { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 3; max-width: none; margin: 0; padding: 0 13px; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; touch-action: pan-x; }
+  html.em-hubm .phub-mos-m .pmo-t.big .pbn-subs::-webkit-scrollbar { display: none; }
+  html.em-hubm .phub-mos-m .pmo-t.big .pbn-subs button { flex: 0 0 auto; max-width: none; overflow: visible; }
+  html.em-hubm .phub-mos-m .pmo-t.big .pmo-iw { bottom: 44px; height: calc(100% - 56px); width: 44%; }
+}
+/* 7 · Ürünler açılışı bilgisayar: alt kategoriler düzgün liste */
+@media (min-width: 900px) {
+  html.em-hubd .phub-mos .pmo-t.big .pbn-subs { flex-direction: column; flex-wrap: nowrap; gap: 0; margin-top: 18px; max-width: 44%; }
+  html.em-hubd .phub-mos .pmo-t.big .pbn-subs button { display: flex; align-items: center; gap: 8px; width: 100%; height: auto; min-height: 40px; padding: 9px 0; white-space: normal; line-height: 1.3; border-radius: 0; background: transparent !important; box-shadow: none !important; border-bottom: 1px solid var(--line, #e5e7eb); font-size: 15px; font-weight: 500; text-align: left; color: color-mix(in oklab, var(--fg, #1d1d1f) 74%, transparent) !important; transition: color .15s ease; }
+  html.em-hubd .phub-mos .pmo-t.big .pbn-subs button:last-child { border-bottom: 0; }
+  html.em-hubd .phub-mos .pmo-t.big .pbn-subs button::after { content: "›"; margin-left: auto; font-size: 18px; line-height: 1; color: var(--muted, #8e8e93); transition: transform .16s cubic-bezier(.23, 1, .32, 1); }
+  html.em-hubd .phub-mos .pmo-t.big .pbn-subs button:hover { color: var(--fg, #1d1d1f) !important; }
+  html.em-hubd .phub-mos .pmo-t.big .pbn-subs button:hover::after { transform: translateX(3px); color: var(--accent, #2f62d6); }
+}
+/* 8 · Giriş sayfası: kart menüyle aynı kenarda, sayfadayken menüdeki 'Giriş yap' gizli (yer korunur) */
+@media (min-width: 900px) { html.em-auth .as-wrap { --as-gap: 28px; width: min(calc(100vw - 2 * var(--as-gap)), 1640px); margin-left: calc(50% - min(50vw - var(--as-gap), 820px)); transform: none; } } /* kullanıcı kuralı 'yanlarda eşit pay' korunur; pay menünün payıyla aynı */
+html.em-auth .shell.tab-hesap .topbar .me-login { visibility: hidden; }
+/* 10 · Animasyon kuralları: kapanış ease-out, scale(0) yok, transition: all yok */
+html.em-anim .ctx-sheet-bg.out .ctx-sheet, html.em-anim .nc-panel.out { animation-timing-function: cubic-bezier(.23, 1, .32, 1); }
+html.em-anim .gl-sw.gone > .gline, html.em-anim .gl-sw.gone > .mo-sw { transition-timing-function: cubic-bezier(.23, 1, .32, 1); }
+html.em-anim .ptr7.done .ptr7-c { transform: scale(.9); }
+html.em-anim .dz2-crop-img span { transition: left .25s var(--ease), top .25s var(--ease), width .25s var(--ease), height .25s var(--ease); }

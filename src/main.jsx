@@ -52,6 +52,7 @@ import { Archive } from './archive.jsx';
 import { UsagePage } from './usagepage.jsx';
 import { AnimLayer } from './anim.jsx';
 import { HdrPanel, useHdrTry } from './hdrtry.jsx';
+import { EmilPanel } from './emil.jsx';
 import { ShopFooter } from './footer.jsx';
 import { Orders } from './orders.jsx';
 import { OrderForm } from './orderform.jsx';
@@ -903,6 +904,7 @@ function ShellFull() {
       {pub && !['katalog', 'sepet', 'hesap', 'kalip'].includes(tab) && <ShopFooter compact={tab !== 'anasayfa'} />}
       {pub && <AnimLayer />}
       {pub && <HdrPanel />}
+      {pub && <EmilPanel />}
       {!admin && tab !== 'lsepet' && tab !== 'odeme' && <CartBar />}
       {admin && vitrinCode && <VitrinListEditor code={vitrinCode} onClose={() => store.set({ vitrinCode: null })} />}
       {admin && vitrinOpen && <OpenVitrinList onClose={() => store.set({ vitrinOpen: false })} />}
