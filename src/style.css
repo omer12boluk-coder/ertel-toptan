@@ -11899,3 +11899,11 @@ html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute;
 .pb-vid.vb-idle { cursor: none; }
 .sh-hero .sh-dots, .sh-hero .hx-in, .sh-hero .sh-hero-nav, .sh-hero .hx-st-top { transition: opacity .35s ease; }
 .sh-hero.vid-idle .sh-dots, .sh-hero.vid-idle .hx-in, .sh-hero.vid-idle .sh-hero-nav, .sh-hero.vid-idle .hx-st-top { opacity: 0 !important; pointer-events: none; }
+
+/* 17.11.2026 Hesabımı sil (Profil bilgilerim en altı) */
+.mi-del { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); }
+.mi-del-b { background: none; border: 0; padding: 4px 0; font: inherit; font-size: 13.5px; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+@media (hover: hover) { .mi-del-b:hover { color: var(--bad); } }
+.mi-del-box p { margin: 0 0 10px; line-height: 1.55; }
+.mi-del-box ul { margin: 0 0 12px; padding-left: 20px; line-height: 1.6; }
+.mi-del-box .fine { margin-bottom: 16px; }

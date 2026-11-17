@@ -1301,7 +1301,48 @@ function MyInfo({ part = 'all' }) {
       <AddressFields a={f.iaddr} set={(iaddr) => setF((x) => ({ ...x, iaddr }))} err={aerr} p="iaddr" />
       {f.iaddr?.address && <button type="button" className="linkish mi-clear" onClick={() => setF((x) => ({ ...x, iaddr: blankAddr() }))}>Fatura adresini temizle</button>}</>}
       <button className="btn primary" disabled={busy} onClick={save}><Icon n="check" s={16} />Kaydet</button>
+      {part === 'info' && <DeleteAccount />}
     </div>
+  );
+}
+
+// 17.11.2026 Hesabımı sil: Profil bilgilerim'in en altında küçük gri bağlantı → pencere (ne silinir, ne kalır) → şifre / Google onayı
+function DeleteAccount() {
+  const A = useStore((s) => s.api);
+  const [open, setOpen] = useState(false);
+  const [pw, setPw] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const kind = A.memberKind?.() || 'password';
+  async function del() {
+    setErr('');
+    if (kind === 'password' && !pw) return setErr('Şifrenizi yazın.');
+    setBusy(true);
+    try {
+      await A.memberDeleteSelf(pw);
+      setOpen(false); openAcct(null); toast('Hesabınız silindi');
+    } catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  return (
+    <>
+      <div className="mi-del"><button type="button" className="mi-del-b" onClick={() => { setOpen(true); setPw(''); setErr(''); }}>Hesabımı sil</button></div>
+      {open && (
+        <Sheet title="Hesabımı sil" onClose={() => !busy && setOpen(false)} footer={<><button className="btn ghost" disabled={busy} onClick={() => setOpen(false)}>Vazgeç</button><button className="btn danger" disabled={busy} onClick={del}>{busy ? 'Siliniyor…' : 'Hesabımı kalıcı olarak sil'}</button></>}>
+          <div className="mi-del-box">
+            <p>Hesabınız <b>hemen ve kalıcı olarak</b> silinir, geri alınamaz.</p>
+            <ul>
+              <li>Giriş bilgileriniz, adresleriniz, fatura bilgileriniz</li>
+              <li>Favorileriniz ve “gelince haber ver” listeniz</li>
+            </ul>
+            <p className="fine">Verdiğiniz siparişlerin kayıtları yasal saklama zorunluluğu nedeniyle silinmez; hesabınızla bağlantısı kalmaz.</p>
+            {kind === 'password'
+              ? <Field label="Onaylamak için şifreniz" error={err}><PasswordInput id="del-pw" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
+              : <><p className="fine">Onay için {kind === 'facebook' ? 'Facebook' : 'Google'} hesabınızı seçmeniz istenecek.</p>{err && <p className="err">{err}</p>}</>}
+          </div>
+        </Sheet>
+      )}
+    </>
   );
 }
 

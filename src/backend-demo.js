@@ -292,6 +292,12 @@ export class DemoBackend {
   }
   async memberResendVerify(id) { return id; }
   async memberLogout() { this.db.shopSession = null; this.persist(); this.memberCb?.(null); }
+  memberKind() { return 'password'; }
+  async memberDeleteSelf(pw) {
+    const m = this.mem()[this.db.shopSession]; if (!m) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
+    if (m.pw && m.pw !== pw) throw new Error('Şifre hatalı.');
+    delete this.mem()[m.uid]; this.db.shopSession = null; this.persist(); this.memberCb?.(null);
+  }
   async memberReset(id) { const m = Object.values(this.mem()).find((x) => x.email === id || x.username === id); return m?.email || id; }
   async authCheckReset() { return 'demo@ornek.com'; }
   async authConfirmReset() {}

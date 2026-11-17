@@ -127,6 +127,7 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/member/delete' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberDelete(env, b)); }
       if (url.pathname === '/mail/auth' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await authMail(req, env, b)); }
       if (url.pathname === '/mail/test' && req.method === 'POST') return json(await mailTest(req, env));
       if (url.pathname === '/notify-member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyMember(env, b)); }
@@ -884,6 +885,43 @@ async function notifyMember(env, b) {
   await adminPush(env, { title: `👤 Yeni mağaza üyesi · ${who}`, body: [via, m.phone, m.email].filter(Boolean).join(' · ').slice(0, 160), url: '/admin/musteriler', tag: 'mb-' + uid }).catch(() => {});
   const text = `👤 Yeni mağaza üyesi\n${who}${m.username ? ` (@${m.username})` : ''}\n${[m.email, m.phone].filter(Boolean).join(' · ')}\n${via} kayıt oldu\n\nPanelde aç: https://ertelmarket.com/admin/musteriler`;
   return notifySend(env, { subject: `Yeni mağaza üyesi · ${who}`, text, noEmail: true });
+}
+
+// 17.11.2026 Hesabımı sil (müşteri kendisi): POST /member/delete { token } — token son 10 dk içinde yeniden girişle alınmış olmalı
+// (uygulama şifre / Google ile tekrar doğrulatır). Silinen: giriş hesabı (Firebase Auth), members/{uid}, usernames/{ad},
+// haber bekleme kayıtları (wait/* içindeki uid). Siparişler / faturalar YASA GEREĞİ KALIR (kullanıcı kararı: aynen kalsın).
+async function memberDelete(env, b) {
+  if (!env.FIREBASE_SA) return { ok: false, error: 'Şu an yapılamıyor, biraz sonra tekrar deneyin.' };
+  const tok = String(b.token || ''); const uid = tokUid(tok);
+  if (!uid) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
+  const m = await fsAuth('members/' + uid, tok).catch(() => null); // anahtarı Firestore doğrular
+  if (!m) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
+  let at = 0; try { at = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).auth_time || 0; } catch {}
+  if (!at || Date.now() / 1000 - at > 600) return { ok: false, code: 'reauth', error: 'Güvenlik için şifrenizi tekrar girin.' };
+  const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
+  // 1) giriş hesabı — önce bu (başarısızsa hiçbir veri silinmez)
+  const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:delete`, { method: 'POST', headers: { Authorization: 'Bearer ' + gt, 'Content-Type': 'application/json' }, body: JSON.stringify({ localId: uid }) });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); if (!/USER_NOT_FOUND/.test(j.error?.message || '')) return { ok: false, error: 'Hesap silinemedi (' + (j.error?.message || r.status) + '). Bize yazın, elle silelim.' }; }
+  // 2) üye kayıtları
+  const st = await saToken(env); const H = { Authorization: 'Bearer ' + st };
+  await fetch(FS + 'members/' + uid, { method: 'DELETE', headers: H }).catch(() => {});
+  const un = String(m.username || '').trim().toLowerCase();
+  if (un && /^[\w.-]{1,60}$/.test(un)) {
+    const u = await fetch(FS + 'usernames/' + un, { headers: H }).then((x) => x.ok ? x.json() : null).catch(() => null);
+    if (u?.fields?.uid?.stringValue === uid) await fetch(FS + 'usernames/' + un, { method: 'DELETE', headers: H }).catch(() => {});
+  }
+  const DOC = `projects/${pid}/databases/(default)/documents/`;
+  const pids = (Array.isArray(m.notify) ? m.notify : []).map(String).filter((x) => /^\d{1,12}$/.test(x)).slice(0, 60);
+  await Promise.all(pids.map((p) => fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents:commit`, {
+    method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ writes: [{ transform: { document: DOC + 'wait/' + p, fieldTransforms: [{ fieldPath: 'uids', removeAllFromArray: { values: [{ stringValue: uid }] } }] }, currentDocument: { exists: true } }] }),
+  }).catch(() => {})));
+  // 3) yöneticiye haber (Telegram + push; e-posta yok)
+  const who = m.name || m.username || 'Üye';
+  await adminPush(env, { title: `🗑️ Üye hesabını sildi · ${who}`, body: [m.email, m.phone].filter(Boolean).join(' · ').slice(0, 160), url: '/admin/musteriler', tag: 'md-' + uid }).catch(() => {});
+  await notifySend(env, { subject: `Üye hesabını sildi · ${who}`, text: `🗑️ Mağaza üyesi hesabını sildi\n${who}${m.username ? ` (@${m.username})` : ''}\n${[m.email, m.phone].filter(Boolean).join(' · ')}\nEski siparişleri yerinde duruyor.`, noEmail: true }).catch(() => {});
+  return { ok: true };
 }
 
 // R2'ye yazma kapısı (resim taşıma işi, tools/r2-mirror.mjs): PUT/GET /r2obj/<anahtar>, başlık X-Key = sha256('r2:' + TELEGRAM_TOKEN).

@@ -740,6 +740,28 @@ export class FirebaseBackend {
     return email;
   }
   async memberLogout() { await this.U.signOut(this.auth); }
+  // 17.11.2026 Hesabımı sil: önce yeniden doğrulama (şifre / Google), sonra bekçi /member/delete (hesap + üye kayıtları; siparişler kalır)
+  memberKind() { const u = this.auth.currentUser; const p = (u?.providerData || []).map((x) => x.providerId); return p.includes('password') ? 'password' : p.includes('google.com') ? 'google' : p.includes('facebook.com') ? 'facebook' : 'password'; }
+  async memberDeleteSelf(pw) {
+    const u = this.auth.currentUser; if (!u) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
+    const kind = this.memberKind();
+    try {
+      if (kind === 'password') await this.U.reauthenticateWithCredential(u, this.U.EmailAuthProvider.credential(u.email, String(pw || '')));
+      else {
+        const P = kind === 'facebook' ? new this.U.FacebookAuthProvider() : new this.U.GoogleAuthProvider();
+        await this.U.reauthenticateWithPopup(u, P, this.U.browserPopupRedirectResolver);
+      }
+    } catch (e) {
+      if (/popup-blocked|popup-closed|cancelled-popup/.test(e?.code || '')) throw new Error(kind === 'password' ? authMsg(e) : 'Onay penceresi açılamadı. Çıkış yapıp tekrar Google ile girin, hemen ardından silmeyi deneyin.');
+      throw new Error(e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential' || e?.code === 'auth/invalid-login-credentials' ? 'Şifre hatalı.' : authMsg(e));
+    }
+    const token = await u.getIdToken(true);
+    const W = String(window.WATCH_URL || '').replace(/\/$/, '');
+    const r = await timeout(fetch(W + '/member/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }), 30000);
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'Hesap silinemedi, biraz sonra tekrar deneyin.');
+    await this.U.signOut(this.auth).catch(() => {});
+  }
   async memberReset(id) {
     const email = await this.emailOf(id);
     if (await this._authMail({ kind: 'reset', email })) return email; // kendi alan adımızdan gitti
