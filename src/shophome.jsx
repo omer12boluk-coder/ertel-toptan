@@ -919,7 +919,8 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const n = slides.length;
   // otomatik geçiş: fare üstüne gelince durur, çekilince KALDIĞI YERDEN devam eder (süre sıfırlanmaz)
   const left = useRef(6500); const since = useRef(0);
-  useEffect(() => { left.current = 6500; }, [i]);
+  // 17.11.2026 hareketli banner kendi süresince kalır (bannerlar.json dur, ms)
+  useEffect(() => { left.current = slides[i]?.pb?.dur || 6500; }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
   // görünmezken (başka sayfadayken ana sayfa arkada gizli açık kalıyor) otomatik geçiş DURUR; geri gelince görünen reklamla eşitlenir.
   // Eskiden arkada sayaç ilerliyor ama kaydırma yerinde kalıyordu → iPhone'da dönünce görünen reklamın yazısı gizli kalıyordu.
   const [vis, setVis] = useState(true);
@@ -1009,7 +1010,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const ownArrows = frame === 'story' || frame === 'deck';
   const pagerOn = !!pagerK && pagerK !== 'off';
   const inner = frame === 'story' ? (hxPhone ? '' : 'story') : frame === 'glow' ? (pagerOn ? 'glow' : '') : frame === '' && pagerOn ? 'p' : '';
-  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
+  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} go={vis && k === play && !E} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
   // deste: parmakla sağa/sola çekince önceki/sonraki (tıklamayla karışmasın diye çekilmişse tık yutulur)
   const sw = useRef(null);
   const dkDown = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };

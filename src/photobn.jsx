@@ -10,6 +10,7 @@ import { store, setQty, toast, useStore } from './store.js';
 import { ensureFonts } from './slidex.jsx';
 import { useWin } from './dzframe.jsx';
 import BANNERS from './icerik/bannerlar.json';
+import { createMotion } from './motionbn.js';
 
 const ACC = '#2f62d6';
 const IMG = (f) => '/bn/' + f;
@@ -206,8 +207,36 @@ function Phone({ b, H, act, br }) {
   return <>{top}<img className="pb-im" src={IMG('da07.webp')} alt="2UUL DA07" style={abs({ left: '50%', bottom: 22, height: h, width: 'auto', transform: 'translateX(-50%)' })} /></>;
 }
 
+// 17.11.2026 hareketli banner (bannerlar.json "motion"): motor src/motionbn.js. go = banner ekranda ve sırası geldi → baştan oynar;
+// gitmeyince durur ve ilk kareye döner. Süre (dur, ms) Hero'nun otomatik geçişine verilir.
+function MotionBanner({ b, go, act }) {
+  const ref = useRef(null); const M = useRef(null); const actRef = useRef(act); actRef.current = act;
+  useEffect(() => {
+    const m = createMotion(ref.current, { base: '/bn/', onLink: (l, e) => actRef.current(l)(e) });
+    M.current = m; return () => { m.destroy(); M.current = null; };
+  }, []);
+  useEffect(() => { const m = M.current; if (!m) return; if (go) m.start(); else m.reset(); }, [go]);
+  return <div ref={ref} className="pb-box pb-dark pb-motion" style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: b.bg || '#05070b' }} />;
+}
+
 // Kutuyu tamamen dolduran banner (konumlu bir ebeveynin içine konur)
-export function PhotoBanner({ b, open, onProduct, edit }) {
+export function PhotoBanner({ b, open, onProduct, edit, go }) {
+  if (b.motion) return <MotionBannerWrap b={b} open={open} onProduct={onProduct} edit={edit} go={go} />;
+  return <PhotoBannerImg b={b} open={open} onProduct={onProduct} edit={edit} />;
+}
+function MotionBannerWrap({ b, open, onProduct, edit, go }) {
+  const act = (l) => (e) => {
+    e?.stopPropagation?.(); if (edit || !l) return;
+    if (l.startsWith('cart:')) {
+      const id = Number(l.slice(5)); const p = store.s.byId?.get(id);
+      if (p && p.s > 0 && p.a !== 0 && !p.so) { setQty(id, (store.s.cart?.[id] || 0) + 1); toast?.('Sepete eklendi'); } else if (p) onProduct?.(p);
+      return;
+    }
+    open(l)();
+  };
+  return <MotionBanner b={b} go={!!go && !edit} act={act} />;
+}
+function PhotoBannerImg({ b, open, onProduct, edit }) {
   const ref = useRef(null); const [sz, setSz] = useState(null);
   const win = useWin();
   // köşeler: Stil Stüdyosu'nda büyük reklam köşesi (look.style.rHero) küçültülünce düğmeler de aynı oranda sivrileşir (Apple yuvarlağı = hap)
