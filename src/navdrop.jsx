@@ -82,7 +82,9 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     return () => { removeEventListener('resize', place); removeEventListener('scroll', place, true); };
   }, [open]);
   me.current = close;
-  useEffect(() => { close(); }, [tab, acct]);
+  // 17.11.2026 sayfa değişince fare hâlâ başlığın üstündeyse (başlığa tıklayıp geçildi) menü, fare bir kez çıkana kadar fareyle AÇILMAZ
+  // (yeni geçilen sayfada ufak kıpırdama menüyü açıyordu). Çıkıp geri gelince eskisi gibi açılır.
+  useEffect(() => { close(); if (wrap.current?.matches(':hover')) mute.current = true; }, [tab, acct]);
   useEffect(() => {
     if (!open) return;
     const k = (e) => { if (e.key === 'Escape') close(); };
@@ -125,7 +127,9 @@ export function HoverDrop({ children, panel, align = 'left', cls = '' }) {
     clearTimeout(t.current);
     // 16.11.2026 Yüzen cam 'Tıklayınca' (bölünmüş düğme DEĞİL): ad + ok TEK düğme — basınca sayfaya gitmez, menüyü açar/kapatır
     if (clickMode() && !document.documentElement.classList.contains('gs1-split') && e.target.closest?.('.topnav-b')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } return; }
-    if (MENU.ok && e.target.closest?.('.topnav-chev')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } }
+    if (MENU.ok && e.target.closest?.('.topnav-chev')) { e.preventDefault(); e.stopPropagation(); if (open) { mute.current = true; close(); } else { mute.current = false; show(); } return; }
+    // 17.11.2026 başlığa tıklayıp sayfaya gidince: fare çıkana kadar menü fareyle açılmaz (bekleyen açılış da iptal)
+    if (e.target.closest?.('.topnav-b')) { mute.current = true; if (open) close(); }
   };
   return (
     <div ref={wrap} className={'hd' + (open ? ' open' : '') + (MENU.ok ? ' hd-chev' : '') + (cls ? ' ' + cls : '')} onMouseEnter={enter} onMouseMove={move} onMouseLeave={leave} onClickCapture={click}>

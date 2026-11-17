@@ -4,6 +4,7 @@
 // → canlı site BİREBİR aynı. Beğenilenler sonra kalıcı ayara bağlanır.
 import { useEffect, useState } from 'react';
 import { ls } from './utils.js';
+import { useStore } from './store.js';
 
 export const EM_HOST = typeof location !== 'undefined' && (location.hostname.includes('--') || /[?&]emil\b/.test(location.search) || !/ertelmarket\.com|web\.app|firebaseapp\.com/.test(location.hostname));
 
@@ -27,16 +28,21 @@ export const EMS = [
 ];
 const KEYS = EMS.map((x) => x[0]);
 const read = () => { const v = ls.get('em-try', null); return v && typeof v === 'object' ? { ...Object.fromEntries(KEYS.map((k) => [k, true])), ...v } : Object.fromEntries(KEYS.map((k) => [k, true])); };
-let cur = EM_HOST ? read() : {};
+// 17.11.2026 YAYIN: canlıda (önizleme değil) 13 (alttaki satın al çubuğu) HARİÇ hepsi varsayılan AÇIK.
+// Geri: look.emFix.all = 'off' (Tasarım v3 › Görünüm 'Tasarım düzeltmeleri (17.11)') ya da tek tek look.emFix.<k> = 'off'.
+// İlk çizimde ayar henüz gelmemiş olabilir → son bilinen hâl ls 'em-live'.
+const LIVE_OFF = ['buy'];
+const liveSet = (F) => Object.fromEntries(KEYS.map((k) => [k, !LIVE_OFF.includes(k) && F?.all !== 'off' && F?.[k] !== 'off']));
+let cur = EM_HOST ? read() : (() => { const v = ls.get('em-live', null); return v && typeof v === 'object' ? v : liveSet(null); })();
 const subs = new Set();
 const put = (v) => { cur = v; ls.set('em-try', v); subs.forEach((f) => f(v)); };
 export const emOn = (k) => !!cur[k];
 // ilk çizimden önce sınıflar (panel açılmadan da düzeltmeler görünsün)
-if (EM_HOST && typeof document !== 'undefined') KEYS.forEach((k) => { if (cur[k]) document.documentElement.classList.add('em-' + k); });
+if (typeof document !== 'undefined') KEYS.forEach((k) => { if (cur[k]) document.documentElement.classList.add('em-' + k); });
 // JSX'te metin değişen düzeltmeler için (ör. arama kutusu yazısı)
 export function useEm(k) {
   const [v, setV] = useState(cur);
-  useEffect(() => { if (!EM_HOST) return undefined; subs.add(setV); return () => subs.delete(setV); }, []);
+  useEffect(() => { subs.add(setV); return () => subs.delete(setV); }, []);
   return !!v[k];
 }
 
@@ -77,14 +83,17 @@ function BuyBar() {
 export function EmilPanel() {
   const [v, setV] = useState(cur);
   const [open, setOpen] = useState(() => ls.get('em-try-open', true));
-  useEffect(() => { if (!EM_HOST) return undefined; subs.add(setV); return () => subs.delete(setV); }, []);
+  useEffect(() => { subs.add(setV); return () => subs.delete(setV); }, []);
+  const F = useStore((s) => s.settings?.look?.emFix) || null;
+  const fk = JSON.stringify(F || {});
+  // canlı: ayardan
+  useEffect(() => { if (EM_HOST) return; const n = liveSet(F); ls.set('em-live', n); cur = n; subs.forEach((f) => f(n)); setV(n); }, [fk]);
   useEffect(() => {
-    if (!EM_HOST) return undefined;
     const c = document.documentElement.classList; const on = KEYS.filter((k) => v[k]);
     KEYS.forEach((k) => c.toggle('em-' + k, on.includes(k)));
     return undefined;
   }, [v]);
-  if (!EM_HOST) return null;
+  if (!EM_HOST) return null; // canlıda panel yok (sınıflar yukarıda ayardan)
   const tog = (o) => { ls.set('em-try-open', o); setOpen(o); };
   const all = (b) => put(Object.fromEntries(KEYS.map((k) => [k, b])));
   const n = KEYS.filter((k) => v[k]).length;

@@ -592,7 +592,7 @@ export function Catalog({ admin }) {
         {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
         <div className="pv2-trow">
           <div className="pv2-tt">
-            <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}.</h1>
+            <h1 key={'t' + cat} className="pv2-t pv2-in">{catTitle}{/[.!?…]$/.test(catTitle) ? '' : '.'}</h1>
             {twinNote && <p className="pv2-pnote"><span className="pn-l">Fiyatlar havale/EFT seçimine özel indirimli fiyatlardır. Kredi kartıyla tek çekim fiyatları ürün sayfasında yazmaktadır.</span><span className="pn-s">Fiyatlar havale/EFT'ye özel indirimli fiyatlardır. Kartla tek çekim fiyatı ürün sayfasında.</span></p>}
           </div>
           {/* 7.11.2026 (akşam): arama açılır/kapanır — kapalıyken belirgin 'Ürün ara' düğmesi; basınca uzar, X ile kapanır. Boşken gri, yazı varken beyaz + mavi çerçeve */}
