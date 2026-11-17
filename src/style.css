@@ -11808,18 +11808,17 @@ html.nav-mv .as-fxsvg *, html.nav-mv .as-fx-x { animation-play-state: paused !im
   html.em-nav.gs1-lb-spot.gs1-t-ink .hdr-gs .gs-nav .topnav-b { color: rgb(233 237 246 / .74) !important; }
 }
 /* 4 · Banner seçici (17.11 son): zemin YOK (kullanıcı beğenmedi); çubuklar altındaki rengin TERSİNİ alır (mix-blend-mode: difference →
-   beyazın üstünde siyah, siyahın üstünde beyaz; banner kayarken çizgi tam kesiştiği yerde döner). Seçili çubuk 0,3 sn'de uzar (0,55 yavaştı). */
+   beyazın üstünde siyah, siyahın üstünde beyaz; banner kayarken çizgi tam kesiştiği yerde döner). Çubuk boyu kaydırmaya 1:1 bağlı (shophome onScroll --f), boylar kısa: PC 10→28, telefon 8→22. */
 html.em-dots .sh-hero.nd-bars .sh-dots { align-items: center; gap: 5px; mix-blend-mode: difference; }
 html.em-dots .sh-hero.nd-bars .sh-dots .sh-dot i, html.em-dots .sh-hero.nd-bars .sh-dots.lt .sh-dot i { background: rgb(255 255 255 / .42); }
 html.em-dots .sh-hero.nd-bars .sh-dots .sh-dot.on i::after, html.em-dots .sh-hero.nd-bars .sh-dots.lt .sh-dot.on i::after { background: #fff; }
-html.em-dots .sh-hero.nd-bars .sh-dot { height: 28px; flex: 0 0 auto; width: 16px; min-width: 0; cursor: pointer; transition: width .3s cubic-bezier(.23, 1, .32, 1); }
-html.em-dots .sh-hero.nd-bars .sh-dot.on { width: 48px; }
-@media (max-width: 899px) { html.em-dots .sh-hero.nd-bars .sh-dot { width: 12px; } html.em-dots .sh-hero.nd-bars .sh-dot.on { width: 36px; } html.em-dots .sh-hero.nd-bars .sh-dots { gap: 4px; } }
+html.em-dots .sh-hero.nd-bars .sh-dot { --f: 0; height: 28px; flex: 0 0 auto; width: calc(10px + 18px * var(--f)); min-width: 0; cursor: pointer; }
+html.em-dots .sh-hero.nd-bars .sh-dot.on { --f: 1; }
+@media (max-width: 899px) { html.em-dots .sh-hero.nd-bars .sh-dot { width: calc(8px + 14px * var(--f)); } html.em-dots .sh-hero.nd-bars .sh-dots { gap: 4px; } }
 html.em-dots .sh-hero.nd-bars .sh-dot i { height: 3px; transition: background-color .2s ease; }
 html.em-dots .sh-hero.nd-bars .sh-dot.on i::after { animation: emFill 6.5s linear forwards; }
 @keyframes emFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @media (hover: hover) and (pointer: fine) { html.em-dots .sh-hero.nd-bars .sh-dots .sh-dot:not(.on):hover i { background: rgb(255 255 255 / .75); } }
-@media (prefers-reduced-motion: reduce) { html.em-dots .sh-hero.nd-bars .sh-dot { transition: none; } }
 /* video açıkken: kutu dokunuş almaz (sarma çubuğu boşluklardan sürüklenir) ama çubukların kendisine basılır (kullanıcı: 'video varken seçiciye tıklanmıyor') */
 .sh-hero.vid-on .sh-dots .sh-dot { pointer-events: auto; }
 .sh-hero.vid-on .sh-dots { z-index: 7; }
