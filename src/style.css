@@ -11888,3 +11888,14 @@ html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute;
 @media (hover: none) and (pointer: coarse) { .pb-vid .gal-vid-seek { height: 40px; } }
 .sh-hero.vid-on .sh-dots, .sh-hero.vid-on .hx-in, .sh-hero.vid-on .hx-in *, .sh-hero.vid-on .hx-st-top, .sh-hero.vid-on .hx-st-top * { pointer-events: none; }
 .pb-vid video { background: #000; }
+
+/* 17.11.2026 video banner ↔ banner seçici: dolan çubuk videonun gerçek ilerlemesini gösterir (--vp, 0..1; Hero yazar) */
+:is(.sh-hero.vid-on, .hx-wrap:has(.sh-hero.vid-on)) .sh-dot.on i::after { animation: none !important; transform: scaleX(var(--vp, 0)) !important; transform-origin: left; }
+:is(.sh-hero.vid-on, .hx-wrap:has(.sh-hero.vid-on)) .hx-f { animation: none !important; transform: scaleX(var(--vp, 0)) !important; }
+:is(.sh-hero.vid-on, .hx-wrap:has(.sh-hero.vid-on)) .hx-rc { animation: none !important; stroke-dashoffset: calc(119.38 * (1 - var(--vp, 0))) !important; }
+/* oynarken boşta: kontroller ve banner seçici yumuşakça kaybolur, dokununca/fare oynayınca geri gelir */
+.pb-vid .gal-vid-snd, .pb-vid .gal-vid-big, .pb-vid .gal-vid-seek { transition: opacity .35s ease; }
+.pb-vid.vb-idle .gal-vid-snd, .pb-vid.vb-idle .gal-vid-big, .pb-vid.vb-idle .gal-vid-seek { opacity: 0; pointer-events: none; }
+.pb-vid.vb-idle { cursor: none; }
+.sh-hero .sh-dots, .sh-hero .hx-in, .sh-hero .sh-hero-nav, .sh-hero .hx-st-top { transition: opacity .35s ease; }
+.sh-hero.vid-idle .sh-dots, .sh-hero.vid-idle .hx-in, .sh-hero.vid-idle .sh-hero-nav, .sh-hero.vid-idle .hx-st-top { opacity: 0 !important; pointer-events: none; }
