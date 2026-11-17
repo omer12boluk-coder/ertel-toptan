@@ -938,6 +938,10 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   }, [n, deck]);
   const vidNow = slides[i]?.pb?.lay === 'video'; // 17.11.2026 video banner: süre sayacı yok, video bitince sıradakine geçer
   useEffect(() => { if (!vidNow) fsRef.current?.classList.remove('vid-idle'); }, [vidNow]);
+  // 17.11.2026 fare banner'ın üstündeyken (resimlerdeki gibi) video bitse de sıradakine geçmez; fare çıkınca kısa bir süre sonra geçer
+  const [vidDone, setVidDone] = useState(false);
+  useEffect(() => { setVidDone(false); }, [i]);
+  useEffect(() => { if (!vidDone || paused || hold || !vidNow || n < 2) return; const t = setTimeout(() => goTo((i + 1) % n), 1500); return () => clearTimeout(t); }, [vidDone, paused, hold, vidNow, i, n]);
   useEffect(() => {
     if (n < 2 || paused || hold || E || !vis || vidNow) return;
     since.current = Date.now();
@@ -1013,7 +1017,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const ownArrows = frame === 'story' || frame === 'deck';
   const pagerOn = !!pagerK && pagerK !== 'off';
   const inner = frame === 'story' ? (hxPhone ? '' : 'story') : frame === 'glow' ? (pagerOn ? 'glow' : '') : frame === '' && pagerOn ? 'p' : '';
-  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} on={k === i && vis} loop={n < 2} cur={k === i} onEnd={() => { if (k === i && !hold && !E) goTo((k + 1) % n); }} onProg={(p) => { if (k !== i) return; const v = p.toFixed(4); fsRef.current?.style.setProperty('--vp', v); fsRef.current?.closest('.hx-wrap')?.style.setProperty('--vp', v); }} onIdle={(x) => { if (k === i) fsRef.current?.classList.toggle('vid-idle', x); }} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
+  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} on={k === i && vis} loop={n < 2} cur={k === i} onEnd={() => { if (k !== i || E) return; if (hold || paused) setVidDone(true); else goTo((k + 1) % n); }} onProg={(p) => { if (k !== i) return; const v = p.toFixed(4); fsRef.current?.style.setProperty('--vp', v); fsRef.current?.closest('.hx-wrap')?.style.setProperty('--vp', v); }} onIdle={(x) => { if (k === i) fsRef.current?.classList.toggle('vid-idle', x); }} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
   // deste: parmakla sağa/sola çekince önceki/sonraki (tıklamayla karışmasın diye çekilmişse tık yutulur)
   const sw = useRef(null);
   const dkDown = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };

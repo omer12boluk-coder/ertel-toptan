@@ -247,8 +247,9 @@ function VideoBanner({ b, on, act, onEnd, loop, onProg, onIdle, cur }) {
     {src && <PlayVideo key={src} src={src} poster={pst} active={on} auto fit={b.fit || 'contain'} loop={loop} onTime={(x) => { const c = x >= at; setCta((o) => (o === c ? o : c)); }} onEnd={onEnd} />}
     {b.a1 && <div className="pb-vcta" style={{ position: 'absolute', left: 0, right: 0, top: ph ? '61%' : '64%', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: ph ? 16 : 18, opacity: cta ? 1 : 0, transform: cta ? 'none' : 'translateY(10px)', transition: 'opacity .6s ease, transform .6s ease', pointerEvents: cta ? 'auto' : 'none' }}>
       <button type="button" className="pb-b1" onClick={act(b.a1[1])} style={{ height: ph ? 44 : 50, padding: '0 28px', borderRadius: 999, background: '#fff', color: '#000', font: `600 ${ph ? 15 : 16}px/1 Inter, sans-serif`, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>{b.a1[0]} <Chev /></button>
-      {sigOn(b) && <img className="pb-sig-i pb-vsig" src={SIG_LOGO} alt="ERTEL" style={{ height: ph ? 40 : 52, width: 'auto', display: 'block', pointerEvents: 'none' }} />}
     </div>}
+    {/* 17.11.2026 imza: düğmenin altına sıkışmasın — bilgisayarda sağ alt köşe, telefonda alt orta (orijinal renk) */}
+    {b.a1 && sigOn(b) && <img className="pb-sig-i pb-vsig" src={SIG_LOGO} alt="ERTEL" style={{ position: 'absolute', zIndex: 2, bottom: ph ? '12%' : 34, ...(ph ? { left: '50%', transform: cta ? 'translateX(-50%)' : 'translate(-50%, 8px)' } : { right: 40, transform: cta ? 'none' : 'translateY(8px)' }), height: ph ? 32 : 40, width: 'auto', display: 'block', pointerEvents: 'none', opacity: cta ? 1 : 0, transition: 'opacity .6s ease .25s, transform .6s ease .25s' }} />}
   </div>;
 }
 
