@@ -54,21 +54,7 @@ export function startLogoSand(kind) {
     }, ret);
   };
   // başlangıç: kanvas önce düz resmin ÜSTÜNDE aynı resmi çizer (2 kare), sonra resim gizlenir → başta da flaş yok
-  // 17.11.2026 önizleme düzeltmesi 3 (emil.jsx, html.em-sand): kum cam menünün DIŞINA taşmasın → kanvas menü kutusuna kırpılır,
-  // kenara 10 px kala yumuşakça söner (mask). Kapalıyken eski hâl (taşar).
-  const clip = () => {
-    if (!cv) return;
-    const bar = cv.closest('.topbar-in') || cv.closest('.topbar');
-    if (!document.documentElement.classList.contains('em-sand') || !bar) { cv.style.maskImage = cv.style.webkitMaskImage = ''; return; }
-    const b = bar.getBoundingClientRect(), c = cv.getBoundingClientRect(), F = 10;
-    const t = Math.max(0, b.top - c.top), bt = Math.max(0, c.bottom - b.bottom), l = Math.max(0, b.left - c.left), r = Math.max(0, c.right - b.right);
-    const v = `linear-gradient(to bottom, transparent ${t}px, #000 ${t + F}px, #000 ${c.height - bt - F}px, transparent ${c.height - bt}px)`;
-    const h = `linear-gradient(to right, transparent ${l}px, #000 ${l + F}px, #000 ${c.width - r - F}px, transparent ${c.width - r}px)`;
-    cv.style.maskImage = cv.style.webkitMaskImage = v + ', ' + h;
-    cv.style.maskComposite = 'intersect'; cv.style.webkitMaskComposite = 'source-in';
-  };
   const show = (go) => {
-    clip();
     cv.style.transition = ''; cv.style.visibility = 'visible'; cv.style.opacity = '0'; eng.wake?.();
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (dead || !cv) return;

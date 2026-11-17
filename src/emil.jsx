@@ -10,14 +10,9 @@ export const EM_HOST = typeof location !== 'undefined' && (location.hostname.inc
 // [anahtar, no, başlık, ne değişti]
 export const EMS = [
   ['nav', '1', 'Menü yazıları okunur', 'Üst menüde Ürünler / Kalıp bulucu… %46 silik griydi (okunurluk 3:1). Şimdi %68 (5:1), üstüne gelince yine tam koyu.'],
-  ['btn', '2', 'Sağ üst düğmeler tek aile', 'Arama, sepet, ses, gece aynı yumuşak düğme (çerçevesiz, 40 px); Giriş yap tek renkli dolgu. Sepet tek satır.'],
-  ['sand', '3', 'Kum logo menünün içinde', 'Kum animasyonu cam menünün dışına taşmıyor; kenara yaklaşınca yumuşakça kayboluyor.'],
-  ['dots', '4', 'Banner seçici: büyük basma alanı + sayaç', 'Çubuklar 32 px yüksek basma alanı, seçili çubuk uzun; yanında "3 / 13" sayacı.'],
-  ['price', '5', 'Kartta 2 satır fiyat', 'Kartta "$8 +KDV" + "KDV dahil 403 ₺". "≈ 336 ₺" ve dolar KDV dahil kalktı (ürün sayfasında hepsi duruyor).'],
+  ['dots', '4', 'Banner seçici: akıcı geçiş', 'Seçili çubuk banner kayarken aynı anda yumuşakça uzar, eskisi kısalır; basma alanı büyük (32 px). Sayaç yok.'],
   ['hubm', '6', 'Ürünler açılışı (telefon)', 'Kutu yazısı resmin üstüne binmiyor; Tamir Ekipmanları alt kategorileri kesilmeden yana kayan tek satır.'],
   ['hubd', '7', 'Ürünler açılışı (bilgisayar)', 'Tamir Ekipmanları alt kategorileri dağınık haplar yerine düzgün liste (ok işaretli satırlar).'],
-  ['auth', '8', 'Giriş sayfası hizası', 'Giriş kartı üst menüyle aynı kenarda; giriş sayfasındayken menüdeki "Giriş yap" gizli (yeri korunur, kayma yok).'],
-  ['srch', '9', 'Listede arama adı net', 'Sayfadaki kutu "Bu listede ara: ad veya stok kodu" — üstteki genel aramayla karışmasın.'],
   ['anim', '10', 'Animasyon kuralları', 'Kapanışlar hızlı başlar (ease-in → ease-out), çekip yenile göstergesi sıfırdan değil 0,9\'dan küçülür, "transition: all" yok.'],
 ];
 const KEYS = EMS.map((x) => x[0]);
