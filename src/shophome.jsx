@@ -936,12 +936,13 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
     });
     io.observe(el); return () => io.disconnect();
   }, [n, deck]);
+  const vidNow = slides[i]?.pb?.lay === 'video'; // 17.11.2026 video banner: süre sayacı yok, video bitince sıradakine geçer
   useEffect(() => {
-    if (n < 2 || paused || hold || E || !vis) return;
+    if (n < 2 || paused || hold || E || !vis || vidNow) return;
     since.current = Date.now();
     const t = setTimeout(() => goTo((i + 1) % n), Math.max(300, left.current));
     return () => { clearTimeout(t); left.current -= Date.now() - since.current; };
-  }, [i, paused, hold, n, vis]);
+  }, [i, paused, hold, n, vis, vidNow]);
   // telefonda reklamlar arasında boşluk var (ayrık kartlar) → bir adım = genişlik + boşluk
   const step = (el) => el.clientWidth + (parseFloat(getComputedStyle(el).columnGap) || 0);
   // yazı giriş animasyonu (play): sadece reklam kendiliğinden / nokta-ok ile geldiğinde oynar. Parmakla kaydırırken yazı zaten
@@ -1009,7 +1010,7 @@ export function Hero({ slides, open, brands, heroH, pkHero, nv: nv0 = {}, onProd
   const ownArrows = frame === 'story' || frame === 'deck';
   const pagerOn = !!pagerK && pagerK !== 'off';
   const inner = frame === 'story' ? (hxPhone ? '' : 'story') : frame === 'glow' ? (pagerOn ? 'glow' : '') : frame === '' && pagerOn ? 'p' : '';
-  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
+  const renderSlide = (s, k) => s.pb ? <article key={s.pb.id} className={'sh-slide pb-slide' + (k === i ? ' on' : '') + (k === play ? (playBack ? ' ta-stay' : ' ta-go') : k === prevPlay ? ' ta-stay' : '')}><PhotoBanner b={s.pb} open={(l) => open(l)} onProduct={onProduct} on={k === i && vis} loop={n < 2} onEnd={() => { if (k === i && !hold && !E) goTo((k + 1) % n); }} /></article> : <Slide key={k} k={k} s={s} pkHero={pkHero} on={k === i} play={k === i && k === play} done={k === i && k === done} open={open} logo={slideLogo(s, brands)} />;
   // deste: parmakla sağa/sola çekince önceki/sonraki (tıklamayla karışmasın diye çekilmişse tık yutulur)
   const sw = useRef(null);
   const dkDown = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };

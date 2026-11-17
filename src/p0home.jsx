@@ -22,7 +22,7 @@ const sellable = (p) => p && p.a !== 0 && !p.so;
 // ---- 1 · Üçlü vitrin: büyük kutu (sırayla dönen reklamlar) + yanda iki küçük kampanya
 function Panel({ s, big, open, on = true, onProduct, edit }) {
   // 7.11.2026: Claude'un fotoğraflı bannerı (photobn.jsx) — kendi tuvalini çizer
-  if (s.pb) return <article className={'p0-pan big pb-pan' + (on ? ' on' : '')}><PhotoBanner b={s.pb} open={open} onProduct={onProduct} edit={edit} /></article>;
+  if (s.pb) return <article className={'p0-pan big pb-pan' + (on ? ' on' : '')}><PhotoBanner b={s.pb} open={open} onProduct={onProduct} edit={edit} on={on} /></article>;
   const bgp = BG_BY[s.bg];
   const lt = bgp ? bgp.ink === 'l' : LIGHT_TH.includes(s.theme);
   const cover = s.img && !isProdImg(s.img) && ['cover', 'glass'].includes(s.layout);
