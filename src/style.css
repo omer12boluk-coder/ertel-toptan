@@ -11840,3 +11840,38 @@ html.em-anim .ctx-sheet-bg.out .ctx-sheet, html.em-anim .nc-panel.out { animatio
 html.em-anim .gl-sw.gone > .gline, html.em-anim .gl-sw.gone > .mo-sw { transition-timing-function: cubic-bezier(.23, 1, .32, 1); }
 html.em-anim .ptr7.done .ptr7-c { transform: scale(.9); }
 html.em-anim .dz2-crop-img span { transition: left .25s var(--ease), top .25s var(--ease), width .25s var(--ease), height .25s var(--ease); }
+/* 11 · Ürün sayfası: adet 1 iken tekrar eden Toplam gizli (yeri korunur) */
+html.em-tot .pbuy-tot.q1 { visibility: hidden; }
+/* 12 · Ürün sayfası: büyük resim (bilgisayar) */
+@media (min-width: 900px) { html.em-gal .pdetail-page .pdetail { grid-template-columns: minmax(0, 42%) minmax(0, 1fr); gap: 32px; } }
+/* 13 · Telefonda alttaki satın al çubuğu (emil.jsx BuyBar; görünüm = sepet sayfasının .cart-bar'ı) */
+@media (max-width: 899px) { html.em-buy-on .cart-fab { display: none; } .em-buybar .btn { min-width: 150px; } }
+/* 14 · Teknik tablo: ince çizgi, sade */
+html.em-tbl .pdesc-body table { display: table; border-collapse: separate; border-spacing: 0; width: min(100%, 560px) !important; max-width: 560px; margin: 8px 0 18px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+html.em-tbl .pdesc-body :is(td, th) { border: 0; border-bottom: 1px solid var(--line-2, var(--line)); padding: 10px 14px; text-align: left; font-size: 14px; }
+html.em-tbl .pdesc-body tr:last-child :is(td, th) { border-bottom: 0; }
+html.em-tbl .pdesc-body th { background: var(--surface-2); font-weight: 600; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+html.em-tbl .pdesc-body td:first-child { color: var(--muted); width: 40%; }
+html.em-tbl .pdesc-body :is(h3, h4, p > b:only-child, p > strong:only-child) { display: inline-block; margin-top: 14px; }
+/* 15 · Sepet: 4 haneli adet sığar, büyük toplam sil düğmesine binmez */
+html.em-qty .gline .stepper.sm input { width: 4.6ch; min-width: 38px; }
+html.em-qty .gline-sum { min-width: 0; }
+html.em-qty .gline-sum b { white-space: nowrap; }
+@media (min-width: 900px) { html.em-qty .gline-ctl { grid-template-columns: 104px 128px 128px 36px; } }
+@media (max-width: 899px) { html.em-qty .gline-ctl { grid-template-columns: auto auto minmax(0, 1fr) 32px; gap: 8px; } html.em-qty .gline-sum b { font-size: clamp(14px, 4.4vw, 18px); } }
+/* 17 · Set sayfası ortalı, uyarı hizalı */
+@media (min-width: 900px) { html.em-set .set-page { margin-inline: auto; } }
+html.em-set .set-page .banner.warn { margin-left: 0; margin-right: 0; }
+/* 18 · Kalıp bulucu başlığı diğer sayfalar gibi; sürüm yazısı gizli */
+html.em-kf .kf-ic { display: none; }
+html.em-kf .kf-head-t h1 { font: 600 clamp(32px, 4vw, 52px)/1.04 'Inter Tight', var(--f-display); letter-spacing: -.035em; }
+html.em-kf .kf-head-t h1::after { content: "."; }
+@media (max-width: 899px) { html.em-kf .kf-head-t h1 { font-size: 34px; } }
+html.em-kf .kf-ver { display: none; }
+/* 19 · Ürünler açılışı: daha hızlı giriş (~0,7 sn) */
+html.em-hubfast .pbn-in :is(.pmo-t, .pmo-set) { animation-duration: .42s; animation-delay: calc(.08s + var(--d, 0s) * .45); }
+html.em-hubfast .pbn-in .pmo-iw { animation-duration: .48s; animation-delay: calc(.14s + var(--d, 0s) * .45); }
+html.em-hubfast .pbn-in .pbn-sh { animation-duration: .4s; animation-delay: calc(.3s + var(--d, 0s) * .45); }
+/* 20 · Gece modunda banner hafif kısık (perde; filtre değil — performans) */
+html.em-bndk[data-theme=dark] .sh-hero { position: relative; }
+html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; border-radius: inherit; background: rgb(8 10 14 / .14); }

@@ -19,6 +19,7 @@ import { GuestGuide } from './guestcart.jsx';
 import { useTwin, useTwinSum, tl2 } from './storepay.jsx';
 import { ShareBtn, NotifyBtn, NotifyBox, PairRail, CatTop, outOfStock, feat, shareMenu, togglePin, isPinned, seenWait } from './extras.jsx';
 import { RatingLine, Reviews } from './reviews.jsx';
+import { useEm } from './emil.jsx';
 import { SetGrid, InSets, liveSets, ProductsSwitch, SetCard, searchSets, openSet } from './sets.jsx';
 
 export function useTree() {
@@ -91,9 +92,9 @@ function useCountUp(target, ms = 420) {
   }, [target, ms]);
   return v;
 }
-function BuyTotal({ v, cur, card }) {
+function BuyTotal({ v, cur, card, q }) {
   const x0 = useCountUp(v); const x = Number.isInteger(v) ? Math.round(x0) : Math.round(x0 * 100) / 100; // tam sayı fiyatta ara kareler kuruşsuz
-  return <span className="pbuy-tot"><small>Toplam</small><b className="num">{fmt(x, cur)}</b><PriceExtras v={x} cur={cur} />{card != null && <span className="tw-tot num">Kredi kartı tek çekim <b>{tl2(card)}</b></span>}</span>;
+  return <span className={'pbuy-tot' + (q === 1 && card == null ? ' q1' : '')}><small>Toplam</small><b className="num">{fmt(x, cur)}</b><PriceExtras v={x} cur={cur} />{card != null && <span className="tw-tot num">Kredi kartı tek çekim <b>{tl2(card)}</b></span>}</span>;
 }
 // 8.11.2026 İkiz fiyat: ürün sayfasında fiyatın yanında Havale/EFT ve kredi kartı tek çekim (KDV dahil TL, 1 adet)
 function TwinBox({ t }) {
@@ -556,6 +557,7 @@ export function Catalog({ admin }) {
   const shown = list.slice(0, limit);
   const cartCount = Object.keys(cart).length;
   const setN = useStore((st) => (st.user?.role === 'public' ? liveSets(st.settings).length : 0));
+  const emBrand = useEm('brand'); // 17.11.2026 önizleme düzeltmesi 16 (emil.jsx): marka sayfası başlığı
   // 31.10.2026: ürün listesi ayrı tutulur → ürüne dokunup pencere açılınca (setOpen / setEdit) bütün liste yeniden çizilmez
   // (telefonda dokunuşu 'takılmış' hissettiren asıl sebep buydu). Satırlar sepet/favori gibi değişiklikleri kendileri izler.
   const addCls = cardCls(S, user?.role);
@@ -578,7 +580,7 @@ export function Catalog({ admin }) {
   const hubBack = !pv2 && !admin && user?.role === 'public' && S.look?.prodHub && hubOff;
   const fN = (brand ? 1 : 0) + (price ? 1 : 0) + (showOos ? 1 : 0) + (newOnly ? 1 : 0) + (favOnly ? 1 : 0) + (setsOnly ? 1 : 0);
   const scopeBrands = pv2 ? (() => { const m = new Map(); for (const p of all) if (p.b && (cat == null || pcats.get(p.id)?.has(cat))) m.set(p.b, (m.get(p.b) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); })() : null;
-  const catTitle = cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : 'Tüm ürünler';
+  const catTitle = cat != null ? tree.nodes.get(cat)?.name || catName(S, cat) : emBrand && brand ? brand : 'Tüm ürünler';
   return (
     <div className="catalog">
       {hubBack && <button className="back-btn cat-hub-back" onClick={() => hubSwap(() => store.set({ catalogGo: { hub: true } }), 'l')}><Icon n="back" s={16} /><span>Kategoriler</span></button>}
@@ -586,7 +588,7 @@ export function Catalog({ admin }) {
       {admin && <div className="page adm-sub prod-top"><PageHead title="Ürünler" extra={<span className="muted"> · {all.length}</span>} /><ProductsSwitch on="products" /></div>}
       {pv2 && <div className="pv2-head">
         {/* 7.11.2026: konum satırı HER ZAMAN var (Tüm ürünlerde 'Ana sayfa › Ürünler') → kategori değişince başlık yerinden oynamaz */}
-        <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button>{S.look?.prodHub ? <span><i>›</i><button type="button" onClick={() => hubSwap(() => { setHubOff(false); window.scrollTo(0, 0); }, 'l')}>Ürünler</button></span> : <span><i>›</i>Ürünler</span>}<span><i>›</i><b>Tüm ürünler</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
+        <nav className="pv2-crumb" aria-label="Konum">{cat == null ? <><button type="button" onClick={() => go('anasayfa')}>Ana sayfa</button>{S.look?.prodHub ? <span><i>›</i><button type="button" onClick={() => hubSwap(() => { setHubOff(false); window.scrollTo(0, 0); }, 'l')}>Ürünler</button></span> : <span><i>›</i>Ürünler</span>}<span><i>›</i><b>{catTitle}</b></span></> : <><button type="button" onClick={() => setCat(null)}>Ürünler</button>{tree.ancestors(cat).slice(1).reverse().map((id) => <span key={id}><i>›</i><button type="button" onClick={() => setCat(id)}>{tree.nodes.get(id)?.name}</button></span>)}<span><i>›</i><b>{catTitle}</b></span></>}</nav>
         {/* 7.11.2026 (2): arama başlık satırında (bilgisayarda başlıkla ortada hizalı); Filtrele/Sırala/etiketler kategorilerin ÜSTÜNDE → alt kategori satırı açılınca sadece ürünler kayar */}
         <div className="pv2-trow">
           <div className="pv2-tt">
@@ -1257,7 +1259,7 @@ function ProductBody({ p, viewOnly, onDone, onPick }) {
           <div className="qty-line">
             <span>Adet</span>
             <Stepper value={qty} min={1} onChange={setQ} onRemove={cart[p.id] ? () => { setQty(p.id, 0); toast('Sepetten çıkarıldı'); } : undefined} />
-            {pr.mine != null && <BuyTotal v={pr.mine * qty} cur={p.cur} card={twQ ? twQ.c : null} />}
+            {pr.mine != null && <BuyTotal v={pr.mine * qty} cur={p.cur} card={twQ ? twQ.c : null} q={qty} />}
           </div>
           <div className="pbuy-btns">
             {cart[p.id] && cart[p.id] === qty
