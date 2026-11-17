@@ -1476,8 +1476,11 @@ export function VideoThumb({ src: src0, poster }) {
 // Video: sitenin kendi oynatıcısı gibi (tarayıcı düğmeleri yok). Görünürken sessiz ve döngülü oynar, dokununca
 // durur/devam eder, köşede ses ve büyütme düğmesi, altta ilerleme çizgisi. Büyüt → tam ekran izleme (VideoViewer).
 // Ürün penceresi (galeri) ve mağaza ana sayfasındaki video bölümü bunu kullanır.
-export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', auto = true, className = '', loop = true, onTime, onEnd }) {
+export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', auto = true, className = '', loop = true, onTime, onEnd, still = false }) {
   const src = mediaUrl(src0);
+  // still: video bitince son kare resim gibi kalır (banner) — oynat düğmesi / kontroller çıkmaz, tıklayınca baştan başlamaz
+  const [done, setDone] = useState(false);
+  const fin = still && done;
   const v = useRef(null);
   const [muted, setMuted] = useState(auto); // dokununca oynayanlar sesli başlar
   const [playing, setPlaying] = useState(false);
@@ -1503,12 +1506,12 @@ export function PlayVideo({ src: src0, poster, active = true, fit = 'cover', aut
   return (
     <div className={'gal-vid' + (playing ? ' playing' : '') + (started ? ' started' : ' fresh') + ' ' + className}>
       <video ref={v} src={live ? src : undefined} poster={pst} muted={muted} loop={loop} playsInline preload="metadata" disablePictureInPicture controlsList="nodownload noplaybackrate nofullscreen"
-        style={{ objectFit: fit }} onPlay={() => { setPlaying(true); setStarted(true); }} onPause={() => setPlaying(false)} onError={(e) => { if (!fbSkip(e)) setErr(true); }}
-        onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); onTime?.(e.currentTarget.currentTime); }} onEnded={() => onEnd?.()} onClick={() => !big && toggle()} />
-      {!playing && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={started ? 24 : 17} /></button>}
-      {started && <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>}
-      {started && <button className="gal-vid-big" onClick={open} aria-label="Büyüt" title="Büyük izle"><Icon n="full" s={17} /></button>}
-      {started && <div className={'gal-vid-seek' + (seek != null ? ' on' : '')} ref={bar} role="slider" aria-label="Sar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((seek ?? prog) * 100)}
+        style={{ objectFit: fit }} onPlay={() => { setPlaying(true); setStarted(true); setDone(false); }} onSeeking={(e) => { if (e.currentTarget.currentTime < (e.currentTarget.duration || 1e9) - .05) setDone(false); }} onPause={() => setPlaying(false)} onError={(e) => { if (!fbSkip(e)) setErr(true); }}
+        onTimeUpdate={(e) => { const d = e.currentTarget.duration; if (d) setProg(e.currentTarget.currentTime / d); onTime?.(e.currentTarget.currentTime); }} onEnded={() => { setDone(true); onEnd?.(); }} onClick={() => !big && !fin && toggle()} />
+      {!playing && !fin && <button className="gal-vid-play" onClick={toggle} aria-label="Oynat"><Icon n="play" s={started ? 24 : 17} /></button>}
+      {started && !fin && <button className="gal-vid-snd" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Sesi aç' : 'Sesi kapat'}><Icon n={muted ? 'mute' : 'sound'} s={17} /></button>}
+      {started && !fin && <button className="gal-vid-big" onClick={open} aria-label="Büyüt" title="Büyük izle"><Icon n="full" s={17} /></button>}
+      {started && !fin && <div className={'gal-vid-seek' + (seek != null ? ' on' : '')} ref={bar} role="slider" aria-label="Sar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((seek ?? prog) * 100)}
         onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); const x = at(e); setSeek(x); jump(x); }}
         onPointerMove={(e) => { if (seek == null) return; const x = at(e); setSeek(x); jump(x); }}
         onPointerUp={() => setSeek(null)} onPointerCancel={() => setSeek(null)}
