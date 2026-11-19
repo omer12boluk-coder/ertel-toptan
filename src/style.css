@@ -9876,6 +9876,70 @@ body.eh-lock{overflow:hidden}
   /* 14.11.2026: logo + yazılar yukarıda; altta boşluk (kaydırıcı başparmağa yakın) */
   .eh-spacer2{display:block;flex:0 0 max(12cqh,calc(env(safe-area-inset-bottom) + 56px))}
 }
+/* ---- 19.11.2026 Giriş sayfası ekleri (herogate.jsx brand.gate; canlıda varsayılan kapalı) ---- */
+.eh-a6{animation-delay:2s}
+.eh-nav-r{display:flex;align-items:center;gap:10px}
+.eh-login{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px 0 12px;border:0;border-radius:999px;cursor:pointer;font:inherit;font-size:14px;font-weight:600;letter-spacing:-.01em;
+  color:var(--eh-fg);background:color-mix(in srgb,var(--eh-fg) 8%,transparent);transition:background-color .25s;-webkit-tap-highlight-color:transparent;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.eh-login:hover{background:color-mix(in srgb,var(--eh-fg) 13%,transparent)}
+.eh-login svg{flex:none;color:var(--eh-acc)}
+.eh-cut{margin:8px 0 0;font-size:13px;color:var(--eh-sub);letter-spacing:-.005em}
+/* bilgisayar: sol sütunda başlığın altında arama + kısayollar yan yana; sağ sütun (açıklama, sayılar, düğme) iki satır boyunca alta yaslı */
+.eh-hasq .eh-content>div:first-child{grid-column:1;grid-row:1}
+.eh-hasq .eh-aside{grid-column:2;grid-row:1/3;align-self:end}
+.eh-quick{grid-column:1;grid-row:2;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-top:calc(-1 * clamp(24px,4cqw,72px) + 26px)}
+.eh-quick .eh-search{flex:0 1 340px;min-width:260px}
+.eh-search{position:relative;display:flex;align-items:center;height:46px;border-radius:999px;padding:0 6px 0 16px;gap:10px;color:var(--eh-sub);
+  background:color-mix(in srgb,var(--eh-fg) 6%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--eh-fg) 8%,transparent);transition:box-shadow .2s,background-color .2s}
+.eh-search:focus-within{background:var(--eh-bg);box-shadow:inset 0 0 0 1.5px var(--eh-acc),0 6px 20px -10px color-mix(in srgb,var(--eh-acc) 60%,transparent)}
+.eh-search svg{flex:none}
+.eh-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--eh-fg);font:inherit;font-size:15px;letter-spacing:-.01em;-webkit-appearance:none;appearance:none}
+.eh-search input::placeholder{color:var(--eh-sub);opacity:.85}
+.eh-search input::-webkit-search-cancel-button{display:none}
+.eh-search button{flex:none;display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:50%;background:var(--eh-acc);color:#fff;cursor:pointer}
+.eh-cats{display:flex;flex-wrap:wrap;gap:6px 8px}
+.eh-cats button{height:30px;padding:0 12px;border:0;border-radius:999px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;letter-spacing:-.005em;color:var(--eh-fg);
+  background:transparent;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--eh-fg) 14%,transparent);transition:background-color .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent}
+.eh-cats button:hover{background:color-mix(in srgb,var(--eh-fg) 6%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--eh-fg) 22%,transparent)}
+.eh-foot{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 22px;
+  padding:14px max(clamp(20px,3.2cqw,48px),calc((100cqw - 1080px)/2)) max(16px,env(safe-area-inset-bottom));font-size:12.5px;color:var(--eh-sub);letter-spacing:-.005em;
+  border-top:1px solid color-mix(in srgb,var(--eh-fg) 7%,transparent)}
+.eh-foot a,.eh-foot button{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:2px 0;font:inherit;color:inherit;cursor:pointer;text-decoration:none;transition:color .2s}
+.eh-foot a:hover,.eh-foot button:hover{color:var(--eh-fg)}
+.eh-foot a svg{color:#25d366}
+.eh-copy{opacity:.75}
+.eh-root.leaving .eh-foot,.eh-root.leaving .eh-try{opacity:0;transition:opacity .3s}
+/* şerit varken alt pay en az şerit kadar (yazılar şeridin üstünde kalsın) */
+.eh-hasfoot .eh-spacer2{display:block;flex:0 0 clamp(72px,11cqh,140px)}
+/* önizleme paneli */
+.eh-try{position:absolute;left:max(14px,env(safe-area-inset-left));top:max(18px,env(safe-area-inset-top));z-index:5;font-size:13px;font-family:var(--eh-font);touch-action:auto}
+.eh-try-tg{height:32px;padding:0 12px;border:0;border-radius:999px;background:#1d1d1f;color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.eh-try-box{position:absolute;left:0;top:40px;width:min(320px,calc(100vw - 28px));background:#fff;color:#1d1d1f;border-radius:14px;padding:14px;box-shadow:0 18px 50px -12px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:8px}
+.eh-try-box>small{color:#6e6e73;margin-top:-6px}
+.eh-try-box label{display:flex;align-items:center;gap:9px;cursor:pointer;line-height:1.3}
+.eh-try-box input[type=checkbox]{width:17px;height:17px;flex:none;accent-color:#2f55b0}
+.eh-try-in{justify-content:space-between}
+.eh-try-in input{width:96px;height:30px;border:1px solid #d2d2d7;border-radius:8px;padding:0 8px;font:inherit;font-size:16px}
+.eh-try-ft{display:flex;gap:8px;margin-top:4px}
+.eh-try-ft button{flex:1;height:34px;border:0;border-radius:9px;background:#f0f0f3;color:#1d1d1f;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.eh-try-ft .pri{background:#2f55b0;color:#fff}
+@container (max-width:1023px){
+  .eh-hasq .eh-content>div:first-child,.eh-hasq .eh-aside,.eh-quick{grid-column:1;grid-row:auto}
+  .eh-quick{max-width:520px;flex-direction:column;align-items:stretch;margin-top:-10px}
+  .eh-quick .eh-search{flex:none;min-width:0}
+}
+@container (max-width:639px){
+  .eh-quick{margin-top:-12px;gap:10px}
+  .eh-search{height:44px}
+  .eh-search input{font-size:16px} /* iPhone: 16 px altı yazıda kutuya dokununca sayfa büyüyor */
+  .eh-cats{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:0 20px;touch-action:pan-x}
+  .eh-cats::-webkit-scrollbar{display:none}
+  .eh-cats button{flex:none}
+  .eh-foot{gap:2px 14px;font-size:11.5px;padding-top:10px}
+  .eh-copy{display:none}
+  .eh-hasfoot .eh-spacer2{flex-basis:max(64px,calc(env(safe-area-inset-bottom) + 48px))}
+  .eh-login{height:32px;font-size:13px;padding:0 12px 0 10px}
+}
 @media (prefers-reduced-motion:reduce){
   .eh-a,.eh-hint{animation:none;opacity:1;transform:none}
   .eh-canvas,.eh-fallback,.eh-btn,.eh-btn svg{transition:none}

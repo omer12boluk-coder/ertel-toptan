@@ -692,7 +692,7 @@ const secKey = (k) => (k && (SEC_BY[k] ? k : ALIAS[k])) || null;
 const groupOf = (k) => SEC_BY[k]?.[4] || null;
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için; 'a.b' = alt alan)
 const SEC_KEYS = {
-  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.heroGate', 'look.anim.flySty', 'look.anim.bnIn', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
+  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.heroGate', 'look.anim.flySty', 'look.anim.bnIn', 'brand.gate', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
   anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], talep: ['requests'],
   katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.pageSizeM', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
   resim: ['catalog.imageThumb', 'catalog.imageLarge'],
@@ -864,6 +864,16 @@ export function Settings() {
           {d.brand.heroGate !== false && <Field label="Banner nasıl açılsın" hint="Giriş sayfasından mağazaya geçerken ilk banner">
             <select id="s-gbn" value={d.look?.anim?.bnIn ?? 'iris'} onChange={(e) => set('look.anim.bnIn', e.target.value)}>{BN_OPTS.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
           </Field>}
+          {/* 19.11.2026 giriş sayfası ekleri (brand.gate, herogate.jsx GATE_OPTS); varsayılan hepsi kapalı = bugünkü sayfa */}
+          {d.brand.heroGate !== false && <>
+            <Toggle id="s-g-ghost" label="Giriş: arkadaki dev “ertel” yazısını kaldır" hint="Logo “ert mobile” yazarken arkada gri “ertel” yazısı üst üste biniyordu" checked={d.brand.gate?.ghost === 'off'} onChange={(v) => set('brand.gate.ghost', v ? 'off' : '')} />
+            <Toggle id="s-g-login" label="Giriş: sağ üstte “Giriş yap”" hint="Üye girişliyse “Merhaba, Ad” yazar; Hesabım açılır" checked={!!d.brand.gate?.login} onChange={(v) => set('brand.gate.login', v)} />
+            <Toggle id="s-g-search" label="Giriş: arama kutusu" hint="Yazıp Enter'a basınca mağaza o aramanın sonuçlarıyla açılır" checked={!!d.brand.gate?.search} onChange={(v) => set('brand.gate.search', v)} />
+            <Toggle id="s-g-cats" label="Giriş: kategori kısayolları" hint="Havya · Mikroskop · Entegre · Kalıp bulucu" checked={!!d.brand.gate?.cats} onChange={(v) => set('brand.gate.cats', v)} />
+            <Toggle id="s-g-foot" label="Giriş: en altta ince şerit" hint="WhatsApp destek ve çalışma saatleri (Mağaza ayarlarındaki değerler; boşsa görünmez), KVKK, Çerez politikası, şirket unvanı" checked={!!d.brand.gate?.foot} onChange={(v) => set('brand.gate.foot', v)} />
+            <Toggle id="s-g-enter" label="Giriş: Enter ile alışverişe başla" hint="Bilgisayarda klavyeden Enter'a basınca mağaza açılır" checked={!!d.brand.gate?.enter} onChange={(v) => set('brand.gate.enter', v)} />
+            <Field label="Aynı gün kargo son saati" hint="Örn. 16:00 → “Saat 16:00 öncesi siparişler aynı gün kargoda.” Boş bırakılırsa görünmez"><input id="s-g-cut" type="text" value={d.brand.gate?.cutoff || ''} placeholder="16:00" onChange={(e) => set('brand.gate.cutoff', e.target.value)} /></Field>
+          </>}
           <Toggle id="s-splash" label="Açılış ekranı" hint="Mağaza ve bayi uygulaması açılırken kısa süre logolu açılış ekranı görünür (oturumda bir kez, dokununca geçer)" checked={d.brand.splashOn !== false} onChange={(v) => set('brand.splashOn', v)} />
           {d.brand.splashOn !== false && <Field label="Arka plan"><div className="spl-pick">{Object.entries(SPLASH_STYLES).map(([k, v]) => <button type="button" key={k} className={'spl-opt' + ((d.brand.splashStyle || 'white') === k ? ' on' : '')} onClick={() => set('brand.splashStyle', k)}><span className={'spl-sw sp-' + k}><i /></span>{v.n}</button>)}</div></Field>}
           {d.brand.splashOn !== false && <Field label="Görünme süresi" hint="En az bu kadar görünür; dokununca hemen geçer. Site daha geç yüklenirse en fazla 3 sn daha bekler."><span className="she-scale"><input type="range" min="0.5" max="6" step="0.1" value={Number(d.brand.splashSec) || 1.4} onChange={(e) => set('brand.splashSec', Number(e.target.value))} /><code>{(Number(d.brand.splashSec) || 1.4).toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} sn</code></span></Field>}

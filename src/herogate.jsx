@@ -6,9 +6,11 @@
 //   localStorage 'hero-gate'den okunur (kapalıyken bir an görünmesin).
 // - Sınıf öneki 'eh-' (dikkat: '.sh-' önekli kurallar telefonda touchHoverToActive tarafından silinir).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useStore, store } from './store.js';
+import { useStore, store, go as goTab } from './store.js';
 import { ls } from './utils.js';
-import { ROUTE, lpath } from './route.js';
+import { ROUTE, lpath, waLink } from './route.js';
+import { openLegal } from './legalui.jsx';
+import { openKalip } from './navdrop.jsx';
 import { LiquidEngine } from './liquid.js';
 import { gateFx } from './anim.jsx';
 import { useVisibleProducts } from './catalog.jsx';
@@ -382,8 +384,11 @@ function WordRoll() {
       el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-.35em)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
         // 'burada.' kayması yumuşak başla-bitir 560 ms (EZ ilk karelerde fırlatıyordu: 'sert')
         if (dead) return; const x0 = after ? after.getBoundingClientRect().left : 0; el.textContent = w; cur.current = w;
-        if (after) { const dx = x0 - after.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) after.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 560, easing: 'cubic-bezier(.45,.05,.25,1)' }); }
-        el.animate([{ opacity: 0, transform: 'translateY(.35em)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: EZ, fill: 'forwards' }).onfinish = () => { if (!dead) t = setTimeout(step, i === list.length - 1 ? 2200 : 1100); };
+        // 19.11.2026: uzun kelime gelirken (ör. 'mikroskobu') 'burada.' daha kaymadan yeni kelime beliriyor, bir an üst üste
+        // görünüyordu → 'burada.' sağa kayacaksa yeni kelime kaymanın büyük kısmı bitince belirir (sıra: önce kay, sonra belir)
+        let wait = 0;
+        if (after) { const dx = x0 - after.getBoundingClientRect().left; if (Math.abs(dx) > 0.5) { after.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: 560, easing: 'cubic-bezier(.45,.05,.25,1)' }); if (dx < 0) wait = 380; } }
+        el.animate([{ opacity: 0, transform: 'translateY(.35em)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: wait, easing: EZ, fill: 'both' }).onfinish = () => { if (!dead) t = setTimeout(step, i === list.length - 1 ? 2200 : 1100); };
       };
     };
     t = setTimeout(step, 2600);
@@ -405,6 +410,75 @@ function GateNums() {
   const [d] = useState(() => Math.max(0, 1850 - (performance.now() - gateT0))); // satır belirdiği anda başla (veri geç gelirse hemen)
   if (!n) return null;
   return <p className="eh-nums"><span><Count n={n} delay={d} /> ürün</span><span><Count n={b} delay={d + 120} /> marka</span><span><b>aynı gün</b> kargo</span></p>;
+}
+
+// ---- 19.11.2026 Giriş sayfası ekleri (brand.gate; canlıda varsayılan HEPSİ KAPALI = bugünkü sayfa) ----
+// Kullanıcı: 'çiğ geliyor, eksikleri tamamla; önizleme olarak ver, ayarlardan kapatılabilsin'. Sunum:
+// https://claude.ai/artifact/2d7Dd82JCB5aQg75Z77aYN
+//  ghost  '' bugünkü dev 'ertel' yazısı | 'off' kaldır (logo 'ert mobile' yazarken arkada 'ertel' üst üste biniyordu)
+//  login  sağ üstte 'Giriş yap' (üyeyse 'Merhaba, Ad') → Hesabım
+//  search 'Ne arıyorsun?' kutusu → mağaza aramanın sonuçlarıyla açılır (mağazanın kendi araması; ek okuma yok)
+//  cats   kategori kısayolları (Havya, Mikroskop, Entegre, Kalıp bulucu)
+//  foot   en altta ince şerit: WhatsApp · çalışma saatleri (Ayarlar › Mağaza'daki değerler; boşsa görünmez) · KVKK · Çerez · unvan
+//  enter  bilgisayarda Enter = Alışverişe başla
+//  cutoff aynı gün kargo son saati (ör. '16:00'; boşsa görünmez)
+// Önizleme adresinde (adında '--' olan ya da ?giris) sol altta 'Giriş sayfası' paneli: bu cihazda aç/kapat (ls 'gate-try'),
+// panel canlı ayarı ezer ve varsayılanı HEPSİ AÇIK'tır.
+export const GATE_OPTS = [
+  ['ghost', 'Arkadaki dev “ertel” yazısını kaldır'],
+  ['login', 'Sağ üstte “Giriş yap”'],
+  ['search', '“Ne arıyorsun?” arama kutusu'],
+  ['cats', 'Kategori kısayolları'],
+  ['foot', 'En altta ince şerit (WhatsApp, saatler, yasal)'],
+  ['enter', 'Enter ile alışverişe başla (bilgisayar)'],
+];
+const GATE_TRY = (() => { try { return /--/.test(location.hostname) || /[?&]giris\b/.test(location.search); } catch { return false; } })();
+const GATE_CATS = [['Havya', 5], ['Mikroskop', 14], ['Entegre', 6], ['Kalıp bulucu', 'kalip']];
+function readGateTry() { const v = ls.get('gate-try', null); return v && typeof v === 'object' ? v : { ghost: true, login: true, search: true, cats: true, foot: true, enter: true, cutoff: '' }; }
+// ayarı tek biçime çevirir: { ghost: bool (kaldır), login, search, cats, foot, enter: bool, cutoff: '' }
+function gateCfg(G, tryV) {
+  if (tryV) return tryV;
+  const g = G || {};
+  return { ghost: g.ghost === 'off', login: !!g.login, search: !!g.search, cats: !!g.cats, foot: !!g.foot, enter: !!g.enter, cutoff: String(g.cutoff || '').trim() };
+}
+function GateSearch({ onGo }) {
+  const [q, setQ] = useState('');
+  const sub = (e) => { e.preventDefault(); const v = q.trim(); if (v) onGo(v); };
+  return (
+    <form className="eh-search" role="search" onSubmit={sub}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+      <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Parça ya da model ara" aria-label="Ürün ara" enterKeyHint="search" autoComplete="off" />
+      {q.trim() && <button type="submit" aria-label="Ara"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button>}
+    </form>
+  );
+}
+function GateFoot({ onLegal }) {
+  const S = useStore((s) => s.settings);
+  const wa = S?.shop?.whatsapp, hours = S?.shop?.hours, F = S?.footer || {};
+  return (
+    <footer className="eh-foot eh-a eh-a6">
+      {wa && <a href={waLink(wa, '')} target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" /></svg>WhatsApp destek</a>}
+      {hours && <span>{hours}</span>}
+      <button type="button" onClick={() => onLegal('kvkk')}>KVKK</button>
+      <button type="button" onClick={() => onLegal('gizlilik')}>Çerez politikası</button>
+      <span className="eh-copy">© {new Date().getFullYear()} {F.company || 'Ertel Telekomünikasyon'}</span>
+    </footer>
+  );
+}
+function GateTryPanel({ v, set }) {
+  const [open, setOpen] = useState(false);
+  const replay = () => { try { sessionStorage.removeItem('hero-seen'); } catch {} location.reload(); };
+  return (
+    <div className={'eh-try' + (open ? ' open' : '')}>
+      {open && <div className="eh-try-box" role="dialog" aria-label="Giriş sayfası denemesi">
+        <b>Giriş sayfası · önizleme</b><small>Sadece bu cihazda. Canlı ayar: Ayarlar › Genel › Giriş sayfası</small>
+        {GATE_OPTS.map(([k, t]) => <label key={k}><input type="checkbox" checked={!!v[k]} onChange={(e) => set({ ...v, [k]: e.target.checked })} /><span>{t}</span></label>)}
+        <label className="eh-try-in"><span>Aynı gün kargo son saati</span><input type="text" value={v.cutoff || ''} placeholder="ör. 16:00" onChange={(e) => set({ ...v, cutoff: e.target.value })} /></label>
+        <div className="eh-try-ft"><button type="button" onClick={() => set(Object.fromEntries(GATE_OPTS.map(([k]) => [k, false])))}>Hepsini kapat</button><button type="button" className="pri" onClick={replay}>Baştan oynat</button></div>
+      </div>}
+      <button type="button" className="eh-try-tg" onClick={() => setOpen((o) => !o)}>{open ? 'Kapat' : 'Önizleme ayarları'}</button>
+    </div>
+  );
 }
 
 const SRC = '/bn/hero-logo-wide.webp', MOBILE_SRC = '/bn/hero-logo-mark.webp';
@@ -440,6 +514,11 @@ export function HeroGate({ onOpen, onDone }) {
   const coarse = typeof matchMedia === 'function' && matchMedia('(hover: none), (pointer: coarse)').matches;
   const look = useStore((s) => s.settings?.look); const logoSrc = useStore((s) => s.settings?.brand?.logo) || LOGO_MARK;
   const fx = gateFx(look);
+  // 19.11.2026 ekler (brand.gate); önizlemede panel ayarı ezer
+  const [tryV, setTryV] = useState(() => (GATE_TRY ? readGateTry() : null));
+  const setTry = (v) => { ls.set('gate-try', v); setTryV(v); };
+  const G = gateCfg(useStore((s) => s.settings?.brand?.gate), tryV);
+  const member = useStore((s) => s.member);
   useState(() => { gateT0 = performance.now(); });
   useEffect(() => { preloadMark(); }, []);
   // kum uçuşu açıksa küçük logonun kum motoru giriş sayfası açıkken, boşta önceden kurulur (basınca kurmak donduruyordu)
@@ -508,7 +587,7 @@ export function HeroGate({ onOpen, onDone }) {
     const pos = (e) => { const b = root.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const mark = () => { root.dataset.touched = '1'; };
     const mv = (e) => { const t = e.pointerType === 'touch'; if (t && e.buttons === 0 && e.pressure === 0) return; const [x, y] = pos(e); engine?.pointer('move', x, y, t); mark(); };
-    const dn = (e) => { if (e.target.closest('button,a')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
+    const dn = (e) => { if (e.target.closest('button,a,input,label,form,.eh-try')) return; const [x, y] = pos(e); engine?.pointer('down', x, y, e.pointerType === 'touch'); mark(); };
     const up = (e) => { const [x, y] = pos(e); engine?.pointer('up', x, y, e.pointerType === 'touch'); };
     const lv = (e) => { const [x, y] = pos(e); engine?.pointer('leave', x, y, e.pointerType === 'touch'); };
     root.addEventListener('pointermove', mv, { passive: true }); root.addEventListener('pointerdown', dn, { passive: true });
@@ -528,7 +607,8 @@ export function HeroGate({ onOpen, onDone }) {
   // 14.11.2026 (4) Açılış geçişi: büyük logo eskisi gibi hızla dağılır; dağılırken ORTADA küçük 'e' buğudan netleşerek belirir
   // (düz resim, CSS) → mağaza arkada çizilir → küçük logo menüdeki yerine kayar. Kumla yeniden kurma (liquid.js gather) DONDURUYOR
   // ve yavaştı (kullanıcı) → kullanılmıyor; kumun menüye akması / menüde toplanması da reddedildi.
-  const go = () => {
+  // then: mağaza açılmadan hemen önce çalışır (arama / kategori / Hesabım / yasal metin) → mağaza doğrudan o sayfayla çizilir
+  const go = (then) => {
     if (leaving || goneRef.current) return; goneRef.current = true;
     const eng = engRef.current, root = rootRef.current;
     const kf = !!(fx.flow && eng?.ready && !eng.lost && root?.dataset.gl === 'on');
@@ -541,6 +621,7 @@ export function HeroGate({ onOpen, onDone }) {
     const t0 = performance.now();
     const open = () => {
       if (!kf) engRef.current?.stop();
+      if (typeof then === 'function') { try { then(); } catch {} }
       onOpen();
       whenCalm(() => {
         // kum: mağaza ÖNCE çizilir (logo o sırada kıpırdamaz → çizim donması görünmez), telefon rahatlayınca çözülme başlar
@@ -578,16 +659,33 @@ export function HeroGate({ onOpen, onDone }) {
     Promise.all([fl?.done, new Promise((r) => setTimeout(r, wait))]).then(() => requestAnimationFrame(() => requestAnimationFrame(open)));
   };
 
+  // Enter = Alışverişe başla (bilgisayar; yazı kutusundayken / panelde değil)
+  const goRef = useRef(go); goRef.current = go;
+  useEffect(() => {
+    if (!G.enter) return undefined;
+    const k = (e) => { if (e.key !== 'Enter' || e.isComposing || e.target.closest?.('input,textarea,button,a,.eh-try')) return; e.preventDefault(); goRef.current(); };
+    addEventListener('keydown', k); return () => removeEventListener('keydown', k);
+  }, [G.enter]);
+  const toSearch = (q) => go(() => { store.set({ catalogGo: { q } }); goTab('katalog'); });
+  const toCat = (id) => go(() => { if (id === 'kalip') openKalip(); else { store.set({ catalogGo: { cat: id } }); goTab('katalog'); } });
+  const toAcct = () => go(() => goTab('hesap'));
+  const toLegal = (k) => go(() => openLegal(k));
+  const first = String(member?.name || '').trim().split(/\s+/)[0];
   return (
-    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
-      <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
+    <section ref={rootRef} className={'eh-root' + ((G.search || G.cats) ? ' eh-hasq' : '') + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '') + (G.foot ? ' eh-hasfoot' : '')} aria-label="Giriş">
+      {!G.ghost && <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>}
       <div ref={stageRef} className="eh-stage" aria-hidden="true"><img ref={imgRef} className="eh-fallback" alt="" draggable="false" /></div>
       <nav ref={navRef} className="eh-nav eh-a" aria-label="Üst">
         <span />
+        <span className="eh-nav-r">
+        {G.login && <button type="button" className="eh-login" onClick={toAcct}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+          {member ? <>Merhaba{first ? ', ' + first : ''}</> : 'Giriş yap'}</button>}
         <button type="button" className="eh-theme" role="switch" aria-checked={dark} aria-label="Karanlık görünüm" onClick={flip}>
           <span className={dark ? '' : 'on'}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg></span>
           <span className={dark ? 'on' : ''}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg></span>
         </button>
+        </span>
       </nav>
       <div className="eh-spacer" />
       <div ref={contentRef} className="eh-content">
@@ -597,15 +695,22 @@ export function HeroGate({ onOpen, onDone }) {
         </div>
         <div className="eh-aside">
           <p className="eh-body eh-a eh-a4">Tamircinin ihtiyacı olan cihazlar ve binlerce yedek parça tek mağazada.</p>
-          {fx.num && <div className="eh-a eh-a4 eh-numw"><GateNums /></div>}
+          {fx.num && <div className="eh-a eh-a4 eh-numw"><GateNums />{G.cutoff && <p className="eh-cut">Saat {G.cutoff} öncesi siparişler aynı gün kargoda.</p>}</div>}
           <div className="eh-a eh-a5">
-            <button type="button" className={'eh-btn' + (fx.shine ? ' eh-shine' : '')} onClick={go}>Alışverişe başla
+            <button type="button" className={'eh-btn' + (fx.shine ? ' eh-shine' : '')} onClick={() => go()}>Alışverişe başla
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
         </div>
+        {/* bilgisayarda başlığın altında (sol sütun), dar ekranda düğmenin altında (grid sırası, CSS) */}
+        {(G.search || G.cats) && <div className="eh-a eh-a6 eh-quick">
+          {G.search && <GateSearch onGo={toSearch} />}
+          {G.cats && <div className="eh-cats" aria-label="Hızlı kategoriler">{GATE_CATS.map(([t, id]) => <button key={t} type="button" onClick={() => toCat(id)}>{t}</button>)}</div>}
+        </div>}
       </div>
       <div className="eh-spacer2" />
+      {G.foot && <GateFoot onLegal={toLegal} />}
+      {GATE_TRY && !leaving && <GateTryPanel v={tryV} set={setTry} />}
     </section>
   );
 }
