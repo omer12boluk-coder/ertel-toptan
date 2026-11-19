@@ -11899,3 +11899,69 @@ html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute;
 .pb-vid.vb-idle { cursor: none; }
 .sh-hero .sh-dots, .sh-hero .hx-in, .sh-hero .sh-hero-nav, .sh-hero .hx-st-top { transition: opacity .35s ease; }
 .sh-hero.vid-idle .sh-dots, .sh-hero.vid-idle .hx-in, .sh-hero.vid-idle .sh-hero-nav, .sh-hero.vid-idle .hx-st-top { opacity: 0 !important; pointer-events: none; }
+
+/* ===== 19.11.2026 Giriş sayfası zemini (brand.heroBg, src/herobg.jsx) ===== */
+.ehb{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;--cy:var(--ehb-cy,38%)}
+.ehb i{position:absolute;display:block}
+.ehb-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ehb-fill{position:absolute;inset:0}
+/* 1 Akan ışık */
+.ehb-aurora{background:#f3f5fa}
+.ehb-aurora .ehb-b{width:75vmax;height:75vmax;border-radius:50%;left:50%;top:50%;margin:-37.5vmax 0 0 -37.5vmax;animation:ehbDrift 26s ease-in-out infinite alternate}
+.ehb-aurora .b1{background:radial-gradient(closest-side,rgba(59,108,246,.42),rgba(59,108,246,0));--x0:-38vw;--y0:-30vh;--x1:-12vw;--y1:-8vh;animation-duration:24s}
+.ehb-aurora .b2{background:radial-gradient(closest-side,rgba(24,190,222,.40),rgba(24,190,222,0));--x0:36vw;--y0:-26vh;--x1:10vw;--y1:6vh;animation-duration:29s;animation-delay:-6s}
+.ehb-aurora .b3{background:radial-gradient(closest-side,rgba(255,164,104,.34),rgba(255,164,104,0));--x0:26vw;--y0:34vh;--x1:-14vw;--y1:22vh;animation-duration:33s;animation-delay:-12s}
+.ehb-aurora .b4{background:radial-gradient(closest-side,rgba(110,170,255,.30),rgba(110,170,255,0));--x0:-30vw;--y0:30vh;--x1:6vw;--y1:-20vh;animation-duration:38s;animation-delay:-3s}
+@keyframes ehbDrift{0%{transform:translate(var(--x0),var(--y0)) scale(1)}50%{transform:translate(calc((var(--x0) + var(--x1))/2 + 4vw),calc((var(--y0) + var(--y1))/2 - 4vh)) scale(1.18)}100%{transform:translate(var(--x1),var(--y1)) scale(.92)}}
+.ehb-grain{inset:0;opacity:.5;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* 2 Atölye ışığı */
+.ehb-atolye{background:radial-gradient(120% 90% at 50% 0%,#2a2119 0%,#15110d 55%,#0b0907 100%)}
+.ehb-atolye .ehb-beam{left:50%;top:-4%;width:120vmin;height:96%;margin-left:-60vmin;transform-origin:50% 0;clip-path:polygon(43% 0,57% 0,100% 100%,0 100%);
+  background:linear-gradient(180deg,rgba(255,214,160,.30) 0%,rgba(255,200,140,.12) 45%,rgba(255,190,130,0) 100%);filter:blur(14px);animation:ehbSway 11s ease-in-out infinite alternate}
+.ehb-atolye .ehb-pool{left:50%;bottom:-18%;width:110vmin;height:46vmin;margin-left:-55vmin;border-radius:50%;background:radial-gradient(closest-side,rgba(255,190,120,.20),rgba(255,190,120,0));animation:ehbBreath 7s ease-in-out infinite}
+@keyframes ehbSway{from{transform:rotate(-2.2deg)}to{transform:rotate(2.2deg)}}
+@keyframes ehbBreath{0%,100%{opacity:.75}50%{opacity:1}}
+.ehb-vig{inset:0;background:radial-gradient(120% 100% at 50% 40%,transparent 55%,rgba(0,0,0,.45) 100%)}
+/* 3 Akım */
+.ehb-akim{background:radial-gradient(90% 70% at 50% 38%,#f8f9fc 0%,#eef1f7 100%)}
+.ehb-svg{position:absolute;left:0;top:0}
+.ehb-tr path{fill:none;stroke:rgba(47,85,176,.16);stroke-width:1.6;stroke-linejoin:round}
+.ehb-pad circle{fill:#f3f5fa;stroke:rgba(47,85,176,.30);stroke-width:1.6}
+.ehb-pls path{fill:none;stroke:#1e9bff;stroke-width:2.6;stroke-linecap:round;stroke-dashoffset:calc(var(--L,600) * 1px + 40px);animation:ehbPulse 5s linear infinite;opacity:.9}
+@keyframes ehbPulse{0%{stroke-dashoffset:calc(var(--L,600) * 1px + 40px)}55%,100%{stroke-dashoffset:-40px}}
+.ehb-akg{inset:0;background:radial-gradient(40% 34% at 50% var(--cy),rgba(30,155,255,.10),transparent 70%)}
+/* 4 Lehim dumanı */
+.ehb-duman{background:linear-gradient(180deg,#f4f3f1 0%,#ecebe8 100%)}
+.ehb-soft{image-rendering:auto}
+.ehb-ember{left:50%;bottom:-70px;width:260px;height:140px;margin-left:-130px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,140,60,.30),rgba(255,140,60,0));animation:ehbBreath 3.6s ease-in-out infinite}
+/* 5 Osiloskop */
+.ehb-osilo{background:radial-gradient(110% 90% at 50% 35%,#0d2029 0%,#071218 60%,#03080b 100%)}
+.ehb-grid{inset:0;opacity:.9;background:
+  linear-gradient(rgba(60,240,200,.07) 1px,transparent 1px) 0 0/96px 96px,
+  linear-gradient(90deg,rgba(60,240,200,.07) 1px,transparent 1px) 0 0/96px 96px,
+  linear-gradient(rgba(60,240,200,.03) 1px,transparent 1px) 0 0/24px 24px,
+  linear-gradient(90deg,rgba(60,240,200,.03) 1px,transparent 1px) 0 0/24px 24px;
+  -webkit-mask-image:radial-gradient(90% 80% at 50% 50%,#000 40%,transparent 100%);mask-image:radial-gradient(90% 80% at 50% 50%,#000 40%,transparent 100%)}
+/* 6 Gece sahnesi */
+.ehb-gece{background:radial-gradient(120% 100% at 50% 0%,#15275a 0%,#0a1433 55%,#050a1c 100%)}
+.ehb-gece .ehb-glow{left:50%;top:var(--cy);width:90vmin;height:90vmin;margin:-45vmin 0 0 -45vmin;border-radius:50%;background:radial-gradient(closest-side,rgba(64,150,255,.30),rgba(64,150,255,0));animation:ehbBreath 6s ease-in-out infinite}
+.ehb-gece .ehb-halo{left:50%;top:var(--cy);width:70vmin;height:70vmin;margin:-35vmin 0 0 -35vmin;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 0deg,rgba(90,170,255,.55) 40deg,transparent 95deg,transparent 180deg,rgba(40,210,235,.45) 225deg,transparent 280deg);
+  -webkit-mask-image:radial-gradient(closest-side,transparent 70%,#000 76%,transparent 100%);mask-image:radial-gradient(closest-side,transparent 70%,#000 76%,transparent 100%);
+  animation:ehbSpin 22s linear infinite}
+.ehb-gece .ehb-halo.h2{width:94vmin;height:94vmin;margin:-47vmin 0 0 -47vmin;opacity:.45;animation-duration:40s;animation-direction:reverse}
+@keyframes ehbSpin{to{transform:rotate(360deg)}}
+.ehb-st{border-radius:50%;background:#fff;opacity:.15;animation:ehbTw 4s ease-in-out infinite}
+.ehb-st.b{background:#7fc4ff}
+@keyframes ehbTw{0%,100%{opacity:.12}50%{opacity:.85}}
+/* hafif mod / hareketi azalt */
+html.pf-lite .ehb *,html.pf-lite .ehb *::before{animation-play-state:paused!important}
+@media (prefers-reduced-motion: reduce){.ehb *{animation-play-state:paused!important}}
+/* koyu zeminde yazılar: eh-dark (herogate.jsx). Telefon: ışık hüzmesi ve hale küçük ekranda da ortada */
+/* önizleme seçicisi */
+.ehb-pick{position:absolute;left:12px;bottom:12px;z-index:6;display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:calc(100% - 24px);padding:8px;border-radius:14px;
+  background:rgba(255,255,255,.86);box-shadow:0 6px 24px -8px rgba(0,0,0,.3);font:500 12px/1 var(--eh-font);color:#1d1d1f;touch-action:manipulation}
+.ehb-pick b{font-weight:700;padding:0 4px}
+.ehb-pick button{border:0;border-radius:999px;padding:7px 10px;background:#eef0f4;color:#1d1d1f;font:inherit;cursor:pointer}
+.ehb-pick button.on{background:#2f55b0;color:#fff}
+.eh-root.ehb-off .ehb{opacity:0;transition:opacity .3s ease}

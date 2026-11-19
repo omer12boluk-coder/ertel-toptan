@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS = {
     theme: 'light', // auto | light | dark  (her cihaz üst menüden kendine göre değiştirebilir)
     logo: '', // boşsa ERT Mobile amblemi kullanılır; Ayarlar > Genel'den değiştirilebilir
     splashSec: 1.4, // açılış ekranının en az görünme süresi (sn); site daha geç yüklenirse en fazla +3 sn bekler
+    heroBg: '', // 19.11.2026 giriş sayfası zemini: '' düz | aurora | atolye | akim | duman | osilo | gece (src/herobg.jsx)
     heroGate: true, // 13.11.2026 giriş sayfası (logo parçacık efekti + 'Alışverişe başla'), mağaza ana adresinde oturumda bir kez. Ayarlar > Genel
     splashOn: true, // açılış ekranı (mağaza ve bayi; oturumda bir kez). Ayarlar > Genel'den kapatılır
     splash: '/splash/dukkan.jpg',

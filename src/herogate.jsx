@@ -14,6 +14,7 @@ import { gateFx } from './anim.jsx';
 import { useVisibleProducts } from './catalog.jsx';
 import { useBrandList } from './brandsets.jsx';
 import { LOGO_MARK } from './config.js';
+import { HeroBg, HeroBgPick, useHeroBg, HBG_DARK, HBG_TRY } from './herobg.jsx';
 
 // ---- 14.11.2026 Açılış sahnesi (look.anim gfly / gscn / gwrd / gnum / gshn; anim.jsx gateFx) ----
 // Kullanıcı: B (logo menüye uçar) + C (sahne kurulur) + D1 (dönen kelime) + D2 (canlı sayılar); D4 (düğmede ışık) denemede kapalı.
@@ -416,7 +417,7 @@ export const HERO_WANTED = (() => {
   try {
     if (!ROUTE.shop || ROUTE.notFound || lpath() !== '/magaza' || location.hash) return false;
     if (/[?&]n=1\b/.test(location.search)) return false;
-    if (sessionStorage.getItem('hero-seen')) return false;
+    if (sessionStorage.getItem('hero-seen') && !HBG_TRY) return false;
     return cachedOn();
   } catch { return false; }
 })();
@@ -436,7 +437,11 @@ export function HeroGate({ onOpen, onDone }) {
   const dark = useStore((s) => s.deviceTheme === 'dark');
   const darkRef = useRef(dark); darkRef.current = dark;
   const flip = () => { const n = dark ? 'light' : 'dark'; ls.set('device-theme', n); document.documentElement.setAttribute('data-theme', n); store.set({ deviceTheme: n }); };
-  useEffect(() => { engRef.current?.setOptions({ bg: dark ? BG.dark : BG.light }); }, [dark]);
+  // 19.11.2026 hareketli zemin (brand.heroBg); koyu zeminlerde giriş sayfası koyu görünümde çizilir
+  const [bgKind, pickBg] = useHeroBg();
+  const dk = dark || !!HBG_DARK[bgKind];
+  const dkRef = useRef(dk); dkRef.current = dk;
+  useEffect(() => { engRef.current?.setOptions({ bg: dk ? BG.dark : BG.light }); }, [dk]);
   const coarse = typeof matchMedia === 'function' && matchMedia('(hover: none), (pointer: coarse)').matches;
   const look = useStore((s) => s.settings?.look); const logoSrc = useStore((s) => s.settings?.brand?.logo) || LOGO_MARK;
   const fx = gateFx(look);
@@ -476,7 +481,7 @@ export function HeroGate({ onOpen, onDone }) {
     const root = rootRef.current, stage = stageRef.current; if (!root || !stage) return;
     const mq = matchMedia('(prefers-reduced-motion: reduce)');
     const opts = () => ({ interactive: true, strength: 1.1, radius: 200, density: 1, dotSize: 1, spread: 1, turbulence: 1, liquid: 1, streaks: true, restStyle: 'image',
-      returnSpeed: 1, ambient: true, ambientIntensity: 0.35, speed: 1, intro: true, reducedMotion: mq.matches, bg: darkRef.current ? BG.dark : BG.light });
+      returnSpeed: 1, ambient: true, ambientIntensity: 0.35, speed: 1, intro: true, reducedMotion: mq.matches, bg: dkRef.current ? BG.dark : BG.light });
     const canvas = document.createElement('canvas'); canvas.className = 'eh-canvas'; stage.appendChild(canvas);
     let engine = null; const fail = () => { root.dataset.gl = 'off'; };
     try { engine = new LiquidEngine(canvas, opts(), fail); engRef.current = engine; } catch { fail(); }
@@ -490,6 +495,7 @@ export function HeroGate({ onOpen, onDone }) {
       if (rw / aspect > maxH) rw = maxH * aspect; const rh = rw / aspect;
       const rect = { x: w / 2 - rw / 2, y: (band.top + band.bottom) / 2 - rh / 2, w: rw, h: rh };
       const bd = bdRef.current; if (bd) { bd.style.fontSize = Math.min(bandH * 0.95, (w * 0.92) / (5 * 0.56)) + 'px'; bd.style.top = (band.top + band.bottom) / 2 + 'px'; }
+      root.style.setProperty('--ehb-cy', Math.round(rect.y + rect.h / 2) + 'px');
       const img = imgRef.current; if (img) Object.assign(img.style, { left: rect.x + 'px', top: rect.y + 'px', width: rect.w + 'px', height: rect.h + 'px' });
       engine?.resize(w, h, rect);
     };
@@ -566,7 +572,7 @@ export function HeroGate({ onOpen, onDone }) {
       // menü logosu kum varırken altında belirir (taneler varışta söner): son karede değişim yok
       const dur = wide ? 1450 : 1350;
       k.tg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur * 0.5, delay: dur * 0.45, easing: 'ease-in-out', fill: 'backwards' });
-      root.style.transition = 'none'; root.style.backgroundColor = 'transparent';
+      root.style.transition = 'none'; root.style.backgroundColor = 'transparent'; root.classList.add('ehb-off');
       const openScene = sceneKur();
       let fin = false;
       const end = () => { if (fin) return; fin = true; if (cvs) { cvs.style.transition = 'none'; cvs.style.opacity = '0'; } onDone(); };
@@ -579,7 +585,8 @@ export function HeroGate({ onOpen, onDone }) {
   };
 
   return (
-    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
+    <section ref={rootRef} className={'eh-root' + (dk ? ' eh-dark' : '') + (bgKind ? ' ehb-on' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
+      <HeroBg kind={bgKind} />
       <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
       <div ref={stageRef} className="eh-stage" aria-hidden="true"><img ref={imgRef} className="eh-fallback" alt="" draggable="false" /></div>
       <nav ref={navRef} className="eh-nav eh-a" aria-label="Üst">
@@ -606,6 +613,7 @@ export function HeroGate({ onOpen, onDone }) {
         </div>
       </div>
       <div className="eh-spacer2" />
+      <HeroBgPick kind={bgKind} pick={pickBg} />
     </section>
   );
 }
