@@ -11922,38 +11922,6 @@ html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute;
 @keyframes ehbSway{from{transform:rotate(-2.2deg)}to{transform:rotate(2.2deg)}}
 @keyframes ehbBreath{0%,100%{opacity:.75}50%{opacity:1}}
 .ehb-vig{inset:0;background:radial-gradient(120% 100% at 50% 40%,transparent 55%,rgba(0,0,0,.45) 100%)}
-/* 3 Akım */
-.ehb-akim{background:radial-gradient(90% 70% at 50% 38%,#f8f9fc 0%,#eef1f7 100%)}
-.ehb-svg{position:absolute;left:0;top:0}
-.ehb-tr path{fill:none;stroke:rgba(47,85,176,.16);stroke-width:1.6;stroke-linejoin:round}
-.ehb-pad circle{fill:#f3f5fa;stroke:rgba(47,85,176,.30);stroke-width:1.6}
-.ehb-pls path{fill:none;stroke:#1e9bff;stroke-width:2.6;stroke-linecap:round;stroke-dashoffset:calc(var(--L,600) * 1px + 40px);animation:ehbPulse 5s linear infinite;opacity:.9}
-@keyframes ehbPulse{0%{stroke-dashoffset:calc(var(--L,600) * 1px + 40px)}55%,100%{stroke-dashoffset:-40px}}
-.ehb-akg{inset:0;background:radial-gradient(40% 34% at 50% var(--cy),rgba(30,155,255,.10),transparent 70%)}
-/* 4 Lehim dumanı */
-.ehb-duman{background:linear-gradient(180deg,#f4f3f1 0%,#ecebe8 100%)}
-.ehb-soft{image-rendering:auto}
-.ehb-ember{left:50%;bottom:-70px;width:260px;height:140px;margin-left:-130px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,140,60,.30),rgba(255,140,60,0));animation:ehbBreath 3.6s ease-in-out infinite}
-/* 5 Osiloskop */
-.ehb-osilo{background:radial-gradient(110% 90% at 50% 35%,#0d2029 0%,#071218 60%,#03080b 100%)}
-.ehb-grid{inset:0;opacity:.9;background:
-  linear-gradient(rgba(60,240,200,.07) 1px,transparent 1px) 0 0/96px 96px,
-  linear-gradient(90deg,rgba(60,240,200,.07) 1px,transparent 1px) 0 0/96px 96px,
-  linear-gradient(rgba(60,240,200,.03) 1px,transparent 1px) 0 0/24px 24px,
-  linear-gradient(90deg,rgba(60,240,200,.03) 1px,transparent 1px) 0 0/24px 24px;
-  -webkit-mask-image:radial-gradient(90% 80% at 50% 50%,#000 40%,transparent 100%);mask-image:radial-gradient(90% 80% at 50% 50%,#000 40%,transparent 100%)}
-/* 6 Gece sahnesi */
-.ehb-gece{background:radial-gradient(120% 100% at 50% 0%,#15275a 0%,#0a1433 55%,#050a1c 100%)}
-.ehb-gece .ehb-glow{left:50%;top:var(--cy);width:90vmin;height:90vmin;margin:-45vmin 0 0 -45vmin;border-radius:50%;background:radial-gradient(closest-side,rgba(64,150,255,.30),rgba(64,150,255,0));animation:ehbBreath 6s ease-in-out infinite}
-.ehb-gece .ehb-halo{left:50%;top:var(--cy);width:70vmin;height:70vmin;margin:-35vmin 0 0 -35vmin;border-radius:50%;
-  background:conic-gradient(from 0deg,transparent 0deg,rgba(90,170,255,.55) 40deg,transparent 95deg,transparent 180deg,rgba(40,210,235,.45) 225deg,transparent 280deg);
-  -webkit-mask-image:radial-gradient(closest-side,transparent 70%,#000 76%,transparent 100%);mask-image:radial-gradient(closest-side,transparent 70%,#000 76%,transparent 100%);
-  animation:ehbSpin 22s linear infinite}
-.ehb-gece .ehb-halo.h2{width:94vmin;height:94vmin;margin:-47vmin 0 0 -47vmin;opacity:.45;animation-duration:40s;animation-direction:reverse}
-@keyframes ehbSpin{to{transform:rotate(360deg)}}
-.ehb-st{border-radius:50%;background:#fff;opacity:.15;animation:ehbTw 4s ease-in-out infinite}
-.ehb-st.b{background:#7fc4ff}
-@keyframes ehbTw{0%,100%{opacity:.12}50%{opacity:.85}}
 /* hafif mod / hareketi azalt */
 html.pf-lite .ehb *,html.pf-lite .ehb *::before{animation-play-state:paused!important}
 @media (prefers-reduced-motion: reduce){.ehb *{animation-play-state:paused!important}}
