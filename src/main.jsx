@@ -1,4 +1,5 @@
 import { savesPending } from './saveq.js';
+import { PageBg } from './herobg.jsx';
 import { HcSearch } from './hcsearch.jsx';
 import { LinkCartPage, LinkCartsPage } from './lcart.jsx';
 import { PayLinkPage, PayLinkView } from './paylink.jsx';
@@ -775,6 +776,7 @@ function ShellFull() {
   ].filter(Boolean) : null;
   return (
     <div className={'shell tab-' + tab + (admin ? ' admin' + (S0.look?.adminNav !== 'old' ? ' adm-bn' + (S0.look?.adminNavTone === 'accent' ? '' : ' bn-ink') : '') : '') + (pub ? ' public' : '')} onContextMenu={(e) => pageMenu(e, user.role)}>
+      <PageBg on={pub && tab === 'anasayfa'} />
       {hs ? <header className="topbar hdr-g hdr-gs" ref={gsRef}>
         <div className="topbar-in">
           <div className="gs-r1">

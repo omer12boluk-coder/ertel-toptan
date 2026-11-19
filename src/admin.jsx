@@ -1,5 +1,5 @@
 import { FLY_OPTS, BN_OPTS } from './anim.jsx';
-import { HBG_OPTS } from './herobg.jsx';
+import { HBG_OPTS, PBG_OPTS } from './herobg.jsx';
 import { AUTH_TXT } from './authsplit.jsx';
 import { can, secOK, secPerm } from './team.js';
 import { TeamPage, NoPerm } from './ekip.jsx';
@@ -693,7 +693,7 @@ const secKey = (k) => (k && (SEC_BY[k] ? k : ALIAS[k])) || null;
 const groupOf = (k) => SEC_BY[k]?.[4] || null;
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için; 'a.b' = alt alan)
 const SEC_KEYS = {
-  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.heroGate', 'brand.heroBg', 'look.anim.flySty', 'look.anim.bnIn', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
+  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.heroGate', 'brand.heroBg', 'shopHome.pageBg', 'look.anim.flySty', 'look.anim.bnIn', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
   anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], talep: ['requests'],
   katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.pageSizeM', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
   resim: ['catalog.imageThumb', 'catalog.imageLarge'],
@@ -862,6 +862,9 @@ export function Settings() {
           {d.brand.heroGate !== false && <Field label="Giriş sayfası zemini" hint="Logo animasyonunun arkasındaki hareketli zemin">
             <select id="s-hbg" value={d.brand.heroBg || ''} onChange={(e) => set('brand.heroBg', e.target.value)}>{HBG_OPTS.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
           </Field>}
+          <Field label="Ana sayfa zemini" hint="Mağaza ana sayfasının arkasında, bölümlerin arasında görünen hareketli ışık">
+            <select id="s-pbg" value={d.shopHome?.pageBg || 'auto'} onChange={(e) => set('shopHome.pageBg', e.target.value)}>{PBG_OPTS.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
+          </Field>
           {d.brand.heroGate !== false && <Field label="Alışverişe başla'dan sonra logo" hint="Logo menüye nasıl gitsin; 'Logo yok' seçilirse sadece banner animasyonla gelir">
             <select id="s-gfly" value={d.look?.anim?.flySty || 'one'} onChange={(e) => set('look.anim.flySty', e.target.value)}>{FLY_OPTS.map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
           </Field>}

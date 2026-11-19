@@ -193,6 +193,7 @@ export const DEFAULT_SETTINGS = {
   // Link: 'brand:Aixun' | 'cat:3' | 'q:jbc uç' | 'p:1234' (ürün) | 'https://…' | ''
   shopHome: {
     enabled: true,
+    pageBg: 'auto', // 20.11.2026 ana sayfa zemini: auto (gündüz akan ışık, gece atölye) | aurora | off = düz (herobg.jsx PageBg)
     slides: [
       { layout: 'split', theme: 'night', tag: 'Yeni gelenler', title: 'Tamir masanızın yeni yıldızları', text: 'Aixun, JCID, Mechanic, Sunshine, Luban ve daha fazlası. Orijinal ürün, aynı gün kargo.', cta: 'Yeni ürünleri gör', link: 'new:', img: 'prod:2882' },
       { layout: 'split', theme: 'ember', tag: 'Aixun', title: 'Akıllı havya istasyonları', text: 'T420D çift kanallı istasyon ve C210 / C245 / C115 uçları stokta.', cta: 'Aixun ürünleri', link: 'brand:Aixun', img: 'prod:1758' },
