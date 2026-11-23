@@ -451,6 +451,46 @@ function OrderDetail({ id }) {
   );
 }
 
+// 23.11.2026 üye penceresinde giriş hesabının durumu: onaylı mı, Google mı, son giriş (veritabanı okuması yok)
+let ACCTS = null; // { at, map: uid → { v, p } } Mağaza müşterileri listesindeki 'Onaysız' etiketi için, 10 dk bellek
+export function useAcctMap() {
+  const [m, setM] = useState(() => (ACCTS && Date.now() - ACCTS.at < 600e3 ? ACCTS.map : null));
+  useEffect(() => {
+    if (m || !can('customers') || !api().adminAccts) return;
+    let off = false;
+    api().adminAccts().then((list) => { const map = {}; for (const a of list) map[a.uid] = a; ACCTS = { at: Date.now(), map }; if (!off) setM(map); }, () => {});
+    return () => { off = true; };
+  }, []);
+  return m;
+}
+function AcctCard({ uid }) {
+  const [a, setA] = useState(null);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState('');
+  const load = () => api().adminAcct(null, uid, true).then((r) => setA(r.found ? r.acct : false), (x) => setErr(x.message));
+  useEffect(() => { load(); }, [uid]);
+  const ok = can('customers');
+  const pv = (a?.providers || []).map((p) => p === 'password' ? 'E-posta + şifre' : p === 'google.com' ? 'Google' : p === 'facebook.com' ? 'Facebook' : p).join(' + ');
+  async function act(what) {
+    setBusy(what);
+    try { const r = await api().adminAcctAct(uid, what); if (ACCTS?.map[uid] && what === 'verify') ACCTS.map[uid].v = 1; toast(what === 'verify' ? 'Hesap onaylandı' : r?.throttled ? 'Az önce gönderilmişti' : 'Onay maili gönderildi'); if (what === 'verify') load(); }
+    catch (x) { toast(x.message, 'bad'); }
+    setBusy('');
+  }
+  return (
+    <div className="o-card acct-card"><h3>Hesap</h3>
+      {err ? <p className="muted">{err}</p> : a === null ? <p className="muted">Bakılıyor…</p> : a === false ? <p className="bad-t">Giriş hesabı yok</p> : <>
+        <p className="acct-st">{a.verified ? <span className="ok-t"><Icon n="check" s={14} />Onaylı</span> : <span className="bad-t">Onaylanmamış · giriş yapamaz</span>}</p>
+        <p className="muted">{pv || '—'}{a.lastLoginAt ? ' · son giriş ' + when(a.lastLoginAt) : ''}</p>
+        {!a.verified && ok && <div className="acct-acts">
+          <button className="btn sm primary" disabled={!!busy} onClick={() => act('verify')}>{busy === 'verify' ? 'Bekleyin…' : 'Onaylı say'}</button>
+          <button className="btn sm outline" disabled={!!busy} onClick={() => act('mail')}>{busy === 'mail' ? 'Gönderiliyor…' : 'Onay maili gönder'}</button>
+        </div>}
+      </>}
+    </div>
+  );
+}
+
 // ---- Mağaza üyeleri -----------------------------------------------------------------------------
 // Üye bilgileri penceresi (Müşteriler > Mağaza müşterileri ve sipariş başlığındaki üye adı)
 function MemberSheet({ m: open, onClose, onDelete }) {
@@ -461,6 +501,7 @@ function MemberSheet({ m: open, onClose, onDelete }) {
     <Sheet title={open.name || open.email} sub={`Üye · ${when(open.createdAt)}`} onClose={onClose} footer={<>{onDelete && <button className="btn ghost danger" onClick={onDelete}><Icon n="trash" s={15} />Üyeyi sil</button>}{open.phone && <a className="btn wa" href={waLink(open.phone, `Merhaba ${open.name || ''},`)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp</a>}</>}>
       <div className="o-info one">
         <div className="o-card"><h3>İletişim</h3><UnameRow m={open} /><p>{open.email}</p>{open.phone && <p className="num">{open.phone}</p>}</div>
+        <AcctCard uid={open.uid} />
         <div className="o-card"><h3>Fatura</h3><InvoiceText inv={open.invoice} name={open.name} /></div>
         <div className="o-card"><h3>Adresler</h3>{(open.addresses || []).length ? open.addresses.map((a) => <p key={a.id}><b>{a.title || 'Adres'}:</b> {addrLine(a)}</p>) : <p className="muted">Kayıtlı adres yok</p>}</div>
       </div>
@@ -524,6 +565,7 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
   const t = norm(q.trim());
   const list = [...members].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).filter((m) => !t || norm([m.name, m.email, m.phone, m.username, m.invoice?.company].join(' ')).includes(t));
   const [acctOpen, setAcctOpen] = useState(false);
+  const accts = useAcctMap();
   const del = (m) => setConfirm({ title: 'Üyeyi sil', text: `${m.name || m.email} üyeliği ve giriş hesabı silinecek; siparişleri kalır. Aynı e-postayla yeniden üye olabilir.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteMember(m.uid).then(() => { toast('Üye silindi'); setOpen(null); }) });
   return (
     <>
@@ -539,7 +581,7 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
               <button className="ocard" onClick={() => setOpen(m)}>
                 <Avatar u={m} size={38} />
                 <span className="ocard-b">
-                  <span className="ocard-who"><b>{m.name || '—'}</b>{m.invoice?.company ? ` · ${m.invoice.company}` : ''}</span>
+                  <span className="ocard-who"><b>{m.name || '—'}</b>{m.invoice?.company ? ` · ${m.invoice.company}` : ''}{accts && accts[m.uid] && !accts[m.uid].v && <span className="acct-tag">Onaysız</span>}{accts && !accts[m.uid] && <span className="acct-tag">Giriş hesabı yok</span>}</span>
                   <span className="muted">{[m.email, m.phone].filter(Boolean).join(' · ')}</span>
                 </span>
                 <span className="muted ocard-sum" title="Son 2 ayın siparişleri; tümü üyeye basınca">{count[m.uid] ? `${count[m.uid]} sipariş` : ''}</span>

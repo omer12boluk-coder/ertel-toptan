@@ -1115,6 +1115,8 @@ async function adminAcct(req, env, b) {
   const a = await acctLookup(env, id ? { localId: [id] } : { email: [email] }).catch(() => null);
   if (!a) return { ok: true, found: false };
   const uid = a.localId;
+  // light: üye penceresi (Firestore okuması yok, sadece giriş hesabı)
+  if (b.light) return { ok: true, found: true, acct: { uid, email: a.email || '', verified: !!a.emailVerified, disabled: !!a.disabled, providers: provsOf(a), createdAt: Number(a.createdAt || 0), lastLoginAt: Number(a.lastLoginAt || 0) } };
   const [m, u] = await Promise.all([saDoc(env, 'members/' + uid), saDoc(env, 'users/' + uid)]);
   return { ok: true, found: true, acct: { uid, email: a.email || '', verified: !!a.emailVerified, disabled: !!a.disabled, providers: provsOf(a), createdAt: Number(a.createdAt || 0), lastLoginAt: Number(a.lastLoginAt || 0), member: m ? { name: m.name || '', username: m.username || '', phone: m.phone || '', byAdmin: !!m.byAdmin } : null, staff: !!u, orders: await hasOrders(env, uid) } };
 }

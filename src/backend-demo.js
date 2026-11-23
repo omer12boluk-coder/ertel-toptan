@@ -321,8 +321,8 @@ export class DemoBackend {
   async adminAccts() { return Object.values(this.mem()).map((m) => ({ uid: m.uid, email: m.email, v: m.unverified ? 0 : 1, p: [m.pw && 'pw', m.google && 'g'].filter(Boolean).join(','), c: m.createdAt || 0, l: m.createdAt || 0, d: 0, _ghost: !!m.ghost })); }
   async memberResendTo(email) { return email; }
   async memberSetPwLink(email, id) { return email || id; }
-  async adminAcct(email) {
-    email = String(email || '').trim().toLowerCase(); const m = Object.values(this.mem()).find((x) => x.email === email);
+  async adminAcct(email, uid) {
+    email = String(email || '').trim().toLowerCase(); const m = uid ? this.mem()[uid] : Object.values(this.mem()).find((x) => x.email === email);
     if (!m) return { ok: true, found: false };
     return { ok: true, found: true, acct: { uid: m.uid, email: m.email, verified: !m.unverified, disabled: false, providers: [...(m.google ? ['google.com'] : []), ...(m.pw ? ['password'] : [])], createdAt: m.createdAt, lastLoginAt: m.createdAt, member: m.ghost ? null : { name: m.name, username: m.username || '', phone: m.phone, byAdmin: !!m.byAdmin }, staff: false, orders: Object.values(this.ord()).some((o) => o.uid === m.uid) } };
   }

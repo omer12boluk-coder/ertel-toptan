@@ -813,7 +813,7 @@ export class FirebaseBackend {
   }
   memberProviders() { return (this.auth.currentUser?.providerData || []).map((x) => x.providerId); }
   // Yönetim › Müşteriler › Hesap durumu
-  async adminAcct(email) { return this._staffCall('/admin/acct', { email }); }
+  async adminAcct(email, uid, light) { return this._staffCall('/admin/acct', uid ? { uid, light: !!light } : { email }); }
   async adminAccts() { return (await this._staffCall('/admin/accts', {})).accts || []; }
   async adminAcctAct(uid, act) { return this._staffCall('/admin/acct-act', { uid, act }); }
   // 23.11.2026 Güvenlik: şifre değiştir · e-posta değiştir (yeni adrese doğrulama bağlantısı) · tüm cihazlardan çıkış
