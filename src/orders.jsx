@@ -689,7 +689,7 @@ function AcctCheck() {
   return (
     <div className="acct-find">
       <form className="acct-q" onSubmit={look}>
-        <input id="acct-q" type="email" autoCapitalize="none" autoFocus placeholder="musteri@ornek.com" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input id="acct-q" type="email" autoCapitalize="none" placeholder="musteri@ornek.com" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="btn primary" disabled={busy}>{busy ? 'Bakılıyor…' : 'Bak'}</button>
       </form>
       {err && <p className="err">{err}</p>}
