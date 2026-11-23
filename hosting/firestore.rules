@@ -90,10 +90,13 @@ service cloud.firestore {
         && (!('photo' in request.resource.data) || request.resource.data.photo == null || (request.resource.data.photo is string && request.resource.data.photo.size() < 60000)));
       allow delete: if isAdmin();
     }
-    // kullanıcı adı → e-posta (kullanıcı adıyla giriş için); sadece adı bilinerek okunur, listelenemez
+    // kullanıcı adı → uid. 23.11.2026: e-posta artık tutulmuyor ve herkese açık OKUNMAZ (KVKK: addan e-posta öğreniliyordu);
+    // kullanıcı adıyla giriş / boş ad kontrolü bekçiden (/member/login-id, /member/uname-free). Yasaklı adlar (ertel…, admin…) sadece yönetici.
     match /usernames/{name} {
-      allow get: if true;
-      allow create: if (isAdmin() || (signedIn() && request.resource.data.uid == request.auth.uid)) && request.resource.data.keys().hasOnly(['uid', 'email'])
+      allow get: if isAdmin();
+      allow create: if (isAdmin() || (signedIn() && request.resource.data.uid == request.auth.uid
+          && !name.matches('^(ertel.*|admin.*|administrator|yonetic.*|yonetim.*|destek.*|support.*|info|iletisim|satis.*|muhasebe.*|magaza.*|root|sistem.*|system|moderator.*|resmi.*|official.*|claude|noreply|no-reply)$')))
+        && request.resource.data.keys().hasOnly(['uid', 'email'])
         && name.matches('^[a-z0-9._-]{3,20}$');
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }

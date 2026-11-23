@@ -242,7 +242,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
       if (digits(f.contact.phone).length !== 11) e.phone = 'Telefonu 0(5xx) xxx xx xx şeklinde yazın';
     }
     if (f.contact.email.trim() && !emailOk(f.contact.email)) e.email = 'E-posta adresi geçersiz';
-    if (!member && f.signup) { if (!emailOk(f.contact.email)) e.email = 'Üyelik için e-posta gerekli'; if (f.pw.length < 6) e.pw = 'Şifre en az 6 karakter olmalı'; if (f.uname && !unameOk(f.uname)) e.uname = '3-20 karakter: harf, rakam, nokta, tire'; }
+    if (!member && f.signup) { if (!emailOk(f.contact.email)) e.email = 'Üyelik için e-posta gerekli'; if (f.pw.length < 6) e.pw = 'Şifre en az 6 karakter olmalı'; if (f.uname && !unameOk(f.uname)) e.uname = '3-20 karakter: harf, rakam, nokta, tire'; else if (f.uname && UN_RESERVED.test(f.uname)) e.uname = 'Bu kullanıcı adı kullanılamaz'; }
     if (f.method === 'cargo') Object.assign(e, addrErrors(delivAddr, 'addr', f.addrId === 'new' || !saved.length || savedBad));
     if (f.inv.type === 'company') {
       if (f.inv.company.trim().length < 2) e['inv.company'] = 'Firma ünvanını yazın';
@@ -459,7 +459,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
             <section className="co-sec co-signup">
               <label className="mini-check big"><input type="checkbox" checked={f.signup} onChange={(e) => set({ signup: e.target.checked, uname: f.uname || suggestUser(f.contact.email) })} /><span><b>Bu bilgilerle üye ol</b> <small className="muted">— bir dahaki siparişte her şey hazır gelir, siparişlerinizi takip edersiniz</small></span></label>
               {f.signup && <div className="row2">
-                <Field label="Kullanıcı adı" opt error={err.uname || unameErr(coUn)} hint={unameHint(coUn, 'E-posta yerine bununla da giriş yapabilirsiniz')}><input id="co-uname" autoCapitalize="none" value={f.uname} placeholder={suggestUser(f.contact.email)} onChange={(e) => set({ uname: cleanUsername(e.target.value).slice(0, 20) })} /></Field>
+                <Field label="Kullanıcı adı" opt error={err.uname || unameErr(coUn, (x) => set({ uname: x }))} hint={unameHint(coUn, 'E-posta yerine bununla da giriş yapabilirsiniz')}><input id="co-uname" autoCapitalize="none" value={f.uname} placeholder={suggestUser(f.contact.email)} onChange={(e) => set({ uname: cleanUsername(e.target.value).slice(0, 20) })} /></Field>
                 <Field label="Şifre belirleyin" error={err.pw} hint="En az 6 karakter"><PasswordInput id="co-pw" autoComplete="new-password" value={f.pw} onChange={(e) => set({ pw: e.target.value })} /></Field>
               </div>}
               {f.signup && <SignupConsent checked={!!f.legalM} onChange={(v) => set({ legalM: v })} error={err.legalM} />}
@@ -811,6 +811,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
         if (!emailOk(email)) throw new Error('E-posta adresini kontrol edin.');
         if (unameReq && !f.uname) throw new Error('Bir kullanıcı adı belirleyin.');
         if (f.uname && !unameOk(f.uname)) throw new Error('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).');
+        if (f.uname && UN_RESERVED.test(f.uname)) throw new Error('Bu kullanıcı adı kullanılamaz, başka bir tane deneyin.');
         if (phoneDigits(f.phone).length !== 11) throw new Error('Telefonu 0(5xx) xxx xx xx şeklinde yazın.');
         if (f.pw.length < 6) throw new Error('Şifre en az 6 karakter olmalı.');
         if (pw2On && f.pw !== f.pw2) throw new Error('Şifreler aynı değil.');
@@ -824,7 +825,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
       }
     } catch (x) {
       if (x.code === 'unverified') setView('unverified');
-      if (x.code === 'social' || x.code === 'pending') { setNote({ kind: x.code, prov: x.kind, email: x.email }); setErr(''); }
+      if (x.code === 'social' || x.code === 'pending') { setNote({ kind: x.code, prov: x.kind, email: x.email, id: x.id }); setErr(''); }
       else setErr(x.message);
     }
     setBusy(false);
@@ -832,7 +833,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
   async function noteAct(what) {
     setBusy(true); setErr('');
     try {
-      if (what === 'setpw') { setSentTo(await A.memberSetPwLink(note.email)); setSentKind('setpw'); setNote(null); setView('resetSent'); }
+      if (what === 'setpw') { setSentTo(await A.memberSetPwLink(note.email, note.id)); setSentKind('setpw'); setNote(null); setView('resetSent'); }
       else if (what === 'resend') { setSentTo(await A.memberResendTo(note.email)); setSentKind('pending'); setNote(null); setView('verifySent'); }
     } catch (x) { setErr(x.message); }
     setBusy(false);
@@ -876,7 +877,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
         <Field label="Ad soyad"><input id="m-name" autoComplete="name" value={f.name} onChange={set('name')} /></Field>
         <Field label="E-posta" hint="Doğrulama bağlantısı buraya gelir"><input id="m-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={set('email')} /></Field>
         <div className="row2">
-          <Field label="Kullanıcı adı" opt={!unameReq} error={unameErr(sgUn)} hint={unameHint(sgUn, 'E-posta yerine bununla da girebilirsiniz')}><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
+          <Field label="Kullanıcı adı" opt={!unameReq} error={unameErr(sgUn, (x) => setF((y) => ({ ...y, uname: x, unameTouched: true })))} hint={unameHint(sgUn, 'E-posta yerine bununla da girebilirsiniz')}><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
           <Field label="Cep telefonu"><PhoneInput id="m-phone" value={f.phone} onChange={set('phone')} /></Field>
         </div>
       </>}
@@ -1357,20 +1358,37 @@ function MyInfo({ part = 'all' }) {
   );
 }
 
-// 23.11.2026 kullanıcı adı yazarken anında kontrol (yazmayı bırakınca 0,45 sn sonra tek okuma)
+// 23.11.2026 kullanıcı adı yazarken anında kontrol (yazmayı bırakınca 0,45 sn sonra tek istek); alınmışsa boş öneriler, yasaklı adlar (ertel…, admin…) kabul edilmez
+export const UN_RESERVED = /^(ertel.*|admin.*|administrator|yonetic.*|yonetim.*|destek.*|support.*|info|iletisim|satis.*|muhasebe.*|magaza.*|root|sistem.*|system|moderator.*|resmi.*|official.*|claude|noreply|no-reply)$/;
+function unameCands(v) {
+  const b = v.replace(/[._-]?\d+$/, '').slice(0, 15) || v.slice(0, 15);
+  const r = (n) => String(Math.floor(Math.random() * n) + (n > 90 ? 100 : 10));
+  return [...new Set([b + '34', b + '.' + r(90), b + r(900), b + '_' + r(90), b + '.gsm', b + r(90)])].filter((x) => x !== v && /^[a-z0-9._-]{3,20}$/.test(x) && !UN_RESERVED.test(x)).slice(0, 6);
+}
 function useUnameCheck(v, cur = '') {
   const A = useStore((s) => s.api);
-  const [st, setSt] = useState('');
+  const [u, setU] = useState({ st: '', sug: [] });
   useEffect(() => {
-    if (!v || v === cur || !unameOk(v)) { setSt(''); return; }
-    setSt('wait'); let off = false;
-    const t = setTimeout(() => { A.usernameFree(v).then((ok) => { if (!off) setSt(ok ? 'free' : 'taken'); }, () => { if (!off) setSt(''); }); }, 450);
+    if (!v || v === cur || !unameOk(v)) { setU({ st: '', sug: [] }); return; }
+    if (UN_RESERVED.test(v)) { setU({ st: 'reserved', sug: [] }); return; }
+    setU({ st: 'wait', sug: [] }); let off = false;
+    const t = setTimeout(async () => {
+      try {
+        const c = unameCands(v);
+        const r = A.usernameCheck ? await A.usernameCheck([v, ...c]) : { free: (await A.usernameFree(v)) ? [v] : [], reserved: [] };
+        if (off) return;
+        if (r.reserved.includes(v)) setU({ st: 'reserved', sug: [] });
+        else if (r.free.includes(v)) setU({ st: 'free', sug: [] });
+        else setU({ st: 'taken', sug: r.free.filter((x) => x !== v).slice(0, 3) });
+      } catch { if (!off) setU({ st: '', sug: [] }); }
+    }, 450);
     return () => { off = true; clearTimeout(t); };
   }, [v, cur]);
-  return st;
+  return u;
 }
-const unameHint = (st, base) => st === 'free' ? <span className="un-ok"><Icon n="check" s={13} />Kullanılabilir</span> : st === 'wait' ? <span className="un-wait">Bakılıyor…</span> : base;
-const unameErr = (st) => st === 'taken' ? 'Bu kullanıcı adı alınmış' : '';
+const unameHint = (u, base) => u.st === 'free' ? <span className="un-ok"><Icon n="check" s={13} />Kullanılabilir</span> : u.st === 'wait' ? <span className="un-wait">Bakılıyor…</span> : base;
+const unameErr = (u, pick) => u.st === 'reserved' ? 'Bu kullanıcı adı kullanılamaz, başka bir tane deneyin'
+  : u.st === 'taken' ? <span className="un-taken">Bu kullanıcı adı alınmış.{u.sug.length > 0 && pick && <> Boş olanlar: {u.sug.map((x) => <button key={x} type="button" className="un-sug" onClick={(e) => { e.preventDefault(); pick(x); }}>{x}</button>)}</>}</span> : '';
 
 // 23.11.2026 kullanıcı adı: müşteri kendisi değiştirir (15 günde bir, bekçi /member/uname — aynı adı iki kişi alamaz)
 const UNAME_DAYS = 15;
@@ -1389,7 +1407,8 @@ function MyUname() {
   const chk = useUnameCheck(locked ? '' : v, cur);
   async function save() {
     if (!unameOk(v)) return setErr('3-20 karakter: harf, rakam, nokta, tire');
-    if (chk === 'taken') return setErr('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
+    if (chk.st === 'taken') return setErr('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
+    if (chk.st === 'reserved' || UN_RESERVED.test(v)) return setErr('Bu kullanıcı adı kullanılamaz, başka bir tane deneyin.');
     setBusy(true); setErr('');
     try { await A.memberSetUsername(v); toast('Kullanıcı adınız değişti'); }
     catch (x) { setErr(x.message); }
@@ -1398,10 +1417,10 @@ function MyUname() {
   const hint = locked ? `${dt(next)} tarihinden sonra tekrar değiştirebilirsiniz` : cur ? `E-posta yerine bununla giriş yapabilirsiniz · ${UNAME_DAYS} günde bir değiştirilebilir` : 'E-posta yerine bununla da giriş yapabilirsiniz';
   return (
     <div className="mi-un">
-      <Field label="Kullanıcı adı" opt={!cur} error={err || unameErr(chk)} hint={unameHint(chk, hint)}>
+      <Field label="Kullanıcı adı" opt={!cur} error={err || unameErr(chk, (x) => { setV(x); setErr(''); })} hint={unameHint(chk, hint)}>
         <div className="mi-un-row">
           <input id="mi-uname" autoCapitalize="none" autoComplete="username" value={v} readOnly={locked} placeholder={locked ? '' : 'ör. ' + (suggestUser(m?.email) || 'kullanici.adi')} onChange={(e) => { setV(cleanUsername(e.target.value).slice(0, 20)); setErr(''); }} onKeyDown={(e) => { if (e.key === 'Enter' && dirty && !busy) save(); }} />
-          {dirty && !locked && <button type="button" className="btn sm primary" disabled={busy || !v || chk === 'taken'} onClick={save}>{busy ? 'Kaydediliyor…' : 'Değiştir'}</button>}
+          {dirty && !locked && <button type="button" className="btn sm primary" disabled={busy || !v || chk.st === 'taken' || chk.st === 'reserved'} onClick={save}>{busy ? 'Kaydediliyor…' : 'Değiştir'}</button>}
         </div>
       </Field>
     </div>

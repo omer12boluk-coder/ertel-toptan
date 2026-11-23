@@ -529,7 +529,7 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
     <>
       <div className="mem-bar">
         <div className="search"><Icon n="search" s={18} /><input id="mem-search" type="search" placeholder="Ad, e-posta, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <button className="btn outline acct-btn" onClick={() => setAcctOpen(true)} title="E-postayla giriş hesabının durumuna bak" aria-label="Hesap durumu"><Icon n="shield" s={16} /><span>Hesap durumu</span></button>
+        <button className="btn outline acct-btn" onClick={() => setAcctOpen(true)} title="E-postayla giriş hesabının durumuna bak" aria-label="Hesaplar"><Icon n="shield" s={16} /><span>Hesaplar</span></button>
         {!outer && <button className="btn primary" onClick={() => setNewOpen(true)}><Icon n="plus" s={16} />Yeni üye</button>}
       </div>
       {list.length === 0 ? <Empty icon="users" title={members.length ? 'Eşleşen üye yok' : 'Henüz mağaza üyesi yok'}>{!members.length && <p>Müşteriler mağazada <b>Hesabım</b>’dan ya da sipariş verirken üye olabilir.</p>}</Empty> : (
@@ -551,14 +551,81 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
       )}
       {open && <MemberSheet m={open} onClose={() => setOpen(null)} onDelete={() => del(open)} />}
       {newOpen && <NewMember onClose={() => setNewOpen(false)} />}
-      {acctOpen && <AcctCheck onClose={() => setAcctOpen(false)} />}
+      {acctOpen && <AcctSheet onClose={() => setAcctOpen(false)} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </>
   );
 }
 
-// 23.11.2026 Hesap durumu: e-postayla giriş hesabına bak (var mı, onaylı mı, Google mı, üye kaydı var mı) → onaylı say / sil
-function AcctCheck({ onClose }) {
+// 23.11.2026 Hesaplar penceresi: Bekleyenler (onaylanmamış + üye kaydı olmayan giriş hesapları) | Hesap ara
+function AcctSheet({ onClose }) {
+  const [tab, setTab] = useState('pend');
+  return (
+    <Sheet title="Hesaplar" sub="Müşteri “giremiyorum” dediğinde" onClose={onClose}>
+      <div className="seg acct-seg" role="tablist">
+        <button type="button" className={tab === 'pend' ? 'on' : ''} onClick={() => setTab('pend')}>Bekleyenler</button>
+        <button type="button" className={tab === 'find' ? 'on' : ''} onClick={() => setTab('find')}>Hesap ara</button>
+      </div>
+      {tab === 'pend' ? <AcctPending /> : <AcctCheck />}
+    </Sheet>
+  );
+}
+function AcctPending() {
+  const members = useStore((s) => s.members);
+  const customers = useStore((s) => s.customers) || [];
+  const [list, setList] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [confirm, setConfirm] = useState(null);
+  const [done, setDone] = useState({}); // uid → 'verify' | 'mail' | 'delete'
+  const ok = can('customers');
+  async function load() {
+    setBusy(true); setErr('');
+    try { setList(await api().adminAccts()); } catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  const mem = useMemo(() => new Set(members.map((m) => m.uid)), [members]);
+  const staff = useMemo(() => new Set(customers.map((u) => u.uid || u.id)), [customers]);
+  const live = (list || []).filter((a) => !done[a.uid] || done[a.uid] === 'mail');
+  const unv = live.filter((a) => !a.v && a.p.split(',').includes('pw') && !staff.has(a.uid)).sort((a, b) => b.c - a.c);
+  const orph = live.filter((a) => a.v && !staff.has(a.uid) && (!mem.has(a.uid) || a._ghost)).sort((a, b) => b.c - a.c);
+  const act = (a, what) => {
+    const run = () => api().adminAcctAct(a.uid, what).then((r) => { setDone((d) => ({ ...d, [a.uid]: what })); toast(what === 'verify' ? 'Onaylandı' : what === 'mail' ? (r?.throttled ? 'Az önce gönderilmişti' : 'Onay maili gönderildi') : 'Silindi'); }, (x) => toast(x.message, 'bad'));
+    if (what === 'mail') return run();
+    setConfirm(what === 'verify'
+      ? { title: 'Onaylı say', text: `${a.email} onaylanmış sayılacak; şifresiyle hemen girebilir.`, okLabel: 'Onaylı say', onOk: run }
+      : { title: 'Hesabı sil', text: `${a.email} giriş hesabı silinecek; e-posta serbest kalır. Siparişi varsa kayıtları kalır.`, okLabel: 'Sil', tone: 'danger', onOk: run });
+  };
+  const row = (a, kind) => (
+    <li key={a.uid} className="acct-row">
+      <div className="acct-row-b"><b>{a.email}</b><span className="muted">Açılış {a.c ? when(a.c) : '—'}{kind === 'orph' && a.l ? ' · son giriş ' + when(a.l) : ''}{a.p.includes('g') ? ' · Google' : ''}</span></div>
+      {ok && <div className="acct-row-a">
+        {kind === 'unv' && <><button className="btn sm outline" onClick={() => act(a, 'mail')} disabled={done[a.uid] === 'mail'}>{done[a.uid] === 'mail' ? 'Gönderildi' : 'Mail gönder'}</button><button className="btn sm outline" onClick={() => act(a, 'verify')}>Onaylı say</button></>}
+        <button className="btn sm ghost danger" onClick={() => act(a, 'delete')} aria-label="Sil"><Icon n="trash" s={15} /></button>
+      </div>}
+    </li>
+  );
+  if (!list) return (
+    <div className="acct-pend-gate">
+      <p className="muted">E-postasını onaylamamış ya da panelde kaydı olmayan giriş hesaplarını listeler. Veritabanı okuması yapmaz.</p>
+      {err && <p className="err">{err}</p>}
+      <button className="btn primary" disabled={busy} onClick={load}>{busy ? 'Getiriliyor…' : 'Listeyi getir'}</button>
+    </div>
+  );
+  return (
+    <div className="acct-pend">
+      <h3 className="sheet-h3">Onaylanmamış <span className="muted">({unv.length})</span></h3>
+      <p className="acct-tip muted">Onay mailine tıklamamışlar; giriş yapamıyorlar. Gerçek müşteriyse mail gönderin ya da onaylı sayın, sahteyse silin.</p>
+      {unv.length ? <ul className="acct-list">{unv.map((a) => row(a, 'unv'))}</ul> : <p className="muted acct-empty">Yok</p>}
+      <h3 className="sheet-h3">Üye kaydı olmayan <span className="muted">({orph.length})</span></h3>
+      <p className="acct-tip muted">Giriş hesabı var ama panelde kaydı yok (çoğu eskiden “Üyeyi sil” ile silinenler). E-postayı boşuna tutuyor.</p>
+      {orph.length ? <ul className="acct-list">{orph.map((a) => row(a, 'orph'))}</ul> : <p className="muted acct-empty">Yok</p>}
+      {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </div>
+  );
+}
+
+function AcctCheck() {
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState(null);
@@ -578,7 +645,7 @@ function AcctCheck({ onClose }) {
     ? { title: 'Onaylı say', text: `${a.email} e-postası onaylanmış sayılacak; müşteri şifresiyle hemen girebilir.`, okLabel: 'Onaylı say', onOk: () => api().adminAcctAct(a.uid, 'verify').then(() => { toast('Hesap onaylandı'); look(); }, (x) => toast(x.message, 'bad')) }
     : { title: 'Hesabı sil', text: `${a.email} giriş hesabı${a.member ? ' ve üye kaydı' : ''} silinecek${a.orders ? ' (siparişleri kalır)' : ''}. E-posta serbest kalır, yeniden üye olabilir.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().adminAcctAct(a.uid, 'delete').then(() => { toast('Hesap silindi'); look(); }, (x) => toast(x.message, 'bad')) });
   return (
-    <Sheet title="Hesap durumu" sub="Müşteri “giremiyorum” dediğinde" onClose={onClose}>
+    <div className="acct-find">
       <form className="acct-q" onSubmit={look}>
         <input id="acct-q" type="email" autoCapitalize="none" autoFocus placeholder="musteri@ornek.com" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="btn primary" disabled={busy}>{busy ? 'Bakılıyor…' : 'Bak'}</button>
@@ -602,7 +669,7 @@ function AcctCheck({ onClose }) {
         </div>}
       </>}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
-    </Sheet>
+    </div>
   );
 }
 

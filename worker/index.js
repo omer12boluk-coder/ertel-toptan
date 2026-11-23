@@ -129,6 +129,9 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/member/login-id' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberLoginId(req, env, b)); }
+      if (url.pathname === '/member/uname-free' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await unameFree(req, env, b)); }
+      if (url.pathname === '/admin/accts' && req.method === 'POST') return json(await adminAccts(req, env));
       if (url.pathname === '/member/how' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberHow(req, env, b)); }
       if (url.pathname === '/admin/acct' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminAcct(req, env, b)); }
       if (url.pathname === '/admin/acct-act' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminAcctAct(req, env, b)); }
@@ -429,6 +432,12 @@ function authMailHtml({ title, intro, btn, link, note }) {
 async function authMail(req, env, b) {
   if (!env.FIREBASE_SA) return { ok: false, fallback: true, error: 'anahtar yok' };
   const kind = b.kind === 'reset' ? 'reset' : b.kind === 'email' ? 'email' : 'verify';
+  // 23.11.2026 kullanıcı adıyla şifre yenileme / onay maili: e-posta sunucuda bulunur, uygulamaya sadece maskeli hâli döner
+  if (b.id && !b.email && !b.token && kind !== 'email') {
+    const e = await emailOfId(env, b.id).catch(() => '');
+    if (!e) return { ok: false, error: 'Bu kullanıcı adıyla üyelik bulunamadı.' };
+    b = { ...b, email: e };
+  }
   const origin = okOrigin(b.origin);
   let email = '', idTok = '';
   if (kind === 'email') {
@@ -458,7 +467,7 @@ async function authMail(req, env, b) {
   // (workers.dev adresinde Cache API yazmıyor → bellekteki sayaç da tutulur)
   const nowT = Date.now(); for (const [k, v] of MAIL_THR) if (v.until < nowT) MAIL_THR.delete(k);
   const ck = new Request('https://mail.throttle/' + kind + '/' + (await h(email)));
-  if (MAIL_THR.has(ck.url) || (await caches.default.match(ck).catch(() => null))) return { ok: true, throttled: true };
+  if (MAIL_THR.has(ck.url) || (await caches.default.match(ck).catch(() => null))) return { ok: true, throttled: true, to: maskEm(email) };
   const ip = req.headers.get('CF-Connecting-IP') || '';
   const ik = new Request('https://mail.throttle/ip/' + (await h(ip)));
   const ic = Math.max(MAIL_THR.get(ik.url)?.n || 0, Number((await (await caches.default.match(ik).catch(() => null))?.text().catch(() => '0')) || 0));
@@ -490,7 +499,7 @@ async function authMail(req, env, b) {
   MAIL_THR.set(ck.url, { until: Date.now() + 60e3 }); MAIL_THR.set(ik.url, { n: ic + 1, until: MAIL_THR.get(ik.url)?.until || Date.now() + 600e3 });
   await caches.default.put(ck, new Response('1', { headers: { 'Cache-Control': 'max-age=60' } })).catch(() => {});
   await caches.default.put(ik, new Response(String(ic + 1), { headers: { 'Cache-Control': 'max-age=600' } })).catch(() => {});
-  return { ok: true, via: r.via };
+  return { ok: true, via: r.via, to: maskEm(email) };
 }
 // Actions 'E-posta servisi' denemesi: X-Key = sha256('mail:' + TELEGRAM_TOKEN) → yöneticiye deneme e-postası
 const mailKey = async (env) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode('mail:' + (env.TELEGRAM_TOKEN || ''))))].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 40);
@@ -928,13 +937,14 @@ async function memberUname(env, b) {
   if (!m) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
   const old = String(m.username || '').trim().toLowerCase();
   if (old === name) return { ok: false, error: 'Kullanıcı adınız zaten bu.' };
+  if (RESERVED_UN.test(name)) return { ok: false, error: 'Bu kullanıcı adı kullanılamaz, başka bir tane deneyin.' };
   const last = Number(m.unameAt || 0), next = last + UNAME_DAYS * 864e5;
   if (last && Date.now() < next) { const d = new Date(next + 3 * 36e5); return { ok: false, code: 'wait', next, error: `Kullanıcı adınızı ${UNAME_DAYS} günde bir değiştirebilirsiniz. Bir sonraki değişiklik: ${d.getUTCDate()}.${d.getUTCMonth() + 1}.${d.getUTCFullYear()}` }; }
   const st = await saToken(env); const H = { Authorization: 'Bearer ' + st, 'Content-Type': 'application/json' };
   const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
   const DOC = `projects/${pid}/databases/(default)/documents/`;
   const writes = [
-    { update: { name: DOC + 'usernames/' + name, fields: { uid: { stringValue: uid }, email: { stringValue: String(m.email || '') } } }, currentDocument: { exists: false } },
+    { update: { name: DOC + 'usernames/' + name, fields: { uid: { stringValue: uid } } }, currentDocument: { exists: false } },
     { update: { name: DOC + 'members/' + uid, fields: { username: { stringValue: name }, unameAt: { integerValue: String(Date.now()) } } }, updateMask: { fieldPaths: ['username', 'unameAt'] }, currentDocument: { exists: true } },
   ];
   if (old && /^[\w.-]{1,60}$/.test(old)) {
@@ -970,7 +980,7 @@ async function memberSyncEmail(env, b) {
   const un = String(m.fields?.username?.stringValue || '').toLowerCase();
   if (un && /^[a-z0-9._-]{3,20}$/.test(un)) {
     const u = await fetch(FS + 'usernames/' + un, { headers: H }).then((x) => x.ok ? x.json() : null).catch(() => null);
-    if (u?.fields?.uid?.stringValue === uid && String(u.fields?.email?.stringValue || '').toLowerCase() !== email) writes.push({ update: { name: DOC + 'usernames/' + un, fields: { email: { stringValue: email } } }, updateMask: { fieldPaths: ['email'] } });
+    if (u?.fields?.uid?.stringValue === uid && u.fields?.email) writes.push({ update: { name: DOC + 'usernames/' + un, fields: { uid: { stringValue: uid } } } }); // eski kayıttaki e-postayı kaldır
   }
   if (!writes.length) return { ok: true, same: true };
   const r = await fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents:commit`, { method: 'POST', headers: H, body: JSON.stringify({ writes }) });
@@ -994,6 +1004,57 @@ function noticeMailHtml({ title, intro, note }) {
     + `<div style="background:#ffffff;border-radius:14px;padding:28px 24px;border:1px solid #e5e7eb"><h1 style="font-size:19px;margin:0 0 12px">${esc(title)}</h1><p style="font-size:15px;line-height:1.6;margin:0">${esc(intro)}</p></div>`
     + `<p style="font-size:12px;color:#94a3b8;line-height:1.5;margin:18px 4px 0">${esc(note)}<br>ERTEL GSM · Santral Center, Tahtakale, Fatih / İstanbul · ertelmarket.com</p>`
     + `</div></body></html>`;
+}
+
+// ---- 23.11.2026 Kullanıcı adı gizliliği: usernames/<ad> artık SADECE { uid } tutar; e-posta dışarı verilmez.
+// Kullanıcı adıyla giriş: bekçi şifreyi doğrular, e-postayı sadece şifreyi bilen kişiye söyler (/member/login-id).
+const RESERVED_UN = /^(ertel.*|admin.*|administrator|yonetic.*|yonetim.*|destek.*|support.*|info|iletisim|satis.*|muhasebe.*|magaza.*|root|sistem.*|system|moderator.*|resmi.*|official.*|claude|noreply|no-reply)$/;
+const maskEm = (e) => String(e || '').replace(/^(.)[^@]*?(.)?@/, (m, a, b) => a + '***' + (b || '') + '@');
+const FB_KEY = 'AIzaSyAb8Q747XVc1e9f_ffp6Y1uWCc8QXDSXKk'; // herkese açık web anahtarı (config.js ile aynı)
+const ID_THR = new Map();
+function ipLimit(map, req, max, ms) {
+  const ip = req.headers.get('CF-Connecting-IP') || '-'; const t = Date.now();
+  const e = map.get(ip); if (e && e.until > t) { if (e.n >= max) return false; e.n++; return true; }
+  map.set(ip, { n: 1, until: t + ms }); if (map.size > 5000) map.clear(); return true;
+}
+async function uidOfName(env, name) {
+  name = String(name || '').trim().toLowerCase(); if (!/^[a-z0-9._-]{3,20}$/.test(name)) return '';
+  const st = await saToken(env);
+  const u = await fetch(FS + 'usernames/' + name, { headers: { Authorization: 'Bearer ' + st } }).then((x) => x.ok ? x.json() : null).catch(() => null);
+  return u?.fields?.uid?.stringValue || '';
+}
+async function emailOfId(env, id) {
+  const uid = await uidOfName(env, id); if (!uid) return '';
+  const a = await acctLookup(env, { localId: [uid] }).catch(() => null); return String(a?.email || '').toLowerCase();
+}
+// kullanıcı adıyla giriş: şifre doğruysa e-posta döner (uygulama sonra normal girişi yapar)
+async function memberLoginId(req, env, b) {
+  if (!env.FIREBASE_SA) return { ok: false, error: 'Şu an yapılamıyor, e-postanızla giriş yapın.' };
+  if (!ipLimit(ID_THR, req, 20, 600e3)) return { ok: false, error: 'Çok fazla deneme. Birkaç dakika sonra tekrar deneyin ya da e-postanızla girin.' };
+  const id = String(b.id || '').trim().toLowerCase(); const pw = String(b.pw || '');
+  const bad = { ok: false, error: 'Kullanıcı adı veya şifre hatalı.' };
+  if (!id || !pw) return bad;
+  const uid = await uidOfName(env, id); if (!uid) return { ok: false, error: 'Bu kullanıcı adıyla üyelik bulunamadı.' };
+  const a = await acctLookup(env, { localId: [uid] }).catch(() => null); if (!a?.email) return bad;
+  const p = provsOf(a);
+  if (!p.includes('password')) return { ok: false, kind: p.includes('facebook.com') ? 'facebook' : 'google', error: 'Bu hesap Google ile açılmış, şifresi yok.' };
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + FB_KEY, { method: 'POST', headers: { 'Content-Type': 'application/json', Referer: 'https://ertelmarket.com/' }, body: JSON.stringify({ email: a.email, password: pw, returnSecureToken: false }) });
+  if (r.ok) return { ok: true, email: String(a.email).toLowerCase() };
+  const j = await r.json().catch(() => ({})); const m = j.error?.message || '';
+  if (/TOO_MANY/.test(m)) return { ok: false, error: 'Çok fazla deneme. Biraz sonra tekrar deneyin ya da e-postanızla girin.' };
+  if (/USER_DISABLED/.test(m)) return { ok: false, error: 'Bu hesap kapatılmış.' };
+  if (/INVALID_LOGIN|INVALID_PASSWORD|EMAIL_NOT_FOUND|MISSING_PASSWORD/.test(m)) return bad;
+  return { ok: false, code: 'srv', error: 'Kullanıcı adıyla giriş şu an yapılamadı, e-postanızla giriş yapın. (' + (m || r.status) + ')' };
+}
+// kullanıcı adı boş mu? (en çok 8 ad; yasaklı adlar boş sayılmaz)
+const FREE_THR = new Map();
+async function unameFree(req, env, b) {
+  if (!env.FIREBASE_SA) return { ok: false };
+  if (!ipLimit(FREE_THR, req, 150, 600e3)) return { ok: false, error: 'Çok fazla istek' };
+  const names = [...new Set((Array.isArray(b.names) ? b.names : [b.name]).map((x) => String(x || '').trim().toLowerCase()))].filter((x) => /^[a-z0-9._-]{3,20}$/.test(x)).slice(0, 8);
+  const free = []; const reserved = [];
+  await Promise.all(names.map(async (n) => { if (RESERVED_UN.test(n)) { reserved.push(n); return; } if (!(await uidOfName(env, n))) free.push(n); }));
+  return { ok: true, free: names.filter((n) => free.includes(n)), reserved };
 }
 
 // ---- 23.11.2026 Hesap yardımcıları (Firebase Auth, servis hesabıyla) ----------------------------------------------
@@ -1062,8 +1123,22 @@ async function adminAcctAct(req, env, b) {
   const uid = String(b.uid || ''); if (!/^[\w-]{10,40}$/.test(uid)) return { ok: false, error: 'kimlik' };
   if (await saDoc(env, 'users/' + uid)) return { ok: false, error: 'Bu bir bayi / ekip hesabı, buradan değiştirilemez.' };
   if (b.act === 'verify') { await authUpdate(env, { localId: uid, emailVerified: true }); return { ok: true }; }
+  if (b.act === 'mail') { const a = await acctLookup(env, { localId: [uid] }).catch(() => null); if (!a?.email) return { ok: false, error: 'E-posta yok' }; return await authMail(req, env, { kind: 'verify', email: a.email, origin: 'https://ertelmarket.com' }); }
   if (b.act === 'delete') { const m = await saDoc(env, 'members/' + uid); return await wipeAccount(env, uid, m); }
   return { ok: false, error: 'işlem' };
+}
+// Yönetim › Müşteriler › Hesaplar › Bekleyenler: tüm giriş hesapları (Firestore OKUMASI YOK; üye/bayi eşleştirmesi panelde, eldeki listeyle)
+async function adminAccts(req, env) {
+  const err = await permOf(req, 'customers'); if (err) return { ok: false, error: err };
+  const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+  const out = []; let next = '';
+  for (let pg = 0; pg < 30; pg++) {
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pidOf(env)}/accounts:batchGet?maxResults=1000${next ? '&nextPageToken=' + encodeURIComponent(next) : ''}`, { headers: { Authorization: 'Bearer ' + gt } });
+    const j = await r.json().catch(() => ({})); if (!r.ok) return { ok: false, error: j.error?.message || 'Hesaplar alınamadı' };
+    for (const a of j.users || []) { const em = String(a.email || '').toLowerCase(); if (!em || em.endsWith('@toptan.ertelgsm.app')) continue; out.push({ uid: a.localId, email: em, v: a.emailVerified ? 1 : 0, p: provsOf(a).map((x) => x === 'password' ? 'pw' : x === 'google.com' ? 'g' : x === 'facebook.com' ? 'fb' : x).join(','), c: Number(a.createdAt || 0), l: Number(a.lastLoginAt || 0), d: a.disabled ? 1 : 0 }); }
+    next = j.nextPageToken || ''; if (!next) break;
+  }
+  return { ok: true, accts: out };
 }
 // Her gece (TR 04:23): 14 günden eski, ONAYLANMAMIŞ, sadece şifreli, siparişi OLMAYAN mağaza hesapları silinir
 // (sahte / unutulmuş kayıtlar e-postayı ve kullanıcı adını boşa tutmasın). Bayi/ekip, panelden açılan üye, siparişi olan: DOKUNULMAZ.

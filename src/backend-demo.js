@@ -317,8 +317,10 @@ export class DemoBackend {
   memberKind() { const m = this.mem()[this.db.shopSession]; return m?.google && !m.pw ? 'google' : 'password'; }
   memberProviders() { const m = this.mem()[this.db.shopSession]; return [...(m?.google ? ['google.com'] : []), ...(m?.pw ? ['password'] : [])]; }
   async memberHow() { return ''; }
+  async usernameCheck(names) { const R = /^(ertel.*|admin.*|administrator|yonetic.*|yonetim.*|destek.*|support.*|info|iletisim|satis.*|muhasebe.*|magaza.*|root|sistem.*|system|moderator.*|resmi.*|official.*|claude|noreply|no-reply)$/; const used = new Set(Object.values(this.mem()).map((m) => m.username)); return { free: names.filter((n) => !R.test(n) && !used.has(n)), reserved: names.filter((n) => R.test(n)) }; }
+  async adminAccts() { return Object.values(this.mem()).map((m) => ({ uid: m.uid, email: m.email, v: m.unverified ? 0 : 1, p: [m.pw && 'pw', m.google && 'g'].filter(Boolean).join(','), c: m.createdAt || 0, l: m.createdAt || 0, d: 0, _ghost: !!m.ghost })); }
   async memberResendTo(email) { return email; }
-  async memberSetPwLink(email) { return email; }
+  async memberSetPwLink(email, id) { return email || id; }
   async adminAcct(email) {
     email = String(email || '').trim().toLowerCase(); const m = Object.values(this.mem()).find((x) => x.email === email);
     if (!m) return { ok: true, found: false };

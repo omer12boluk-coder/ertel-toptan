@@ -689,7 +689,7 @@ export class FirebaseBackend {
       const r = await timeout(fetch(W + '/mail/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, origin: location.origin }) }), 15000);
       j = await r.json().catch(() => ({}));
     } catch { return false; } // bekçiye ulaşılamadı → Firebase gönderir
-    if (j.ok) return true;
+    if (j.ok) return j; // 23.11.2026: { ok, to (maskeli e-posta) }
     if (j.error && !j.fallback) throw new Error(j.error); // ör. çok fazla deneme
     return false;
   }
@@ -698,7 +698,16 @@ export class FirebaseBackend {
     try { sent = await this._authMail({ kind: 'verify', token: await user.getIdToken() }); } catch { sent = false; }
     if (!sent) await this.U.sendEmailVerification(user, this.actionUrl());
   }
-  async usernameFree(name) { const s = await timeout(this.F.getDoc(this.d('usernames', name))); return !s.exists(); }
+  async usernameFree(name) {
+    // yönetici oturumu doğrudan okur; müşteri / misafir için kural kapalı → bekçi
+    try { const s = await timeout(this.F.getDoc(this.d('usernames', name)), 8000); return !s.exists(); } catch (e) { if (!/permission|insufficient/i.test(e?.code || e?.message || '')) throw e; }
+    const j = await this._watch('/member/uname-free', { names: [name] }, 8000);
+    if (!j.ok) throw new Error('Kullanıcı adı kontrol edilemedi, biraz sonra tekrar deneyin.');
+    if ((j.reserved || []).includes(name)) throw new Error('Bu kullanıcı adı kullanılamaz, başka bir tane deneyin.');
+    return (j.free || []).includes(name);
+  }
+  // 23.11.2026 alınmış ada boş öneriler / yasaklı ad bilgisi (tek istekte)
+  async usernameCheck(names) { const j = await this._watch('/member/uname-free', { names }, 8000); if (!j.ok) throw new Error('kontrol edilemedi'); return { free: j.free || [], reserved: j.reserved || [] }; }
   // keep: true → sipariş adımında üye olunca sipariş yazılana kadar oturum açık kalır; sonra memberDone() çağrılır
   async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' }, legal }, keep) {
     if (username && !(await this.usernameFree(username))) throw new Error('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
@@ -718,7 +727,7 @@ export class FirebaseBackend {
     try {
       const m = { uid: cred.user.uid, email, name, phone, createdAt: now(), addresses, invoice, ...(username ? { username } : {}), ...(legal ? { legal } : {}) };
       await timeout(this.F.setDoc(this.d('members', m.uid), m));
-      if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid: m.uid, email })).catch((e) => console.warn(e));
+      if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid: m.uid })).catch((e) => console.warn(e));
       await this._pingMember(cred.user, 'mail');
       await this._sendVerify(cred.user).catch((e) => console.warn(e));
       if (!keep) await this.memberDone();
@@ -728,15 +737,22 @@ export class FirebaseBackend {
   // 17.11.2026 yeni üye bildirimi (Telegram + yönetici push): oturum kapanmadan anahtar alınır, istek arka planda gider
   async _pingMember(user, via) { try { const token = await user.getIdToken(); if (token) pingWatch('/notify-member', { token, via }); } catch (e) { console.warn(e); } }
   async memberDone() { this.signingUp = false; await this.U.signOut(this.auth); }
-  async emailOf(id) {
+  // 23.11.2026 kullanıcı adı → e-posta artık herkese açık değil: bekçi şifreyi doğrular, e-postayı sadece şifreyi bilene söyler
+  async _watch(path, body, ms = 15000) {
+    const W = String(window.WATCH_URL || '').replace(/\/$/, ''); if (!W) throw new Error('Sunucuya ulaşılamadı.');
+    const r = await timeout(fetch(W + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), ms);
+    return r.json().catch(() => ({}));
+  }
+  async emailOf(id, pw) {
     id = String(id || '').trim().toLowerCase();
     if (id.includes('@')) return id;
-    const s = await timeout(this.F.getDoc(this.d('usernames', id)));
-    if (!s.exists()) throw new Error('Bu kullanıcı adıyla üyelik bulunamadı.');
-    return s.data().email;
+    const j = await this._watch('/member/login-id', { id, pw });
+    if (j.ok && j.email) return j.email;
+    if (j.kind === 'google' || j.kind === 'facebook') { const x = socialErr(j.kind, ''); x.id = id; throw x; }
+    throw new Error(j.error || 'Kullanıcı adı veya şifre hatalı.');
   }
   async memberLogin(id, pw) {
-    const email = await this.emailOf(id);
+    const email = await this.emailOf(id, pw);
     let cred;
     try { cred = await this.U.signInWithEmailAndPassword(this.auth, email, pw); }
     catch (e) {
@@ -748,7 +764,7 @@ export class FirebaseBackend {
     if (!cred.user.emailVerified && !byAdmin) { await this.U.signOut(this.auth); const e = new Error('E-posta adresiniz henüz doğrulanmadı. Size gönderdiğimiz e-postadaki bağlantıya tıklayın.'); e.code = 'unverified'; throw e; }
   }
   async memberResendVerify(id, pw) {
-    const email = await this.emailOf(id);
+    const email = await this.emailOf(id, pw);
     this.signingUp = true;
     try { const c = await this.U.signInWithEmailAndPassword(this.auth, email, pw); await this._sendVerify(c.user); }
     catch (e) { throw new Error(authMsg(e)); }
@@ -774,7 +790,7 @@ export class FirebaseBackend {
     if (old === name) return;
     if (!(await this.usernameFree(name))) throw new Error('Bu kullanıcı adı alınmış.');
     const b = this.F.writeBatch(this.db);
-    b.set(this.d('usernames', name), { uid, email: m.email || '' });
+    b.set(this.d('usernames', name), { uid });
     if (old) { const o = await timeout(this.F.getDoc(this.d('usernames', old))).catch(() => null); if (o?.exists() && o.data().uid === uid) b.delete(this.d('usernames', old)); }
     b.update(this.d('members', uid), { username: name });
     await timeout(b.commit());
@@ -788,8 +804,9 @@ export class FirebaseBackend {
     if (!(await this._authMail({ kind: 'verify', email }))) throw new Error('Şu an gönderilemedi, biraz sonra tekrar deneyin.');
     return email;
   }
-  async memberSetPwLink(email) {
+  async memberSetPwLink(email, id) {
     email = String(email || '').trim().toLowerCase();
+    if (!email && id) { const j = await this._authMail({ kind: 'reset', id, set: true }); if (j) return j.to || id; throw new Error('Şu an gönderilemedi, biraz sonra tekrar deneyin.'); }
     if (await this._authMail({ kind: 'reset', email, set: true })) return email;
     try { await this.U.sendPasswordResetEmail(this.auth, email, this.actionUrl()); } catch (e) { throw new Error(authMsg(e)); }
     return email;
@@ -797,6 +814,7 @@ export class FirebaseBackend {
   memberProviders() { return (this.auth.currentUser?.providerData || []).map((x) => x.providerId); }
   // Yönetim › Müşteriler › Hesap durumu
   async adminAcct(email) { return this._staffCall('/admin/acct', { email }); }
+  async adminAccts() { return (await this._staffCall('/admin/accts', {})).accts || []; }
   async adminAcctAct(uid, act) { return this._staffCall('/admin/acct-act', { uid, act }); }
   // 23.11.2026 Güvenlik: şifre değiştir · e-posta değiştir (yeni adrese doğrulama bağlantısı) · tüm cihazlardan çıkış
   async memberChangePassword(cur, nw) {
@@ -866,7 +884,9 @@ export class FirebaseBackend {
     await this.U.signOut(this.auth).catch(() => {});
   }
   async memberReset(id) {
-    const email = await this.emailOf(id);
+    id = String(id || '').trim().toLowerCase();
+    if (!id.includes('@')) { const j = await this._authMail({ kind: 'reset', id }); if (j) return j.to || id; throw new Error('Şu an gönderilemedi, biraz sonra tekrar deneyin.'); }
+    const email = id;
     if (await this._authMail({ kind: 'reset', email })) return email; // kendi alan adımızdan gitti
     try { await this.U.sendPasswordResetEmail(this.auth, email, this.actionUrl()); } catch (e) { throw new Error(authMsg(e)); }
     return email;
@@ -891,7 +911,7 @@ export class FirebaseBackend {
       await this.U.signOut(auth);
       const m = { uid, email, name, phone, createdAt: now(), addresses: [], invoice: { type: 'person' }, byAdmin: true, ...(username ? { username } : {}) };
       await timeout(this.F.setDoc(this.d('members', uid), m));
-      if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid, email }));
+      if (username) await timeout(this.F.setDoc(this.d('usernames', username), { uid }));
       return m;
     } finally { this.A.deleteApp(tmp).catch(() => {}); }
   }
