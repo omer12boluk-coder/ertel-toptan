@@ -127,6 +127,8 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/member/sync-email' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberSyncEmail(env, b)); }
+      if (url.pathname === '/member/signout-all' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberSignoutAll(env, b)); }
       if (url.pathname === '/member/uname' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberUname(env, b)); }
       if (url.pathname === '/member/delete' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberDelete(env, b)); }
       if (url.pathname === '/mail/auth' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await authMail(req, env, b)); }
@@ -421,10 +423,20 @@ function authMailHtml({ title, intro, btn, link, note }) {
 }
 async function authMail(req, env, b) {
   if (!env.FIREBASE_SA) return { ok: false, fallback: true, error: 'anahtar yok' };
-  const kind = b.kind === 'reset' ? 'reset' : 'verify';
+  const kind = b.kind === 'reset' ? 'reset' : b.kind === 'email' ? 'email' : 'verify';
   const origin = okOrigin(b.origin);
-  let email = '';
-  if (kind === 'verify') {
+  let email = '', idTok = '';
+  if (kind === 'email') {
+    // 23.11.2026 e-posta değiştir: bağlantı YENİ adrese gider; tıklanınca Firebase hesabın e-postasını değiştirir
+    idTok = String(b.token || ''); const uid = tokUid(idTok);
+    if (!uid || !(await fsAuth('members/' + uid, idTok).catch(() => null))) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
+    email = String(b.email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: 'Geçerli bir e-posta adresi yazın.' };
+    const pid0 = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
+    const gt0 = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+    const lk = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid0}/accounts:lookup`, { method: 'POST', headers: { Authorization: 'Bearer ' + gt0, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: [email] }) }).then((x) => x.json()).catch(() => ({}));
+    if ((lk.users || []).length) return { ok: false, error: 'Bu e-posta ile başka bir üyelik var.' };
+  } else if (kind === 'verify') {
     const tok = String(b.token || ''); const uid = tokUid(tok);
     if (!uid) return { ok: false, fallback: true };
     const m = await fsAuth('members/' + uid, tok).catch(() => null); // anahtarı Firestore doğrular → başkası adına istenemez
@@ -447,15 +459,17 @@ async function authMail(req, env, b) {
     const tok = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
     const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:sendOobCode`, {
       method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestType: kind === 'reset' ? 'PASSWORD_RESET' : 'VERIFY_EMAIL', email, returnOobLink: true, continueUrl: origin + '/' }),
+      body: JSON.stringify(kind === 'email' ? { requestType: 'VERIFY_AND_CHANGE_EMAIL', idToken: idTok, newEmail: email, returnOobLink: true, continueUrl: origin + '/' } : { requestType: kind === 'reset' ? 'PASSWORD_RESET' : 'VERIFY_EMAIL', email, returnOobLink: true, continueUrl: origin + '/' }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.oobLink) return { ok: false, fallback: true, error: j.error?.message || String(r.status) }; // ör. EMAIL_NOT_FOUND → uygulama Firebase'in kendi mesajını gösterir
     oob = new URL(j.oobLink).searchParams.get('oobCode');
   } catch (e) { return { ok: false, fallback: true, error: String(e.message || e) }; }
   if (!oob) return { ok: false, fallback: true };
-  const link = `${origin}/islem?mode=${kind === 'reset' ? 'resetPassword' : 'verifyEmail'}&oobCode=${encodeURIComponent(oob)}&lang=tr`;
-  const t = kind === 'reset'
+  const link = `${origin}/islem?mode=${kind === 'reset' ? 'resetPassword' : kind === 'email' ? 'verifyAndChangeEmail' : 'verifyEmail'}&oobCode=${encodeURIComponent(oob)}&lang=tr`;
+  const t = kind === 'email'
+    ? { subject: 'ERTEL GSM e-posta değişikliği', title: 'Yeni e-posta adresinizi onaylayın', intro: `ERTEL GSM hesabınızın e-posta adresini ${email} olarak değiştirmek istediniz. Onaylamak için aşağıdaki düğmeye dokunun; onaylayana kadar eski adresiniz geçerli kalır.`, btn: 'E-postamı değiştir', note: 'Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; hesabınız değişmez.' }
+    : kind === 'reset'
     ? { subject: 'ERTEL GSM şifre yenileme', title: 'Şifrenizi yenileyin', intro: `${email} hesabı için şifre yenileme isteği aldık. Yeni şifrenizi belirlemek için aşağıdaki düğmeye dokunun.`, btn: 'Yeni şifre belirle', note: 'Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.' }
     : { subject: 'ERTEL GSM üyeliğinizi onaylayın', title: 'E-posta adresinizi onaylayın', intro: `ERTEL GSM'e hoş geldiniz. Üyeliğinizi tamamlamak için ${email} adresini onaylamanız yeterli.`, btn: 'E-postamı onayla', note: 'Bu üyeliği siz açmadıysanız bu e-postayı yok sayabilirsiniz.' };
   const text = `${t.title}\n\n${t.intro}\n\n${link}\n\n${t.note}\n\nERTEL GSM · ertelmarket.com`;
@@ -924,6 +938,52 @@ async function memberUname(env, b) {
   return { ok: true, username: name, unameAt: Date.now() };
 }
 
+// 23.11.2026 e-posta değişti → members/<uid>.email + usernames/<ad>.email Firebase Auth'taki GERÇEK adrese eşitlenir.
+// İstemciden gelen sadece arama anahtarı (yeni adres); yazılan değer Auth kaydından okunur → başkası adına bir şey değiştirilemez.
+async function memberSyncEmail(env, b) {
+  if (!env.FIREBASE_SA) return { ok: false };
+  const email = String(b.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false };
+  const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
+  const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+  const lk = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:lookup`, { method: 'POST', headers: { Authorization: 'Bearer ' + gt, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: [email] }) }).then((x) => x.json()).catch(() => ({}));
+  const acc = (lk.users || [])[0]; if (!acc?.localId || String(acc.email || '').toLowerCase() !== email) return { ok: false };
+  const uid = acc.localId;
+  const st = await saToken(env); const H = { Authorization: 'Bearer ' + st, 'Content-Type': 'application/json' };
+  const m = await fetch(FS + 'members/' + uid, { headers: H }).then((x) => x.ok ? x.json() : null).catch(() => null);
+  if (!m) return { ok: false };
+  const DOC = `projects/${pid}/databases/(default)/documents/`;
+  const writes = [];
+  if (String(m.fields?.email?.stringValue || '').toLowerCase() !== email) writes.push({ update: { name: DOC + 'members/' + uid, fields: { email: { stringValue: email } } }, updateMask: { fieldPaths: ['email'] } });
+  const un = String(m.fields?.username?.stringValue || '').toLowerCase();
+  if (un && /^[a-z0-9._-]{3,20}$/.test(un)) {
+    const u = await fetch(FS + 'usernames/' + un, { headers: H }).then((x) => x.ok ? x.json() : null).catch(() => null);
+    if (u?.fields?.uid?.stringValue === uid && String(u.fields?.email?.stringValue || '').toLowerCase() !== email) writes.push({ update: { name: DOC + 'usernames/' + un, fields: { email: { stringValue: email } } }, updateMask: { fieldPaths: ['email'] } });
+  }
+  if (!writes.length) return { ok: true, same: true };
+  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents:commit`, { method: 'POST', headers: H, body: JSON.stringify({ writes }) });
+  return { ok: r.ok };
+}
+// 23.11.2026 Tüm cihazlardan çıkış: hesabın oturum anahtarları geçersiz sayılır (validSince = şimdi). Diğer cihazlar en geç ~1 saatte düşer.
+async function memberSignoutAll(env, b) {
+  if (!env.FIREBASE_SA) return { ok: false, error: 'Şu an yapılamıyor, biraz sonra tekrar deneyin.' };
+  const tok = String(b.token || ''); const uid = tokUid(tok);
+  if (!uid || !(await fsAuth('members/' + uid, tok).catch(() => null))) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
+  const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
+  const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:update`, { method: 'POST', headers: { Authorization: 'Bearer ' + gt, 'Content-Type': 'application/json' }, body: JSON.stringify({ localId: uid, validSince: String(Math.floor(Date.now() / 1000)) }) });
+  return r.ok ? { ok: true } : { ok: false, error: 'Yapılamadı, biraz sonra tekrar deneyin.' };
+}
+// hesap silindi bilgilendirme e-postası (düğmesiz)
+function noticeMailHtml({ title, intro, note }) {
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title></head>`
+    + `<body style="margin:0;padding:0;background:#f4f5f7"><div style="max-width:520px;margin:0 auto;padding:32px 20px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a">`
+    + `<div style="font-size:20px;font-weight:700;letter-spacing:.5px;margin:0 0 20px">ERTEL GSM</div>`
+    + `<div style="background:#ffffff;border-radius:14px;padding:28px 24px;border:1px solid #e5e7eb"><h1 style="font-size:19px;margin:0 0 12px">${esc(title)}</h1><p style="font-size:15px;line-height:1.6;margin:0">${esc(intro)}</p></div>`
+    + `<p style="font-size:12px;color:#94a3b8;line-height:1.5;margin:18px 4px 0">${esc(note)}<br>ERTEL GSM · Santral Center, Tahtakale, Fatih / İstanbul · ertelmarket.com</p>`
+    + `</div></body></html>`;
+}
+
 // 17.11.2026 Hesabımı sil (müşteri kendisi): POST /member/delete { token } — token son 10 dk içinde yeniden girişle alınmış olmalı
 // (uygulama şifre / Google ile tekrar doğrulatır). Silinen: giriş hesabı (Firebase Auth), members/{uid}, usernames/{ad},
 // haber bekleme kayıtları (wait/* içindeki uid). Siparişler / faturalar YASA GEREĞİ KALIR (kullanıcı kararı: aynen kalsın).
@@ -954,7 +1014,12 @@ async function memberDelete(env, b) {
     method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
     body: JSON.stringify({ writes: [{ transform: { document: DOC + 'wait/' + p, fieldTransforms: [{ fieldPath: 'uids', removeAllFromArray: { values: [{ stringValue: uid }] } }] }, currentDocument: { exists: true } }] }),
   }).catch(() => {})));
-  // 3) yöneticiye haber (Telegram + push; e-posta yok)
+  // 3) müşteriye 'hesabınız silindi' e-postası (bizim alan adımızdan)
+  if (m.email) {
+    const t = { title: 'Hesabınız silindi', intro: `${m.email} adresine bağlı ERTEL GSM üyeliğiniz isteğiniz üzerine silindi. Giriş bilgileriniz, adresleriniz ve favorileriniz kaldırıldı. Daha önce verdiğiniz siparişlerin kayıtları yasal zorunluluk nedeniyle saklanır.`, note: 'Bu işlemi siz yapmadıysanız hemen bize yazın: bu e-postayı yanıtlayabilirsiniz.' };
+    await sendMail(env, { to: m.email, from: AUTH_FROM(env), subject: 'ERTEL GSM hesabınız silindi', text: `${t.title}\n\n${t.intro}\n\n${t.note}\n\nERTEL GSM · ertelmarket.com`, html: noticeMailHtml(t), replyTo: AUTH_REPLY(env) }).catch(() => {});
+  }
+  // 4) yöneticiye haber (Telegram + push; e-posta yok)
   const who = m.name || m.username || 'Üye';
   await adminPush(env, { title: `🗑️ Üye hesabını sildi · ${who}`, body: [m.email, m.phone].filter(Boolean).join(' · ').slice(0, 160), url: '/admin/musteriler', tag: 'md-' + uid }).catch(() => {});
   await notifySend(env, { subject: `Üye hesabını sildi · ${who}`, text: `🗑️ Mağaza üyesi hesabını sildi\n${who}${m.username ? ` (@${m.username})` : ''}\n${[m.email, m.phone].filter(Boolean).join(' · ')}\nEski siparişleri yerinde duruyor.`, noEmail: true }).catch(() => {});

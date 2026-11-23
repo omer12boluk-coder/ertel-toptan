@@ -180,6 +180,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
   const rate = useRate();
   const methods = [O.cargo !== false && 'cargo', O.pickup !== false && 'pickup'].filter(Boolean);
   const [f, setF] = useState(() => initForm(member, methods, ls.get('guest-checkout', null)));
+  const coUn = useUnameCheck(!member && f.signup ? f.uname : '');
   const [err, setErr] = useState({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -458,7 +459,7 @@ export function Checkout({ items, onBack, single }) { // single: "Hemen satın a
             <section className="co-sec co-signup">
               <label className="mini-check big"><input type="checkbox" checked={f.signup} onChange={(e) => set({ signup: e.target.checked, uname: f.uname || suggestUser(f.contact.email) })} /><span><b>Bu bilgilerle üye ol</b> <small className="muted">— bir dahaki siparişte her şey hazır gelir, siparişlerinizi takip edersiniz</small></span></label>
               {f.signup && <div className="row2">
-                <Field label="Kullanıcı adı" opt error={err.uname} hint="E-posta yerine bununla da giriş yapabilirsiniz"><input id="co-uname" autoCapitalize="none" value={f.uname} placeholder={suggestUser(f.contact.email)} onChange={(e) => set({ uname: cleanUsername(e.target.value).slice(0, 20) })} /></Field>
+                <Field label="Kullanıcı adı" opt error={err.uname || unameErr(coUn)} hint={unameHint(coUn, 'E-posta yerine bununla da giriş yapabilirsiniz')}><input id="co-uname" autoCapitalize="none" value={f.uname} placeholder={suggestUser(f.contact.email)} onChange={(e) => set({ uname: cleanUsername(e.target.value).slice(0, 20) })} /></Field>
                 <Field label="Şifre belirleyin" error={err.pw} hint="En az 6 karakter"><PasswordInput id="co-pw" autoComplete="new-password" value={f.pw} onChange={(e) => set({ pw: e.target.value })} /></Field>
               </div>}
               {f.signup && <SignupConsent checked={!!f.legalM} onChange={(v) => set({ legalM: v })} error={err.legalM} />}
@@ -750,6 +751,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e?.target ? e.target.value : e }));
   const canSignup = S.orders?.signup !== false;
+  const sgUn = useUnameCheck(view === 'signup' ? f.uname : '');
   const unameReq = S.orders?.unameReq !== false; // 16.11.2026: Ayarlar › Sipariş ve üyelik › 'Kullanıcı adı zorunlu'
   // 17.11.2026: 'Şifre (tekrar)' alanı varsayılan VAR (kullanıcı istedi); iki bölmeli sayfada Şifre ile yan yana; orders.pw2 'off' = yok
   const pw2On = !noGrow || S.orders?.pw2 !== 'off';
@@ -858,7 +860,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
         <Field label="Ad soyad"><input id="m-name" autoComplete="name" value={f.name} onChange={set('name')} /></Field>
         <Field label="E-posta" hint="Doğrulama bağlantısı buraya gelir"><input id="m-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={set('email')} /></Field>
         <div className="row2">
-          <Field label="Kullanıcı adı" opt={!unameReq} hint="E-posta yerine bununla da girebilirsiniz"><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
+          <Field label="Kullanıcı adı" opt={!unameReq} error={unameErr(sgUn)} hint={unameHint(sgUn, 'E-posta yerine bununla da girebilirsiniz')}><input id="m-uname" autoCapitalize="none" autoComplete="username" value={f.uname} onChange={(e) => setF((x) => ({ ...x, uname: cleanUsername(e.target.value).slice(0, 20), unameTouched: true }))} /></Field>
           <Field label="Cep telefonu"><PhoneInput id="m-phone" value={f.phone} onChange={set('phone')} /></Field>
         </div>
       </>}
@@ -897,6 +899,7 @@ export function AuthAction() {
     if (!code) { setErr('Bağlantı eksik görünüyor.'); setSt('err'); return; }
     if (mode === 'resetPassword') A.authCheckReset(code).then((e) => { setEmail(e); setSt('form'); }, (e) => { setErr(e.message); setSt('err'); });
     else if (mode === 'verifyEmail') A.authVerifyEmail(code).then(() => setSt('done'), (e) => { setErr(e.message); setSt('err'); });
+    else if (mode === 'verifyAndChangeEmail') A.authEmailChange(code).then((e) => { setEmail(e); setSt('done'); }, (e) => { setErr(e.message); setSt('err'); });
     else { setErr('Bu bağlantı tanınmadı.'); setSt('err'); }
   }, []);
   async function save(e) {
@@ -925,8 +928,8 @@ export function AuthAction() {
         )}
         {st === 'done' && <div className="auth-form auth-sent">
           <span className="sent-ic"><Icon n="check" s={28} /></span>
-          <h1 className="page-t">{mode === 'verifyEmail' ? 'E-postanız doğrulandı' : 'Şifreniz değişti'}</h1>
-          <p className="muted">{mode === 'verifyEmail' ? 'Üyeliğiniz açıldı. Şimdi giriş yapabilirsiniz.' : 'Yeni şifrenizle giriş yapabilirsiniz.'}</p>
+          <h1 className="page-t">{mode === 'verifyEmail' ? 'E-postanız doğrulandı' : mode === 'verifyAndChangeEmail' ? 'E-posta adresiniz değişti' : 'Şifreniz değişti'}</h1>
+          <p className="muted">{mode === 'verifyEmail' ? 'Üyeliğiniz açıldı. Şimdi giriş yapabilirsiniz.' : mode === 'verifyAndChangeEmail' ? `Artık ${email || 'yeni adresiniz'} ile giriş yapabilirsiniz (kullanıcı adınız aynı).` : 'Yeni şifrenizle giriş yapabilirsiniz.'}</p>
           <button className="btn primary" onClick={toAccount}>Giriş yap</button>
         </div>}
       </div>
@@ -1282,7 +1285,7 @@ function MyInfo({ part = 'all' }) {
         <Field label="Cep telefonu"><PhoneInput id="mi-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} /></Field>
       </div>
       {part !== 'inv' && <MyUname />}
-      <Field label="E-posta" hint="Giriş için kullanılır, değiştirilemez"><input id="mi-email" value={m.email || ''} readOnly /></Field></>}
+      <MyEmail /></>}
       {part !== 'info' && <>{part === 'all' && <h3>Fatura bilgileri</h3>}
       <div className="seg-cards two" role="radiogroup">
         <Choice on={f.inv.type === 'person'} onClick={() => setI('type', 'person')} title="Bireysel" />
@@ -1302,10 +1305,26 @@ function MyInfo({ part = 'all' }) {
       <AddressFields a={f.iaddr} set={(iaddr) => setF((x) => ({ ...x, iaddr }))} err={aerr} p="iaddr" />
       {f.iaddr?.address && <button type="button" className="linkish mi-clear" onClick={() => setF((x) => ({ ...x, iaddr: blankAddr() }))}>Fatura adresini temizle</button>}</>}
       <button className="btn primary" disabled={busy} onClick={save}><Icon n="check" s={16} />Kaydet</button>
+      {part === 'info' && <MySecurity />}
       {part === 'info' && <DeleteAccount />}
     </div>
   );
 }
+
+// 23.11.2026 kullanıcı adı yazarken anında kontrol (yazmayı bırakınca 0,45 sn sonra tek okuma)
+function useUnameCheck(v, cur = '') {
+  const A = useStore((s) => s.api);
+  const [st, setSt] = useState('');
+  useEffect(() => {
+    if (!v || v === cur || !unameOk(v)) { setSt(''); return; }
+    setSt('wait'); let off = false;
+    const t = setTimeout(() => { A.usernameFree(v).then((ok) => { if (!off) setSt(ok ? 'free' : 'taken'); }, () => { if (!off) setSt(''); }); }, 450);
+    return () => { off = true; clearTimeout(t); };
+  }, [v, cur]);
+  return st;
+}
+const unameHint = (st, base) => st === 'free' ? <span className="un-ok"><Icon n="check" s={13} />Kullanılabilir</span> : st === 'wait' ? <span className="un-wait">Bakılıyor…</span> : base;
+const unameErr = (st) => st === 'taken' ? 'Bu kullanıcı adı alınmış' : '';
 
 // 23.11.2026 kullanıcı adı: müşteri kendisi değiştirir (15 günde bir, bekçi /member/uname — aynı adı iki kişi alamaz)
 const UNAME_DAYS = 15;
@@ -1321,8 +1340,10 @@ function MyUname() {
   const locked = next > Date.now();
   const dt = (t) => { const d = new Date(t); return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`; };
   const dirty = v !== cur;
+  const chk = useUnameCheck(locked ? '' : v, cur);
   async function save() {
     if (!unameOk(v)) return setErr('3-20 karakter: harf, rakam, nokta, tire');
+    if (chk === 'taken') return setErr('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
     setBusy(true); setErr('');
     try { await A.memberSetUsername(v); toast('Kullanıcı adınız değişti'); }
     catch (x) { setErr(x.message); }
@@ -1331,12 +1352,101 @@ function MyUname() {
   const hint = locked ? `${dt(next)} tarihinden sonra tekrar değiştirebilirsiniz` : cur ? `E-posta yerine bununla giriş yapabilirsiniz · ${UNAME_DAYS} günde bir değiştirilebilir` : 'E-posta yerine bununla da giriş yapabilirsiniz';
   return (
     <div className="mi-un">
-      <Field label="Kullanıcı adı" opt={!cur} error={err} hint={err ? '' : hint}>
+      <Field label="Kullanıcı adı" opt={!cur} error={err || unameErr(chk)} hint={unameHint(chk, hint)}>
         <div className="mi-un-row">
           <input id="mi-uname" autoCapitalize="none" autoComplete="username" value={v} readOnly={locked} placeholder={locked ? '' : 'ör. ' + (suggestUser(m?.email) || 'kullanici.adi')} onChange={(e) => { setV(cleanUsername(e.target.value).slice(0, 20)); setErr(''); }} onKeyDown={(e) => { if (e.key === 'Enter' && dirty && !busy) save(); }} />
-          {dirty && !locked && <button type="button" className="btn sm primary" disabled={busy || !v} onClick={save}>{busy ? 'Kaydediliyor…' : 'Değiştir'}</button>}
+          {dirty && !locked && <button type="button" className="btn sm primary" disabled={busy || !v || chk === 'taken'} onClick={save}>{busy ? 'Kaydediliyor…' : 'Değiştir'}</button>}
         </div>
       </Field>
+    </div>
+  );
+}
+
+// 23.11.2026 e-posta değiştir: şifreyle onay → YENİ adrese bağlantı gider, tıklanınca değişir (o zamana kadar eski adres geçerli)
+function MyEmail() {
+  const m = useStore((s) => s.member);
+  const A = useStore((s) => s.api);
+  const kind = A.memberKind?.() || 'password';
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ email: '', pw: '' });
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState('');
+  async function send() {
+    setErr('');
+    if (!f.pw) return setErr('Şifrenizi yazın.');
+    setBusy(true);
+    try { const e = await A.memberChangeEmail(f.pw, f.email); setSent(e); }
+    catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  const close = () => { if (busy) return; setOpen(false); };
+  return (
+    <>
+      <Field label="E-posta" hint={kind === 'password' ? 'Giriş ve bildirimler için kullanılır' : (kind === 'facebook' ? 'Facebook' : 'Google') + ' hesabınıza bağlı'}>
+        <div className="mi-un-row">
+          <input id="mi-email" value={m.email || ''} readOnly />
+          {kind === 'password' && <button type="button" className="btn sm outline" onClick={() => { setF({ email: '', pw: '' }); setErr(''); setSent(''); setOpen(true); }}>Değiştir</button>}
+        </div>
+      </Field>
+      {open && (
+        <Sheet title="E-posta adresimi değiştir" onClose={close} footer={sent ? <button className="btn primary" onClick={() => setOpen(false)}>Tamam</button> : <><button className="btn ghost" disabled={busy} onClick={close}>Vazgeç</button><button className="btn primary" disabled={busy || !f.email} onClick={send}>{busy ? 'Gönderiliyor…' : 'Onay bağlantısı gönder'}</button></>}>
+          {sent ? (
+            <div className="sec-done"><span className="sent-ic"><Icon n="check" s={26} /></span>
+              <p><b>{sent}</b> adresine bir onay bağlantısı gönderdik.</p>
+              <p className="fine">Bağlantıya tıklayınca e-posta adresiniz değişir ve yeni adresinizle tekrar giriş yaparsınız. O zamana kadar <b>{m.email}</b> geçerli. Gelmediyse gereksiz (spam) klasörüne bakın.</p>
+            </div>
+          ) : (
+            <div className="form-col">
+              <p className="fine">Yeni adresinize bir onay bağlantısı göndereceğiz. Onaylayana kadar eski adresiniz geçerli kalır.</p>
+              <Field label="Yeni e-posta"><input id="ce-email" type="email" autoComplete="email" autoCapitalize="none" value={f.email} onChange={(e) => setF((x) => ({ ...x, email: e.target.value.trim() }))} /></Field>
+              <Field label="Şifreniz" hint="Güvenlik için" error={err}><PasswordInput id="ce-pw" autoComplete="current-password" value={f.pw} onChange={(e) => setF((x) => ({ ...x, pw: e.target.value }))} /></Field>
+            </div>
+          )}
+        </Sheet>
+      )}
+    </>
+  );
+}
+
+// 23.11.2026 Güvenlik: şifremi değiştir + tüm cihazlardan çıkış (Profil bilgilerim, Kaydet'in altında)
+function MySecurity() {
+  const A = useStore((s) => s.api);
+  const kind = A.memberKind?.() || 'password';
+  const [pwOpen, setPwOpen] = useState(false);
+  const [f, setF] = useState({ cur: '', nw: '', nw2: '' });
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [conf, setConf] = useState(null);
+  async function savePw() {
+    setErr('');
+    if (!f.cur) return setErr('Şu anki şifrenizi yazın.');
+    if (f.nw.length < 6) return setErr('Yeni şifre en az 6 karakter olmalı.');
+    if (f.nw !== f.nw2) return setErr('Yeni şifreler aynı değil.');
+    if (f.nw === f.cur) return setErr('Yeni şifre eskisiyle aynı.');
+    setBusy(true);
+    try { await A.memberChangePassword(f.cur, f.nw); setPwOpen(false); toast('Şifreniz değişti'); }
+    catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  const outAll = () => setConf({ title: 'Tüm cihazlardan çıkış', text: 'Bu hesabın açık olduğu bütün telefon ve bilgisayarlardan çıkış yapılır (bu cihaz dahil). Diğer cihazlar en geç 1 saat içinde çıkar. Sonra tekrar giriş yapmanız gerekir.', okLabel: 'Çıkış yap', onOk: () => A.memberSignoutAll().then(() => { openAcct(null); toast('Tüm cihazlardan çıkış yapıldı'); }, (x) => toast(x.message, 'bad')) });
+  return (
+    <div className="mi-sec">
+      <h3>Güvenlik</h3>
+      {kind === 'password'
+        ? <button type="button" className="mi-sec-row" onClick={() => { setF({ cur: '', nw: '', nw2: '' }); setErr(''); setPwOpen(true); }}><span><b>Şifremi değiştir</b><small>Hesabınıza girerken kullandığınız şifre</small></span><Icon n="back" s={16} className="flip" /></button>
+        : <div className="mi-sec-row static"><span><b>Şifre</b><small>{kind === 'facebook' ? 'Facebook' : 'Google'} ile giriş yapıyorsunuz, ayrı şifreniz yok</small></span></div>}
+      <button type="button" className="mi-sec-row" onClick={outAll}><span><b>Tüm cihazlardan çıkış yap</b><small>Telefonunuzu kaybettiyseniz ya da başka yerde açık kaldıysa</small></span><Icon n="back" s={16} className="flip" /></button>
+      {pwOpen && (
+        <Sheet title="Şifremi değiştir" onClose={() => !busy && setPwOpen(false)} footer={<><button className="btn ghost" disabled={busy} onClick={() => setPwOpen(false)}>Vazgeç</button><button className="btn primary" disabled={busy} onClick={savePw}>{busy ? 'Kaydediliyor…' : 'Şifreyi değiştir'}</button></>}>
+          <div className="form-col">
+            <Field label="Şu anki şifre"><PasswordInput id="cp-cur" autoComplete="current-password" value={f.cur} onChange={(e) => setF((x) => ({ ...x, cur: e.target.value }))} /></Field>
+            <Field label="Yeni şifre" hint="En az 6 karakter"><PasswordInput id="cp-new" autoComplete="new-password" value={f.nw} onChange={(e) => setF((x) => ({ ...x, nw: e.target.value }))} /></Field>
+            <Field label="Yeni şifre (tekrar)" error={err}><PasswordInput id="cp-new2" autoComplete="new-password" value={f.nw2} onChange={(e) => setF((x) => ({ ...x, nw2: e.target.value }))} /></Field>
+          </div>
+        </Sheet>
+      )}
+      {conf && <Confirm {...conf} onClose={() => setConf(null)} />}
     </div>
   );
 }

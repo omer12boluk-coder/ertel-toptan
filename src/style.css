@@ -11922,3 +11922,18 @@ html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute;
 .mi-un-row input[readonly] { color: var(--muted); }
 .mi-un-row .btn { flex: none; }
 .mi-un-row .btn, .un-row .btn { align-self: stretch; height: auto; min-height: 40px; padding: 0 16px; }
+/* 23.11.2026 anında kullanıcı adı kontrolü + Güvenlik bölümü */
+.un-ok { display: inline-flex; align-items: center; gap: 4px; color: var(--ok, #16a34a); font-weight: 600; }
+.un-wait { color: var(--muted); }
+.mi-sec { margin-top: 28px; }
+.mi-sec h3 { margin: 0 0 8px; font-size: 16px; }
+.mi-sec-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 13px 14px; margin: 0 0 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mi-sec-row span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mi-sec-row b { font-weight: 600; font-size: 15px; }
+.mi-sec-row small { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.mi-sec-row.static { cursor: default; }
+.mi-sec-row .ic { flex: none; color: var(--muted); }
+@media (hover: hover) { .mi-sec-row:not(.static):hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); } }
+.sec-done { text-align: center; padding: 6px 4px 2px; }
+.sec-done .sent-ic { margin: 0 auto 12px; }
+.sec-done p { margin: 0 0 10px; line-height: 1.55; }

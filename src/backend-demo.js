@@ -311,6 +311,17 @@ export class DemoBackend {
     m.username = name; this.persist();
   }
   memberKind() { return 'password'; }
+  _me(pw) { const m = this.mem()[this.db.shopSession]; if (!m) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.'); if (m.pw && m.pw !== pw) throw new Error('Şifre hatalı.'); return m; }
+  async memberChangePassword(cur, nw) { if (String(nw || '').length < 6) throw new Error('Yeni şifre en az 6 karakter olmalı.'); const m = this._me(cur); m.pw = nw; this.persist(); }
+  async memberChangeEmail(pw, email) {
+    email = String(email || '').trim().toLowerCase(); const m = this._me(pw);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Geçerli bir e-posta adresi yazın.');
+    if (email === m.email) throw new Error('E-posta adresiniz zaten bu.');
+    if (Object.values(this.mem()).some((x) => x.email === email)) throw new Error('Bu e-posta ile başka bir üyelik var.');
+    m.pendingEmail = email; this.persist(); return email; // demoda bağlantı yok
+  }
+  async memberSignoutAll() { this.db.shopSession = null; this.persist(); this.memberCb?.(null); }
+  async authEmailChange() { return 'yeni@ornek.com'; }
   async memberDeleteSelf(pw) {
     const m = this.mem()[this.db.shopSession]; if (!m) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
     if (m.pw && m.pw !== pw) throw new Error('Şifre hatalı.');

@@ -616,7 +616,8 @@ export class FirebaseBackend {
         const data = s.exists() ? s.data() : {};
         // yönetici panelden açtığı hesaplar e-posta doğrulaması beklemez
         if (!ok && !data.byAdmin) return cb(null);
-        cb({ uid: u.uid, email: u.email, ...data });
+        if (u.email && data.email && u.email.toLowerCase() !== String(data.email).toLowerCase()) { this.syncEmail(u.email); data.email = u.email; }
+        cb({ uid: u.uid, ...data, email: u.email || data.email });
       } catch { cb(ok ? { uid: u.uid, email: u.email } : null); }
     };
     // telefonda Google'a yönlendirilip geri dönüldüyse sonucu al (üye kaydı ilk girişte açılır)
@@ -763,9 +764,50 @@ export class FirebaseBackend {
     b.update(this.d('members', uid), { username: name });
     await timeout(b.commit());
   }
+  // 23.11.2026 Güvenlik: şifre değiştir · e-posta değiştir (yeni adrese doğrulama bağlantısı) · tüm cihazlardan çıkış
+  async memberChangePassword(cur, nw) {
+    if (String(nw || '').length < 6) throw new Error('Yeni şifre en az 6 karakter olmalı.');
+    const u = await this._reauth(cur);
+    try { await this.U.updatePassword(u, nw); } catch (e) { throw new Error(authMsg(e)); }
+  }
+  async memberChangeEmail(pw, email) {
+    email = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Geçerli bir e-posta adresi yazın.');
+    const u = await this._reauth(pw);
+    if (email === String(u.email || '').toLowerCase()) throw new Error('E-posta adresiniz zaten bu.');
+    let sent = false;
+    try {
+      const W = String(window.WATCH_URL || '').replace(/\/$/, '');
+      const r = await timeout(fetch(W + '/mail/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'email', token: await u.getIdToken(), email, origin: location.origin }) }), 20000);
+      const j = await r.json().catch(() => ({}));
+      if (j.ok) sent = true; else if (j.error && !j.fallback) throw new Error(j.error);
+    } catch (e) { if (!/fetch|Sunucu/.test(e.message)) throw e; }
+    if (!sent) { try { await this.U.verifyBeforeUpdateEmail(u, email, this.actionUrl()); } catch (e) { throw new Error(authMsg(e)); } }
+    return email;
+  }
+  async memberSignoutAll() {
+    const u = this.auth.currentUser; if (!u) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
+    const W = String(window.WATCH_URL || '').replace(/\/$/, '');
+    const r = await timeout(fetch(W + '/member/signout-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: await u.getIdToken() }) }), 20000);
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'Yapılamadı, biraz sonra tekrar deneyin.');
+    await this.U.signOut(this.auth).catch(() => {});
+  }
+  // e-posta değişince üye kaydı + kullanıcı adı kaydındaki e-posta da güncellenir (bekçi, Firebase'deki GERÇEK adresi yazar)
+  syncEmail(email) {
+    const W = String(window.WATCH_URL || '').replace(/\/$/, '');
+    return fetch(W + '/member/sync-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) }).then((r) => r.json()).catch(() => ({}));
+  }
+  async authEmailChange(code) {
+    let info; try { info = await this.U.checkActionCode(this.auth, code); } catch (e) { throw new Error(authMsg(e)); }
+    try { await this.U.applyActionCode(this.auth, code); } catch (e) { throw new Error(authMsg(e)); }
+    const email = info?.data?.email || ''; if (email) await this.syncEmail(email);
+    return email;
+  }
   // 17.11.2026 Hesabımı sil: önce yeniden doğrulama (şifre / Google), sonra bekçi /member/delete (hesap + üye kayıtları; siparişler kalır)
   memberKind() { const u = this.auth.currentUser; const p = (u?.providerData || []).map((x) => x.providerId); return p.includes('password') ? 'password' : p.includes('google.com') ? 'google' : p.includes('facebook.com') ? 'facebook' : 'password'; }
-  async memberDeleteSelf(pw) {
+  // yeniden doğrulama (şifre / Google) — şifre, e-posta değiştirme ve hesap silme öncesi
+  async _reauth(pw) {
     const u = this.auth.currentUser; if (!u) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
     const kind = this.memberKind();
     try {
@@ -778,6 +820,10 @@ export class FirebaseBackend {
       if (/popup-blocked|popup-closed|cancelled-popup/.test(e?.code || '')) throw new Error(kind === 'password' ? authMsg(e) : 'Onay penceresi açılamadı. Çıkış yapıp tekrar Google ile girin, hemen ardından silmeyi deneyin.');
       throw new Error(e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential' || e?.code === 'auth/invalid-login-credentials' ? 'Şifre hatalı.' : authMsg(e));
     }
+    return u;
+  }
+  async memberDeleteSelf(pw) {
+    const u = await this._reauth(pw);
     const token = await u.getIdToken(true);
     const W = String(window.WATCH_URL || '').replace(/\/$/, '');
     const r = await timeout(fetch(W + '/member/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }), 30000);
