@@ -1,4 +1,4 @@
-// Hesap teşhisi (sadece okur): verilen e-postaların Firebase giriş hesabı + üye kaydı. Repo herkese açık → e-posta / kimlik maskelenir.
+// Hesap teşhisi (sadece okur): e-postaların SHA-256 özetleri verilir (repo herkese açık, günlükte e-posta görünmesin); Firebase giriş hesabı + üye kaydı. Repo herkese açık → e-posta / kimlik maskelenir.
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -9,10 +9,13 @@ const note = (t, m) => console.log(`::notice title=${t}::${m}`);
 const mask = (e) => String(e || '').replace(/^(.)[^@]*(.)@/, '$1***$2@');
 const P = { password: 'şifre', 'google.com': 'Google', 'facebook.com': 'Facebook' };
 const d = (t) => (t ? new Date(t).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' }) : '—');
-for (const em of String(process.env.EMAILS || '').split(/[\s,]+/).filter(Boolean)) {
-  const e = em.trim().toLowerCase(); const t = mask(e);
-  let u = null; try { u = await auth.getUserByEmail(e); } catch {}
-  if (!u) { note(t, 'Giriş hesabı YOK'); continue; }
+import { createHash } from 'node:crypto';
+const want = new Set(String(process.env.HASHES || '').split(/[\s,]+/).filter(Boolean).map((x) => x.toLowerCase()));
+const found = new Map(); let next;
+do { const r = await auth.listUsers(1000, next); for (const u of r.users) { const h = createHash('sha256').update(String(u.email || '').toLowerCase()).digest('hex'); if (want.has(h)) found.set(h, u); } next = r.pageToken; } while (next);
+for (const h of want) if (!found.has(h)) note('özet ' + h.slice(0, 6), 'Giriş hesabı YOK');
+for (const u of found.values()) {
+  const e = String(u.email).toLowerCase(); const t = mask(e);
   const m = await db.doc('members/' + u.uid).get();
   const staff = (await db.doc('users/' + u.uid).get()).exists;
   const same = await db.collection('members').where('email', '==', e).get();

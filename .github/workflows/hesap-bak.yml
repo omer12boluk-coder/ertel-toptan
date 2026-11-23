@@ -3,8 +3,8 @@ name: Hesap teşhis
 on:
   workflow_dispatch:
     inputs:
-      emails:
-        description: 'E-postalar (virgülle)'
+      hashes:
+        description: 'E-postaların SHA-256 özetleri (virgülle; e-posta yazma, repo herkese açık)'
         required: true
 jobs:
   probe:
@@ -17,5 +17,5 @@ jobs:
       - run: npm install --no-save --no-package-lock firebase-admin@12
       - env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          EMAILS: ${{ inputs.emails }}
+          HASHES: ${{ inputs.hashes }}
         run: node tools/hesap-bak.mjs
