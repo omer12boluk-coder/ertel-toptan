@@ -88,6 +88,7 @@ listesinde ara (yeni ad duyarsan listeye ekle); bulamazsan TEK soru sor ("Ana sa
 - `backdrop-filter` fixed çocukların konum kutusunu değiştirir (arama kutusu cam şeride göre konumlanır).
 - `html.th-dash` tokenları `:root[data-theme=dark]`'ı ezmek için `html.th-dash[data-theme]` ile yazılır.
 - **Bekçide KV'ye her istekte yazan bir şey EKLEME** (ücretsiz KV günde 1.000 yazma; bildirim aboneliği yazmaları %93'e çıkarmıştı → `addSub` aynıysa yazmaz).
+- **Ziyaretçinin tetiklediği yeni bildirim/kapı = sınır şart (23.11.2026):** bekçide `noteGate(env, req, tür)` (Cloudflare istek sınırı RL_IP / RL_NOTE, KV'ye yazmaz) KV'ye dokunmadan ÖNCE; giriş denemesi `RL_LOGIN` + `tsVerify`. Workers.dev'de önbellek (Cache API) çalışmaz, sayaç için kullanma. Güvenlik listesi: https://claude.ai/artifact/McN8gGt4To7JVPpqQvWpJ4
 - **SİLME KAPALI:** PlatinMarket pasif ürün sayfasında da 404 veriyor → eşitlemede silinmiş/pasif ayrılamaz. `DELETE_OK` AÇMA. Dosyada olmayan = silinmiş ayrımı sadece Excel dışa aktarımıyla.
 - PlatinMarket sitesine (ertelgsm.com) toplu istek atma (IP engeli yemiştik). GSMArena'yı tarama (429 ile engelledi).
 - Gizli tutulan sayfalar (`.kp-off`) `content-visibility: hidden` ile; `ShopImg` `decoding=async` değil; `Thumb` resim adresini ilk çizimde hesaplar → geri dönüş flaşları buydu.
