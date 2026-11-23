@@ -1281,6 +1281,7 @@ function MyInfo({ part = 'all' }) {
         <Field label="Ad soyad"><input id="mi-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
         <Field label="Cep telefonu"><PhoneInput id="mi-phone" value={f.phone} onChange={(v) => setF({ ...f, phone: v })} /></Field>
       </div>
+      {part !== 'inv' && <MyUname />}
       <Field label="E-posta" hint="Giriş için kullanılır, değiştirilemez"><input id="mi-email" value={m.email || ''} readOnly /></Field></>}
       {part !== 'info' && <>{part === 'all' && <h3>Fatura bilgileri</h3>}
       <div className="seg-cards two" role="radiogroup">
@@ -1301,7 +1302,82 @@ function MyInfo({ part = 'all' }) {
       <AddressFields a={f.iaddr} set={(iaddr) => setF((x) => ({ ...x, iaddr }))} err={aerr} p="iaddr" />
       {f.iaddr?.address && <button type="button" className="linkish mi-clear" onClick={() => setF((x) => ({ ...x, iaddr: blankAddr() }))}>Fatura adresini temizle</button>}</>}
       <button className="btn primary" disabled={busy} onClick={save}><Icon n="check" s={16} />Kaydet</button>
+      {part === 'info' && <DeleteAccount />}
     </div>
+  );
+}
+
+// 23.11.2026 kullanıcı adı: müşteri kendisi değiştirir (15 günde bir, bekçi /member/uname — aynı adı iki kişi alamaz)
+const UNAME_DAYS = 15;
+function MyUname() {
+  const m = useStore((s) => s.member);
+  const A = useStore((s) => s.api);
+  const cur = m?.username || '';
+  const [v, setV] = useState(cur);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setV(cur); }, [cur]);
+  const next = m?.unameAt ? m.unameAt + UNAME_DAYS * 864e5 : 0;
+  const locked = next > Date.now();
+  const dt = (t) => { const d = new Date(t); return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`; };
+  const dirty = v !== cur;
+  async function save() {
+    if (!unameOk(v)) return setErr('3-20 karakter: harf, rakam, nokta, tire');
+    setBusy(true); setErr('');
+    try { await A.memberSetUsername(v); toast('Kullanıcı adınız değişti'); }
+    catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  const hint = locked ? `${dt(next)} tarihinden sonra tekrar değiştirebilirsiniz` : cur ? `E-posta yerine bununla giriş yapabilirsiniz · ${UNAME_DAYS} günde bir değiştirilebilir` : 'E-posta yerine bununla da giriş yapabilirsiniz';
+  return (
+    <div className="mi-un">
+      <Field label="Kullanıcı adı" opt={!cur} error={err} hint={err ? '' : hint}>
+        <div className="mi-un-row">
+          <input id="mi-uname" autoCapitalize="none" autoComplete="username" value={v} readOnly={locked} placeholder={locked ? '' : 'ör. ' + (suggestUser(m?.email) || 'kullanici.adi')} onChange={(e) => { setV(cleanUsername(e.target.value).slice(0, 20)); setErr(''); }} onKeyDown={(e) => { if (e.key === 'Enter' && dirty && !busy) save(); }} />
+          {dirty && !locked && <button type="button" className="btn sm primary" disabled={busy || !v} onClick={save}>{busy ? 'Kaydediliyor…' : 'Değiştir'}</button>}
+        </div>
+      </Field>
+    </div>
+  );
+}
+
+// 17.11.2026 Hesabımı sil: Profil bilgilerim'in en altında küçük gri bağlantı → pencere (ne silinir, ne kalır) → şifre / Google onayı
+function DeleteAccount() {
+  const A = useStore((s) => s.api);
+  const [open, setOpen] = useState(false);
+  const [pw, setPw] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const kind = A.memberKind?.() || 'password';
+  async function del() {
+    setErr('');
+    if (kind === 'password' && !pw) return setErr('Şifrenizi yazın.');
+    setBusy(true);
+    try {
+      await A.memberDeleteSelf(pw);
+      setOpen(false); openAcct(null); toast('Hesabınız silindi');
+    } catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  return (
+    <>
+      <div className="mi-del"><button type="button" className="mi-del-b" onClick={() => { setOpen(true); setPw(''); setErr(''); }}>Hesabımı sil</button></div>
+      {open && (
+        <Sheet title="Hesabımı sil" onClose={() => !busy && setOpen(false)} footer={<><button className="btn ghost" disabled={busy} onClick={() => setOpen(false)}>Vazgeç</button><button className="btn danger" disabled={busy} onClick={del}>{busy ? 'Siliniyor…' : 'Hesabımı kalıcı olarak sil'}</button></>}>
+          <div className="mi-del-box">
+            <p>Hesabınız <b>hemen ve kalıcı olarak</b> silinir, geri alınamaz.</p>
+            <ul>
+              <li>Giriş bilgileriniz, adresleriniz, fatura bilgileriniz</li>
+              <li>Favorileriniz ve “gelince haber ver” listeniz</li>
+            </ul>
+            <p className="fine">Verdiğiniz siparişlerin kayıtları yasal saklama zorunluluğu nedeniyle silinmez; hesabınızla bağlantısı kalmaz.</p>
+            {kind === 'password'
+              ? <Field label="Onaylamak için şifreniz" error={err}><PasswordInput id="del-pw" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
+              : <><p className="fine">Onay için {kind === 'facebook' ? 'Facebook' : 'Google'} hesabınızı seçmeniz istenecek.</p>{err && <p className="err">{err}</p>}</>}
+          </div>
+        </Sheet>
+      )}
+    </>
   );
 }
 

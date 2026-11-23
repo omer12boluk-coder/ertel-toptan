@@ -196,7 +196,7 @@ const ORD_FREE = new Set(['unread', 'dhl']); // otomatik (okundu, DHL takip) →
 const W = {
   orders: ['deleteOrders', 'updateRequest', 'sendMessage', 'deleteRequests', 'createLcart', 'updateLcart', 'deleteLcart', 'deleteLcarts', 'createPaylink', 'updatePaylink', 'deletePaylink', 'saveForm', 'deleteForm'],
   products: ['saveDescs', 'setDesc', 'setImage', 'markDeleted', 'updateGelen', 'uploadImage', 'uploadVideo', 'saveCosts'],
-  customers: ['createUser', 'updateUser', 'deleteUser', 'setUserPrices', 'setNote', 'adminCreateMember', 'deleteMember', 'updatePreq', 'replyPreq', 'deletePreq', 'updateIssue', 'replyIssue', 'msgIssue', 'deleteIssue', 'updateReview', 'deleteReview'],
+  customers: ['createUser', 'updateUser', 'deleteUser', 'setUserPrices', 'setNote', 'adminCreateMember', 'deleteMember', 'adminSetUsername', 'updatePreq', 'replyPreq', 'deletePreq', 'updateIssue', 'replyIssue', 'msgIssue', 'deleteIssue', 'updateReview', 'deleteReview'],
   design: ['saveShopImage', 'deleteShopImage'],
 };
 const ordNo = (id) => { const o = (store.s.orders || []).find((x) => x.id === id); return o ? '#' + (o.no || id.slice(-5)) : '#' + String(id).slice(-5); };
@@ -289,6 +289,7 @@ const LOG = {
   deleteUser: (uid) => audit('musteri', 'Bayi sildi: ' + custName(uid)),
   setUserPrices: (uid) => audit('musteri', 'Kişiye özel fiyat: ' + custName(uid)),
   deleteMember: () => audit('musteri', 'Mağaza üyesi sildi'),
+  adminSetUsername: (uid, n) => audit('musteri', 'Üye kullanıcı adını değiştirdi → ' + n),
   saveDescs: () => audit('urun', 'Ürün açıklamalarını güncelledi'),
   setDesc: (id) => audit('urun', 'Ürün açıklaması: ' + (base?.get(id)?.n || '#' + id)),
   saveShopImage: () => audit('ayar', 'Mağaza resmi yükledi'),

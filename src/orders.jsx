@@ -4,7 +4,7 @@ import { can } from './team.js';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore, api, store, toast, openOrder, go } from './store.js';
 import { CarrierMark, PageHead, SubNav, Thumb, Icon, Avatar, StatusPill, Empty, Sheet, Confirm, Field, PhoneInput, openMenu, copyText } from './ui.jsx';
-import { fmt, totals, fmtTotals, when, now, norm, ls } from './utils.js';
+import { fmt, totals, fmtTotals, when, now, norm, ls, cleanUsername } from './utils.js';
 import { ORDER_STATUS, ORDER_OPEN, PAY, DELIVERY, CARRIERS, carrierOf, carrierList, carrierInfo, carrierDef, trackLink } from './config.js';
 import { links, waLink } from './route.js';
 import { ListPaper, useRate, toTL, fmtTL } from './listsheet.jsx';
@@ -460,7 +460,7 @@ function MemberSheet({ m: open, onClose, onDelete }) {
   return (
     <Sheet title={open.name || open.email} sub={`Üye · ${when(open.createdAt)}`} onClose={onClose} footer={<>{onDelete && <button className="btn ghost danger" onClick={onDelete}><Icon n="trash" s={15} />Üyeyi sil</button>}{open.phone && <a className="btn wa" href={waLink(open.phone, `Merhaba ${open.name || ''},`)} target="_blank" rel="noopener"><Icon n="wa" s={16} />WhatsApp</a>}</>}>
       <div className="o-info one">
-        <div className="o-card"><h3>İletişim</h3>{open.username && <p>Kullanıcı adı: <b>{open.username}</b></p>}<p>{open.email}</p>{open.phone && <p className="num">{open.phone}</p>}</div>
+        <div className="o-card"><h3>İletişim</h3><UnameRow m={open} /><p>{open.email}</p>{open.phone && <p className="num">{open.phone}</p>}</div>
         <div className="o-card"><h3>Fatura</h3><InvoiceText inv={open.invoice} name={open.name} /></div>
         <div className="o-card"><h3>Adresler</h3>{(open.addresses || []).length ? open.addresses.map((a) => <p key={a.id}><b>{a.title || 'Adres'}:</b> {addrLine(a)}</p>) : <p className="muted">Kayıtlı adres yok</p>}</div>
       </div>
@@ -472,6 +472,40 @@ function MemberSheet({ m: open, onClose, onDelete }) {
         {!mine.length && <li className="muted">Henüz sipariş yok</li>}
       </ul>
     </Sheet>
+  );
+}
+
+// 23.11.2026 yönetici üyenin kullanıcı adını düzeltir (müşteri yanlış yazdıysa); müşteri kendisi Hesabım › Profil bilgilerim'den 15 günde bir
+function UnameRow({ m }) {
+  const [un, setUn] = useState(m.username || '');
+  const [edit, setEdit] = useState(false);
+  const [v, setV] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const ok = can('customers');
+  async function save() {
+    const n = cleanUsername(v);
+    if (n === un) return setEdit(false);
+    if (!/^[a-z0-9._-]{3,20}$/.test(n)) return setErr('3-20 karakter: harf, rakam, nokta, tire');
+    setBusy(true); setErr('');
+    try { await api().adminSetUsername(m.uid, n); setUn(n); setEdit(false); toast('Kullanıcı adı değişti: ' + n); }
+    catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  if (edit) return (
+    <div className="un-edit">
+      <span className="un-lbl">Kullanıcı adı</span>
+      <div className="un-row">
+        <input id="un-new" autoFocus autoCapitalize="none" autoComplete="off" value={v} maxLength={20} onChange={(e) => { setV(cleanUsername(e.target.value).slice(0, 20)); setErr(''); }} onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEdit(false); }} />
+        <button className="btn sm primary" disabled={busy || !v} onClick={save}>{busy ? 'Kaydediliyor…' : 'Kaydet'}</button>
+        <button className="btn sm ghost" disabled={busy} onClick={() => setEdit(false)}>Vazgeç</button>
+      </div>
+      {err ? <p className="err">{err}</p> : <p className="fine">{un ? <>Eski ad (<b>{un}</b>) serbest kalır; müşteri artık yeni adla girer.</> : 'Müşteri e-posta yerine bununla da girebilir.'}</p>}
+    </div>
+  );
+  return (
+    <p className="un-line">{un ? <>Kullanıcı adı: <b>{un}</b></> : <span className="muted">Kullanıcı adı yok</span>}
+      {ok && <button type="button" className="un-chg" onClick={() => { setV(un); setErr(''); setEdit(true); }}>{un ? 'Değiştir' : 'Ekle'}</button>}</p>
   );
 }
 
@@ -488,7 +522,7 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
   useEffect(() => { if (!want) return; const m = members.find((x) => x.uid === want); if (m) { setOpen(m); store.set({ openMember: null }); } }, [want, members.length]);
   const count = useMemo(() => { const m = {}; for (const o of orders) if (o.uid) m[o.uid] = (m[o.uid] || 0) + 1; return m; }, [orders]);
   const t = norm(q.trim());
-  const list = [...members].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).filter((m) => !t || norm([m.name, m.email, m.phone, m.invoice?.company].join(' ')).includes(t));
+  const list = [...members].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).filter((m) => !t || norm([m.name, m.email, m.phone, m.username, m.invoice?.company].join(' ')).includes(t));
   const del = (m) => setConfirm({ title: 'Üyeyi sil', text: `${m.name || m.email} üyeliği silinecek (siparişleri kalır). Aynı e-postayla yeniden üye olamaz; gerekirse Firebase’den hesabı da silin.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteMember(m.uid).then(() => { toast('Üye silindi'); setOpen(null); }) });
   return (
     <>

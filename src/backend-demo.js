@@ -292,6 +292,30 @@ export class DemoBackend {
   }
   async memberResendVerify(id) { return id; }
   async memberLogout() { this.db.shopSession = null; this.persist(); this.memberCb?.(null); }
+  async memberSetUsername(name) {
+    const m = this.mem()[this.db.shopSession]; if (!m) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
+    name = String(name || '').trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,20}$/.test(name)) throw new Error('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).');
+    if (m.username === name) throw new Error('Kullanıcı adınız zaten bu.');
+    if (m.unameAt && Date.now() < m.unameAt + 15 * 864e5) { const d = new Date(m.unameAt + 15 * 864e5); throw new Error(`Kullanıcı adınızı 15 günde bir değiştirebilirsiniz. Bir sonraki değişiklik: ${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`); }
+    if (!(await this.usernameFree(name))) throw new Error('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
+    m.username = name; m.unameAt = Date.now(); this.persist(); this.memberCb?.(this.pub(m));
+    return { ok: true, username: name, unameAt: m.unameAt };
+  }
+  async adminSetUsername(uid, name) {
+    const m = this.mem()[uid]; if (!m) throw new Error('Üye bulunamadı.');
+    name = String(name || '').trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,20}$/.test(name)) throw new Error('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).');
+    if (m.username === name) return;
+    if (!(await this.usernameFree(name))) throw new Error('Bu kullanıcı adı alınmış.');
+    m.username = name; this.persist();
+  }
+  memberKind() { return 'password'; }
+  async memberDeleteSelf(pw) {
+    const m = this.mem()[this.db.shopSession]; if (!m) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
+    if (m.pw && m.pw !== pw) throw new Error('Şifre hatalı.');
+    delete this.mem()[m.uid]; this.db.shopSession = null; this.persist(); this.memberCb?.(null);
+  }
   async memberReset(id) { const m = Object.values(this.mem()).find((x) => x.email === id || x.username === id); return m?.email || id; }
   async authCheckReset() { return 'demo@ornek.com'; }
   async authConfirmReset() {}

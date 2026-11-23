@@ -127,6 +127,8 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/member/uname' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberUname(env, b)); }
+      if (url.pathname === '/member/delete' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberDelete(env, b)); }
       if (url.pathname === '/mail/auth' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await authMail(req, env, b)); }
       if (url.pathname === '/mail/test' && req.method === 'POST') return json(await mailTest(req, env));
       if (url.pathname === '/notify-member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyMember(env, b)); }
@@ -884,6 +886,79 @@ async function notifyMember(env, b) {
   await adminPush(env, { title: `👤 Yeni mağaza üyesi · ${who}`, body: [via, m.phone, m.email].filter(Boolean).join(' · ').slice(0, 160), url: '/admin/musteriler', tag: 'mb-' + uid }).catch(() => {});
   const text = `👤 Yeni mağaza üyesi\n${who}${m.username ? ` (@${m.username})` : ''}\n${[m.email, m.phone].filter(Boolean).join(' · ')}\n${via} kayıt oldu\n\nPanelde aç: https://ertelmarket.com/admin/musteriler`;
   return notifySend(env, { subject: `Yeni mağaza üyesi · ${who}`, text, noEmail: true });
+}
+
+// 23.11.2026 Kullanıcı adını değiştir (müşteri kendisi, Hesabım › Profil bilgilerim): POST /member/uname { token, name }
+// 15 günde bir (members.unameAt). Tek işlemde: usernames/<yeni> (yoksa) + usernames/<eski> silinir + members.username.
+// Yeni ad başkasındaysa işlem tümden reddedilir (aynı anda iki kişi aynı adı alamaz). Yönetici panelden sınırsız değiştirir (backend).
+const UNAME_DAYS = 15;
+async function memberUname(env, b) {
+  if (!env.FIREBASE_SA) return { ok: false, error: 'Şu an yapılamıyor, biraz sonra tekrar deneyin.' };
+  const tok = String(b.token || ''); const uid = tokUid(tok);
+  const name = String(b.name || '').trim().toLowerCase();
+  if (!uid) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
+  if (!/^[a-z0-9._-]{3,20}$/.test(name)) return { ok: false, error: 'Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).' };
+  const m = await fsAuth('members/' + uid, tok).catch(() => null);
+  if (!m) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
+  const old = String(m.username || '').trim().toLowerCase();
+  if (old === name) return { ok: false, error: 'Kullanıcı adınız zaten bu.' };
+  const last = Number(m.unameAt || 0), next = last + UNAME_DAYS * 864e5;
+  if (last && Date.now() < next) { const d = new Date(next + 3 * 36e5); return { ok: false, code: 'wait', next, error: `Kullanıcı adınızı ${UNAME_DAYS} günde bir değiştirebilirsiniz. Bir sonraki değişiklik: ${d.getUTCDate()}.${d.getUTCMonth() + 1}.${d.getUTCFullYear()}` }; }
+  const st = await saToken(env); const H = { Authorization: 'Bearer ' + st, 'Content-Type': 'application/json' };
+  const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
+  const DOC = `projects/${pid}/databases/(default)/documents/`;
+  const writes = [
+    { update: { name: DOC + 'usernames/' + name, fields: { uid: { stringValue: uid }, email: { stringValue: String(m.email || '') } } }, currentDocument: { exists: false } },
+    { update: { name: DOC + 'members/' + uid, fields: { username: { stringValue: name }, unameAt: { integerValue: String(Date.now()) } } }, updateMask: { fieldPaths: ['username', 'unameAt'] }, currentDocument: { exists: true } },
+  ];
+  if (old && /^[\w.-]{1,60}$/.test(old)) {
+    const u = await fetch(FS + 'usernames/' + old, { headers: H }).then((x) => x.ok ? x.json() : null).catch(() => null);
+    if (u?.fields?.uid?.stringValue === uid) writes.push({ delete: DOC + 'usernames/' + old });
+  }
+  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents:commit`, { method: 'POST', headers: H, body: JSON.stringify({ writes }) });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 409 || /ALREADY_EXISTS/.test(j.error?.status || j.error?.message || '')) return { ok: false, error: 'Bu kullanıcı adı alınmış, başka bir tane deneyin.' };
+    return { ok: false, error: 'Kaydedilemedi, biraz sonra tekrar deneyin.' };
+  }
+  return { ok: true, username: name, unameAt: Date.now() };
+}
+
+// 17.11.2026 Hesabımı sil (müşteri kendisi): POST /member/delete { token } — token son 10 dk içinde yeniden girişle alınmış olmalı
+// (uygulama şifre / Google ile tekrar doğrulatır). Silinen: giriş hesabı (Firebase Auth), members/{uid}, usernames/{ad},
+// haber bekleme kayıtları (wait/* içindeki uid). Siparişler / faturalar YASA GEREĞİ KALIR (kullanıcı kararı: aynen kalsın).
+async function memberDelete(env, b) {
+  if (!env.FIREBASE_SA) return { ok: false, error: 'Şu an yapılamıyor, biraz sonra tekrar deneyin.' };
+  const tok = String(b.token || ''); const uid = tokUid(tok);
+  if (!uid) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
+  const m = await fsAuth('members/' + uid, tok).catch(() => null); // anahtarı Firestore doğrular
+  if (!m) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
+  let at = 0; try { at = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).auth_time || 0; } catch {}
+  if (!at || Date.now() / 1000 - at > 600) return { ok: false, code: 'reauth', error: 'Güvenlik için şifrenizi tekrar girin.' };
+  const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
+  // 1) giriş hesabı — önce bu (başarısızsa hiçbir veri silinmez)
+  const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:delete`, { method: 'POST', headers: { Authorization: 'Bearer ' + gt, 'Content-Type': 'application/json' }, body: JSON.stringify({ localId: uid }) });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); if (!/USER_NOT_FOUND/.test(j.error?.message || '')) return { ok: false, error: 'Hesap silinemedi (' + (j.error?.message || r.status) + '). Bize yazın, elle silelim.' }; }
+  // 2) üye kayıtları
+  const st = await saToken(env); const H = { Authorization: 'Bearer ' + st };
+  await fetch(FS + 'members/' + uid, { method: 'DELETE', headers: H }).catch(() => {});
+  const un = String(m.username || '').trim().toLowerCase();
+  if (un && /^[\w.-]{1,60}$/.test(un)) {
+    const u = await fetch(FS + 'usernames/' + un, { headers: H }).then((x) => x.ok ? x.json() : null).catch(() => null);
+    if (u?.fields?.uid?.stringValue === uid) await fetch(FS + 'usernames/' + un, { method: 'DELETE', headers: H }).catch(() => {});
+  }
+  const DOC = `projects/${pid}/databases/(default)/documents/`;
+  const pids = (Array.isArray(m.notify) ? m.notify : []).map(String).filter((x) => /^\d{1,12}$/.test(x)).slice(0, 60);
+  await Promise.all(pids.map((p) => fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents:commit`, {
+    method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ writes: [{ transform: { document: DOC + 'wait/' + p, fieldTransforms: [{ fieldPath: 'uids', removeAllFromArray: { values: [{ stringValue: uid }] } }] }, currentDocument: { exists: true } }] }),
+  }).catch(() => {})));
+  // 3) yöneticiye haber (Telegram + push; e-posta yok)
+  const who = m.name || m.username || 'Üye';
+  await adminPush(env, { title: `🗑️ Üye hesabını sildi · ${who}`, body: [m.email, m.phone].filter(Boolean).join(' · ').slice(0, 160), url: '/admin/musteriler', tag: 'md-' + uid }).catch(() => {});
+  await notifySend(env, { subject: `Üye hesabını sildi · ${who}`, text: `🗑️ Mağaza üyesi hesabını sildi\n${who}${m.username ? ` (@${m.username})` : ''}\n${[m.email, m.phone].filter(Boolean).join(' · ')}\nEski siparişleri yerinde duruyor.`, noEmail: true }).catch(() => {});
+  return { ok: true };
 }
 
 // R2'ye yazma kapısı (resim taşıma işi, tools/r2-mirror.mjs): PUT/GET /r2obj/<anahtar>, başlık X-Key = sha256('r2:' + TELEGRAM_TOKEN).

@@ -740,6 +740,51 @@ export class FirebaseBackend {
     return email;
   }
   async memberLogout() { await this.U.signOut(this.auth); }
+  // 23.11.2026 kullanıcı adı değiştir — müşteri: bekçi /member/uname (15 günde bir, tek işlem); yönetici: doğrudan toplu yazma (sınırsız)
+  async memberSetUsername(name) {
+    const u = this.auth.currentUser; if (!u) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
+    const W = String(window.WATCH_URL || '').replace(/\/$/, '');
+    const r = await timeout(fetch(W + '/member/uname', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: await u.getIdToken(), name }) }), 20000);
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'Kaydedilemedi, biraz sonra tekrar deneyin.');
+    await this._emitMember?.(u);
+    return j;
+  }
+  async adminSetUsername(uid, name) {
+    name = String(name || '').trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,20}$/.test(name)) throw new Error('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, nokta, tire).');
+    const s = await timeout(this.F.getDoc(this.d('members', uid))); if (!s.exists()) throw new Error('Üye bulunamadı.');
+    const m = s.data(); const old = String(m.username || '').toLowerCase();
+    if (old === name) return;
+    if (!(await this.usernameFree(name))) throw new Error('Bu kullanıcı adı alınmış.');
+    const b = this.F.writeBatch(this.db);
+    b.set(this.d('usernames', name), { uid, email: m.email || '' });
+    if (old) { const o = await timeout(this.F.getDoc(this.d('usernames', old))).catch(() => null); if (o?.exists() && o.data().uid === uid) b.delete(this.d('usernames', old)); }
+    b.update(this.d('members', uid), { username: name });
+    await timeout(b.commit());
+  }
+  // 17.11.2026 Hesabımı sil: önce yeniden doğrulama (şifre / Google), sonra bekçi /member/delete (hesap + üye kayıtları; siparişler kalır)
+  memberKind() { const u = this.auth.currentUser; const p = (u?.providerData || []).map((x) => x.providerId); return p.includes('password') ? 'password' : p.includes('google.com') ? 'google' : p.includes('facebook.com') ? 'facebook' : 'password'; }
+  async memberDeleteSelf(pw) {
+    const u = this.auth.currentUser; if (!u) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.');
+    const kind = this.memberKind();
+    try {
+      if (kind === 'password') await this.U.reauthenticateWithCredential(u, this.U.EmailAuthProvider.credential(u.email, String(pw || '')));
+      else {
+        const P = kind === 'facebook' ? new this.U.FacebookAuthProvider() : new this.U.GoogleAuthProvider();
+        await this.U.reauthenticateWithPopup(u, P, this.U.browserPopupRedirectResolver);
+      }
+    } catch (e) {
+      if (/popup-blocked|popup-closed|cancelled-popup/.test(e?.code || '')) throw new Error(kind === 'password' ? authMsg(e) : 'Onay penceresi açılamadı. Çıkış yapıp tekrar Google ile girin, hemen ardından silmeyi deneyin.');
+      throw new Error(e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential' || e?.code === 'auth/invalid-login-credentials' ? 'Şifre hatalı.' : authMsg(e));
+    }
+    const token = await u.getIdToken(true);
+    const W = String(window.WATCH_URL || '').replace(/\/$/, '');
+    const r = await timeout(fetch(W + '/member/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }), 30000);
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'Hesap silinemedi, biraz sonra tekrar deneyin.');
+    await this.U.signOut(this.auth).catch(() => {});
+  }
   async memberReset(id) {
     const email = await this.emailOf(id);
     if (await this._authMail({ kind: 'reset', email })) return email; // kendi alan adımızdan gitti
