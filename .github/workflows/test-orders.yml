@@ -7,6 +7,9 @@ on:
         type: choice
         options: [ekle, sil]
         default: ekle
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   run:
     runs-on: ubuntu-latest

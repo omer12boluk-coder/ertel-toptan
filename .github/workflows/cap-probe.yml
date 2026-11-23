@@ -1,6 +1,9 @@
 # Kapasite teşhisi (sadece okur)
 name: Kapasite teşhis
 on: workflow_dispatch
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   probe:
     runs-on: ubuntu-latest

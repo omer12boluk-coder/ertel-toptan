@@ -22,13 +22,14 @@ export function tsPrefetch() {
   const p = getTok(90000, true); pre = { at: Date.now(), p };
   p.then((v) => { if (!v && pre?.p === p) pre = null; });
 }
-export async function tsToken(ms = 90000) {
+// msg: kutuda çıkan açıklama (varsayılan sipariş). 23.11.2026 kullanıcı adıyla giriş de kullanıyor.
+export async function tsToken(ms = 90000, msg) {
   if (!tsOn()) return null;
   if (pre && Date.now() - pre.at < 240000) { const p = pre.p; pre = null; const v = await p; if (v) return v; }
   pre = null;
-  return getTok(ms, false);
+  return getTok(ms, false, msg);
 }
-async function getTok(ms, quiet) {
+async function getTok(ms, quiet, msg) {
   let T; try { T = await Promise.race([load(), new Promise((_, r) => setTimeout(() => r(new Error('ts')), 10000))]); } catch { return null; }
   let box = document.getElementById('ts-box');
   if (!box) {
@@ -36,6 +37,7 @@ async function getTok(ms, quiet) {
     box.innerHTML = '<b>Güvenlik kontrolü</b><span>Siparişinizi tamamlamak için kutuyu işaretleyin.</span><div class="ts-w"></div>';
     document.body.appendChild(box);
   }
+  if (!quiet) box.querySelector('span').textContent = msg || 'Siparişinizi tamamlamak için kutuyu işaretleyin.';
   // sessiz hazırlık kendi gizli kutusunda (ekranda hiçbir şey çıkmaz)
   let w = box.querySelector('.ts-w');
   if (quiet) { w = document.createElement('div'); w.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden'; document.body.appendChild(w); }

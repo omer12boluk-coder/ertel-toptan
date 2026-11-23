@@ -17,6 +17,9 @@ on:
       onay:
         description: "'uzerine' için buraya EVET yazın"
         default: ''
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   restore:
     runs-on: ubuntu-latest

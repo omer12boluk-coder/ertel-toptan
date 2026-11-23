@@ -2,8 +2,11 @@
 name: Önizleme (canlıya dokunmaz)
 on:
   push:
-    branches: [resim-adresi, ayarlar-duzen, tasarim-2, tasarim-3, kdv-odeme, ekip, kullanim, yasal-iade, ikiz-fiyat, bekleyen, banner-yazi, giris-kaydir, urunler-sabit, menu-acilir]
+    branches: [guvenlik, resim-adresi, ayarlar-duzen, tasarim-2, tasarim-3, kdv-odeme, ekip, kullanim, yasal-iade, ikiz-fiyat, bekleyen, banner-yazi, giris-kaydir, urunler-sabit, menu-acilir]
   workflow_dispatch:
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   preview:
     runs-on: ubuntu-latest

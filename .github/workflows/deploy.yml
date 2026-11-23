@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   deploy:
     runs-on: ubuntu-latest

@@ -31,6 +31,26 @@ binding = "AI"
 binding = "AE"
 dataset = "ertel_usage"
 
+# 23.11.2026 güvenlik: istek sınırları (Cloudflare Rate Limiting, ücretsiz, KV'ye yazmaz; süre 10 ya da 60 sn olabilir).
+# namespace_id hesapta benzersiz bir sayı. RL_LOGIN: kullanıcı adıyla giriş · RL_IP: ziyaretçi bildirimi (bağlantı başına) · RL_NOTE: toplam
+[[unsafe.bindings]]
+name = "RL_LOGIN"
+type = "ratelimit"
+namespace_id = "4101"
+simple = { limit = 8, period = 60 }
+
+[[unsafe.bindings]]
+name = "RL_IP"
+type = "ratelimit"
+namespace_id = "4102"
+simple = { limit = 6, period = 60 }
+
+[[unsafe.bindings]]
+name = "RL_NOTE"
+type = "ratelimit"
+namespace_id = "4103"
+simple = { limit = 8, period = 60 }
+
 [[kv_namespaces]]
 binding = "KV"
 id = "__KV_ID__"

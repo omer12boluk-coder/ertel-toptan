@@ -6,6 +6,9 @@ on:
     paths: ['worker/**', 'wrangler.toml', '.github/workflows/worker.yml']
   workflow_dispatch:
   workflow_call: # 'E-posta servisi' işi servis değişince bekçiyi buradan yeniden yükler
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   deploy:
     runs-on: ubuntu-latest

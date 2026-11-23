@@ -6,6 +6,9 @@ on:
     branches: [gelistirme, resim-adresi]
     paths: ['tools/r2-domain.txt']
   workflow_dispatch:
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   domain:
     runs-on: ubuntu-latest

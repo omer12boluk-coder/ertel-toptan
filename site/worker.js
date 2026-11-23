@@ -316,9 +316,26 @@ async function lcartSeo(id, ctx) {
   return o;
 }
 
+// 23.11.2026 güvenlik başlıkları (hosting/public/_headers ile aynı; worker'ın kendi ürettiği cevaplara _headers uygulanmaz):
+// site başka sitenin içine gömülemez (tıklama tuzağı), tarayıcı dosya türünü tahmin etmez, hep https, konum / mikrofon kapalı.
+const SEC = { 'Strict-Transport-Security': 'max-age=31536000', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'SAMEORIGIN',
+  'Content-Security-Policy': "frame-ancestors 'self'", 'Referrer-Policy': 'strict-origin-when-cross-origin', 'Permissions-Policy': 'geolocation=(), microphone=(), usb=()' };
+function secure(r) {
+  const out = new Response(r.body, r);
+  for (const [k, v] of Object.entries(SEC)) if (!out.headers.has(k)) out.headers.set(k, v);
+  return out;
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    // Google girişi geçidi (/__/auth/*) Firebase'in kendi cevabı: dokunulmaz
+    if (url.pathname.startsWith('/__/')) return handle(req, env, ctx, url);
+    return secure(await handle(req, env, ctx, url));
+  },
+};
+
+async function handle(req, env, ctx, url) {
     if (url.pathname.startsWith('/__/auth/') || url.pathname.startsWith('/__/firebase/')) {
       const r = await fetch(FB + url.pathname + url.search, { method: req.method, headers: req.headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body, redirect: 'manual' });
       return new Response(r.body, r);
@@ -362,5 +379,4 @@ export default {
     const res = rw.transform(page);
     const h = new Headers(res.headers); h.set('Vary', 'User-Agent');
     return new Response(res.body, { status: res.status, headers: h });
-  },
-};
+}

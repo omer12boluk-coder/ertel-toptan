@@ -5,6 +5,7 @@
 import { meterFs } from './usage.js';
 import { isPv, pvGet, pvPatch, pvDelete } from './pvorders.js';
 import { pingWatch } from './push.js';
+import { tsToken } from './turnstile.js';
 import { EMAIL_DOMAIN } from './config.js';
 import { now, ls, r2Base } from './utils.js';
 import { chunkBySize } from './cats.js';
@@ -746,7 +747,9 @@ export class FirebaseBackend {
   async emailOf(id, pw) {
     id = String(id || '').trim().toLowerCase();
     if (id.includes('@')) return id;
-    const j = await this._watch('/member/login-id', { id, pw });
+    // 23.11.2026 güvenlik: robot kontrolü jetonu (bekçi doğrular; çok deneme yapan robot engellenir)
+    const ts = await tsToken(60000, 'Giriş yapmak için kutuyu işaretleyin.').catch(() => null);
+    const j = await this._watch('/member/login-id', { id, pw, ts });
     if (j.ok && j.email) return j.email;
     if (j.kind === 'google' || j.kind === 'facebook') { const x = socialErr(j.kind, ''); x.id = id; throw x; }
     throw new Error(j.error || 'Kullanıcı adı veya şifre hatalı.');
@@ -762,6 +765,8 @@ export class FirebaseBackend {
     }
     const byAdmin = !cred.user.emailVerified && (await timeout(this.F.getDoc(this.d('members', cred.user.uid))).then((x) => x.exists() && x.data().byAdmin, () => false));
     if (!cred.user.emailVerified && !byAdmin) { await this.U.signOut(this.auth); const e = new Error('E-posta adresiniz henüz doğrulanmadı. Size gönderdiğimiz e-postadaki bağlantıya tıklayın.'); e.code = 'unverified'; throw e; }
+    // 23.11.2026 'yeni üye' bildirimi artık e-posta onaylanınca gelir: yeni açılmış (3 günden genç) hesabın ilk girişinde bekçiye haber ver (bekçi bir kez gönderir)
+    if (cred.user.emailVerified && Date.now() - Date.parse(cred.user.metadata?.creationTime || 0) < 3 * 864e5) this._pingMember(cred.user, 'mail');
   }
   async memberResendVerify(id, pw) {
     const email = await this.emailOf(id, pw);

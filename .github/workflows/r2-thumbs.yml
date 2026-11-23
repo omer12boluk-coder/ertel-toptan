@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
 concurrency:
   group: r2-thumbs
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   thumbs:
     runs-on: ubuntu-latest

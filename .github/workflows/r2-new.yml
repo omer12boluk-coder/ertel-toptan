@@ -14,6 +14,9 @@ on:
 concurrency:
   group: r2-new
   cancel-in-progress: false
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   copy:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'

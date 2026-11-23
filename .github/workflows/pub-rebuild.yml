@@ -5,6 +5,9 @@ on:
 concurrency:
   group: sync
   cancel-in-progress: false
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   run:
     runs-on: ubuntu-latest

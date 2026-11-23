@@ -7,6 +7,9 @@ on:
         description: 'Kopuksa yeniden bağla'
         type: boolean
         default: false
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   domain:
     runs-on: ubuntu-latest

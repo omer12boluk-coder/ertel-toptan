@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '47 20 * * *' # her gün TR 23:47
   workflow_dispatch:
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   usage:
     runs-on: ubuntu-latest

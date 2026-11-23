@@ -8,6 +8,9 @@ on:
     branches: [eposta]
     paths: ['.github/workflows/email-setup.yml']
   workflow_dispatch:
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   setup:
     runs-on: ubuntu-latest

@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: '17 0 * * *'
   workflow_dispatch:
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   backup:
     runs-on: ubuntu-latest

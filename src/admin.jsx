@@ -1893,7 +1893,8 @@ function NotifyCard() {
   const W = (window.WATCH_URL || '').replace(/\/$/, '');
   const load = () => W && fetch(W + '/').then((r) => r.json()).then((j) => setSt(j.notify || {})).catch(() => setSt({}));
   useEffect(() => { load(); }, []);
-  async function post(path, body) { const r = await fetch(W + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }); return r.json(); }
+  // 23.11.2026: deneme bildirimi sadece yönetici oturumuyla (bekçi anahtarı doğrular)
+  async function post(path, body) { const tok = await api().idToken?.(); const r = await fetch(W + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify(body || {}) }); return r.json(); }
   async function test() {
     setBusy(true);
     try {

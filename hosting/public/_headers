@@ -1,6 +1,13 @@
 # Cloudflare önbellek başlıkları (firebase.json headers ile aynı)
+# 23.11.2026 güvenlik başlıkları (/* altında; site/worker.js SEC ile aynı)
 /*
   Cache-Control: no-cache
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: frame-ancestors 'self'
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), usb=()
 /fb/*
   Cache-Control: max-age=604800
 /tr/*

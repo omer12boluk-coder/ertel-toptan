@@ -1,6 +1,9 @@
 # Kullanım sayacı teşhisi (elle): bekçiye deneme kaydı gönderir, Analytics Engine'de son 1 saatin kayıtlarını sayar
 name: Kullanım sayacı kontrol
 on: workflow_dispatch
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   probe:
     runs-on: ubuntu-latest

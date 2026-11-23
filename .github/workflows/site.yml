@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths: ['hosting/public/**', 'site/**', 'src/seo.js', 'src/categories.json', '.github/workflows/site.yml']
   workflow_dispatch:
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   deploy:
     runs-on: ubuntu-latest

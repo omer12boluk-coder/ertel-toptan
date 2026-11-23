@@ -6,6 +6,9 @@ on:
       codes:
         description: 'Stok kodları (virgülle)'
         required: true
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   restore:
     runs-on: ubuntu-latest

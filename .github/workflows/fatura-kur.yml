@@ -6,6 +6,9 @@ on:
       budget:
         description: 'Aylık bütçe (fatura hesabının para biriminde, ör. 100 TL ya da 5 USD) — Google e-postası %50/%90/%100'
         default: '100'
+# 23.11.2026 güvenlik: bu iş GitHub anahtarıyla sadece okur (depoya yazamaz)
+permissions:
+  contents: read
 jobs:
   setup:
     runs-on: ubuntu-latest

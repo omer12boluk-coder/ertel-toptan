@@ -118,7 +118,7 @@ export default {
       // Mağaza siparişi bekçiden geçer: fiyatlar kataloğdan yeniden hesaplanır, sipariş sunucu anahtarıyla yazılır (fiyat oynanamaz)
       if (url.pathname === '/order' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await placeOrder(req, env, b, ctx)); }
       if (url.pathname === '/notify' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyOrder(env, String(b.id || ''))); }
-      if (url.pathname === '/notify-test' && req.method === 'POST') { if (await env.KV.get('ntest')) return json({ ok: false, error: 'Biraz bekleyip tekrar deneyin' }); await env.KV.put('ntest', '1', { expirationTtl: 120 }); return json(await notifySend(env, { subject: 'ERTEL GSM · bildirim denemesi', text: 'Bu bir deneme bildirimidir. Mağazadan sipariş gelince buna benzer bir mesaj alacaksınız.' })); }
+      if (url.pathname === '/notify-test' && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); if (await env.KV.get('ntest')) return json({ ok: false, error: 'Biraz bekleyip tekrar deneyin' }); await env.KV.put('ntest', '1', { expirationTtl: 120 }); return json(await notifySend(env, { subject: 'ERTEL GSM · bildirim denemesi', text: 'Bu bir deneme bildirimidir. Mağazadan sipariş gelince buna benzer bir mesaj alacaksınız.' })); }
       if (url.pathname === '/tg-link' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await tgLink(env, String(b.code || ''))); }
       if (url.pathname === '/') return json({ ok: true, name: 'ertel-b2b-watch', notify: await notifyStatus(env), ai: aiStatus(env) });
       // müşteriye sipariş durumu bildirimi (web push)
@@ -135,13 +135,13 @@ export default {
       if (url.pathname === '/member/how' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberHow(req, env, b)); }
       if (url.pathname === '/admin/acct' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminAcct(req, env, b)); }
       if (url.pathname === '/admin/acct-act' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminAcctAct(req, env, b)); }
-      if (url.pathname === '/member/sync-email' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberSyncEmail(env, b)); }
+      if (url.pathname === '/member/sync-email' && req.method === 'POST') { const b = await req.json().catch(() => ({})); if (await rlOk(env.RL_IP, 'se:' + (req.headers.get('CF-Connecting-IP') || '-'))) await memberSyncEmail(env, b).catch(() => {}); return json({ ok: true }); } // 23.11.2026: sonuç dönmez (e-postanın üye olup olmadığı öğrenilemesin)
       if (url.pathname === '/member/signout-all' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberSignoutAll(env, b)); }
       if (url.pathname === '/member/uname' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberUname(env, b)); }
       if (url.pathname === '/member/delete' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberDelete(env, b)); }
       if (url.pathname === '/mail/auth' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await authMail(req, env, b)); }
       if (url.pathname === '/mail/test' && req.method === 'POST') return json(await mailTest(req, env));
-      if (url.pathname === '/notify-member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyMember(env, b)); }
+      if (url.pathname === '/notify-member' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyMember(env, b, req)); }
       if (url.pathname === '/push/fav' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushFav(env, req.headers.get('X-Key') || '', b)); }
       if (url.pathname === '/push/back-admin' && req.method === 'POST') { const err = await adminOf(req); if (err) return json({ ok: false, error: err }, 403); const b = await req.json().catch(() => ({})); return json(await sendBack(env, b)); }
       if (url.pathname === '/push/back' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await pushBack(env, req.headers.get('X-Key') || '', b)); }
@@ -907,14 +907,19 @@ async function notifyReq(env, b) {
 
 // 17.11.2026 Yeni mağaza üyesi: üye kaydolunca kendi oturum anahtarıyla çağırır (members/{uid} o anahtarla okunur → başkası adına yollanamaz).
 // Telegram + yönetici push; e-posta yok (Resend günlük sınırı siparişlere kalsın). Aynı üye için bir kez (KV nmb:<uid>).
-async function notifyMember(env, b) {
+async function notifyMember(env, b, req) {
   const tok = String(b.token || ''); const uid = tokUid(tok);
   if (!uid) return { ok: false, error: 'eksik' };
+  // 23.11.2026 güvenlik: e-postası onaylanmamış hesap bildirim göndermez (robotla açılan sahte hesaplar). Onaylayıp ilk
+  // girişte (memberLogin) bildirim gelir. Google / Facebook hesapları zaten onaylı.
+  const cl = tokClaims(tok); const prov = cl.firebase?.sign_in_provider || '';
+  if (cl.email_verified !== true && prov !== 'google.com' && prov !== 'facebook.com') return { ok: true, skip: 'onay bekliyor' };
   const key = 'nmb:' + uid;
   if (await env.KV.get(key)) return { ok: true, already: true };
+  if (!(await noteGate(env, req, 'mb'))) return { ok: true, skip: 'sınır' };
   const m = await fsAuth('members/' + uid, tok);
   if (!m) return { ok: false, error: 'üye yok' };
-  if (m.byAdmin || (m.createdAt && Date.now() - Number(m.createdAt) > 864e5)) return { ok: true, skip: true }; // panelden açılan / eski üye
+  if (m.byAdmin || (m.createdAt && Date.now() - Number(m.createdAt) > 3 * 864e5)) return { ok: true, skip: true }; // panelden açılan / eski üye (onay birkaç gün sürebilir)
   await env.KV.put(key, '1', { expirationTtl: 60 * 60 * 24 * 30 });
   const who = m.name || m.username || m.email || 'Yeni üye';
   const via = b.via === 'google' ? 'Google ile' : b.via === 'facebook' ? 'Facebook ile' : 'E-posta ile';
@@ -1017,6 +1022,22 @@ function ipLimit(map, req, max, ms) {
   const e = map.get(ip); if (e && e.until > t) { if (e.n >= max) return false; e.n++; return true; }
   map.set(ip, { n: 1, until: t + ms }); if (map.size > 5000) map.clear(); return true;
 }
+// 23.11.2026 güvenlik: Cloudflare 'istek sınırı' (wrangler.toml [[unsafe.bindings]] RL_*). KV'ye YAZMAZ, ücretsiz; her Cloudflare
+// noktasında ayrı sayılır. Bağlantı yoksa (eski yayın) sınır yok sayılır, iş durmaz.
+async function rlOk(rl, key) { if (!rl?.limit) return true; try { return (await rl.limit({ key })).success; } catch { return true; } }
+// Ziyaretçinin tetikleyebildiği yönetici bildirimleri (yeni üye / sorun / talep / yorum): aynı bağlantıdan dakikada 6,
+// hepsi birden dakikada 8. Tavan aşılırsa fazlası gönderilmez; yarım saatte bir tek 'çok fazla bildirim' uyarısı gelir.
+let rlWarnAt = 0;
+async function noteGate(env, req, kind) {
+  const ip = req?.headers?.get('CF-Connecting-IP') || '-';
+  if (!(await rlOk(env.RL_IP, 'n:' + kind + ':' + ip))) return false;
+  if (await rlOk(env.RL_NOTE, 'all')) return true;
+  if (Date.now() - rlWarnAt > 30 * 60e3) {
+    rlWarnAt = Date.now();
+    await notifySend(env, { subject: 'Çok fazla bildirim', text: '⚠️ Son dakikada çok sayıda ziyaretçi bildirimi geldi (yeni üye / sorun / talep / yorum).\nFazlası susturuldu, tek tek gönderilmedi. Panelden bakabilirsin.', noEmail: true }).catch(() => {});
+  }
+  return false;
+}
 async function uidOfName(env, name) {
   name = String(name || '').trim().toLowerCase(); if (!/^[a-z0-9._-]{3,20}$/.test(name)) return '';
   const st = await saToken(env);
@@ -1032,6 +1053,12 @@ async function memberLoginId(req, env, b) {
   if (!env.FIREBASE_SA) return { ok: false, error: 'Şu an yapılamıyor, e-postanızla giriş yapın.' };
   if (!ipLimit(ID_THR, req, 20, 600e3)) return { ok: false, error: 'Çok fazla deneme. Birkaç dakika sonra tekrar deneyin ya da e-postanızla girin.' };
   const id = String(b.id || '').trim().toLowerCase(); const pw = String(b.pw || '');
+  // 23.11.2026 güvenlik: bağlantı başına dakikada 8 deneme (tüm bekçi kopyalarında; eski sınır sadece tek kopyanın belleğindeydi)
+  // + aynı kullanıcı adına da dakikada 8 deneme + robot kontrolü (Turnstile; siparişteki gibi)
+  if (!(await rlOk(env.RL_LOGIN, 'ip:' + (req.headers.get('CF-Connecting-IP') || '-'))) || !(await rlOk(env.RL_LOGIN, 'id:' + id)))
+    return { ok: false, error: 'Çok fazla deneme. Bir dakika sonra tekrar deneyin ya da e-postanızla girin.' };
+  const ts = await tsVerify(env, b.ts, req);
+  if (!ts.ok) return { ok: false, code: 'ts', error: 'Güvenlik kontrolü tamamlanamadı. Sayfayı yenileyip tekrar deneyin ya da e-postanızla girin.' };
   const bad = { ok: false, error: 'Kullanıcı adı veya şifre hatalı.' };
   if (!id || !pw) return bad;
   const uid = await uidOfName(env, id); if (!uid) return { ok: false, error: 'Bu kullanıcı adıyla üyelik bulunamadı.' };
@@ -1635,6 +1662,7 @@ async function preqNew(req, env, b, origin) {
   const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
   if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
   if (await env.KV.get('nq:' + id)) return { ok: true, already: true };
+  if (!(await noteGate(env, req, 'pq'))) return { ok: true, skip: 'sınır' };
   const d = await fsAuth('preq/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'talep yok' };
   await env.KV.put('nq:' + id, '1', { expirationTtl: 60 * 60 * 24 * 7 });
   const who = [d.name, d.phone].filter(Boolean).join(' · ');
@@ -1768,6 +1796,7 @@ async function issueNew(req, env, b, origin) {
   const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
   if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
   if (await env.KV.get('ni:' + id)) return { ok: true, already: true };
+  if (!(await noteGate(env, req, 'is'))) return { ok: true, skip: 'sınır' };
   const d = await fsAuth('issues/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'kayıt yok' };
   await env.KV.put('ni:' + id, '1', { expirationTtl: 60 * 60 * 24 * 7 });
   const who = [d.name, d.phone].filter(Boolean).join(' · ');
@@ -1800,6 +1829,7 @@ async function issueMsg(req, env, b) {
   const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
   if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
   if (await env.KV.get('nim:' + id)) return { ok: true, already: true };
+  if (!(await noteGate(env, req, 'im'))) return { ok: true, skip: 'sınır' };
   const d = await fsAuth('issues/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'kayıt yok' };
   await env.KV.put('nim:' + id, '1', { expirationTtl: 120 });
   const r = (d.replies || []).slice(-1)[0] || {};
@@ -1855,6 +1885,7 @@ async function revNew(req, env, b) {
   const id = String(b.id || ''); const tok = bearer(req); const uid = tokUid(tok);
   if (!/^[A-Za-z0-9_-]{6,60}$/.test(id) || !uid) return { ok: false, error: 'eksik' };
   if (await env.KV.get('nrv:' + id)) return { ok: true, already: true };
+  if (!(await noteGate(env, req, 'rv'))) return { ok: true, skip: 'sınır' };
   const d = await fsAuth('reviews/' + id, tok); if (!d || d.uid !== uid) return { ok: false, error: 'yorum yok' };
   await env.KV.put('nrv:' + id, '1', { expirationTtl: 60 * 60 * 24 * 30 });
   await adminPush(env, { title: `⭐ Yeni yorum ${'★'.repeat(Number(d.stars) || 0)} · ${d.name || 'Üye'}`, body: (String(d.text || '') || 'Sadece yıldız verdi').slice(0, 160) + (d.status === 'pending' ? ' · onay bekliyor' : ''), url: '/admin/musteriler', tag: 'rv-' + id }).catch(() => {});
