@@ -11937,3 +11937,23 @@ html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute;
 .sec-done { text-align: center; padding: 6px 4px 2px; }
 .sec-done .sent-ic { margin: 0 auto 12px; }
 .sec-done p { margin: 0 0 10px; line-height: 1.55; }
+/* 23.11.2026 giriş yönlendirme kutusu + gereksiz klasörü uyarısı + hesap durumu */
+.auth-note { border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); border-radius: 12px; padding: 12px 14px; margin: 4px 0 10px; text-align: left; }
+.auth-note p { margin: 0 0 10px; line-height: 1.5; font-size: 14px; }
+.auth-note .fine { margin: 8px 0 0; font-size: 12.5px; }
+.auth-note-b { display: flex; flex-wrap: wrap; gap: 8px; }
+.junk-note { margin: 4px 0 14px; }
+.junk-note.hot { display: flex; gap: 8px; align-items: flex-start; text-align: left; font-size: 13.5px; line-height: 1.5; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--warn, #f2b45a) 16%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn, #f2b45a) 45%, var(--line)); }
+.junk-note.hot .ic { flex: none; margin-top: 2px; color: var(--warn, #b7791f); }
+.acct-q { display: flex; gap: 8px; }
+.acct-q input { flex: 1; min-width: 0; }
+.acct-res { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 4px 14px; }
+.acct-res dl { margin: 0; }
+.acct-res .r { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.acct-res .r:last-child { border-bottom: 0; }
+.acct-res dt { color: var(--muted); }
+.acct-res dd { margin: 0; text-align: right; font-weight: 600; }
+.acct-res .ok { color: var(--ok); } .acct-res .bad { color: var(--bad); }
+.acct-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.acct-tip { margin: 10px 0 0; font-size: 13px; }
+@media (max-width: 700px) { .mem-bar .acct-btn { padding: 0 14px; flex: none; } .mem-bar .acct-btn span { display: none; } }

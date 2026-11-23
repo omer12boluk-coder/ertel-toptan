@@ -269,7 +269,10 @@ export class DemoBackend {
   onMember(cb) { this.memberCb = cb; const m = this.mem()[this.db.shopSession]; cb(m ? this.pub(m) : null); return () => {}; }
   async usernameFree(n) { return !Object.values(this.mem()).some((m) => m.username === n); }
   async memberSignup({ email, password, name, phone, username, addresses = [], invoice = { type: 'person' } }, keep) {
-    if (Object.values(this.mem()).some((m) => m.email === email)) throw new Error('Bu e-posta ile zaten üyelik var. Giriş yapın ya da şifrenizi sıfırlayın.');
+    const ex = Object.values(this.mem()).find((m) => m.email === email);
+    if (ex?.unverified) { const x = new Error('Bu e-postayla daha önce kayıt başlatılmış ama onaylanmamış.'); x.code = 'pending'; x.email = email; throw x; }
+    if (ex?.google && !ex.pw) { const x = new Error('Bu hesap Google ile açılmış, şifresi yok.'); x.code = 'social'; x.kind = 'google'; x.email = email; throw x; }
+    if (ex) throw new Error('Bu e-posta ile zaten üyelik var. Giriş yapın ya da şifrenizi sıfırlayın.');
     if (username && !(await this.usernameFree(username))) throw new Error('Bu kullanıcı adı alınmış, başka bir tane deneyin.');
     const uid = 'm_' + rid();
     const m = { uid, email, pw: password, name, phone, username, createdAt: now(), addresses, invoice, verified: true }; // demoda e-posta doğrulaması atlanır
@@ -287,6 +290,7 @@ export class DemoBackend {
   async memberLogin(id, pw) {
     id = String(id).trim().toLowerCase();
     const m = Object.values(this.mem()).find((x) => x.email === id || x.username === id);
+    if (m && m.google && !m.pw) { const x = new Error('Bu hesap Google ile açılmış, şifresi yok.'); x.code = 'social'; x.kind = 'google'; x.email = m.email; throw x; }
     if (!m || m.pw !== pw) throw new Error('E-posta / kullanıcı adı veya şifre hatalı.');
     this.db.shopSession = m.uid; this.persist(); this.memberCb?.(this.pub(m));
   }
@@ -310,7 +314,17 @@ export class DemoBackend {
     if (!(await this.usernameFree(name))) throw new Error('Bu kullanıcı adı alınmış.');
     m.username = name; this.persist();
   }
-  memberKind() { return 'password'; }
+  memberKind() { const m = this.mem()[this.db.shopSession]; return m?.google && !m.pw ? 'google' : 'password'; }
+  memberProviders() { const m = this.mem()[this.db.shopSession]; return [...(m?.google ? ['google.com'] : []), ...(m?.pw ? ['password'] : [])]; }
+  async memberHow() { return ''; }
+  async memberResendTo(email) { return email; }
+  async memberSetPwLink(email) { return email; }
+  async adminAcct(email) {
+    email = String(email || '').trim().toLowerCase(); const m = Object.values(this.mem()).find((x) => x.email === email);
+    if (!m) return { ok: true, found: false };
+    return { ok: true, found: true, acct: { uid: m.uid, email: m.email, verified: !m.unverified, disabled: false, providers: [...(m.google ? ['google.com'] : []), ...(m.pw ? ['password'] : [])], createdAt: m.createdAt, lastLoginAt: m.createdAt, member: m.ghost ? null : { name: m.name, username: m.username || '', phone: m.phone, byAdmin: !!m.byAdmin }, staff: false, orders: Object.values(this.ord()).some((o) => o.uid === m.uid) } };
+  }
+  async adminAcctAct(uid, act) { const m = this.mem()[uid]; if (!m) throw new Error('Bulunamadı'); if (act === 'verify') delete m.unverified; if (act === 'delete') delete this.mem()[uid]; this.persist(); return { ok: true }; }
   _me(pw) { const m = this.mem()[this.db.shopSession]; if (!m) throw new Error('Oturum bulunamadı. Tekrar giriş yapın.'); if (m.pw && m.pw !== pw) throw new Error('Şifre hatalı.'); return m; }
   async memberChangePassword(cur, nw) { if (String(nw || '').length < 6) throw new Error('Yeni şifre en az 6 karakter olmalı.'); const m = this._me(cur); m.pw = nw; this.persist(); }
   async memberChangeEmail(pw, email) {

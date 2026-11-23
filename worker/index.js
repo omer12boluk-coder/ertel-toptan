@@ -58,6 +58,7 @@ export default {
     // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 17) ctx.waitUntil(preqSweep(env).catch((e) => console.log('preqSweep', e.message)));
     { const d = new Date(event.scheduledTime || Date.now()); if (d.getUTCHours() === 0 && d.getUTCMinutes() === 53) ctx.waitUntil(auditSweep(env).catch((e) => console.log('auditSweep', e.message))); }
+    { const d = new Date(event.scheduledTime || Date.now()); if (d.getUTCHours() === 1 && d.getUTCMinutes() === 23) ctx.waitUntil(unverifiedSweep(env).catch((e) => console.log('unverifiedSweep', e.message))); }
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 37) ctx.waitUntil(issueSweep(env).catch((e) => console.log('issueSweep', e.message)));
     // sepet linki: süresi dolup onaylanmayan (status 'open') linkler 10 dakikada bir silinir (Ayarlar › Sepet linki)
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() % 10 === 4) ctx.waitUntil(lcartSweep(env).catch((e) => console.log('lcartSweep', e.message)));
@@ -127,6 +128,9 @@ export default {
       if (url.pathname === '/notify-cancel' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyCancel(env, String(b.id || ''))); }
       if (url.pathname === '/notify-lcart' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyLcart(env, String(b.id || ''))); }
       if (url.pathname === '/notify-req' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await notifyReq(env, b)); }
+      if (url.pathname === '/member/how' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberHow(req, env, b)); }
+      if (url.pathname === '/admin/acct' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminAcct(req, env, b)); }
+      if (url.pathname === '/admin/acct-act' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await adminAcctAct(req, env, b)); }
       if (url.pathname === '/member/sync-email' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberSyncEmail(env, b)); }
       if (url.pathname === '/member/signout-all' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberSignoutAll(env, b)); }
       if (url.pathname === '/member/uname' && req.method === 'POST') { const b = await req.json().catch(() => ({})); return json(await memberUname(env, b)); }
@@ -436,6 +440,11 @@ async function authMail(req, env, b) {
     const gt0 = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
     const lk = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid0}/accounts:lookup`, { method: 'POST', headers: { Authorization: 'Bearer ' + gt0, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: [email] }) }).then((x) => x.json()).catch(() => ({}));
     if ((lk.users || []).length) return { ok: false, error: 'Bu e-posta ile başka bir üyelik var.' };
+  } else if (kind === 'verify' && !b.token && b.email) {
+    // 23.11.2026 onaysız kalmış kayıt: e-postaya onay bağlantısı tekrar (sadece şifreli + onaysız hesaba; bağlantı o adrese gittiği için güvenli)
+    email = String(b.email || '').trim().toLowerCase();
+    const a = await acctLookup(env, { email: [email] }).catch(() => null);
+    if (!a || a.emailVerified || !provsOf(a).includes('password')) return { ok: true, skipped: true };
   } else if (kind === 'verify') {
     const tok = String(b.token || ''); const uid = tokUid(tok);
     if (!uid) return { ok: false, fallback: true };
@@ -469,6 +478,8 @@ async function authMail(req, env, b) {
   const link = `${origin}/islem?mode=${kind === 'reset' ? 'resetPassword' : kind === 'email' ? 'verifyAndChangeEmail' : 'verifyEmail'}&oobCode=${encodeURIComponent(oob)}&lang=tr`;
   const t = kind === 'email'
     ? { subject: 'ERTEL GSM e-posta değişikliği', title: 'Yeni e-posta adresinizi onaylayın', intro: `ERTEL GSM hesabınızın e-posta adresini ${email} olarak değiştirmek istediniz. Onaylamak için aşağıdaki düğmeye dokunun; onaylayana kadar eski adresiniz geçerli kalır.`, btn: 'E-postamı değiştir', note: 'Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; hesabınız değişmez.' }
+    : kind === 'reset' && b.set
+    ? { subject: 'ERTEL GSM şifre belirleme', title: 'Şifrenizi belirleyin', intro: `${email} hesabınız Google ile açılmış. Bu bağlantıdan bir şifre belirlerseniz e-posta (ya da kullanıcı adınız) ve şifreyle de giriş yapabilirsiniz; Google ile giriş de çalışmaya devam eder.`, btn: 'Şifre belirle', note: 'Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; hesabınız değişmez.' }
     : kind === 'reset'
     ? { subject: 'ERTEL GSM şifre yenileme', title: 'Şifrenizi yenileyin', intro: `${email} hesabı için şifre yenileme isteği aldık. Yeni şifrenizi belirlemek için aşağıdaki düğmeye dokunun.`, btn: 'Yeni şifre belirle', note: 'Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.' }
     : { subject: 'ERTEL GSM üyeliğinizi onaylayın', title: 'E-posta adresinizi onaylayın', intro: `ERTEL GSM'e hoş geldiniz. Üyeliğinizi tamamlamak için ${email} adresini onaylamanız yeterli.`, btn: 'E-postamı onayla', note: 'Bu üyeliği siz açmadıysanız bu e-postayı yok sayabilirsiniz.' };
@@ -984,6 +995,102 @@ function noticeMailHtml({ title, intro, note }) {
     + `</div></body></html>`;
 }
 
+// ---- 23.11.2026 Hesap yardımcıları (Firebase Auth, servis hesabıyla) ----------------------------------------------
+const pidOf = (env) => JSON.parse(env.FIREBASE_SA || '{}').project_id || 'erteltoptan';
+async function idtk(env, op, body) {
+  const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pidOf(env)}/accounts:${op}`, { method: 'POST', headers: { Authorization: 'Bearer ' + gt, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return { r, j: await r.json().catch(() => ({})) };
+}
+async function acctLookup(env, by) { const { j } = await idtk(env, 'lookup', by); return (j.users || [])[0] || null; }
+const provsOf = (a) => (a?.providerUserInfo || []).map((x) => x.providerId);
+// giriş hesabı + üye kaydı + kullanıcı adı + 'haber ver' listeleri (siparişler KALIR)
+async function wipeAccount(env, uid, m) {
+  const { r, j } = await idtk(env, 'delete', { localId: uid });
+  if (!r.ok && !/USER_NOT_FOUND/.test(j.error?.message || '')) return { ok: false, error: 'Hesap silinemedi (' + (j.error?.message || r.status) + '). Bize yazın, elle silelim.' };
+  const pid = pidOf(env);
+  const st = await saToken(env); const H = { Authorization: 'Bearer ' + st };
+  await fetch(FS + 'members/' + uid, { method: 'DELETE', headers: H }).catch(() => {});
+  const un = String(m?.username || '').trim().toLowerCase();
+  if (un && /^[\w.-]{1,60}$/.test(un)) {
+    const u = await fetch(FS + 'usernames/' + un, { headers: H }).then((x) => x.ok ? x.json() : null).catch(() => null);
+    if (u?.fields?.uid?.stringValue === uid) await fetch(FS + 'usernames/' + un, { method: 'DELETE', headers: H }).catch(() => {});
+  }
+  const DOC = `projects/${pid}/databases/(default)/documents/`;
+  const pids = (Array.isArray(m?.notify) ? m.notify : []).map(String).filter((x) => /^\d{1,12}$/.test(x)).slice(0, 60);
+  await Promise.all(pids.map((p) => fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents:commit`, {
+    method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ writes: [{ transform: { document: DOC + 'wait/' + p, fieldTransforms: [{ fieldPath: 'uids', removeAllFromArray: { values: [{ stringValue: uid }] } }] }, currentDocument: { exists: true } }] }),
+  }).catch(() => {})));
+  return { ok: true };
+}
+async function saDoc(env, path) { const st = await saToken(env); const r = await fetch(FS + path, { headers: { Authorization: 'Bearer ' + st } }).catch(() => null); if (!r?.ok) return null; const d = await r.json(); return Object.fromEntries(Object.entries(d.fields || {}).map(([k, v]) => [k, fsVal(v)])); }
+async function hasOrders(env, uid) {
+  const st = await saToken(env);
+  const r = await fetch(FS.replace(/\/$/, '') + ':runQuery', { method: 'POST', headers: { Authorization: 'Bearer ' + st, 'Content-Type': 'application/json' }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'orders' }], where: { fieldFilter: { field: { fieldPath: 'uid' }, op: 'EQUAL', value: { stringValue: uid } } }, limit: 1 } }) }).catch(() => null);
+  if (!r?.ok) return true; // emin değilsek SİLME
+  const a = await r.json().catch(() => []); return Array.isArray(a) && a.some((x) => x.document);
+}
+// giriş yardımı: bu e-posta Google ile mi açılmış / onaysız mı? (sadece bu iki bilgi; dakikada sınırlı)
+const HOW_THR = new Map();
+async function memberHow(req, env, b) {
+  if (!env.FIREBASE_SA) return { ok: true, kind: '' };
+  const ip = req.headers.get('CF-Connecting-IP') || '-'; const t = Date.now();
+  const e = HOW_THR.get(ip); if (e && e.until > t && e.n >= 20) return { ok: true, kind: '' };
+  HOW_THR.set(ip, e && e.until > t ? { n: e.n + 1, until: e.until } : { n: 1, until: t + 600e3 });
+  const email = String(b.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: true, kind: '' };
+  const a = await acctLookup(env, { email: [email] }).catch(() => null); if (!a) return { ok: true, kind: '' };
+  const p = provsOf(a);
+  if (!p.includes('password') && (p.includes('google.com') || p.includes('facebook.com'))) return { ok: true, kind: p.includes('google.com') ? 'google' : 'facebook' };
+  if (p.includes('password') && !a.emailVerified) return { ok: true, kind: 'unverified' };
+  return { ok: true, kind: '' };
+}
+// Yönetim › Müşteriler › 'Hesap durumuna bak' (yetki: customers)
+async function adminAcct(req, env, b) {
+  const err = await permOf(req, 'customers'); if (err) return { ok: false, error: err };
+  const email = String(b.email || '').trim().toLowerCase(); const id = String(b.uid || '').trim();
+  const a = await acctLookup(env, id ? { localId: [id] } : { email: [email] }).catch(() => null);
+  if (!a) return { ok: true, found: false };
+  const uid = a.localId;
+  const [m, u] = await Promise.all([saDoc(env, 'members/' + uid), saDoc(env, 'users/' + uid)]);
+  return { ok: true, found: true, acct: { uid, email: a.email || '', verified: !!a.emailVerified, disabled: !!a.disabled, providers: provsOf(a), createdAt: Number(a.createdAt || 0), lastLoginAt: Number(a.lastLoginAt || 0), member: m ? { name: m.name || '', username: m.username || '', phone: m.phone || '', byAdmin: !!m.byAdmin } : null, staff: !!u, orders: await hasOrders(env, uid) } };
+}
+async function adminAcctAct(req, env, b) {
+  const err = await permOf(req, 'customers'); if (err) return { ok: false, error: err };
+  const uid = String(b.uid || ''); if (!/^[\w-]{10,40}$/.test(uid)) return { ok: false, error: 'kimlik' };
+  if (await saDoc(env, 'users/' + uid)) return { ok: false, error: 'Bu bir bayi / ekip hesabı, buradan değiştirilemez.' };
+  if (b.act === 'verify') { await authUpdate(env, { localId: uid, emailVerified: true }); return { ok: true }; }
+  if (b.act === 'delete') { const m = await saDoc(env, 'members/' + uid); return await wipeAccount(env, uid, m); }
+  return { ok: false, error: 'işlem' };
+}
+// Her gece (TR 04:23): 14 günden eski, ONAYLANMAMIŞ, sadece şifreli, siparişi OLMAYAN mağaza hesapları silinir
+// (sahte / unutulmuş kayıtlar e-postayı ve kullanıcı adını boşa tutmasın). Bayi/ekip, panelden açılan üye, siparişi olan: DOKUNULMAZ.
+async function unverifiedSweep(env) {
+  if (!env.FIREBASE_SA) return;
+  const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
+  const old = Date.now() - 14 * 864e5; const cand = []; let next = '';
+  for (let pg = 0; pg < 20; pg++) {
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pidOf(env)}/accounts:batchGet?maxResults=1000${next ? '&nextPageToken=' + encodeURIComponent(next) : ''}`, { headers: { Authorization: 'Bearer ' + gt } });
+    const j = await r.json().catch(() => ({})); if (!r.ok) break;
+    for (const a of j.users || []) {
+      const p = provsOf(a); const em = String(a.email || '').toLowerCase();
+      if (a.emailVerified || !em || em.endsWith('@toptan.ertelgsm.app') || p.length !== 1 || p[0] !== 'password' || Number(a.createdAt || 0) > old) continue;
+      cand.push(a);
+    }
+    next = j.nextPageToken || ''; if (!next) break;
+  }
+  const gone = [];
+  for (const a of cand.slice(0, 40)) {
+    const uid = a.localId;
+    if (await saDoc(env, 'users/' + uid)) continue;
+    const m = await saDoc(env, 'members/' + uid); if (m?.byAdmin) continue;
+    if (await hasOrders(env, uid)) continue;
+    const w = await wipeAccount(env, uid, m).catch(() => ({ ok: false })); if (w.ok) gone.push(a.email);
+  }
+  if (gone.length) await notifySend(env, { subject: `Onaylanmamış ${gone.length} üyelik temizlendi`, text: `🧹 14 günden eski, e-postası onaylanmamış, siparişi olmayan ${gone.length} üyelik silindi:\n${gone.slice(0, 20).join('\n')}${gone.length > 20 ? '\n…' : ''}`, noEmail: true }).catch(() => {});
+}
+
 // 17.11.2026 Hesabımı sil (müşteri kendisi): POST /member/delete { token } — token son 10 dk içinde yeniden girişle alınmış olmalı
 // (uygulama şifre / Google ile tekrar doğrulatır). Silinen: giriş hesabı (Firebase Auth), members/{uid}, usernames/{ad},
 // haber bekleme kayıtları (wait/* içindeki uid). Siparişler / faturalar YASA GEREĞİ KALIR (kullanıcı kararı: aynen kalsın).
@@ -995,25 +1102,8 @@ async function memberDelete(env, b) {
   if (!m) return { ok: false, error: 'Oturum bulunamadı. Tekrar giriş yapın.' };
   let at = 0; try { at = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).auth_time || 0; } catch {}
   if (!at || Date.now() / 1000 - at > 600) return { ok: false, code: 'reauth', error: 'Güvenlik için şifrenizi tekrar girin.' };
-  const pid = JSON.parse(env.FIREBASE_SA).project_id || 'erteltoptan';
-  // 1) giriş hesabı — önce bu (başarısızsa hiçbir veri silinmez)
-  const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');
-  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pid}/accounts:delete`, { method: 'POST', headers: { Authorization: 'Bearer ' + gt, 'Content-Type': 'application/json' }, body: JSON.stringify({ localId: uid }) });
-  if (!r.ok) { const j = await r.json().catch(() => ({})); if (!/USER_NOT_FOUND/.test(j.error?.message || '')) return { ok: false, error: 'Hesap silinemedi (' + (j.error?.message || r.status) + '). Bize yazın, elle silelim.' }; }
-  // 2) üye kayıtları
-  const st = await saToken(env); const H = { Authorization: 'Bearer ' + st };
-  await fetch(FS + 'members/' + uid, { method: 'DELETE', headers: H }).catch(() => {});
-  const un = String(m.username || '').trim().toLowerCase();
-  if (un && /^[\w.-]{1,60}$/.test(un)) {
-    const u = await fetch(FS + 'usernames/' + un, { headers: H }).then((x) => x.ok ? x.json() : null).catch(() => null);
-    if (u?.fields?.uid?.stringValue === uid) await fetch(FS + 'usernames/' + un, { method: 'DELETE', headers: H }).catch(() => {});
-  }
-  const DOC = `projects/${pid}/databases/(default)/documents/`;
-  const pids = (Array.isArray(m.notify) ? m.notify : []).map(String).filter((x) => /^\d{1,12}$/.test(x)).slice(0, 60);
-  await Promise.all(pids.map((p) => fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents:commit`, {
-    method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ writes: [{ transform: { document: DOC + 'wait/' + p, fieldTransforms: [{ fieldPath: 'uids', removeAllFromArray: { values: [{ stringValue: uid }] } }] }, currentDocument: { exists: true } }] }),
-  }).catch(() => {})));
+  const w = await wipeAccount(env, uid, m);
+  if (!w.ok) return w;
   // 3) müşteriye 'hesabınız silindi' e-postası (bizim alan adımızdan)
   if (m.email) {
     const t = { title: 'Hesabınız silindi', intro: `${m.email} adresine bağlı ERTEL GSM üyeliğiniz isteğiniz üzerine silindi. Giriş bilgileriniz, adresleriniz ve favorileriniz kaldırıldı. Daha önce verdiğiniz siparişlerin kayıtları yasal zorunluluk nedeniyle saklanır.`, note: 'Bu işlemi siz yapmadıysanız hemen bize yazın: bu e-postayı yanıtlayabilirsiniz.' };

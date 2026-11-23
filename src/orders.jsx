@@ -523,11 +523,13 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
   const count = useMemo(() => { const m = {}; for (const o of orders) if (o.uid) m[o.uid] = (m[o.uid] || 0) + 1; return m; }, [orders]);
   const t = norm(q.trim());
   const list = [...members].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).filter((m) => !t || norm([m.name, m.email, m.phone, m.username, m.invoice?.company].join(' ')).includes(t));
-  const del = (m) => setConfirm({ title: 'Üyeyi sil', text: `${m.name || m.email} üyeliği silinecek (siparişleri kalır). Aynı e-postayla yeniden üye olamaz; gerekirse Firebase’den hesabı da silin.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteMember(m.uid).then(() => { toast('Üye silindi'); setOpen(null); }) });
+  const [acctOpen, setAcctOpen] = useState(false);
+  const del = (m) => setConfirm({ title: 'Üyeyi sil', text: `${m.name || m.email} üyeliği ve giriş hesabı silinecek; siparişleri kalır. Aynı e-postayla yeniden üye olabilir.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().deleteMember(m.uid).then(() => { toast('Üye silindi'); setOpen(null); }) });
   return (
     <>
       <div className="mem-bar">
         <div className="search"><Icon n="search" s={18} /><input id="mem-search" type="search" placeholder="Ad, e-posta, telefon…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <button className="btn outline acct-btn" onClick={() => setAcctOpen(true)} title="E-postayla giriş hesabının durumuna bak" aria-label="Hesap durumu"><Icon n="shield" s={16} /><span>Hesap durumu</span></button>
         {!outer && <button className="btn primary" onClick={() => setNewOpen(true)}><Icon n="plus" s={16} />Yeni üye</button>}
       </div>
       {list.length === 0 ? <Empty icon="users" title={members.length ? 'Eşleşen üye yok' : 'Henüz mağaza üyesi yok'}>{!members.length && <p>Müşteriler mağazada <b>Hesabım</b>’dan ya da sipariş verirken üye olabilir.</p>}</Empty> : (
@@ -549,8 +551,58 @@ export function Members({ newOpen: nO, setNewOpen: sNO } = {}) {
       )}
       {open && <MemberSheet m={open} onClose={() => setOpen(null)} onDelete={() => del(open)} />}
       {newOpen && <NewMember onClose={() => setNewOpen(false)} />}
+      {acctOpen && <AcctCheck onClose={() => setAcctOpen(false)} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </>
+  );
+}
+
+// 23.11.2026 Hesap durumu: e-postayla giriş hesabına bak (var mı, onaylı mı, Google mı, üye kaydı var mı) → onaylı say / sil
+function AcctCheck({ onClose }) {
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState(null);
+  const [err, setErr] = useState('');
+  const [confirm, setConfirm] = useState(null);
+  const ok = can('customers');
+  async function look(e) {
+    e?.preventDefault(); setErr(''); setRes(null);
+    const em = q.trim().toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return setErr('E-posta adresini yazın');
+    setBusy(true);
+    try { setRes(await api().adminAcct(em)); } catch (x) { setErr(x.message); }
+    setBusy(false);
+  }
+  const a = res?.acct;
+  const pv = (a?.providers || []).map((p) => p === 'password' ? 'E-posta + şifre' : p === 'google.com' ? 'Google' : p === 'facebook.com' ? 'Facebook' : p).join(' + ') || '—';
+  const act = (what) => setConfirm(what === 'verify'
+    ? { title: 'Onaylı say', text: `${a.email} e-postası onaylanmış sayılacak; müşteri şifresiyle hemen girebilir.`, okLabel: 'Onaylı say', onOk: () => api().adminAcctAct(a.uid, 'verify').then(() => { toast('Hesap onaylandı'); look(); }, (x) => toast(x.message, 'bad')) }
+    : { title: 'Hesabı sil', text: `${a.email} giriş hesabı${a.member ? ' ve üye kaydı' : ''} silinecek${a.orders ? ' (siparişleri kalır)' : ''}. E-posta serbest kalır, yeniden üye olabilir.`, okLabel: 'Sil', tone: 'danger', onOk: () => api().adminAcctAct(a.uid, 'delete').then(() => { toast('Hesap silindi'); look(); }, (x) => toast(x.message, 'bad')) });
+  return (
+    <Sheet title="Hesap durumu" sub="Müşteri “giremiyorum” dediğinde" onClose={onClose}>
+      <form className="acct-q" onSubmit={look}>
+        <input id="acct-q" type="email" autoCapitalize="none" autoFocus placeholder="musteri@ornek.com" value={q} onChange={(e) => setQ(e.target.value)} />
+        <button className="btn primary" disabled={busy}>{busy ? 'Bakılıyor…' : 'Bak'}</button>
+      </form>
+      {err && <p className="err">{err}</p>}
+      {res && !res.found && <p className="acct-tip muted">Bu e-postayla bir giriş hesabı yok. Müşteri bu adresle yeniden üye olabilir.</p>}
+      {a && <>
+        <div className="acct-res"><dl>
+          <div className="r"><dt>E-posta</dt><dd>{a.email}</dd></div>
+          <div className="r"><dt>Giriş şekli</dt><dd>{pv}</dd></div>
+          <div className="r"><dt>E-posta onayı</dt><dd className={a.verified ? 'ok' : 'bad'}>{a.verified ? 'Onaylı' : 'Onaylanmamış'}</dd></div>
+          <div className="r"><dt>Üye kaydı</dt><dd className={a.member || a.staff ? '' : 'bad'}>{a.staff ? 'Bayi / ekip hesabı' : a.member ? (a.member.name || '—') + (a.member.username ? ' · @' + a.member.username : '') : 'Yok (panelde görünmez)'}</dd></div>
+          <div className="r"><dt>Siparişi</dt><dd>{a.orders ? 'Var' : 'Yok'}</dd></div>
+          <div className="r"><dt>Açılış · son giriş</dt><dd>{a.createdAt ? when(a.createdAt) : '—'} · {a.lastLoginAt ? when(a.lastLoginAt) : '—'}</dd></div>
+        </dl></div>
+        {!a.verified && a.providers.includes('password') && <p className="acct-tip muted">Onaylanmamış hesap giriş yapamaz. Müşteri maili bulamıyorsa “Onaylı say” deyin{!a.orders ? '; ya da silin, yeniden üye olsun' : ''}.</p>}
+        {!a.providers.includes('password') && a.providers.length > 0 && <p className="acct-tip muted">Bu hesabın şifresi yok; müşteri “Google ile devam et”le girer. Şifre isterse giriş ekranındaki “Şifre belirleme bağlantısı”nı kullanabilir.</p>}
+        {ok && !a.staff && <div className="acct-acts">
+          {!a.verified && a.providers.includes('password') && <button className="btn primary sm" onClick={() => act('verify')}><Icon n="check" s={15} />Onaylı say</button>}
+          <button className="btn ghost danger sm" onClick={() => act('delete')}><Icon n="trash" s={15} />Hesabı sil</button>
+        </div>}
+      </>}
+      {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+    </Sheet>
   );
 }
 

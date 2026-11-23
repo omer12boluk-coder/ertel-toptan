@@ -31,6 +31,7 @@ function restVal(v) {
 }
 // sahte DocumentSnapshot: exists() / data() / id (getDoc ile aynı kullanım)
 const fakeSnap = (id, data) => ({ id, exists: () => data != null, data: () => data || undefined });
+const socialErr = (k, email) => { const x = new Error(`Bu hesap ${k === 'facebook' ? 'Facebook' : 'Google'} ile açılmış, şifresi yok.`); x.code = 'social'; x.kind = k; x.email = email; return x; };
 const timeout = (p, ms = 20000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('Sunucu cevap vermedi, bağlantınızı kontrol edip tekrar deneyin')), ms))]);
 const toEmail = (u) => `${u.trim().toLowerCase()}@${EMAIL_DOMAIN}`;
 
@@ -704,7 +705,16 @@ export class FirebaseBackend {
     this.signingUp = true;
     let cred;
     try { cred = await this.U.createUserWithEmailAndPassword(this.auth, email, password); }
-    catch (e) { this.signingUp = false; throw new Error(authMsg(e)); }
+    catch (e) {
+      this.signingUp = false;
+      // 23.11.2026 bu e-postayla daha önce kayıt başlatılmış ama onaylanmamış → 'onay mailini tekrar gönder'; Google hesabıysa söyle
+      if (/email-already-in-use/.test(e?.code || '')) {
+        const k = await this.memberHow(email);
+        if (k === 'unverified') { const x = new Error('Bu e-postayla daha önce kayıt başlatılmış ama onaylanmamış.'); x.code = 'pending'; x.email = email; throw x; }
+        if (k === 'google' || k === 'facebook') throw socialErr(k, email);
+      }
+      throw new Error(authMsg(e));
+    }
     try {
       const m = { uid: cred.user.uid, email, name, phone, createdAt: now(), addresses, invoice, ...(username ? { username } : {}), ...(legal ? { legal } : {}) };
       await timeout(this.F.setDoc(this.d('members', m.uid), m));
@@ -728,7 +738,12 @@ export class FirebaseBackend {
   async memberLogin(id, pw) {
     const email = await this.emailOf(id);
     let cred;
-    try { cred = await this.U.signInWithEmailAndPassword(this.auth, email, pw); } catch (e) { throw new Error(authMsg(e)); }
+    try { cred = await this.U.signInWithEmailAndPassword(this.auth, email, pw); }
+    catch (e) {
+      // 23.11.2026 Google / Facebook ile açılmış hesaba şifreyle girilmeye çalışılıyorsa açıkça söyle
+      if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(e?.code || '')) { const k = await this.memberHow(email); if (k === 'google' || k === 'facebook') throw socialErr(k, email); }
+      throw new Error(authMsg(e));
+    }
     const byAdmin = !cred.user.emailVerified && (await timeout(this.F.getDoc(this.d('members', cred.user.uid))).then((x) => x.exists() && x.data().byAdmin, () => false));
     if (!cred.user.emailVerified && !byAdmin) { await this.U.signOut(this.auth); const e = new Error('E-posta adresiniz henüz doğrulanmadı. Size gönderdiğimiz e-postadaki bağlantıya tıklayın.'); e.code = 'unverified'; throw e; }
   }
@@ -764,6 +779,25 @@ export class FirebaseBackend {
     b.update(this.d('members', uid), { username: name });
     await timeout(b.commit());
   }
+  // 23.11.2026 giriş yardımları
+  async memberHow(email) {
+    const W = String(window.WATCH_URL || '').replace(/\/$/, ''); if (!W) return '';
+    try { const r = await timeout(fetch(W + '/member/how', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) }), 8000); return (await r.json()).kind || ''; } catch { return ''; }
+  }
+  async memberResendTo(email) {
+    if (!(await this._authMail({ kind: 'verify', email }))) throw new Error('Şu an gönderilemedi, biraz sonra tekrar deneyin.');
+    return email;
+  }
+  async memberSetPwLink(email) {
+    email = String(email || '').trim().toLowerCase();
+    if (await this._authMail({ kind: 'reset', email, set: true })) return email;
+    try { await this.U.sendPasswordResetEmail(this.auth, email, this.actionUrl()); } catch (e) { throw new Error(authMsg(e)); }
+    return email;
+  }
+  memberProviders() { return (this.auth.currentUser?.providerData || []).map((x) => x.providerId); }
+  // Yönetim › Müşteriler › Hesap durumu
+  async adminAcct(email) { return this._staffCall('/admin/acct', { email }); }
+  async adminAcctAct(uid, act) { return this._staffCall('/admin/acct-act', { uid, act }); }
   // 23.11.2026 Güvenlik: şifre değiştir · e-posta değiştir (yeni adrese doğrulama bağlantısı) · tüm cihazlardan çıkış
   async memberChangePassword(cur, nw) {
     if (String(nw || '').length < 6) throw new Error('Yeni şifre en az 6 karakter olmalı.');
@@ -868,6 +902,8 @@ export class FirebaseBackend {
   // bir bayinin tüm talepleri (müşteri penceresindeki geçmiş; ana liste son 60 günle sınırlı)
   watchUserRequests(uid, cb) { return this.F.onSnapshot(this.F.query(this.c('requests'), this.F.where('uid', '==', uid)), (s) => cb(s.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => b.updatedAt - a.updatedAt)), () => cb([])); }
   async deleteMember(uid) {
+    // 23.11.2026 giriş hesabı da silinir (bekçi) → e-posta serbest kalır; bekçiye ulaşılamazsa eski yol (sadece kayıt)
+    try { await this._staffCall('/admin/acct-act', { uid, act: 'delete' }); return; } catch (e) { if (/bayi|ekip|yetki/i.test(e.message)) throw e; console.warn(e); }
     const s = await this.F.getDoc(this.d('members', uid)); const un = s.exists() && s.data().username;
     const b = this.F.writeBatch(this.db); b.delete(this.d('members', uid)); if (un) b.delete(this.d('usernames', un)); await b.commit();
   }

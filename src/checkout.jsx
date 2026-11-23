@@ -744,10 +744,12 @@ async function bayiLogin(A, u, pw) {
 function AuthForm({ onDone, compact, start, onView, noGrow }) {
   const { api: A, settings: S } = useStore();
   const [view, setView] = useState(start || 'login');
-  useEffect(() => { onView?.(view); }, [view]); // login | signup | reset | resetSent | verifySent | unverified
+  useEffect(() => { onView?.(view); setNote(null); }, [view]); // login | signup | reset | resetSent | verifySent | unverified
   const [f, setF] = useState({ id: '', email: '', uname: '', pw: '', pw2: '', name: '', phone: '' });
   const [err, setErr] = useState('');
   const [sentTo, setSentTo] = useState('');
+  const [note, setNote] = useState(null); // 23.11.2026 { kind: 'social'|'pending', prov, email }
+  const [sentKind, setSentKind] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e?.target ? e.target.value : e }));
   const canSignup = S.orders?.signup !== false;
@@ -820,7 +822,19 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
         if (!f.id.trim()) throw new Error('E-posta ya da kullanıcı adınızı yazın.');
         setSentTo(await A.memberReset(f.id)); setView('resetSent');
       }
-    } catch (x) { if (x.code === 'unverified') setView('unverified'); setErr(x.message); }
+    } catch (x) {
+      if (x.code === 'unverified') setView('unverified');
+      if (x.code === 'social' || x.code === 'pending') { setNote({ kind: x.code, prov: x.kind, email: x.email }); setErr(''); }
+      else setErr(x.message);
+    }
+    setBusy(false);
+  }
+  async function noteAct(what) {
+    setBusy(true); setErr('');
+    try {
+      if (what === 'setpw') { setSentTo(await A.memberSetPwLink(note.email)); setSentKind('setpw'); setNote(null); setView('resetSent'); }
+      else if (what === 'resend') { setSentTo(await A.memberResendTo(note.email)); setSentKind('pending'); setNote(null); setView('verifySent'); }
+    } catch (x) { setErr(x.message); }
     setBusy(false);
   }
   async function resend() {
@@ -832,9 +846,11 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
     <div className="auth-form auth-sent">
       <span className="sent-ic"><Icon n="send" s={26} /></span>
       {view === 'resetSent'
-        ? <p>Bu bilgilerle bir üyelik varsa <b>{sentTo}</b> adresine şifre yenileme bağlantısı gönderdik. Bağlantıya tıklayıp yeni şifrenizi belirleyin.</p>
-        : <p><b>{sentTo}</b> adresine bir doğrulama bağlantısı gönderdik. Bağlantıya tıklayınca üyeliğiniz açılır ve giriş yapabilirsiniz.</p>}
-      <p className="fine">E-posta birkaç dakika içinde gelir. Gelmediyse <b>gereksiz (spam)</b> klasörüne bakın.</p>
+        ? sentKind === 'setpw'
+          ? <p><b>{sentTo}</b> adresine şifre belirleme bağlantısı gönderdik. Şifrenizi belirledikten sonra hem Google ile hem e-posta / kullanıcı adı ve şifreyle girebilirsiniz.</p>
+          : <p>Bu bilgilerle bir üyelik varsa <b>{sentTo}</b> adresine şifre yenileme bağlantısı gönderdik. Bağlantıya tıklayıp yeni şifrenizi belirleyin.</p>
+        : <p><b>{sentTo}</b> adresine bir doğrulama bağlantısı gönderdik. Bağlantıya tıklayınca üyeliğiniz açılır ve giriş yapabilirsiniz.{sentKind === 'pending' && <> Şifrenizi hatırlamıyorsanız onayladıktan sonra <b>Şifremi unuttum</b>’u kullanın.</>}</p>}
+      <JunkNote email={sentTo} />
       <button className="btn outline" onClick={() => go2('login')}>Girişe dön</button>
     </div>
   );
@@ -867,6 +883,7 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
       {!['signup', 'bayi'].includes(view) && <Field label="E-posta ya da kullanıcı adı"><input id="m-id" autoComplete="username" autoCapitalize="none" value={f.id} onChange={set('id')} required /></Field>}
       {noGrow && view === 'signup' && pw2On ? <div className="row2">{!['reset', 'bayi'].includes(view) && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}{view === 'signup' && pw2On && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}</div> : <>{!['reset', 'bayi'].includes(view) && <Field label="Şifre" hint={view === 'signup' ? 'En az 6 karakter' : ''}><PasswordInput id="m-pw" autoComplete={view === 'signup' ? 'new-password' : 'current-password'} value={f.pw} onChange={set('pw')} required /></Field>}{view === 'signup' && pw2On && <Field label="Şifre (tekrar)"><PasswordInput id="m-pw2" autoComplete="new-password" value={f.pw2} onChange={set('pw2')} required /></Field>}</>}
       {view === 'signup' && <SignupConsent checked={!!f.legal} onChange={(v) => setF((x) => ({ ...x, legal: v }))} />}
+      {note && <AuthNote note={note} busy={busy} onGoogle={() => socialIn(note.prov || 'google')} onAct={noteAct} />}
       {err && <p className="err">{err}</p>}
       {view === 'unverified'
         ? <button type="button" className="btn primary big center-btn" disabled={busy} onClick={resend}>{busy ? 'Bekleyin…' : 'Doğrulama e-postasını tekrar gönder'}</button>
@@ -883,6 +900,35 @@ function AuthForm({ onDone, compact, start, onView, noGrow }) {
       </div>
     </form>
   );
+}
+
+// 23.11.2026 giriş / üye ol ekranında yönlendirme kutusu: Google hesabına şifreyle girme ya da onaysız kalmış kayıt
+function AuthNote({ note, busy, onGoogle, onAct }) {
+  const P = note.prov === 'facebook' ? 'Facebook' : 'Google';
+  if (note.kind === 'social') return (
+    <div className="auth-note">
+      <p><b>Bu hesap {P} ile açılmış.</b> Şifresi olmadığı için <b>{P} ile devam et</b>’e basarak girin.</p>
+      <div className="auth-note-b">
+        <button type="button" className="btn primary sm" disabled={busy} onClick={onGoogle}>{P} ile devam et</button>
+        <button type="button" className="btn outline sm" disabled={busy} onClick={() => onAct('setpw')}>Şifre belirleme bağlantısı gönder</button>
+      </div>
+      <p className="fine">Şifre belirlerseniz e-posta / kullanıcı adı ve şifreyle de girebilirsiniz; hesabınız aynı kalır.</p>
+    </div>
+  );
+  return (
+    <div className="auth-note">
+      <p><b>Bu e-postayla daha önce kayıt başlatılmış ama onaylanmamış.</b> Size onay bağlantısını tekrar gönderelim; tıklayınca üyeliğiniz açılır.</p>
+      <div className="auth-note-b"><button type="button" className="btn primary sm" disabled={busy} onClick={() => onAct('resend')}>{busy ? 'Gönderiliyor…' : 'Onay mailini tekrar gönder'}</button></div>
+    </div>
+  );
+}
+// gönderildi ekranları: 'gereksiz' klasörü uyarısı (Hotmail / Outlook'ta daha belirgin)
+const JUNK_RE = /@(hotmail|outlook|live|msn|windowslive)\./i;
+export function JunkNote({ email }) {
+  const ms = JUNK_RE.test(String(email || ''));
+  return ms
+    ? <p className="junk-note hot"><Icon n="mail" s={16} /><span>Mail 1-2 dakika içinde gelir. <b>Hotmail / Outlook</b> bizim mailleri çoğu zaman <b>Gereksiz (Junk)</b> klasörüne atar, gelen kutunuzda yoksa oraya bakın.</span></p>
+    : <p className="fine junk-note">Mail 1-2 dakika içinde gelir. Gelen kutunuzda yoksa <b>Gereksiz / Spam</b> klasörüne bakın.</p>;
 }
 
 // E-postadaki bağlantı: şifre yenileme ya da e-posta doğrulama (/magaza/islem?mode=…&oobCode=…)
@@ -929,7 +975,7 @@ export function AuthAction() {
         {st === 'done' && <div className="auth-form auth-sent">
           <span className="sent-ic"><Icon n="check" s={28} /></span>
           <h1 className="page-t">{mode === 'verifyEmail' ? 'E-postanız doğrulandı' : mode === 'verifyAndChangeEmail' ? 'E-posta adresiniz değişti' : 'Şifreniz değişti'}</h1>
-          <p className="muted">{mode === 'verifyEmail' ? 'Üyeliğiniz açıldı. Şimdi giriş yapabilirsiniz.' : mode === 'verifyAndChangeEmail' ? `Artık ${email || 'yeni adresiniz'} ile giriş yapabilirsiniz (kullanıcı adınız aynı).` : 'Yeni şifrenizle giriş yapabilirsiniz.'}</p>
+          <p className="muted">{mode === 'verifyEmail' ? 'Üyeliğiniz açıldı. Şimdi giriş yapabilirsiniz. Şifrenizi hatırlamıyorsanız Şifremi unuttum’u kullanın.' : mode === 'verifyAndChangeEmail' ? `Artık ${email || 'yeni adresiniz'} ile giriş yapabilirsiniz (kullanıcı adınız aynı).` : 'Yeni şifrenizle giriş yapabilirsiniz.'}</p>
           <button className="btn primary" onClick={toAccount}>Giriş yap</button>
         </div>}
       </div>
@@ -1366,7 +1412,8 @@ function MyUname() {
 function MyEmail() {
   const m = useStore((s) => s.member);
   const A = useStore((s) => s.api);
-  const kind = A.memberKind?.() || 'password';
+  const provs = A.memberProviders?.() || ['password'];
+  const kind = provs.includes('google.com') ? 'google' : provs.includes('facebook.com') ? 'facebook' : 'password';
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({ email: '', pw: '' });
   const [err, setErr] = useState('');
@@ -1394,7 +1441,8 @@ function MyEmail() {
           {sent ? (
             <div className="sec-done"><span className="sent-ic"><Icon n="check" s={26} /></span>
               <p><b>{sent}</b> adresine bir onay bağlantısı gönderdik.</p>
-              <p className="fine">Bağlantıya tıklayınca e-posta adresiniz değişir ve yeni adresinizle tekrar giriş yaparsınız. O zamana kadar <b>{m.email}</b> geçerli. Gelmediyse gereksiz (spam) klasörüne bakın.</p>
+              <p className="fine">Bağlantıya tıklayınca e-posta adresiniz değişir ve yeni adresinizle tekrar giriş yaparsınız. O zamana kadar <b>{m.email}</b> geçerli.</p>
+              <JunkNote email={sent} />
             </div>
           ) : (
             <div className="form-col">
@@ -1429,13 +1477,15 @@ function MySecurity() {
     catch (x) { setErr(x.message); }
     setBusy(false);
   }
+  const me = useStore((s) => s.member);
+  const setPw = () => setConf({ title: 'Şifre belirle', text: `${me?.email} adresine şifre belirleme bağlantısı gönderelim. Bağlantıdan şifrenizi belirleyin; ${kind === 'facebook' ? 'Facebook' : 'Google'} ile giriş de çalışmaya devam eder.`, okLabel: 'Bağlantı gönder', onOk: () => A.memberSetPwLink(me?.email).then((e) => toast(e + ' adresine bağlantı gönderildi. Gelmezse Gereksiz / Spam klasörüne bakın.'), (x) => toast(x.message, 'bad')) });
   const outAll = () => setConf({ title: 'Tüm cihazlardan çıkış', text: 'Bu hesabın açık olduğu bütün telefon ve bilgisayarlardan çıkış yapılır (bu cihaz dahil). Diğer cihazlar en geç 1 saat içinde çıkar. Sonra tekrar giriş yapmanız gerekir.', okLabel: 'Çıkış yap', onOk: () => A.memberSignoutAll().then(() => { openAcct(null); toast('Tüm cihazlardan çıkış yapıldı'); }, (x) => toast(x.message, 'bad')) });
   return (
     <div className="mi-sec">
       <h3>Güvenlik</h3>
       {kind === 'password'
         ? <button type="button" className="mi-sec-row" onClick={() => { setF({ cur: '', nw: '', nw2: '' }); setErr(''); setPwOpen(true); }}><span><b>Şifremi değiştir</b><small>Hesabınıza girerken kullandığınız şifre</small></span><Icon n="back" s={16} className="flip" /></button>
-        : <div className="mi-sec-row static"><span><b>Şifre</b><small>{kind === 'facebook' ? 'Facebook' : 'Google'} ile giriş yapıyorsunuz, ayrı şifreniz yok</small></span></div>}
+        : <button type="button" className="mi-sec-row" onClick={setPw}><span><b>Şifre belirle</b><small>{kind === 'facebook' ? 'Facebook' : 'Google'} ile giriyorsunuz. Şifre belirlerseniz kullanıcı adı / e-posta ve şifreyle de girebilirsiniz</small></span><Icon n="back" s={16} className="flip" /></button>}
       <button type="button" className="mi-sec-row" onClick={outAll}><span><b>Tüm cihazlardan çıkış yap</b><small>Telefonunuzu kaybettiyseniz ya da başka yerde açık kaldıysa</small></span><Icon n="back" s={16} className="flip" /></button>
       {pwOpen && (
         <Sheet title="Şifremi değiştir" onClose={() => !busy && setPwOpen(false)} footer={<><button className="btn ghost" disabled={busy} onClick={() => setPwOpen(false)}>Vazgeç</button><button className="btn primary" disabled={busy} onClick={savePw}>{busy ? 'Kaydediliyor…' : 'Şifreyi değiştir'}</button></>}>
