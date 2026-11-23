@@ -58,7 +58,8 @@ export default {
     // ürün talebi fotoğrafları: saatte bir, süresi dolanlar (Ayarlar > Ürün talebi > gün) silinir
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 17) ctx.waitUntil(preqSweep(env).catch((e) => console.log('preqSweep', e.message)));
     { const d = new Date(event.scheduledTime || Date.now()); if (d.getUTCHours() === 0 && d.getUTCMinutes() === 53) ctx.waitUntil(auditSweep(env).catch((e) => console.log('auditSweep', e.message))); }
-    { const d = new Date(event.scheduledTime || Date.now()); if (d.getUTCHours() === 1 && d.getUTCMinutes() === 23) ctx.waitUntil(unverifiedSweep(env).catch((e) => console.log('unverifiedSweep', e.message))); }
+    // 23.11.2026 kullanıcı isteğiyle KAPALI: açmak için UNVERIFIED_SWEEP = true
+    { const d = new Date(event.scheduledTime || Date.now()); if (UNVERIFIED_SWEEP && d.getUTCHours() === 1 && d.getUTCMinutes() === 23) ctx.waitUntil(unverifiedSweep(env).catch((e) => console.log('unverifiedSweep', e.message))); }
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 37) ctx.waitUntil(issueSweep(env).catch((e) => console.log('issueSweep', e.message)));
     // sepet linki: süresi dolup onaylanmayan (status 'open') linkler 10 dakikada bir silinir (Ayarlar › Sepet linki)
     if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() % 10 === 4) ctx.waitUntil(lcartSweep(env).catch((e) => console.log('lcartSweep', e.message)));
@@ -1066,6 +1067,7 @@ async function adminAcctAct(req, env, b) {
 }
 // Her gece (TR 04:23): 14 günden eski, ONAYLANMAMIŞ, sadece şifreli, siparişi OLMAYAN mağaza hesapları silinir
 // (sahte / unutulmuş kayıtlar e-postayı ve kullanıcı adını boşa tutmasın). Bayi/ekip, panelden açılan üye, siparişi olan: DOKUNULMAZ.
+const UNVERIFIED_SWEEP = false; // 23.11.2026 kullanıcı: 'şimdilik durdur'
 async function unverifiedSweep(env) {
   if (!env.FIREBASE_SA) return;
   const gt = await gToken(env, 'https://www.googleapis.com/auth/cloud-platform');

@@ -1,0 +1,21 @@
+# Hesap teşhisi (sadece okur): e-postaların giriş hesabı / üye kaydı durumu (maskeli notlar)
+name: Hesap teşhis
+on:
+  workflow_dispatch:
+    inputs:
+      emails:
+        description: 'E-postalar (virgülle)'
+        required: true
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          EMAILS: ${{ inputs.emails }}
+        run: node tools/hesap-bak.mjs
