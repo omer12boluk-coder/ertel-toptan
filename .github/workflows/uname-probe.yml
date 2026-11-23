@@ -1,0 +1,21 @@
+# Kullanıcı adıyla giriş denetimi (sadece okur + bir yanlış şifre denemesi)
+name: Kullanıcı adı giriş denetimi
+on:
+  workflow_dispatch:
+    inputs:
+      hash:
+        description: 'Hesabın e-posta SHA-256 özeti'
+        required: true
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          HASH: ${{ inputs.hash }}
+        run: node tools/uname-probe.mjs
