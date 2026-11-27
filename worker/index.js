@@ -1065,6 +1065,8 @@ async function idtk(env, op, body) {
   return { r, j: await r.json().catch(() => ({})) };
 }
 async function acctLookup(env, by) { const { j } = await idtk(env, 'lookup', by); return (j.users || [])[0] || null; }
+// Son giriş: Firebase lastLoginAt sadece şifre/Google ile GİRİŞTE değişir (oturum açık kalınca kayıt tarihinde kalır) → oturum yenilemesi lastRefreshAt da sayılır
+const lastSeen = (a) => Math.max(Number(a?.lastLoginAt || 0), Date.parse(a?.lastRefreshAt || '') || 0);
 const provsOf = (a) => (a?.providerUserInfo || []).map((x) => x.providerId);
 // giriş hesabı + üye kaydı + kullanıcı adı + 'haber ver' listeleri (siparişler KALIR)
 async function wipeAccount(env, uid, m) {
@@ -1116,9 +1118,9 @@ async function adminAcct(req, env, b) {
   if (!a) return { ok: true, found: false };
   const uid = a.localId;
   // light: üye penceresi (Firestore okuması yok, sadece giriş hesabı)
-  if (b.light) return { ok: true, found: true, acct: { uid, email: a.email || '', verified: !!a.emailVerified, disabled: !!a.disabled, providers: provsOf(a), createdAt: Number(a.createdAt || 0), lastLoginAt: Number(a.lastLoginAt || 0) } };
+  if (b.light) return { ok: true, found: true, acct: { uid, email: a.email || '', verified: !!a.emailVerified, disabled: !!a.disabled, providers: provsOf(a), createdAt: Number(a.createdAt || 0), lastLoginAt: lastSeen(a) } };
   const [m, u] = await Promise.all([saDoc(env, 'members/' + uid), saDoc(env, 'users/' + uid)]);
-  return { ok: true, found: true, acct: { uid, email: a.email || '', verified: !!a.emailVerified, disabled: !!a.disabled, providers: provsOf(a), createdAt: Number(a.createdAt || 0), lastLoginAt: Number(a.lastLoginAt || 0), member: m ? { name: m.name || '', username: m.username || '', phone: m.phone || '', byAdmin: !!m.byAdmin } : null, staff: !!u, orders: await hasOrders(env, uid) } };
+  return { ok: true, found: true, acct: { uid, email: a.email || '', verified: !!a.emailVerified, disabled: !!a.disabled, providers: provsOf(a), createdAt: Number(a.createdAt || 0), lastLoginAt: lastSeen(a), member: m ? { name: m.name || '', username: m.username || '', phone: m.phone || '', byAdmin: !!m.byAdmin } : null, staff: !!u, orders: await hasOrders(env, uid) } };
 }
 async function adminAcctAct(req, env, b) {
   const err = await permOf(req, 'customers'); if (err) return { ok: false, error: err };
@@ -1137,7 +1139,7 @@ async function adminAccts(req, env) {
   for (let pg = 0; pg < 30; pg++) {
     const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${pidOf(env)}/accounts:batchGet?maxResults=1000${next ? '&nextPageToken=' + encodeURIComponent(next) : ''}`, { headers: { Authorization: 'Bearer ' + gt } });
     const j = await r.json().catch(() => ({})); if (!r.ok) return { ok: false, error: j.error?.message || 'Hesaplar alınamadı' };
-    for (const a of j.users || []) { const em = String(a.email || '').toLowerCase(); if (!em || em.endsWith('@toptan.ertelgsm.app')) continue; out.push({ uid: a.localId, email: em, v: a.emailVerified ? 1 : 0, p: provsOf(a).map((x) => x === 'password' ? 'pw' : x === 'google.com' ? 'g' : x === 'facebook.com' ? 'fb' : x).join(','), c: Number(a.createdAt || 0), l: Number(a.lastLoginAt || 0), d: a.disabled ? 1 : 0 }); }
+    for (const a of j.users || []) { const em = String(a.email || '').toLowerCase(); if (!em || em.endsWith('@toptan.ertelgsm.app')) continue; out.push({ uid: a.localId, email: em, v: a.emailVerified ? 1 : 0, p: provsOf(a).map((x) => x === 'password' ? 'pw' : x === 'google.com' ? 'g' : x === 'facebook.com' ? 'fb' : x).join(','), c: Number(a.createdAt || 0), l: lastSeen(a), d: a.disabled ? 1 : 0 }); }
     next = j.nextPageToken || ''; if (!next) break;
   }
   return { ok: true, accts: out };
