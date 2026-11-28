@@ -180,7 +180,7 @@ for (const [i, p] of tagQ.entries()) {
     const cs = (/charset=([\w-]+)/i.exec(r.headers.get('content-type') || '') || [])[1] || 'windows-1254';
     const h = new TextDecoder(/utf-?8/i.test(cs) ? 'utf-8' : 'windows-1254').decode(new Uint8Array(await r.arrayBuffer()));
     const tg = pageTags(h); p.tg = now;
-    if (tg) { p.t = tg; st.tags++; if (DRY || st.tags <= 3) note('Etiket alındı', `${p.k} · ${tg.split(',').length} etiket: ${tg.slice(0, 200)}`); }
+    if (tg) { p.t = tg; st.tags++; if (st.tags <= 2) note('Etiket alındı', `${p.k} · ${tg.split(',').length} etiket: ${tg.slice(0, 200)}`); }
   } catch (e) { p.tg = now; note('Etiket alınamadı', `${p.k}: ${e.message}`); }
 }
 const tagLeft = cat.filter((p) => !p.t && !p.man && p.a && feed.get(p.id)?.u && !(p.tg > now - 3 * 864e5)).length;
