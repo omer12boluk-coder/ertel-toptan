@@ -12011,3 +12011,36 @@ html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute;
   linear-gradient(90deg,rgb(120 160 255 / .12) 1px,transparent 1px) 0 0/32px 32px}
 .eh-root.reveal::before{opacity:0}
 
+/* 28.11.2026 giriş sayfası düzenleri (brand.gateLay; boş = bugünkü). Kum logosunun yeri herogate.jsx relayout'ta */
+/* Sahne: bilgisayarda yazılar solda, logo sağ yarıda büyük */
+@media (min-width:900px){
+  .eh-root[data-lay="split"] .eh-backdrop{display:none}
+  .eh-root[data-lay="split"] .eh-spacer{display:none}
+  .eh-root[data-lay="split"] .eh-content{position:absolute;left:max(clamp(20px,3.2cqw,48px),calc((100cqw - 1240px)/2));top:50%;transform:translateY(-46%);width:min(44cqw,560px);grid-template-columns:1fr;gap:28px;padding:0}
+  .eh-root[data-lay="split"] .eh-h1{font-size:clamp(44px,min(5.2cqw,11cqh),84px)}
+  .eh-root[data-lay="split"] .eh-aside{justify-self:start;max-width:440px}
+  .eh-root[data-lay="split"]::after{content:"";position:absolute;z-index:-1;right:2cqw;top:50%;width:46cqw;aspect-ratio:1;transform:translateY(-50%);border-radius:50%;background:radial-gradient(closest-side,rgb(47 85 176 / .13),transparent);pointer-events:none}
+  .eh-root.eh-dark[data-lay="split"]::after{background:radial-gradient(closest-side,rgb(79 141 255 / .18),transparent)}
+}
+/* Gece stüdyosu: hep lacivert, logo ışık gibi parlar */
+.eh-root[data-lay="night"]{--eh-bg:#091026;--eh-fg:#f4f6fb;--eh-acc:#3d7bff;--eh-sub:#9aa6c4}
+.eh-root[data-lay="night"]::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(48% 34% at 50% 34%,rgb(56 120 255 / .32),transparent 72%),
+  radial-gradient(60% 40% at 50% 112%,rgb(14 165 233 / .22),transparent 70%),
+  linear-gradient(rgb(255 255 255 / .035) 1px,transparent 1px) 0 0/100% 4px}
+.eh-root[data-lay="night"] .eh-theme{display:none}
+.eh-root[data-lay="night"] .eh-backdrop{color:rgb(255 255 255 / .035)}
+.eh-root[data-lay="night"] .eh-btn{box-shadow:0 0 0 1px rgb(255 255 255 / .12) inset,0 18px 44px -14px rgb(61 123 255 / .9)}
+/* Poster: dev logo, yazılar altta logonun üstüne biner */
+.eh-root[data-lay="poster"] .eh-backdrop{display:none}
+.eh-root[data-lay="poster"] .eh-content{z-index:3}
+.eh-root[data-lay="poster"] .eh-content::before{content:"";position:absolute;z-index:-1;left:-50cqw;right:-50cqw;top:-90px;bottom:-60px;background:linear-gradient(to bottom,transparent,var(--eh-bg) 120px);pointer-events:none}
+.eh-root[data-lay="poster"] .eh-h1{font-size:clamp(42px,min(7cqw,12cqh),118px);letter-spacing:-.05em}
+@media (max-width:899px){.eh-root[data-lay="poster"] .eh-h1{font-size:clamp(38px,min(12.5cqw,7.4cqh),64px)}}
+/* Ürün rafı: logonun altında mağazadaki ürünler yavaşça akar */
+.eh-shelf{position:relative;z-index:2;overflow:hidden;margin:0 0 clamp(14px,2cqh,28px);-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.eh-shelf-t{display:flex;gap:clamp(28px,4cqw,64px);width:max-content;animation:ehShelf 38s linear infinite}
+.eh-shelf img{height:clamp(64px,10cqh,120px);width:auto;flex:none;filter:drop-shadow(0 10px 14px rgb(15 23 42 / .14));user-select:none;-webkit-user-drag:none}
+@keyframes ehShelf{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.eh-shelf-t{animation:none}}
+

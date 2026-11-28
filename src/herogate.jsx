@@ -408,7 +408,8 @@ function GateNums() {
 }
 
 const SRC = '/bn/hero-logo-wide.webp', MOBILE_SRC = '/bn/hero-logo-mark.webp';
-const BG = { light: [245 / 255, 245 / 255, 247 / 255], dark: [10 / 255, 11 / 255, 15 / 255] };
+const SHELF = [3, 5, 14, 24, 31, 42];
+const BG = { light: [245 / 255, 245 / 255, 247 / 255], dark: [10 / 255, 11 / 255, 15 / 255], night: [9 / 255, 16 / 255, 38 / 255] };
 
 const cachedOn = () => { try { return localStorage.getItem('hero-gate') !== '0'; } catch { return true; } };
 // Açılışta bir kez karar verilir
@@ -429,6 +430,9 @@ export function HeroGate({ onOpen, onDone }) {
   const on = useStore((s) => s.settings.brand?.heroGate !== false);
   // 28.11.2026 zemin: brand.gateBg '' düz (eski) | glow ışık | mesh renk geçişi | dots nokta | grid çizim kâğıdı
   const gbg = useStore((s) => s.settings.brand?.gateBg || '');
+  // 28.11.2026 düzen: brand.gateLay '' bugünkü | split sahne (PC'de yazı solda, logo sağda) | night gece stüdyosu | poster dev logo | shelf ürün rafı
+  const glay = useStore((s) => s.settings.brand?.gateLay || '');
+  const relayRef = useRef(null);
   const boot = useStore((s) => s.boot);
   const rootRef = useRef(null), stageRef = useRef(null), imgRef = useRef(null), navRef = useRef(null), contentRef = useRef(null), bdRef = useRef(null);
   const engRef = useRef(null);
@@ -436,9 +440,10 @@ export function HeroGate({ onOpen, onDone }) {
   const [reveal, setReveal] = useState(false);
   // 13.11.2026 (C düzeni): hep AYDINLIK açılır; karanlık sadece cihazda seçilmişse (mağazanın tema düğmesiyle aynı ayar: device-theme)
   const dark = useStore((s) => s.deviceTheme === 'dark');
-  const darkRef = useRef(dark); darkRef.current = dark;
+  const darkRef = useRef(dark); darkRef.current = dark || glay === 'night';
   const flip = () => { const n = dark ? 'light' : 'dark'; ls.set('device-theme', n); document.documentElement.setAttribute('data-theme', n); store.set({ deviceTheme: n }); };
-  useEffect(() => { engRef.current?.setOptions({ bg: dark ? BG.dark : BG.light }); }, [dark]);
+  useEffect(() => { engRef.current?.setOptions({ bg: glay === 'night' ? BG.night : dark ? BG.dark : BG.light }); }, [dark, glay]);
+  useEffect(() => { relayRef.current?.(); }, [glay]);
   const coarse = typeof matchMedia === 'function' && matchMedia('(hover: none), (pointer: coarse)').matches;
   const look = useStore((s) => s.settings?.look); const logoSrc = useStore((s) => s.settings?.brand?.logo) || LOGO_MARK;
   const fx = gateFx(look);
@@ -488,9 +493,15 @@ export function HeroGate({ onOpen, onDone }) {
       const band = { top: nav ? nav.offsetTop + nav.offsetHeight + 8 : 16, bottom: content ? content.offsetTop - 8 : h };
       const bandH = Math.max(80, band.bottom - band.top);
       // 15.11: altta pay eklenince basık ekranlarda logo küçülmesin (0,82 → 0,96)
+      const lay = root.dataset.lay || '';
+      const shelf = root.querySelector('.eh-shelf'); if (shelf && shelf.offsetTop) band.bottom = Math.min(band.bottom, shelf.offsetTop - 4);
       let rw, maxH; if (w >= 1024) { rw = w * 0.62; maxH = bandH * 0.96; } else if (w >= 640) { rw = w * 0.8; maxH = bandH * 0.85; } else { rw = w * 0.74; maxH = bandH * 0.8; }
-      if (rw / aspect > maxH) rw = maxH * aspect; const rh = rw / aspect;
-      const rect = { x: w / 2 - rw / 2, y: (band.top + band.bottom) / 2 - rh / 2, w: rw, h: rh };
+      if (lay === 'poster') { rw = w >= 900 ? w * 0.9 : w * 1.15; maxH = h * (w >= 900 ? 0.82 : 0.6); }
+      if (lay === 'shelf') maxH = Math.max(80, band.bottom - band.top) * 0.92;
+      if (rw / aspect > maxH) rw = maxH * aspect; let rh = rw / aspect;
+      let rect = { x: w / 2 - rw / 2, y: (band.top + band.bottom) / 2 - rh / 2, w: rw, h: rh };
+      if (lay === 'poster') rect.y = Math.max(band.top, h * (w >= 900 ? 0.44 : 0.36) - rh / 2);
+      if (lay === 'split' && w >= 900) { const cw = w * 0.5; rw = Math.min(cw * 0.92, h * 0.72 * aspect); rh = rw / aspect; rect = { x: w * 0.5 + (cw - rw) / 2 - w * 0.02, y: h / 2 - rh / 2 + 10, w: rw, h: rh }; }
       const bd = bdRef.current; if (bd) { bd.style.fontSize = Math.min(bandH * 0.95, (w * 0.92) / (5 * 0.56)) + 'px'; bd.style.top = (band.top + band.bottom) / 2 + 'px'; }
       const img = imgRef.current; if (img) Object.assign(img.style, { left: rect.x + 'px', top: rect.y + 'px', width: rect.w + 'px', height: rect.h + 'px' });
       engine?.resize(w, h, rect);
@@ -504,7 +515,7 @@ export function HeroGate({ onOpen, onDone }) {
       };
       im.src = src;
     };
-    load();
+    load(); relayRef.current = relayout;
     const ro = new ResizeObserver(load); ro.observe(root);
     const onVis = () => engine?.setVisible(!document.hidden); document.addEventListener('visibilitychange', onVis);
     const pos = (e) => { const b = root.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
@@ -581,7 +592,7 @@ export function HeroGate({ onOpen, onDone }) {
   };
 
   return (
-    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} data-bg={gbg || undefined} aria-label="Giriş">
+    <section ref={rootRef} className={'eh-root' + (dark || glay === 'night' ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} data-bg={gbg || undefined} data-lay={glay || undefined} aria-label="Giriş">
       <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
       <div ref={stageRef} className="eh-stage" aria-hidden="true"><img ref={imgRef} className="eh-fallback" alt="" draggable="false" /></div>
       <nav ref={navRef} className="eh-nav eh-a" aria-label="Üst">
@@ -592,6 +603,7 @@ export function HeroGate({ onOpen, onDone }) {
         </button>
       </nav>
       <div className="eh-spacer" />
+      {glay === 'shelf' && <div className="eh-shelf eh-a eh-a4" aria-hidden="true"><div className="eh-shelf-t">{[...SHELF, ...SHELF].map((k, i) => <img key={i} src={'/bn/hub-' + k + '.webp'} alt="" draggable="false" />)}</div></div>}
       <div ref={contentRef} className="eh-content">
         <div>
           <p className="eh-eyebrow eh-a eh-a1">Ertel Telekomünikasyon</p>

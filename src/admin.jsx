@@ -692,7 +692,7 @@ const secKey = (k) => (k && (SEC_BY[k] ? k : ALIAS[k])) || null;
 const groupOf = (k) => SEC_BY[k]?.[4] || null;
 // hangi ayar hangi bölümde (kaydedilmemiş değişiklik noktası için; 'a.b' = alt alan)
 const SEC_KEYS = {
-  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.heroGate', 'brand.gateBg', 'look.anim.flySty', 'look.anim.bnIn', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
+  tema: ['look'], gorunum: ['look', 'brand'], kart: ['cards', 'pricing'], genel: ['brand.appName', 'brand.tagline', 'brand.logo', 'brand.heroGate', 'brand.gateLay', 'brand.gateBg', 'look.anim.flySty', 'look.anim.bnIn', 'brand.splashOn', 'brand.splashStyle', 'brand.splashSec'],
   anasayfa: ['home'], magazaana: ['shopHome'], markalar: ['brandLogos'], fiyat: ['pricing'], kademe: ['tiers'], talep: ['requests'],
   katalog: ['catalog.stockMode', 'catalog.lowStock', 'catalog.pageSize', 'catalog.pageSizeM', 'catalog.showInactive', 'catalog.hideOutOfStock', 'catalog.searchTags', 'catalog.showBrand', 'catalog.showDescription'],
   resim: ['catalog.imageThumb', 'catalog.imageLarge'],
@@ -858,6 +858,9 @@ export function Settings() {
             </div>
           </Field>
           <Toggle id="s-hero" label="Giriş sayfası (logo efekti)" hint="Mağaza ana sayfası açılmadan önce hareketli logo ve “Alışverişe başla” düğmesi görünür (oturumda bir kez; ürün ve sipariş linkleri etkilenmez)" checked={d.brand.heroGate !== false} onChange={(v) => set('brand.heroGate', v)} />
+          {d.brand.heroGate !== false && <Field label="Giriş sayfası düzeni">
+            <select id="s-glay" value={d.brand.gateLay || ''} onChange={(e) => set('brand.gateLay', e.target.value)}>{[['', 'Bugünkü'], ['split', 'Sahne (bilgisayarda yazı solda, logo sağda)'], ['night', 'Gece stüdyosu (lacivert)'], ['poster', 'Poster (dev logo)'], ['shelf', 'Ürün rafı (logo altında ürünler)']].map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
+          </Field>}
           {d.brand.heroGate !== false && <Field label="Giriş sayfası zemini">
             <select id="s-gbg" value={d.brand.gateBg || ''} onChange={(e) => set('brand.gateBg', e.target.value)}>{[['', 'Düz (eski)'], ['glow', 'Yumuşak ışık'], ['mesh', 'Renk geçişi'], ['dots', 'Nokta deseni'], ['grid', 'Çizim kâğıdı']].map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
           </Field>}
