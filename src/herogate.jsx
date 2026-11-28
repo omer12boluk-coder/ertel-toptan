@@ -427,6 +427,8 @@ if (HERO_WANTED) { try { window.__gateWait = new Promise((r) => { window.__gateD
 
 export function HeroGate({ onOpen, onDone }) {
   const on = useStore((s) => s.settings.brand?.heroGate !== false);
+  // 28.11.2026 zemin: brand.gateBg '' düz (eski) | glow ışık | mesh renk geçişi | dots nokta | grid çizim kâğıdı
+  const gbg = useStore((s) => s.settings.brand?.gateBg || '');
   const boot = useStore((s) => s.boot);
   const rootRef = useRef(null), stageRef = useRef(null), imgRef = useRef(null), navRef = useRef(null), contentRef = useRef(null), bdRef = useRef(null);
   const engRef = useRef(null);
@@ -579,7 +581,7 @@ export function HeroGate({ onOpen, onDone }) {
   };
 
   return (
-    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} aria-label="Giriş">
+    <section ref={rootRef} className={'eh-root' + (dark ? ' eh-dark' : '') + (leaving ? ' leaving' : '') + (reveal ? ' reveal' : '')} data-bg={gbg || undefined} aria-label="Giriş">
       <div ref={bdRef} className="eh-backdrop" aria-hidden="true">ertel</div>
       <div ref={stageRef} className="eh-stage" aria-hidden="true"><img ref={imgRef} className="eh-fallback" alt="" draggable="false" /></div>
       <nav ref={navRef} className="eh-nav eh-a" aria-label="Üst">
