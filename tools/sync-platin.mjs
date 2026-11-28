@@ -77,6 +77,16 @@ const st = { price: [], hidden: 0, shown: 0, img: 0, name: 0, added: [] };
 const ev = [];
 const E = (t, p, extra) => { p.ut = now; p.ur = t; ev.push({ t, at: now, id: p.id, k: p.k || '', n: String(p.n || '').slice(0, 90), ...extra }); }; // ut: son güncelleme (yönetici listesinde)
 const round2 = (v) => Math.round(v * 100) / 100;
+// Tek seferlik (OPEN_STUCK=1): Excel'in kapattığı (işaretsiz) ama sitede açık ürünler açılır; panelden kapatılanlar (ur a/edit) hariç
+if (process.env.OPEN_STUCK === 'true' || process.env.OPEN_STUCK === '1') {
+  const l = cat.filter((p) => !p.a && !p.so && !p.man && feed.has(p.id) && !['a', 'edit'].includes(p.ur));
+  for (const p of l) { p.a = 1; E('shown', p); st.shown++; }
+  note('Takılı kalan kapalılar açıldı', `${l.length} ürün: ` + l.map((p) => p.k).join(', '));
+  // sitede de pasif olan işaretsiz kapalılar: 'sitede yok' işareti (Platin'de açılınca eşitleme kendiliğinden açar)
+  const m = cat.filter((p) => !p.a && !p.so && !p.man && !feed.has(p.id) && !['a', 'edit'].includes(p.ur));
+  for (const p of m) { p.so = 1; p.sg = 1; }
+  st.marked = m.length; note('İşaretlenen kapalılar', `${m.length} ürün (Platin'de de pasif)`);
+}
 for (const p of cat) {
   const f = feed.get(p.id);
   if (!f) {
@@ -231,7 +241,7 @@ for (const [i, p] of gone.entries()) {
   else if (p.sg === -1 || p.sg == null) { p.sg = -2; E('hidden', p); } // iki kez anlaşılamadı: genel "satıştan kalktı"
   else p.sg = -1;
 }
-const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length + st.removed + st.tagTried;
+const changed = (st.marked || 0) + st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length + st.removed + st.tagTried;
 const has = (id) => (feed.has(id) ? 'var' : 'yok');
 const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length} · tamamlanan ${st.filled} · silinen ${st.deleted} · pasif ${st.passive} · etiket ${st.tags}/${st.tagTried}`;
 note(DRY ? 'Deneme (kaydedilmedi)' : 'Eşitleme', summary);

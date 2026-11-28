@@ -17,6 +17,10 @@ on:
         description: 'Ürün no: deneme modunda yeniymiş gibi dener; normalde eksiklerini (açıklama vb.) siteden tamamlar'
         type: string
         default: ''
+      open_stuck:
+        description: 'Sitede açık ama bizde (Excel yüzünden) kapalı kalan ürünleri aç (tek seferlik)'
+        type: boolean
+        default: false
       pasif_q:
         description: 'Deneme modunda: kapalı ürün raporu (ürün adı/kodu yazılabilir; boşluk = sadece genel rapor)'
         type: string
@@ -46,4 +50,5 @@ jobs:
           REMOVE_CODES: ${{ inputs.remove_codes }}
           TAGS_N: ${{ inputs.tags_n }}
           PASIF_Q: ${{ inputs.pasif_q }}
+          OPEN_STUCK: ${{ inputs.open_stuck }}
         run: node tools/sync-platin.mjs ${{ inputs.dry && '--dry' || '' }}

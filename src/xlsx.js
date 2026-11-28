@@ -199,11 +199,13 @@ export function mergeCatalog(current, incomingIn) {
     if (!byId.has(n.id) && ck && byCode.has(ck)) { idMap[n.id] = byCode.get(ck); n = { ...n0, id: byCode.get(ck) }; matchedByCode++; }
     seen.add(n.id);
     const o = byId.get(n.id);
-    if (!o) { const p = { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n, nw: 1, ft: Date.now() }; byId.set(n.id, p); if (ck) byCode.set(ck, n.id); added++; continue; }
+    if (!o) { const p = { k: '', n: '', c: 0, r: 0, w: null, cur: 'USD', s: 0, a: 1, ...n, nw: 1, ft: Date.now() }; if (p.a === 0) { p.so = 1; p.sg = 1; } byId.set(n.id, p); if (ck) byCode.set(ck, n.id); added++; continue; }
     const { _sale, ...nn } = n;
     if (o.ie) { delete nn.pi; delete nn.im; } // resimleri panelden elle düzenlenmiş ürün: Excel resim listesine dokunmaz
     const m = { ...o, ...nn };
     if (n.a === 1) { delete m.so; delete m.sg; delete m.sgr; } // sitede aktif
+    // sitede pasif: eşitlemenin 'sitede yok' işareti (so) + 'Platin'de pasif' (sg 1) → Platin'de açılınca eşitleme kendiliğinden açar (28.11.2026)
+    if (n.a === 0) { m.so = 1; if (!o.so) { m.sg = 1; delete m.sgr; } }
     // eski "indirimli fiyat = toptan" kaydı (24.10.2026 kuralı): toptan indirimli fiyata eşitse elle toptan sayılmaz
     const clearW = n.w == null && o.w != null && _sale != null && Number(o.w) === Number(_sale);
     if (n.pi || n.c) delete m.pf; // Excel'den gelen bilgi geçerli: ürün sayfasından tamamlamaya gerek yok
