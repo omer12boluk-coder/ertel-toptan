@@ -17,6 +17,10 @@ on:
         description: 'Ürün no: deneme modunda yeniymiş gibi dener; normalde eksiklerini (açıklama vb.) siteden tamamlar'
         type: string
         default: ''
+      pasif_q:
+        description: 'Deneme modunda: kapalı ürün raporu (ürün adı/kodu yazılabilir; boşluk = sadece genel rapor)'
+        type: string
+        default: ''
       tags_n:
         description: 'Etiketi boş en çok kaç ürüne Platin sayfasından bakılsın (varsayılan 12, en çok 400; 3 sn arayla)'
         type: string
@@ -41,4 +45,5 @@ jobs:
           TEST_ID: ${{ inputs.test_id }}
           REMOVE_CODES: ${{ inputs.remove_codes }}
           TAGS_N: ${{ inputs.tags_n }}
+          PASIF_Q: ${{ inputs.pasif_q }}
         run: node tools/sync-platin.mjs ${{ inputs.dry && '--dry' || '' }}

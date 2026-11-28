@@ -48,6 +48,19 @@ if (!meta.exists) throw new Error('Katalog yok');
 const parts = await Promise.all(Array.from({ length: meta.data().chunks }, (_, i) => db.doc(`catalog/c${i}`).get()));
 const cat = parts.flatMap((p) => (p.exists ? p.data().items : []));
 const byId = new Map(cat.map((p) => [p.id, p]));
+// Deneme modunda kapalı ürün raporu (sadece okur): neden kapalı — beslemeden çıktı mı (so), elle mi (ur 'a'), Excel'den mi
+if (DRY && process.env.PASIF_Q != null) {
+  const nz = (x) => String(x || '').toLowerCase().replace(/[\s\-_.\/]/g, '');
+  const d8 = (t) => (t ? new Date(t + 3 * 36e5).toISOString().slice(0, 16).replace('T', ' ') : '—');
+  const why = (p) => [p.a ? 'AÇIK' : 'KAPALI', p.so ? 'sitede yok (beslemeden çıktı' + (p.sg === 1 ? ', Platin\'de pasif' : p.sg === -2 ? ', sayfası açılmıyor' : '') + ')' : '', feed.has(p.id) ? 'beslemede VAR' : 'beslemede yok', 'son işlem ' + (p.ur || '—') + ' ' + d8(p.ut), 'stok ' + p.s, p.man ? 'elle eklenmiş' : ''].filter(Boolean).join(' · ');
+  const q = nz(process.env.PASIF_Q);
+  if (q) for (const p of cat.filter((p) => nz(p.n).includes(q) || nz(p.k).includes(q)).slice(0, 8)) note('Ürün: ' + p.k, `${p.n}\n${why(p)}`);
+  const off = cat.filter((p) => !p.a);
+  const g = {}; for (const p of off) { const k = p.so ? (feed.has(p.id) ? 'so+beslemede' : 'sitede yok') : (feed.has(p.id) ? 'elle/Excel kapalı, SİTEDE AÇIK' : 'elle/Excel kapalı, sitede de yok') + ' · ' + (p.ur || '—'); (g[k] = g[k] || []).push(p); }
+  note('Kapalı ürünler', `${off.length} kapalı\n` + Object.entries(g).sort((a, b) => b[1].length - a[1].length).map(([k, l]) => `${k}: ${l.length}`).join('\n'));
+  const odd = off.filter((p) => !p.so && feed.has(p.id)).sort((a, b) => (b.ut || 0) - (a.ut || 0));
+  if (odd.length) note('Sitede açık ama bizde kapalı', odd.slice(0, 60).map((p) => `${p.k} ${String(p.n).slice(0, 38)} · ${p.ur || '—'} ${d8(p.ut)}`).join('\n'));
+}
 // panelden elle silinen ürünler sitede dursa da yeniden eklenmez
 const delDoc = await db.doc('meta/deleted').get();
 const DELETED = new Set(delDoc.exists ? delDoc.data().ids || [] : []);
