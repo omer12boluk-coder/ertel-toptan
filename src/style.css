@@ -12043,4 +12043,16 @@ html.em-bndk[data-theme=dark] .sh-hero::after { content: ""; position: absolute;
 .eh-shelf img{height:clamp(64px,10cqh,120px);width:auto;flex:none;filter:drop-shadow(0 10px 14px rgb(15 23 42 / .14));user-select:none;-webkit-user-drag:none}
 @keyframes ehShelf{to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.eh-shelf-t{animation:none}}
+/* Marka şeridi: logonun altında markalarımız akar */
+.eh-shelf.eh-br{margin-bottom:clamp(18px,2.6cqh,34px)}
+.eh-shelf.eh-br .eh-shelf-t{gap:clamp(26px,4.6cqw,72px);align-items:center;animation-duration:46s}
+.eh-shelf.eh-br img{height:clamp(22px,3.4cqh,36px);max-width:150px;object-fit:contain;filter:grayscale(1);opacity:.62}
+.eh-dark .eh-shelf.eh-br img{filter:grayscale(1) invert(1);opacity:.5}
+/* Marka duvarı: tüm zemin markalarımızın silik logolarıyla dolu, logonun çevresi açık */
+.eh-wall{position:absolute;inset:-6% -6% 30% -6%;z-index:-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(96px,13cqw,170px),1fr));align-content:start;justify-items:center;gap:clamp(26px,5cqh,56px) clamp(14px,2cqw,30px);padding-top:2%;overflow:hidden;pointer-events:none;transform:rotate(-8deg);
+  -webkit-mask-image:radial-gradient(44% 42% at 50% 46%,transparent 34%,#000 78%),linear-gradient(#000 52%,transparent 86%);-webkit-mask-composite:source-in;
+  mask-image:radial-gradient(44% 42% at 50% 46%,transparent 34%,#000 78%),linear-gradient(#000 52%,transparent 86%);mask-composite:intersect}
+.eh-wall img{height:clamp(18px,2.8cqh,30px);max-width:120px;object-fit:contain;filter:grayscale(1);opacity:.16}
+.eh-dark .eh-wall img{filter:grayscale(1) invert(1);opacity:.12}
 
+@media (max-width:640px){.eh-wall{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:30px 10px}.eh-wall img{height:15px;max-width:76px;opacity:.13}}

@@ -859,7 +859,7 @@ export function Settings() {
           </Field>
           <Toggle id="s-hero" label="Giriş sayfası (logo efekti)" hint="Mağaza ana sayfası açılmadan önce hareketli logo ve “Alışverişe başla” düğmesi görünür (oturumda bir kez; ürün ve sipariş linkleri etkilenmez)" checked={d.brand.heroGate !== false} onChange={(v) => set('brand.heroGate', v)} />
           {d.brand.heroGate !== false && <Field label="Giriş sayfası düzeni">
-            <select id="s-glay" value={d.brand.gateLay || ''} onChange={(e) => set('brand.gateLay', e.target.value)}>{[['', 'Bugünkü'], ['split', 'Sahne (bilgisayarda yazı solda, logo sağda)'], ['night', 'Gece stüdyosu (lacivert)'], ['poster', 'Poster (dev logo)'], ['shelf', 'Ürün rafı (logo altında ürünler)']].map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
+            <select id="s-glay" value={d.brand.gateLay || ''} onChange={(e) => set('brand.gateLay', e.target.value)}>{[['', 'Bugünkü'], ['split', 'Sahne (bilgisayarda yazı solda, logo sağda)'], ['night', 'Gece stüdyosu (lacivert)'], ['poster', 'Poster (dev logo)'], ['shelf', 'Ürün rafı (logo altında ürünler)'], ['brands', 'Marka şeridi (logo altında markalar)'], ['wall', 'Marka duvarı (zeminde silik markalar)']].map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
           </Field>}
           {d.brand.heroGate !== false && <Field label="Giriş sayfası zemini">
             <select id="s-gbg" value={d.brand.gateBg || ''} onChange={(e) => set('brand.gateBg', e.target.value)}>{[['', 'Düz (eski)'], ['glow', 'Yumuşak ışık'], ['mesh', 'Renk geçişi'], ['dots', 'Nokta deseni'], ['grid', 'Çizim kâğıdı']].map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>

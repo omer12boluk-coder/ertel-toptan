@@ -409,6 +409,7 @@ function GateNums() {
 
 const SRC = '/bn/hero-logo-wide.webp', MOBILE_SRC = '/bn/hero-logo-mark.webp';
 const SHELF = [3, 5, 14, 24, 31, 42];
+const BRANDS = ['jbc', 'quick', 'aixun-dark', 'qianli', 'mechanic-dark', '2uul', 'sugon', 'relife', 'amaoe', 'xzz', 'jcid', 'ycs', 'fluke', 'luowei', 'mijing', 'sunshine', 'megaidea', 'kaisi', 'i2c', 'doseer'];
 const BG = { light: [245 / 255, 245 / 255, 247 / 255], dark: [10 / 255, 11 / 255, 15 / 255], night: [9 / 255, 16 / 255, 38 / 255] };
 
 const cachedOn = () => { try { return localStorage.getItem('hero-gate') !== '0'; } catch { return true; } };
@@ -497,7 +498,7 @@ export function HeroGate({ onOpen, onDone }) {
       const shelf = root.querySelector('.eh-shelf'); if (shelf && shelf.offsetTop) band.bottom = Math.min(band.bottom, shelf.offsetTop - 4);
       let rw, maxH; if (w >= 1024) { rw = w * 0.62; maxH = bandH * 0.96; } else if (w >= 640) { rw = w * 0.8; maxH = bandH * 0.85; } else { rw = w * 0.74; maxH = bandH * 0.8; }
       if (lay === 'poster') { rw = w >= 900 ? w * 0.9 : w * 1.15; maxH = h * (w >= 900 ? 0.82 : 0.6); }
-      if (lay === 'shelf') maxH = Math.max(80, band.bottom - band.top) * 0.92;
+      if (lay === 'shelf' || lay === 'brands') maxH = Math.max(80, band.bottom - band.top) * 0.92;
       if (rw / aspect > maxH) rw = maxH * aspect; let rh = rw / aspect;
       let rect = { x: w / 2 - rw / 2, y: (band.top + band.bottom) / 2 - rh / 2, w: rw, h: rh };
       if (lay === 'poster') rect.y = Math.max(band.top, h * (w >= 900 ? 0.44 : 0.36) - rh / 2);
@@ -604,6 +605,8 @@ export function HeroGate({ onOpen, onDone }) {
       </nav>
       <div className="eh-spacer" />
       {glay === 'shelf' && <div className="eh-shelf eh-a eh-a4" aria-hidden="true"><div className="eh-shelf-t">{[...SHELF, ...SHELF].map((k, i) => <img key={i} src={'/bn/hub-' + k + '.webp'} alt="" draggable="false" />)}</div></div>}
+      {glay === 'brands' && <div className="eh-shelf eh-br eh-a eh-a4" aria-hidden="true"><div className="eh-shelf-t">{[...BRANDS, ...BRANDS].map((k, i) => <img key={i} src={'/brands/' + k + '.png'} alt="" draggable="false" />)}</div></div>}
+      {glay === 'wall' && <div className="eh-wall" aria-hidden="true">{[...BRANDS, ...BRANDS, ...BRANDS].map((k, i) => <img key={i} src={'/brands/' + k + '.png'} alt="" draggable="false" />)}</div>}
       <div ref={contentRef} className="eh-content">
         <div>
           <p className="eh-eyebrow eh-a eh-a1">Ertel Telekomünikasyon</p>
