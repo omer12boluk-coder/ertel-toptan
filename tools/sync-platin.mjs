@@ -102,7 +102,15 @@ cat.sort((a, b) => b.id - a.id);
 // Sadece eşitlemenin eklediği yeni ürünler (pf 0 / -1): ürün sayfasına BİR kez bakılır → tüm resimler + kategori.
 // Siteyi yormamak için çalışma başına en çok 10 ürün, istekler arası 3 sn. Açıklama beslemeden gelir (ek istek yok).
 // Başarısız olursa bir kez daha denenir (pf -1), sonra bırakılır (pf -2). Sonradan Excel yüklenirse onun bilgileri geçerli olur.
-st.filled = 0;
+st.filled = 0; st.tags = 0;
+// Ürün sayfasındaki etiketler: <div class="urun_taglari"> … <a title="Bord Isıtıcı">Bord Isıtıcı</a> … </ul>
+function pageTags(h) {
+  const i = h.indexOf('class="urun_taglari"'); if (i < 0) return '';
+  const j = h.indexOf('</ul>', i); const box = h.slice(i, j < 0 ? i + 20000 : j);
+  const out = [];
+  for (const m of box.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi)) { const t = cleanText(unesc(m[1].replace(/<[^>]+>/g, ''))).replace(/,/g, ' ').replace(/\s+/g, ' ').trim(); if (t) out.push(t); }
+  return [...new Set(out)].join(',');
+}
 const { readFileSync } = await import('node:fs');
 const PARENT = new Map(JSON.parse(readFileSync(new URL('../src/categories.json', import.meta.url))).map(([id, , par]) => [id, par]));
 // TEST_ID: deneme modunda ürünü yeniymiş gibi tamamlar (kaydetmez, sonucu yazar); gerçek modda eksiklerini (açıklama vb.) bir kez daha tamamlar
@@ -133,12 +141,9 @@ if (pending.length) {
         const html = h.slice(ai + 27, k).replace(/<script[\s\S]*?<\/script>/gi, '').trim();
         if (html.replace(/<[^>]+>|&nbsp;|\s/g, '').length > 3) newDescs[p.id] = html;
       }
-      if (DRY && TEST === p.id) { // etiket teşhisi (geçici): sayfada etiket nerede yazıyor
-        const kw = (h.match(/<meta[^>]+name=["']keywords["'][^>]*>/i) || [''])[0];
-        note('Etiket teşhis: meta', kw.slice(0, 1500) || 'yok');
-        const sn = []; const re2 = /etiket|tags?\b/gi; let m2; while ((m2 = re2.exec(h)) && sn.length < 6) { sn.push(h.slice(Math.max(0, m2.index - 200), m2.index + 600).replace(/\s+/g, ' ')); re2.lastIndex = m2.index + 600; }
-        note('Etiket teşhis: parçalar', sn.join('\n-----\n') || 'yok');
-      }
+      // etiketler: sayfadaki 'Ürün Etiketleri' kutusu (Excel'deki Etiketler ile aynı); ürünün etiketi boşsa yazılır
+      const tg = pageTags(h); p.tg = now;
+      if (tg && !p.t) { p.t = tg; st.tags++; }
       // resimler: ürün şemasındaki (ld+json Product) image listesi, tam boy
       let imgs = [];
       for (const m of h.matchAll(/<script[^>]*ld\+json[^>]*>([\s\S]*?)<\/script>/g)) {
@@ -160,6 +165,26 @@ if (pending.length) {
     } catch (e) { p.pf = (p.pf || 0) - 1; note('Ürün sayfası alınamadı', `${p.k}: ${e.message}`); }
   }
 }
+// ---- Etiketi boş ürünler: ürün sayfasındaki 'Ürün Etiketleri'nden doldurulur (yeni ürün yukarıda zaten bakıldı)
+// Çalışma başına en çok 12 ürün (elle: TAGS_N), istekler arası 3 sn; bakılan ürün 3 gün sonra tekrar denenir (tg = son bakış)
+// (Platin'de etiket sonradan girilirse gelir). Etiketi DOLU ürüne dokunulmaz (panelden girilen etiket korunur).
+const TAGS_N = Math.min(400, Math.max(0, Number(process.env.TAGS_N) || 12));
+const tagQ = cat.filter((p) => !p.t && !p.man && p.a && feed.get(p.id)?.u && !pending.includes(p) && !(p.tg > now - 3 * 864e5)).slice(0, TAGS_N);
+st.tagTried = tagQ.length;
+for (const [i, p] of tagQ.entries()) {
+  if (i || pending.length) await new Promise((r) => setTimeout(r, 3000));
+  try {
+    const r = await fetch(feed.get(p.id).u, { headers: { 'User-Agent': 'ERTEL-B2B-sync/1.0' } });
+    if (r.status === 429 || r.status === 403) { note('Etiket: site durdurdu', `HTTP ${r.status} · kalanlar sonraki çalışmada`); break; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const cs = (/charset=([\w-]+)/i.exec(r.headers.get('content-type') || '') || [])[1] || 'windows-1254';
+    const h = new TextDecoder(/utf-?8/i.test(cs) ? 'utf-8' : 'windows-1254').decode(new Uint8Array(await r.arrayBuffer()));
+    const tg = pageTags(h); p.tg = now;
+    if (tg) { p.t = tg; st.tags++; if (DRY || st.tags <= 3) note('Etiket alındı', `${p.k} · ${tg.split(',').length} etiket: ${tg.slice(0, 200)}`); }
+  } catch (e) { p.tg = now; note('Etiket alınamadı', `${p.k}: ${e.message}`); }
+}
+const tagLeft = cat.filter((p) => !p.t && !p.man && p.a && feed.get(p.id)?.u && !(p.tg > now - 3 * 864e5)).length;
+if (tagQ.length) note('Etiketler', `${tagQ.length} ürüne bakıldı · ${st.tags} ürüne etiket geldi · bakılmayı bekleyen etiketsiz ${tagLeft}`);
 // Elle temizlik: REMOVE_CODES (virgüllü stok kodları) — sadece beslemede OLMAYAN (sitede yok) ürünler kataloğdan kaldırılır
 st.removed = 0;
 for (const code of String(process.env.REMOVE_CODES || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)) {
@@ -174,7 +199,7 @@ st.deleted = 0; st.passive = 0;
 const DELETE_OK = process.env.DELETE_OK === '1';
 const gone = cat.filter((p) => p.so && !p.man && p.u && (p.sg === 0 || p.sg === -1 || (DELETE_OK && p.sg === -2 && !p.sgr) || p.id === TEST)).slice(0, 6);
 for (const [i, p] of gone.entries()) {
-  if (i || pending.length) await new Promise((r) => setTimeout(r, 3000));
+  if (i || pending.length || tagQ.length) await new Promise((r) => setTimeout(r, 3000));
   let verdict = null, why = '';
   try {
     const u0 = new URL(p.u, 'https://www.ertelgsm.com/'); // eski kayıtlarda adres sitesiz (/urun-adi-pmu123) olabilir
@@ -193,9 +218,9 @@ for (const [i, p] of gone.entries()) {
   else if (p.sg === -1 || p.sg == null) { p.sg = -2; E('hidden', p); } // iki kez anlaşılamadı: genel "satıştan kalktı"
   else p.sg = -1;
 }
-const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length + st.removed;
+const changed = st.price.length + st.hidden + st.shown + st.img + st.name + st.added.length + pending.length + gone.length + st.removed + st.tagTried;
 const has = (id) => (feed.has(id) ? 'var' : 'yok');
-const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length} · tamamlanan ${st.filled} · silinen ${st.deleted} · pasif ${st.passive}`;
+const summary = `kur ${rate.toFixed(2)} · beslemede ${feed.size} ürün · fiyatı değişen ${st.price.length} · gizlenen ${st.hidden} · geri açılan ${st.shown} · resim ${st.img} · ad ${st.name} · yeni ${st.added.length} · tamamlanan ${st.filled} · silinen ${st.deleted} · pasif ${st.passive} · etiket ${st.tags}/${st.tagTried}`;
 note(DRY ? 'Deneme (kaydedilmedi)' : 'Eşitleme', summary);
 if (st.price.length) note('Fiyatı değişenler', st.price.slice(0, 40).join('\n'));
 if (st.added.length) note('Yeni ürünler', st.added.slice(0, 40).join('\n'));

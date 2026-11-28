@@ -17,6 +17,10 @@ on:
         description: 'Ürün no: deneme modunda yeniymiş gibi dener; normalde eksiklerini (açıklama vb.) siteden tamamlar'
         type: string
         default: ''
+      tags_n:
+        description: 'Etiketi boş en çok kaç ürüne Platin sayfasından bakılsın (varsayılan 12, en çok 400; 3 sn arayla)'
+        type: string
+        default: ''
 concurrency:
   group: sync
   cancel-in-progress: false
@@ -36,4 +40,5 @@ jobs:
           WATCH_URL: https://ertel-b2b-watch.omer-12boluk.workers.dev
           TEST_ID: ${{ inputs.test_id }}
           REMOVE_CODES: ${{ inputs.remove_codes }}
+          TAGS_N: ${{ inputs.tags_n }}
         run: node tools/sync-platin.mjs ${{ inputs.dry && '--dry' || '' }}
