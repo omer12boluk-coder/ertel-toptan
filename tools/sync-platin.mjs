@@ -133,6 +133,12 @@ if (pending.length) {
         const html = h.slice(ai + 27, k).replace(/<script[\s\S]*?<\/script>/gi, '').trim();
         if (html.replace(/<[^>]+>|&nbsp;|\s/g, '').length > 3) newDescs[p.id] = html;
       }
+      if (DRY && TEST === p.id) { // etiket teşhisi (geçici): sayfada etiket nerede yazıyor
+        const kw = (h.match(/<meta[^>]+name=["']keywords["'][^>]*>/i) || [''])[0];
+        note('Etiket teşhis: meta', kw.slice(0, 1500) || 'yok');
+        const sn = []; const re2 = /etiket|tags?\b/gi; let m2; while ((m2 = re2.exec(h)) && sn.length < 6) { sn.push(h.slice(Math.max(0, m2.index - 200), m2.index + 600).replace(/\s+/g, ' ')); re2.lastIndex = m2.index + 600; }
+        note('Etiket teşhis: parçalar', sn.join('\n-----\n') || 'yok');
+      }
       // resimler: ürün şemasındaki (ld+json Product) image listesi, tam boy
       let imgs = [];
       for (const m of h.matchAll(/<script[^>]*ld\+json[^>]*>([\s\S]*?)<\/script>/g)) {
