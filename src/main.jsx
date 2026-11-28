@@ -1698,7 +1698,22 @@ function setupResumeFix() {
       setTimeout(take, 500); setTimeout(take, 1400); setTimeout(() => take(true), 2600);
     };
     learn(); addEventListener('orientationchange', learn); screen.orientation?.addEventListener?.('change', learn);
-    const visBottom = () => (good && port() === goodPort ? Math.max(vv.height, good) : vv.height);
+    // 28.11.2026: ana ekran uygulamasında kaydırma başlarken iPhone görünen alanı (vv.height) ~%57 kısa bildiriyor ve menü ekranın
+    // ortasında kalıyor (kullanıcı videosu; tekrar kaydırınca düzeliyor). 'good' açılışta öğrenilemediyse ölçü kalmıyordu → bozulmayan
+    // ölçü: 100lvh (en büyük ekran alanı; uygulama modunda sabit). Sadece uygulama modunda ve görünen alan bundan belirgin kısaysa (%85).
+    const pwa = (() => { try { return navigator.standalone === true || matchMedia('(display-mode: standalone)').matches; } catch { return false; } })();
+    let probe = null;
+    const lvh = () => {
+      if (!pwa || !document.body) return 0;
+      if (!probe) { probe = document.createElement('div'); probe.setAttribute('aria-hidden', 'true'); probe.style.cssText = 'position:absolute;left:-10px;top:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none'; document.body.appendChild(probe); }
+      return probe.offsetHeight;
+    };
+    const visBottom = () => {
+      let b = good && port() === goodPort ? Math.max(vv.height, good) : vv.height;
+      const L = lvh(); const full = port() ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width);
+      if (L && L <= full + 1 && L >= full * 0.8 && b < L * 0.85) b = L;
+      return b;
+    };
     const upd = () => {
       q = 0; const nav = document.querySelector('.botnav'); if (!nav || isField(document.activeElement)) { if (cur) { cur = 0; r.style.removeProperty('--vvd'); } return; }
       const cs = getComputedStyle(nav); if (cs.position !== 'fixed' || cs.display === 'none') return;
